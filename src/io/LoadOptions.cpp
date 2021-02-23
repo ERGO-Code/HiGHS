@@ -30,7 +30,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
       int equals = line.find_first_of("=");
       if (equals < 0 || equals >= (int)line.size() - 1) {
         highsLogUser(options.log_options, HighsLogType::ERROR,
-                        "Error on line %d of options file.\n", line_count);
+                     "Error on line %d of options file.\n", line_count);
         return false;
       }
       option = line.substr(0, equals);
@@ -43,7 +43,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
     }
   } else {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "Options file not found.\n");
+                 "Options file not found.\n");
     return false;
   }
 

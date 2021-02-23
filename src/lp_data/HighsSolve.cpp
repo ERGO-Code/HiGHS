@@ -31,7 +31,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndSolutionParams(model);
-  highsLogUser(options.log_options, HighsLogType::INFO, (message + "\n").c_str());
+  highsLogUser(options.log_options, HighsLogType::INFO,
+               (message + "\n").c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -78,7 +79,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       if (return_status == HighsStatus::Error) return return_status;
       if (!isSolutionRightSize(model.lp_, model.solution_)) {
         highsLogUser(options.log_options, HighsLogType::ERROR,
-                        "Inconsistent solution returned from solver\n");
+                     "Inconsistent solution returned from solver\n");
         return HighsStatus::Error;
       }
     } else {
@@ -87,7 +88,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     }
 #else
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "Model cannot be solved with IPM\n");
+                 "Model cannot be solved with IPM\n");
     return HighsStatus::Error;
 #endif
   } else {
@@ -98,7 +99,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     if (return_status == HighsStatus::Error) return return_status;
     if (!isSolutionRightSize(model.lp_, model.solution_)) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
-                      "Inconsistent solution returned from solver\n");
+                   "Inconsistent solution returned from solver\n");
       return HighsStatus::Error;
     }
   }
@@ -134,7 +135,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   if (lp.numRow_ != 0) return HighsStatus::Error;
 
   highsLogUser(options.log_options, HighsLogType::INFO,
-                  "Solving an unconstrained LP with %d columns\n", lp.numCol_);
+               "Solving an unconstrained LP with %d columns\n", lp.numCol_);
 
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);

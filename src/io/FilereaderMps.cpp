@@ -43,34 +43,34 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         return FilereaderRetcode::FILENOTFOUND;
       case FreeFormatParserReturnCode::FIXED_FORMAT:
         highsLogUser(options.log_options, HighsLogType::WARNING,
-                        "Free format reader has detected row/col names with "
-                        "spaces: switching to fixed format parser\n");
+                     "Free format reader has detected row/col names with "
+                     "spaces: switching to fixed format parser\n");
         break;
       case FreeFormatParserReturnCode::TIMEOUT:
         highsLogUser(options.log_options, HighsLogType::WARNING,
-                        "Free format reader reached time_limit while parsing "
-                        "the input file\n");
+                     "Free format reader reached time_limit while parsing "
+                     "the input file\n");
         return FilereaderRetcode::TIMEOUT;
     }
   }
 
   // else use fixed format parser
-  FilereaderRetcode return_code =
-      readMPS(options.log_options, filename, -1, -1, model.numRow_, model.numCol_,
-              model.sense_, model.offset_, model.Astart_, model.Aindex_,
-              model.Avalue_, model.colCost_, model.colLower_, model.colUpper_,
-              model.rowLower_, model.rowUpper_, model.integrality_,
-              model.col_names_, model.row_names_, options.keep_n_rows);
+  FilereaderRetcode return_code = readMPS(
+      options.log_options, filename, -1, -1, model.numRow_, model.numCol_,
+      model.sense_, model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
+      model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+      model.rowUpper_, model.integrality_, model.col_names_, model.row_names_,
+      options.keep_n_rows);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                    "Model has column names with spaces\n");
+                 "Model has column names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numCol_, model.col_names_, true);
 #endif
   }
   if (namesWithSpaces(model.numRow_, model.row_names_)) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                    "Model has row names with spaces\n");
+                 "Model has row names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numRow_, model.row_names_, true);
 #endif

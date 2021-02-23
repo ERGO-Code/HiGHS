@@ -127,9 +127,9 @@ bool HEkk::switchToDevex() {
                       local_measure > local_threshold;
     if (switch_to_devex) {
       highsLogUser(options_.log_options, HighsLogType::INFO,
-                      "Switch from DSE to Devex with log error measure of %g > "
-                      "%g = threshold\n",
-                      local_measure, local_threshold);
+                   "Switch from DSE to Devex with log error measure of %g > "
+                   "%g = threshold\n",
+                   local_measure, local_threshold);
     }
   }
   return switch_to_devex;

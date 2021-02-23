@@ -44,7 +44,7 @@ InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
   for (index = 0; index < num_info; index++)
     if (info_records[index]->name == name) return InfoStatus::OK;
   highsLogUser(options.log_options, HighsLogType::ERROR,
-                  "getInfoIndex: Info \"%s\" is unknown\n", name.c_str());
+               "getInfoIndex: Info \"%s\" is unknown\n", name.c_str());
   return InfoStatus::UNKNOWN_INFO;
 }
 
@@ -79,10 +79,10 @@ InfoStatus checkInfo(const HighsOptions& options,
         if (check_info.type == HighsInfoType::INT) {
           if (check_info.value == value_pointer) {
             highsLogUser(options.log_options, HighsLogType::ERROR,
-                            "checkInfo: Info %d (\"%s\") has the same value "
-                            "pointer as info %d (\"%s\")\n",
-                            index, info.name.c_str(), check_index,
-                            check_info.name.c_str());
+                         "checkInfo: Info %d (\"%s\") has the same value "
+                         "pointer as info %d (\"%s\")\n",
+                         index, info.name.c_str(), check_index,
+                         check_info.name.c_str());
             error_found = true;
           }
         }
@@ -99,10 +99,10 @@ InfoStatus checkInfo(const HighsOptions& options,
         if (check_info.type == HighsInfoType::DOUBLE) {
           if (check_info.value == value_pointer) {
             highsLogUser(options.log_options, HighsLogType::ERROR,
-                            "checkInfo: Info %d (\"%s\") has the same value "
-                            "pointer as info %d (\"%s\")\n",
-                            index, info.name.c_str(), check_index,
-                            check_info.name.c_str());
+                         "checkInfo: Info %d (\"%s\") has the same value "
+                         "pointer as info %d (\"%s\")\n",
+                         index, info.name.c_str(), check_index,
+                         check_info.name.c_str());
             error_found = true;
           }
         }
@@ -111,7 +111,7 @@ InfoStatus checkInfo(const HighsOptions& options,
   }
   if (error_found) return InfoStatus::ILLEGAL_VALUE;
   highsLogUser(options.log_options, HighsLogType::INFO,
-                  "checkInfo: Info are OK\n");
+               "checkInfo: Info are OK\n");
   return InfoStatus::OK;
 }
 

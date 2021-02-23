@@ -257,7 +257,6 @@ class HighsSimplexAnalysis {
   vector<TranStageAnalysis> tran_stage;
 
   std::stringstream analysis_log;
- 
 
  private:
   void iterationReport(const bool header);

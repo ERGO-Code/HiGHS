@@ -22,9 +22,8 @@
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
 
-void analyseModelBounds(const HighsLogOptions& log_options,
-			const char* message, int numBd,
-                        const std::vector<double>& lower,
+void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
+                        int numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper) {
   if (numBd == 0) return;
   int numFr = 0;
@@ -59,20 +58,28 @@ void analyseModelBounds(const HighsLogOptions& log_options,
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::INFO,"Analysing %d %s bounds\n", numBd, message);
+  highsLogDev(log_options, HighsLogType::INFO, "Analysing %d %s bounds\n",
+              numBd, message);
   if (numFr > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   Free:  %7d (%3d%%)\n", numFr, (100 * numFr) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   Free:  %7d (%3d%%)\n",
+                numFr, (100 * numFr) / numBd);
   if (numLb > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   LB:    %7d (%3d%%)\n", numLb, (100 * numLb) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   LB:    %7d (%3d%%)\n",
+                numLb, (100 * numLb) / numBd);
   if (numUb > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   UB:    %7d (%3d%%)\n", numUb, (100 * numUb) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   UB:    %7d (%3d%%)\n",
+                numUb, (100 * numUb) / numBd);
   if (numBx > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   Boxed: %7d (%3d%%)\n", numBx, (100 * numBx) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   Boxed: %7d (%3d%%)\n",
+                numBx, (100 * numBx) / numBd);
   if (numFx > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   Fixed: %7d (%3d%%)\n", numFx, (100 * numFx) / numBd);
-  highsLogDev(log_options, HighsLogType::INFO, "grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
-  highsLogDev(log_options, HighsLogType::INFO, "grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
-         numFx);
+    highsLogDev(log_options, HighsLogType::INFO, "   Fixed: %7d (%3d%%)\n",
+                numFx, (100 * numFx) / numBd);
+  highsLogDev(log_options, HighsLogType::INFO,
+              "grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
+  highsLogDev(log_options, HighsLogType::INFO,
+              "grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb,
+              numBx, numFx);
 }
 
 std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
@@ -197,9 +204,9 @@ HighsStatus normaliseNames(const HighsOptions& options,
     // because the existing names are too long
 
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                    "There are empty or excessively-long %s names: using "
-                    "constructed names with prefix %s\n",
-                    name_type.c_str(), name_prefix.c_str());
+                 "There are empty or excessively-long %s names: using "
+                 "constructed names with prefix %s\n",
+                 name_type.c_str(), name_prefix.c_str());
     for (int ix = 0; ix < num_name; ix++)
       names[ix] = name_prefix + std::to_string(ix);
   } else {

@@ -22,7 +22,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const bool force = false);
 
 void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
-                               const HighsLogOptions& log_options, 
+                               const HighsLogOptions& log_options,
                                const int numRow, const vector<int>& permute,
                                const vector<int>& iwork, const int* baseIndex,
                                const int rank_deficiency,
@@ -30,25 +30,26 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
                                const vector<int>& noPvC);
 
 void debugReportRankDeficientASM(
-    const int highs_debug_level, const HighsLogOptions& log_options, 
+    const int highs_debug_level, const HighsLogOptions& log_options,
     const int numRow, const vector<int>& MCstart, const vector<int>& MCcountA,
     const vector<int>& MCindex, const vector<double>& MCvalue,
     const vector<int>& iwork, const int rank_deficiency,
     const vector<int>& noPvC, const vector<int>& noPvR);
 
 void debugReportMarkSingC(const int call_id, const int highs_debug_level,
-                          const HighsLogOptions& log_options, 
-                          const int numRow, const vector<int>& iwork,
-                          const int* baseIndex);
+                          const HighsLogOptions& log_options, const int numRow,
+                          const vector<int>& iwork, const int* baseIndex);
 
-void debugLogRankDeficiency(const int highs_debug_level, const HighsLogOptions& log_options,
-                             const int rank_deficiency,
+void debugLogRankDeficiency(const int highs_debug_level,
+                            const HighsLogOptions& log_options,
+                            const int rank_deficiency,
                             const int basis_matrix_num_el,
                             const int invert_num_el, const int& kernel_dim,
                             const int kernel_num_el, const int nwork);
 
-void debugPivotValueAnalysis(const int highs_debug_level, const HighsLogOptions& log_options,
-                              const int numRow,
+void debugPivotValueAnalysis(const int highs_debug_level,
+                             const HighsLogOptions& log_options,
+                             const int numRow,
                              const vector<double>& UpivotValue);
 
 #endif  // SIMPLEX_HFACTORDEBUG_H_

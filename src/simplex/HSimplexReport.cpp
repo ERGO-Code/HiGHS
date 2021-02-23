@@ -16,7 +16,8 @@
 
 #include "simplex/HSimplex.h"
 
-void reportSimplexPhaseIterations(const HighsLogOptions& log_options, const int iteration_count,
+void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
+                                  const int iteration_count,
                                   const HighsSimplexInfo& simplex_info,
                                   const bool initialise) {
   if (simplex_info.run_quiet) return;
@@ -77,6 +78,6 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options, const int 
   }
 
   highsLogDev(log_options, HighsLogType::INFO,
-                  "Simplex iterations: %sTotal %d\n",
-                  iteration_report.str().c_str(), delta_iteration_count);
+              "Simplex iterations: %sTotal %d\n",
+              iteration_report.str().c_str(), delta_iteration_count);
 }

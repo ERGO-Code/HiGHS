@@ -29,8 +29,8 @@ class HighsOptions;
 
 using std::vector;
 
-HighsStatus writeBasisFile(const HighsLogOptions& log_options, const HighsBasis& basis,
-                           const std::string filename);
+HighsStatus writeBasisFile(const HighsLogOptions& log_options,
+                           const HighsBasis& basis, const std::string filename);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename);
@@ -61,19 +61,22 @@ HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
                              const HighsScale& scale);
 
 HighsStatus applyScalingToLpColCost(
-    const HighsLogOptions& log_options, HighsLp& lp, const vector<double>& colScale,
+    const HighsLogOptions& log_options, HighsLp& lp,
+    const vector<double>& colScale,
     const HighsIndexCollection& index_collection);
 
 HighsStatus applyScalingToLpColBounds(
-    const HighsLogOptions& log_options, HighsLp& lp, const vector<double>& colScale,
+    const HighsLogOptions& log_options, HighsLp& lp,
+    const vector<double>& colScale,
     const HighsIndexCollection& index_collection);
 
 HighsStatus applyScalingToLpRowBounds(
-    const HighsLogOptions& log_options, HighsLp& lp, const vector<double>& rowScale,
+    const HighsLogOptions& log_options, HighsLp& lp,
+    const vector<double>& rowScale,
     const HighsIndexCollection& index_collection);
 
-HighsStatus applyScalingToLpMatrix(const HighsLogOptions& log_options, HighsLp& lp,
-                                   const double* colScale,
+HighsStatus applyScalingToLpMatrix(const HighsLogOptions& log_options,
+                                   HighsLp& lp, const double* colScale,
                                    const double* rowScale, const int from_col,
                                    const int to_col, const int from_row,
                                    const int to_row);
@@ -148,8 +151,8 @@ HighsStatus changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper);
 
-HighsStatus changeBounds(const HighsLogOptions& log_options, vector<double>& lower,
-                         vector<double>& upper,
+HighsStatus changeBounds(const HighsLogOptions& log_options,
+                         vector<double>& lower, vector<double>& upper,
                          const HighsIndexCollection& index_collection,
                          const vector<double>& new_lower,
                          const vector<double>& new_upper);
@@ -158,11 +161,11 @@ HighsStatus changeBounds(const HighsLogOptions& log_options, vector<double>& low
  * @brief Report the data of an LP
  */
 void reportLp(const HighsLogOptions& log_options,
-              const HighsLp& lp,          //!< LP whose data are to be reported
+              const HighsLp& lp,  //!< LP whose data are to be reported
               const HighsLogType report_level = HighsLogType::INFO
-	                                  //!< INFO => scalar [dimensions];
-                                          //!< DETAILED => vector[costs/bounds];
-                                          //!< VERBOSE => vector+matrix
+              //!< INFO => scalar [dimensions];
+              //!< DETAILED => vector[costs/bounds];
+              //!< VERBOSE => vector+matrix
 );
 /**
  * @brief Report the brief data of an LP
@@ -225,10 +228,12 @@ HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row,
 HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
                                    const int col, double* val);
 // Analyse the data in an LP problem
-void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp, const std::string message);
+void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
+               const std::string message);
 
 // Analyse the scaling and data in a scaled LP problem
-void analyseScaledLp(const HighsLogOptions& log_options, const HighsScale& scale, const HighsLp& scaled_lp);
+void analyseScaledLp(const HighsLogOptions& log_options,
+                     const HighsScale& scale, const HighsLp& scaled_lp);
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty);
@@ -237,12 +242,13 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 double calculateObjective(const HighsLp& lp, HighsSolution& solution);
 
-bool isColDataNull(const HighsLogOptions& log_options, const double* usr_col_cost,
-                   const double* usr_col_lower, const double* usr_col_upper);
-bool isRowDataNull(const HighsLogOptions& log_options, const double* usr_row_lower,
-                   const double* usr_row_upper);
-bool isMatrixDataNull(const HighsLogOptions& log_options, const int* usr_matrix_start,
-                      const int* usr_matrix_index,
+bool isColDataNull(const HighsLogOptions& log_options,
+                   const double* usr_col_cost, const double* usr_col_lower,
+                   const double* usr_col_upper);
+bool isRowDataNull(const HighsLogOptions& log_options,
+                   const double* usr_row_lower, const double* usr_row_upper);
+bool isMatrixDataNull(const HighsLogOptions& log_options,
+                      const int* usr_matrix_start, const int* usr_matrix_index,
                       const double* usr_matrix_value);
 
 bool isEqualityProblem(const HighsLp& lp);
@@ -256,11 +262,11 @@ HighsStatus calculateResidual(const HighsLp& lp, HighsSolution& solution,
 double vectorProduct(const std::vector<double>& v1,
                      const std::vector<double>& v2);
 
-void reportPresolveReductions(const HighsLogOptions& log_options, const HighsLp& lp,
-                              const HighsLp& presolve_lp);
+void reportPresolveReductions(const HighsLogOptions& log_options,
+                              const HighsLp& lp, const HighsLp& presolve_lp);
 
-void reportPresolveReductions(const HighsLogOptions& log_options, const HighsLp& lp,
-                              const bool presolve_to_empty);
+void reportPresolveReductions(const HighsLogOptions& log_options,
+                              const HighsLp& lp, const bool presolve_to_empty);
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);

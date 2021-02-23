@@ -42,13 +42,13 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
                             const HighsModelObject& highs_model_object) {
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
-                    "Cannot get ranging without an optimal solution\n");
+                 "Cannot get ranging without an optimal solution\n");
     return HighsStatus::Error;
   }
   const HEkk& ekk_instance = highs_model_object.ekk_instance_;
   if (!ekk_instance.simplex_lp_status_.valid) {
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
-                    "Cannot get ranging without a valid Simplex LP\n");
+                 "Cannot get ranging without a valid Simplex LP\n");
     return HighsStatus::Error;
   }
   // Aliases

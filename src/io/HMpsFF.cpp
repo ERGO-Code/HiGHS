@@ -12,9 +12,9 @@
 
 namespace free_format_parser {
 
-FreeFormatParserReturnCode HMpsFF::loadProblem(const HighsLogOptions& log_options,
-                                               const std::string filename,
-                                               HighsLp& lp) {
+FreeFormatParserReturnCode HMpsFF::loadProblem(
+    const HighsLogOptions& log_options, const std::string filename,
+    HighsLp& lp) {
   FreeFormatParserReturnCode result = parse(log_options, filename);
   if (result != FreeFormatParserReturnCode::SUCCESS) return result;
 
@@ -223,7 +223,8 @@ double getWallTime() {
       .count();
 }
 
-HMpsFF::parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
+                                       std::ifstream& file) {
   std::string strline, word;
 
   while (getline(file, strline)) {
@@ -251,7 +252,8 @@ HMpsFF::parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options, std::
   return HMpsFF::parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
+                                   std::ifstream& file) {
   std::string strline, word;
   size_t nrows = 0;
   bool hasobj = false;
@@ -276,7 +278,7 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options, std::ifst
       numRow = int(nrows);
       if (!hasobj) {
         highsLogUser(log_options, HighsLogType::WARNING,
-                        "No objective row found\n");
+                     "No objective row found\n");
         rowname2idx.emplace("artificial_empty_objective", -1);
       };
       return key;
@@ -466,15 +468,15 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
     if (word == "") {
       highsLogUser(log_options, HighsLogType::ERROR,
-                      "No coefficient given for column %s\n", marker.c_str());
+                   "No coefficient given for column %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
       highsLogUser(log_options, HighsLogType::WARNING,
-                      "COLUMNS section contains row %s not in ROWS section\n",
-                      marker.c_str());
+                   "COLUMNS section contains row %s not in ROWS section\n",
+                   marker.c_str());
     } else {
       double value = atof(word.c_str());
       if (value) {
@@ -488,7 +490,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       marker = first_word(strline, end);
       if (word == "") {
         highsLogUser(log_options, HighsLogType::ERROR,
-                        "No coefficient given for column %s\n", marker.c_str());
+                     "No coefficient given for column %s\n", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
       end_marker = first_word_end(strline, end);
@@ -520,7 +522,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
+                                  std::ifstream& file) {
   std::string strline;
 
   auto parsename = [this](const std::string& name, int& rowidx) {
@@ -595,7 +598,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstr
 
     if (word == "") {
       highsLogUser(log_options, HighsLogType::ERROR,
-                      "No bound given for row %s\n", marker.c_str());
+                   "No bound given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
@@ -614,7 +617,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstr
         end = first_word_end(strline, end_marker);
         if (word == "") {
           highsLogUser(log_options, HighsLogType::ERROR,
-                          "No bound given for SIF row %s\n", marker.c_str());
+                       "No bound given for SIF row %s\n", marker.c_str());
           return HMpsFF::parsekey::FAIL;
         }
         mit = rowname2idx.find(marker);
@@ -622,10 +625,9 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstr
     }
 
     if (mit == rowname2idx.end()) {
-      highsLogUser(
-          log_options, HighsLogType::WARNING,
-          "RHS section contains row %s not in ROWS section: ignored\n",
-          marker.c_str());
+      highsLogUser(log_options, HighsLogType::WARNING,
+                   "RHS section contains row %s not in ROWS section: ignored\n",
+                   marker.c_str());
     } else {
       parsename(marker, rowidx);
       double value = atof(word.c_str());
@@ -637,8 +639,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstr
       marker = first_word(strline, end);
       if (word == "") {
         highsLogUser(log_options, HighsLogType::ERROR,
-                        "No coefficient given for rhs of row %s\n",
-                        marker.c_str());
+                     "No coefficient given for rhs of row %s\n",
+                     marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
       end_marker = first_word_end(strline, end);
@@ -669,7 +671,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstr
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
+                                     std::ifstream& file) {
   std::string strline, word;
 
   int num_mi = 0;
@@ -715,24 +718,19 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::if
     if (key != parsekey::NONE) {
       if (num_mi)
         highsLogUser(log_options, HighsLogType::INFO,
-                        "Number of MI entries in BOUNDS section is %d\n",
-                        num_mi);
+                     "Number of MI entries in BOUNDS section is %d\n", num_mi);
       if (num_pl)
         highsLogUser(log_options, HighsLogType::INFO,
-                        "Number of PL entries in BOUNDS section is %d\n",
-                        num_pl);
+                     "Number of PL entries in BOUNDS section is %d\n", num_pl);
       if (num_bv)
         highsLogUser(log_options, HighsLogType::INFO,
-                        "Number of BV entries in BOUNDS section is %d\n",
-                        num_bv);
+                     "Number of BV entries in BOUNDS section is %d\n", num_bv);
       if (num_li)
         highsLogUser(log_options, HighsLogType::INFO,
-                        "Number of LI entries in BOUNDS section is %d\n",
-                        num_li);
+                     "Number of LI entries in BOUNDS section is %d\n", num_li);
       if (num_ui)
         highsLogUser(log_options, HighsLogType::INFO,
-                        "Number of UI entries in BOUNDS section is %d\n",
-                        num_ui);
+                     "Number of UI entries in BOUNDS section is %d\n", num_ui);
       // Assign bounds to columns that remain binary by default
       for (int colidx = 0; colidx < numCol; colidx++) {
         if (col_binary[colidx]) {
@@ -841,8 +839,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::if
       {
         if (!islb || !isub) {
           highsLogUser(log_options, HighsLogType::ERROR,
-                          "BV row %s but [islb, isub] = [%1d, %1d]\n",
-                          marker.c_str(), islb, isub);
+                       "BV row %s but [islb, isub] = [%1d, %1d]\n",
+                       marker.c_str(), islb, isub);
           assert(islb && isub);
           return HMpsFF::parsekey::FAIL;
         }
@@ -864,7 +862,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::if
 
     if (word == "") {
       highsLogUser(log_options, HighsLogType::ERROR,
-                      "No bound given for row %s\n", marker.c_str());
+                   "No bound given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
     double value = atof(word.c_str());
@@ -874,8 +872,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::if
       double dl = value - i_value;
       if (dl)
         highsLogUser(log_options, HighsLogType::ERROR,
-                        "Bound for LI/UI row %s is %g: not integer\n",
-                        marker.c_str(), value);
+                     "Bound for LI/UI row %s is %g: not integer\n",
+                     marker.c_str(), value);
       // Bound marker LI or UI defines the column as integer
       col_integrality[colidx] = HighsVarType::INTEGER;
     }
@@ -888,7 +886,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::if
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
+                                     std::ifstream& file) {
   std::string strline, word;
 
   auto parsename = [this](const std::string& name, int& rowidx) {
@@ -950,7 +949,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options, std::if
 
     if (word == "") {
       highsLogUser(log_options, HighsLogType::ERROR,
-                      "No range given for row %s\n", marker.c_str());
+                   "No range given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
@@ -978,7 +977,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options, std::if
 
       if (word == "") {
         highsLogUser(log_options, HighsLogType::ERROR,
-                        "No range given for row %s\n", marker.c_str());
+                     "No range given for row %s\n", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
 
@@ -997,8 +996,8 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options, std::if
 
       if (!is_end(strline, end)) {
         highsLogUser(log_options, HighsLogType::ERROR,
-                        "Unknown specifiers in RANGES section for row %s\n",
-                        marker.c_str());
+                     "Unknown specifiers in RANGES section for row %s\n",
+                     marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
     }

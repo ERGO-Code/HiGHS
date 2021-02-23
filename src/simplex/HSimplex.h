@@ -67,7 +67,8 @@ void updateSimplexLpStatus(
 
 void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 
-HighsStatus deleteScale(const HighsLogOptions& log_options, vector<double>& scale,
+HighsStatus deleteScale(const HighsLogOptions& log_options,
+                        vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
 void getUnscaledInfeasibilitiesAndNewTolerances(

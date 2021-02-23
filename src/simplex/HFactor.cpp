@@ -157,8 +157,8 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
                     double pivot_threshold_, double pivot_tolerance_,
                     int highs_debug_level_, bool output_flag_,
-                    FILE* log_file_stream_, bool log_to_console_, int log_dev_level_,
-                    const bool use_original_HFactor_logic_,
+                    FILE* log_file_stream_, bool log_to_console_,
+                    int log_dev_level_, const bool use_original_HFactor_logic_,
                     const int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
@@ -276,8 +276,8 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
     highsLogUser(log_options, HighsLogType::WARNING,
-                    "Rank deficiency of %d identified in basis matrix\n",
-                    rank_deficiency);
+                 "Rank deficiency of %d identified in basis matrix\n",
+                 rank_deficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
     // logical which replaces them
@@ -293,9 +293,9 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
 
   kernel_dim -= rank_deficiency;
-  debugLogRankDeficiency(highs_debug_level, log_options,
-                         rank_deficiency, basis_matrix_num_el, invert_num_el,
-                         kernel_dim, kernel_num_el, nwork);
+  debugLogRankDeficiency(highs_debug_level, log_options, rank_deficiency,
+                         basis_matrix_num_el, invert_num_el, kernel_dim,
+                         kernel_num_el, nwork);
   factor_timer.stop(FactorInvert, factor_timer_clock_pointer);
   return rank_deficiency;
 }
@@ -376,9 +376,9 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         highsLogUser(log_options, HighsLogType::ERROR,
-                        "INVERT Error: Found a logical column with pivot "
-                        "already in row %d\n",
-                        lc_iRow);
+                     "INVERT Error: Found a logical column with pivot "
+                     "already in row %d\n",
+                     lc_iRow);
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
         Bvalue[BcountX++] = 1.0;
@@ -713,8 +713,7 @@ int HFactor::buildKernel() {
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
       highsLogUser(log_options, HighsLogType::WARNING,
-                      "Small |pivot| = %g when nwork = %d\n", fabs(pivotX),
-                      nwork);
+                   "Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
     }
@@ -876,9 +875,8 @@ int HFactor::buildKernel() {
 }
 
 void HFactor::buildHandleRankDeficiency() {
-  debugReportRankDeficiency(0, highs_debug_level, log_options, numRow,
-                            permute, iwork, baseIndex, rank_deficiency, noPvR,
-                            noPvC);
+  debugReportRankDeficiency(0, highs_debug_level, log_options, numRow, permute,
+                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
   // iwork can now be used as workspace: use it to accumulate the new
   // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
   // Indices of iwork corresponding to missing indices in permute
@@ -911,9 +909,8 @@ void HFactor::buildHandleRankDeficiency() {
     }
   }
   assert(lc_rank_deficiency == rank_deficiency);
-  debugReportRankDeficiency(1, highs_debug_level, log_options, numRow,
-                            permute, iwork, baseIndex, rank_deficiency, noPvR,
-                            noPvC);
+  debugReportRankDeficiency(1, highs_debug_level, log_options, numRow, permute,
+                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
   for (int k = 0; k < rank_deficiency; k++) {
     int iRow = noPvR[k];
     int iCol = noPvC[k];
@@ -924,11 +921,10 @@ void HFactor::buildHandleRankDeficiency() {
     UpivotValue.push_back(1);
     Ustart.push_back(Uindex.size());
   }
-  debugReportRankDeficiency(2, highs_debug_level, log_options, numRow,
-                            permute, iwork, baseIndex, rank_deficiency, noPvR,
-                            noPvC);
-  debugReportRankDeficientASM(highs_debug_level, log_options, numRow,
-                              MCstart, MCcountA, MCindex, MCvalue, iwork,
+  debugReportRankDeficiency(2, highs_debug_level, log_options, numRow, permute,
+                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
+  debugReportRankDeficientASM(highs_debug_level, log_options, numRow, MCstart,
+                              MCcountA, MCindex, MCvalue, iwork,
                               rank_deficiency, noPvC, noPvR);
 }
 
@@ -936,8 +932,8 @@ void HFactor::buildMarkSingC() {
   // Singular matrix B: reorder the basic variables so that the
   // singular columns are in the position corresponding to the
   // logical which replaces them
-  debugReportMarkSingC(0, highs_debug_level, log_options, numRow,
-                       iwork, baseIndex);
+  debugReportMarkSingC(0, highs_debug_level, log_options, numRow, iwork,
+                       baseIndex);
 
   for (int k = 0; k < rank_deficiency; k++) {
     int ASMrow = noPvR[k];
@@ -949,8 +945,8 @@ void HFactor::buildMarkSingC() {
     noPvC[k] = baseIndex[ASMcol];
     baseIndex[ASMcol] = numCol + ASMrow;
   }
-  debugReportMarkSingC(1, highs_debug_level, log_options, numRow,
-                       iwork, baseIndex);
+  debugReportMarkSingC(1, highs_debug_level, log_options, numRow, iwork,
+                       baseIndex);
 }
 
 void HFactor::buildFinish() {

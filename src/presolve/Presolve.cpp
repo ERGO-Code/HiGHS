@@ -223,8 +223,7 @@ void Presolve::reportDevMainLoop() {
   if (iPrint == 0) {
     if (timer.getTime() > 10)
       highsLogDev(log_options, HighsLogType::VERBOSE,
-                        "Presolve finished main loop %d... ",
-                        stats.dev.n_loops + 1);
+                  "Presolve finished main loop %d... ", stats.dev.n_loops + 1);
   } else {
     int rows = 0;
     int cols = 0;
@@ -443,7 +442,8 @@ int Presolve::presolve(int print) {
     int diff = prev_cols_rows - current_cols_rows;
     double iteration_reduction_pct =
         100 * (1.0 * diff) / (1.0 * model_cols_rows);
-    highsLogDev(log_options, HighsLogType::VERBOSE,
+    highsLogDev(
+        log_options, HighsLogType::VERBOSE,
         "Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: "
         "Reduction this iteration (%9d) is %5.2f%%\n",
         iter, current_num_row, current_num_col, diff, iteration_reduction_pct);
@@ -473,7 +473,8 @@ int Presolve::presolve(int print) {
       int diff = prev_cols_rows - current_cols_rows;
       double iteration_reduction_pct =
           100 * (1.0 * diff) / (1.0 * model_cols_rows);
-      highsLogDev(log_options, HighsLogType::VERBOSE,
+      highsLogDev(
+          log_options, HighsLogType::VERBOSE,
           "Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: "
           "Reduction this iteration (%9d) is %5.2f%%\n",
           iter, current_num_row, current_num_col, diff,
@@ -1347,7 +1348,7 @@ void Presolve::runPropagator() {
   propagator.computeRowActivities();
   int nboundchgs = propagator.propagate();
   highsLogDev(log_options, HighsLogType::VERBOSE,
-                    "Propagation found %d bound changes\n", nboundchgs);
+              "Propagation found %d bound changes\n", nboundchgs);
   // propagation found nothing, so we can stop here. Only for mip we also try
   // coefficient tightening
   if (!mip && nboundchgs == 0) return;
@@ -1357,7 +1358,7 @@ void Presolve::runPropagator() {
     while (true) {
       int ncoeffchgs = propagator.tightenCoefficients();
       highsLogDev(log_options, HighsLogType::VERBOSE,
-                        "tightened %d coefficients\n", ncoeffchgs);
+                  "tightened %d coefficients\n", ncoeffchgs);
       // if no coefficients where tightened we can stop
       if (ncoeffchgs == 0) break;
       ntotalcoeffchgs += ncoeffchgs;
@@ -1460,8 +1461,8 @@ void Presolve::runPropagator() {
   implColLower = colLower;
   implColUpper = colUpper;
 
-  highsLogDev(log_options, HighsLogType::VERBOSE,
-		    "Tightened %d bounds\n", ntightened);
+  highsLogDev(log_options, HighsLogType::VERBOSE, "Tightened %d bounds\n",
+              ntightened);
   if (ntightened != 0) hasChange = true;
 }
 
@@ -1561,8 +1562,8 @@ void Presolve::detectImpliedIntegers() {
   }
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-                    "found %d implied integers with primal detection method\n",
-                    numimplint);
+              "found %d implied integers with primal detection method\n",
+              numimplint);
 
   primalimplint = numimplint;
 
@@ -1635,12 +1636,11 @@ void Presolve::detectImpliedIntegers() {
   }
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-                    "found %d implied integers with dual detection method\n",
-                    numimplint - primalimplint);
+              "found %d implied integers with dual detection method\n",
+              numimplint - primalimplint);
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-                    "implint detection found %d implied integers\n",
-                    numimplint);
+              "implint detection found %d implied integers\n", numimplint);
 }
 
 void Presolve::applyMipDualFixing() {

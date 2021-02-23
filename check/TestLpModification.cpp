@@ -9,12 +9,12 @@ const bool dev_run = false;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
   highsLogUser(log_options, HighsLogType::INFO, "%s: HighsStatus = %d - %s\n",
-                  message.c_str(), (int)status,
-                  HighsStatusToString(status).c_str());
+               message.c_str(), (int)status,
+               HighsStatusToString(status).c_str());
 }
 
-void callRun(Highs& highs, const HighsLogOptions& log_options, std::string message,
-             const HighsStatus require_return_status) {
+void callRun(Highs& highs, const HighsLogOptions& log_options,
+             std::string message, const HighsStatus require_return_status) {
   HighsStatus return_status = highs.run();
   HighsStatusReport(log_options, message, return_status);
   REQUIRE(return_status == require_return_status);
@@ -304,9 +304,10 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   bool output_flag = true;
   bool log_to_console = false;
   int log_dev_level = LOG_DEV_LEVEL_INFO;
-  highsSetLogOptions(log_options, &output_flag, stdout, &log_to_console, &log_dev_level);
-  highsLogDev(log_options, HighsLogType::VERBOSE, 
-                    "\nReporting LP: %s\n", message);
+  highsSetLogOptions(log_options, &output_flag, stdout, &log_to_console,
+                     &log_dev_level);
+  highsLogDev(log_options, HighsLogType::VERBOSE, "\nReporting LP: %s\n",
+              message);
   reportLp(log_options, lp, HighsLogType::VERBOSE);
 }
 
@@ -321,8 +322,8 @@ void messageReportMatrix(const char* message, const int num_col,
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  highsLogDev(log_options, HighsLogType::VERBOSE, 
-                    "\nReporting Matrix: %s\n", message);
+  highsLogDev(log_options, HighsLogType::VERBOSE, "\nReporting Matrix: %s\n",
+              message);
   reportMatrix(log_options, message, num_col, num_nz, start, index, value);
 }
 
@@ -387,7 +388,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
                               &ARstart[0], &ARindex[0], &ARvalue[0]));
 
   return_status = avgas_highs.writeModel("");
-  HighsStatusReport(options.log_options, "avgas_highs.writeModel(\"\")", return_status);
+  HighsStatusReport(options.log_options, "avgas_highs.writeModel(\"\")",
+                    return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   Highs highs(options);
@@ -395,7 +397,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
     highs.setHighsOptionValue("output_flag", false);
   }
   return_status = highs.setHighsOptionValue("highs_debug_level", 2);
-  HighsStatusReport(options.log_options, "\"highs_debug_level\", 2", return_status);
+  HighsStatusReport(options.log_options, "\"highs_debug_level\", 2",
+                    return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   return_status = highs.passModel(lp);
@@ -421,7 +424,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   return_status = highs.writeModel("");
-  HighsStatusReport(options.log_options, "highs.writeModel(\"\")", return_status);
+  HighsStatusReport(options.log_options, "highs.writeModel(\"\")",
+                    return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   // Adding row vectors and matrix to model with columns returns OK
@@ -429,7 +433,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
                         &ARstart[0], &ARindex[0], &ARvalue[0]));
 
   return_status = highs.writeModel("");
-  HighsStatusReport(options.log_options, "highs.writeModel(\"\")", return_status);
+  HighsStatusReport(options.log_options, "highs.writeModel(\"\")",
+                    return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   REQUIRE(

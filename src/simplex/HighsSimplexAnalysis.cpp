@@ -14,6 +14,7 @@
 #include <cmath>
 //#include <cstdio>
 #include <iomanip>
+
 #include "HConfig.h"
 #include "simplex/FactorTimer.h"
 #include "simplex/HEkkDebug.h"
@@ -272,7 +273,9 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   }
 }
 
-void HighsSimplexAnalysis::messaging(const HighsLogOptions& log_options_) { log_options = log_options_; }
+void HighsSimplexAnalysis::messaging(const HighsLogOptions& log_options_) {
+  log_options = log_options_;
+}
 
 void HighsSimplexAnalysis::updateOperationResultDensity(
     const double local_density, double& density) {
@@ -319,7 +322,8 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
     //  reportCondition(header);
   }
   reportInfeasibility(header);
-  highsLogUser(log_options, invert_report_log_type, "%s\n", analysis_log.str().c_str());
+  highsLogUser(log_options, invert_report_log_type, "%s\n",
+               analysis_log.str().c_str());
   if (!header) num_invert_report_since_last_header++;
 }
 
@@ -452,9 +456,9 @@ bool HighsSimplexAnalysis::switchToDevex() {
                       dse_weight_error_measure > dse_weight_error_threshold;
     if (switch_to_devex) {
       highsLogUser(log_options, HighsLogType::INFO,
-                      "Switch from DSE to Devex with log error measure of %g > "
-                      "%g = threshold",
-                      dse_weight_error_measure, dse_weight_error_threshold);
+                   "Switch from DSE to Devex with log error measure of %g > "
+                   "%g = threshold",
+                   dse_weight_error_measure, dse_weight_error_threshold);
     }
   }
   return switch_to_devex;
@@ -793,7 +797,8 @@ void HighsSimplexAnalysis::summaryReport() {
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDensity,
              lcNumNNz, lcAnIterOpRsDim);
-      logValueDistribution(log_options, AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
+      logValueDistribution(log_options, AnIter.AnIterOp_density,
+                           AnIter.AnIterOpRsDim);
     }
   }
   int NumInvert = 0;
@@ -1152,11 +1157,13 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
     reportDensity(header);
     reportIterationData(header);
   }
-  highsLogDev(log_options, iteration_report_log_type, "%s\n", analysis_log.str().c_str());
+  highsLogDev(log_options, iteration_report_log_type, "%s\n",
+              analysis_log.str().c_str());
   if (!header) num_iteration_report_since_last_header++;
 }
 
-void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool header) {
+void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
+    const bool header) {
   if (header) {
     analysis_log << "       Iteration        Objective    ";
   } else {
@@ -1166,8 +1173,9 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool hea
     } else {
       algorithm = "Pr";
     }
-    analysis_log << highsFormatToString("%2sPh%1d %10d %20.10e", algorithm.c_str(), solve_phase,
-                      simplex_iteration_count, objective_value);
+    analysis_log << highsFormatToString(
+        "%2sPh%1d %10d %20.10e", algorithm.c_str(), solve_phase,
+        simplex_iteration_count, objective_value);
   }
 }
 
@@ -1177,17 +1185,14 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
   } else {
     if (solve_phase == 1) {
       analysis_log << highsFormatToString(
-                        " Ph1: %d(%g)", num_primal_infeasibility,
-                        sum_primal_infeasibility);
+          " Ph1: %d(%g)", num_primal_infeasibility, sum_primal_infeasibility);
     } else {
       analysis_log << highsFormatToString(
-			" Pr: %d(%g)", num_primal_infeasibility,
-                        sum_primal_infeasibility);
+          " Pr: %d(%g)", num_primal_infeasibility, sum_primal_infeasibility);
     }
     if (sum_dual_infeasibility > 0) {
       analysis_log << highsFormatToString(
-                        "; Du: %d(%g)", num_dual_infeasibility,
-                        sum_dual_infeasibility);
+          "; Du: %d(%g)", num_dual_infeasibility, sum_dual_infeasibility);
     }
   }
 }
@@ -1197,8 +1202,8 @@ void HighsSimplexAnalysis::reportThreads(const bool header) {
   if (header) {
     analysis_log << highsFormatToString("  Threads");
   } else if (num_threads > 0) {
-    analysis_log << highsFormatToString(" %2d|%2d|%2d",
-                      min_threads, num_threads, max_threads);
+    analysis_log << highsFormatToString(" %2d|%2d|%2d", min_threads,
+                                        num_threads, max_threads);
   } else {
     analysis_log << highsFormatToString("   |  |  ");
   }
@@ -1209,7 +1214,8 @@ void HighsSimplexAnalysis::reportMulti(const bool header) {
   if (header) {
     analysis_log << highsFormatToString("  Multi");
   } else if (average_fraction_of_possible_minor_iterations_performed >= 0) {
-    analysis_log << highsFormatToString("   %3d%%",
+    analysis_log << highsFormatToString(
+        "   %3d%%",
         (int)(100 * average_fraction_of_possible_minor_iterations_performed));
   } else {
     analysis_log << highsFormatToString("       ");
@@ -1220,8 +1226,7 @@ void HighsSimplexAnalysis::reportOneDensity(const double density) {
   assert(analyse_simplex_data);
   const int log_10_density = intLog10(density);
   if (log_10_density > -99) {
-    analysis_log << highsFormatToString(" %4d",
-                      log_10_density);
+    analysis_log << highsFormatToString(" %4d", log_10_density);
   } else {
     analysis_log << highsFormatToString("     ");
   }
@@ -1266,8 +1271,7 @@ void HighsSimplexAnalysis::reportInvert(const bool header) {
   if (header) {
     analysis_log << highsFormatToString(" Inv");
   } else {
-    analysis_log << highsFormatToString("  %2d",
-                      rebuild_reason);
+    analysis_log << highsFormatToString("  %2d", rebuild_reason);
   }
 }
 /*
@@ -1293,15 +1297,17 @@ void HighsSimplexAnalysis::reportCondition(const bool header) {
 // * primal_step  - theta_primal
 void HighsSimplexAnalysis::reportIterationData(const bool header) {
   if (header) {
-    analysis_log << highsFormatToString("     EnC     LvC     LvR        ThDu        ThPr        "
-                      "DlPr       NumCk          Aa");
+    analysis_log << highsFormatToString(
+        "     EnC     LvC     LvR        ThDu        ThPr        "
+        "DlPr       NumCk          Aa");
   } else if (pivotal_row_index >= 0) {
-    analysis_log << highsFormatToString(" %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %11.4g",
-                      entering_variable, leaving_variable, pivotal_row_index,
-                      dual_step, primal_step, primal_delta, numerical_trouble,
-                      pivot_value_from_column);
+    analysis_log << highsFormatToString(
+        " %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %11.4g", entering_variable,
+        leaving_variable, pivotal_row_index, dual_step, primal_step,
+        primal_delta, numerical_trouble, pivot_value_from_column);
   } else {
-    analysis_log << highsFormatToString(" %7d %7d %7d %11.4g %11.4g                                    ",
+    analysis_log << highsFormatToString(
+        " %7d %7d %7d %11.4g %11.4g                                    ",
         entering_variable, leaving_variable, pivotal_row_index, dual_step,
         primal_step);
   }

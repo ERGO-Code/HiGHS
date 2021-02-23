@@ -22,14 +22,15 @@ class HighsOptions;
  * @brief IO methods for HiGHS - currently just print/log messages
  */
 enum class HighsLogType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
-const char* const HighsLogTypeTag[] = {"", "", "", "", "WARNING: ", "ERROR:   "};
+const char* const HighsLogTypeTag[] = {"", "",          "",
+                                       "", "WARNING: ", "ERROR:   "};
 enum LogDevLevel {
-		     LOG_DEV_LEVEL_MIN = 0,
-		     LOG_DEV_LEVEL_NONE = LOG_DEV_LEVEL_MIN, // 0
-		     LOG_DEV_LEVEL_INFO,                  // 1
-		     LOG_DEV_LEVEL_DETAILED,              // 2
-		     LOG_DEV_LEVEL_VERBOSE,               // 3
-		     LOG_DEV_LEVEL_MAX = LOG_DEV_LEVEL_VERBOSE
+  LOG_DEV_LEVEL_MIN = 0,
+  LOG_DEV_LEVEL_NONE = LOG_DEV_LEVEL_MIN,  // 0
+  LOG_DEV_LEVEL_INFO,                      // 1
+  LOG_DEV_LEVEL_DETAILED,                  // 2
+  LOG_DEV_LEVEL_VERBOSE,                   // 3
+  LOG_DEV_LEVEL_MAX = LOG_DEV_LEVEL_VERBOSE
 };
 
 struct HighsLogOptions {
@@ -44,23 +45,24 @@ struct HighsLogOptions {
  */
 // Printing format: must contain exactly one "\n" at end of format
 void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
-                     const char* format, ...);
+                  const char* format, ...);
 
 /**
  * @brief For development logging
  */
 void highsLogDev(const HighsLogOptions& log_options, const HighsLogType type,
-                    const char* format, ...);
+                 const char* format, ...);
 
 /*
  * @brief sets the callbacks used to print output and and log
  *
  * Set to NULL to reset to default, which is to print to logfile and output file
  */
-void highsSetLogCallback(
-    void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
-    void (*logmsgcb_)(HighsLogType type, const char* msg, void* msgcb_data),
-    void* msgcb_data_);
+void highsSetLogCallback(void (*printmsgcb_)(int level, const char* msg,
+                                             void* msgcb_data),
+                         void (*logmsgcb_)(HighsLogType type, const char* msg,
+                                           void* msgcb_data),
+                         void* msgcb_data_);
 
 /*
  * @brief sets callbacks from options
@@ -69,10 +71,10 @@ void highsSetLogCallback(HighsOptions& options  //!< the options
 );
 
 void highsSetLogOptions(HighsLogOptions& log_options,
-			const bool* output_flag_ = NULL,
-			FILE* log_file_stream_ = NULL,
-			const bool* log_to_console_ = NULL,
-			const int* log_dev_level = NULL);
+                        const bool* output_flag_ = NULL,
+                        FILE* log_file_stream_ = NULL,
+                        const bool* log_to_console_ = NULL,
+                        const int* log_dev_level = NULL);
 void highsReportLogOptions(const HighsLogOptions& log_options);
 
 std::string highsFormatToString(const char* format, ...);

@@ -27,10 +27,9 @@ void HighsDebugSol::activate() {
   if (!mipsolver->submip &&
       debugSolObjective <= mipsolver->mipdata_->upper_limit &&
       !mipsolver->options_mip_->mip_debug_solution_file.empty()) {
-    highsLogDev(mipsolver->options_mip_->log_options,
-                      HighsLogType::INFO,
-                      "reading debug solution file %s\n",
-                      mipsolver->options_mip_->mip_debug_solution_file.c_str());
+    highsLogDev(mipsolver->options_mip_->log_options, HighsLogType::INFO,
+                "reading debug solution file %s\n",
+                mipsolver->options_mip_->mip_debug_solution_file.c_str());
     std::ifstream file(mipsolver->options_mip_->mip_debug_solution_file);
     if (file) {
       std::string varname;
@@ -51,9 +50,8 @@ void HighsDebugSol::activate() {
         auto it = nametoidx.find(varname);
         if (it != nametoidx.end()) {
           file >> varval;
-          highsLogDev(mipsolver->options_mip_->log_options,
-			 HighsLogType::INFO,
-                            "%s = %g\n", varname.c_str(), varval);
+          highsLogDev(mipsolver->options_mip_->log_options, HighsLogType::INFO,
+                      "%s = %g\n", varname.c_str(), varval);
           debugSolution[it->second] = varval;
         }
 
@@ -70,8 +68,8 @@ void HighsDebugSol::activate() {
       registerDomain(mipsolver->mipdata_->domain);
     } else {
       highsLogUser(mipsolver->options_mip_->log_options, HighsLogType::WARNING,
-                      "debug solution: could not open file '%s'\n",
-                      mipsolver->options_mip_->mip_debug_solution_file.c_str());
+                   "debug solution: could not open file '%s'\n",
+                   mipsolver->options_mip_->mip_debug_solution_file.c_str());
       HighsLp model = *mipsolver->model_;
       model.colLower_ = mipsolver->mipdata_->domain.colLower_;
       model.colUpper_ = mipsolver->mipdata_->domain.colUpper_;

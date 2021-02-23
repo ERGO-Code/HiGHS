@@ -94,10 +94,10 @@ void updateIndexCollectionOutInIndex(
 
 int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
 
-bool intUserDataNotNull(const HighsLogOptions& log_options, const int* user_data,
-                        const std::string name);
-bool doubleUserDataNotNull(const HighsLogOptions& log_options, const double* user_data,
-                           const std::string name);
+bool intUserDataNotNull(const HighsLogOptions& log_options,
+                        const int* user_data, const std::string name);
+bool doubleUserDataNotNull(const HighsLogOptions& log_options,
+                           const double* user_data, const std::string name);
 
 double getNorm2(const std::vector<double> values);
 
@@ -151,8 +151,8 @@ int integerPercentage(const int of, const int in);
 double doublePercentage(const int of, const int in);
 
 bool logValueDistribution(const HighsLogOptions& log_options,
-			  const HighsValueDistribution& value_distribution,
-                            const int mu = 0);
+                          const HighsValueDistribution& value_distribution,
+                          const int mu = 0);
 bool initialiseScatterData(const int max_num_point,
                            HighsScatterData& scatter_data);
 bool updateScatterData(const double value0, const double value1,

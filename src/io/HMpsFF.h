@@ -135,12 +135,18 @@ class HMpsFF {
                                   std::string& word) const;
 
   HMpsFF::parsekey parseDefault(std::ifstream& file);
-  HMpsFF::parsekey parseObjsense(const HighsLogOptions& log_options, std::ifstream& file);
-  HMpsFF::parsekey parseRows(const HighsLogOptions& log_options, std::ifstream& file);
-  HMpsFF::parsekey parseCols(const HighsLogOptions& log_options, std::ifstream& file);
-  HMpsFF::parsekey parseRhs(const HighsLogOptions& log_options, std::ifstream& file);
-  HMpsFF::parsekey parseRanges(const HighsLogOptions& log_options, std::ifstream& file);
-  HMpsFF::parsekey parseBounds(const HighsLogOptions& log_options, std::ifstream& file);
+  HMpsFF::parsekey parseObjsense(const HighsLogOptions& log_options,
+                                 std::ifstream& file);
+  HMpsFF::parsekey parseRows(const HighsLogOptions& log_options,
+                             std::ifstream& file);
+  HMpsFF::parsekey parseCols(const HighsLogOptions& log_options,
+                             std::ifstream& file);
+  HMpsFF::parsekey parseRhs(const HighsLogOptions& log_options,
+                            std::ifstream& file);
+  HMpsFF::parsekey parseRanges(const HighsLogOptions& log_options,
+                               std::ifstream& file);
+  HMpsFF::parsekey parseBounds(const HighsLogOptions& log_options,
+                               std::ifstream& file);
 };
 
 }  // namespace free_format_parser

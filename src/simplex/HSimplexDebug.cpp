@@ -48,21 +48,23 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
   right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::ERROR, "scale size error\n");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "scale size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
-  if (applyScalingToLp(options.log_options, check_lp, scale) != HighsStatus::OK) {
+  if (applyScalingToLp(options.log_options, check_lp, scale) !=
+      HighsStatus::OK) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "debugSimplexLp: Error scaling check LP\n");
+                 "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "debugSimplexLp: Check LP and simplex LP not equal\n");
+                 "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -73,7 +75,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
         HighsStatus::Error;
     if (!simplex_basis_correct) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
-                      "Supposed to be a Simplex basis, but incorrect\n");
+                   "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -105,7 +107,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
       HighsDebugStatus::LOGICAL_ERROR) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "nonbasicFlag inconsistent\n");
+                 "nonbasicFlag inconsistent\n");
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool right_size =
@@ -113,7 +115,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // Check consistency of basicIndex
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "basicIndex size error\n");
+                 "basicIndex size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -130,13 +132,12 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
       if (flag == NONBASIC_FLAG_TRUE) {
         // Nonbasic...
         highsLogUser(options.log_options, HighsLogType::ERROR,
-                        "Entry basicIndex_[%d] = %d is not basic\n", iRow,
-                        iCol);
+                     "Entry basicIndex_[%d] = %d is not basic\n", iRow, iCol);
       } else {
         // .. or is -1 since it has already been found in basicIndex
         highsLogUser(options.log_options, HighsLogType::ERROR,
-                        "Entry basicIndex_[%d] = %d is already basic\n", iRow,
-                        iCol);
+                     "Entry basicIndex_[%d] = %d is already basic\n", iRow,
+                     iCol);
         assert(flag == -1);
       }
       assert(!flag);
@@ -155,7 +156,7 @@ HighsDebugStatus debugDualChuzcFail(
     return HighsDebugStatus::NOT_CHECKED;
 
   highsLogDev(options.log_options, HighsLogType::INFO,
-                    "DualChuzC:     No change in loop 2 so return error\n");
+              "DualChuzC:     No change in loop 2 so return error\n");
   double workDataNorm = 0;
   double dualNorm = 0;
   for (int i = 0; i < workCount; i++) {
@@ -168,11 +169,11 @@ HighsDebugStatus debugDualChuzcFail(
   workDataNorm += sqrt(workDataNorm);
   dualNorm += sqrt(dualNorm);
   highsLogDev(options.log_options, HighsLogType::INFO,
-      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
-      workCount, selectTheta, remainTheta);
+              "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
+              workCount, selectTheta, remainTheta);
   highsLogDev(options.log_options, HighsLogType::INFO,
-                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
-                    workDataNorm, dualNorm);
+              "DualChuzC:     workDataNorm = %g; dualNorm = %g\n", workDataNorm,
+              dualNorm);
   return HighsDebugStatus::OK;
 }
 
@@ -186,7 +187,7 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "nonbasicFlag size error\n");
+                 "nonbasicFlag size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -201,8 +202,8 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
   if (!right_num_basic_variables) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                    "nonbasicFlag has %d, not %d basic variables\n",
-                    num_basic_variables, simplex_lp.numRow_);
+                 "nonbasicFlag has %d, not %d basic variables\n",
+                 num_basic_variables, simplex_lp.numRow_);
     assert(right_num_basic_variables);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }

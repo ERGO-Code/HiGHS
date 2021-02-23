@@ -15,8 +15,7 @@ static void myprintmsgcb(int level, const char* msg, void* msgcb_data) {
   receiveddata = msgcb_data;
 }
 
-static void mylogmsgcb(HighsLogType type, const char* msg,
-                       void* msgcb_data) {
+static void mylogmsgcb(HighsLogType type, const char* msg, void* msgcb_data) {
   strcpy(printedmsg, msg);
   receiveddata = msgcb_data;
 }

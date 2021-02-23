@@ -372,9 +372,8 @@ void HighsLpRelaxation::storeDualInfProof() {
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
-    highsLogDev(mipsolver.options_mip_->log_options,
-		   HighsLogType::VERBOSE,
-                      "no dual ray stored\n");
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::VERBOSE,
+                "no dual ray stored\n");
     return;
   }
 
@@ -753,8 +752,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // printf("error: lpsolver stopped with unexpected status %d\n",
       //        (int)scaledmodelstatus);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::WARNING,
-                      "LP solved to unexpected status (%d)\n",
-                      (int)scaledmodelstatus);
+                   "LP solved to unexpected status (%d)\n",
+                   (int)scaledmodelstatus);
       return Status::Error;
   }
 }

@@ -18,7 +18,8 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   if (dev_run) log_file = stdout;
   bool output_flag = false;
   if (dev_run) output_flag = true;
-  REQUIRE(set.setup(size, max_entry, output_flag, log_file, debug, allow_assert));
+  REQUIRE(
+      set.setup(size, max_entry, output_flag, log_file, debug, allow_assert));
   //  set.print();
   REQUIRE(!set.add(-1));
   REQUIRE(set.add(0));

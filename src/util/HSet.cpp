@@ -15,9 +15,8 @@
 
 #include <cassert>
 
-bool HSet::setup(const int size, const int max_entry,
-		 const bool output_flag, FILE* log_file,
-                 const bool debug, const bool allow_assert) {
+bool HSet::setup(const int size, const int max_entry, const bool output_flag,
+                 FILE* log_file, const bool debug, const bool allow_assert) {
   setup_ = false;
   if (size <= 0) return false;
   if (max_entry < min_entry) return false;
@@ -151,8 +150,8 @@ bool HSet::debug() const {
   bool count_ok = count == count_;
   if (!count_ok) {
     if (output_flag_) {
-      fprintf(log_file_, "HSet: ERROR pointer_ has %d pointers, not %d\n", count,
-              count_);
+      fprintf(log_file_, "HSet: ERROR pointer_ has %d pointers, not %d\n",
+              count, count_);
       print();
     }
     if (allow_assert_) assert(count_ok);
