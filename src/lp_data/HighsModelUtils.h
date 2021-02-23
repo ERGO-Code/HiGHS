@@ -19,7 +19,8 @@
 #include "lp_data/HighsStatus.h"
 
 // Analyse lower and upper bounds of a model
-void analyseModelBounds(const char* message, int numBd,
+void analyseModelBounds(const HighsLogOptions& log_options,
+			const char* message, int numBd,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper);
 void writeModelBoundSol(FILE* file, const bool columns, const int dim,

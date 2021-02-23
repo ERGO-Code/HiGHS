@@ -76,7 +76,7 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options, const int 
     iteration_report << "PrSwap " << delta_primal_bound_swap << "; ";
   }
 
-  highsLogUser(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::INFO,
                   "Simplex iterations: %sTotal %d\n",
                   iteration_report.str().c_str(), delta_iteration_count);
 }

@@ -793,7 +793,7 @@ void HighsSimplexAnalysis::summaryReport() {
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDensity,
              lcNumNNz, lcAnIterOpRsDim);
-      printValueDistribution(AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
+      logValueDistribution(log_options, AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
     }
   }
   int NumInvert = 0;
@@ -873,23 +873,23 @@ void HighsSimplexAnalysis::summaryReport() {
         sum_multi_chosen, pct_minor_iterations_performed);
   }
 
-  printf("\nCost perturbation summary\n");
-  printValueDistribution(cost_perturbation1_distribution);
-  printValueDistribution(cost_perturbation2_distribution);
+  highsLogDev(log_options, HighsLogType::INFO, "\nCost perturbation summary\n");
+  logValueDistribution(log_options, cost_perturbation1_distribution);
+  logValueDistribution(log_options, cost_perturbation2_distribution);
 
-  printValueDistribution(before_ftran_upper_sparse_density, numRow);
-  printValueDistribution(ftran_upper_sparse_density, numRow);
-  printValueDistribution(before_ftran_upper_hyper_density, numRow);
-  printValueDistribution(ftran_upper_hyper_density, numRow);
-  printValueDistribution(primal_step_distribution);
-  printValueDistribution(dual_step_distribution);
-  printValueDistribution(simplex_pivot_distribution);
-  printValueDistribution(factor_pivot_threshold_distribution);
-  printValueDistribution(numerical_trouble_distribution);
-  printValueDistribution(cleanup_dual_change_distribution);
-  printValueDistribution(cleanup_primal_step_distribution);
-  printValueDistribution(cleanup_dual_step_distribution);
-  printValueDistribution(cleanup_primal_change_distribution);
+  logValueDistribution(log_options, before_ftran_upper_sparse_density, numRow);
+  logValueDistribution(log_options, ftran_upper_sparse_density, numRow);
+  logValueDistribution(log_options, before_ftran_upper_hyper_density, numRow);
+  logValueDistribution(log_options, ftran_upper_hyper_density, numRow);
+  logValueDistribution(log_options, primal_step_distribution);
+  logValueDistribution(log_options, dual_step_distribution);
+  logValueDistribution(log_options, simplex_pivot_distribution);
+  logValueDistribution(log_options, factor_pivot_threshold_distribution);
+  logValueDistribution(log_options, numerical_trouble_distribution);
+  logValueDistribution(log_options, cleanup_dual_change_distribution);
+  logValueDistribution(log_options, cleanup_primal_step_distribution);
+  logValueDistribution(log_options, cleanup_dual_step_distribution);
+  logValueDistribution(log_options, cleanup_primal_change_distribution);
 
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final

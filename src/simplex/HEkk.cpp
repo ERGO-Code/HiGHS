@@ -120,7 +120,7 @@ HighsStatus HEkk::solve() {
   }
   reportSimplexPhaseIterations(options_.log_options, iteration_count_, simplex_info_);
   if (return_status == HighsStatus::Error) return return_status;
-  highsLogUser(
+  highsLogDev(
       options_.log_options, HighsLogType::INFO,
       "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
       "Status %s\n",

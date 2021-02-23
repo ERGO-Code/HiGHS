@@ -54,7 +54,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
-  if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
+  if (applyScalingToLp(options.log_options, check_lp, scale) != HighsStatus::OK) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;

@@ -15,6 +15,8 @@
 #include "simplex/HSimplex.h"
 
 #include "HConfig.h"
+
+#include "lp_data/HighsLpUtils.h"
 #include "util/HighsSort.h"
 
 using std::runtime_error;
@@ -38,15 +40,21 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
                     "Forcing no scaling\n");
     scale_lp = false;
   }
+  const bool analyse_lp_data = 
+      HIGHS_ANALYSIS_LEVEL_MODEL_DATA & options.highs_analysis_level;
+  if (analyse_lp_data) analyseLp(options.log_options, highs_model_object.lp_, "Unscaled");
+  // Possibly scale the LP. At least set the scaling factors to 1
+  HighsScale& scale = highs_model_object.scale_;
   if (scale_lp) {
     HighsLp scaled_lp = highs_model_object.lp_;
     // Perform scaling - if it's worth it.
-    scaleSimplexLp(options, scaled_lp, highs_model_object.scale_);
+    scaleSimplexLp(options, scaled_lp, scale);
+    if (analyse_lp_data) analyseScaledLp(options.log_options, scale, scaled_lp);
     // Pass the scaled LP to Ekk
     ekk_instance.passLp(scaled_lp);
   } else {
     // Initialise unit scaling factors
-    initialiseScale(highs_model_object.lp_, highs_model_object.scale_);
+    initialiseScale(highs_model_object.lp_, scale);
     // Pass the original LP to Ekk
     ekk_instance.passLp(highs_model_object.lp_);
   }
@@ -318,15 +326,15 @@ void unscaleSolution(HighsSolution& solution, const HighsScale scale) {
   }
 }
 
-HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+HighsStatus deleteScale(const HighsLogOptions& log_options, vector<double>& scale,
                         const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {

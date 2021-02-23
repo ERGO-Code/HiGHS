@@ -444,7 +444,6 @@ int Presolve::presolve(int print) {
     double iteration_reduction_pct =
         100 * (1.0 * diff) / (1.0 * model_cols_rows);
     highsLogDev(log_options, HighsLogType::VERBOSE,
-        // printf(
         "Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: "
         "Reduction this iteration (%9d) is %5.2f%%\n",
         iter, current_num_row, current_num_col, diff, iteration_reduction_pct);
@@ -475,7 +474,6 @@ int Presolve::presolve(int print) {
       double iteration_reduction_pct =
           100 * (1.0 * diff) / (1.0 * model_cols_rows);
       highsLogDev(log_options, HighsLogType::VERBOSE,
-          // printf(
           "Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: "
           "Reduction this iteration (%9d) is %5.2f%%\n",
           iter, current_num_row, current_num_col, diff,
@@ -1349,7 +1347,7 @@ void Presolve::runPropagator() {
   propagator.computeRowActivities();
   int nboundchgs = propagator.propagate();
   highsLogDev(log_options, HighsLogType::VERBOSE,
-                    "propagation found %d bound changes\n", nboundchgs);
+                    "Propagation found %d bound changes\n", nboundchgs);
   // propagation found nothing, so we can stop here. Only for mip we also try
   // coefficient tightening
   if (!mip && nboundchgs == 0) return;
@@ -1463,8 +1461,7 @@ void Presolve::runPropagator() {
   implColUpper = colUpper;
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-		    "tightened %d bounds\n ",
-                    ntightened);
+		    "Tightened %d bounds\n", ntightened);
   if (ntightened != 0) hasChange = true;
 }
 

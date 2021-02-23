@@ -161,7 +161,7 @@ void HighsMipSolver::run() {
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
       case HighsPresolveStatus::Reduced:
-        reportPresolveReductions(*options_mip_, *model_,
+        reportPresolveReductions(options_mip_->log_options, *model_,
                                  presolve_.getReducedProblem());
         model_ = &presolve_.getReducedProblem();
         break;
@@ -190,7 +190,7 @@ void HighsMipSolver::run() {
         return;
       case HighsPresolveStatus::ReducedToEmpty:
         modelstatus_ = HighsModelStatus::OPTIMAL;
-        reportPresolveReductions(*options_mip_, *model_, true);
+        reportPresolveReductions(options_mip_->log_options, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
         mipdata_->init();
         mipdata_->upper_bound = presolve_.data_.presolve_[0].objShift;
@@ -199,7 +199,7 @@ void HighsMipSolver::run() {
         cleanupSolve();
         return;
       case HighsPresolveStatus::NotReduced:
-        reportPresolveReductions(*options_mip_, *model_, false);
+        reportPresolveReductions(options_mip_->log_options, *model_, false);
         break;
       default:
         assert(false);

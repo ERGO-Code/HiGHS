@@ -22,7 +22,8 @@
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
 
-void analyseModelBounds(const char* message, int numBd,
+void analyseModelBounds(const HighsLogOptions& log_options,
+			const char* message, int numBd,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper) {
   if (numBd == 0) return;
@@ -58,19 +59,19 @@ void analyseModelBounds(const char* message, int numBd,
       }
     }
   }
-  printf("Analysing %d %s bounds\n", numBd, message);
+  highsLogDev(log_options, HighsLogType::INFO,"Analysing %d %s bounds\n", numBd, message);
   if (numFr > 0)
-    printf("   Free:  %7d (%3d%%)\n", numFr, (100 * numFr) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   Free:  %7d (%3d%%)\n", numFr, (100 * numFr) / numBd);
   if (numLb > 0)
-    printf("   LB:    %7d (%3d%%)\n", numLb, (100 * numLb) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   LB:    %7d (%3d%%)\n", numLb, (100 * numLb) / numBd);
   if (numUb > 0)
-    printf("   UB:    %7d (%3d%%)\n", numUb, (100 * numUb) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   UB:    %7d (%3d%%)\n", numUb, (100 * numUb) / numBd);
   if (numBx > 0)
-    printf("   Boxed: %7d (%3d%%)\n", numBx, (100 * numBx) / numBd);
+    highsLogDev(log_options, HighsLogType::INFO, "   Boxed: %7d (%3d%%)\n", numBx, (100 * numBx) / numBd);
   if (numFx > 0)
-    printf("   Fixed: %7d (%3d%%)\n", numFx, (100 * numFx) / numBd);
-  printf("grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
-  printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
+    highsLogDev(log_options, HighsLogType::INFO, "   Fixed: %7d (%3d%%)\n", numFx, (100 * numFx) / numBd);
+  highsLogDev(log_options, HighsLogType::INFO, "grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
+  highsLogDev(log_options, HighsLogType::INFO, "grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
          numFx);
 }
 

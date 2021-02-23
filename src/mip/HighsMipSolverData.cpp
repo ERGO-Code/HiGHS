@@ -298,7 +298,7 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   mipsolver.mipdata_->implications.rebuild(cleanedUpModel.numCol_, cIndex,
                                            rIndex);
 
-  reportPresolveReductions(*mipsolver.options_mip_, *origmodel, cleanedUpModel);
+  reportPresolveReductions(mipsolver.options_mip_->log_options, *origmodel, cleanedUpModel);
 }
 
 void HighsMipSolverData::ModelCleanup::recoverSolution(

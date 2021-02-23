@@ -91,7 +91,7 @@ HighsStatus HEkkDual::solve() {
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
   simplex_info.store_squared_primal_infeasibility = true;
   if (options.less_infeasible_DSE_check) {
-    if (isLessInfeasibleDSECandidate(options, ekk_instance_.simplex_lp_)) {
+    if (isLessInfeasibleDSECandidate(options.log_options, ekk_instance_.simplex_lp_)) {
       // LP is a candidate for LiDSE
       if (options.less_infeasible_DSE_choose_row)
         // Use LiDSE

@@ -300,30 +300,30 @@ bool testAllDeleteKeep(int num_row) {
 }
 
 void messageReportLp(const char* message, const HighsLp& lp) {
-  HighsOptions options;
+  HighsLogOptions log_options;
   bool output_flag = true;
   bool log_to_console = false;
   int log_dev_level = LOG_DEV_LEVEL_INFO;
-  highsSetLogOptions(options.log_options, &output_flag, stdout, &log_to_console, &log_dev_level);
-  highsLogDev(options.log_options, HighsLogType::VERBOSE, 
+  highsSetLogOptions(log_options, &output_flag, stdout, &log_to_console, &log_dev_level);
+  highsLogDev(log_options, HighsLogType::VERBOSE, 
                     "\nReporting LP: %s\n", message);
-  reportLp(options, lp, HighsLogType::VERBOSE);
+  reportLp(log_options, lp, HighsLogType::VERBOSE);
 }
 
 void messageReportMatrix(const char* message, const int num_col,
                          const int num_nz, const int* start, const int* index,
                          const double* value) {
-  HighsOptions options;
+  HighsLogOptions log_options;
   bool output_flag = true;
   bool log_to_console = false;
   int log_dev_level = LOG_DEV_LEVEL_INFO;
-  options.log_options.log_file_stream = stdout;
-  options.log_options.output_flag = &output_flag;
-  options.log_options.log_to_console = &log_to_console;
-  options.log_options.log_dev_level = &log_dev_level;
-  highsLogDev(options.log_options, HighsLogType::VERBOSE, 
+  log_options.log_file_stream = stdout;
+  log_options.output_flag = &output_flag;
+  log_options.log_to_console = &log_to_console;
+  log_options.log_dev_level = &log_dev_level;
+  highsLogDev(log_options, HighsLogType::VERBOSE, 
                     "\nReporting Matrix: %s\n", message);
-  reportMatrix(options, message, num_col, num_nz, start, index, value);
+  reportMatrix(log_options, message, num_col, num_nz, start, index, value);
 }
 
 // No commas in test case name.

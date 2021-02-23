@@ -310,7 +310,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   // Try to read basis file into read_basis
   HighsBasis read_basis = this->basis_;
   return_status =
-      interpretCallStatus(readBasisFile(options_, read_basis, filename),
+      interpretCallStatus(readBasisFile(options_.log_options, read_basis, filename),
                           return_status, "readBasis");
   if (return_status != HighsStatus::OK) return return_status;
   // Basis read OK: check whether it's consistent with the LP
@@ -335,7 +335,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
   if (filename == "") {
     // Empty file name: report model on stdout
-    reportLp(options_, model, HighsLogType::VERBOSE);
+    reportLp(options_.log_options, model, HighsLogType::VERBOSE);
     return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename);
@@ -355,7 +355,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   return_status =
-      interpretCallStatus(writeBasisFile(options_, this->basis_, filename),
+      interpretCallStatus(writeBasisFile(options_.log_options, this->basis_, filename),
                           return_status, "writeBasis");
   return returnFromHighs(return_status);
 }
@@ -532,7 +532,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        reportPresolveReductions(hmos_[original_hmo].options_,
+        reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_, false);
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
@@ -561,7 +561,7 @@ HighsStatus Highs::run() {
 
         hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
         // Log the presolve reductions
-        reportPresolveReductions(hmos_[original_hmo].options_,
+        reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_,
                                  hmos_[presolve_hmo].lp_);
         // Record the HMO to be solved
@@ -597,7 +597,7 @@ HighsStatus Highs::run() {
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
-        reportPresolveReductions(hmos_[original_hmo].options_,
+        reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_, true);
         hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
         hmos_[original_hmo].scaled_model_status_ =
