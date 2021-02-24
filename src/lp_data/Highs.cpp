@@ -1257,6 +1257,23 @@ bool Highs::changeColCost(const int col, const double cost) {
   return changeColsCost(1, &col, &cost);
 }
 
+bool Highs::changeColsCost(const int from_col, const int to_col,
+                           const double* cost) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_col;
+  index_collection.to_ = to_col;
+  if (!haveHmo("changeColsCost")) return false;
+  call_status = changeCostsInterface(index_collection, cost);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeCosts");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
 bool Highs::changeColsCost(const int num_set_entries, const int* set,
                            const double* cost) {
   if (num_set_entries <= 0) return true;

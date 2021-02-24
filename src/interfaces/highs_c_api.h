@@ -469,6 +469,17 @@ int Highs_changeColCost(
 );
 
 /**
+ * @brief Change the cost of multiple columns given by an interval
+ */
+  int Highs_changeColsCostByRange(
+    void* highs,                //!< HiGHS object reference
+    const int from_col,  //!< The index of the first column whose cost changes
+    const int to_col,    //!< One more than the index of the last column whose
+                         //!< cost changes
+    const double* cost  //!< Array of size num_set_entries with new costs
+);
+
+/**
  * @brief Change the cost of multiple columns given by a set of indices
  */
 int Highs_changeColsCostBySet(

@@ -357,8 +357,13 @@ int Highs_changeObjectiveSense(void* highs, const int sense) {
   return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
-int Highs_changeColCost(void* highs, const int col, const double cost) {
+int Highs_changeColsCost(void* highs, const int col, const double cost) {
   return ((Highs*)highs)->changeColCost(col, cost);
+}
+
+int Highs_changeColsCostByRange(void* highs, const int from_col,
+				const int to_col, const double* cost) {
+  return ((Highs*)highs)->changeColsCost(from_col, to_col, cost);
 }
 
 int Highs_changeColsCostBySet(void* highs, const int num_set_entries,

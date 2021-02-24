@@ -887,6 +887,28 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
+  const int from_col = 2;
+  const int to_col = 5;
+  int lp_num_col = local_lp.numCol_;
+  int get_num_col;
+  int get_num_nz;
+  vector<double> og_col2345_cost;
+  vector<double> set_col2345_cost;
+  vector<double> get_col2345_cost;
+  og_col2345_cost.resize(lp_num_col);
+  set_col2345_cost.resize(lp_num_col);
+  get_col2345_cost.resize(lp_num_col);
+  set_col2345_cost[2] = 2.0;
+  set_col2345_cost[3] = 3.0;
+  set_col2345_cost[4] = 4.0;
+  set_col2345_cost[5] = 5.0;
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.changeColsCost(from_col, to_col, &set_col2345_cost[0]));
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
+  for (int iCol = from_col; iCol < to_col + 1; iCol++)
+    REQUIRE(get_col2345_cost[iCol] == set_col2345_cost[iCol]);
+  REQUIRE(highs.changeColsCost(from_col, to_col, &og_col2345_cost[0]));
+
   REQUIRE(highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost));
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
