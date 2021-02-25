@@ -126,8 +126,6 @@ class OptionRecordString : public OptionRecord {
   virtual ~OptionRecordString() {}
 };
 
-inline const char* bool2string(bool b);
-
 bool commandLineOffChooseOnOk(const HighsLogOptions& log_options,
                               const string& value);
 bool commandLineSolverOk(const HighsLogOptions& log_options,

@@ -627,8 +627,8 @@ HighsStatus writeMPS(
   }
 #ifdef HiGHSDEV
   printf("Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
-         BoolToCharStar(have_rhs), BoolToCharStar(have_ranges),
-         BoolToCharStar(have_bounds));
+         highsBoolToString(have_rhs), highsBoolToString(have_ranges),
+         highsBoolToString(have_bounds));
 #endif
 
   // Field:    1           2          3         4         5         6
@@ -806,4 +806,3 @@ HighsStatus writeMPS(
   return HighsStatus::OK;
 }
 
-inline const char* BoolToCharStar(bool b) { return b ? "True" : "False"; }

@@ -4,7 +4,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
@@ -301,11 +301,16 @@ bool testAllDeleteKeep(int num_row) {
 
 void messageReportLp(const char* message, const HighsLp& lp) {
   HighsLogOptions log_options;
-  bool output_flag = true;
-  bool log_to_console = false;
-  int log_dev_level = LOG_DEV_LEVEL_INFO;
-  highsSetLogOptions(log_options, &output_flag, stdout, &log_to_console,
-                     &log_dev_level);
+  bool output_flag;
+  bool log_to_console;
+  int log_dev_level;
+  output_flag = dev_run;
+  log_to_console = true;
+  log_dev_level = LOG_DEV_LEVEL_VERBOSE;
+  log_options.output_flag = &output_flag;
+  log_options.log_file_stream = NULL;
+  log_options.log_to_console = &log_to_console;
+  log_options.log_dev_level = &log_dev_level;
   highsLogDev(log_options, HighsLogType::VERBOSE, "\nReporting LP: %s\n",
               message);
   reportLp(log_options, lp, HighsLogType::VERBOSE);
@@ -887,28 +892,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
-  const int from_col = 2;
-  const int to_col = 5;
-  int lp_num_col = local_lp.numCol_;
-  int get_num_col;
-  int get_num_nz;
-  vector<double> og_col2345_cost;
-  vector<double> set_col2345_cost;
-  vector<double> get_col2345_cost;
-  og_col2345_cost.resize(lp_num_col);
-  set_col2345_cost.resize(lp_num_col);
-  get_col2345_cost.resize(lp_num_col);
-  set_col2345_cost[2] = 2.0;
-  set_col2345_cost[3] = 3.0;
-  set_col2345_cost[4] = 4.0;
-  set_col2345_cost[5] = 5.0;
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
-  REQUIRE(highs.changeColsCost(from_col, to_col, &set_col2345_cost[0]));
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
-  for (int iCol = from_col; iCol < to_col + 1; iCol++)
-    REQUIRE(get_col2345_cost[iCol] == set_col2345_cost[iCol]);
-  REQUIRE(highs.changeColsCost(from_col, to_col, &og_col2345_cost[0]));
-
   REQUIRE(highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost));
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
@@ -1078,4 +1061,62 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_indices[1] == 1);
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -2.0);
+}
+
+TEST_CASE("LP-interval-changes", "[highs_data]") {
+
+  HighsStatus run_status;
+  HighsStatus return_status;
+
+  Highs highs;
+  const HighsOptions& options = highs.getHighsOptions();
+  const HighsInfo& info = highs.getHighsInfo();
+
+  highs.setHighsOptionValue("output_flag", dev_run);
+  highs.setHighsOptionValue("log_to_console", true);
+  highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
+
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+
+  const HighsLp& lp = highs.getLp();
+
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+
+  double avgas_optimal_objective_function_value = info.objective_function_value;
+
+  REQUIRE(info.objective_function_value == avgas_optimal_objective_function_value);
+  //  messageReportLp("LP-interval-changes", lp);
+
+  /*
+  // Change a 
+  const int from_col = 2;
+  const int to_col = 5;
+  int lp_num_col = local_lp.numCol_;
+  int get_num_col;
+  int get_num_nz;
+  vector<double> og_col2345_cost;
+  vector<double> set_col2345_cost;
+  vector<double> get_col2345_cost;
+  og_col2345_cost.resize(lp_num_col);
+  set_col2345_cost.resize(lp_num_col);
+  get_col2345_cost.resize(lp_num_col);
+  set_col2345_cost[2] = 2.0;
+  set_col2345_cost[3] = 3.0;
+  set_col2345_cost[4] = 4.0;
+  set_col2345_cost[5] = 5.0;
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.changeColsCost(from_col, to_col, &set_col2345_cost[0]));
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
+  for (int iCol = from_col; iCol < to_col + 1; iCol++)
+    REQUIRE(get_col2345_cost[iCol] == set_col2345_cost[iCol]);
+  REQUIRE(highs.changeColsCost(from_col, to_col, &og_col2345_cost[0]));
+
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+
+  highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
+  REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
+
+  */  
+  
 }

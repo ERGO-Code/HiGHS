@@ -27,8 +27,6 @@ void HighsInfo::clear() {
   sum_dual_infeasibilities = illegal_infeasibility_measure;
 }
 
-inline const char* bool2string(bool b) { return b ? "true" : "false"; }
-
 std::string infoEntryType2string(const HighsInfoType type) {
   if (type == HighsInfoType::INT) {
     return "int";
@@ -199,11 +197,11 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: int, advanced: %s\n", bool2string(info.advanced));
+    fprintf(file, "type: int, advanced: %s\n", highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: int, advanced: %s]\n", bool2string(info.advanced));
+    fprintf(file, "# [type: int, advanced: %s]\n", highsBoolToString(info.advanced).c_str());
     fprintf(file, "%s = %d\n", info.name.c_str(), *info.value);
   }
 }
@@ -214,12 +212,12 @@ void reportInfo(FILE* file, const InfoRecordDouble& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: double, advanced: %s\n", bool2string(info.advanced));
+    fprintf(file, "type: double, advanced: %s\n", highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());
     fprintf(file, "# [type: double, advanced: %s]\n",
-            bool2string(info.advanced));
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "%s = %g\n", info.name.c_str(), *info.value);
   }
 }

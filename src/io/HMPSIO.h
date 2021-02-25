@@ -72,6 +72,4 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
                          const std::string filename, const HighsLp& lp,
                          const bool free = true);
 
-inline const char* BoolToCharStar(bool b);
-
 #endif /* IO_HMPSIO_H_ */

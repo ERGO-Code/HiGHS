@@ -44,13 +44,13 @@ struct HighsLogOptions {
  * @brief For _single-line_ user logging with message type notification
  */
 // Printing format: must contain exactly one "\n" at end of format
-void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
+void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...);
 
 /**
  * @brief For development logging
  */
-void highsLogDev(const HighsLogOptions& log_options, const HighsLogType type,
+void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
                  const char* format, ...);
 
 /*
@@ -70,13 +70,10 @@ void highsSetLogCallback(void (*printmsgcb_)(int level, const char* msg,
 void highsSetLogCallback(HighsOptions& options  //!< the options
 );
 
-void highsSetLogOptions(HighsLogOptions& log_options,
-                        const bool* output_flag_ = NULL,
-                        FILE* log_file_stream_ = NULL,
-                        const bool* log_to_console_ = NULL,
-                        const int* log_dev_level = NULL);
-void highsReportLogOptions(const HighsLogOptions& log_options);
+void highsReportLogOptions(const HighsLogOptions& log_options_);
 
 std::string highsFormatToString(const char* format, ...);
+
+const std::string highsBoolToString(const bool b);
 
 #endif

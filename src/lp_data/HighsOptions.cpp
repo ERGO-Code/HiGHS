@@ -13,8 +13,6 @@
  */
 #include "lp_data/HighsOptions.h"
 
-inline const char* bool2string(bool b) { return b ? "true" : "false"; }
-
 std::string optionEntryType2string(const HighsOptionType type) {
   if (type == HighsOptionType::BOOL) {
     return "bool";
@@ -722,16 +720,18 @@ void reportOption(FILE* file, const OptionRecordBool& option,
       fprintf(file, "%s<br>\n", option.description.c_str());
       fprintf(file,
               "type: bool, advanced: %s, range: {false, true}, default: %s\n",
-              bool2string(option.advanced), bool2string(option.default_value));
+              highsBoolToString(option.advanced).c_str(),
+	      highsBoolToString(option.default_value).c_str());
       fprintf(file, "</li>\n");
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(
           file,
           "# [type: bool, advanced: %s, range: {false, true}, default: %s]\n",
-          bool2string(option.advanced), bool2string(option.default_value));
+          highsBoolToString(option.advanced).c_str(),
+	  highsBoolToString(option.default_value).c_str());
       fprintf(file, "%s = %s\n", option.name.c_str(),
-              bool2string(*option.value));
+              highsBoolToString(*option.value).c_str());
     }
   }
 }
@@ -746,14 +746,14 @@ void reportOption(FILE* file, const OptionRecordInt& option,
               option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
       fprintf(file, "type: int, advanced: %s, range: {%d, %d}, default: %d\n",
-              bool2string(option.advanced), option.lower_bound,
+              highsBoolToString(option.advanced).c_str(), option.lower_bound,
               option.upper_bound, option.default_value);
       fprintf(file, "</li>\n");
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
               "# [type: int, advanced: %s, range: {%d, %d}, default: %d]\n",
-              bool2string(option.advanced), option.lower_bound,
+              highsBoolToString(option.advanced).c_str(), option.lower_bound,
               option.upper_bound, option.default_value);
       fprintf(file, "%s = %d\n", option.name.c_str(), *option.value);
     }
@@ -771,14 +771,14 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
       fprintf(file, "%s<br>\n", option.description.c_str());
       fprintf(file,
               "type: double, advanced: %s, range: [%g, %g], default: %g\n",
-              bool2string(option.advanced), option.lower_bound,
+              highsBoolToString(option.advanced).c_str(), option.lower_bound,
               option.upper_bound, option.default_value);
       fprintf(file, "</li>\n");
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file,
               "# [type: double, advanced: %s, range: [%g, %g], default: %g]\n",
-              bool2string(option.advanced), option.lower_bound,
+              highsBoolToString(option.advanced).c_str(), option.lower_bound,
               option.upper_bound, option.default_value);
       fprintf(file, "%s = %g\n", option.name.c_str(), *option.value);
     }
@@ -797,12 +797,12 @@ void reportOption(FILE* file, const OptionRecordString& option,
               option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
       fprintf(file, "type: string, advanced: %s, default: \"%s\"\n",
-              bool2string(option.advanced), option.default_value.c_str());
+              highsBoolToString(option.advanced).c_str(), option.default_value.c_str());
       fprintf(file, "</li>\n");
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
-              bool2string(option.advanced), option.default_value.c_str());
+              highsBoolToString(option.advanced).c_str(), option.default_value.c_str());
       fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
     }
   }
