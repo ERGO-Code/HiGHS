@@ -43,12 +43,20 @@ class HighsPostsolveStack {
   // The undo() call must pop all values from the stack that were added during
   // the constructor call, and should restore primal/dual solution values, as
   // well as the basis status as appropriate.
+ public:
+  enum class RowType {
+    Geq,
+    Leq,
+    Eq,
+  };
 
+ private:
   struct FreeColSubstitution {
-    int row;
-    int col;
     double rhs;
     double colCost;
+    int row;
+    int col;
+    RowType rowType;
 
     void undo(const std::vector<std::pair<int, double>>& rowValues,
               const std::vector<std::pair<int, double>>& colValues,
@@ -120,7 +128,7 @@ class HighsPostsolveStack {
   struct ForcingRow {
     double side;
     int row;
-    bool atLower;
+    RowType rowType;
 
     void undo(const std::vector<std::pair<int, double>>& rowValues,
               HighsSolution& solution, HighsBasis& basis);
@@ -182,6 +190,7 @@ class HighsPostsolveStack {
 
   template <typename RowStorageFormat, typename ColStorageFormat>
   void freeColSubstitution(int row, int col, double rhs, double colCost,
+                           RowType rowType,
                            const HighsMatrixSlice<RowStorageFormat>& rowVec,
                            const HighsMatrixSlice<ColStorageFormat>& colVec) {
     rowValues.clear();
@@ -192,8 +201,8 @@ class HighsPostsolveStack {
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FreeColSubstitution{origRowIndex[row],
-                                             origColIndex[col], rhs, colCost});
+    reductionValues.push(FreeColSubstitution{rhs, colCost, origRowIndex[row],
+                                             origColIndex[col], rowType});
     reductionValues.push(rowValues);
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFreeColSubstitution);
@@ -268,12 +277,12 @@ class HighsPostsolveStack {
 
   template <typename RowStorageFormat>
   void forcingRow(int row, const HighsMatrixSlice<RowStorageFormat>& rowVec,
-                  double side, bool onLower) {
+                  double side, RowType rowType) {
     rowValues.clear();
     for (const HighsSliceNonzero& rowVal : rowVec)
       rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
 
-    reductionValues.push(ForcingRow{side, origRowIndex[row], onLower});
+    reductionValues.push(ForcingRow{side, origRowIndex[row], rowType});
     reductionValues.push(rowValues);
     reductions.push_back(ReductionType::kForcingRow);
   }

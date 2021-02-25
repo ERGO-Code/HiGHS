@@ -70,7 +70,14 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   // set basis status
   basis.col_status[col] = HighsBasisStatus::BASIC;
-  basis.row_status[row] = HighsBasisStatus::NONBASIC;
+  if (rowType == RowType::Eq)
+    basis.row_status[row] = solution.row_dual[row] > 0
+                                ? HighsBasisStatus::UPPER
+                                : HighsBasisStatus::LOWER;
+  else if (rowType == RowType::Geq)
+    basis.row_status[row] = HighsBasisStatus::LOWER;
+  else
+    basis.row_status[row] = HighsBasisStatus::UPPER;
 }
 
 void HighsPostsolveStack::DoubletonEquation::undo(
@@ -332,8 +339,8 @@ void HighsPostsolveStack::ForcingRow::undo(
                  solution.row_dual[row] * rowVal.second);
     }
     solution.col_dual[basicCol] = 0;
-    basis.row_status[row] =
-        (atLower ? HighsBasisStatus::LOWER : HighsBasisStatus::UPPER);
+    basis.row_status[row] = (rowType == RowType::Geq ? HighsBasisStatus::LOWER
+                                                     : HighsBasisStatus::UPPER);
 
     basis.col_status[basicCol] = HighsBasisStatus::BASIC;
   } else {

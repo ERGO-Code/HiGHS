@@ -68,21 +68,18 @@ class HPresolve {
   // stack to reuse free slots
   std::vector<int> freeslots;
 
-  // vectors holding implied bounds on primal and dual variables
+  // vectors holding implied bounds on primal and dual variables as well as
+  // their origins
+  std::vector<double> implColLower;
+  std::vector<double> implColUpper;
+  std::vector<int> colLowerSource;
+  std::vector<int> colUpperSource;
   std::vector<double> rowDualLower;
   std::vector<double> rowDualUpper;
+  std::vector<double> implRowDualLower;
+  std::vector<double> implRowDualUpper;
   std::vector<int> rowDualLowerSource;
   std::vector<int> rowDualUpperSource;
-
-  // vector to store a row that implies a columns upper/lower bound so that
-  // the vectors are used to cache the result of a scan for such a row
-  std::vector<int> impliedLbRow;
-  std::vector<int> impliedUbRow;
-
-  // for weakly dominated columns we need to check the uplocks/downlocks of the
-  // column
-  std::vector<int> columnUpLocks;
-  std::vector<int> columnDownLocks;
 
   // implied bounds on values of primal and dual rows computed from the bounds
   // of primal and dual variables
@@ -93,6 +90,8 @@ class HPresolve {
   std::vector<uint8_t> changedRowFlag;
   std::vector<int> changedColIndices;
   std::vector<uint8_t> changedColFlag;
+
+  std::vector<std::pair<int, int>> substitutionOpportunities;
 
   // set with the sizes and indices of equation rows sorted by the size and a
   // vector to access there iterator positions in the set by index for quick
@@ -138,19 +137,27 @@ class HPresolve {
 
   void markChangedCol(int col);
 
-  double getImpliedLb(double val, int row, int col) const;
+  double getMaxAbsColVal(int col) const;
 
-  double getImpliedUb(double val, int row, int col) const;
+  double getMaxAbsRowVal(int row) const;
 
-  double getImpliedLb(int row, int col);
+  void updateColImpliedBounds(int row, int col, double val);
 
-  double getImpliedUb(int row, int col);
+  void updateRowDualImpliedBounds(int row, int col, double val);
 
-  bool isImpliedFree(int col);
+  bool isRowIntegral(int row, double scale) const;
 
-  bool isLowerImplied(int col);
+  bool isRowInteger(int row, double scale) const;
 
-  bool isUpperImplied(int col);
+  bool isImpliedFree(int col) const;
+
+  bool isDualImpliedFree(int row) const;
+
+  bool isImpliedIntegral(int col);
+
+  bool isLowerImplied(int col) const;
+
+  bool isUpperImplied(int col) const;
 
   int countFillin(int row);
 
@@ -195,15 +202,19 @@ class HPresolve {
 
   void fixColToUpper(HighsPostsolveStack& postsolveStack, int col);
 
-  void substitute(int row, int col);
+  void substitute(int row, int col, double rhs);
 
   void changeColUpper(int col, double newUpper);
 
   void changeColLower(int col, double newLower);
 
-  void changeRowDualUpper(int row, double newUpper, int originCol);
+  void changeImplColUpper(int col, double newUpper, int originRow);
 
-  void changeRowDualLower(int row, double newLower, int originCol);
+  void changeImplColLower(int col, double newLower, int originRow);
+
+  void changeImplRowDualUpper(int row, double newUpper, int originCol);
+
+  void changeImplRowDualLower(int row, double newLower, int originCol);
 
   Result fastPresolveLoop(HighsPostsolveStack& postsolveStack);
 
@@ -216,10 +227,6 @@ class HPresolve {
   double problemSizeReduction();
 
  public:
-  void addLocks(int pos);
-
-  void removeLocks(int pos);
-
   void setInput(HighsLp& model_, const HighsOptions& options_);
 
   int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }

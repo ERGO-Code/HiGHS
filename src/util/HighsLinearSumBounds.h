@@ -28,6 +28,10 @@ class HighsLinearSumBounds {
   std::vector<int> numInfSumUpper;
   const double* varLower;
   const double* varUpper;
+  const double* implVarLower;
+  const double* implVarUpper;
+  const int* implVarLowerSource;
+  const int* implVarUpperSource;
 
  public:
   void setNumSums(int numSums) {
@@ -37,9 +41,16 @@ class HighsLinearSumBounds {
     sumUpper.resize(numSums);
   }
 
-  void setBoundArrays(const double* varLower, const double* varUpper) {
+  void setBoundArrays(const double* varLower, const double* varUpper,
+                      const double* implVarLower, const double* implVarUpper,
+                      const int* implVarLowerSource,
+                      const int* implVarUpperSource) {
     this->varLower = varLower;
     this->varUpper = varUpper;
+    this->implVarLower = implVarLower;
+    this->implVarUpper = implVarUpper;
+    this->implVarLowerSource = implVarLowerSource;
+    this->implVarUpperSource = implVarUpperSource;
   }
 
   void add(int sum, int var, double coefficient);
@@ -51,6 +62,16 @@ class HighsLinearSumBounds {
 
   void updatedVarLower(int sum, int var, double coefficient,
                        double oldVarLower);
+
+  void updatedImplVarUpper(int sum, int var, double coefficient,
+                           double oldImplVarUpper, int oldImplVarUpperSource);
+
+  void updatedImplVarLower(int sum, int var, double coefficient,
+                           double oldImplVarLower, int oldImplVarLowerSource);
+
+  double getResidualSumLower(int sum, int var, double coefficient) const;
+
+  double getResidualSumUpper(int sum, int var, double coefficient) const;
 
   double getSumLower(int sum) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -HIGHS_CONST_INF;
@@ -73,48 +94,6 @@ class HighsLinearSumBounds {
   int getNumInfSumLower(int sum) const { return numInfSumLower[sum]; }
 
   int getNumInfSumUpper(int sum) const { return numInfSumUpper[sum]; }
-
-  double getResidualSumLower(int sum, int var, double coefficient) const {
-    switch (numInfSumLower[sum]) {
-      case 0:
-        if (coefficient > 0)
-          return double(sumLower[sum] - varLower[var] * coefficient);
-        else
-          return double(sumLower[sum] - varUpper[var] * coefficient);
-        break;
-      case 1:
-        if (coefficient > 0)
-          return varLower[var] == -HIGHS_CONST_INF ? double(sumLower[sum])
-                                                   : -HIGHS_CONST_INF;
-        else
-          return varUpper[var] == HIGHS_CONST_INF ? double(sumLower[sum])
-                                                  : -HIGHS_CONST_INF;
-        break;
-      default:
-        return -HIGHS_CONST_INF;
-    }
-  }
-
-  double getResidualSumUpper(int sum, int var, double coefficient) const {
-    switch (numInfSumUpper[sum]) {
-      case 0:
-        if (coefficient > 0)
-          return double(sumUpper[sum] - varUpper[var] * coefficient);
-        else
-          return double(sumUpper[sum] - varLower[var] * coefficient);
-        break;
-      case 1:
-        if (coefficient > 0)
-          return varUpper[var] == HIGHS_CONST_INF ? double(sumUpper[sum])
-                                                  : HIGHS_CONST_INF;
-        else
-          return varLower[var] == -HIGHS_CONST_INF ? double(sumUpper[sum])
-                                                   : HIGHS_CONST_INF;
-        break;
-      default:
-        return HIGHS_CONST_INF;
-    }
-  }
 };
 
 #endif
