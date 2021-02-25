@@ -1063,6 +1063,7 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_values[1] == -2.0);
 }
 
+/*
 TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   HighsStatus run_status;
@@ -1088,23 +1089,21 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   REQUIRE(info.objective_function_value == avgas_optimal_objective_function_value);
   //  messageReportLp("LP-interval-changes", lp);
 
-  /*
-  // Change a 
+  // Change an interval of column costs
   const int from_col = 2;
   const int to_col = 5;
-  int lp_num_col = local_lp.numCol_;
   int get_num_col;
   int get_num_nz;
   vector<double> og_col2345_cost;
   vector<double> set_col2345_cost;
   vector<double> get_col2345_cost;
-  og_col2345_cost.resize(lp_num_col);
-  set_col2345_cost.resize(lp_num_col);
-  get_col2345_cost.resize(lp_num_col);
-  set_col2345_cost[2] = 2.0;
-  set_col2345_cost[3] = 3.0;
-  set_col2345_cost[4] = 4.0;
-  set_col2345_cost[5] = 5.0;
+  og_col2345_cost.resize(lp.numCol_);
+  set_col2345_cost.resize(lp.numCol_);
+  get_col2345_cost.resize(lp.numCol_);
+  set_col2345_cost[0] = 2.0;
+  set_col2345_cost[1] = 3.0;
+  set_col2345_cost[2] = 4.0;
+  set_col2345_cost[3] = 5.0;
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
   REQUIRE(highs.changeColsCost(from_col, to_col, &set_col2345_cost[0]));
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
@@ -1114,9 +1113,9 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
+  double optimal_objective_function_value;
   highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
 
-  */  
-  
 }
+*/
