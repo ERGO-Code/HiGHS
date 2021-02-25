@@ -748,7 +748,6 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
                                     usr_col_cost + num_usr_col_cost};
   // If changing the costs for a set of columns, ensure that the
   // set and data are in ascending order
-  assert(!index_collection.is_interval_ || index_collection.from_ == 0);
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
                 usr_col_cost, NULL, NULL, &local_colCost[0], NULL, NULL);
@@ -799,7 +798,6 @@ HighsStatus Highs::changeColBoundsInterface(
                                     "column upper bounds") ||
               null_data;
   if (null_data) return HighsStatus::Error;
-  assert(!index_collection.is_interval_ || index_collection.from_ == 0);
   int num_usr_col_bounds = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
@@ -874,7 +872,6 @@ HighsStatus Highs::changeRowBoundsInterface(
                                     "row upper bounds") ||
               null_data;
   if (null_data) return HighsStatus::Error;
-  assert(!index_collection.is_interval_ || index_collection.from_ == 0);
   int num_usr_row_bounds = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done

@@ -1405,16 +1405,22 @@ HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
   const int* col_mask = index_collection.mask_;
 
   // Change the costs to the user-supplied costs, according to the technique
-  int usr_col;
+  int lp_col;
+  int usr_col = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
-      usr_col = k;
+      lp_col = k;
     } else {
-      usr_col = col_set[k];
+      lp_col = col_set[k];
     }
-    int col = usr_col;
+    int col = lp_col;
+    if (interval) {
+      usr_col++;
+    } else {
+      usr_col = k;
+    }
     if (mask && !col_mask[col]) continue;
-    lp.colCost_[col] = new_col_cost[k];
+    lp.colCost_[col] = new_col_cost[usr_col];
   }
   return HighsStatus::OK;
 }
@@ -1458,17 +1464,23 @@ HighsStatus changeBounds(const HighsLogOptions& log_options,
   const int* ix_mask = index_collection.mask_;
 
   // Change the bounds to the user-supplied bounds, according to the technique
-  int usr_ix;
+  int lp_ix;
+  int usr_ix = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
-      usr_ix = k;
+      lp_ix = k;
     } else {
-      usr_ix = ix_set[k];
+      lp_ix = ix_set[k];
     }
-    int ix = usr_ix;
+    int ix = lp_ix;
+    if (interval) {
+      usr_ix++;
+    } else {
+      usr_ix = k;
+    }
     if (mask && !ix_mask[ix]) continue;
-    lower[ix] = new_lower[k];
-    upper[ix] = new_upper[k];
+    lower[ix] = new_lower[usr_ix];
+    upper[ix] = new_upper[usr_ix];
   }
   return HighsStatus::OK;
 }

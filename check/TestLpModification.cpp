@@ -1063,7 +1063,6 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_values[1] == -2.0);
 }
 
-/*
 TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   HighsStatus run_status;
@@ -1116,6 +1115,4 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   double optimal_objective_function_value;
   highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
-
 }
-*/
