@@ -11,12 +11,13 @@
 
 #include "Highs.h"
 
-int Highs_call(int numcol, int numrow, int numnz, double* colcost,
-               double* collower, double* colupper, double* rowlower,
-               double* rowupper, int* astart, int* aindex, double* avalue,
-               double* colvalue, double* coldual, double* rowvalue,
-               double* rowdual, int* colbasisstatus, int* rowbasisstatus,
-               int* modelstatus) {
+int Highs_call(const int numcol, const int numrow, const int numnz,
+               const double* colcost, const double* collower,
+               const double* colupper, const double* rowlower,
+               const double* rowupper, const int* astart, const int* aindex,
+               const double* avalue, double* colvalue, double* coldual,
+               double* rowvalue, double* rowdual, int* colbasisstatus,
+               int* rowbasisstatus, int* modelstatus) {
   Highs highs;
 
   int status =

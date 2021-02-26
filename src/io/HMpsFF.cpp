@@ -578,8 +578,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
 
     // Ignore lack of name for SIF format;
     // we know we have this case when "word" is a row name
-    if ((key == parsekey::NONE) &&
-        (key != parsekey::RHS) &&
+    if ((key == parsekey::NONE) && (key != parsekey::RHS) &&
         (rowname2idx.find(word) != rowname2idx.end())) {
       end = begin;
     }
@@ -797,8 +796,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       // it here if we found the marker instead
       marker = bound_name;
       end_marker = end_bound_name;
-    }
-    else {
+    } else {
       // The first word is the bound name, which should be ignored.
       marker = first_word(strline, end_bound_name);
       end_marker = first_word_end(strline, end_bound_name);
