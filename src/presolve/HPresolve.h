@@ -208,6 +208,10 @@ class HPresolve {
 
   void changeColLower(int col, double newLower);
 
+  void changeRowDualUpper(int row, double newUpper);
+
+  void changeRowDualLower(int row, double newLower);
+
   void changeImplColUpper(int col, double newUpper, int originRow);
 
   void changeImplColLower(int col, double newLower, int originRow);
@@ -230,6 +234,8 @@ class HPresolve {
   void setInput(HighsLp& model_, const HighsOptions& options_);
 
   int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
+
+  void shrinkProblem(HighsPostsolveStack& postSolveStack);
 
   void addToMatrix(int row, int col, double val);
 

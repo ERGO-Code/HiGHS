@@ -94,6 +94,8 @@ class HighsLinearSumBounds {
   int getNumInfSumLower(int sum) const { return numInfSumLower[sum]; }
 
   int getNumInfSumUpper(int sum) const { return numInfSumUpper[sum]; }
+
+  void shrink(const std::vector<int>& newIndices, int newSize);
 };
 
 #endif

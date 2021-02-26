@@ -287,3 +287,20 @@ double HighsLinearSumBounds::getResidualSumUpper(int sum, int var,
       return HIGHS_CONST_INF;
   }
 }
+
+void HighsLinearSumBounds::shrink(const std::vector<int>& newIndices, int newSize) {
+  int oldNumInds = newIndices.size();
+  for (int i = 0; i != oldNumInds; ++i) {
+    if (newIndices[i] != -1) {
+      sumLower[newIndices[i]] = sumLower[i];
+      sumUpper[newIndices[i]] = sumUpper[i];
+      numInfSumLower[newIndices[i]] = numInfSumLower[i];
+      numInfSumUpper[newIndices[i]] = numInfSumUpper[i];
+    }
+  }
+
+  sumLower.resize(newSize);
+  sumUpper.resize(newSize);
+  numInfSumLower.resize(newSize);
+  numInfSumUpper.resize(newSize);
+}
