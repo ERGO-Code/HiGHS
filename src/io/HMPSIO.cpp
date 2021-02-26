@@ -805,4 +805,3 @@ HighsStatus writeMPS(
   fclose(file);
   return HighsStatus::OK;
 }
-

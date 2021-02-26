@@ -362,7 +362,7 @@ int Highs_changeColsCost(void* highs, const int col, const double cost) {
 }
 
 int Highs_changeColsCostByRange(void* highs, const int from_col,
-				const int to_col, const double* cost) {
+                                const int to_col, const double* cost) {
   return ((Highs*)highs)->changeColsCost(from_col, to_col, cost);
 }
 

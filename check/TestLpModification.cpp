@@ -1064,7 +1064,6 @@ TEST_CASE("LP-getrows", "[highs_data]") {
 }
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
-
   HighsStatus run_status;
   HighsStatus return_status;
 
@@ -1076,7 +1075,8 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   highs.setHighsOptionValue("log_to_console", true);
   highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
 
-  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
   const HighsLp& lp = highs.getLp();
@@ -1085,13 +1085,14 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   double avgas_optimal_objective_function_value = info.objective_function_value;
 
-  REQUIRE(info.objective_function_value == avgas_optimal_objective_function_value);
+  REQUIRE(info.objective_function_value ==
+          avgas_optimal_objective_function_value);
   //  messageReportLp("LP-interval-changes", lp);
 
   // Change an interval of column costs
   int from_col = 2;
   int to_col = 5;
-  int set_num_col = to_col-from_col+1;
+  int set_num_col = to_col - from_col + 1;
   int get_num_col;
   int get_num_nz;
   vector<double> og_col2345_cost;
@@ -1104,9 +1105,11 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_col2345_cost[1] = 3.0;
   set_col2345_cost[2] = 4.0;
   set_col2345_cost[3] = 5.0;
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &og_col2345_cost[0],
+                        NULL, NULL, get_num_nz, NULL, NULL, NULL));
   REQUIRE(highs.changeColsCost(from_col, to_col, &set_col2345_cost[0]));
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0], NULL, NULL, get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, &get_col2345_cost[0],
+                        NULL, NULL, get_num_nz, NULL, NULL, NULL));
   REQUIRE(get_num_col == set_num_col);
   for (int usr_col = 0; usr_col < get_num_col; usr_col++)
     REQUIRE(get_col2345_cost[usr_col] == set_col2345_cost[usr_col]);
@@ -1115,12 +1118,14 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   double optimal_objective_function_value;
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
-  REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
+  highs.getHighsInfoValue("objective_function_value",
+                          optimal_objective_function_value);
+  REQUIRE(optimal_objective_function_value ==
+          avgas_optimal_objective_function_value);
 
   from_col = 0;
   to_col = 4;
-  set_num_col = to_col-from_col+1;
+  set_num_col = to_col - from_col + 1;
   vector<double> og_col01234_lower;
   vector<double> og_col01234_upper;
   vector<double> set_col01234_lower;
@@ -1134,22 +1139,30 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_col01234_lower[2] = 2.0;
   set_col01234_lower[3] = 3.0;
   set_col01234_lower[4] = 4.0;
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL, &og_col01234_lower[0], &og_col01234_upper[0], get_num_nz, NULL, NULL, NULL));
-  REQUIRE(highs.changeColsBounds(from_col, to_col, &set_col01234_lower[0], &og_col01234_upper[0]));
-  REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL, &get_col01234_lower[0], &og_col01234_upper[0], get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
+                        &og_col01234_lower[0], &og_col01234_upper[0],
+                        get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.changeColsBounds(from_col, to_col, &set_col01234_lower[0],
+                                 &og_col01234_upper[0]));
+  REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
+                        &get_col01234_lower[0], &og_col01234_upper[0],
+                        get_num_nz, NULL, NULL, NULL));
   REQUIRE(get_num_col == set_num_col);
   for (int usr_col = 0; usr_col < get_num_col; usr_col++)
     REQUIRE(get_col01234_lower[usr_col] == set_col01234_lower[usr_col]);
-  REQUIRE(highs.changeColsBounds(from_col, to_col, &og_col01234_lower[0], &og_col01234_upper[0]));
+  REQUIRE(highs.changeColsBounds(from_col, to_col, &og_col01234_lower[0],
+                                 &og_col01234_upper[0]));
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
-  REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
+  highs.getHighsInfoValue("objective_function_value",
+                          optimal_objective_function_value);
+  REQUIRE(optimal_objective_function_value ==
+          avgas_optimal_objective_function_value);
 
   int from_row = 5;
   int to_row = 9;
-  int set_num_row = to_row-from_row+1;
+  int set_num_row = to_row - from_row + 1;
   int get_num_row;
   vector<double> og_row56789_lower;
   vector<double> og_row56789_upper;
@@ -1164,17 +1177,22 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   set_row56789_lower[2] = 7.0;
   set_row56789_lower[3] = 8.0;
   set_row56789_lower[4] = 9.0;
-  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &og_row56789_lower[0], &og_row56789_upper[0], get_num_nz, NULL, NULL, NULL));
-  REQUIRE(highs.changeRowsBounds(from_row, to_row, &set_row56789_lower[0], &og_row56789_upper[0]));
-  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &get_row56789_lower[0], &og_row56789_upper[0], get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &og_row56789_lower[0],
+                        &og_row56789_upper[0], get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.changeRowsBounds(from_row, to_row, &set_row56789_lower[0],
+                                 &og_row56789_upper[0]));
+  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &get_row56789_lower[0],
+                        &og_row56789_upper[0], get_num_nz, NULL, NULL, NULL));
   REQUIRE(get_num_row == set_num_row);
   for (int usr_row = 0; usr_row < get_num_row; usr_row++)
     REQUIRE(get_row56789_lower[usr_row] == set_row56789_lower[usr_row]);
-  REQUIRE(highs.changeRowsBounds(from_row, to_row, &og_row56789_lower[0], &og_row56789_upper[0]));
+  REQUIRE(highs.changeRowsBounds(from_row, to_row, &og_row56789_lower[0],
+                                 &og_row56789_upper[0]));
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
-  REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
-
+  highs.getHighsInfoValue("objective_function_value",
+                          optimal_objective_function_value);
+  REQUIRE(optimal_objective_function_value ==
+          avgas_optimal_objective_function_value);
 }

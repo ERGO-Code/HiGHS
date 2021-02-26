@@ -721,7 +721,7 @@ void reportOption(FILE* file, const OptionRecordBool& option,
       fprintf(file,
               "type: bool, advanced: %s, range: {false, true}, default: %s\n",
               highsBoolToString(option.advanced).c_str(),
-	      highsBoolToString(option.default_value).c_str());
+              highsBoolToString(option.default_value).c_str());
       fprintf(file, "</li>\n");
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
@@ -729,7 +729,7 @@ void reportOption(FILE* file, const OptionRecordBool& option,
           file,
           "# [type: bool, advanced: %s, range: {false, true}, default: %s]\n",
           highsBoolToString(option.advanced).c_str(),
-	  highsBoolToString(option.default_value).c_str());
+          highsBoolToString(option.default_value).c_str());
       fprintf(file, "%s = %s\n", option.name.c_str(),
               highsBoolToString(*option.value).c_str());
     }
@@ -797,12 +797,14 @@ void reportOption(FILE* file, const OptionRecordString& option,
               option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
       fprintf(file, "type: string, advanced: %s, default: \"%s\"\n",
-              highsBoolToString(option.advanced).c_str(), option.default_value.c_str());
+              highsBoolToString(option.advanced).c_str(),
+              option.default_value.c_str());
       fprintf(file, "</li>\n");
     } else {
       fprintf(file, "\n# %s\n", option.description.c_str());
       fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
-              highsBoolToString(option.advanced).c_str(), option.default_value.c_str());
+              highsBoolToString(option.advanced).c_str(),
+              option.default_value.c_str());
       fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
     }
   }

@@ -47,7 +47,8 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
       vfprintf(log_options_.log_file_stream, format, argptr);
       va_start(argptr, format);
     }
-    if (*log_options_.log_to_console && log_options_.log_file_stream != stdout) {
+    if (*log_options_.log_to_console &&
+        log_options_.log_file_stream != stdout) {
       // Write to stdout unless log file stream is stdout
       if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
@@ -95,7 +96,8 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       vfprintf(log_options_.log_file_stream, format, argptr);
       va_start(argptr, format);
     }
-    if (*log_options_.log_to_console && log_options_.log_file_stream != stdout) {
+    if (*log_options_.log_to_console &&
+        log_options_.log_file_stream != stdout) {
       // Write to stdout unless log file stream is stdout
       vfprintf(stdout, format, argptr);
     }
@@ -134,8 +136,10 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
   } else {
     printf("   log_file_stream = Not NULL\n");
   }
-  printf("   output_flag = %s\n", highsBoolToString(*log_options_.output_flag).c_str());
-  printf("   log_to_console = %s\n", highsBoolToString(*log_options_.log_to_console).c_str());
+  printf("   output_flag = %s\n",
+         highsBoolToString(*log_options_.output_flag).c_str());
+  printf("   log_to_console = %s\n",
+         highsBoolToString(*log_options_.log_to_console).c_str());
   printf("   log_dev_level = %d\n\n", *log_options_.log_dev_level);
 }
 
@@ -152,4 +156,6 @@ std::string highsFormatToString(const char* format, ...) {
   return local_string;
 }
 
-const std::string highsBoolToString(const bool b) { return b ? "true" : "false"; }
+const std::string highsBoolToString(const bool b) {
+  return b ? "true" : "false";
+}

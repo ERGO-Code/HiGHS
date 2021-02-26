@@ -197,11 +197,13 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: int, advanced: %s\n", highsBoolToString(info.advanced).c_str());
+    fprintf(file, "type: int, advanced: %s\n",
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: int, advanced: %s]\n", highsBoolToString(info.advanced).c_str());
+    fprintf(file, "# [type: int, advanced: %s]\n",
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "%s = %d\n", info.name.c_str(), *info.value);
   }
 }
@@ -212,7 +214,8 @@ void reportInfo(FILE* file, const InfoRecordDouble& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: double, advanced: %s\n", highsBoolToString(info.advanced).c_str());
+    fprintf(file, "type: double, advanced: %s\n",
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());

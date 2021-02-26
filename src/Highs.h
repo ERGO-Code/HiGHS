@@ -492,8 +492,8 @@ class Highs {
   bool changeColsCost(
       const int from_col,  //!< The index of the first column whose cost changes
       const int to_col,    //!< One more than the index of the last column whose
-                         //!< cost changes
-      const double* cost  //!< Array of size num_set_entries with new costs
+                           //!< cost changes
+      const double* cost   //!< Array of size num_set_entries with new costs
   );
 
   /**
@@ -572,7 +572,7 @@ class Highs {
    * @brief Change the bounds of multiple rows given by an interval
    */
   bool changeRowsBounds(const int from_row, const int to_row,
-			const double* lower, const double* upper);
+                        const double* lower, const double* upper);
 
   /**
    * @brief Change the bounds of multiple rows given by a set of indices
