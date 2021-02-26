@@ -569,6 +569,12 @@ class Highs {
   );
 
   /**
+   * @brief Change the bounds of multiple rows given by an interval
+   */
+  bool changeRowsBounds(const int from_row, const int to_row,
+			const double* lower, const double* upper);
+
+  /**
    * @brief Change the bounds of multiple rows given by a set of indices
    */
   bool changeRowsBounds(

@@ -1382,6 +1382,23 @@ bool Highs::changeRowBounds(const int row, const double lower,
   return changeRowsBounds(1, &row, &lower, &upper);
 }
 
+bool Highs::changeRowsBounds(const int from_row, const int to_row,
+                             const double* lower, const double* upper) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numRow_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_row;
+  index_collection.to_ = to_row;
+  if (!haveHmo("changeRowsBounds")) return false;
+  call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeRowBounds");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
 bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   if (num_set_entries <= 0) return true;

@@ -1147,4 +1147,34 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
 
+  int from_row = 5;
+  int to_row = 9;
+  int set_num_row = to_row-from_row+1;
+  int get_num_row;
+  vector<double> og_row56789_lower;
+  vector<double> og_row56789_upper;
+  vector<double> set_row56789_lower;
+  vector<double> get_row56789_lower;
+  og_row56789_lower.resize(lp.numRow_);
+  og_row56789_upper.resize(lp.numRow_);
+  set_row56789_lower.resize(set_num_row);
+  get_row56789_lower.resize(lp.numRow_);
+  set_row56789_lower[0] = 5.0;
+  set_row56789_lower[1] = 6.0;
+  set_row56789_lower[2] = 7.0;
+  set_row56789_lower[3] = 8.0;
+  set_row56789_lower[4] = 9.0;
+  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &og_row56789_lower[0], &og_row56789_upper[0], get_num_nz, NULL, NULL, NULL));
+  REQUIRE(highs.changeRowsBounds(from_row, to_row, &set_row56789_lower[0], &og_row56789_upper[0]));
+  REQUIRE(highs.getRows(from_row, to_row, get_num_row, &get_row56789_lower[0], &og_row56789_upper[0], get_num_nz, NULL, NULL, NULL));
+  REQUIRE(get_num_row == set_num_row);
+  for (int usr_row = 0; usr_row < get_num_row; usr_row++)
+    REQUIRE(get_row56789_lower[usr_row] == set_row56789_lower[usr_row]);
+  REQUIRE(highs.changeRowsBounds(from_row, to_row, &og_row56789_lower[0], &og_row56789_upper[0]));
+
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+
+  highs.getHighsInfoValue("objective_function_value", optimal_objective_function_value);
+  REQUIRE(optimal_objective_function_value == avgas_optimal_objective_function_value);
+
 }
