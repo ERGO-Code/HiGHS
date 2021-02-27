@@ -17,6 +17,7 @@
 #define PRESOLVE_HIGHS_POSTSOLVE_STACK_H_
 
 #include <cassert>
+#include <cmath>
 #include <numeric>
 #include <tuple>
 #include <vector>
@@ -112,7 +113,7 @@ class HighsPostsolveStack {
     double fixValue;
     double colCost;
     int col;
-    bool atLower;
+    HighsBasisStatus fixType;
 
     void undo(const std::vector<std::pair<int, double>>& colValues,
               HighsSolution& solution, HighsBasis& basis);
@@ -121,8 +122,7 @@ class HighsPostsolveStack {
   struct RedundantRow {
     int row;
 
-    void undo(const std::vector<std::pair<int, double>>& rowValues,
-              HighsSolution& solution, HighsBasis& basis);
+    void undo(HighsSolution& solution, HighsBasis& basis);
   };
 
   struct ForcingRow {
@@ -177,6 +177,8 @@ class HighsPostsolveStack {
   std::vector<int> origRowIndex;
   std::vector<std::pair<int, double>> rowValues;
   std::vector<std::pair<int, double>> colValues;
+  int origNumCol = -1;
+  int origNumRow = -1;
 
  public:
   int getOrigRowIndex(int row) const { return origRowIndex[row]; }
@@ -243,11 +245,13 @@ class HighsPostsolveStack {
   template <typename ColStorageFormat>
   void fixedColAtLower(int col, double fixValue, double colCost,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
+    assert(std::isfinite(fixValue));
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col], true});
+    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+                                  HighsBasisStatus::LOWER});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -255,23 +259,33 @@ class HighsPostsolveStack {
   template <typename ColStorageFormat>
   void fixedColAtUpper(int col, double fixValue, double colCost,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
+    assert(std::isfinite(fixValue));
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col], false});
+    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+                                  HighsBasisStatus::UPPER});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
 
-  template <typename RowStorageFormat>
-  void redundantRow(int row, const HighsMatrixSlice<RowStorageFormat>& rowVec) {
-    rowValues.clear();
-    for (const HighsSliceNonzero& rowVal : rowVec)
-      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+  template <typename ColStorageFormat>
+  void removedFixedCol(int col, double fixValue, double colCost,
+                       const HighsMatrixSlice<ColStorageFormat>& colVec) {
+    assert(std::isfinite(fixValue));
+    colValues.clear();
+    for (const HighsSliceNonzero& colVal : colVec)
+      colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
+    reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
+                                  HighsBasisStatus::NONBASIC});
+    reductionValues.push(colValues);
+    reductions.push_back(ReductionType::kFixedCol);
+  }
+
+  void redundantRow(int row) {
     reductionValues.push(RedundantRow{row});
-    reductionValues.push(rowValues);
     reductions.push_back(ReductionType::kRedundantRow);
   }
 
@@ -308,7 +322,44 @@ class HighsPostsolveStack {
 
   void undo(HighsSolution& solution, HighsBasis& basis, double feastol) {
     reductionValues.resetPosition();
-    // todo expand solution to original index space
+
+    if (solution.col_value.size() != origColIndex.size()) return;
+    if (solution.row_value.size() != origRowIndex.size()) return;
+
+    bool dualPostSolve = solution.col_dual.size() == solution.col_value.size();
+
+    // expand solution to original index space
+    solution.col_value.resize(origNumCol);
+    for (int i = origColIndex.size() - 1; i >= 0; --i) {
+      assert(origColIndex[i] >= i);
+      solution.col_value[origColIndex[i]] = solution.col_value[i];
+    }
+
+    solution.row_value.resize(origNumRow);
+    for (int i = origRowIndex.size() - 1; i >= 0; --i) {
+      assert(origRowIndex[i] >= i);
+      solution.row_value[origRowIndex[i]] = solution.row_value[i];
+    }
+
+    if (dualPostSolve) {
+      // if dual solution is given, expand dual solution and basis to original
+      // index space
+      solution.col_dual.resize(origNumCol);
+      basis.col_status.resize(origNumCol);
+      for (int i = origColIndex.size() - 1; i >= 0; --i) {
+        basis.col_status[origColIndex[i]] = basis.col_status[i];
+        solution.col_dual[origColIndex[i]] = solution.col_dual[i];
+      }
+
+      solution.row_dual.resize(origNumRow);
+      basis.row_status.resize(origNumRow);
+      for (int i = origRowIndex.size() - 1; i >= 0; --i) {
+        basis.row_status[origRowIndex[i]] = basis.row_status[i];
+        solution.row_dual[origRowIndex[i]] = solution.row_dual[i];
+      }
+    }
+
+    // now undo the changes
     for (int i = reductions.size() - 1; i >= 0; --i) {
       switch (reductions[i]) {
         case ReductionType::kFreeColSubstitution: {
@@ -347,9 +398,113 @@ class HighsPostsolveStack {
         }
         case ReductionType::kRedundantRow: {
           RedundantRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(solution, basis);
+          break;
+        }
+        case ReductionType::kForcingRow: {
+          ForcingRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
           reduction.undo(rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kDuplicateRow: {
+          DuplicateRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(solution, basis);
+          break;
+        }
+        case ReductionType::kDuplicateColumn: {
+          DuplicateColumn reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(solution, basis, feastol);
+        }
+      }
+    }
+  }
+
+  void undoUntil(HighsSolution& solution, HighsBasis& basis, double feastol,
+                 int numReductions) {
+    reductionValues.resetPosition();
+
+    if (solution.col_value.size() != origColIndex.size()) return;
+    if (solution.row_value.size() != origRowIndex.size()) return;
+
+    bool dualPostSolve = solution.col_dual.size() == solution.col_value.size();
+
+    // expand solution to original index space
+    solution.col_value.resize(origNumCol);
+    for (int i = origColIndex.size() - 1; i >= 0; --i) {
+      assert(origColIndex[i] >= i);
+      solution.col_value[origColIndex[i]] = solution.col_value[i];
+    }
+
+    solution.row_value.resize(origNumRow);
+    for (int i = origRowIndex.size() - 1; i >= 0; --i) {
+      assert(origRowIndex[i] >= i);
+      solution.row_value[origRowIndex[i]] = solution.row_value[i];
+    }
+
+    if (dualPostSolve) {
+      // if dual solution is given, expand dual solution and basis to original
+      // index space
+      solution.col_dual.resize(origNumCol);
+      basis.col_status.resize(origNumCol);
+      for (int i = origColIndex.size() - 1; i >= 0; --i) {
+        basis.col_status[origColIndex[i]] = basis.col_status[i];
+        solution.col_dual[origColIndex[i]] = solution.col_dual[i];
+      }
+
+      solution.row_dual.resize(origNumRow);
+      basis.row_status.resize(origNumRow);
+      for (int i = origRowIndex.size() - 1; i >= 0; --i) {
+        basis.row_status[origRowIndex[i]] = basis.row_status[i];
+        solution.row_dual[origRowIndex[i]] = solution.row_dual[i];
+      }
+    }
+
+    // now undo the changes
+    for (int i = reductions.size() - 1; i >= numReductions; --i) {
+      switch (reductions[i]) {
+        case ReductionType::kFreeColSubstitution: {
+          FreeColSubstitution reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(rowValues, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kDoubletonEquation: {
+          DoubletonEquation reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kEqualityRowAddition: {
+          EqualityRowAddition reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(solution, basis);
+          break;
+        }
+        case ReductionType::kSingletonRow: {
+          SingletonRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(solution, basis);
+          break;
+        }
+        case ReductionType::kFixedCol: {
+          FixedCol reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kRedundantRow: {
+          RedundantRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(solution, basis);
           break;
         }
         case ReductionType::kForcingRow: {

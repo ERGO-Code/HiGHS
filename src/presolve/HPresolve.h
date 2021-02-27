@@ -12,7 +12,7 @@
  * @author Leona Gottwald
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
-#define PRESOLVE_HAGGREGATOR_H_
+#define PRESOLVE_HIGHS_PRESOLVE_H_
 #include <cassert>
 #include <cmath>
 #include <list>
@@ -233,6 +233,10 @@ class HPresolve {
  public:
   void setInput(HighsLp& model_, const HighsOptions& options_);
 
+  void setReductionLimit(size_t reductionLimit) {
+    this->reductionLimit = reductionLimit;
+  }
+
   int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
 
   void shrinkProblem(HighsPostsolveStack& postSolveStack);
@@ -255,6 +259,10 @@ class HPresolve {
 
   HighsModelStatus run(HighsPostsolveStack& postSolveStack);
 
+  void computeIntermediateMatrix(std::vector<int>& flagRow,
+                                 std::vector<int>& flagCol,
+                                 size_t& numreductions);
+
   void substitute(int substcol, int staycol, double offset, double scale);
 
   void removeFixedCol(int col);
@@ -276,6 +284,8 @@ class HPresolve {
   int strengthenInequalities();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolveStack);
+
+  static void debug(const HighsLp& lp, const HighsOptions& options);
 };
 
 }  // namespace presolve
