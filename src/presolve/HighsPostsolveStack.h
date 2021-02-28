@@ -28,6 +28,7 @@
 #include "util/HighsDataStack.h"
 #include "util/HighsMatrixSlice.h"
 
+class HighsOptions;
 namespace presolve {
 class HighsPostsolveStack {
   // now a section of individual classes for each type of each transformation
@@ -59,7 +60,8 @@ class HighsPostsolveStack {
     int col;
     RowType rowType;
 
-    void undo(const std::vector<std::pair<int, double>>& rowValues,
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& rowValues,
               const std::vector<std::pair<int, double>>& colValues,
               HighsSolution& solution, HighsBasis& basis);
   };
@@ -77,7 +79,8 @@ class HighsPostsolveStack {
     bool lowerTightened;
     bool upperTightened;
 
-    void undo(const std::vector<std::pair<int, double>>& colValues,
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& colValues,
               HighsSolution& solution, HighsBasis& basis);
   };
 
@@ -86,7 +89,8 @@ class HighsPostsolveStack {
     int addedEqRow;
     double eqRowScale;
 
-    void undo(HighsSolution& solution, HighsBasis& basis);
+    void undo(const HighsOptions& options, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct ForcingColumn {
@@ -94,7 +98,8 @@ class HighsPostsolveStack {
     int col;
     bool atInfiniteUpper;
 
-    void undo(const std::vector<std::pair<int, double>>& colValues,
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& colValues,
               HighsSolution& solution, HighsBasis& basis);
   };
 
@@ -105,7 +110,8 @@ class HighsPostsolveStack {
     bool colLowerTightened;
     bool colUpperTightened;
 
-    void undo(HighsSolution& solution, HighsBasis& basis);
+    void undo(const HighsOptions& options, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   // column fixed to lower or upper bound
@@ -115,14 +121,16 @@ class HighsPostsolveStack {
     int col;
     HighsBasisStatus fixType;
 
-    void undo(const std::vector<std::pair<int, double>>& colValues,
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& colValues,
               HighsSolution& solution, HighsBasis& basis);
   };
 
   struct RedundantRow {
     int row;
 
-    void undo(HighsSolution& solution, HighsBasis& basis);
+    void undo(const HighsOptions& options, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct ForcingRow {
@@ -130,7 +138,8 @@ class HighsPostsolveStack {
     int row;
     RowType rowType;
 
-    void undo(const std::vector<std::pair<int, double>>& rowValues,
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& rowValues,
               HighsSolution& solution, HighsBasis& basis);
   };
 
@@ -141,7 +150,8 @@ class HighsPostsolveStack {
     bool rowLowerTightened;
     bool rowUpperTightened;
 
-    void undo(HighsSolution& solution, HighsBasis& basis);
+    void undo(const HighsOptions& options, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct DuplicateColumn {
@@ -155,7 +165,8 @@ class HighsPostsolveStack {
     bool colIntegral;
     bool duplicateColIntegral;
 
-    void undo(HighsSolution& solution, HighsBasis& basis, double feastol);
+    void undo(const HighsOptions& options, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   /// tags for reduction
@@ -320,7 +331,8 @@ class HighsPostsolveStack {
     reductions.push_back(ReductionType::kDuplicateColumn);
   }
 
-  void undo(HighsSolution& solution, HighsBasis& basis, double feastol) {
+  void undo(const HighsOptions& options, HighsSolution& solution,
+            HighsBasis& basis) {
     reductionValues.resetPosition();
 
     if (solution.col_value.size() != origColIndex.size()) return;
@@ -367,65 +379,65 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(rowValues, colValues, solution, basis);
+          reduction.undo(options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kDoubletonEquation: {
           DoubletonEquation reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(colValues, solution, basis);
+          reduction.undo(options, colValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAddition: {
           EqualityRowAddition reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
           SingletonRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kFixedCol: {
           FixedCol reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(colValues, solution, basis);
+          reduction.undo(options, colValues, solution, basis);
           break;
         }
         case ReductionType::kRedundantRow: {
           RedundantRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kForcingRow: {
           ForcingRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(rowValues, solution, basis);
+          reduction.undo(options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kDuplicateRow: {
           DuplicateRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kDuplicateColumn: {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis, feastol);
+          reduction.undo(options, solution, basis);
         }
       }
     }
   }
 
-  void undoUntil(HighsSolution& solution, HighsBasis& basis, double feastol,
-                 int numReductions) {
+  void undoUntil(const HighsOptions& options, HighsSolution& solution,
+                 HighsBasis& basis, int numReductions) {
     reductionValues.resetPosition();
 
     if (solution.col_value.size() != origColIndex.size()) return;
@@ -472,58 +484,58 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(rowValues, colValues, solution, basis);
+          reduction.undo(options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kDoubletonEquation: {
           DoubletonEquation reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(colValues, solution, basis);
+          reduction.undo(options, colValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAddition: {
           EqualityRowAddition reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
           SingletonRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kFixedCol: {
           FixedCol reduction;
           reductionValues.pop(colValues);
           reductionValues.pop(reduction);
-          reduction.undo(colValues, solution, basis);
+          reduction.undo(options, colValues, solution, basis);
           break;
         }
         case ReductionType::kRedundantRow: {
           RedundantRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kForcingRow: {
           ForcingRow reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(rowValues, solution, basis);
+          reduction.undo(options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kDuplicateRow: {
           DuplicateRow reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(options, solution, basis);
           break;
         }
         case ReductionType::kDuplicateColumn: {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis, feastol);
+          reduction.undo(options, solution, basis);
         }
       }
     }

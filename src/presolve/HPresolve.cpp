@@ -822,7 +822,6 @@ void HPresolve::changeRowDualUpper(int row, double newUpper) {
   double oldUpper = rowDualUpper[row];
   rowDualUpper[row] = newUpper;
 
-  assert(std::isfinite(newUpper));
   // printf("tightening upper bound of column %d from %.15g to %.15g\n", col,
   //        oldUpper, newUpper);
 
@@ -1728,26 +1727,35 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolveStack,
     // in reverse, it will first restore the column primal and dual values
     // as the dual values are required to find the proper dual multiplier for
     // the row and the column that we put in the basis.
-    ++numForcingRow;
     storeRow(row);
     auto rowVector = getStoredRow();
 
-    postsolveStack.forcingRow(row, rowVector, model->rowLower_[row],
-                              HighsPostsolveStack::RowType::Geq);
-
-    // already mark the row as deleted, since otherwise it would be registered
-    // as changed/singleton in the process of fixing and removing the contained
-    // columns
-    int nfixed = 0;
+    int nfixings = 0;
     for (const HighsSliceNonzero& nonzero : rowVector) {
       if (nonzero.value() > 0) {
-        if (model->colUpper_[nonzero.index()] <=
-                implColUpper[nonzero.index()] ||
-            colUpperSource[nonzero.index()] == row) {
+        if (model->colUpper_[nonzero.index()] <= implColUpper[nonzero.index()])
+          ++nfixings;
+      } else {
+        if (model->colLower_[nonzero.index()] >= implColLower[nonzero.index()])
+          ++nfixings;
+      }
+    }
+
+    if (nfixings == rowsize[row]) {
+      ++numForcingRow;
+      postsolveStack.forcingRow(row, rowVector, model->rowLower_[row],
+                                HighsPostsolveStack::RowType::Geq);
+      // already mark the row as deleted, since otherwise it would be registered
+      // as changed/singleton in the process of fixing and removing the
+      // contained columns
+
+      markRowDeleted(row);
+      for (const HighsSliceNonzero& nonzero : rowVector) {
+        if (nonzero.value() > 0) {
           // the upper bound of the column is as tight as the implied upper
           // bound or comes from this row, which means it is not used in the
-          // rows implied bounds. Therefore we can fix the variable at its upper
-          // bound.
+          // rows implied bounds. Therefore we can fix the variable at its
+          // upper bound.
           postsolveStack.fixedColAtUpper(nonzero.index(),
                                          model->colUpper_[nonzero.index()],
                                          model->colCost_[nonzero.index()],
@@ -1756,16 +1764,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolveStack,
               model->colUpper_[nonzero.index()])
             changeColLower(nonzero.index(), model->colUpper_[nonzero.index()]);
           removeFixedCol(nonzero.index());
-          ++nfixed;
-        }
-      } else {
-        if (model->colLower_[nonzero.index()] >=
-                implColLower[nonzero.index()] ||
-            colLowerSource[nonzero.index()] == row) {
-          // the lower bound of the column is as tight as the implied lower
-          // bound or comes from this row, which means it is not used in the
-          // rows implied bounds. Therefore we can fix the variable at its lower
-          // bound.
+        } else {
           postsolveStack.fixedColAtLower(nonzero.index(),
                                          model->colLower_[nonzero.index()],
                                          model->colCost_[nonzero.index()],
@@ -1775,40 +1774,40 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolveStack,
               model->colLower_[nonzero.index()])
             changeColUpper(nonzero.index(), model->colLower_[nonzero.index()]);
           removeFixedCol(nonzero.index());
-          ++nfixed;
         }
       }
-    }
+      // now the row might be empty, but not necessarily because the implied
+      // column bounds might be implied by other rows in which case we cannot
+      // fix the column
+      postsolveStack.redundantRow(row);
 
-    // now the row might be empty, but not necessarily because the implied
-    // column bounds might be implied by other rows in which case we cannot fix
-    // the column
-    if (nfixed != 0) {
-      if (rowsize[row] == 0) {
-        markRowDeleted(row);
-        postsolveStack.redundantRow(row);
-      }
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolveStack));
       HPRESOLVE_CHECKED_CALL(checkLimits(postsolveStack));
-
-      if (!rowDeleted[row]) return rowPresolve(postsolveStack, row);
     }
     // if there are any new row singletons, also remove them immediately
   } else if (impliedRowLower >=
              model->rowUpper_[row] - options->primal_feasibility_tolerance) {
     // forcing row in the other direction
-    ++numForcingRow;
     storeRow(row);
     auto rowVector = getStoredRow();
 
-    postsolveStack.forcingRow(row, rowVector, model->rowUpper_[row],
-                              HighsPostsolveStack::RowType::Leq);
-    int nfixed = 0;
+    int nfixings = 0;
     for (const HighsSliceNonzero& nonzero : rowVector) {
       if (nonzero.value() < 0) {
-        if (model->colUpper_[nonzero.index()] <=
-                implColUpper[nonzero.index()] ||
-            colUpperSource[nonzero.index()] == row) {
+        if (model->colUpper_[nonzero.index()] <= implColUpper[nonzero.index()])
+          ++nfixings;
+      } else {
+        if (model->colLower_[nonzero.index()] >= implColLower[nonzero.index()])
+          ++nfixings;
+      }
+    }
+    if (nfixings == rowsize[row]) {
+      ++numForcingRow;
+      postsolveStack.forcingRow(row, rowVector, model->rowUpper_[row],
+                                HighsPostsolveStack::RowType::Leq);
+      markRowDeleted(row);
+      for (const HighsSliceNonzero& nonzero : rowVector) {
+        if (nonzero.value() < 0) {
           postsolveStack.fixedColAtUpper(nonzero.index(),
                                          model->colUpper_[nonzero.index()],
                                          model->colCost_[nonzero.index()],
@@ -1818,12 +1817,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolveStack,
             changeColLower(nonzero.index(), model->colUpper_[nonzero.index()]);
 
           removeFixedCol(nonzero.index());
-          ++nfixed;
-        }
-      } else {
-        if (model->colLower_[nonzero.index()] >=
-                implColLower[nonzero.index()] ||
-            colLowerSource[nonzero.index()] == row) {
+        } else {
           postsolveStack.fixedColAtLower(nonzero.index(),
                                          model->colLower_[nonzero.index()],
                                          model->colCost_[nonzero.index()],
@@ -1833,19 +1827,13 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolveStack,
             changeColUpper(nonzero.index(), model->colLower_[nonzero.index()]);
 
           removeFixedCol(nonzero.index());
-          ++nfixed;
         }
       }
-    }
-    if (nfixed != 0) {
-      if (rowsize[row] == 0) {
-        markRowDeleted(row);
-        postsolveStack.redundantRow(row);
-      }
+
+      postsolveStack.redundantRow(row);
+
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postsolveStack));
       HPRESOLVE_CHECKED_CALL(checkLimits(postsolveStack));
-
-      if (!rowDeleted[row]) return rowPresolve(postsolveStack, row);
     }
   }
 
@@ -3229,7 +3217,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // incorporate the check for the variable types that allow domination.
       if (objDiff < -options->dual_feasibility_tolerance) {
         // scaled col is better than duplicate col
-        if (colUpperInf())
+        if (colUpperInf() && model->colLower_[duplicateCol] != HIGHS_CONST_INF)
           reductionCase = kDominanceDuplicateColToLower;
         else if (duplicateColLowerInf() &&
                  (colScale < 0 || model->colUpper_[col] != HIGHS_CONST_INF) &&
@@ -3459,7 +3447,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
   for (int i = 0; i != model->numRow_; ++i) {
     if (rowDeleted[i]) continue;
-    if (rowsize[i] <= 1) {
+    if (rowsize[i] <= 1 ||
+        (rowsize[i] == 2 && model->rowLower_[i] == model->rowUpper_[i])) {
       HPRESOLVE_CHECKED_CALL(rowPresolve(postsolveStack, i));
       ++numRowBuckets;
       continue;
@@ -3714,7 +3703,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   model = lp;
   sol = reducedsol;
   basis = reducedbasis;
-  postsolveStack.undo(sol, basis, options.primal_feasibility_tolerance);
+  postsolveStack.undo(options, sol, basis);
   calculateRowValues(model, sol);
   std::vector<int> flagCol(lp.numCol_, 1);
   std::vector<int> flagRow(lp.numRow_, 1);
@@ -3739,9 +3728,12 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   }
   size_t good = postsolveStack.numReductions();
   size_t bad = 0;
+  size_t reductionLim = (good + bad) / 2;
 
+  // good = 163576, bad = 163556;
+  // good=1396295, bad=1396292;
+  // reductionLim = bad;
   do {
-    size_t reductionLim = (good + bad) / 2;
     model = lp;
     HPresolve presolve;
     presolve.setInput(model, options);
@@ -3755,16 +3747,20 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
                          ARvalue);
     sol = reducedsol;
     basis = reducedbasis;
-    postsolveStack.undoUntil(sol, basis, options.primal_feasibility_tolerance,
-                             reductionLim);
+    postsolveStack.undoUntil(options, sol, basis, reductionLim);
     calculateRowValues(model, sol);
     kktinfo = dev_kkt_check::initInfo();
 
-    if (dev_kkt_check::checkKkt(state, kktinfo))
+    bool checkresult = dev_kkt_check::checkKkt(state, kktinfo);
+    if (bad == good - 1) break;
+    if (checkresult) {
       good = reductionLim;
-    else
+    } else {
       bad = reductionLim;
-  } while (bad != good - 1);
+    }
+    reductionLim = (bad + good) / 2;
+    printf("binary search ongoing: good=%zu, bad=%zu\n", good, bad);
+  } while (true);
 
   printf("binary search finished: good=%zu, bad=%zu\n", good, bad);
   assert(false);
