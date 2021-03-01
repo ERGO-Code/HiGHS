@@ -584,7 +584,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                   "IPX model has %d rows, %d columns and %d nonzeros",
                   (int)num_row, (int)num_col, (int)Ap[num_col]);
 
-  ipx::Int load_status =
+  //  ipx::Int load_status =
       lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
                     &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 

@@ -358,7 +358,7 @@ void IPM::StepSizes(const Step& step) {
     const Vector& dxu = step.xu;
     const Vector& dzl = step.zl;
     const Vector& dzu = step.zu;
-    const double mu = iterate_->mu();
+    //    const double mu = iterate_->mu();
     const double gammaf = 0.9;
     const double gammaa = 1.0 / (1.0-gammaf);
 

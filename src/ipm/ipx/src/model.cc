@@ -168,37 +168,37 @@ Int Model::PresolveIPMStartingPoint(const double* x_user,
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(xl_temp[j] >= 0.0) ||
-            scaled_lbuser_[j] == -INFINITY && xl_temp[j] != INFINITY ||
-            scaled_lbuser_[j] != -INFINITY && xl_temp[j] == INFINITY)
+            (scaled_lbuser_[j] == -INFINITY && xl_temp[j] != INFINITY) ||
+            (scaled_lbuser_[j] != -INFINITY && xl_temp[j] == INFINITY))
             return IPX_ERROR_invalid_vector;
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(xu_temp[j] >= 0.0) ||
-            scaled_ubuser_[j] == INFINITY && xu_temp[j] != INFINITY ||
-            scaled_ubuser_[j] != INFINITY && xu_temp[j] == INFINITY)
+            (scaled_ubuser_[j] == INFINITY && xu_temp[j] != INFINITY) ||
+            (scaled_ubuser_[j] != INFINITY && xu_temp[j] == INFINITY))
             return IPX_ERROR_invalid_vector;
     }
     for (Int i = 0; i < num_constr_; ++i) {
         if (!std::isfinite(slack_temp[i]) ||
-            constr_type_[i] == '=' && !(slack_temp[i] == 0.0) ||
-            constr_type_[i] == '<' && !(slack_temp[i] >= 0.0) ||
-            constr_type_[i] == '>' && !(slack_temp[i] <= 0.0) )
+            (constr_type_[i] == '=' && !(slack_temp[i] == 0.0)) ||
+	    (constr_type_[i] == '<' && !(slack_temp[i] >= 0.0)) ||
+	    (constr_type_[i] == '>' && !(slack_temp[i] <= 0.0)) )
             return IPX_ERROR_invalid_vector;
     }
     for (Int i = 0; i < num_constr_; ++i) {
         if (!std::isfinite(y_temp[i]) ||
-            constr_type_[i] == '<' && !(y_temp[i] <= 0.0) ||
-            constr_type_[i] == '>' && !(y_temp[i] >= 0.0) )
+            (constr_type_[i] == '<' && !(y_temp[i] <= 0.0)) ||
+	    (constr_type_[i] == '>' && !(y_temp[i] >= 0.0)) )
             return IPX_ERROR_invalid_vector;
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(zl_temp[j] >= 0.0 && zl_temp[j] < INFINITY) ||
-            scaled_lbuser_[j] == -INFINITY && zl_temp[j] != 0.0)
+            (scaled_lbuser_[j] == -INFINITY && zl_temp[j] != 0.0))
             return IPX_ERROR_invalid_vector;
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(zu_temp[j] >= 0.0 && zu_temp[j] < INFINITY) ||
-            scaled_ubuser_[j] == INFINITY && zu_temp[j] != 0.0)
+            (scaled_ubuser_[j] == INFINITY && zu_temp[j] != 0.0))
             return IPX_ERROR_invalid_vector;
     }
 
