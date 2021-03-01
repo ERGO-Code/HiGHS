@@ -429,10 +429,18 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
         log_options, ((OptionRecordString*)option_records[index])[0], value);
     if (!name.compare(log_file_string)) {
       // Changing the name of the log file
-      if (log_options.log_file_stream != NULL)
+      if (log_options.log_file_stream != NULL) {
+	// Current log file stream is not null, so flush and close it
+	fflush(log_options.log_file_stream);
         fclose(log_options.log_file_stream);
-      if (!value.compare(""))
+      }
+      if (value.compare("")) {
+	// New log file name is not empty, so open it
         log_options.log_file_stream = fopen(value.c_str(), "w");
+      } else {
+	// New log file name is empty, so set the stream to null
+	log_options.log_file_stream = NULL;
+      }
     }
     return option_status;
   }
