@@ -39,7 +39,7 @@ double Infnorm(const Vector& x) {
 double Dot(const Vector& x, const Vector& y) {
     assert(x.size() == y.size());
     double d = 0.0;
-    for (Int i = 0; i < x.size(); i++)
+    for (Int i = 0; i < (Int) x.size(); i++)
         d += x[i]*y[i];
     return d;
 }
@@ -47,7 +47,7 @@ double Dot(const Vector& x, const Vector& y) {
 Int FindMaxAbs(const Vector& x) {
     double xmax = 0.0;
     Int imax = 0;
-    for (Int i = 0; i < x.size(); i++) {
+    for (Int i = 0; i < (Int) x.size(); i++) {
         if (std::abs(x[i]) > xmax) {
             xmax = std::abs(x[i]);
             imax = i;

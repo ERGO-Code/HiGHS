@@ -196,29 +196,31 @@ void MultiplyAdd(const SparseMatrix& A, const Vector& rhs, double alpha,
     const Int m = A.rows();
     const Int n = A.cols();
     if (trans == 't' || trans == 'T') {
-        assert(rhs.size() == m);
-        assert(lhs.size() == n);
+        assert((int)rhs.size() == m);
+        assert((int)lhs.size() == n);
         for (Int j = 0; j < n; j++)
             lhs[j] += alpha * DotColumn(A, j, rhs);
     } else {
-        assert(rhs.size() == n);
-        assert(lhs.size() == m);
+        assert((int)rhs.size() == n);
+        assert((int)lhs.size() == m);
         for (Int j = 0; j < n; j++)
             ScatterColumn(A, j, alpha*rhs[j], lhs);
     }
+    (void)(m);
 }
 
 void AddNormalProduct(const SparseMatrix& A, const double* D, const Vector& rhs,
                       Vector& lhs) {
     const Int m = A.rows();
     const Int n = A.cols();
-    assert(rhs.size() == m);
-    assert(lhs.size() == m);
+    assert((int)rhs.size() == m);
+    assert((int)lhs.size() == m);
     for (Int j = 0; j < n; j++) {
         double temp = DotColumn(A, j, rhs);
         if (D) temp *= D[j]*D[j];
         ScatterColumn(A, j, temp, lhs);
     }
+    (void)(m);
 }
 
 Int TriangularSolve(const SparseMatrix& A, Vector& x, char trans,
