@@ -596,8 +596,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   ipx::Info ipx_info = lps.GetInfo();
   iteration_counts.ipm += (int)ipx_info.iter;
 
-  iteration_counts.crossover += (int)ipx_info.updates_crossover;
-  // iteration_counts.crossover += (int)ipx_info.pushes_crossover;
+  // iteration_counts.crossover += (int)ipx_info.updates_crossover;
+  iteration_counts.crossover += (int)ipx_info.pushes_crossover;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
