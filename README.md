@@ -180,6 +180,11 @@ Julia
 
 - A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
 
+Rust
+----
+
+- HiGHS can be used from rust through the [`highs` crate](https://crates.io/crates/highs). The rust linear programming modeler [**good_lp**](https://crates.io/crates/good_lp) supports HiGHS. 
+
 OSI
 ---
 - `OSI_ROOT`:
