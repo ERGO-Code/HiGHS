@@ -77,7 +77,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passLp
 
-    function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
+    function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setHighsOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
