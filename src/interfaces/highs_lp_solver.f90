@@ -326,7 +326,12 @@ module highs_lp_solver
       type(c_ptr), VALUE :: h
       integer(c_int) :: nnz
     end function Highs_getNumNz
-
+    
+    function Highs_runQuiet (h) result(s) bind(c, name='Highs_runQuiet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: s
+    end function Highs_runQuiet
   
 ! int Highs_getColsByRange(
 !     void *highs,          //!< HiGHS object reference
