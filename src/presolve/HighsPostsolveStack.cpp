@@ -447,7 +447,6 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     // do postsolve using basis status if a basis is available:
     // if the merged column is nonbasic, we can just set both columns
     // to the corresponding basis status and value
-    solution.col_dual[duplicateCol] = solution.col_dual[col] * colScale;
     if (basis.col_status[col] == HighsBasisStatus::LOWER) {
       solution.col_value[col] = colLower;
       if (colScale > 0) {
@@ -530,6 +529,7 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     // setting col to its lower bound yielded a feasible value for duplicateCol
     basis.col_status[duplicateCol] = basis.col_status[col];
     basis.col_status[col] = HighsBasisStatus::LOWER;
+    solution.col_value[col] = colLower;
   }
 }
 

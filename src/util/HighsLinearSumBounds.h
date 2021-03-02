@@ -22,6 +22,10 @@
 #include "util/HighsCDouble.h"
 
 class HighsLinearSumBounds {
+  std::vector<HighsCDouble> sumLowerOrig;
+  std::vector<HighsCDouble> sumUpperOrig;
+  std::vector<int> numInfSumLowerOrig;
+  std::vector<int> numInfSumUpperOrig;
   std::vector<HighsCDouble> sumLower;
   std::vector<HighsCDouble> sumUpper;
   std::vector<int> numInfSumLower;
@@ -39,6 +43,10 @@ class HighsLinearSumBounds {
     numInfSumUpper.resize(numSums);
     sumLower.resize(numSums);
     sumUpper.resize(numSums);
+    numInfSumLowerOrig.resize(numSums);
+    numInfSumUpperOrig.resize(numSums);
+    sumLowerOrig.resize(numSums);
+    sumUpperOrig.resize(numSums);
   }
 
   void setBoundArrays(const double* varLower, const double* varUpper,
@@ -73,6 +81,20 @@ class HighsLinearSumBounds {
 
   double getResidualSumUpper(int sum, int var, double coefficient) const;
 
+  double getResidualSumLowerOrig(int sum, int var, double coefficient) const;
+
+  double getResidualSumUpperOrig(int sum, int var, double coefficient) const;
+
+  double getSumLowerOrig(int sum) const {
+    return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
+                                        : -HIGHS_CONST_INF;
+  }
+
+  double getSumUpperOrig(int sum) const {
+    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum])
+                                        : HIGHS_CONST_INF;
+  }
+
   double getSumLower(int sum) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -HIGHS_CONST_INF;
   }
@@ -91,9 +113,23 @@ class HighsLinearSumBounds {
                                     : HIGHS_CONST_INF;
   }
 
+  double getSumLower(int sum, HighsCDouble offset) const {
+    return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
+                                    : -HIGHS_CONST_INF;
+  }
+
+  double getSumUpper(int sum, HighsCDouble offset) const {
+    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
+                                    : HIGHS_CONST_INF;
+  }
+
   int getNumInfSumLower(int sum) const { return numInfSumLower[sum]; }
 
   int getNumInfSumUpper(int sum) const { return numInfSumUpper[sum]; }
+
+  int getNumInfSumLowerOrig(int sum) const { return numInfSumLowerOrig[sum]; }
+
+  int getNumInfSumUpperOrig(int sum) const { return numInfSumUpperOrig[sum]; }
 
   void shrink(const std::vector<int>& newIndices, int newSize);
 };

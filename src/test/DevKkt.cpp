@@ -225,7 +225,7 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
                       << ": L= " << state.rowLower[i] << ", Ax=" << rowV
                       << ", U=" << state.rowUpper[i]
                       << ", y=" << state.rowDual[i] << std::endl;
-          infeas = state.rowDual[i];
+          infeas = std::abs(state.rowDual[i]);
         }
       }
       if (infeas > 0) {
@@ -312,7 +312,7 @@ void checkStationarityOfLagrangian(const State& state,
       details.checked++;
       double infeas = 0;
 
-      double lagrV = state.colCost[j] - state.colDual[j];
+      HighsCDouble lagrV = HighsCDouble(state.colCost[j]) - state.colDual[j];
       for (int k = state.Astart[j]; k < state.Aend[j]; k++) {
         const int row = state.Aindex[k];
         assert(row >= 0 && row < state.numRow);
@@ -320,12 +320,12 @@ void checkStationarityOfLagrangian(const State& state,
           lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
       }
 
-      if (fabs(lagrV) > tol) {
+      if (fabs(double(lagrV)) > tol) {
         if (dev_print == 1)
           std::cout << "Column " << j
                     << " fails stationary of Lagrangian: dL/dx" << j << " = "
-                    << lagrV << ", rather than zero." << std::endl;
-        infeas = fabs(lagrV);
+                    << double(lagrV) << ", rather than zero." << std::endl;
+        infeas = fabs(double(lagrV));
       }
 
       if (infeas > 0) {
