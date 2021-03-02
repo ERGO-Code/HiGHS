@@ -1,26 +1,31 @@
 module highs_lp_solver
   interface
-    function Highs_call (n,m,nz,cc,cl,cu,rl,ru,as,ai,av, cv, cd, rv, rd, cbs, rbs, ms) result(s) bind (c, name='Highs_call')
+     function Highs_call (numcol, numrow, numnz, &
+          colcost, collower, colupper, rowlower, rowupper, &
+          astart, aindex, avalue, &
+          colvalue, coldual, rowvalue, rowdual, &
+          colbasisstatus, rowbasisstatus, modelstatus) &
+          result(s) bind (c, name='Highs_call')
       use iso_c_binding
-      integer ( c_int ), VALUE :: n
-      integer ( c_int ), VALUE :: m
-      integer ( c_int ), VALUE :: nz
-      real ( c_double ) :: cc(*)
-      real ( c_double ) :: cl(*)
-      real ( c_double ) :: cu(*)
-      real ( c_double ) :: rl(*)
-      real ( c_double ) :: ru(*)
-      integer ( c_int ) :: as(*)
-      integer ( c_int ) :: ai(*)
-      real ( c_double ) :: av(*)
-      real ( c_double ) :: cv(*)
-      real ( c_double ) :: cd(*)
-      real ( c_double ) :: rv(*)
-      real ( c_double ) :: rd(*)
-      integer ( c_int ) :: cbs(*)
-      integer ( c_int ) :: rbs(*)
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      real ( c_double ) :: colvalue(*)
+      real ( c_double ) :: coldual(*)
+      real ( c_double ) :: rowvalue(*)
+      real ( c_double ) :: rowdual(*)
+      integer ( c_int ) :: colbasisstatus(*)
+      integer ( c_int ) :: rowbasisstatus(*)
       integer ( c_int ) :: s
-      integer ( c_int ) :: ms
+      integer ( c_int ) :: modelstatus
     end function Highs_call
 
     function Highs_create () result ( h ) bind( c, name='Highs_create' )
@@ -60,20 +65,22 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_writeSolution
 
-    function Highs_passLp ( h, n, m, nz, cc, cl, cu, rl, ru, as, ai, av) result ( s ) bind ( c, name='Highs_passLp' )
+    function Highs_passLp ( h, numcol, numrow, numnz,&
+         colcost, collower, colupper, rowlower, rowupper, &
+         astart, aindex, avalue) result ( s ) bind ( c, name='Highs_passLp' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
-      integer ( c_int ), VALUE :: n
-      integer ( c_int ), VALUE :: m
-      integer ( c_int ), VALUE :: nz
-      real ( c_double ) :: cc(*)
-      real ( c_double ) :: cl(*)
-      real ( c_double ) :: cu(*)
-      real ( c_double ) :: rl(*)
-      real ( c_double ) :: ru(*)
-      integer ( c_int ) :: as(*)
-      integer ( c_int ) :: ai(*)
-      real ( c_double ) :: av(*)
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
       integer ( c_int ) :: s
     end function Highs_passLp
 
