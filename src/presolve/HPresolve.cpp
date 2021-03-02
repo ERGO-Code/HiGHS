@@ -2163,20 +2163,33 @@ void HPresolve::computeIntermediateMatrix(std::vector<int>& flagRow,
 }
 
 HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
-  int numcol = colsize.size();
-  auto iter = equations.begin();
   int numsubst = 0;
   int numsubstint = 0;
+  substitutionOpportunities.erase(
+      std::remove_if(substitutionOpportunities.begin(),
+                     substitutionOpportunities.end(),
+                     [&](const std::pair<int, int>& p) {
+                       int row = p.first;
+                       int col = p.second;
+                       return rowDeleted[row] || colDeleted[col] ||
+                              !isImpliedFree(col) || !isDualImpliedFree(row);
+                     }),
+      substitutionOpportunities.end());
 
-#if 1
   std::sort(
       substitutionOpportunities.begin(), substitutionOpportunities.end(),
       [&](const std::pair<int, int>& nz1, const std::pair<int, int>& nz2) {
-        return std::min(rowsize[nz1.first], colsize[nz1.second]) <
-               std::min(rowsize[nz2.first], colsize[nz2.second]);
+        int minLen1 = std::min(rowsize[nz1.first], colsize[nz1.second]);
+        int minLen2 = std::min(rowsize[nz2.first], colsize[nz2.second]);
+        if (minLen1 == 2 && minLen2 != 2) return true;
+        if (minLen2 == 2 && minLen1 != 2) return false;
+
+        return rowsize[nz1.first] * colsize[nz1.second] <
+               rowsize[nz2.first] * colsize[nz2.second];
       });
-  int numSubstOpportunitites = substitutionOpportunities.size();
-  for (int i = 0; i != numSubstOpportunitites; ++i) {
+
+  int nfail = 0;
+  for (size_t i = 0; i < substitutionOpportunities.size(); ++i) {
     int row = substitutionOpportunities[i].first;
     int col = substitutionOpportunities[i].second;
 
@@ -2222,15 +2235,10 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       postSolveStack.freeColSubstitution(row, col, rhs, model->colCost_[col],
                                          rowType, getStoredRow(),
                                          getColumnVector(col));
-      if (model->colLower_[col] != -HIGHS_CONST_INF)
-        changeColLower(col, -HIGHS_CONST_INF);
-      if (model->colUpper_[col] != HIGHS_CONST_INF)
-        changeColUpper(col, HIGHS_CONST_INF);
+      substitutionOpportunities[i].first = -1;
 
       substitute(row, col, rhs);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
-      HPRESOLVE_CHECKED_CALL(presolveChangedRows(postSolveStack));
-      HPRESOLVE_CHECKED_CALL(presolveChangedCols(postSolveStack));
       HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
       continue;
     }
@@ -2242,7 +2250,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         maxVal = getMaxAbsColVal(col);
         if (std::abs(Avalue[nzPos]) <
             maxVal * options->presolve_pivot_threshold)
-          continue;
+          substitutionOpportunities[i].first = -1;
       }
     }
 
@@ -2255,8 +2263,16 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       if (fillin > options->presolve_substitution_maxfillin) break;
     }
 
-    if (fillin > options->presolve_substitution_maxfillin) continue;
+    if (fillin > options->presolve_substitution_maxfillin) {
+      ++nfail;
+      // if the fill in is too much for multiple tries, then we stop
+      // as this indicates that the rows/columns are becoming too dense
+      // for substitutions
+      if (nfail == 3) break;
+      continue;
+    }
 
+    nfail = 0;
     ++numsubst;
     if (model->integrality_[col] == HighsVarType::INTEGER) ++numsubstint;
     double rhs;
@@ -2292,176 +2308,6 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       substitutionOpportunities.end());
 
   return Result::Ok;
-
-  // return Result::Ok;
-  if (numsubst != 0) {
-    HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-  }
-#endif
-  HighsHashTable<int, int> fillinCache;
-  std::vector<uint8_t> notimpliedfree(numcol);
-  std::vector<std::pair<int, double>> aggr_cands;
-  aggr_cands.reserve(colsize.size());
-
-  int nonzerosCheckedSinceLastSubstitution = 0;
-
-  std::pair<int, int> lastCheckedEq;
-
-  while (iter != equations.end()) {
-    // if (nonzerosCheckedSinceLastSubstitution > 10000) break;
-    // extract sparsest equation
-    lastCheckedEq = *iter;
-    ++iter;
-    int sparsesteq = lastCheckedEq.second;
-
-    // extract aggregation candidates from equation. rule out integers if
-    // integrality of coefficients does not work out, then rule out columns that
-    // are not implied free
-    double minintcoef = HIGHS_CONST_INF;
-    int ncont = 0;
-
-    storeRow(sparsesteq);
-
-    nonzerosCheckedSinceLastSubstitution += rowsize[sparsesteq];
-
-    aggr_cands.clear();
-    double row_numerics_threshold = 0;
-    for (int rowiter : rowpositions) {
-      int col = Acol[rowiter];
-      double absval = std::abs(Avalue[rowiter]);
-
-      row_numerics_threshold = std::max(row_numerics_threshold, absval);
-
-      if (model->integrality_[col] == HighsVarType::INTEGER) {
-        // if there are non-integer variables in the row, no integer variable
-        // can be used
-        if (ncont != 0) continue;
-
-        // if all variables in a row are integer variables, we still need to
-        // check whether their coefficients are all integral
-        minintcoef = std::min(absval, minintcoef);
-        aggr_cands.emplace_back(col, absval);
-      } else {
-        // if this is the first continuous variable, we remove all integer
-        // candidates that were stored before
-        if (ncont == 0) aggr_cands.clear();
-
-        aggr_cands.emplace_back(col, absval);
-        ++ncont;
-      }
-    }
-
-    row_numerics_threshold *= options->presolve_pivot_threshold;
-    assert(ncont == 0 || ncont == int(aggr_cands.size()));
-
-    // if all candidates are integral, we check that all coefficients are
-    // integral when divided by the minimal absolute coefficient of the row. If
-    // that is the case we keep all candidates with a value that is equal to the
-    // minimal absolute coefficient value. Otherwise we skip this equation for
-    // substitution.
-    if (ncont == 0) {
-      // all candidates are integer variables so we need to check if
-      // all coefficients are integral when divided by the smallest absolute
-      // coefficient value
-      bool suitable = true;
-      for (std::pair<int, double>& cand : aggr_cands) {
-        double divval = cand.second / minintcoef;
-        double intval = std::floor(divval + 0.5);
-        if (std::abs(divval - intval) > options->mip_epsilon) {
-          suitable = false;
-          break;
-        }
-      }
-
-      if (!suitable) continue;
-
-      // candidates with the coefficient equal to the minimal absolute
-      // coefficient value are suitable for substitution, other candidates are
-      // now removed
-      double maxintcoef = minintcoef + options->mip_epsilon;
-      aggr_cands.erase(std::remove_if(aggr_cands.begin(), aggr_cands.end(),
-                                      [&](const std::pair<int, double>& cand) {
-                                        return cand.second > maxintcoef;
-                                      }),
-                       aggr_cands.end());
-    }
-
-    // remove candidates that have already been checked to be not implied free,
-    // or that do not fulfill the numerics criteria to have their absolute
-    // coefficient value in this row above the specified markowitz threshold
-    // times the maximal absolute value in the candidates row or column. Note
-    // that the "or"-nature of this numerics condition is not accidental.
-    aggr_cands.erase(
-        std::remove_if(aggr_cands.begin(), aggr_cands.end(),
-                       [&](const std::pair<int, double>& cand) {
-                         if (notimpliedfree[cand.first]) return true;
-
-                         if (row_numerics_threshold > cand.second &&
-                             col_numerics_threshold[cand.first] > cand.second)
-                           return true;
-
-                         return false;
-                       }),
-        aggr_cands.end());
-
-    // check if any candidates are left
-    if (aggr_cands.empty()) continue;
-
-    // now sort the candidates to prioritize sparse columns, tiebreak by
-    // preferring columns with a larger coefficient in this row which is better
-    // for numerics
-    std::sort(
-        aggr_cands.begin(), aggr_cands.end(),
-        [&](const std::pair<int, double>& cand1,
-            const std::pair<int, double>& cand2) {
-          return std::make_pair(colsize[cand1.first], -std::abs(cand1.second)) <
-                 std::make_pair(colsize[cand2.first], -std::abs(cand2.second));
-        });
-    fillinCache.clear();
-    int chosencand = -1;
-    for (std::pair<int, double>& cand : aggr_cands) {
-      bool isimpliedfree = isImpliedFree(cand.first);
-
-      if (!isimpliedfree) {
-        notimpliedfree[cand.first] = true;
-        continue;
-      }
-
-      if (!checkFillin(fillinCache, sparsesteq, cand.first)) continue;
-
-      // take the first suitable candidate
-      chosencand = cand.first;
-      break;
-    }
-
-    // if we have found no suitable candidate we continue with the next equation
-    if (chosencand == -1) continue;
-
-    // finally perform the substitution with the chosen candidate and update the
-    // iterator to point to the next sparsest equation
-    ++numsubst;
-    if (model->integrality_[chosencand] == HighsVarType::INTEGER) ++numsubstint;
-
-    // printf("substituting col %d with row %d\n", chosencand, sparsesteq);
-    // debugPrintSubMatrix(sparsesteq, chosencand);
-
-    postSolveStack.freeColSubstitution(
-        sparsesteq, chosencand, model->rowUpper_[sparsesteq],
-        model->colCost_[chosencand], HighsPostsolveStack::RowType::Eq,
-        getStoredRow(), getColumnVector(chosencand));
-    substitute(sparsesteq, chosencand, model->rowUpper_[sparsesteq]);
-
-    HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
-    // HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
-    HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
-
-    nonzerosCheckedSinceLastSubstitution = 0;
-
-    iter = equations.upper_bound(lastCheckedEq);
-  }
-
-  printf("performed %d(%d int) substitutions\n", numsubst, numsubstint);
-  return checkLimits(postSolveStack);
 }
 
 void HPresolve::substitute(int substcol, int staycol, double offset,

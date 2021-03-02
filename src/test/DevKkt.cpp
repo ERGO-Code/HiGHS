@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iostream>
 
+#include "HighsCDouble.h"
 #include "presolve/PresolveUtils.h"
 
 namespace presolve {
