@@ -90,7 +90,7 @@ Int LpSolver::Solve() {
         }
         PrintSummary();
     }
-    catch (std::bad_alloc) {
+    catch (const std::bad_alloc&) {
         control_.Log() << " out of memory\n";
         info_.status = IPX_STATUS_out_of_memory;
     }
@@ -485,6 +485,8 @@ void LpSolver::RunCrossover() {
             crossover.time_primal() + crossover.time_dual();
         info_.updates_crossover =
             crossover.primal_pivots() + crossover.dual_pivots();
+        info_.pushes_crossover =
+            crossover.primal_pushes() + crossover.dual_pushes();
         if (info_.status_crossover != IPX_STATUS_optimal) {
             // Crossover failed. Discard solution.
             x_crossover_.resize(0);
@@ -497,7 +499,7 @@ void LpSolver::RunCrossover() {
     // Recompute vertex solution and set basic statuses.
     basis_->ComputeBasicSolution(x_crossover_, y_crossover_, z_crossover_);
     basic_statuses_.resize(n+m);
-    for (Int j = 0; j < basic_statuses_.size(); j++) {
+    for (Int j = 0; j < (Int) basic_statuses_.size(); j++) {
         if (basis_->IsBasic(j)) {
             basic_statuses_[j] = IPX_basic;
         } else {

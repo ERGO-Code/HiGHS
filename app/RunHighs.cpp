@@ -198,7 +198,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
 
   // Solve LP case.
   Highs highs(use_options);
-  const HighsOptions& options = highs.getHighsOptions();
+  //  const HighsOptions& options = highs.getHighsOptions();
 
   // // Load problem.
   highs.passModel(lp);

@@ -16,6 +16,7 @@ struct IPM::Step {
     Step& operator+=(const Step& rhs) {
         x += rhs.x; xl += rhs.xl; xu += rhs.xu;
         y += rhs.y; zl += rhs.zl; zu += rhs.zu;
+        return *this;
     }
 };
 
@@ -357,7 +358,7 @@ void IPM::StepSizes(const Step& step) {
     const Vector& dxu = step.xu;
     const Vector& dzl = step.zl;
     const Vector& dzu = step.zu;
-    const double mu = iterate_->mu();
+    //    const double mu = iterate_->mu();
     const double gammaf = 0.9;
     const double gammaa = 1.0 / (1.0-gammaf);
 

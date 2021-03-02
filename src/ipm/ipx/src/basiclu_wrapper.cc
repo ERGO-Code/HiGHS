@@ -111,6 +111,7 @@ void BasicLu::_GetFactors(SparseMatrix* L, SparseMatrix* U, Int* rowperm,
         // Remove unit diagonal from L.
         Int num_dropped = RemoveDiagonal(*L, nullptr);
         assert(num_dropped == dim);
+        (void)(num_dropped);
     }
     if (dependent_cols) {
         // Dependent columns are at the end of the BASICLU pivot sequence.

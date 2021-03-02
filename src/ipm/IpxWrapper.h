@@ -584,9 +584,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                   "IPX model has %d rows, %d columns and %d nonzeros",
                   (int)num_row, (int)num_col, (int)Ap[num_col]);
 
-  ipx::Int load_status =
-      lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
-                    &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
+  //  ipx::Int load_status =
+  lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
+                &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 
   // todo: handle load error
   ipx::Int solve_status = lps.Solve();
@@ -596,8 +596,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   ipx::Info ipx_info = lps.GetInfo();
   iteration_counts.ipm += (int)ipx_info.iter;
 
-  iteration_counts.crossover += (int)ipx_info.updates_crossover;
-  // iteration_counts.crossover += (int)ipx_info.pushes_crossover;
+  // iteration_counts.crossover += (int)ipx_info.updates_crossover;
+  iteration_counts.crossover += (int)ipx_info.pushes_crossover;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
