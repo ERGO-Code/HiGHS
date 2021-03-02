@@ -84,13 +84,53 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passLp
 
-    function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
+    function Highs_setIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setHighsIntOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_setIntOptionValue
+
+    function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setHighsOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
       character( c_char ) :: v(*)
       integer ( c_int ) :: s
     end function Highs_setOptionValue
+
+    function Highs_getIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsIntOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getIntOptionValue
+
+    function Highs_getHighsOptionType ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsOptionType' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getHighsOptionType
+
+    function Highs_getIntInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsIntInfoValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getIntInfoValue
+
+    function Highs_getDoubleInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsDoubleInfoValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      real ( c_double ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getDoubleInfoValue
 
     function Highs_getSolution (h, cv, cd, rv, rd) result ( s ) bind ( c, name='Highs_getSolution' )
       use iso_c_binding
@@ -109,6 +149,13 @@ module highs_lp_solver
       integer ( c_int ) :: rbs(*)
       integer ( c_int ) :: s
     end function Highs_getBasis
+    
+    function Highs_getModelStatus (h, scaled_model) result(model_status) bind(c, name='Highs_getModelStatus')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: model_status
+      integer ( c_int ) :: scaled_model
+    end function Highs_getModelStatus
 
     function Highs_getObjectiveValue (h) result(ov) bind(c, name='Highs_getObjectiveValue')
       use iso_c_binding
@@ -333,6 +380,13 @@ module highs_lp_solver
       type(c_ptr), VALUE :: h
       integer(c_int) :: nnz
     end function Highs_getNumNz
+
+    function Highs_getObjectiveSense (h, sense) result(s) bind(c, name='Highs_getObjectiveSense')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: sense
+      integer ( c_int ) :: s
+    end function Highs_getObjectiveSense
 
   
 ! int Highs_getColsByRange(

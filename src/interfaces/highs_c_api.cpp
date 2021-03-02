@@ -106,6 +106,7 @@ int Highs_setHighsBoolOptionValue(void* highs, const char* option,
 
 int Highs_setHighsIntOptionValue(void* highs, const char* option,
                                  const int value) {
+  printf("CAPI: setHighsIntOptionValue = %d\n", value);
   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
 }
 

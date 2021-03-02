@@ -79,6 +79,9 @@ program fortrantest
   integer ( c_int ) modelstatus
   integer ( c_int ) runstatus
   
+  ! For the full API test
+  type ( c_ptr ) :: highs
+  
   ! For the row-wise matrix
   integer ( c_int ) arstart(numrow)
   integer ( c_int ) arindex(numnz)
@@ -86,8 +89,17 @@ program fortrantest
   
   real, parameter :: inf = 1e30
   integer, parameter :: runstatus_ok = 0
+  integer, parameter :: scaled_model = 0
   integer col, row
-  real objective_value
+  integer simplex_iteration_count, primal_status, dual_status
+  double precision objective_function_value
+  integer ( c_int ) option_type
+
+  integer sense;
+  integer ( c_int ) simplex_scale_strategy
+
+  double precision, pointer :: double_null(:)
+  integer, pointer :: integer_null(:)
   
   colcost(1) = 2
   colcost(2) = 3
@@ -100,7 +112,7 @@ program fortrantest
   
   rowlower(1) = -inf
   rowlower(2) = 10.0
-  rowlower(2) = 8.0
+  rowlower(3) = 8.0
   
   rowupper(1) = 6.0
   rowupper(2) = 14.0
@@ -126,6 +138,7 @@ program fortrantest
        astart, aindex, avalue,&
        colvalue, coldual, rowvalue, rowdual,&
        colbasisstatus, rowbasisstatus, modelstatus)
+
   if (runstatus .ne. runstatus_ok) then
      write(*, '(a, i1, a, i2)')'Highs_call run status is not ', runstatus, ' but ', runstatus
      stop
@@ -133,14 +146,14 @@ program fortrantest
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
       
   if (modelstatus .eq. 9) then
-     objective_value = 0
+     objective_function_value = 0
      ! Report the column primal and dual values, and basis status
      do col = 1, numcol
         write(*, '(a, i1, a, f10.4, a, f10.4, a, i2)') &
              'Col', col, ' = ', colvalue(col), &
              '; dual = ', coldual(col), &
              '; status = ', colbasisstatus(col)
-        objective_value = objective_value + colvalue(col)*colcost(col)
+        objective_function_value = objective_function_value + colvalue(col)*colcost(col)
      enddo
      ! Report the row primal and dual values, and basis status
      do row = 1, numrow
@@ -149,9 +162,10 @@ program fortrantest
              '; dual = ', rowdual(row), &
              '; status = ', rowbasisstatus(row)
      enddo
-     write(*, '(a, f10.4)')'Optimal objective value = ', objective_value
+     write(*, '(a, f10.4)')'Optimal objective value = ', objective_function_value
   endif
 
+  ! Define the constraint matrix row-wise, as it is added to the LP with the rows
   arstart(1) = 0
   arstart(2) = 1
   arstart(3) = 3
@@ -166,4 +180,81 @@ program fortrantest
   arvalue(4) = 2
   arvalue(5) = 1
 
+  highs = Highs_create()
+  call C_F_POINTER(C_NULL_PTR, double_null, [0])
+  call C_F_POINTER(C_NULL_PTR, integer_null, [0])
+
+  ! Add two columns to the empty LP
+  runstatus = Highs_addCols(highs, numcol, colcost, collower, colupper, 0, integer_null, integer_null, double_null);
+  ! Add three rows to the 2-column LP
+  runstatus = Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue)
+
+  runstatus = Highs_getObjectiveSense(highs, sense);
+  write(*, '(a, i2)')"LP problem has objective sense = ", sense
+  call assert(sense .eq. 1, "Objective sense")
+  
+  sense = -1 * sense
+  runstatus = Highs_changeObjectiveSense(highs, sense);
+  runstatus = Highs_getObjectiveSense(highs, sense);
+  call assert(sense .eq. -1, "Changed Objective sense")
+  
+  runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+  print*, simplex_scale_strategy
+!  runstatus = Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy)
+
+  ! There are some functions to check what type of option value you should provide.
+!  runstatus = Highs_getHighsOptionType(highs, "simplex_scale_strategy", option_type);
+!  call assert(runstatus .eq. 0, "getHighsOptionType runstatus")
+!  call assert(option_type .eq. 1, "getHighsOptionType option_type")
+!  runstatus = Highs_getHighsOptionType(highs, "bad_option", option_type)
+!  call assert(runstatus .ne. 0, "getHighsOptionType runstatus")
+
+  runstatus = Highs_run(highs);
+  ! Get the model status
+  modelstatus = Highs_getModelStatus(highs, scaled_model);
+
+  write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
+!  write(*, '(a, i1, a, a)')'Run status = ', runstatus, '; Model status = ', Highs_highsModelStatusToChar(highs, modelstatus)
+
+  runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value", objective_function_value);
+  runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count", simplex_iteration_count);
+  runstatus = Highs_getIntInfoValue(highs, "primal_status", primal_status);
+  runstatus = Highs_getIntInfoValue(highs, "dual_status", dual_status);
+
+  write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value,&
+       "; Iteration count = ", simplex_iteration_count
+  if (modelstatus .eq. 9) then
+!    printf("Solution primal status = %s\n", Highs_primalDualStatusToChar(highs, primal_status));
+!    printf("Solution dual status = %s\n", Highs_primalDualStatusToChar(highs, dual_status));
+    ! Get the primal and dual solution
+    runstatus = Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
+    ! Get the basis
+    runstatus = Highs_getBasis(highs, colbasisstatus, rowbasisstatus);
+     ! Report the column primal and dual values, and basis status
+     do col = 1, numcol
+        write(*, '(a, i1, a, f10.4, a, f10.4, a, i2)') &
+             'Col', col, ' = ', colvalue(col), &
+             '; dual = ', coldual(col), &
+             '; status = ', colbasisstatus(col)
+     enddo
+     ! Report the row primal and dual values, and basis status
+     do row = 1, numrow
+        write(*, '(a, i1, a, f10.4, a, f10.4, a, i2)') &
+             'Row', row, ' = ', rowvalue(row), &
+             '; dual = ', rowdual(row), &
+             '; status = ', rowbasisstatus(row)
+     enddo
+  endif
+
+
 end program fortrantest
+
+subroutine assert ( logic, message)
+  logical logic
+  character*(*) message
+  if (.not.logic) then
+     write(*, '(a, a)')'assert fail for ', message
+     stop
+  endif  
+end subroutine assert
+
