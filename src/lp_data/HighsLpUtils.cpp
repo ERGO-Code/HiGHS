@@ -262,20 +262,23 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   // columns in the model.
   //
   int local_col;
-  int data_col;
   int ml_col;
+  int usr_col = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_col = k;
-      data_col = k;
     } else {
       local_col = index_collection.set_[k];
-      data_col = k;
+    }
+    if (index_collection.is_interval_) {
+      usr_col++;
+    } else {
+      usr_col = k;
     }
     ml_col = ml_col_os + local_col;
     if (index_collection.is_mask_ && !index_collection.mask_[local_col])
       continue;
-    double abs_cost = fabs(cost[data_col]);
+    double abs_cost = fabs(cost[usr_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
@@ -338,59 +341,62 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   int num_infinite_lower_bound = 0;
   int num_infinite_upper_bound = 0;
   int local_ix;
-  int data_ix;
   int ml_ix;
+  int usr_ix = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_ix = k;
-      data_ix = k;
     } else {
       local_ix = index_collection.set_[k];
-      data_ix = k;
+    }
+    if (index_collection.is_interval_) {
+      usr_ix++;
+    } else {
+      usr_ix = k;
     }
     ml_ix = ml_ix_os + local_ix;
     if (index_collection.is_mask_ && !index_collection.mask_[local_ix])
       continue;
 
-    if (!highs_isInfinity(-lower[data_ix])) {
+    if (!highs_isInfinity(-lower[usr_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
-      bool infinite_lower_bound = lower[data_ix] <= -infinite_bound;
+      bool infinite_lower_bound = lower[usr_ix] <= -infinite_bound;
       if (infinite_lower_bound) {
-        lower[data_ix] = -HIGHS_CONST_INF;
+        lower[usr_ix] = -HIGHS_CONST_INF;
         num_infinite_lower_bound++;
       }
     }
-    if (!highs_isInfinity(upper[data_ix])) {
+    if (!highs_isInfinity(upper[usr_ix])) {
       // Check whether a finite upper bound will be treated as Infinity
-      bool infinite_upper_bound = upper[data_ix] >= infinite_bound;
+      bool infinite_upper_bound = upper[usr_ix] >= infinite_bound;
       if (infinite_upper_bound) {
-        upper[data_ix] = HIGHS_CONST_INF;
+        upper[usr_ix] = HIGHS_CONST_INF;
         num_infinite_upper_bound++;
       }
     }
     // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = lower[data_ix] <= upper[data_ix];
+    bool legalLowerUpperBound = lower[usr_ix] <= upper[usr_ix];
     if (!legalLowerUpperBound) {
       // Leave inconsistent bounds to be used to deduce infeasibility
       highsLogUser(options.log_options, HighsLogType::WARNING,
                    "%3s  %12d has inconsistent bounds [%12g, %12g]\n", type,
-                   ml_ix, lower[data_ix], upper[data_ix]);
+                   ml_ix, lower[usr_ix], upper[usr_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = lower[data_ix] < infinite_bound;
+    bool legalLowerBound = lower[usr_ix] < infinite_bound;
     if (!legalLowerBound) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
                    "%3s  %12d has lower bound of %12g >= %12g\n", type, ml_ix,
-                   lower[data_ix], infinite_bound);
+                   lower[usr_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = upper[data_ix] > -infinite_bound;
+    bool legalUpperBound = upper[usr_ix] > -infinite_bound;
     if (!legalUpperBound) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
                    "%3s  %12d has upper bound of %12g <= %12g\n", type, ml_ix,
-                   upper[data_ix], -infinite_bound);
+                   upper[usr_ix], -infinite_bound);
       error_found = true;
     }
   }
