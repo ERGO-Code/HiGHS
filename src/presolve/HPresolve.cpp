@@ -3638,6 +3638,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 }
 
 void HPresolve::setRelaxedImpliedBounds() {
+  double hugeBound = options->primal_feasibility_tolerance / HIGHS_CONST_TINY;
   for (int i = 0; i != model->numCol_; ++i) {
     if (model->colLower_[i] >= implColLower[i] &&
         model->colUpper_[i] <= implColUpper[i])
@@ -3651,13 +3652,23 @@ void HPresolve::setRelaxedImpliedBounds() {
     }
 
     double boundRelax =
-        1024.0 * options->primal_feasibility_tolerance / minAbsVal;
+        128.0 * options->primal_feasibility_tolerance / minAbsVal;
 
-    double newLb = implColLower[i] - boundRelax;
-    if (newLb > model->colLower_[i]) model->colLower_[i] = newLb;
+    if (std::abs(implColLower[i]) <= hugeBound) {
+      double newLb =
+          implColLower[i] -
+          std::max(boundRelax, options->primal_feasibility_tolerance *
+                                   std::abs(implColLower[i]));
+      if (newLb > model->colLower_[i]) model->colLower_[i] = newLb;
+    }
 
-    double newUb = implColUpper[i] + boundRelax;
-    if (newUb < model->colUpper_[i]) model->colUpper_[i] = newUb;
+    if (std::abs(implColUpper[i]) <= hugeBound) {
+      double newUb =
+          implColUpper[i] +
+          std::max(boundRelax, options->primal_feasibility_tolerance *
+                                   std::abs(implColUpper[i]));
+      if (newUb < model->colUpper_[i]) model->colUpper_[i] = newUb;
+    }
   }
 }
 
@@ -3681,7 +3692,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     Highs highs;
     highs.passModel(model);
     highs.passHighsOptions(options);
-    // highs.setHighsOptionValue("presolve", "off");
+    highs.setHighsOptionValue("presolve", "off");
     highs.run();
     if (highs.getModelStatus(true) != HighsModelStatus::OPTIMAL) return;
     reducedsol = highs.getSolution();
