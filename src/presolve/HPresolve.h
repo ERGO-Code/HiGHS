@@ -68,6 +68,7 @@ class HPresolve {
   // stack to reuse free slots
   std::vector<int> freeslots;
 
+
   // vectors holding implied bounds on primal and dual variables as well as
   // their origins
   std::vector<double> implColLower;
@@ -99,6 +100,7 @@ class HPresolve {
   std::set<std::pair<int, int>> equations;
   std::vector<std::set<std::pair<int, int>>::iterator> eqiters;
 
+  bool shrinkProblemEnabled;
   size_t reductionLimit;
 
   // vectors storing singleton rows and columns

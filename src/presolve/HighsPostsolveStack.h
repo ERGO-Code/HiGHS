@@ -296,7 +296,7 @@ class HighsPostsolveStack {
   }
 
   void redundantRow(int row) {
-    reductionValues.push(RedundantRow{row});
+    reductionValues.push(RedundantRow{origRowIndex[row]});
     reductions.push_back(ReductionType::kRedundantRow);
   }
 

@@ -6,6 +6,7 @@
 #include <limits>
 
 #include "Highs.h"
+#include "HighsLinearSumBounds.h"
 #include "HighsLpUtils.h"
 #include "HighsSolution.h"
 #include "lp_data/HConst.h"
@@ -79,21 +80,11 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
   model = &model_;
   options = &options_;
 
-  colhead.resize(model->numCol_, -1);
-  colsize.resize(model->numCol_);
   col_numerics_threshold.resize(model->numCol_);
   colLowerSource.resize(model->numCol_, -1);
   colUpperSource.resize(model->numCol_, -1);
   implColLower.resize(model->numCol_, -HIGHS_CONST_INF);
   implColUpper.resize(model->numCol_, HIGHS_CONST_INF);
-
-  rowroot.resize(model->numRow_, -1);
-  rowsize.resize(model->numRow_);
-
-  impliedRowBounds.setBoundArrays(
-      model->colLower_.data(), model->colUpper_.data(), implColLower.data(),
-      implColUpper.data(), colLowerSource.data(), colUpperSource.data());
-  impliedRowBounds.setNumSums(model->numRow_);
 
   rowDualLower.resize(model->numRow_, -HIGHS_CONST_INF);
   rowDualUpper.resize(model->numRow_, HIGHS_CONST_INF);
@@ -106,12 +97,6 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
     if (model->rowLower_[i] == -HIGHS_CONST_INF) rowDualLower[i] = 0;
     if (model->rowUpper_[i] == HIGHS_CONST_INF) rowDualUpper[i] = 0;
   }
-
-  impliedDualRowBounds.setBoundArrays(
-      rowDualLower.data(), rowDualUpper.data(), implRowDualLower.data(),
-      implRowDualUpper.data(), rowDualLowerSource.data(),
-      rowDualUpperSource.data());
-  impliedDualRowBounds.setNumSums(model->numCol_);
 
   fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
 
@@ -282,7 +267,10 @@ void HPresolve::unlink(int pos) {
   --colsize[Acol[pos]];
 
   if (!colDeleted[Acol[pos]]) {
-    if (colsize[Acol[pos]] == 1) singletonColumns.push_back(Acol[pos]);
+    if (colsize[Acol[pos]] == 1)
+      singletonColumns.push_back(Acol[pos]);
+    else
+      markChangedCol(Acol[pos]);
 
     impliedDualRowBounds.remove(Acol[pos], Arow[pos], Avalue[pos]);
     if (colUpperSource[Acol[pos]] == Arow[pos])
@@ -300,7 +288,10 @@ void HPresolve::unlink(int pos) {
   --rowsize[Arow[pos]];
 
   if (!rowDeleted[Arow[pos]]) {
-    if (rowsize[Arow[pos]] == 1) singletonRows.push_back(Arow[pos]);
+    if (rowsize[Arow[pos]] == 1)
+      singletonRows.push_back(Arow[pos]);
+    else
+      markChangedRow(Arow[pos]);
     impliedRowBounds.remove(Arow[pos], Acol[pos], Avalue[pos]);
 
     if (rowDualUpperSource[Arow[pos]] == Acol[pos])
@@ -597,6 +588,20 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
       model->row_names_[newRowIndex[i]] = model->row_names_[i];
       changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
     }
+  }
+
+  for (int i = 0; i != model->numCol_; ++i) {
+    if (colLowerSource[i] != -1)
+      colLowerSource[i] = newRowIndex[colLowerSource[i]];
+    if (colUpperSource[i] != -1)
+      colUpperSource[i] = newRowIndex[colUpperSource[i]];
+  }
+
+  for (int i = 0; i != model->numRow_; ++i) {
+    if (rowDualLowerSource[i] != -1)
+      rowDualLowerSource[i] = newColIndex[rowDualLowerSource[i]];
+    if (rowDualUpperSource[i] != -1)
+      rowDualUpperSource[i] = newColIndex[rowDualUpperSource[i]];
   }
 
   rowDeleted.assign(model->numRow_, false);
@@ -989,6 +994,24 @@ void HPresolve::fromCSC(const std::vector<double>& Aval,
   Acol.clear();
   Arow.clear();
 
+  freeslots.clear();
+  colhead.assign(model->numCol_, -1);
+  rowroot.assign(model->numRow_, -1);
+  colsize.assign(model->numCol_, 0);
+  rowsize.assign(model->numRow_, 0);
+
+  impliedRowBounds.setNumSums(0);
+  impliedDualRowBounds.setNumSums(0);
+  impliedRowBounds.setBoundArrays(
+      model->colLower_.data(), model->colUpper_.data(), implColLower.data(),
+      implColUpper.data(), colLowerSource.data(), colUpperSource.data());
+  impliedRowBounds.setNumSums(model->numRow_);
+  impliedDualRowBounds.setBoundArrays(
+      rowDualLower.data(), rowDualUpper.data(), implRowDualLower.data(),
+      implRowDualUpper.data(), rowDualLowerSource.data(),
+      rowDualUpperSource.data());
+  impliedDualRowBounds.setNumSums(model->numCol_);
+
   int ncol = Astart.size() - 1;
   assert(ncol == int(colhead.size()));
   int nnz = Aval.size();
@@ -1010,11 +1033,13 @@ void HPresolve::fromCSC(const std::vector<double>& Aval,
   ARright.resize(nnz);
   for (int pos = 0; pos != nnz; ++pos) link(pos);
 
-  eqiters.assign(model->numRow_, equations.end());
-  for (int i = 0; i != model->numRow_; ++i) {
-    // register equation
-    if (model->rowLower_[i] == model->rowUpper_[i])
-      eqiters[i] = equations.emplace(rowsize[i], i).first;
+  if (equations.empty()) {
+    eqiters.assign(model->numRow_, equations.end());
+    for (int i = 0; i != model->numRow_; ++i) {
+      // register equation
+      if (model->rowLower_[i] == model->rowUpper_[i])
+        eqiters[i] = equations.emplace(rowsize[i], i).first;
+    }
   }
 }
 
@@ -1973,49 +1998,63 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
   numForcingRow = 0;
 
+  auto report = [&]() {
+    int numCol = model->numCol_ - numDeletedCols;
+    int numRow = model->numRow_ - numDeletedRows;
+    int numNonz = Avalue.size() - freeslots.size();
+    printf("Problem size: %d rows  %d cols  %d nonzeros\n", numRow, numCol,
+           numNonz);
+  };
+  report();
   HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
-  printf(
-      "after initial presolve scan: %d del rows %d del cols  %d forcing rows\n",
-      numDeletedRows, numDeletedCols, numForcingRow);
+
+  int numParallelRowColCalls = 0;
   while (true) {
+    report();
+
     HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-    printf(
-        "after fast presolve loop: %d del rows %d del cols %d forcing rows\n",
-        numDeletedRows, numDeletedCols, numForcingRow);
 
     storeCurrentProblemSize();
 
-    HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
-    printf("after parallel rows/cols: %d del rows %d del cols\n",
-           numDeletedRows, numDeletedCols);
-
+    //    if( ! parallelRowColDetectionCalled )
+    //    {
+    //      HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
+    //      printf("after parallel rows/cols: %d del rows %d del cols\n",
+    //            numDeletedRows, numDeletedCols);
+    //      parallelRowColDetectionCalled = true;
+    //    }
     if (problemSizeReduction() > 0) {
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-      printf(
-          "after fast presolve loop: %d del rows %d del cols %d forcing rows\n",
-          numDeletedRows, numDeletedCols, numForcingRow);
     }
 
     storeCurrentProblemSize();
 
     HPRESOLVE_CHECKED_CALL(aggregator(postSolveStack));
 
-    printf("after aggregator: %d del rows %d del cols\n", numDeletedRows,
-           numDeletedCols);
-
     if (problemSizeReduction() > 0.05) continue;
 
+    if (numParallelRowColCalls < 5) {
+      if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->numCol_ ||
+           numDeletedRows >= 0.5 * model->numRow_)) {
+        shrinkProblem(postSolveStack);
+
+        toCSC(model->Avalue_, model->Aindex_, model->Astart_);
+        fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
+      }
+      storeCurrentProblemSize();
+      HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
+      ++numParallelRowColCalls;
+      if (problemSizeReduction() > 0.05) continue;
+    }
+
     HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-    printf(
-        "after fast presolve loop: %d del rows %d del cols %d forcing rows\n",
-        numDeletedRows, numDeletedCols, numForcingRow);
 
     // todo sparsify
 
     break;
   }
 
-  printf("num nonzeros: %lu\n", Avalue.size() - freeslots.size());
+  report();
 
   return Result::Ok;
 }
@@ -2126,6 +2165,7 @@ double HPresolve::problemSizeReduction() {
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
+  shrinkProblemEnabled = true;
   switch (presolve(postSolveStack)) {
     case Result::Stopped:
     case Result::Ok:
@@ -2150,6 +2190,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
 void HPresolve::computeIntermediateMatrix(std::vector<int>& flagRow,
                                           std::vector<int>& flagCol,
                                           size_t& numreductions) {
+  shrinkProblemEnabled = false;
   HighsPostsolveStack stack;
   stack.initializeIndexMaps(flagRow.size(), flagCol.size());
   setReductionLimit(numreductions);
@@ -3398,11 +3439,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (newUpper < model->rowUpper_[parallelRowCand]) {
             rowUpperTightened = true;
-            if (rowScale > 0)
-              std::swap(rowDualUpper[i], rowDualUpper[parallelRowCand]);
-            else {
-              double tmp = -rowDualLower[i];
-              rowDualLower[i] = -rowDualUpper[parallelRowCand];
+            if (rowScale > 0) {
+              double tmp = rowDualUpper[i] / rowScale;
+              rowDualUpper[i] = rowDualUpper[parallelRowCand] * rowScale;
+              rowDualUpper[parallelRowCand] = tmp;
+            } else {
+              double tmp = rowDualLower[i] / rowScale;
+              rowDualLower[i] = rowDualUpper[parallelRowCand] * rowScale;
               rowDualUpper[parallelRowCand] = tmp;
             }
 
@@ -3421,22 +3464,24 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
           if (newLower > model->rowLower_[parallelRowCand]) {
             // the rows lower bound is tightened
-            // instead of updating the activities of dual constraints, we can
-            // simply swap the bounds on the row duals. If the old lower bound
-            // on the row dual was finite, the new row dual lower bound is
-            // infinite as the new row lower bound must be a finite value. This
-            // infinite contribution, was, however, already counted from the
-            // parallel row. Therefore by swapping the bounds unlinking the
-            // other row will not decrease the infinity counter, but simply
-            // remove a bound with zero contribution. For a negative scale we
-            // need to swap with the negated upper bound of the row dual of row
-            // i.
+            // instead of updating the activities of dual constraints, we
+            // can simply swap the bounds on the row duals. If the old
+            // lower bound on the row dual was finite, the new row dual
+            // lower bound is infinite as the new row lower bound must be
+            // a finite value. This infinite contribution, was, however,
+            // already counted from the parallel row. Therefore by
+            // swapping the bounds unlinking the other row will not
+            // decrease the infinity counter, but simply remove a bound
+            // with zero contribution. For a negative scale we need to
+            // swap with the negated upper bound of the row dual of row i.
             rowLowerTightened = true;
-            if (rowScale > 0)
-              std::swap(rowDualLower[i], rowDualLower[parallelRowCand]);
-            else {
-              double tmp = -rowDualUpper[i];
-              rowDualUpper[i] = -rowDualLower[parallelRowCand];
+            if (rowScale > 0) {
+              double tmp = rowDualLower[i] / rowScale;
+              rowDualLower[i] = rowDualLower[parallelRowCand] * rowScale;
+              rowDualLower[parallelRowCand] = tmp;
+            } else {
+              double tmp = rowDualUpper[i] / rowScale;
+              rowDualUpper[i] = rowDualLower[parallelRowCand] * rowScale;
               rowDualLower[parallelRowCand] = tmp;
             }
 
@@ -3568,11 +3613,12 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   {
     HPresolve presolve;
     presolve.setInput(model, options);
+    // presolve.setReductionLimit(1622017);
     if (presolve.run(postSolveStack) != HighsModelStatus::NOTSET) return;
     Highs highs;
     highs.passModel(model);
     highs.passHighsOptions(options);
-    highs.setHighsOptionValue("presolve", "off");
+    // highs.setHighsOptionValue("presolve", "off");
     highs.run();
     if (highs.getModelStatus(true) != HighsModelStatus::OPTIMAL) return;
     reducedsol = highs.getSolution();
@@ -3608,7 +3654,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   size_t bad = 0;
   size_t reductionLim = (good + bad) / 2;
 
-  // good = 1576369, bad = 1576368;
+  // good = 1614604, bad = 1614603;
   // reductionLim = bad;
   do {
     model = lp;
