@@ -49,8 +49,8 @@ enum class HighsDebugStatus {
 
 enum class HighsVarType : uint8_t {
   CONTINUOUS = 0,
-  IMPLICIT_INTEGER = 1,
-  INTEGER = 2,
+  INTEGER = 1,
+  IMPLICIT_INTEGER = 2,
 };
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING };

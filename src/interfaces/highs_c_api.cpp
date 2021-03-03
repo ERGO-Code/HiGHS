@@ -11,7 +11,7 @@
 
 #include "Highs.h"
 
-int Highs_call(const int numcol, const int numrow, const int numnz,
+int Highs_lpCall(const int numcol, const int numrow, const int numnz,
                const double* colcost, const double* collower,
                const double* colupper, const double* rowlower,
                const double* rowupper, const int* astart, const int* aindex,
@@ -23,6 +23,49 @@ int Highs_call(const int numcol, const int numrow, const int numnz,
   int status =
       Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
                    rowlower, rowupper, astart, aindex, avalue);
+  if (status != 0) {
+    return status;
+  }
+
+  status = (int)highs.run();
+
+  if (status == 0) {
+    HighsSolution solution;
+    HighsBasis basis;
+    solution = highs.getSolution();
+    basis = highs.getBasis();
+    *modelstatus = (int)highs.getModelStatus();
+
+    for (int i = 0; i < numcol; i++) {
+      colvalue[i] = solution.col_value[i];
+      coldual[i] = solution.col_dual[i];
+
+      colbasisstatus[i] = (int)basis.col_status[i];
+    }
+
+    for (int i = 0; i < numrow; i++) {
+      rowvalue[i] = solution.row_value[i];
+      rowdual[i] = solution.row_dual[i];
+
+      rowbasisstatus[i] = (int)basis.row_status[i];
+    }
+  }
+
+  return status;
+}
+
+int Highs_mipCall(const int numcol, const int numrow, const int numnz,
+               const double* colcost, const double* collower,
+               const double* colupper, const double* rowlower,
+               const double* rowupper, const int* astart, const int* aindex,
+               const double* avalue, const int* integrality, double* colvalue, double* coldual,
+               double* rowvalue, double* rowdual, int* colbasisstatus,
+               int* rowbasisstatus, int* modelstatus) {
+  Highs highs;
+
+  int status =
+      Highs_passMip(&highs, numcol, numrow, numnz, colcost, collower, colupper,
+		    rowlower, rowupper, astart, aindex, avalue, integrality);
   if (status != 0) {
     return status;
   }
@@ -80,6 +123,17 @@ int Highs_passLp(void* highs, const int numcol, const int numrow,
   return (int)((Highs*)highs)
       ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
                   rowupper, astart, aindex, avalue);
+}
+
+int Highs_passMip(void* highs, const int numcol, const int numrow,
+		  const int numnz, const double* colcost, const double* collower,
+		  const double* colupper, const double* rowlower,
+		  const double* rowupper, const int* astart, const int* aindex,
+		  const double* avalue,
+		  const int* integrality) {
+  return (int)((Highs*)highs)
+      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
+                  rowupper, astart, aindex, avalue, integrality);
 }
 
 int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
@@ -550,6 +604,21 @@ const char* Highs_primalDualStatusToChar(void* highs,
 // *********************
 // * Deprecated methods*
 // *********************
+
+int Highs_call(const int numcol, const int numrow, const int numnz,
+               const double* colcost, const double* collower,
+               const double* colupper, const double* rowlower,
+               const double* rowupper, const int* astart, const int* aindex,
+               const double* avalue, double* colvalue, double* coldual,
+               double* rowvalue, double* rowdual, int* colbasisstatus,
+               int* rowbasisstatus, int* modelstatus) {
+  return Highs_lpCall(numcol, numrow, numnz,
+		      colcost, collower, colupper,
+		      rowlower, rowupper,
+		      astart, aindex, avalue,
+		      colvalue, coldual, rowvalue, rowdual,
+		      colbasisstatus, rowbasisstatus, modelstatus);
+}
 
 int Highs_runQuiet(void* highs) {
   int return_status = Highs_setHighsLogfile(highs, NULL);

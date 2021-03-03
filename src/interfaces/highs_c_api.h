@@ -15,9 +15,9 @@ extern "C" {
 #endif
 
 /*
- * @brief runs a model using HiGHS
+ * @brief solves an LP using HiGHS
  */
-int Highs_call(
+int Highs_lpCall(
     const int numcol,       //!< number of columns
     const int numrow,       //!< number of rows
     const int numnz,        //!< number of entries in the constraint matrix
@@ -34,6 +34,38 @@ int Highs_call(
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue,        //!< array of length [numnz] with value of matrix entries
+    double* colvalue,  //!< array of length [numcol], filled with column values
+    double* coldual,   //!< array of length [numcol], filled with column duals
+    double* rowvalue,  //!< array of length [numrow], filled with row values
+    double* rowdual,   //!< array of length [numrow], filled with row duals
+    int* colbasisstatus,  //!< array of length [numcol], filled with column
+                          //!< basis stati
+    int* rowbasisstatus,  //!< array of length [numrow], filled with row basis
+                          //!< status
+    int* modelstatus      //!< status of the model will be saved here
+);
+
+/*
+ * @brief solves a MIP using HiGHS
+ */
+int Highs_mipCall(
+    const int numcol,       //!< number of columns
+    const int numrow,       //!< number of rows
+    const int numnz,        //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const int*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const int*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const double*
+        avalue,        //!< array of length [numnz] with value of matrix entries
+    const int* integrality, //!< array of length [numcol] indicating whether variables are continuous (0) or integer (1)    
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
@@ -110,6 +142,29 @@ int Highs_passLp(
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue  //!< array of length [numnz] with value of matrix entries
+);
+
+/*
+ * @brief pass a MIP to HiGHS
+ */
+int Highs_passMip(
+    void* highs,            //!< HiGHS object reference
+    const int numcol,       //!< number of columns
+    const int numrow,       //!< number of rows
+    const int numnz,        //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const int*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const int*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const double* avalue,  //!< array of length [numnz] with value of matrix entries
+    const int* integrality //!< array of length [numcol] indicating whether variables are continuous (0) or integer (1)    
 );
 
 int Highs_setBoolOptionValue(void* highs,  //!< HiGHS object reference
@@ -788,6 +843,16 @@ const char* Highs_primalDualStatusToChar(
 // *********************
 // * Deprecated methods*
 // *********************
+
+int Highs_call(
+    const int numcol, const int numrow, const int numnz,
+    const double* colcost, const double* collower, const double* colupper,
+    const double* rowlower, const double* rowupper,
+    const int* astart, const int* aindex, const double* avalue,
+    double* colvalue, double* coldual,
+    double* rowvalue, double* rowdual,
+    int* colbasisstatus, int* rowbasisstatus, int* modelstatus
+);
 
 int Highs_runQuiet(void* highs  //!< HiGHS object reference
 );

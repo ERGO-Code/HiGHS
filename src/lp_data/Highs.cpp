@@ -242,7 +242,7 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
                              const double* col_lower, const double* col_upper,
                              const double* row_lower, const double* row_upper,
                              const int* astart, const int* aindex,
-                             const double* avalue) {
+                             const double* avalue, const int* integrality) {
   HighsLp lp;
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
@@ -272,6 +272,15 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
   }
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
+  if (num_col > 0 && integrality != NULL) {
+    lp.integrality_.resize(num_col);
+    for (int iCol = 0; iCol < num_col; iCol++) {
+      int integrality_status = integrality[iCol];
+      assert(integrality_status == (int)HighsVarType::CONTINUOUS ||
+	     integrality_status == (int)HighsVarType::INTEGER);
+      lp.integrality_[iCol] = (HighsVarType)integrality_status;
+    }
+  }
   return this->passModel(std::move(lp));
 }
 
