@@ -132,74 +132,47 @@ int Highs_passLp(
         avalue  //!< array of length [numnz] with value of matrix entries
 );
 
-/*
- * @brief
- */
-int Highs_setHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_setBoolOptionValue(void* highs,  //!< HiGHS object reference
                                   const char* option,  //!< name of the option
                                   const int value      //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_setIntOptionValue(void* highs,  //!< HiGHS object reference
                                  const char* option,  //!< name of the option
                                  const int value      //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_setDoubleOptionValue(void* highs,  //!< HiGHS object reference
                                     const char* option,  //!< name of the option
                                     const double value  //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsStringOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_setStringOptionValue(void* highs,  //!< HiGHS object reference
                                     const char* option,  //!< name of the option
                                     const char* value  //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
+int Highs_setOptionValue(void* highs,         //!< HiGHS object reference
                               const char* option,  //!< name of the option
                               const char* value    //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_getBoolOptionValue(void* highs,  //!< HiGHS object reference
                                   const char* option,  //!< name of the option
                                   int* value           //!< value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_getIntOptionValue(void* highs,  //!< HiGHS object reference
                                  const char* option,  //!< name of the option
                                  int* value           //!< value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+int Highs_getDoubleOptionValue(void* highs,  //!< HiGHS object reference
                                     const char* option,  //!< name of the option
                                     double* value        //!< value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsStringOptionValue(
+int Highs_getStringOptionValue(
     void* highs,         //!< HiGHS object reference
     const char* option,  //!< name of the option
     char* value  //!< pointer to allocated memory to store value of option
@@ -291,15 +264,10 @@ double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
 );
 
 /**
- * @brief Returns the simplex iteration count (if known)
+ * @brief Returns all known iteration counts
  */
-int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
-);
-
-/**
- * @brief Returns the simplex iteration count (if known)
- */
-int Highs_getSimplexIterationCount(void* highs  //!< HiGHS object reference,
+void Highs_getIterationCounts(void* highs,  //!< HiGHS object reference,
+			      int* iteration_count
 );
 
 /**
@@ -843,6 +811,68 @@ const char* Highs_primalDualStatusToChar(
 //  * LP of the (first?) HighsModelObject
 //  */
 // HighsStatus setBasis(const HighsBasis &basis);
+
+// *********************
+// * Deprecated methods*
+// *********************
+  
+/**
+ * @brief Returns the simplex iteration count (if known) - deprecated
+ */
+int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
+);
+
+/**
+ * @brief Returns the simplex iteration count (if known) - deprecated
+ */
+int Highs_getSimplexIterationCount(void* highs  //!< HiGHS object reference,
+);
+
+int Highs_setHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+                                  const char* option,  //!< name of the option
+                                  const int value      //!< new value of option
+);
+
+int Highs_setHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 const int value      //!< new value of option
+);
+
+int Highs_setHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const double value  //!< new value of option
+);
+
+int Highs_setHighsStringOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const char* value  //!< new value of option
+);
+
+int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const char* value    //!< new value of option
+);
+
+int Highs_getHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+                                  const char* option,  //!< name of the option
+                                  int* value           //!< value of option
+);
+
+int Highs_getHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 int* value           //!< value of option
+);
+
+int Highs_getHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    double* value        //!< value of option
+);
+
+int Highs_getHighsStringOptionValue(
+    void* highs,         //!< HiGHS object reference
+    const char* option,  //!< name of the option
+    char* value  //!< pointer to allocated memory to store value of option
+);
 
 #ifdef __cplusplus
 }

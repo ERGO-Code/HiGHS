@@ -98,36 +98,35 @@ int Highs_setHighsOutput(void* highs, void* outputfile) {
   return (int)((Highs*)highs)->setHighsOutput((FILE*)outputfile);
 }
 
-int Highs_setHighsBoolOptionValue(void* highs, const char* option,
+int Highs_setBoolOptionValue(void* highs, const char* option,
                                   const int value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), (bool)value);
 }
 
-int Highs_setHighsIntOptionValue(void* highs, const char* option,
+int Highs_setIntOptionValue(void* highs, const char* option,
                                  const int value) {
-  printf("CAPI: setHighsIntOptionValue = %d\n", value);
   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
 }
 
-int Highs_setHighsDoubleOptionValue(void* highs, const char* option,
+int Highs_setDoubleOptionValue(void* highs, const char* option,
                                     const double value) {
   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
 }
 
-int Highs_setHighsStringOptionValue(void* highs, const char* option,
+int Highs_setStringOptionValue(void* highs, const char* option,
                                     const char* value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
 }
 
-int Highs_setHighsOptionValue(void* highs, const char* option,
+int Highs_setOptionValue(void* highs, const char* option,
                               const char* value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
 }
 
-int Highs_getHighsBoolOptionValue(void* highs, const char* option, int* value) {
+int Highs_getBoolOptionValue(void* highs, const char* option, int* value) {
   bool v;
   int retcode =
       (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
@@ -135,16 +134,16 @@ int Highs_getHighsBoolOptionValue(void* highs, const char* option, int* value) {
   return retcode;
 }
 
-int Highs_getHighsIntOptionValue(void* highs, const char* option, int* value) {
+int Highs_getIntOptionValue(void* highs, const char* option, int* value) {
   return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
 }
 
-int Highs_getHighsDoubleOptionValue(void* highs, const char* option,
+int Highs_getDoubleOptionValue(void* highs, const char* option,
                                     double* value) {
   return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
 }
 
-int Highs_getHighsStringOptionValue(void* highs, const char* option,
+int Highs_getStringOptionValue(void* highs, const char* option,
                                     char* value) {
   std::string v;
   int retcode =
@@ -229,12 +228,7 @@ double Highs_getObjectiveValue(void* highs) {
   return ((Highs*)highs)->getObjectiveValue();
 }
 
-int Highs_getIterationCount(void* highs) {
-  return Highs_getSimplexIterationCount(highs);
-}
-
-int Highs_getSimplexIterationCount(void* highs) {
-  return (int)((Highs*)highs)->getSimplexIterationCount();
+void Highs_getIterationCounts(void* highs, int* iteration_count) {
 }
 
 int Highs_getBasicVariables(void* highs, int* basic_variables) {
@@ -569,3 +563,59 @@ const char* Highs_primalDualStatusToChar(void* highs,
       ->primalDualStatusToString(int_primal_dual_status)
       .c_str();
 }
+
+// *********************
+// * Deprecated methods*
+// *********************
+
+int Highs_getIterationCount(void* highs) {
+  return Highs_getSimplexIterationCount(highs);
+}
+
+int Highs_getSimplexIterationCount(void* highs) {
+  return (int)((Highs*)highs)->getSimplexIterationCount();
+}
+
+int Highs_setHighsBoolOptionValue(void* highs, const char* option,
+                                  const int value) {
+  return Highs_setBoolOptionValue(highs, option, value);
+}
+
+int Highs_setHighsIntOptionValue(void* highs, const char* option,
+                                 const int value) {
+  return Highs_setIntOptionValue(highs, option, value);
+}
+
+int Highs_setHighsDoubleOptionValue(void* highs, const char* option,
+                                    const double value) {
+  return Highs_setDoubleOptionValue(highs, option, value);
+}
+
+int Highs_setHighsStringOptionValue(void* highs, const char* option,
+                                    const char* value) {
+  return Highs_setStringOptionValue(highs, option, value);
+}
+
+int Highs_setHighsOptionValue(void* highs, const char* option,
+                              const char* value) {
+  return Highs_setOptionValue(highs, option, value);
+}
+
+int Highs_getHighsBoolOptionValue(void* highs, const char* option, int* value) {
+  return Highs_getBoolOptionValue(highs, option, value);
+}
+
+int Highs_getHighsIntOptionValue(void* highs, const char* option, int* value) {
+  return Highs_getIntOptionValue(highs, option, value);
+}
+
+int Highs_getHighsDoubleOptionValue(void* highs, const char* option,
+                                    double* value) {
+  return Highs_getDoubleOptionValue(highs, option, value);
+}
+
+int Highs_getHighsStringOptionValue(void* highs, const char* option,
+                                    char* value) {
+  return Highs_getStringOptionValue(highs, option, value);
+}
+
