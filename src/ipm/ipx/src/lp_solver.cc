@@ -90,7 +90,7 @@ Int LpSolver::Solve() {
         }
         PrintSummary();
     }
-    catch (std::bad_alloc) {
+    catch (const std::bad_alloc&) {
         control_.Log() << " out of memory\n";
         info_.status = IPX_STATUS_out_of_memory;
     }

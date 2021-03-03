@@ -1,6 +1,7 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "guess_basis.h"
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include "sparse_utils.h"
