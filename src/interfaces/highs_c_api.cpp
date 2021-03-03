@@ -84,20 +84,6 @@ int Highs_passLp(void* highs, const int numcol, const int numrow,
 
 int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
 
-int Highs_runQuiet(void* highs) {
-  int return_status = Highs_setHighsLogfile(highs, NULL);
-  if (return_status) return return_status;
-  return Highs_setHighsOutput(highs, NULL);
-}
-
-int Highs_setHighsLogfile(void* highs, void* logfile) {
-  return (int)((Highs*)highs)->setHighsLogfile((FILE*)logfile);
-}
-
-int Highs_setHighsOutput(void* highs, void* outputfile) {
-  return (int)((Highs*)highs)->setHighsOutput((FILE*)outputfile);
-}
-
 int Highs_setBoolOptionValue(void* highs, const char* option,
                                   const int value) {
   return (int)((Highs*)highs)
@@ -226,9 +212,6 @@ int Highs_getPrimalRay(void* highs, int* has_primal_ray,
 
 double Highs_getObjectiveValue(void* highs) {
   return ((Highs*)highs)->getObjectiveValue();
-}
-
-void Highs_getIterationCounts(void* highs, int* iteration_count) {
 }
 
 int Highs_getBasicVariables(void* highs, int* basic_variables) {
@@ -568,6 +551,20 @@ const char* Highs_primalDualStatusToChar(void* highs,
 // * Deprecated methods*
 // *********************
 
+int Highs_runQuiet(void* highs) {
+  int return_status = Highs_setHighsLogfile(highs, NULL);
+  if (return_status) return return_status;
+  return Highs_setHighsOutput(highs, NULL);
+}
+
+int Highs_setHighsLogfile(void* highs, void* logfile) {
+  return (int)((Highs*)highs)->setHighsLogfile((FILE*)logfile);
+}
+
+int Highs_setHighsOutput(void* highs, void* outputfile) {
+  return (int)((Highs*)highs)->setHighsOutput((FILE*)outputfile);
+}
+
 int Highs_getIterationCount(void* highs) {
   return Highs_getSimplexIterationCount(highs);
 }
@@ -643,4 +640,3 @@ double Highs_getHighsRunTime(void* highs) {
 double Highs_getHighsInfinity(void* highs) {
   return Highs_getInfinity(highs);
 }
-

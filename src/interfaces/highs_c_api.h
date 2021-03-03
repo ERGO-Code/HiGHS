@@ -41,7 +41,7 @@ int Highs_call(
     int* colbasisstatus,  //!< array of length [numcol], filled with column
                           //!< basis stati
     int* rowbasisstatus,  //!< array of length [numrow], filled with row basis
-                          //!< stati
+                          //!< status
     int* modelstatus      //!< status of the model will be saved here
 );
 
@@ -74,26 +74,6 @@ int Highs_writeModel(void* highs,          //!< HiGHS object reference
  * @brief
  */
 int Highs_clearModel(void* highs  //!< HiGHS object reference
-);
-
-/*
- * @brief Sets the Logfile and Output to NULL
- */
-int Highs_runQuiet(void* highs  //!< HiGHS object reference
-);
-
-/*
- * @brief Sets the logfile for printing.
- */
-int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
-                          void* logfile  //!< File handle of the logfile
-);
-
-/*
- * @brief Sets the output for printing.
- */
-int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
-                         void* outputfile  //!< File handle of the output file
 );
 
 /*
@@ -261,13 +241,6 @@ int Highs_getPrimalRay(
  * @brief Returns the objective function value (if known)
  */
 double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
-);
-
-/**
- * @brief Returns all known iteration counts
- */
-void Highs_getIterationCounts(void* highs,  //!< HiGHS object reference,
-			      int* iteration_count
 );
 
 /**
@@ -815,16 +788,21 @@ const char* Highs_primalDualStatusToChar(
 // *********************
 // * Deprecated methods*
 // *********************
-  
-/**
- * @brief Returns the simplex iteration count (if known) - deprecated
- */
+
+int Highs_runQuiet(void* highs  //!< HiGHS object reference
+);
+
+int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
+                          void* logfile  //!< File handle of the logfile
+);
+
+int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
+                         void* outputfile  //!< File handle of the output file
+);
+
 int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
 );
 
-/**
- * @brief Returns the simplex iteration count (if known) - deprecated
- */
 int Highs_getSimplexIterationCount(void* highs  //!< HiGHS object reference,
 );
 
@@ -885,6 +863,7 @@ int Highs_getHighsDoubleInfoValue(void* highs, const char* info, double* value);
 double Highs_getHighsInfinity(void* highs);
 
 double Highs_getHighsRunTime(void* highs);
+  
 #ifdef __cplusplus
 }
 #endif

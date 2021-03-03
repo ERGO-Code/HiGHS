@@ -181,26 +181,26 @@ void full_api() {
   assert(sense == 1);
 
   int simplex_scale_strategy;
-  Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
   printf("simplex_scale_strategy = %d: setting it to 3\n", simplex_scale_strategy);
   simplex_scale_strategy = 3;
-  Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+  Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
   // There are some functions to check what type of option value you should
   // provide.
   int option_type;
   int ret;
-  ret = Highs_getHighsOptionType(highs, "simplex_scale_strategy", &option_type);
+  ret = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
   assert(ret == 0);
   assert(option_type == 1);
-  ret = Highs_getHighsOptionType(highs, "bad_option", &option_type);
+  ret = Highs_getOptionType(highs, "bad_option", &option_type);
   assert(ret != 0);
 
   double primal_feasibility_tolerance;
-  Highs_getHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
   printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
   primal_feasibility_tolerance = 1e-6;
-  Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
+  Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
   Highs_runQuiet(highs);
   printf("Running quietly...\n");
@@ -216,13 +216,13 @@ void full_api() {
   printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
 
   double objective_function_value;
-  Highs_getHighsDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   int simplex_iteration_count = 0;
-  Highs_getHighsIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
   int primal_status = 0;
-  Highs_getHighsIntInfoValue(highs, "primal_status", &primal_status);
+  Highs_getIntInfoValue(highs, "primal_status", &primal_status);
   int dual_status = 0;
-  Highs_getHighsIntInfoValue(highs, "dual_status", &dual_status);
+  Highs_getIntInfoValue(highs, "dual_status", &dual_status);
 
   printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
   if (modelstatus == 9) {
