@@ -157,6 +157,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
 
   num_iteration_report_since_last_header = -1;
   num_invert_report_since_last_header = -1;
+  // Set values used to skip an iteration report when column (row)
+  // choice has found nothing in primal (dual) simplex
+  entering_variable = -1;
+  pivotal_row_index = -1;
 
   // Set following averages to illegal values so that first average is
   // set equal to first value
@@ -1151,7 +1155,13 @@ void HighsSimplexAnalysis::reportInvertFormData() {
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
   analysis_log = std::stringstream();
-  if (!header && entering_variable < 0) return;
+  if (!header) {
+    if (dualAlgorithm()) {
+      if (pivotal_row_index < 0) return;
+    } else {
+      if (entering_variable < 0) return;
+    }
+  }
   reportAlgorithmPhaseIterationObjective(header);
   if (analyse_simplex_data) {
     reportDensity(header);

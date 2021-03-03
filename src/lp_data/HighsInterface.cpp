@@ -754,7 +754,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status =
-      interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
+      interpretCallStatus(assessCosts(options, 0, index_collection,
                                       local_colCost, options.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
@@ -816,7 +816,7 @@ HighsStatus Highs::changeColBoundsInterface(
   HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
-      assessBounds(options, "col", lp.numCol_, index_collection, local_colLower,
+      assessBounds(options, "col", 0, index_collection, local_colLower,
                    local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -890,7 +890,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
-      assessBounds(options, "row", lp.numRow_, index_collection, local_rowLower,
+      assessBounds(options, "row", 0, index_collection, local_rowLower,
                    local_rowUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
