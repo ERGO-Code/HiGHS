@@ -152,7 +152,7 @@ int Highs_getStringOptionValue(void* highs, const char* option,
   return retcode;
 }
 
-int Highs_getHighsOptionType(void* highs, const char* option, int* type) {
+int Highs_getOptionType(void* highs, const char* option, int* type) {
   HighsOptionType t;
   int retcode =
       (int)((Highs*)highs)->getHighsOptionType(std::string(option), t);
@@ -160,15 +160,15 @@ int Highs_getHighsOptionType(void* highs, const char* option, int* type) {
   return retcode;
 }
 
-int Highs_resetHighsOptions(void* highs) {
+int Highs_resetOptions(void* highs) {
   return (int)((Highs*)highs)->resetHighsOptions();
 }
 
-int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value) {
+int Highs_getIntInfoValue(void* highs, const char* info, int* value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }
 
-int Highs_getHighsDoubleInfoValue(void* highs, const char* info,
+int Highs_getDoubleInfoValue(void* highs, const char* info,
                                   double* value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }
@@ -320,7 +320,7 @@ int Highs_setLogicalBasis(void* highs) {
   return (int)((Highs*)highs)->setBasis();
 }
 
-double Highs_getHighsRunTime(void* highs) {
+double Highs_getRunTime(void* highs) {
   return (double)((Highs*)highs)->getHighsRunTime();
 }
 
@@ -527,7 +527,7 @@ int Highs_deleteRowsByMask(void* highs, int* mask) {
   return ((Highs*)highs)->deleteRows(mask);
 }
 
-double Highs_getHighsInfinity(void* highs) {
+double Highs_getInfinity(void* highs) {
   return ((Highs*)highs)->getHighsInfinity();
 }
 
@@ -617,5 +617,30 @@ int Highs_getHighsDoubleOptionValue(void* highs, const char* option,
 int Highs_getHighsStringOptionValue(void* highs, const char* option,
                                     char* value) {
   return Highs_getStringOptionValue(highs, option, value);
+}
+
+int Highs_getHighsOptionType(void* highs, const char* option, int* type) {
+  return Highs_getOptionType(highs, option, type);
+}
+
+int Highs_resetHighsOptions(void* highs) {
+  return Highs_resetOptions(highs);
+}
+
+int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value) {
+  return Highs_getIntInfoValue(highs, info, value);
+}
+
+int Highs_getHighsDoubleInfoValue(void* highs, const char* info,
+                                  double* value) {
+  return Highs_getDoubleInfoValue(highs, info, value);
+}
+
+double Highs_getHighsRunTime(void* highs) {
+  return Highs_getRunTime(highs);
+}
+
+double Highs_getHighsInfinity(void* highs) {
+  return Highs_getInfinity(highs);
 }
 

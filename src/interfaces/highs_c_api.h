@@ -181,7 +181,7 @@ int Highs_getStringOptionValue(
 /*
  * @brief Get the type expected by an option
  */
-int Highs_getHighsOptionType(void* highs,         //!< HiGHS object reference
+int Highs_getOptionType(void* highs,         //!< HiGHS object reference
                              const char* option,  //!< The name of the option
                              int* type            //!< The type of the option.
 );
@@ -189,13 +189,13 @@ int Highs_getHighsOptionType(void* highs,         //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
+int Highs_resetOptions(void* highs  //!< HiGHS object reference
 );
 
 /*
  * @brief
  */
-int Highs_getHighsIntInfoValue(void* highs,       //!< HiGHS object reference
+int Highs_getIntInfoValue(void* highs,       //!< HiGHS object reference
                                const char* info,  //!< The info name
                                int* value         //!< The info value
 );
@@ -203,7 +203,7 @@ int Highs_getHighsIntInfoValue(void* highs,       //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_getHighsDoubleInfoValue(void* highs,       //!< HiGHS object reference
+int Highs_getDoubleInfoValue(void* highs,       //!< HiGHS object reference
                                   const char* info,  //!< The info name
                                   double* value      //!< The info value
 );
@@ -361,7 +361,7 @@ int Highs_setLogicalBasis(void* highs  //!< HiGHS object reference
 /**
  * @brief Returns the cumulative wall-clock time spent in Highs_run();
  */
-double Highs_getHighsRunTime(void* highs  //!< HiGHS object reference
+double Highs_getRunTime(void* highs  //!< HiGHS object reference
 );
 
 /**
@@ -734,7 +734,7 @@ int Highs_deleteRowsByMask(
 /**
  * @brief Returns the value of infinity used by HiGHS
  */
-double Highs_getHighsInfinity(void* highs  //!< HiGHS object reference
+double Highs_getInfinity(void* highs  //!< HiGHS object reference
 );
 
 /**
@@ -874,6 +874,17 @@ int Highs_getHighsStringOptionValue(
     char* value  //!< pointer to allocated memory to store value of option
 );
 
+int Highs_getHighsOptionType(void* highs, const char* option, int* type);
+
+int Highs_resetHighsOptions(void* highs);
+
+int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value);
+
+int Highs_getHighsDoubleInfoValue(void* highs, const char* info, double* value);
+
+double Highs_getHighsInfinity(void* highs);
+
+double Highs_getHighsRunTime(void* highs);
 #ifdef __cplusplus
 }
 #endif
