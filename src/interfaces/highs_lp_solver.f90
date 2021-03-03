@@ -88,7 +88,7 @@ module highs_lp_solver
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
-      integer ( c_int ) :: v
+      integer ( c_int ), VALUE :: v
       integer ( c_int ) :: s
     end function Highs_setIntOptionValue
 
