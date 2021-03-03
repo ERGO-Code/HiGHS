@@ -212,9 +212,10 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   // possible from the solution values.
 }
 
-void HighsPostsolveStack::EqualityRowAddition::undo(const HighsOptions& options,
-                                                    HighsSolution& solution,
-                                                    HighsBasis& basis) {
+void HighsPostsolveStack::EqualityRowAddition::undo(
+    const HighsOptions& options,
+    const std::vector<std::pair<int, double>>& eqRowValues,
+    HighsSolution& solution, HighsBasis& basis) {
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (solution.row_dual.empty() || solution.row_dual[row] == 0.0) return;
@@ -224,6 +225,27 @@ void HighsPostsolveStack::EqualityRowAddition::undo(const HighsOptions& options,
   solution.row_dual[addedEqRow] =
       double(HighsCDouble(eqRowScale) * solution.row_dual[row] +
              solution.row_dual[addedEqRow]);
+
+  if (basis.row_status[addedEqRow] == HighsBasisStatus::BASIC) {
+    // due to redundancy in the linear system it may happen that the equation
+    // is basic in the solution. Now it got a nonzero dual multiplier so that
+    // we need to make it non-basic. It must however be the case that we have
+    // a different column in the equation that we can make basic.
+    if (solution.row_dual[addedEqRow] > 0)
+      basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+    else if (solution.row_dual[addedEqRow] <
+             -options.dual_feasibility_tolerance)
+      basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+
+    for (const auto& entry : eqRowValues) {
+      if (basis.col_status[entry.first] != HighsBasisStatus::BASIC &&
+          std::abs(solution.col_dual[entry.first]) <=
+              options.dual_feasibility_tolerance) {
+        basis.col_status[entry.first] = HighsBasisStatus::BASIC;
+        break;
+      }
+    }
+  }
 }
 
 void HighsPostsolveStack::ForcingColumn::undo(

@@ -243,6 +243,8 @@ void HPresolve::link(int pos) {
       std::max(options->presolve_pivot_threshold * std::abs(Avalue[pos]),
                col_numerics_threshold[Acol[pos]]);
 
+  ARleft[pos] = -1;
+  ARright[pos] = -1;
   auto get_row_left = [&](int pos) -> int& { return ARleft[pos]; };
   auto get_row_right = [&](int pos) -> int& { return ARright[pos]; };
   auto get_row_key = [&](int pos) { return Acol[pos]; };
@@ -267,7 +269,7 @@ void HPresolve::unlink(int pos) {
   --colsize[Acol[pos]];
 
   if (!colDeleted[Acol[pos]]) {
-    if (colsize[Acol[pos]] == 1)
+    if (colsize[Acol[pos]] <= 1)
       singletonColumns.push_back(Acol[pos]);
     else
       markChangedCol(Acol[pos]);
@@ -288,7 +290,7 @@ void HPresolve::unlink(int pos) {
   --rowsize[Arow[pos]];
 
   if (!rowDeleted[Arow[pos]]) {
-    if (rowsize[Arow[pos]] == 1)
+    if (rowsize[Arow[pos]] <= 1)
       singletonRows.push_back(Arow[pos]);
     else
       markChangedRow(Arow[pos]);
@@ -1546,6 +1548,9 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
   } else if (upperTightened)
     changeColUpper(col, ub);
 
+  if (!colDeleted[col] && colsize[col] == 0)
+    return emptyCol(postSolveStack, col);
+
   return checkLimits(postSolveStack);
 }
 
@@ -1837,6 +1842,29 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
   return checkLimits(postSolveStack);
 }
 
+HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postSolveStack,
+                                      int col) {
+  if ((model->colCost_[col] > 0 && model->colLower_[col] == -HIGHS_CONST_INF) ||
+      (model->colCost_[col] < 0 && model->colUpper_[col] == HIGHS_CONST_INF)) {
+    if (std::abs(model->colCost_[col]) <= options->dual_feasibility_tolerance)
+      model->colCost_[col] = 0;
+    else
+      return Result::DualInfeasible;
+  }
+
+  if (model->colCost_[col] > 0)
+    fixColToLower(postSolveStack, col);
+  else if (model->colCost_[col] < 0 ||
+           std::abs(model->colUpper_[col]) < std::abs(model->colLower_[col]))
+    fixColToUpper(postSolveStack, col);
+  else {
+    assert(model->colLower_[col] != -HIGHS_CONST_INF);
+    // todo, handle free empty column
+    fixColToLower(postSolveStack, col);
+  }
+
+  return checkLimits(postSolveStack);
+}
 HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
                                          int col) {
   assert(!colDeleted[col]);
@@ -1856,7 +1884,14 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
     }
   }
 
-  if (colsize[col] == 1) return singletonCol(postSolveStack, col);
+  switch (colsize[col]) {
+    case 0:
+      return emptyCol(postSolveStack, col);
+    case 1:
+      return singletonCol(postSolveStack, col);
+    default:
+      break;
+  }
 
   double colDualUpper =
       impliedDualRowBounds.getSumUpper(col, model->colCost_[col]);
@@ -2035,7 +2070,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
     if (numParallelRowColCalls < 5) {
       if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->numCol_ ||
-           numDeletedRows >= 0.5 * model->numRow_)) {
+                                   numDeletedRows >= 0.5 * model->numRow_)) {
         shrinkProblem(postSolveStack);
 
         toCSC(model->Avalue_, model->Aindex_, model->Astart_);
@@ -2183,6 +2218,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
   shrinkProblem(postSolveStack);
 
   toCSC(model->Avalue_, model->Aindex_, model->Astart_);
+  setRelaxedImpliedBounds();
 
   return HighsModelStatus::NOTSET;
 }
@@ -3508,7 +3544,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    numSingleton, numSingletonCandidate,
         //    model->rowLower_[parallelRowCand] ==
         //        model->rowUpper_[parallelRowCand]);
-        postSolveStack.equalityRowAddition(parallelRowCand, i, -rowScale);
+        postSolveStack.equalityRowAddition(parallelRowCand, i, -rowScale,
+                                           getStoredRow());
         for (const HighsSliceNonzero& rowNz : getStoredRow()) {
           int pos = findNonzero(parallelRowCand, rowNz.index());
           if (pos != -1)
@@ -3532,7 +3569,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // that contains only singletons and we let the normal row presolve
         // handle the cases
         HPRESOLVE_CHECKED_CALL(rowPresolve(postSolveStack, parallelRowCand));
-
+        delRow = parallelRowCand;
       } else if (model->rowLower_[parallelRowCand] ==
                  model->rowUpper_[parallelRowCand]) {
         // printf(
@@ -3541,7 +3578,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         //    numSingletonCandidate, numSingleton);
         // the row parallelRowCand is an equation; add it to the other row
         double scale = -rowMax[i].first / rowMax[parallelRowCand].first;
-        postSolveStack.equalityRowAddition(i, parallelRowCand, scale);
+        postSolveStack.equalityRowAddition(i, parallelRowCand, scale,
+                                           getRowVector(parallelRowCand));
         for (const HighsSliceNonzero& rowNz : getRowVector(parallelRowCand)) {
           int pos = findNonzero(i, rowNz.index());
           if (pos != -1)
@@ -3561,6 +3599,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                      HighsCDouble(scale) * model->rowUpper_[parallelRowCand]);
 
         HPRESOLVE_CHECKED_CALL(rowPresolve(postSolveStack, i));
+        delRow = i;
       } else {
         assert(numSingleton == 1);
         assert(numSingletonCandidate == 1);
@@ -3596,6 +3635,30 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   }
 
   return Result::Ok;
+}
+
+void HPresolve::setRelaxedImpliedBounds() {
+  for (int i = 0; i != model->numCol_; ++i) {
+    if (model->colLower_[i] >= implColLower[i] &&
+        model->colUpper_[i] <= implColUpper[i])
+      continue;
+
+    double minAbsVal = 1.0;
+
+    for (int k = model->Astart_[i]; k != model->Astart_[i + 1]; ++k) {
+      double absVal = std::abs(model->Avalue_[i]);
+      minAbsVal = std::min(absVal, minAbsVal);
+    }
+
+    double boundRelax =
+        1024.0 * options->primal_feasibility_tolerance / minAbsVal;
+
+    double newLb = implColLower[i] - boundRelax;
+    if (newLb > model->colLower_[i]) model->colLower_[i] = newLb;
+
+    double newUb = implColUpper[i] + boundRelax;
+    if (newUb < model->colUpper_[i]) model->colUpper_[i] = newUb;
+  }
 }
 
 void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {

@@ -68,7 +68,6 @@ class HPresolve {
   // stack to reuse free slots
   std::vector<int> freeslots;
 
-
   // vectors holding implied bounds on primal and dual variables as well as
   // their origins
   std::vector<double> implColLower;
@@ -249,6 +248,8 @@ class HPresolve {
 
   Result singletonRow(HighsPostsolveStack& postSolveStack, int row);
 
+  Result emptyCol(HighsPostsolveStack& postSolveStack, int col);
+
   Result singletonCol(HighsPostsolveStack& postSolveStack, int col);
 
   Result rowPresolve(HighsPostsolveStack& postSolveStack, int row);
@@ -286,6 +287,8 @@ class HPresolve {
   int strengthenInequalities();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolveStack);
+
+  void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);
 };
