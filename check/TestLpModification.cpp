@@ -4,7 +4,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
@@ -1064,9 +1064,6 @@ TEST_CASE("LP-getrows", "[highs_data]") {
 }
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
-  HighsStatus run_status;
-  HighsStatus return_status;
-
   Highs highs;
   const HighsOptions& options = highs.getHighsOptions();
   const HighsInfo& info = highs.getHighsInfo();
