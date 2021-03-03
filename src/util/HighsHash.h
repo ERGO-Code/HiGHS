@@ -137,6 +137,24 @@ struct HighsHashHelpers {
     if (hash >= M61()) hash -= M61();
   }
 
+  static void sparse_inverse_combine(u64& hash, int index, u64 value) {
+    // same hash algorithm as sparse_combine(), but for updating a hash value to
+    // the state before it was changed with a call to sparse_combine(). This is
+    // easily possible as the hash value just uses finite field arithmetic. We
+    // can simply add the additive inverse of the previous hash value. This is a
+    // very useful routine for symmetry detection. During partition refinement
+    // the hashes do not need to be recomputed but can be updated with this
+    // procedure.
+
+    u64 a = c[index & 15] & M61();
+    int degree = (index / 16) + 1;
+    // add the additive inverse (M61() - hashvalue) instead of the hash value
+    // itself
+    hash += M61() - multiply_modM61(value, modexp_M61(a, degree));
+    hash = (hash >> 61) + (hash & M61());
+    if (hash >= M61()) hash -= M61();
+  }
+
   static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
 
   static constexpr size_t rotate_left(size_t x, int n) {

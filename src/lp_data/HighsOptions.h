@@ -298,11 +298,13 @@ struct HighsOptionsStruct {
   int dual_simplex_cleanup_strategy;
   int simplex_price_strategy;
   int dual_chuzc_sort_strategy;
+  int presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_bound_perturbation_multiplier;
+  double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
   double start_crossover_tolerance;
@@ -731,6 +733,19 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
         HIGHS_CONST_INF);
     records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "presolve_pivot_threshold",
+        "Matrix factorization pivot threshold for substitutions in presolve",
+        advanced, &presolve_pivot_threshold, min_pivot_threshold, 0.01,
+        max_pivot_threshold);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "presolve_substitution_maxfillin", "Strategy for CHUZC sort in dual simplex",
+        advanced, &presolve_substitution_maxfillin, 0,
+        10, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
         "factor_pivot_threshold", "Matrix factorization pivot threshold",

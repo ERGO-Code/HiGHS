@@ -249,7 +249,29 @@ class HighsCDouble {
     return a <= double(b);
   }
 
+  bool operator==(const HighsCDouble& other) const {
+    return double(*this) == double(other);
+  }
+
+  bool operator==(double other) const { return double(*this) == other; }
+
+  friend bool operator==(double a, const HighsCDouble& b) {
+    return a == double(b);
+  }
+
+  bool operator!=(const HighsCDouble& other) const {
+    return double(*this) != double(other);
+  }
+
+  bool operator!=(double other) const { return double(*this) != other; }
+
+  friend bool operator!=(double a, const HighsCDouble& b) {
+    return a != double(b);
+  }
+
   void renormalize() { two_sum(hi, lo, hi, lo); }
+
+  friend HighsCDouble abs(const HighsCDouble& v) { return v < 0 ? -v : v; }
 
   friend HighsCDouble sqrt(const HighsCDouble& v) {
     double c = std::sqrt(v.hi + v.lo);
