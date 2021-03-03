@@ -76,7 +76,6 @@ void Basis::SetToSlackBasis() {
     Int err = Factorize();
     // factorization of slack basis cannot fail other than out of memory
     assert(err == 0);
-    (void)(err);
 }
 
 Int Basis::Load(const int* basic_status) {
@@ -252,7 +251,7 @@ void Basis::TableauRow(Int jb, IndexedVector& btran, IndexedVector& row,
             Int end = AIt.end(i);
             for (Int p = begin; p < end; p++) {
                 Int j = Ati[p];
-                if (map2basis_[j] == -1 || (map2basis_[j] == -2 && !ignore_fixed))
+                if (map2basis_[j] == -1 || map2basis_[j] == -2 && !ignore_fixed)
                 {
                     map2basis_[j] -= 2; // mark column
                     row_pattern[nz++] = j;
@@ -271,7 +270,7 @@ void Basis::TableauRow(Int jb, IndexedVector& btran, IndexedVector& row,
         const double* Ax = AI.values();
         for (Int j = 0; j < n+m; j++) {
             double result = 0.0;
-            if (map2basis_[j] == -1 || (map2basis_[j] == -2 && !ignore_fixed)) {
+            if (map2basis_[j] == -1 || map2basis_[j] == -2 && !ignore_fixed) {
                 Int begin = AI.begin(j);
                 Int end = AI.end(j);
                 for (Int p = begin; p < end; p++)
@@ -348,8 +347,8 @@ void Basis::ComputeBasicSolution(Vector& x, Vector& y, Vector& z) const {
 }
 
 void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
-    // const Int m = model_.rows();
-    // const Int n = model_.cols();
+    const Int m = model_.rows();
+    const Int n = model_.cols();
     assert(colscale);
     info->errflag = 0;
     info->dependent_rows = 0;
@@ -509,15 +508,15 @@ void Basis::CrashBasis(const double* colweights) {
     // rank revealing factorization, but it detects many dependencies in
     // practice.
     std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights);
-    assert((int)cols_guessed.size() <= m);
-    assert((int)cols_guessed.size() == m); // at the moment
+    assert(cols_guessed.size() <= m);
+    assert(cols_guessed.size() == m); // at the moment
 
     // Initialize the Basis object and factorize the (partial) basis. If
     // basis_[p] is negative, the p-th column of the basis matrix is zero,
     // and a slack column will be inserted by CrashFacorize().
     std::fill(basis_.begin(), basis_.end(), -1);
     std::fill(map2basis_.begin(), map2basis_.end(), -1);
-    for (Int k = 0; k < (Int) cols_guessed.size(); k++) {
+    for (Int k = 0; k < cols_guessed.size(); k++) {
         basis_[k] = cols_guessed[k];
         assert(map2basis_[basis_[k]] == -1); // must not have duplicates
         map2basis_[basis_[k]] = k;
@@ -527,7 +526,6 @@ void Basis::CrashBasis(const double* colweights) {
     control_.Debug()
         << Textline("Number of columns dropped from guessed basis:")
         << num_dropped << '\n';
-    (void)(m);
 }
 
 // Rook search for a large entry in inverse(B). If successful, returns [p,i,x]

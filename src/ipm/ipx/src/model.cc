@@ -109,9 +109,9 @@ void Model::PresolveStartingPoint(const double* x_user,
                                   Vector& z_solver) const {
     const Int m = rows();
     const Int n = cols();
-    assert((int)x_solver.size() == n+m);
-    assert((int)y_solver.size() == m);
-    assert((int)z_solver.size() == n+m);
+    assert(x_solver.size() == n+m);
+    assert(y_solver.size() == m);
+    assert(z_solver.size() == n+m);
 
     Vector x_temp(num_var_);
     Vector slack_temp(num_constr_);
@@ -128,8 +128,6 @@ void Model::PresolveStartingPoint(const double* x_user,
     ScalePoint(x_temp, slack_temp, y_temp, z_temp);
     DualizeBasicSolution(x_temp, slack_temp, y_temp, z_temp,
                          x_solver, y_solver, z_solver);
-    (void)(n);
-    (void)(m);
 }
 
 Int Model::PresolveIPMStartingPoint(const double* x_user,
@@ -168,37 +166,37 @@ Int Model::PresolveIPMStartingPoint(const double* x_user,
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(xl_temp[j] >= 0.0) ||
-            (scaled_lbuser_[j] == -INFINITY && xl_temp[j] != INFINITY) ||
-            (scaled_lbuser_[j] != -INFINITY && xl_temp[j] == INFINITY))
+            scaled_lbuser_[j] == -INFINITY && xl_temp[j] != INFINITY ||
+            scaled_lbuser_[j] != -INFINITY && xl_temp[j] == INFINITY)
             return IPX_ERROR_invalid_vector;
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(xu_temp[j] >= 0.0) ||
-            (scaled_ubuser_[j] == INFINITY && xu_temp[j] != INFINITY) ||
-            (scaled_ubuser_[j] != INFINITY && xu_temp[j] == INFINITY))
+            scaled_ubuser_[j] == INFINITY && xu_temp[j] != INFINITY ||
+            scaled_ubuser_[j] != INFINITY && xu_temp[j] == INFINITY)
             return IPX_ERROR_invalid_vector;
     }
     for (Int i = 0; i < num_constr_; ++i) {
         if (!std::isfinite(slack_temp[i]) ||
-            (constr_type_[i] == '=' && !(slack_temp[i] == 0.0)) ||
-	    (constr_type_[i] == '<' && !(slack_temp[i] >= 0.0)) ||
-	    (constr_type_[i] == '>' && !(slack_temp[i] <= 0.0)) )
+            constr_type_[i] == '=' && !(slack_temp[i] == 0.0) ||
+            constr_type_[i] == '<' && !(slack_temp[i] >= 0.0) ||
+            constr_type_[i] == '>' && !(slack_temp[i] <= 0.0) )
             return IPX_ERROR_invalid_vector;
     }
     for (Int i = 0; i < num_constr_; ++i) {
         if (!std::isfinite(y_temp[i]) ||
-            (constr_type_[i] == '<' && !(y_temp[i] <= 0.0)) ||
-	    (constr_type_[i] == '>' && !(y_temp[i] >= 0.0)) )
+            constr_type_[i] == '<' && !(y_temp[i] <= 0.0) ||
+            constr_type_[i] == '>' && !(y_temp[i] >= 0.0) )
             return IPX_ERROR_invalid_vector;
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(zl_temp[j] >= 0.0 && zl_temp[j] < INFINITY) ||
-            (scaled_lbuser_[j] == -INFINITY && zl_temp[j] != 0.0))
+            scaled_lbuser_[j] == -INFINITY && zl_temp[j] != 0.0)
             return IPX_ERROR_invalid_vector;
     }
     for (Int j = 0; j < num_var_; ++j) {
         if (!(zu_temp[j] >= 0.0 && zu_temp[j] < INFINITY) ||
-            (scaled_ubuser_[j] == INFINITY && zu_temp[j] != 0.0))
+            scaled_ubuser_[j] == INFINITY && zu_temp[j] != 0.0)
             return IPX_ERROR_invalid_vector;
     }
 
@@ -223,12 +221,12 @@ void Model::PostsolveInteriorSolution(const Vector& x_solver,
                                       double* zl_user, double* zu_user) const {
     const Int m = rows();
     const Int n = cols();
-    assert((int)x_solver.size() == n+m);
-    assert((int)xl_solver.size() == n+m);
-    assert((int)xu_solver.size() == n+m);
-    assert((int)y_solver.size() == m);
-    assert((int)zl_solver.size() == n+m);
-    assert((int)zu_solver.size() == n+m);
+    assert(x_solver.size() == n+m);
+    assert(xl_solver.size() == n+m);
+    assert(xu_solver.size() == n+m);
+    assert(y_solver.size() == m);
+    assert(zl_solver.size() == n+m);
+    assert(zu_solver.size() == n+m);
 
     Vector x_temp(num_var_);
     Vector xl_temp(num_var_);
@@ -256,8 +254,6 @@ void Model::PostsolveInteriorSolution(const Vector& x_solver,
         std::copy(std::begin(zl_temp), std::end(zl_temp), zl_user);
     if (zu_user)
         std::copy(std::begin(zu_temp), std::end(zu_temp), zu_user);
-    (void)(n);
-    (void)(m);
 }
 
 void Model::EvaluateInteriorSolution(const Vector& x_solver,
@@ -269,12 +265,12 @@ void Model::EvaluateInteriorSolution(const Vector& x_solver,
                                      Info* info) const {
     const Int m = rows();
     const Int n = cols();
-    assert((int)x_solver.size() == n+m);
-    assert((int)xl_solver.size() == n+m);
-    assert((int)xu_solver.size() == n+m);
-    assert((int)y_solver.size() == m);
-    assert((int)zl_solver.size() == n+m);
-    assert((int)zu_solver.size() == n+m);
+    assert(x_solver.size() == n+m);
+    assert(xl_solver.size() == n+m);
+    assert(xu_solver.size() == n+m);
+    assert(y_solver.size() == m);
+    assert(zl_solver.size() == n+m);
+    assert(zu_solver.size() == n+m);
 
     // Build solution to scaled user model.
     Vector x(num_var_);
@@ -307,8 +303,8 @@ void Model::EvaluateInteriorSolution(const Vector& x_solver,
     }
     // rb = rhs-slack-A*x
     Vector rb = scaled_rhs_ - slack;
-    assert((int)scaled_rhs_.size() == num_constr_);
-    assert((int)rb.size() == num_constr_);
+    assert(scaled_rhs_.size() == num_constr_);
+    assert(rb.size() == num_constr_);
     MultiplyWithScaledMatrix(x, -1.0, rb, 'N');
     // rc = obj-zl+zu-A'y
     Vector rc = scaled_obj_ - zl + zu;
@@ -356,8 +352,6 @@ void Model::EvaluateInteriorSolution(const Vector& x_solver,
     info->normx = Infnorm(x);
     info->normy = Infnorm(y);
     info->normz = std::max(Infnorm(zl), Infnorm(zu));
-    (void)(n);
-    (void)(m);
 }
 
 void Model::PostsolveBasicSolution(const Vector& x_solver,
@@ -368,10 +362,10 @@ void Model::PostsolveBasicSolution(const Vector& x_solver,
                                    double* y_user, double* z_user) const {
     const Int m = rows();
     const Int n = cols();
-    assert((int)x_solver.size() == n+m);
-    assert((int)y_solver.size() == m);
-    assert((int)z_solver.size() == n+m);
-    assert((int)basic_status_solver.size() == n+m);
+    assert(x_solver.size() == n+m);
+    assert(y_solver.size() == m);
+    assert(z_solver.size() == n+m);
+    assert(basic_status_solver.size() == n+m);
 
     Vector x_temp(num_var_);
     Vector slack_temp(num_constr_);
@@ -393,8 +387,6 @@ void Model::PostsolveBasicSolution(const Vector& x_solver,
         std::copy(std::begin(y_temp), std::end(y_temp), y_user);
     if (z_user)
         std::copy(std::begin(z_temp), std::end(z_temp), z_user);
-    (void)(n);
-    (void)(m);
 }
 
 void Model::EvaluateBasicSolution(const Vector& x_solver,
@@ -404,10 +396,10 @@ void Model::EvaluateBasicSolution(const Vector& x_solver,
                                   Info* info) const {
     const Int m = rows();
     const Int n = cols();
-    assert((int)x_solver.size() == n+m);
-    assert((int)y_solver.size() == m);
-    assert((int)z_solver.size() == n+m);
-    assert((int)basic_status_solver.size() == n+m);
+    assert(x_solver.size() == n+m);
+    assert(y_solver.size() == m);
+    assert(z_solver.size() == n+m);
+    assert(basic_status_solver.size() == n+m);
 
     // Build basic solution to scaled user model.
     Vector x(num_var_);
@@ -458,15 +450,13 @@ void Model::EvaluateBasicSolution(const Vector& x_solver,
     info->primal_infeas = std::max(Infnorm(xinfeas), Infnorm(sinfeas));
     info->dual_infeas = std::max(Infnorm(zinfeas), Infnorm(yinfeas));
     info->objval = pobj;
-    (void)(n);
-    (void)(m);
 }
 
 void Model::PostsolveBasis(const std::vector<Int>& basic_status_solver,
                            Int* cbasis_user, Int* vbasis_user) const {
     const Int m = rows();
     const Int n = cols();
-    assert((int)basic_status_solver.size() == n+m);
+    assert(basic_status_solver.size() == n+m);
 
     std::vector<Int> cbasis_temp(num_constr_);
     std::vector<Int> vbasis_temp(num_var_);
@@ -476,8 +466,6 @@ void Model::PostsolveBasis(const std::vector<Int>& basic_status_solver,
         std::copy(std::begin(cbasis_temp), std::end(cbasis_temp), cbasis_user);
     if (vbasis_user)
         std::copy(std::begin(vbasis_temp), std::end(vbasis_temp), vbasis_user);
-    (void)(m);
-    (void)(n);
 }
 
 // Checks if the vectors are valid LP data vectors. Returns 0 if OK and a
@@ -597,13 +585,13 @@ void Model::ScaleModel(const Control& control) {
 
     // Apply scaling to vectors.
     if (colscale_.size() > 0) {
-        assert((int)colscale_.size() == num_var_);
+        assert(colscale_.size() == num_var_);
         scaled_obj_ *= colscale_;
         scaled_lbuser_ /= colscale_;
         scaled_ubuser_ /= colscale_;
     }
     if (rowscale_.size() > 0) {
-        assert((int)rowscale_.size() == num_constr_);
+        assert(rowscale_.size() == num_constr_);
         scaled_rhs_ *= rowscale_;
     }
 }
@@ -848,10 +836,10 @@ void Model::PrintCoefficientRange(const Control& control) const {
     double amax = 0.0;
     for (Int j = 0; j < A_.cols(); j++) {
         for (Int p = A_.begin(j); p < A_.end(j); p++) {
-            double x = std::abs(A_.value(p));
+            double x = A_.value(p);
             if (x != 0.0) {
-                amin = std::min(amin, x);
-                amax = std::max(amax, x);
+                amin = std::min(amin, std::abs(x));
+                amax = std::max(amax, std::abs(x));
             }
         }
     }
@@ -1064,13 +1052,13 @@ void Model::DualizeBasicSolution(const Vector& x_user,
 
     if (dualized_) {
         assert(num_var_ == m);
-        assert(num_constr_ + (int)boxed_vars_.size() == n);
+        assert(num_constr_ + boxed_vars_.size() == n);
 
         // Build dual solver variables from primal user variables.
         y_solver = -x_user;
         for (Int i = 0; i < num_constr_; i++)
             z_solver[i] = -slack_user[i];
-        for (Int k = 0; k < (Int) boxed_vars_.size(); k++) {
+        for (Int k = 0; k < boxed_vars_.size(); k++) {
             Int j = boxed_vars_[k];
             z_solver[num_constr_+k] = c(num_constr_+k) + y_solver[j];
         }
@@ -1080,7 +1068,7 @@ void Model::DualizeBasicSolution(const Vector& x_user,
         // Build primal solver variables from dual user variables.
         std::copy_n(std::begin(y_user), num_constr_, std::begin(x_solver));
         std::copy_n(std::begin(z_user), num_var_, std::begin(x_solver) + n);
-        for (Int k = 0; k < (Int) boxed_vars_.size(); k++) {
+        for (Int k = 0; k < boxed_vars_.size(); k++) {
             Int j = boxed_vars_[k];
             if (x_solver[n+j] < 0.0) {
                 // j is a boxed variable and z_user[j] < 0
@@ -1184,7 +1172,7 @@ void Model::DualizeBackInteriorSolution(const Vector& x_solver,
 
     if (dualized_) {
         assert(num_var_ == m);
-        assert(num_constr_ + (int)boxed_vars_.size() == n);
+        assert(num_constr_ + boxed_vars_.size() == n);
         x_user = -y_solver;
 
         // If the solution from the solver would be exact, we could copy the
@@ -1323,7 +1311,7 @@ void Model::DualizeBackBasicSolution(const Vector& x_solver,
 
     if (dualized_) {
         assert(num_var_ == m);
-        assert(num_constr_ + (int)boxed_vars_.size() == n);
+        assert(num_constr_ + boxed_vars_.size() == n);
         x_user = -y_solver;
         for (Int i = 0; i < num_constr_; i++)
             slack_user[i] = -z_solver[i];
@@ -1343,7 +1331,6 @@ void Model::DualizeBackBasicSolution(const Vector& x_solver,
         std::copy_n(std::begin(y_solver), num_constr_, std::begin(y_user));
         std::copy_n(std::begin(z_solver), num_var_, std::begin(z_user));
     }
-    (void)(m);
 }
 
 void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
@@ -1354,7 +1341,7 @@ void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
 
     if (dualized_) {
         assert(num_var_ == m);
-        assert(num_constr_ + (int)boxed_vars_.size() == n);
+        assert(num_constr_ + boxed_vars_.size() == n);
         for (Int i = 0; i < num_constr_; i++) {
             if (basic_status_solver[i] == IPX_basic)
                 cbasis_user[i] = IPX_nonbasic;
@@ -1391,7 +1378,6 @@ void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
         for (Int j = 0; j < num_var_; j++)
             vbasis_user[j] = basic_status_solver[j];
     }
-    (void)(m);
 }
 
 void Model::CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,
@@ -1417,8 +1403,8 @@ void Model::CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,
 void Model::MultiplyWithScaledMatrix(const Vector& rhs, double alpha,
                                      Vector& lhs, char trans) const {
     if (trans == 't' || trans == 'T') {
-        assert((int)rhs.size() == num_constr_);
-        assert((int)lhs.size() == num_var_);
+        assert(rhs.size() == num_constr_);
+        assert(lhs.size() == num_var_);
         if (dualized())
             for (Int i = 0; i < num_constr_; i++)
                 ScatterColumn(AI_, i, alpha*rhs[i], lhs);
@@ -1427,8 +1413,8 @@ void Model::MultiplyWithScaledMatrix(const Vector& rhs, double alpha,
                 lhs[j] += alpha * DotColumn(AI_, j, rhs);
     }
     else {
-        assert((int)rhs.size() == num_var_);
-        assert((int)lhs.size() == num_constr_);
+        assert(rhs.size() == num_var_);
+        assert(lhs.size() == num_constr_);
         if (dualized())
             for (Int i = 0; i < num_constr_; i++)
                 lhs[i] += alpha * DotColumn(AI_, i, rhs);
@@ -1444,7 +1430,7 @@ double PrimalInfeasibility(const Model& model, const Vector& x) {
     assert(x.size() == lb.size());
 
     double infeas = 0.0;
-    for (Int j = 0; j < (Int) x.size(); j++) {
+    for (Int j = 0; j < x.size(); j++) {
         infeas = std::max(infeas, lb[j]-x[j]);
         infeas = std::max(infeas, x[j]-ub[j]);
     }
@@ -1459,7 +1445,7 @@ double DualInfeasibility(const Model& model, const Vector& x,
     assert(z.size() == lb.size());
 
     double infeas = 0.0;
-    for (Int j = 0; j < (Int) x.size(); j++) {
+    for (Int j = 0; j < x.size(); j++) {
         if (x[j] > lb[j])
             infeas = std::max(infeas, z[j]);
         if (x[j] < ub[j])
@@ -1471,10 +1457,10 @@ double DualInfeasibility(const Model& model, const Vector& x,
 double PrimalResidual(const Model& model, const Vector& x) {
     const SparseMatrix& AIt = model.AIt();
     const Vector& b = model.b();
-    assert((int)x.size() == AIt.rows());
+    assert(x.size() == AIt.rows());
 
     double res = 0.0;
-    for (Int i = 0; i < (Int) b.size(); i++) {
+    for (Int i = 0; i < b.size(); i++) {
         double r = b[i] - DotColumn(AIt, i, x);
         res = std::max(res, std::abs(r));
     }
@@ -1484,11 +1470,11 @@ double PrimalResidual(const Model& model, const Vector& x) {
 double DualResidual(const Model& model, const Vector& y, const Vector& z) {
     const SparseMatrix& AI = model.AI();
     const Vector& c = model.c();
-    assert((int)y.size() == AI.rows());
-    assert((int)z.size() == AI.cols());
+    assert(y.size() == AI.rows());
+    assert(z.size() == AI.cols());
 
     double res = 0.0;
-    for (Int j = 0; j < (Int) c.size(); j++) {
+    for (Int j = 0; j < c.size(); j++) {
         double r = c[j] - z[j] - DotColumn(AI, j, y);
         res = std::max(res, std::abs(r));
     }

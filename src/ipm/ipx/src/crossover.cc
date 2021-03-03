@@ -29,7 +29,7 @@ void Crossover::PushAll(Basis* basis, Vector& x, Vector& y, Vector& z,
 
     // Run dual push phase.
     std::vector<Int> dual_superbasics;
-    for (Int p = 0; p < (Int) perm.size(); p++) {
+    for (Int p = 0; p < perm.size(); p++) {
         Int j = perm[p];
         if (basis->IsBasic(j) && z[j] != 0.0)
             dual_superbasics.push_back(j);
@@ -113,13 +113,13 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
 
     control_.ResetPrintInterval();
     Int next = 0;
-    while (next < (Int) variables.size()) {
+    while (next < variables.size()) {
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
         const Int jn = variables[next];
         if (x[jn] == lb[jn] || x[jn] == ub[jn] ||
-            (x[jn] == 0.0 && std::isinf(lb[jn]) && std::isinf(ub[jn]))) {
+            x[jn] == 0.0 && std::isinf(lb[jn]) && std::isinf(ub[jn])) {
             // nothing to do
             next++;
             continue;
@@ -242,15 +242,15 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
             throw std::logic_error("invalid variable in Crossover::PushDual");
     }
     for (Int j = 0; j < n+m; j++) {
-        if (((sign_restrict[j] & 1) && z[j] < 0.0) ||
-            ((sign_restrict[j] & 2) && z[j] > 0.0))
+        if ((sign_restrict[j] & 1) && z[j] < 0.0 ||
+            (sign_restrict[j] & 2) && z[j] > 0.0)
             throw std::logic_error(
                 "sign condition violated in Crossover::PushDual");
     }
 
     control_.ResetPrintInterval();
     Int next = 0;
-    while (next < (Int) variables.size()) {
+    while (next < variables.size()) {
         if ((info->errflag = control_.InterruptCheck()) != 0)
             break;
 
@@ -346,7 +346,7 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
     const Vector& ub = model.ub();
 
     std::vector<int> sign_restrict(n+m);
-    for (Int j = 0; j < (Int) sign_restrict.size(); j++) {
+    for (Int j = 0; j < sign_restrict.size(); j++) {
         if (x[j] != ub[j]) sign_restrict[j] |= 1;
         if (x[j] != lb[j]) sign_restrict[j] |= 2;
     }
