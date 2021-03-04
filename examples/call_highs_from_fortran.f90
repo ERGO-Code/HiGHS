@@ -76,8 +76,8 @@ program fortrantest
   real ( c_double ) rowdual(numrow)
   integer ( c_int ) colbasisstatus(numcol)
   integer ( c_int ) rowbasisstatus(numrow)
-  integer ( c_int ) modelstatus
-  integer ( c_int ) runstatus
+  integer modelstatus
+  integer runstatus
   
   ! For the full API test
   type ( c_ptr ) :: highs
@@ -97,6 +97,7 @@ program fortrantest
 
   integer sense
   integer simplex_scale_strategy
+  integer, parameter :: default_simplex_scale_strategy = 2
   integer, parameter :: new_simplex_scale_strategy = 3
 
   double precision, pointer :: double_null(:)
@@ -200,19 +201,21 @@ program fortrantest
   call assert(sense .eq. -1, "Changed Objective sense")
   
   runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
-  print*, "Default: simplex_scale_strategy = ", simplex_scale_strategy
+  call assert(simplex_scale_strategy .eq. default_simplex_scale_strategy,&
+       "simplex_scale_strategy .eq. default_simplex_scale_strategy")
   runstatus = Highs_setIntOptionValue(highs, "simplex_scale_strategy", new_simplex_scale_strategy)
   runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
-  print*, "Changed: simplex_scale_strategy = ", simplex_scale_strategy
+  call assert(simplex_scale_strategy .eq. new_simplex_scale_strategy,&
+       "simplex_scale_strategy .eq. new_simplex_scale_strategy")
 
   ! There are some functions to check what type of option value you should provide.
-  runstatus = Highs_getHighsOptionType(highs, "simplex_scale_strategy", option_type);
+  runstatus = Highs_getOptionType(highs, "simplex_scale_strategy", option_type);
   call assert(runstatus .eq. 0, "getHighsOptionType runstatus")
   call assert(option_type .eq. 1, "getHighsOptionType option_type")
-  runstatus = Highs_getHighsOptionType(highs, "bad_option", option_type)
+  runstatus = Highs_getOptionType(highs, "bad_option", option_type)
   call assert(runstatus .eq. 2, "getHighsOptionType runstatus")
 
-  if (1 .eq. 0) then
+  if (1 .eq. 1) then
   runstatus = Highs_run(highs);
   ! Get the model status
   modelstatus = Highs_getModelStatus(highs, scaled_model);

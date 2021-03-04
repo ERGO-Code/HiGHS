@@ -84,7 +84,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passLp
 
-    function Highs_setIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setHighsIntOptionValue' )
+    function Highs_setIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setIntOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
@@ -92,7 +92,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_setIntOptionValue
 
-    function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setHighsOptionValue' )
+    function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
@@ -100,7 +100,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_setOptionValue
 
-    function Highs_getIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsIntOptionValue' )
+    function Highs_getIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getIntOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
@@ -108,13 +108,13 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getIntOptionValue
 
-    function Highs_getHighsOptionType ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsOptionType' )
+    function Highs_getOptionType ( h, o, v ) result( s ) bind ( c, name='Highs_getOptionType' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
       integer ( c_int ) :: v
       integer ( c_int ) :: s
-    end function Highs_getHighsOptionType
+    end function Highs_getOptionType
 
     function Highs_getIntInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getIntInfoValue' )
       use iso_c_binding
@@ -124,7 +124,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getIntInfoValue
 
-    function Highs_getDoubleInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsDoubleInfoValue' )
+    function Highs_getDoubleInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getDoubleInfoValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
