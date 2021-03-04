@@ -116,7 +116,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getHighsOptionType
 
-    function Highs_getIntInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getHighsIntInfoValue' )
+    function Highs_getIntInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getIntInfoValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: o(*)
