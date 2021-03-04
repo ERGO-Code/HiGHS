@@ -12,12 +12,12 @@
 #include "Highs.h"
 
 int Highs_lpCall(const int numcol, const int numrow, const int numnz,
-               const double* colcost, const double* collower,
-               const double* colupper, const double* rowlower,
-               const double* rowupper, const int* astart, const int* aindex,
-               const double* avalue, double* colvalue, double* coldual,
-               double* rowvalue, double* rowdual, int* colbasisstatus,
-               int* rowbasisstatus, int* modelstatus) {
+                 const double* colcost, const double* collower,
+                 const double* colupper, const double* rowlower,
+                 const double* rowupper, const int* astart, const int* aindex,
+                 const double* avalue, double* colvalue, double* coldual,
+                 double* rowvalue, double* rowdual, int* colbasisstatus,
+                 int* rowbasisstatus, int* modelstatus) {
   Highs highs;
 
   int status =
@@ -55,17 +55,18 @@ int Highs_lpCall(const int numcol, const int numrow, const int numnz,
 }
 
 int Highs_mipCall(const int numcol, const int numrow, const int numnz,
-               const double* colcost, const double* collower,
-               const double* colupper, const double* rowlower,
-               const double* rowupper, const int* astart, const int* aindex,
-               const double* avalue, const int* integrality, double* colvalue, double* coldual,
-               double* rowvalue, double* rowdual, int* colbasisstatus,
-               int* rowbasisstatus, int* modelstatus) {
+                  const double* colcost, const double* collower,
+                  const double* colupper, const double* rowlower,
+                  const double* rowupper, const int* astart, const int* aindex,
+                  const double* avalue, const int* integrality,
+                  double* colvalue, double* coldual, double* rowvalue,
+                  double* rowdual, int* colbasisstatus, int* rowbasisstatus,
+                  int* modelstatus) {
   Highs highs;
 
   int status =
       Highs_passMip(&highs, numcol, numrow, numnz, colcost, collower, colupper,
-		    rowlower, rowupper, astart, aindex, avalue, integrality);
+                    rowlower, rowupper, astart, aindex, avalue, integrality);
   if (status != 0) {
     return status;
   }
@@ -111,8 +112,9 @@ int Highs_writeModel(void* highs, const char* filename) {
   return (int)((Highs*)highs)->writeModel(std::string(filename));
 }
 
-int Highs_writeSolution(void* highs, const char* filename) {
-  return (int)((Highs*)highs)->writeSolution(std::string(filename));
+int Highs_writeSolution(void* highs, const char* filename, const int pretty) {
+  return (int)((Highs*)highs)
+      ->writeSolution(std::string(filename), (bool)pretty);
 }
 
 int Highs_passLp(void* highs, const int numcol, const int numrow,
@@ -126,11 +128,11 @@ int Highs_passLp(void* highs, const int numcol, const int numrow,
 }
 
 int Highs_passMip(void* highs, const int numcol, const int numrow,
-		  const int numnz, const double* colcost, const double* collower,
-		  const double* colupper, const double* rowlower,
-		  const double* rowupper, const int* astart, const int* aindex,
-		  const double* avalue,
-		  const int* integrality) {
+                  const int numnz, const double* colcost,
+                  const double* collower, const double* colupper,
+                  const double* rowlower, const double* rowupper,
+                  const int* astart, const int* aindex, const double* avalue,
+                  const int* integrality) {
   return (int)((Highs*)highs)
       ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
                   rowupper, astart, aindex, avalue, integrality);
@@ -138,30 +140,29 @@ int Highs_passMip(void* highs, const int numcol, const int numrow,
 
 int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
 
-int Highs_setBoolOptionValue(void* highs, const char* option,
-                                  const int value) {
+int Highs_setBoolOptionValue(void* highs, const char* option, const int value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), (bool)value);
 }
 
-int Highs_setIntOptionValue(void* highs, const char* option,
-                                 const int value) {
+int Highs_setIntOptionValue(void* highs, const char* option, const int value) {
   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
 }
 
 int Highs_setDoubleOptionValue(void* highs, const char* option,
-                                    const double value) {
+                               const double value) {
   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
 }
 
 int Highs_setStringOptionValue(void* highs, const char* option,
-                                    const char* value) {
+                               const char* value) {
+  printf("setStringOptionValue: %s = %s\n", option, value);
+  fflush(stdout);
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
 }
 
-int Highs_setOptionValue(void* highs, const char* option,
-                              const char* value) {
+int Highs_setOptionValue(void* highs, const char* option, const char* value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
 }
@@ -178,13 +179,11 @@ int Highs_getIntOptionValue(void* highs, const char* option, int* value) {
   return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
 }
 
-int Highs_getDoubleOptionValue(void* highs, const char* option,
-                                    double* value) {
+int Highs_getDoubleOptionValue(void* highs, const char* option, double* value) {
   return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
 }
 
-int Highs_getStringOptionValue(void* highs, const char* option,
-                                    char* value) {
+int Highs_getStringOptionValue(void* highs, const char* option, char* value) {
   std::string v;
   int retcode =
       (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
@@ -208,8 +207,7 @@ int Highs_getIntInfoValue(void* highs, const char* info, int* value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }
 
-int Highs_getDoubleInfoValue(void* highs, const char* info,
-                                  double* value) {
+int Highs_getDoubleInfoValue(void* highs, const char* info, double* value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }
 
@@ -578,15 +576,13 @@ int Highs_getNumNz(void* highs) {
   return ((Highs*)highs)->getLp().Astart_[numCol];
 }
 
-const char* Highs_modelStatusToChar(void* highs,
-                                         int int_model_status) {
+const char* Highs_modelStatusToChar(void* highs, int int_model_status) {
   const char* illegal_model_status = "Model status out of range";
   if (int_model_status < (int)HighsModelStatus::HIGHS_MODEL_STATUS_MIN ||
       int_model_status > (int)HighsModelStatus::HIGHS_MODEL_STATUS_MAX)
     return illegal_model_status;
   return ((Highs*)highs)
-      ->modelStatusToString(
-          static_cast<HighsModelStatus>(int_model_status))
+      ->modelStatusToString(static_cast<HighsModelStatus>(int_model_status))
       .c_str();
 }
 
@@ -612,12 +608,10 @@ int Highs_call(const int numcol, const int numrow, const int numnz,
                const double* avalue, double* colvalue, double* coldual,
                double* rowvalue, double* rowdual, int* colbasisstatus,
                int* rowbasisstatus, int* modelstatus) {
-  return Highs_lpCall(numcol, numrow, numnz,
-		      colcost, collower, colupper,
-		      rowlower, rowupper,
-		      astart, aindex, avalue,
-		      colvalue, coldual, rowvalue, rowdual,
-		      colbasisstatus, rowbasisstatus, modelstatus);
+  return Highs_lpCall(numcol, numrow, numnz, colcost, collower, colupper,
+                      rowlower, rowupper, astart, aindex, avalue, colvalue,
+                      coldual, rowvalue, rowdual, colbasisstatus,
+                      rowbasisstatus, modelstatus);
 }
 
 int Highs_runQuiet(void* highs) {
@@ -689,9 +683,7 @@ int Highs_getHighsOptionType(void* highs, const char* option, int* type) {
   return Highs_getOptionType(highs, option, type);
 }
 
-int Highs_resetHighsOptions(void* highs) {
-  return Highs_resetOptions(highs);
-}
+int Highs_resetHighsOptions(void* highs) { return Highs_resetOptions(highs); }
 
 int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value) {
   return Highs_getIntInfoValue(highs, info, value);
@@ -702,15 +694,10 @@ int Highs_getHighsDoubleInfoValue(void* highs, const char* info,
   return Highs_getDoubleInfoValue(highs, info, value);
 }
 
-double Highs_getHighsRunTime(void* highs) {
-  return Highs_getRunTime(highs);
-}
+double Highs_getHighsRunTime(void* highs) { return Highs_getRunTime(highs); }
 
-double Highs_getHighsInfinity(void* highs) {
-  return Highs_getInfinity(highs);
-}
+double Highs_getHighsInfinity(void* highs) { return Highs_getInfinity(highs); }
 
 const char* Highs_highsModelStatusToChar(void* highs, int int_model_status) {
   return Highs_modelStatusToChar(highs, int_model_status);
 }
-

@@ -277,7 +277,7 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
     for (int iCol = 0; iCol < num_col; iCol++) {
       int integrality_status = integrality[iCol];
       assert(integrality_status == (int)HighsVarType::CONTINUOUS ||
-	     integrality_status == (int)HighsVarType::INTEGER);
+             integrality_status == (int)HighsVarType::INTEGER);
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }
@@ -1758,8 +1758,8 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       "([%d:%d] %d, %d; [%d:%d] %d, %d); basis %d "
       "(%d, %d)\n\n",
       message.c_str(), modelStatusToString(model_status).c_str(),
-      modelStatusToString(scaled_model_status).c_str(), lp.numCol_,
-      lp.numRow_, unscaled_primal_status, scaled_primal_status,
+      modelStatusToString(scaled_model_status).c_str(), lp.numCol_, lp.numRow_,
+      unscaled_primal_status, scaled_primal_status,
       (int)solution.col_value.size(), (int)solution.row_value.size(),
       unscaled_dual_status, scaled_dual_status, (int)solution.col_dual.size(),
       (int)solution.row_dual.size(), basis.valid_, (int)basis.col_status.size(),

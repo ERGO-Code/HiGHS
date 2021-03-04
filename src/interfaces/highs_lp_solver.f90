@@ -58,10 +58,11 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_writeModel
 
-    function Highs_writeSolution ( h, f ) result ( s ) bind ( c, name='Highs_writeSolution' )
+    function Highs_writeSolution ( h, f, v ) result ( s ) bind ( c, name='Highs_writeSolution' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: f(*)
+      integer ( c_int ) :: v
       integer ( c_int ) :: s
     end function Highs_writeSolution
 
@@ -84,6 +85,14 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passLp
 
+    function Highs_setBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setBoolOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      logical ( c_bool ), VALUE :: v
+      integer ( c_int ) :: s
+    end function Highs_setBoolOptionValue
+
     function Highs_setIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setIntOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
@@ -91,6 +100,22 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: v
       integer ( c_int ) :: s
     end function Highs_setIntOptionValue
+
+    function Highs_setDoubleOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setDoubleOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      real ( c_double ), VALUE :: v
+      integer ( c_int ) :: s
+    end function Highs_setDoubleOptionValue
+
+    function Highs_setStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setStringOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      character( c_char ), VALUE :: v
+      integer ( c_int ) :: s
+    end function Highs_setStringOptionValue
 
     function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
       use iso_c_binding
@@ -107,6 +132,30 @@ module highs_lp_solver
       integer ( c_int ) :: v
       integer ( c_int ) :: s
     end function Highs_getIntOptionValue
+
+    function Highs_getBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getBoolOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      logical ( c_bool ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getBoolOptionValue
+
+    function Highs_getDoubleOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getDoubleOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      real ( c_double ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getDoubleOptionValue
+
+    function Highs_getStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getStringOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      character( c_char ) :: v(*)
+      integer ( c_int ) :: s
+    end function Highs_getStringOptionValue
 
     function Highs_getOptionType ( h, o, v ) result( s ) bind ( c, name='Highs_getOptionType' )
       use iso_c_binding
@@ -387,6 +436,12 @@ module highs_lp_solver
       integer(c_int) :: sense
       integer ( c_int ) :: s
     end function Highs_getObjectiveSense
+
+    function Highs_runQuiet (h) result(s) bind(c, name='Highs_runQuiet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: s
+    end function Highs_runQuiet
 
 ! int Highs_getColsByRange(
 !     void *highs,          //!< HiGHS object reference
