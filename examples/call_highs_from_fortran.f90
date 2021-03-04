@@ -200,28 +200,27 @@ program fortrantest
   runstatus = Highs_getObjectiveSense(highs, sense);
   call assert(sense .eq. -1, "Changed Objective sense")
   
-  runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+  runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy"//C_NULL_CHAR, simplex_scale_strategy);
   call assert(simplex_scale_strategy .eq. default_simplex_scale_strategy,&
        "simplex_scale_strategy .eq. default_simplex_scale_strategy")
-  runstatus = Highs_setIntOptionValue(highs, "simplex_scale_strategy", new_simplex_scale_strategy)
-  runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+  runstatus = Highs_setIntOptionValue(highs, "simplex_scale_strategy"//C_NULL_CHAR, new_simplex_scale_strategy)
+  runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy"//C_NULL_CHAR, simplex_scale_strategy);
   call assert(simplex_scale_strategy .eq. new_simplex_scale_strategy,&
        "simplex_scale_strategy .eq. new_simplex_scale_strategy")
 
   ! There are some functions to check what type of option value you should provide.
-  runstatus = Highs_getOptionType(highs, "simplex_scale_strategy", option_type);
+  runstatus = Highs_getOptionType(highs, "simplex_scale_strategy"//C_NULL_CHAR, option_type);
   call assert(runstatus .eq. 0, "getHighsOptionType runstatus")
   call assert(option_type .eq. 1, "getHighsOptionType option_type")
-  runstatus = Highs_getOptionType(highs, "bad_option", option_type)
+  runstatus = Highs_getOptionType(highs, "bad_option"//C_NULL_CHAR, option_type)
   call assert(runstatus .eq. 2, "getHighsOptionType runstatus")
 
-  if (1 .eq. 1) then
   runstatus = Highs_run(highs);
   ! Get the model status
   modelstatus = Highs_getModelStatus(highs, scaled_model);
 
+  
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
-  write(*, '(a, i1, a, a)')'Run status = ', runstatus, '; Model status = ', Highs_modelStatusToChar(highs, modelstatus)
 
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);
   runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count"//C_NULL_CHAR, simplex_iteration_count);
@@ -229,13 +228,14 @@ program fortrantest
   runstatus = Highs_getIntInfoValue(highs, "dual_status"//C_NULL_CHAR, dual_status);
 
   write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value, "; Iteration count = ", simplex_iteration_count
+  call assert(modelstatus .eq. 9, "Optimal => modelstatus = 9")
   if (modelstatus .eq. 9) then
-!    print*, "Solution primal status = %s\n", Highs_primalDualStatusToChar(highs, primal_status)
-!    printf("Solution dual status = %s\n", Highs_primalDualStatusToChar(highs, dual_status));
-    ! Get the primal and dual solution
-    runstatus = Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
-    ! Get the basis
-    runstatus = Highs_getBasis(highs, colbasisstatus, rowbasisstatus);
+     call assert(primal_status .eq. 3, "Optimal => primal_status = 3")
+     call assert(dual_status .eq. 3, "Optimal => dual_status = 3")
+     ! Get the primal and dual solution
+     runstatus = Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
+     ! Get the basis
+     runstatus = Highs_getBasis(highs, colbasisstatus, rowbasisstatus);
      ! Report the column primal and dual values, and basis status
      do col = 1, numcol
         write(*, '(a, i1, a, f10.4, a, f10.4, a, i2)') &
@@ -251,7 +251,6 @@ program fortrantest
              '; status = ', rowbasisstatus(row)
      enddo
   endif
-endif
 
 end program fortrantest
 

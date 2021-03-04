@@ -579,14 +579,14 @@ int Highs_getNumNz(void* highs) {
 }
 
 const char* Highs_modelStatusToChar(void* highs,
-                                         int int_highs_model_status) {
-  const char* illegal_highs_model_status = "Model status out of range";
-  if (int_highs_model_status < (int)HighsModelStatus::HIGHS_MODEL_STATUS_MIN ||
-      int_highs_model_status > (int)HighsModelStatus::HIGHS_MODEL_STATUS_MAX)
-    return illegal_highs_model_status;
+                                         int int_model_status) {
+  const char* illegal_model_status = "Model status out of range";
+  if (int_model_status < (int)HighsModelStatus::HIGHS_MODEL_STATUS_MIN ||
+      int_model_status > (int)HighsModelStatus::HIGHS_MODEL_STATUS_MAX)
+    return illegal_model_status;
   return ((Highs*)highs)
       ->modelStatusToString(
-          static_cast<HighsModelStatus>(int_highs_model_status))
+          static_cast<HighsModelStatus>(int_model_status))
       .c_str();
 }
 
@@ -710,7 +710,7 @@ double Highs_getHighsInfinity(void* highs) {
   return Highs_getInfinity(highs);
 }
 
-const char* Highs_highsModelStatusToChar(void* highs, int int_highs_model_status) {
-  return Highs_modelStatusToChar(highs, int_highs_model_status);
+const char* Highs_highsModelStatusToChar(void* highs, int int_model_status) {
+  return Highs_modelStatusToChar(highs, int_model_status);
 }
 

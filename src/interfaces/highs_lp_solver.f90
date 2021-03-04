@@ -388,7 +388,6 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getObjectiveSense
 
-  
 ! int Highs_getColsByRange(
 !     void *highs,          //!< HiGHS object reference
 !     const int from_col,   //!< The index of the first column to
