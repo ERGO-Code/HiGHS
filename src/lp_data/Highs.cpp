@@ -14,6 +14,7 @@
 #include "Highs.h"
 
 #include <algorithm>
+//#include <string>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -26,6 +27,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "mip/HighsMipSolver.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -471,18 +473,30 @@ HighsStatus Highs::run() {
   highsLogDev(options_.log_options, HighsLogType::VERBOSE, "Solving %s\n",
               lp_.model_name_.c_str());
 
+  // Start the HiGHS clock unless it's already running
+  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
+  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
+
+  if (!options_.solver.compare(choose_string) && isMip(lp_)) {
+    // Solve the model as a MIP
+    call_status = callSolveMip();
+    return_status =
+      interpretCallStatus(call_status, return_status, "callSolveMip");
+    if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+    return returnFromRun(return_status);
+  }
+
+  // Solve the model as an LP
+  //
+  // Record the initial time and set the component times and postsolve
+  // iteration count to -1 to identify whether they are not required
+  double initial_time = timer_.readRunHighsClock();
   double this_presolve_time = -1;
   double this_solve_presolved_lp_time = -1;
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
-
-  // Running as LP solver: start the HiGHS clock unless it's already running
-  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
-  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-  // Record the initial time and set the postsolve iteration count to
-  // -1 to identify whether it's not required
-  double initial_time = timer_.readRunHighsClock();
   int postsolve_iteration_count = -1;
+
   // Define identifiers to refer to the HMO of the original LP (0) and
   // the HMO created when using presolve. The index of this HMO is 1
   // when solving a one-off LP, but greater than one if presolve has
@@ -1892,6 +1906,49 @@ HighsStatus Highs::callSolveLp(const int model_index, const string message) {
 
   // Transfer this model's LP solver iteration counts to HiGHS
   copyHighsIterationCounts(iteration_counts, info_);
+
+  return return_status;
+}
+
+HighsStatus Highs::callSolveMip() {
+  HighsStatus return_status = HighsStatus::OK;
+  // Run the MIP solver
+  options_.log_dev_level = LOG_DEV_LEVEL_INFO;
+  HighsMipSolver solver(options_, lp_);
+  solver.run();
+  // Cheating now, but need to set this honestly!
+  HighsStatus call_status = HighsStatus::OK;
+  return_status = interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");
+  if (return_status == HighsStatus::Error) return return_status;
+  // Cheating now, but need to set this honestly!
+  scaled_model_status_ = HighsModelStatus::OPTIMAL;
+  scaled_model_status_ = solver.modelstatus_;
+  model_status_ = scaled_model_status_;
+  // Set the values in HighsInfo instance info_
+  info_.simplex_iteration_count = -1; // Not known
+  info_.ipm_iteration_count = -1; // Not known
+  info_.crossover_iteration_count = -1; // Not known
+  info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  info_.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
+  info_.objective_function_value = solver.solution_objective_;
+  info_.num_primal_infeasibilities = -1; // Not known
+  // Are the violations max or sum?
+  info_.max_primal_infeasibility = -1; // Not known
+  info_.sum_primal_infeasibilities = solver.bound_violation_ + solver.row_violation_;
+  info_.num_dual_infeasibilities = -1; // Not known
+  info_.max_dual_infeasibility = -1; // Not known
+  info_.sum_dual_infeasibilities = -1; // Not known
+  // The solution needs to be here, but just resize it for now
+  int solver_solution_size = solver.solution_.size();
+  assert(solver_solution_size >= lp_.numCol_);
+  solution_.col_value.resize(lp_.numCol_);
+  for (int iCol=0; iCol<lp_.numCol_; iCol++)
+    solution_.col_value[iCol] = solver.solution_[iCol];
+
+  //  assert((int)solution_.col_value.size() == lp_.numCol_);
+  //  assert((int)solution_.row_value.size() == lp_.numRow_);
+  //  solution_.row_value.resize(lp_.numRow_);
+  
 
   return return_status;
 }

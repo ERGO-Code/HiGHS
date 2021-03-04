@@ -825,6 +825,7 @@ class Highs {
   int omp_max_threads = 0;
 
   HighsStatus callSolveLp(const int model_index, const string message);
+  HighsStatus callSolveMip();
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve();

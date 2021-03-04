@@ -46,12 +46,14 @@ int main(int argc, char** argv) {
   // Run LP or MIP solver.
   const HighsLp& lp = highs.getLp();
   HighsStatus run_status = HighsStatus::Error;
+
   bool is_mip = false;
   for (int i = 0; i < (int)lp.integrality_.size(); i++)
     if (lp.integrality_[i] == HighsVarType::INTEGER) {
       is_mip = true;
       break;
     }
+  is_mip = false;
 
   if (options.solver == "simplex" || options.solver == "ipm" ||
       (!is_mip && options.presolve != "mip")) {
