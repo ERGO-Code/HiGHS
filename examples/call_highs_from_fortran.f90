@@ -100,6 +100,8 @@ program fortrantest
   integer, parameter :: default_simplex_scale_strategy = 2
   integer, parameter :: new_simplex_scale_strategy = 3
 
+  character*26 objective_function_value_string 
+
   double precision, pointer :: double_null(:)
   integer, pointer :: integer_null(:)
   
@@ -223,13 +225,17 @@ program fortrantest
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
 !  write(*, '(a, i1, a, a)')'Run status = ', runstatus, '; Model status = ', Highs_highsModelStatusToChar(highs, modelstatus)
 
-  runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value", objective_function_value);
-  runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count", simplex_iteration_count);
-  runstatus = Highs_getIntInfoValue(highs, "primal_status", primal_status);
-  runstatus = Highs_getIntInfoValue(highs, "dual_status", dual_status);
+  objective_function_value_string = "objective_function_value\h"
+  print*, "objective_function_value_string(24:24) = ", objective_function_value_string(24:24)
+  print*, "objective_function_value_string(25:25) = ", objective_function_value_string(25:25)
+  print*, "objective_function_value_string(26:26) = ", objective_function_value_string(26:26)
+  runstatus = Highs_getDoubleInfoValue(highs, objective_function_value_string, objective_function_value);
+!  runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count", simplex_iteration_count);
+!  runstatus = Highs_getIntInfoValue(highs, "primal_status", primal_status);
+!  runstatus = Highs_getIntInfoValue(highs, "dual_status", dual_status);
 
-  write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value,&
-       "; Iteration count = ", simplex_iteration_count
+  write(*, '(a, f10.4)')"Objective value = ", objective_function_value
+!  write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value, "; Iteration count = ", simplex_iteration_count
   if (modelstatus .eq. 9) then
 !    printf("Solution primal status = %s\n", Highs_primalDualStatusToChar(highs, primal_status));
 !    printf("Solution dual status = %s\n", Highs_primalDualStatusToChar(highs, dual_status));
