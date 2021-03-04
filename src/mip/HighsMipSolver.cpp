@@ -214,7 +214,7 @@ void HighsMipSolver::run() {
     mipdata_->printDisplayLine();
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL, "\nSolving stopped with status: %s\n",
-                      utilHighsModelStatusToString(modelstatus_).c_str());
+                      utilModelStatusToString(modelstatus_).c_str());
     bool haveSolution = mipdata_->upper_bound != HIGHS_CONST_INF;
     if (mipdata_->modelcleanup) {
       model_ = mipdata_->modelcleanup->origmodel;
@@ -415,7 +415,7 @@ void HighsMipSolver::run() {
 
   HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                     ML_MINIMAL, "\nSolving stopped with status: %s\n",
-                    utilHighsModelStatusToString(modelstatus_).c_str());
+                    utilModelStatusToString(modelstatus_).c_str());
 
   if (mipdata_->modelcleanup) {
     model_ = mipdata_->modelcleanup->origmodel;

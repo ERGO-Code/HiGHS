@@ -132,7 +132,7 @@ void testSolver(Highs& highs, const std::string solver,
   model_status = highs.getModelStatus();
   if (dev_run)
     printf("Returns status = %d; model status = %s\n", (int)return_status,
-           highs.highsModelStatusToString(model_status).c_str());
+           highs.modelStatusToString(model_status).c_str());
   REQUIRE(return_status == HighsStatus::Warning);
   REQUIRE(model_status == HighsModelStatus::REACHED_ITERATION_LIMIT);
 

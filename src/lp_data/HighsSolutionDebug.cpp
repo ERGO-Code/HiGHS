@@ -798,5 +798,5 @@ void debugReportHighsBasicSolution(const string message,
       solution_params.num_dual_infeasibilities,
       solution_params.max_dual_infeasibility,
       solution_params.sum_dual_infeasibilities,
-      utilHighsModelStatusToString(model_status).c_str());
+      utilModelStatusToString(model_status).c_str());
 }

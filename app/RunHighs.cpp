@@ -156,7 +156,7 @@ void reportSolvedLpStats(FILE* output, int message_level,
     }
     HighsPrintMessage(output, message_level, ML_ALWAYS,
                       "Model   status      : %s\n",
-                      highs.highsModelStatusToString(model_status).c_str());
+                      highs.modelStatusToString(model_status).c_str());
     HighsPrintMessage(
         output, message_level, ML_ALWAYS, "Primal  status      : %s\n",
         highs.primalDualStatusToString(highs_info.primal_status).c_str());

@@ -644,7 +644,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         }
         HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                         "Problem status detected on presolve: %s",
-                        highsModelStatusToString(model_status_).c_str());
+                        modelStatusToString(model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -1757,8 +1757,8 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       "\n%s\nModel status = %s; Scaled model status = %s; LP(%d, %d); solution "
       "([%d:%d] %d, %d; [%d:%d] %d, %d); basis %d "
       "(%d, %d)\n\n",
-      message.c_str(), utilHighsModelStatusToString(model_status).c_str(),
-      utilHighsModelStatusToString(scaled_model_status).c_str(), lp.numCol_,
+      message.c_str(), modelStatusToString(model_status).c_str(),
+      modelStatusToString(scaled_model_status).c_str(), lp.numCol_,
       lp.numRow_, unscaled_primal_status, scaled_primal_status,
       (int)solution.col_value.size(), (int)solution.row_value.size(),
       unscaled_dual_status, scaled_dual_status, (int)solution.col_dual.size(),
@@ -1769,7 +1769,12 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
 
 std::string Highs::highsModelStatusToString(
     const HighsModelStatus model_status) const {
-  return utilHighsModelStatusToString(model_status);
+  return modelStatusToString(model_status);
+}
+
+std::string Highs::modelStatusToString(
+    const HighsModelStatus model_status) const {
+  return utilModelStatusToString(model_status);
 }
 
 std::string Highs::primalDualStatusToString(const int primal_dual_status) {
@@ -2038,7 +2043,7 @@ HighsStatus Highs::getUseModelStatus(
         printf(
             "Unscaled model status was NOTSET: after running from logical "
             "basis it is %s\n",
-            highsModelStatusToString(model_status_).c_str());
+            modelStatusToString(model_status_).c_str());
 
       if (model_status_ != HighsModelStatus::NOTSET) {
         use_model_status = model_status_;

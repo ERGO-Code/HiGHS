@@ -787,7 +787,7 @@ int Highs_getNumNz(void* highs  //!< HiGHS object reference
  * @brief Returns a pointer to a character representation of a HiGHS model
  * status
  */
-const char* Highs_highsModelStatusToChar(
+const char* Highs_modelStatusToChar(
     void* highs,                //!< HiGHS object reference
     int int_highs_model_status  //!< Status to interpret
 );
@@ -929,6 +929,8 @@ double Highs_getHighsInfinity(void* highs);
 
 double Highs_getHighsRunTime(void* highs);
   
+const char* Highs_highsModelStatusToChar(void* highs, int int_highs_model_status);
+ 
 #ifdef __cplusplus
 }
 #endif

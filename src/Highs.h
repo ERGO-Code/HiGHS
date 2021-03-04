@@ -768,7 +768,11 @@ class Highs {
                                       const int hmo_ix = -1);
 #endif
 
+  // Deprecated
   std::string highsModelStatusToString(
+      const HighsModelStatus model_status) const;
+
+  std::string modelStatusToString(
       const HighsModelStatus model_status) const;
 
   std::string primalDualStatusToString(const int primal_dual_status);

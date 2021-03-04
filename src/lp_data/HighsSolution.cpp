@@ -305,8 +305,7 @@ void analyseSimplexAndHighsSolutionDifferences(
       scaled_solution_params.sum_primal_infeasibilities,
       scaled_solution_params.num_dual_infeasibilities,
       scaled_solution_params.sum_dual_infeasibilities,
-      utilHighsModelStatusToString(highs_model_object.scaled_model_status_)
-          .c_str(),
+      utilModelStatusToString(highs_model_object.scaled_model_status_).c_str(),
       num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences,
       num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences,
       num_basic_col_value_differences, sum_basic_col_value_differences,
