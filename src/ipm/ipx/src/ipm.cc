@@ -16,6 +16,7 @@ struct IPM::Step {
     Step& operator+=(const Step& rhs) {
         x += rhs.x; xl += rhs.xl; xu += rhs.xu;
         y += rhs.y; zl += rhs.zl; zu += rhs.zu;
+	return *this;
     }
 };
 
