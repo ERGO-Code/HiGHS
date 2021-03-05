@@ -251,6 +251,7 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   double dual_objective_value_upper_bound;
   int highs_debug_level;
+  int highs_analysis_level;
   int simplex_strategy;
   int simplex_scale_strategy;
   int simplex_crash_strategy;
@@ -277,10 +278,13 @@ struct HighsOptionsStruct {
   int dual_simplex_cleanup_strategy;
   int simplex_price_strategy;
   int dual_chuzc_sort_strategy;
+  int presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
+  double primal_simplex_bound_perturbation_multiplier;
+  double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
   double start_crossover_tolerance;
@@ -291,6 +295,9 @@ struct HighsOptionsStruct {
   // Options for MIP solver
   int mip_max_nodes;
   int mip_max_leaves;
+  int mip_lp_age_limit;
+  int mip_pool_age_limit;
+  int mip_pool_soft_limit;
   int mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
@@ -440,6 +447,12 @@ class HighsOptions : public HighsOptionsStruct {
                             HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt(
+        "highs_analysis_level", "Analysis level in HiGHS", advanced,
+        &highs_analysis_level, HIGHS_ANALYSIS_LEVEL_MIN,
+        HIGHS_ANALYSIS_LEVEL_MIN, HIGHS_ANALYSIS_LEVEL_MAX);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
                             advanced, &simplex_strategy, SIMPLEX_STRATEGY_MIN,
@@ -550,6 +563,26 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_max_leaves, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("mip_lp_age_limit",
+                                     "maximal age of dynamic LP rows before "
+                                     "they are removed from the LP relaxation",
+                                     advanced, &mip_lp_age_limit, 0, 10,
+                                     std::numeric_limits<int16_t>::max());
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_pool_age_limit",
+        "maximal age of rows in the cutpool before they are deleted", advanced,
+        &mip_pool_age_limit, 0, 30, 1000);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_pool_soft_limit",
+                                     "soft limit on the number of rows in the "
+                                     "cutpool for dynamic age adjustment",
+                                     advanced, &mip_pool_soft_limit, 1, 10000,
+                                     HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("mip_report_level", "MIP solver reporting level",
                             advanced, &mip_report_level, 0, 1, 2);
@@ -615,7 +648,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt("dual_simplex_cleanup_strategy",
                             "Strategy for cleanup in dual simplex solver: none "
-                            "/ HPrimal / HQPrimal (0/1/2)",
+                            "/ HPrimal / HEkk (0/1/2)",
                             advanced, &dual_simplex_cleanup_strategy,
                             DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
                             DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
@@ -660,6 +693,26 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
         HIGHS_CONST_INF);
     records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "primal_simplex_bound_perturbation_multiplier",
+        "Primal simplex bound perturbation multiplier: 0 => no perturbation",
+        advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
+        HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "presolve_pivot_threshold",
+        "Matrix factorization pivot threshold for substitutions in presolve",
+        advanced, &presolve_pivot_threshold, min_pivot_threshold, 0.01,
+        max_pivot_threshold);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "presolve_substitution_maxfillin", "Strategy for CHUZC sort in dual simplex",
+        advanced, &presolve_substitution_maxfillin, 0,
+        10, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
         "factor_pivot_threshold", "Matrix factorization pivot threshold",

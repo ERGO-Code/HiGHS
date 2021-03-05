@@ -30,13 +30,11 @@ struct SimplexBasis {
 
 struct HighsSimplexLpStatus {
   // Status of LP solved by the simplex method and its data
+  bool initialised = false;
   bool valid = false;
-  bool is_dualised = false;
-  bool is_permuted = false;
   bool scaling_tried = false;
-  bool has_basis = false;            // The simplex LP has a valid simplex basis
-  bool has_matrix_col_wise = false;  // The HMatrix column-wise matrix is valid
-  bool has_matrix_row_wise = false;  // The HMatrix row-wise matrix is valid
+  bool has_basis = false;   // The simplex LP has a valid simplex basis
+  bool has_matrix = false;  // The HMatrix matrices are valid
   bool has_factor_arrays =
       false;  // Has the arrays for the representation of B^{-1}
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known
@@ -94,7 +92,9 @@ struct HighsSimplexInfo {
   std::vector<double> workUpper_;
   std::vector<double> workRange_;
   std::vector<double> workValue_;
-
+  std::vector<double> workLowerShift_;
+  std::vector<double> workUpperShift_;
+  //
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
   // is called since B^{-1} is required to compute them. Knowledge of
@@ -120,7 +120,10 @@ struct HighsSimplexInfo {
   bool valid_backtracking_basis_ = false;
   SimplexBasis backtracking_basis_;
   int backtracking_basis_costs_perturbed_;
+  int backtracking_basis_bounds_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
+  std::vector<double> backtracking_basis_workLowerShift_;
+  std::vector<double> backtracking_basis_workUpperShift_;
   std::vector<double> backtracking_basis_edge_weights_;
 
   // Dual and primal ray vectors
@@ -136,16 +139,36 @@ struct HighsSimplexInfo {
   int price_strategy;
 
   double dual_simplex_cost_perturbation_multiplier;
+  double primal_simplex_phase1_cost_perturbation_multiplier = 1;
+  double primal_simplex_bound_perturbation_multiplier;
   double factor_pivot_threshold;
   int update_limit;
+
+  // Simplex control parameters from HSA
+  int control_iteration_count0;
+  double col_aq_density;
+  double row_ep_density;
+  double row_ap_density;
+  double row_DSE_density;
+  double col_basic_feasibility_change_density;
+  double row_basic_feasibility_change_density;
+  double col_BFRT_density;
+  double primal_col_density;
+  double dual_col_density;
+  // For control of switch from DSE to Devex in dual simplex
+  bool allow_dual_steepest_edge_to_devex_switch;
+  double dual_steepest_edge_weight_log_error_threshold;
+  double costly_DSE_frequency;
+  int num_costly_DSE_iteration;
+  double average_log_low_DSE_weight_error;
+  double average_log_high_DSE_weight_error;
+  // Needed globally??
 
   // Internal options - can't be changed externally
   bool run_quiet = false;
   bool store_squared_primal_infeasibility = false;
-#ifndef HiGHSDEV
-  bool analyse_lp_solution = false;  // true;//
-#else
-  bool analyse_lp_solution = true;
+
+  //  bool analyse_lp_solution = true;
   // Options for reporting timing
   bool report_simplex_inner_clock = false;
   bool report_simplex_outer_clock = false;
@@ -156,26 +179,28 @@ struct HighsSimplexInfo {
   bool analyse_lp = false;
   bool analyse_iterations = false;
   bool analyse_invert_form = false;
-  bool analyse_invert_condition = false;
-  bool analyse_invert_time = false;
-  bool analyse_rebuild_time = false;
-#endif
-  // Simplex runtime information
-  int allow_cost_perturbation = true;
-  int costs_perturbed = 0;
+  //  bool analyse_invert_condition = false;
+  //  bool analyse_invert_time = false;
+  //  bool analyse_rebuild_time = false;
 
-  int num_primal_infeasibilities = -1;
+  // Simplex runtime information
+  bool allow_cost_perturbation = true;
+  bool costs_perturbed = false;
+  bool bounds_perturbed = false;
+
+  int num_primal_infeasibility = -1;
   double max_primal_infeasibility;
-  double sum_primal_infeasibilities;
-  int num_dual_infeasibilities = -1;
+  double sum_primal_infeasibility;
+  int num_dual_infeasibility = -1;
   double max_dual_infeasibility;
-  double sum_dual_infeasibilities;
+  double sum_dual_infeasibility;
 
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
   int primal_phase1_iteration_count = 0;
   int primal_phase2_iteration_count = 0;
+  int primal_bound_swap = 0;
 
   int min_threads = 1;
   int num_threads = 1;
@@ -203,37 +228,6 @@ struct HighsSimplexInfo {
   double updated_primal_objective_value;
   // Number of logical variables in the basis
   int num_basic_logicals;
-
-#ifdef HiGHSDEV
-  // Analysis of INVERT
-  int num_invert = 0;
-  // Analysis of INVERT form
-  int num_kernel = 0;
-  int num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshold = 0.1;
-  double max_kernel_dim = 0;
-  double sum_kernel_dim = 0;
-  double running_average_kernel_dim = 0;
-  double sum_invert_fill_factor = 0;
-  double sum_kernel_fill_factor = 0;
-  double sum_major_kernel_fill_factor = 0;
-  double running_average_invert_fill_factor = 1;
-  double running_average_kernel_fill_factor = 1;
-  double running_average_major_kernel_fill_factor = 1;
-
-  int total_inverts;
-  double total_invert_time;
-  double invert_condition = 1;
-#endif
-
-  /*
-#ifdef HiGHSDEV
-  // Move this to Simplex class once it's created
-  vector<int> historyColumnIn;
-  vector<int> historyColumnOut;
-  vector<double> historyAlpha;
-#endif
-  */
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

@@ -14,9 +14,118 @@
 #include "util/HighsSort.h"
 
 #include <cstddef>
-#include <vector>
 
 #include "lp_data/HConst.h"
+
+using std::vector;
+
+void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
+                         vector<int>& heap_ix, const double v, const int ix) {
+  int cd_p, pa_p;
+  if (n < mx_n) {
+    // The heap is not full so put the new value at the bottom of the
+    // heap and let it rise up to its correct level.
+    n++;
+    cd_p = n;
+    pa_p = cd_p / 2;
+    for (;;) {
+      if (pa_p > 0) {
+        if (v < heap_v[pa_p]) {
+          heap_v[cd_p] = heap_v[pa_p];
+          heap_ix[cd_p] = heap_ix[pa_p];
+          cd_p = pa_p;
+          pa_p = pa_p / 2;
+          continue;
+        }
+      }
+      break;
+    }
+    heap_v[cd_p] = v;
+    heap_ix[cd_p] = ix;
+  } else if (v > heap_v[1]) {
+    // The heap is full so replace the least value with the new value
+    // and let it sink down to its correct level.
+    pa_p = 1;
+    cd_p = pa_p + pa_p;
+    for (;;) {
+      if (cd_p <= n) {
+        if (cd_p < n) {
+          if (heap_v[cd_p] > heap_v[cd_p + 1]) cd_p++;
+        }
+        if (v > heap_v[cd_p]) {
+          heap_v[pa_p] = heap_v[cd_p];
+          heap_ix[pa_p] = heap_ix[cd_p];
+          pa_p = cd_p;
+          cd_p = cd_p + cd_p;
+          continue;
+        }
+      }
+      break;
+    }
+    heap_v[pa_p] = v;
+    heap_ix[pa_p] = ix;
+  }
+  // Set heap_ix[0]=1 to indicate that the values form a heap.
+  heap_ix[0] = 1;
+  return;
+}
+
+void sortDecreasingHeap(const int n, vector<double>& heap_v,
+                        vector<int>& heap_ix) {
+  int fo_p, srt_p;
+  int cd_p, pa_p;
+  int ix;
+  double v;
+  if (n <= 1) return;
+  if (heap_ix[0] != 1) {
+    // The data are assumed to be completely unordered. A heap will be formed
+    // and sorted.
+    fo_p = n / 2 + 1;
+    srt_p = n;
+  } else {
+    // The data are assumed to form a heap which is to be sorted.
+    fo_p = 1;
+    srt_p = n;
+  }
+  for (;;) {
+    if (fo_p > 1) {
+      fo_p = fo_p - 1;
+      v = heap_v[fo_p];
+      ix = heap_ix[fo_p];
+    } else {
+      v = heap_v[srt_p];
+      ix = heap_ix[srt_p];
+      heap_v[srt_p] = heap_v[1];
+      heap_ix[srt_p] = heap_ix[1];
+      srt_p--;
+      if (srt_p == 1) {
+        heap_v[1] = v;
+        heap_ix[1] = ix;
+        return;
+      }
+    }
+    pa_p = fo_p;
+    cd_p = fo_p + fo_p;
+    for (;;) {
+      if (cd_p <= srt_p) {
+        if (cd_p < srt_p) {
+          if (heap_v[cd_p] > heap_v[cd_p + 1]) cd_p = cd_p + 1;
+        }
+        if (v > heap_v[cd_p]) {
+          heap_v[pa_p] = heap_v[cd_p];
+          heap_ix[pa_p] = heap_ix[cd_p];
+          pa_p = cd_p;
+          cd_p = cd_p + cd_p;
+          continue;
+        }
+      }
+      break;
+    }
+    heap_v[pa_p] = v;
+    heap_ix[pa_p] = ix;
+  }
+  return;
+}
 
 void maxheapsort(int* heap_v, int n) {
   buildMaxheap(heap_v, n);
@@ -220,8 +329,8 @@ bool increasingSetOk(const double* set, const int set_num_entries,
 void sortSetData(const int num_entries, int* set, const double* data0,
                  const double* data1, const double* data2, double* sorted_data0,
                  double* sorted_data1, double* sorted_data2) {
-  std::vector<int> sort_set_vec(1 + num_entries);
-  std::vector<int> perm_vec(1 + num_entries);
+  vector<int> sort_set_vec(1 + num_entries);
+  vector<int> perm_vec(1 + num_entries);
 
   int* sort_set = &sort_set_vec[0];
   int* perm = &perm_vec[0];

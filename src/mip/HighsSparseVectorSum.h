@@ -11,6 +11,7 @@
 #define HIGHS_SPARSE_VECTOR_SUM_H_
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <vector>
 
@@ -32,6 +33,7 @@ class HighsSparseVectorSum {
   }
 
   void add(int index, double value) {
+    assert(index >= 0 && index < (int)nonzeroflag.size());
     if (nonzeroflag[index]) {
       values[index] += value;
     } else {
@@ -75,6 +77,31 @@ class HighsSparseVectorSum {
   }
 
   void sort() { std::sort(nonzeroinds.begin(), nonzeroinds.end()); }
+
+  template <typename Pred>
+  int partition(Pred&& pred) {
+    return std::partition(nonzeroinds.begin(), nonzeroinds.end(), pred) -
+           nonzeroinds.begin();
+  }
+
+  template <typename IsZero>
+  void cleanup(IsZero&& isZero) {
+    int numNz = nonzeroinds.size();
+
+    for (int i = numNz - 1; i >= 0; --i) {
+      int pos = nonzeroinds[i];
+      double val = double(values[pos]);
+
+      if (isZero(pos, val)) {
+        values[pos] = 0.0;
+        nonzeroflag[pos] = 0;
+        --numNz;
+        std::swap(nonzeroinds[numNz], nonzeroinds[i]);
+      }
+    }
+
+    nonzeroinds.resize(numNz);
+  }
 };
 
 #endif

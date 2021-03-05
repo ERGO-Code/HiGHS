@@ -81,7 +81,7 @@ class FactorTimer {
           factor_timer_clock_pointer->clock_[factor_clock]);
     return argument;
   };
-#ifdef HiGHSDEV
+
   void initialiseFactorClocks(HighsTimerClock& factor_timer_clock) {
     HighsTimer& timer = factor_timer_clock.timer_;
     std::vector<int>& clock = factor_timer_clock.clock_;
@@ -181,7 +181,5 @@ class FactorTimer {
     reportFactorLevel1Clock(factor_timer_clock);
     reportFactorLevel2Clock(factor_timer_clock);
   }
-
-#endif
 };
 #endif /* SIMPLEX_FACTORTIMER_H_ */

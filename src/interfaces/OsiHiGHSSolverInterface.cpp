@@ -1324,9 +1324,6 @@ void OsiHiGHSSolverInterface::getBasisStatus(int* cstat, int* rstat) const {
       case HighsBasisStatus::UPPER:
         cstat[i] = 2;
         break;
-      case HighsBasisStatus::SUPER:
-        cstat[i] = 0;
-        break;
       case HighsBasisStatus::ZERO:
         cstat[i] = 0;
         break;
@@ -1346,9 +1343,6 @@ void OsiHiGHSSolverInterface::getBasisStatus(int* cstat, int* rstat) const {
       case HighsBasisStatus::UPPER:
         rstat[i] = 2;
         break;
-      case HighsBasisStatus::SUPER:
-        rstat[i] = 0;
-        break;
       case HighsBasisStatus::ZERO:
         rstat[i] = 0;
         break;
@@ -1358,11 +1352,11 @@ void OsiHiGHSSolverInterface::getBasisStatus(int* cstat, int* rstat) const {
     }
 }
 
-void OsiHiGHSSolverInterface ::setRowNames(OsiNameVec& srcNames, int srcStart,
-                                           int len, int tgtStart) {}
+void OsiHiGHSSolverInterface::setRowNames(OsiNameVec& srcNames, int srcStart,
+                                          int len, int tgtStart) {}
 
-void OsiHiGHSSolverInterface ::setColNames(OsiNameVec& srcNames, int srcStart,
-                                           int len, int tgtStart) {}
+void OsiHiGHSSolverInterface::setColNames(OsiNameVec& srcNames, int srcStart,
+                                          int len, int tgtStart) {}
 
 void OsiSolverInterfaceMpsUnitTest(
     const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir) {

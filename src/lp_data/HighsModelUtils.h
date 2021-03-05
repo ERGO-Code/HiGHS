@@ -18,12 +18,10 @@
 #include "Highs.h"
 #include "lp_data/HighsStatus.h"
 
-#ifdef HiGHSDEV
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const char* message, int numBd,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper);
-#endif
 void writeModelBoundSol(FILE* file, const bool columns, const int dim,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper,

@@ -35,7 +35,6 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::Error) return return_status;
 
   // If the LP has no columns there is nothing left to test
-  // NB assessLpDimensions returns HighsStatus::Error if lp.numCol_ < 0
   if (lp.numCol_ == 0) return HighsStatus::OK;
 
   // From here, any LP has lp.numCol_ > 0 and lp.Astart_[lp.numCol_] exists (as
@@ -1719,7 +1718,6 @@ void reportMatrix(const HighsOptions& options, const std::string message,
                     "             Start   %10d\n", num_nz);
 }
 
-#ifdef HiGHSDEV
 void analyseLp(const HighsLp& lp, const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
@@ -1755,7 +1753,6 @@ void analyseLp(const HighsLp& lp, const std::string message) {
   analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
   analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
-#endif
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty) {
@@ -2058,7 +2055,8 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
   }
   equality_lp.rowLower_ = rhs;
   equality_lp.rowUpper_ = rhs;
-
+  equality_lp.integrality_.assign(equality_lp.numCol_,
+                                  HighsVarType::CONTINUOUS);
   return HighsStatus::OK;
 }
 

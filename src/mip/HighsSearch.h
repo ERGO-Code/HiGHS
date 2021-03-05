@@ -20,6 +20,7 @@
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
+#include "util/HighsHash.h"
 
 class HighsMipSolver;
 class HighsImplications;
@@ -51,6 +52,7 @@ class HighsSearch {
     Random,
     BestCost,
     WorstCost,
+    Disjunction,
   };
 
  private:
@@ -64,22 +66,27 @@ class HighsSearch {
     double branching_point;
     HighsDomainChange branchingdecision;
     uint8_t opensubtrees;
-    bool lpsolved;
+    // we store the lp objective separately to the lower bound since the lower
+    // bound could be above the LP objective when cuts age out or below when the
+    // LP is unscaled dual infeasible and it is not set. We still want to use
+    // the objective for pseudocost updates and tiebreaking of best bound node
+    // selection
+    double lp_objective;
 
     NodeData(double parentlb = -HIGHS_CONST_INF,
              double parentestimate = -HIGHS_CONST_INF)
         : lower_bound(parentlb),
           estimate(parentestimate),
           opensubtrees(2),
-          lpsolved(false) {}
+          lp_objective(-HIGHS_CONST_INF) {}
   };
 
   std::vector<NodeData> nodestack;
-  std::unordered_map<int, int> reliableatnode;
+  HighsHashTable<int, int> reliableatnode;
 
   bool branchingVarReliableAtNode(int col) const {
     auto it = reliableatnode.find(col);
-    if (it == reliableatnode.end() || it->second != 3) return false;
+    if (it == nullptr || *it != 3) return false;
 
     return true;
   }
@@ -98,15 +105,21 @@ class HighsSearch {
 
   double getCutoffBound() const;
 
-  HighsDomain& getLocalDomain() { return localdom; }
-
   void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
 
   double checkSol(const std::vector<double>& sol, bool& integerfeasible) const;
 
-  void heuristicSearch();
+  void createNewNode();
 
-  void heuristicSearchNew();
+  void cutoffNode();
+
+  void branchDownwards(int col, double newub, double branchpoint);
+
+  void branchUpwards(int col, double newlb, double branchpoint);
+
+  void setMinReliable(int minreliable);
+
+  void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
 
   void addBoundExceedingConflict();
 
@@ -118,6 +131,8 @@ class HighsSearch {
   size_t getHeuristicLpIterations() const;
 
   size_t getTotalLpIterations() const;
+
+  size_t getLocalLpIterations() const;
 
   size_t getStrongBranchingLpIterations() const;
 
@@ -158,6 +173,14 @@ class HighsSearch {
   void printDisplayLine(char first, bool header = false);
 
   void dive();
+
+  HighsDomain& getLocalDomain() { return localdom; }
+
+  const HighsDomain& getLocalDomain() const { return localdom; }
+
+  HighsPseudocost& getPseudoCost() { return pseudocost; }
+
+  const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
   void solveDepthFirst(size_t maxbacktracks = 1);
 };

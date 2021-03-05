@@ -7,11 +7,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HDualRow.cpp
+/**@file simplex/HEkkDualRow.cpp
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "simplex/HDualRow.h"
+#include "simplex/HEkkDualRow.h"
 
 #include <cassert>
 #include <iostream>
@@ -28,12 +28,12 @@ using std::make_pair;
 using std::pair;
 using std::set;
 
-void HDualRow::setupSlice(int size) {
+void HEkkDualRow::setupSlice(int size) {
   workSize = size;
-  workMove = &workHMO.simplex_basis_.nonbasicMove_[0];
-  workDual = &workHMO.simplex_info_.workDual_[0];
-  workRange = &workHMO.simplex_info_.workRange_[0];
-  work_devex_index = &workHMO.simplex_info_.devex_index_[0];
+  workMove = &ekk_instance_.simplex_basis_.nonbasicMove_[0];
+  workDual = &ekk_instance_.simplex_info_.workDual_[0];
+  workRange = &ekk_instance_.simplex_info_.workRange_[0];
+  work_devex_index = &ekk_instance_.simplex_info_.devex_index_[0];
 
   // Allocate spaces
   packCount = 0;
@@ -42,14 +42,15 @@ void HDualRow::setupSlice(int size) {
 
   workCount = 0;
   workData.resize(workSize);
-  analysis = &workHMO.simplex_analysis_;
+  analysis = &ekk_instance_.analysis_;
 }
 
-void HDualRow::setup() {
+void HEkkDualRow::setup() {
   // Setup common vectors
-  const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
+  const int numTot =
+      ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
   setupSlice(numTot);
-  workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
+  workNumTotPermutation = &ekk_instance_.simplex_info_.numTotPermutation_[0];
 
   // deleteFreelist() is being called in Phase 1 and Phase 2 since
   // it's in updatePivots(), but create_Freelist() is only called in
@@ -58,12 +59,12 @@ void HDualRow::setup() {
   freeList.clear();
 }
 
-void HDualRow::clear() {
+void HEkkDualRow::clear() {
   packCount = 0;
   workCount = 0;
 }
 
-void HDualRow::chooseMakepack(const HVector* row, const int offset) {
+void HEkkDualRow::chooseMakepack(const HVector* row, const int offset) {
   /**
    * Pack the indices and values for the row
    *
@@ -81,22 +82,23 @@ void HDualRow::chooseMakepack(const HVector* row, const int offset) {
   }
 }
 
-void HDualRow::choosePossible() {
+void HEkkDualRow::choosePossible() {
   /**
    * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
    */
-  const double Ta = workHMO.simplex_info_.update_count < 10
-                        ? 1e-9
-                        : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
-  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
-  const int sourceOut = workDelta < 0 ? -1 : 1;
+  const double Ta =
+      ekk_instance_.simplex_info_.update_count < 10
+          ? 1e-9
+          : ekk_instance_.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
+  const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
+  const int move_out = workDelta < 0 ? -1 : 1;
   workTheta = HIGHS_CONST_INF;
   workCount = 0;
   for (int i = 0; i < packCount; i++) {
     const int iCol = packIndex[i];
     const int move = workMove[iCol];
-    const double alpha = packValue[i] * sourceOut * move;
+    const double alpha = packValue[i] * move_out * move;
     if (alpha > Ta) {
       workData[workCount++] = make_pair(iCol, alpha);
       const double relax = workDual[iCol] * move + Td;
@@ -105,7 +107,7 @@ void HDualRow::choosePossible() {
   }
 }
 
-void HDualRow::chooseJoinpack(const HDualRow* otherRow) {
+void HEkkDualRow::chooseJoinpack(const HEkkDualRow* otherRow) {
   /**
    * Join pack of possible candidates in this row with possible
    * candidates in otherRow
@@ -117,7 +119,7 @@ void HDualRow::chooseJoinpack(const HDualRow* otherRow) {
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
-int HDualRow::chooseFinal() {
+int HEkkDualRow::chooseFinal() {
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -155,7 +157,7 @@ int HDualRow::chooseFinal() {
   bool use_quad_sort = false;
   bool use_heap_sort = false;
   const int dual_chuzc_sort_strategy =
-      workHMO.options_.dual_chuzc_sort_strategy;
+      ekk_instance_.options_.dual_chuzc_sort_strategy;
   if (dual_chuzc_sort_strategy == SIMPLEX_DUAL_CHUZC_STRATEGY_CHOOSE) {  // 0
     // Use the quadratic cost sort for smaller values of workCount,
     // otherwise use the heap-based sort
@@ -223,21 +225,20 @@ int HDualRow::chooseFinal() {
   }
   analysis->simplexTimerStart(Chuzc3cClock);
 
+  int move_out = workDelta < 0 ? -1 : 1;
   if (breakIndex < 0) {
-    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
                     "Suspected dual unboundedness identified in chooseFinal");
     return 1;
   }
-  int sourceOut = workDelta < 0 ? -1 : 1;
-  assert(breakIndex >= 0);  // todo @ Julian : assert can fail and leads to
-                            // invalid memory access below
+  assert(breakIndex >= 0);
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;
-    workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
+    workAlpha = workData[breakIndex].second * move_out * workMove[workPivot];
   } else {
     workPivot = sorted_workData[breakIndex].first;
     workAlpha =
-        sorted_workData[breakIndex].second * sourceOut * workMove[workPivot];
+        sorted_workData[breakIndex].second * move_out * workMove[workPivot];
   }
   if (workDual[workPivot] * workMove[workPivot] > 0) {
     workTheta = workDual[workPivot] / workAlpha;
@@ -247,11 +248,13 @@ int HDualRow::chooseFinal() {
 
   analysis->simplexTimerStop(Chuzc3cClock);
 
+  /*
   if (use_quad_sort && use_heap_sort)
     debugDualChuzcWorkDataAndGroup(
-        workHMO, workDelta, workTheta, workCount, alt_workCount, breakIndex,
-        alt_breakIndex, workData, sorted_workData, workGroup, alt_workGroup);
-
+        ekk_instance_, workDelta, workTheta, workCount, alt_workCount,
+  breakIndex, alt_breakIndex, workData, sorted_workData, workGroup,
+  alt_workGroup);
+  */
   analysis->simplexTimerStart(Chuzc3dClock);
 
   // 4. Determine BFRT flip index: flip all
@@ -285,8 +288,8 @@ int HDualRow::chooseFinal() {
   return 0;
 }
 
-bool HDualRow::chooseFinalWorkGroupQuad() {
-  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+bool HEkkDualRow::chooseFinalWorkGroupQuad() {
+  const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
   int fullCount = workCount;
   workCount = 0;
   double totalChange = initial_total_change;
@@ -323,7 +326,7 @@ bool HDualRow::chooseFinalWorkGroupQuad() {
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
-      debugDualChuzcFail(workHMO.options_, workCount, workData, workDual,
+      debugDualChuzcFail(ekk_instance_.options_, workCount, workData, workDual,
                          selectTheta, remainTheta);
       return false;
     }
@@ -337,8 +340,8 @@ bool HDualRow::chooseFinalWorkGroupQuad() {
   return true;
 }
 
-bool HDualRow::chooseFinalWorkGroupHeap() {
-  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+bool HEkkDualRow::chooseFinalWorkGroupHeap() {
+  const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
   int fullCount = alt_workCount;
   double totalChange = initial_total_change;
   double selectTheta = workTheta;
@@ -391,7 +394,7 @@ bool HDualRow::chooseFinalWorkGroupHeap() {
   return true;
 }
 
-void HDualRow::chooseFinalLargeAlpha(
+void HEkkDualRow::chooseFinalLargeAlpha(
     int& breakIndex, int& breakGroup, int pass_workCount,
     const std::vector<std::pair<int, double>>& pass_workData,
     const std::vector<int>& pass_workGroup) {
@@ -426,100 +429,102 @@ void HDualRow::chooseFinalLargeAlpha(
   }
 }
 
-void HDualRow::updateFlip(HVector* bfrtColumn) {
-  double* workDual = &workHMO.simplex_info_.workDual_[0];
+void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
+  double* workDual = &ekk_instance_.simplex_info_.workDual_[0];
   double dual_objective_value_change = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
     const int iCol = workData[i].first;
     const double change = workData[i].second;
     double local_dual_objective_change = change * workDual[iCol];
-    local_dual_objective_change *= workHMO.scale_.cost_;
+    local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
-    flip_bound(workHMO, iCol);
-    workHMO.matrix_.collect_aj(*bfrtColumn, iCol, change);
+    ekk_instance_.flipBound(iCol);
+    ekk_instance_.matrix_.collect_aj(*bfrtColumn, iCol, change);
   }
-  workHMO.simplex_info_.updated_dual_objective_value +=
+  ekk_instance_.simplex_info_.updated_dual_objective_value +=
       dual_objective_value_change;
 }
 
-void HDualRow::updateDual(double theta) {
+void HEkkDualRow::updateDual(double theta) {
   analysis->simplexTimerStart(UpdateDualClock);
-  double* workDual = &workHMO.simplex_info_.workDual_[0];
+  double* workDual = &ekk_instance_.simplex_info_.workDual_[0];
   double dual_objective_value_change = 0;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
     int iCol = packIndex[i];
     const double delta_dual = theta * packValue[i];
-    const double local_value = workHMO.simplex_info_.workValue_[iCol];
+    const double local_value = ekk_instance_.simplex_info_.workValue_[iCol];
     double local_dual_objective_change =
-        workHMO.simplex_basis_.nonbasicFlag_[iCol] *
+        ekk_instance_.simplex_basis_.nonbasicFlag_[iCol] *
         (-local_value * delta_dual);
-    local_dual_objective_change *= workHMO.scale_.cost_;
+    local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
   }
-  workHMO.simplex_info_.updated_dual_objective_value +=
+  ekk_instance_.simplex_info_.updated_dual_objective_value +=
       dual_objective_value_change;
   analysis->simplexTimerStop(UpdateDualClock);
 }
 
-void HDualRow::createFreelist() {
+void HEkkDualRow::createFreelist() {
   freeList.clear();
-  for (int i = 0; i < workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
+  for (int i = 0; i < ekk_instance_.simplex_lp_.numCol_ +
+                          ekk_instance_.simplex_lp_.numRow_;
        i++) {
-    if (workHMO.simplex_basis_.nonbasicFlag_[i] &&
-        highs_isInfinity(-workHMO.simplex_info_.workLower_[i]) &&
-        highs_isInfinity(workHMO.simplex_info_.workUpper_[i]))
+    if (ekk_instance_.simplex_basis_.nonbasicFlag_[i] &&
+        highs_isInfinity(-ekk_instance_.simplex_info_.workLower_[i]) &&
+        highs_isInfinity(ekk_instance_.simplex_info_.workUpper_[i]))
       freeList.insert(i);
   }
-  debugFreeListNumEntries(workHMO, freeList);
+  //  debugFreeListNumEntries(ekk_instance_, freeList);
 }
 
-void HDualRow::createFreemove(HVector* row_ep) {
+void HEkkDualRow::createFreemove(HVector* row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
-    double Ta = workHMO.simplex_info_.update_count < 10
-                    ? 1e-9
-                    : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
-    int sourceOut = workDelta < 0 ? -1 : 1;
+    double Ta =
+        ekk_instance_.simplex_info_.update_count < 10
+            ? 1e-9
+            : ekk_instance_.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
+    int move_out = workDelta < 0 ? -1 : 1;
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workHMO.simplex_lp_.numCol_);
-      double alpha = workHMO.matrix_.compute_dot(*row_ep, iCol);
+      assert(iCol < ekk_instance_.simplex_lp_.numCol_);
+      double alpha = ekk_instance_.matrix_.compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
-        if (alpha * sourceOut > 0)
-          workHMO.simplex_basis_.nonbasicMove_[iCol] = 1;
+        if (alpha * move_out > 0)
+          ekk_instance_.simplex_basis_.nonbasicMove_[iCol] = 1;
         else
-          workHMO.simplex_basis_.nonbasicMove_[iCol] = -1;
+          ekk_instance_.simplex_basis_.nonbasicMove_[iCol] = -1;
       }
     }
   }
 }
-void HDualRow::deleteFreemove() {
+void HEkkDualRow::deleteFreemove() {
   if (!freeList.empty()) {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workHMO.simplex_lp_.numCol_);
-      workHMO.simplex_basis_.nonbasicMove_[iCol] = 0;
+      assert(iCol < ekk_instance_.simplex_lp_.numCol_);
+      ekk_instance_.simplex_basis_.nonbasicMove_[iCol] = 0;
     }
   }
 }
 
-void HDualRow::deleteFreelist(int iColumn) {
+void HEkkDualRow::deleteFreelist(int iColumn) {
   if (!freeList.empty()) {
     if (freeList.count(iColumn)) freeList.erase(iColumn);
   }
 }
 
-void HDualRow::computeDevexWeight(const int slice) {
+void HEkkDualRow::computeDevexWeight(const int slice) {
   const bool rp_computed_edge_weight = false;
   computed_edge_weight = 0;
   for (int el_n = 0; el_n < packCount; el_n++) {
     int vr_n = packIndex[el_n];
-    if (!workHMO.simplex_basis_.nonbasicFlag_[vr_n]) {
+    if (!ekk_instance_.simplex_basis_.nonbasicFlag_[vr_n]) {
       //      printf("Basic variable %d in packIndex is skipped\n", vr_n);
       continue;
     }
@@ -531,7 +536,7 @@ void HDualRow::computeDevexWeight(const int slice) {
   if (rp_computed_edge_weight) {
     if (slice >= 0)
       printf(
-          "HDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = "
+          "HEkkDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = "
           "%11.4g\n",
           slice, computed_edge_weight);
   }

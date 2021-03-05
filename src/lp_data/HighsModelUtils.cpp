@@ -22,7 +22,6 @@
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
 
-#ifdef HiGHSDEV
 void analyseModelBounds(const char* message, int numBd,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper) {
@@ -75,7 +74,6 @@ void analyseModelBounds(const char* message, int numBd,
          numFx);
 }
 
-#endif
 std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
                          const double upper) {
   switch (status) {
@@ -94,9 +92,6 @@ std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
       break;
     case HighsBasisStatus::ZERO:
       return "FR";
-      break;
-    case HighsBasisStatus::SUPER:
-      return "SU";
       break;
     case HighsBasisStatus::NONBASIC:
       return "NB";

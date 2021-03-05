@@ -17,7 +17,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "simplex/SimplexConst.h"
 
-void reportSimplexPhaseIterations(const HighsModelObject& highs_model_object,
-                                  const SimplexAlgorithm algorithm,
+void reportSimplexPhaseIterations(FILE* logfile, const int iteration_count,
+                                  const HighsSimplexInfo& simplex_info,
                                   const bool initialise = false);
 #endif  // SIMPLEX_HSIMPLEXREPORT_H_

@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iostream>
 
+#include "HighsCDouble.h"
 #include "presolve/PresolveUtils.h"
 
 namespace presolve {
@@ -225,7 +226,7 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
                       << ": L= " << state.rowLower[i] << ", Ax=" << rowV
                       << ", U=" << state.rowUpper[i]
                       << ", y=" << state.rowDual[i] << std::endl;
-          infeas = state.rowDual[i];
+          infeas = std::abs(state.rowDual[i]);
         }
       }
       if (infeas > 0) {
@@ -312,7 +313,7 @@ void checkStationarityOfLagrangian(const State& state,
       details.checked++;
       double infeas = 0;
 
-      double lagrV = state.colCost[j] - state.colDual[j];
+      HighsCDouble lagrV = HighsCDouble(state.colCost[j]) - state.colDual[j];
       for (int k = state.Astart[j]; k < state.Aend[j]; k++) {
         const int row = state.Aindex[k];
         assert(row >= 0 && row < state.numRow);
@@ -320,12 +321,12 @@ void checkStationarityOfLagrangian(const State& state,
           lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
       }
 
-      if (fabs(lagrV) > tol) {
+      if (fabs(double(lagrV)) > tol) {
         if (dev_print == 1)
           std::cout << "Column " << j
                     << " fails stationary of Lagrangian: dL/dx" << j << " = "
-                    << lagrV << ", rather than zero." << std::endl;
-        infeas = fabs(lagrV);
+                    << double(lagrV) << ", rather than zero." << std::endl;
+        infeas = fabs(double(lagrV));
       }
 
       if (infeas > 0) {
@@ -409,14 +410,12 @@ void checkBasicFeasibleSolution(const State& state,
   for (int i = 0; i < state.numRow; i++) {
     if (state.flagRow[i]) current_n_rows++;
 
-    if (state.flagRow[i] && (state.row_status[i] == HighsBasisStatus::BASIC ||
-                             state.row_status[i] == HighsBasisStatus::SUPER))
+    if (state.flagRow[i] && state.row_status[i] == HighsBasisStatus::BASIC)
       current_n_rows_basic++;
   }
 
   for (int i = 0; i < state.numCol; i++) {
-    if (state.flagCol[i] && (state.col_status[i] == HighsBasisStatus::BASIC ||
-                             state.col_status[i] == HighsBasisStatus::SUPER))
+    if (state.flagCol[i] && state.col_status[i] == HighsBasisStatus::BASIC)
       current_n_cols_basic++;
   }
 

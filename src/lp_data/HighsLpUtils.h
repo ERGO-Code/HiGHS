@@ -223,10 +223,8 @@ HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row,
 
 HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
                                    const int col, double* val);
-#ifdef HiGHSDEV
 // Analyse the data in an LP problem
 void analyseLp(const HighsLp& lp, const std::string message);
-#endif
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty);

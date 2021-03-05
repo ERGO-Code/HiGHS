@@ -20,10 +20,197 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
-#include "simplex/HDualRow.h"
+#include "simplex/HEkkDebug.h"
+#include "simplex/HEkkDualRow.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
+
+// Methods for Ekk
+
+HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
+  // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
+  // according to .scale
+  const HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  const HighsSimplexLpStatus& simplex_lp_status =
+      ekk_instance.simplex_lp_status_;
+  if (!simplex_lp_status.valid ||
+      highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  const HighsOptions& options = ekk_instance.options_;
+  const HighsLp& lp = highs_model_object.lp_;
+  const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  const HighsScale& scale = highs_model_object.scale_;
+  const HFactor& factor = ekk_instance.factor_;
+
+  bool right_size = true;
+  right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
+  right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "scale size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  // Take a copy of the original LP
+  HighsLp check_lp = lp;
+  if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "debugSimplexLp: Error scaling check LP");
+    return HighsDebugStatus::LOGICAL_ERROR;
+  }
+  const bool simplex_lp_data_ok = check_lp == simplex_lp;
+  if (!simplex_lp_data_ok) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "debugSimplexLp: Check LP and simplex LP not equal");
+    assert(simplex_lp_data_ok);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+
+  if (simplex_lp_status.has_basis) {
+    const bool simplex_basis_correct =
+        debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
+        HighsStatus::Error;
+    if (!simplex_basis_correct) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Supposed to be a Simplex basis, but incorrect");
+      assert(simplex_basis_correct);
+      return_status = HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+
+  if (simplex_lp_status.has_invert) {
+    const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
+                               options, factor)) != HighsStatus::Error;
+    if (!invert_ok) {
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "Supposed to be a Simplex basis inverse, but too inaccurate");
+      assert(invert_ok);
+      return_status = HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
+                                      const HighsLp& simplex_lp,
+                                      const SimplexBasis& simplex_basis) {
+  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
+  // of basic/nonbasic variables and non-repetition of basic variables
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  // Check consistency of nonbasicFlag
+  if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag inconsistent");
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  const bool right_size =
+      (int)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
+  // Check consistency of basicIndex
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "basicIndex size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  // Use localNonbasicFlag so that duplicate entries in basicIndex can
+  // be spotted
+  vector<int> localNonbasicFlag = simplex_basis.nonbasicFlag_;
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+    int iCol = simplex_basis.basicIndex_[iRow];
+    int flag = localNonbasicFlag[iCol];
+    // Indicate that this column has been found in basicIndex
+    localNonbasicFlag[iCol] = -1;
+    if (flag) {
+      // Nonzero value for localNonbasicFlag entry means that column is either
+      if (flag == NONBASIC_FLAG_TRUE) {
+        // Nonbasic...
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Entry basicIndex_[%d] = %d is not basic", iRow, iCol);
+      } else {
+        // .. or is -1 since it has already been found in basicIndex
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Entry basicIndex_[%d] = %d is already basic", iRow,
+                        iCol);
+        assert(flag == -1);
+      }
+      assert(!flag);
+      return_status = HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus debugDualChuzcFail(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const double* workDual,
+    const double selectTheta, const double remainTheta) {
+  // Non-trivially expensive assessment of basis condition
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "DualChuzC:     No change in loop 2 so return error\n");
+  double workDataNorm = 0;
+  double dualNorm = 0;
+  for (int i = 0; i < workCount; i++) {
+    int iCol = workData[i].first;
+    double value = workData[i].second;
+    workDataNorm += value * value;
+    value = workDual[iCol];
+    dualNorm += value * value;
+  }
+  workDataNorm += sqrt(workDataNorm);
+  dualNorm += sqrt(dualNorm);
+  HighsPrintMessage(
+      options.output, options.message_level, ML_ALWAYS,
+      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
+      workCount, selectTheta, remainTheta);
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
+                    workDataNorm, dualNorm);
+  return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus debugNonbasicFlagConsistent(
+    const HighsOptions& options, const HighsLp& simplex_lp,
+    const SimplexBasis& simplex_basis) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  int num_basic_variables = 0;
+  for (int var = 0; var < numTot; var++) {
+    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
+      num_basic_variables++;
+    } else {
+      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
+    }
+  }
+  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
+  if (!right_num_basic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag has %d, not %d basic variables",
+                    num_basic_variables, simplex_lp.numRow_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return return_status;
+}
+
+// Methods for HMO
 
 const double excessive_absolute_primal_norm = 1e12;
 const double excessive_relative_primal_norm = 1e6;
@@ -98,6 +285,7 @@ const double freelist_excessive_pct_num_entries = 25.0;
 const double freelist_large_pct_num_entries = 10.0;
 const double freelist_fair_pct_num_entries = 1.0;
 
+/*
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
   // according to .scale
@@ -884,9 +1072,6 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-#ifdef HiGHSDEV
-  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-#endif
   // Make sure that the original_dual has been set up
   assert((int)original_dual.size() == simplex_lp.numCol_ + simplex_lp.numRow_);
   const std::vector<double>& new_dual = simplex_info.workDual_;
@@ -902,8 +1087,6 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
 #ifdef HiGHSDEV
     const double nonbasic_dual_change =
         std::fabs(new_dual[iVar] - original_dual[iVar]);
-    updateValueDistribution(nonbasic_dual_change,
-                            analysis.cleanup_dual_change_distribution);
     cleanup_absolute_nonbasic_dual_change_norm += nonbasic_dual_change;
 #endif
     const double max_dual =
@@ -1014,37 +1197,6 @@ HighsDebugStatus debugFreeListNumEntries(
       value_adjective.c_str(), pct_freelist_num_entries, numTot);
 
   return return_status;
-}
-
-HighsDebugStatus debugDualChuzcFail(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const double* workDual,
-    const double selectTheta, const double remainTheta) {
-  // Non-trivially expensive assessment of basis condition
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
-    return HighsDebugStatus::NOT_CHECKED;
-
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "DualChuzC:     No change in loop 2 so return error\n");
-  double workDataNorm = 0;
-  double dualNorm = 0;
-  for (int i = 0; i < workCount; i++) {
-    int iCol = workData[i].first;
-    double value = workData[i].second;
-    workDataNorm += value * value;
-    value = workDual[iCol];
-    dualNorm += value * value;
-  }
-  workDataNorm += sqrt(workDataNorm);
-  dualNorm += sqrt(dualNorm);
-  HighsPrintMessage(
-      options.output, options.message_level, ML_ALWAYS,
-      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
-      workCount, selectTheta, remainTheta);
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
-                    workDataNorm, dualNorm);
-  return HighsDebugStatus::OK;
 }
 
 void debugDualChuzcWorkDataAndGroupReport(
@@ -1221,7 +1373,6 @@ HighsDebugStatus debugSimplexBasicSolution(
   if (!highs_model_object.scale_.is_scaled_) return return_status;
 
   // Doesn't work if simplex LP has permuted columns
-  assert(!highs_model_object.simplex_lp_status_.is_permuted);
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     solution.col_value[iCol] *= scale.col_[iCol];
     solution.col_dual[iCol] /= (scale.col_[iCol] / scale.cost_);
@@ -1459,91 +1610,6 @@ HighsDebugStatus debugSimplexBasisCorrect(
   return return_status;
 }
 
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp& simplex_lp,
-                                      const SimplexBasis& simplex_basis) {
-  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
-  // of basic/nonbasic variables and non-repetition of basic variables
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  // Check consistency of nonbasicFlag
-  if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
-      HighsDebugStatus::LOGICAL_ERROR) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag inconsistent");
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  const bool right_size =
-      (int)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
-  // Check consistency of basicIndex
-  if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "basicIndex size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  // Use localNonbasicFlag so that duplicate entries in basicIndex can
-  // be spotted
-  vector<int> localNonbasicFlag = simplex_basis.nonbasicFlag_;
-  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    int iCol = simplex_basis.basicIndex_[iRow];
-    int flag = localNonbasicFlag[iCol];
-    // Indicate that this column has been found in basicIndex
-    localNonbasicFlag[iCol] = -1;
-    if (flag) {
-      // Nonzero value for localNonbasicFlag entry means that column is either
-      if (flag == NONBASIC_FLAG_TRUE) {
-        // Nonbasic...
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Entry basicIndex_[%d] = %d is not basic", iRow, iCol);
-      } else {
-        // .. or is -1 since it has already been found in basicIndex
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Entry basicIndex_[%d] = %d is already basic", iRow,
-                        iCol);
-        assert(flag == -1);
-      }
-      assert(!flag);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
-    }
-  }
-  return return_status;
-}
-
-HighsDebugStatus debugNonbasicFlagConsistent(
-    const HighsOptions& options, const HighsLp& simplex_lp,
-    const SimplexBasis& simplex_basis) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
-  if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int num_basic_variables = 0;
-  for (int var = 0; var < numTot; var++) {
-    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
-      num_basic_variables++;
-    } else {
-      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
-    }
-  }
-  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
-  if (!right_num_basic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag has %d, not %d basic variables",
-                    num_basic_variables, simplex_lp.numRow_);
-    assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  return return_status;
-}
-
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
@@ -1556,8 +1622,7 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
   const HighsOptions& options = highs_model_object.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
-       simplex_lp_status.has_matrix_row_wise &&
+  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix &&
        simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
@@ -1566,18 +1631,10 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Not OK to solve since simplex_lp_status.has_basis = %d",
                       simplex_lp_status.has_basis);
-    if (!simplex_lp_status.has_matrix_col_wise)
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Not OK to solve since simplex_lp_status.has_matrix_col_wise "
-          "= %d",
-          simplex_lp_status.has_matrix_col_wise);
-    if (!simplex_lp_status.has_matrix_row_wise)
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Not OK to solve since simplex_lp_status.has_matrix_row_wise "
-          "= %d",
-          simplex_lp_status.has_matrix_row_wise);
+    if (!simplex_lp_status.has_matrix)
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_matrix = %d",
+                      simplex_lp_status.has_matrix);
     //    if (!simplex_lp_status.has_factor_arrays)
     //      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
     //                  "Not OK to solve since
@@ -1962,3 +2019,4 @@ void debugReportReinvertOnNumericalTrouble(
                     "   Numerical trouble or wrong sign and not reinverting");
   }
 }
+*/

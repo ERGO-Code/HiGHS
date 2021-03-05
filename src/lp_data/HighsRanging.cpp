@@ -46,15 +46,16 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
                     "Cannot get ranging without an optimal solution");
     return HighsStatus::Error;
   }
-  if (!highs_model_object.simplex_lp_status_.valid) {
+  const HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  if (!ekk_instance.simplex_lp_status_.valid) {
     HighsLogMessage(highs_model_object.options_.logfile,
                     HighsMessageType::ERROR,
                     "Cannot get ranging without a valid Simplex LP");
     return HighsStatus::Error;
   }
   // Aliases
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
+  const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   const vector<double>& col_scale = highs_model_object.scale_.col_;
   const vector<double>& row_scale = highs_model_object.scale_.row_;
   const vector<double>& value_ = simplex_info.workValue_;
@@ -68,18 +69,18 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   const vector<int>& Nflag_ = simplex_basis.nonbasicFlag_;
   const vector<int>& Nmove_ = simplex_basis.nonbasicMove_;
   const vector<int>& Bindex_ = simplex_basis.basicIndex_;
-  const HMatrix& matrix = highs_model_object.matrix_;
-  const HFactor& factor = highs_model_object.factor_;
+  const HMatrix& matrix = ekk_instance.matrix_;
+  const HFactor& factor = ekk_instance.factor_;
 
   // Local copies of scalars
 
-  const int numRow = highs_model_object.simplex_lp_.numRow_;
-  const int numCol = highs_model_object.simplex_lp_.numCol_;
+  const int numRow = ekk_instance.simplex_lp_.numRow_;
+  const int numCol = ekk_instance.simplex_lp_.numCol_;
   const int numTotal = numCol + numRow;
   const double H_TT = 1e-13;
   const double H_INF = HIGHS_CONST_INF;
   const double objective =
-      highs_model_object.unscaled_solution_params_.objective_function_value;
+      highs_model_object.solution_params_.objective_function_value;
 
   // Code written for minimization problems. Maximization problems are
   // solved by using negated costs in the simplex solver and

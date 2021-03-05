@@ -47,6 +47,20 @@ enum class HighsDebugStatus {
   LOGICAL_ERROR,
 };
 
+enum HighsAnalysisLevel {
+  HIGHS_ANALYSIS_LEVEL_MIN = 0,
+  HIGHS_ANALYSIS_LEVEL_NONE = HIGHS_ANALYSIS_LEVEL_MIN,
+  HIGHS_ANALYSIS_LEVEL_MODEL_DATA = 1,
+  HIGHS_ANALYSIS_LEVEL_SOLVER_DATA = 2,
+  HIGHS_ANALYSIS_LEVEL_SOLVER_TIME = 4,
+  HIGHS_ANALYSIS_LEVEL_NLA_DATA = 8,
+  HIGHS_ANALYSIS_LEVEL_NLA_TIME = 16,
+  HIGHS_ANALYSIS_LEVEL_MAX =
+      HIGHS_ANALYSIS_LEVEL_MODEL_DATA + HIGHS_ANALYSIS_LEVEL_SOLVER_DATA +
+      HIGHS_ANALYSIS_LEVEL_SOLVER_TIME + HIGHS_ANALYSIS_LEVEL_NLA_DATA +
+      HIGHS_ANALYSIS_LEVEL_NLA_TIME
+};
+
 enum class HighsVarType : uint8_t {
   CONTINUOUS = 0,
   IMPLICIT_INTEGER = 1,
@@ -141,10 +155,13 @@ enum class HighsBasisStatus {
   BASIC,  // (slack) variable is basic
   UPPER,  // (slack) variable is at its upper bound
   ZERO,   // free variable is non-basic and set to zero
-  NONBASIC,  // nonbasic with no specific bound information - useful for users
-             // and postsolve
-  SUPER      // Super-basic variable: non-basic and either free and
-             // nonzero or not at a bound. No SCIP equivalent
+  NONBASIC  // nonbasic with no specific bound information - useful for users
+            // and postsolve
 };
+
+// Illegal values of num/max/sum infeasibility - used to indicate that true
+// values aren't known
+const int illegal_infeasibility_count = -1;
+const double illegal_infeasibility_measure = -1;
 
 #endif /* LP_DATA_HCONST_H_ */
