@@ -795,6 +795,7 @@ class HighsOptions : public HighsOptionsStruct {
 
  public:
   std::vector<OptionRecord*> records;
+  void setLogOptions();
 };
 
 #endif

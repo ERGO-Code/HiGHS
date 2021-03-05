@@ -28,7 +28,10 @@ class Highs {
  public:
   // see if an empty lp should have Astart[0] = 0
   Highs();
-  Highs(HighsOptions& options) { options_ = options; }
+  Highs(HighsOptions& options) {
+    options_ = options;
+    options_.setLogOptions();
+  }
 
   virtual ~Highs() {}
 

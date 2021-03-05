@@ -13,6 +13,7 @@
  */
 #include "lp_data/HighsOptions.h"
 
+void setLogOptions();
 std::string optionEntryType2string(const HighsOptionType type) {
   if (type == HighsOptionType::BOOL) {
     return "bool";
@@ -816,4 +817,11 @@ void reportOption(FILE* file, const OptionRecordString& option,
       fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
     }
   }
+}
+
+void HighsOptions::setLogOptions() {
+  this->log_options.log_file_stream = this->log_file_stream;
+  this->log_options.output_flag = &this->output_flag;
+  this->log_options.log_to_console = &this->log_to_console;
+  this->log_options.log_dev_level = &this->log_dev_level;
 }
