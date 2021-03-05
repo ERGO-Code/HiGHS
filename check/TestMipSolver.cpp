@@ -6,18 +6,18 @@ const double inf = HIGHS_CONST_INF;
 const bool dev_run = false;
 
 bool objectiveOk(const double optimal_objective,
-		 const double require_optimal_objective,
-		 const bool dev_run = false) {
+                 const double require_optimal_objective,
+                 const bool dev_run = false) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
-    std::max(1.0, std::fabs(require_optimal_objective));
+                 std::max(1.0, std::fabs(require_optimal_objective));
   bool error_ok = error < 1e-10;
   if (!error_ok && dev_run)
     printf("Objective is %g but require %g (error %g)\n", optimal_objective,
-	   require_optimal_objective, error);
+           require_optimal_objective, error);
   return error_ok;
 }
 
-void solve(Highs& highs, std::string presolve, 
+void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
@@ -32,7 +32,7 @@ void solve(Highs& highs, std::string presolve,
 
   if (require_model_status == HighsModelStatus::OPTIMAL) {
     REQUIRE(objectiveOk(info.objective_function_value,
-			require_optimal_objective, dev_run));
+                        require_optimal_objective, dev_run));
   }
   REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
 }
@@ -93,4 +93,3 @@ TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setHighsOptionValue("output_flag", false);
   rowlessMIP(highs);
 }
-

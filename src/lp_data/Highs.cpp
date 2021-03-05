@@ -481,7 +481,7 @@ HighsStatus Highs::run() {
     // Solve the model as a MIP
     call_status = callSolveMip();
     return_status =
-      interpretCallStatus(call_status, return_status, "callSolveMip");
+        interpretCallStatus(call_status, return_status, "callSolveMip");
     if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
     return returnFromRun(return_status);
   }
@@ -1918,37 +1918,38 @@ HighsStatus Highs::callSolveMip() {
   solver.run();
   // Cheating now, but need to set this honestly!
   HighsStatus call_status = HighsStatus::OK;
-  return_status = interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");
+  return_status =
+      interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");
   if (return_status == HighsStatus::Error) return return_status;
   // Cheating now, but need to set this honestly!
   scaled_model_status_ = HighsModelStatus::OPTIMAL;
   scaled_model_status_ = solver.modelstatus_;
   model_status_ = scaled_model_status_;
   // Set the values in HighsInfo instance info_
-  info_.simplex_iteration_count = -1; // Not known
-  info_.ipm_iteration_count = -1; // Not known
-  info_.crossover_iteration_count = -1; // Not known
+  info_.simplex_iteration_count = -1;    // Not known
+  info_.ipm_iteration_count = -1;        // Not known
+  info_.crossover_iteration_count = -1;  // Not known
   info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
   info_.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
   info_.objective_function_value = solver.solution_objective_;
-  info_.num_primal_infeasibilities = -1; // Not known
+  info_.num_primal_infeasibilities = -1;  // Not known
   // Are the violations max or sum?
-  info_.max_primal_infeasibility = -1; // Not known
-  info_.sum_primal_infeasibilities = solver.bound_violation_ + solver.row_violation_;
-  info_.num_dual_infeasibilities = -1; // Not known
-  info_.max_dual_infeasibility = -1; // Not known
-  info_.sum_dual_infeasibilities = -1; // Not known
+  info_.max_primal_infeasibility = -1;  // Not known
+  info_.sum_primal_infeasibilities =
+      solver.bound_violation_ + solver.row_violation_;
+  info_.num_dual_infeasibilities = -1;  // Not known
+  info_.max_dual_infeasibility = -1;    // Not known
+  info_.sum_dual_infeasibilities = -1;  // Not known
   // The solution needs to be here, but just resize it for now
   int solver_solution_size = solver.solution_.size();
   assert(solver_solution_size >= lp_.numCol_);
   solution_.col_value.resize(lp_.numCol_);
-  for (int iCol=0; iCol<lp_.numCol_; iCol++)
+  for (int iCol = 0; iCol < lp_.numCol_; iCol++)
     solution_.col_value[iCol] = solver.solution_[iCol];
 
   //  assert((int)solution_.col_value.size() == lp_.numCol_);
   //  assert((int)solution_.row_value.size() == lp_.numRow_);
   //  solution_.row_value.resize(lp_.numRow_);
-  
 
   return return_status;
 }
