@@ -288,6 +288,8 @@ class HPresolve {
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolveStack);
 
+  Result sparsify(HighsPostsolveStack& postsolveStack);
+
   void setRelaxedImpliedBounds();
 
   static void debug(const HighsLp& lp, const HighsOptions& options);

@@ -90,20 +90,18 @@ class HighsPostsolveStack {
     double eqRowScale;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& rowValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<std::pair<int, double>>& eqRowValues,
+              int& numMissingBasic, HighsSolution& solution, HighsBasis& basis);
   };
 
-  struct ForcingColumn {
-    double colCost;
-    int col;
-    bool atInfiniteUpper;
+  struct EqualityRowAdditions {
+    int addedEqRow;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& colValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<std::pair<int, double>>& eqRowValues,
+              const std::vector<std::pair<int, double>>& targetRows,
+              int& numMissingBasic, HighsSolution& solution, HighsBasis& basis);
   };
-
   struct SingletonRow {
     double coef;
     int row;
@@ -144,6 +142,24 @@ class HighsPostsolveStack {
               HighsSolution& solution, HighsBasis& basis);
   };
 
+  struct ForcingColumn {
+    double colCost;
+    int col;
+    bool atInfiniteUpper;
+
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& colValues,
+              HighsSolution& solution, HighsBasis& basis);
+  };
+
+  struct ForcingColumnRemovedRow {
+    double rhs;
+    int row;
+    void undo(const HighsOptions& options,
+              const std::vector<std::pair<int, double>>& rowValues,
+              HighsSolution& solution, HighsBasis& basis);
+  };
+
   struct DuplicateRow {
     double duplicateRowScale;
     int duplicateRow;
@@ -175,10 +191,13 @@ class HighsPostsolveStack {
     kFreeColSubstitution,
     kDoubletonEquation,
     kEqualityRowAddition,
+    kEqualityRowAdditions,
     kSingletonRow,
     kFixedCol,
     kRedundantRow,
     kForcingRow,
+    kForcingColumn,
+    kForcingColumnRemovedRow,
     kDuplicateRow,
     kDuplicateColumn,
   };
@@ -225,17 +244,17 @@ class HighsPostsolveStack {
   template <typename ColStorageFormat>
   void doubletonEquation(int row, int colSubst, int col, double coefSubst,
                          double coef, double rhs, double substLower,
-                         double substUpper, double oldLower, double oldUpper,
-                         double newLower, double newUpper, double substCost,
+                         double substUpper, double substCost,
+                         bool lowerTightened, bool upperTightened,
                          const HighsMatrixSlice<ColStorageFormat>& colVec) {
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(DoubletonEquation{
-        coef, coefSubst, rhs, substLower, substUpper, substCost,
-        origRowIndex[row], origColIndex[colSubst], origColIndex[col],
-        (oldLower < newLower), (oldUpper > newUpper)});
+    reductionValues.push(
+        DoubletonEquation{coef, coefSubst, rhs, substLower, substUpper,
+                          substCost, origRowIndex[row], origColIndex[colSubst],
+                          origColIndex[col], lowerTightened, upperTightened});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kDoubletonEquation);
   }
@@ -251,6 +270,20 @@ class HighsPostsolveStack {
         origRowIndex[row], origRowIndex[addedEqRow], eqRowScale});
     reductionValues.push(rowValues);
     reductions.push_back(ReductionType::kEqualityRowAddition);
+  }
+
+  template <typename RowStorageFormat>
+  void equalityRowAdditions(
+      int addedEqRow, const HighsMatrixSlice<RowStorageFormat>& eqRowVec,
+      const std::vector<std::pair<int, double>>& targetRows) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : eqRowVec)
+      rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(EqualityRowAdditions{origRowIndex[addedEqRow]});
+    reductionValues.push(rowValues);
+    reductionValues.push(targetRows);
+    reductions.push_back(ReductionType::kEqualityRowAdditions);
   }
 
   void singletonRow(int row, int col, double coef, bool tightenedColLower,
@@ -309,6 +342,20 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
+  void forcingColumnRemovedRow(
+      int forcingCol, int row, double rhs,
+      const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      if (rowVal.index() != forcingCol)
+        rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(ForcingColumnRemovedRow{rhs, origRowIndex[row]});
+    reductionValues.push(rowValues);
+    reductions.push_back(ReductionType::kForcingColumnRemovedRow);
+  }
+
+  template <typename RowStorageFormat>
   void forcingRow(int row, const HighsMatrixSlice<RowStorageFormat>& rowVec,
                   double side, RowType rowType) {
     rowValues.clear();
@@ -318,6 +365,19 @@ class HighsPostsolveStack {
     reductionValues.push(ForcingRow{side, origRowIndex[row], rowType});
     reductionValues.push(rowValues);
     reductions.push_back(ReductionType::kForcingRow);
+  }
+
+  template <typename ColStorageFormat>
+  void forcingColumn(int col, const HighsMatrixSlice<ColStorageFormat>& colVec,
+                     double cost, bool atInfiniteUpper) {
+    colValues.clear();
+    for (const HighsSliceNonzero& colVal : colVec)
+      colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
+
+    reductionValues.push(
+        ForcingColumn{cost, origColIndex[col], atInfiniteUpper});
+    reductionValues.push(colValues);
+    reductions.push_back(ReductionType::kForcingColumn);
   }
 
   void duplicateRow(int row, bool rowUpperTightened, bool rowLowerTightened,
@@ -379,6 +439,7 @@ class HighsPostsolveStack {
       }
     }
 
+    int numMissingBasic = 0;
     // now undo the changes
     for (int i = reductions.size() - 1; i >= 0; --i) {
       switch (reductions[i]) {
@@ -401,7 +462,16 @@ class HighsPostsolveStack {
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(options, rowValues, numMissingBasic, solution, basis);
+          break;
+        }
+        case ReductionType::kEqualityRowAdditions: {
+          EqualityRowAdditions reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, colValues, numMissingBasic,
+                         solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
@@ -430,6 +500,20 @@ class HighsPostsolveStack {
           reduction.undo(options, rowValues, solution, basis);
           break;
         }
+        case ReductionType::kForcingColumn: {
+          ForcingColumn reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kForcingColumnRemovedRow: {
+          ForcingColumnRemovedRow reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         case ReductionType::kDuplicateRow: {
           DuplicateRow reduction;
           reductionValues.pop(reduction);
@@ -443,9 +527,37 @@ class HighsPostsolveStack {
         }
       }
     }
+
+    // maybe handle the case of a basic equality row in the end
+    // by choosing nonbasic structural/logical nonbasic columns
+    // with zero reduced cost as replacement in the basis?
+    if (numMissingBasic != 0) {
+      for (int i = 0; i != origNumRow; ++i) {
+        if (basis.row_status[i] != HighsBasisStatus::BASIC &&
+            std::abs(solution.row_dual[i]) <=
+                options.dual_feasibility_tolerance) {
+          basis.row_status[i] = HighsBasisStatus::BASIC;
+          --numMissingBasic;
+          if (numMissingBasic == 0) break;
+        }
+      }
+
+      if (numMissingBasic != 0) {
+        for (int i = 0; i != origNumCol; ++i) {
+          if (basis.col_status[i] != HighsBasisStatus::BASIC &&
+              std::abs(solution.col_dual[i]) <=
+                  options.dual_feasibility_tolerance) {
+            basis.col_status[i] = HighsBasisStatus::BASIC;
+            --numMissingBasic;
+            if (numMissingBasic == 0) break;
+          }
+        }
+      }
+    }
   }
 
-  void undoUntil(const HighsOptions& options, HighsSolution& solution,
+  void undoUntil(const HighsOptions& options, const std::vector<int>& flagRow,
+                 const std::vector<int>& flagCol, HighsSolution& solution,
                  HighsBasis& basis, int numReductions) {
     reductionValues.resetPosition();
 
@@ -485,6 +597,8 @@ class HighsPostsolveStack {
       }
     }
 
+    int numMissingBasic = 0;
+
     // now undo the changes
     for (int i = reductions.size() - 1; i >= numReductions; --i) {
       switch (reductions[i]) {
@@ -507,7 +621,16 @@ class HighsPostsolveStack {
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, solution, basis);
+          reduction.undo(options, rowValues, numMissingBasic, solution, basis);
+          break;
+        }
+        case ReductionType::kEqualityRowAdditions: {
+          EqualityRowAdditions reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, colValues, numMissingBasic,
+                         solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
@@ -536,6 +659,20 @@ class HighsPostsolveStack {
           reduction.undo(options, rowValues, solution, basis);
           break;
         }
+        case ReductionType::kForcingColumn: {
+          ForcingColumn reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kForcingColumnRemovedRow: {
+          ForcingColumnRemovedRow reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
         case ReductionType::kDuplicateRow: {
           DuplicateRow reduction;
           reductionValues.pop(reduction);
@@ -546,6 +683,32 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
+        }
+      }
+    }
+
+    if (numMissingBasic != 0) {
+      for (int i = 0; i != origNumRow; ++i) {
+        if (!flagRow[i]) continue;
+        if (basis.row_status[i] != HighsBasisStatus::BASIC &&
+            std::abs(solution.row_dual[i]) <=
+                options.dual_feasibility_tolerance) {
+          basis.row_status[i] = HighsBasisStatus::BASIC;
+          --numMissingBasic;
+          if (numMissingBasic == 0) break;
+        }
+      }
+
+      if (numMissingBasic != 0) {
+        for (int i = 0; i != origNumCol; ++i) {
+          if (!flagCol[i]) continue;
+          if (basis.col_status[i] != HighsBasisStatus::BASIC &&
+              std::abs(solution.col_dual[i]) <=
+                  options.dual_feasibility_tolerance) {
+            basis.col_status[i] = HighsBasisStatus::BASIC;
+            --numMissingBasic;
+            if (numMissingBasic == 0) break;
+          }
         }
       }
     }

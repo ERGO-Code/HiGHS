@@ -105,117 +105,63 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   else if (solution.col_dual[col] < -options.dual_feasibility_tolerance)
     basis.col_status[col] = HighsBasisStatus::UPPER;
 
-  // now compute the current dual value of the substituted row
-  HighsCDouble substColDual = substCost;
+  // compute the current dual values of the row and the substituted column
+  // before deciding on which column becomes basic
+  // for each entry in a row i of the substituted column we added the doubleton
+  // equation row with scale -a_i/substCoef. Therefore the dual multiplier of
+  // this row i implicitly increases the dual multiplier of this doubleton
+  // equation row with that scale.
+  HighsCDouble rowDual = 0.0;
   solution.row_dual[row] = 0;
   for (const auto& colVal : colValues)
-    substColDual += colVal.second * solution.row_dual[colVal.first];
+    rowDual -= colVal.second * solution.row_dual[colVal.first];
+  rowDual /= coefSubst;
+  solution.row_dual[row] = double(rowDual);
 
-  // todo, I think we should not use Status NONBASIC. The status should
-  // always be clear from the presolve rule and the postsolve gets actually
-  // simpler if we can trust the status. For this we should follow the
-  // invariant that the primal values are exactly the bounds and not
-  // computed with numerical errors for the nonbasic variables.
-  // The primal values of the basic variables should be the ones that are
-  // computed with numerical errors. If we set column dual values, then
-  // the basic variables should have an exact zero and the other values
-  // should be computed accordingly.
-  assert(basis.col_status[col] != HighsBasisStatus::NONBASIC);
+  // the equation was also added to the objective, so the current values need to
+  // be changed
+  solution.col_dual[colSubst] = substCost;
+  solution.col_dual[col] += substCost * coef / coefSubst;
 
-  // now decide which of the two columns becomes basic for this row
-  // this depends on whether the bounds that are used in the basis
-  // on the column that stayed have been computed from the bounds of the
-  // substituted column
-  if (((!lowerTightened || basis.col_status[col] == HighsBasisStatus::UPPER) &&
-       (!upperTightened || basis.col_status[col] == HighsBasisStatus::LOWER)) ||
-      basis.col_status[col] == HighsBasisStatus::BASIC) {
-    // there is no tightened bound that is used in the basic solution
-    // hence we make the substituted column basic
-    solution.col_dual[colSubst] = 0;
+  if ((upperTightened && basis.col_status[col] == HighsBasisStatus::UPPER) ||
+      (lowerTightened && basis.col_status[col] == HighsBasisStatus::LOWER)) {
+    // column must get zero reduced cost as the current bound cannot be used
+    // so alter the dual multiplier of the row to make the dual multiplier of
+    // column zero
+    double rowDualDelta = -solution.col_dual[col] / coef;
+    solution.row_dual[row] = double(rowDual + rowDualDelta);
+    solution.col_dual[col] = 0.0;
+    solution.col_dual[colSubst] = double(
+        HighsCDouble(solution.col_dual[colSubst]) + rowDualDelta * coefSubst);
+    if ((std::signbit(coef) == std::signbit(coefSubst) &&
+         basis.col_status[col] == HighsBasisStatus::UPPER) ||
+        (std::signbit(coef) != std::signbit(coefSubst) &&
+         basis.col_status[col] == HighsBasisStatus::LOWER))
+      basis.col_status[colSubst] = HighsBasisStatus::LOWER;
+    else
+      basis.col_status[colSubst] = HighsBasisStatus::UPPER;
+    basis.col_status[col] = HighsBasisStatus::BASIC;
+  } else {
+    // otherwise make the reduced cost of the subsituted column zero and make
+    // that column basic
+    double rowDualDelta = -solution.col_dual[colSubst] / coefSubst;
+    solution.row_dual[row] = double(rowDual + rowDualDelta);
+    solution.col_dual[colSubst] = 0.0;
+    solution.col_dual[col] =
+        double(HighsCDouble(solution.col_dual[col]) + rowDualDelta * coef);
     basis.col_status[colSubst] = HighsBasisStatus::BASIC;
-    solution.row_dual[row] = -double(substColDual / coefSubst);
-    basis.row_status[row] = solution.row_dual[row] >= 0
-                                ? HighsBasisStatus::UPPER
-                                : HighsBasisStatus::LOWER;
-    return;
   }
-  assert(basis.col_status[col] != HighsBasisStatus::ZERO);
-  assert(basis.col_status[col] != HighsBasisStatus::NONBASIC);
 
-  switch (basis.col_status[col]) {
-    case HighsBasisStatus::LOWER:
-      assert(lowerTightened);
-      // the lower bound was tightened and the column sits at this tightened
-      // bound
-      if (std::signbit(coef) == std::signbit(coefSubst)) {
-        // the sign of the coefficients is equal, hence the tightened lower
-        // bound comes from the upper bound of the substituted columns:
-        //   a*x + d*y = b
-        //   x = b/ a - (d/a)*y
-        //   x >= b/a - (d/a) * ub_y
-        basis.col_status[colSubst] = HighsBasisStatus::UPPER;
-        solution.col_value[colSubst] = substUpper;
-        solution.col_dual[colSubst] = -solution.col_dual[col];
-      } else {
-        basis.col_status[colSubst] = HighsBasisStatus::LOWER;
-        solution.col_value[colSubst] = substLower;
-        solution.col_dual[colSubst] = solution.col_dual[col];
-      }
-      break;
-    case HighsBasisStatus::UPPER:
-      assert(upperTightened);
-
-      if (std::signbit(coef) == std::signbit(coefSubst)) {
-        // the sign of the coefficients is equal, hence the tightened upper
-        // bound comes from the lower bound of the substituted columns:
-        //   a*x + d*y = b
-        //   x = b/ a - (d/a)*y
-        //   x <= b/a - (d/a) * lb_y
-        basis.col_status[colSubst] = HighsBasisStatus::LOWER;
-        solution.col_value[colSubst] = substLower;
-      } else {
-        basis.col_status[colSubst] = HighsBasisStatus::UPPER;
-        solution.col_value[colSubst] = substUpper;
-      }
-      break;
-    default:
-      assert(false);
-  }
-  solution.row_dual[row] =
-      -double(substColDual / coefSubst + solution.col_dual[col] / coef);
-  solution.col_dual[colSubst] =
-      double(substColDual + coefSubst * solution.row_dual[row]);
-
-  // the substituted column has now a basis status lower or upper and has
-  // been set to the exact bound value
-  assert(basis.col_status[colSubst] == HighsBasisStatus::LOWER ||
-         basis.col_status[colSubst] == HighsBasisStatus::UPPER);
-
-  // now recompute the solution value for the other column from the bound
-  // the substituted column has been set to to minimize numerical errors
-  solution.col_value[col] = double(
-      (rhs - HighsCDouble(coefSubst) * solution.col_value[colSubst]) / coef);
-
-  // The column that we make basic must get zero reduced cost. Therefore we
-  // compute the multiplier for the doubleton equation row such that we can
-  // set the basic columns dual value to exact zero.
-  basis.col_status[col] = HighsBasisStatus::BASIC;
-  // solution.row_dual[row] =
-  //    double((solution.col_dual[colSubst] - substColDual) / coef);
-  solution.col_dual[col] = 0;
-  basis.row_status[row] = solution.row_dual[row] >= 0 ? HighsBasisStatus::UPPER
-                                                      : HighsBasisStatus::LOWER;
-  // now as we have recomputed the values as above the nonbasic variable
-  // sits exactly at its bound and the reduced cost of the basic variable is
-  // exactly set to zero. The reduced cost of the nonbasic variable and the
-  // primal value of the basic variable are computed as accurately as
-  // possible from the solution values.
+  if (solution.row_dual[row] < 0)
+    basis.row_status[row] = HighsBasisStatus::LOWER;
+  else
+    basis.row_status[row] = HighsBasisStatus::UPPER;
 }
 
 void HighsPostsolveStack::EqualityRowAddition::undo(
     const HighsOptions& options,
     const std::vector<std::pair<int, double>>& eqRowValues,
-    HighsSolution& solution, HighsBasis& basis) {
+    int& numMissingBasic, HighsSolution& solution, HighsBasis& basis) {
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (solution.row_dual.empty() || solution.row_dual[row] == 0.0) return;
@@ -226,25 +172,71 @@ void HighsPostsolveStack::EqualityRowAddition::undo(
       double(HighsCDouble(eqRowScale) * solution.row_dual[row] +
              solution.row_dual[addedEqRow]);
 
-  if (basis.row_status[addedEqRow] == HighsBasisStatus::BASIC) {
+  if (basis.row_status[addedEqRow] == HighsBasisStatus::BASIC &&
+      std::abs(solution.row_dual[addedEqRow]) >
+          options.dual_feasibility_tolerance) {
+    ++numMissingBasic;
+    if (solution.row_dual[addedEqRow] > 0)
+      basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+    else
+      basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+#if 0
     // due to redundancy in the linear system it may happen that the equation
     // is basic in the solution. Now it got a nonzero dual multiplier so that
     // we need to make it non-basic. It must however be the case that we have
     // a different column in the equation that we can make basic.
-    if (solution.row_dual[addedEqRow] > 0)
-      basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
-    else if (solution.row_dual[addedEqRow] <
-             -options.dual_feasibility_tolerance)
-      basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+    int bestBasicCol = -1;
+    double bestBasicColViol = std::abs(solution.row_value[addedEqRow]);
 
     for (const auto& entry : eqRowValues) {
       if (basis.col_status[entry.first] != HighsBasisStatus::BASIC &&
-          std::abs(solution.col_dual[entry.first]) <=
-              options.dual_feasibility_tolerance) {
-        basis.col_status[entry.first] = HighsBasisStatus::BASIC;
-        break;
+          std::abs(solution.col_dual[entry.first]) < bestBasicColViol) {
+        bestBasicCol = entry.first;
+        bestBasicColViol = std::abs(solution.col_dual[entry.first]);
       }
     }
+
+    if (bestBasicCol != -1) {
+      // if we found a column that we can use as basic column instead of the row
+      // such that the dual violation gets smaller, we use that column,
+      // otherwise we leave the row basic to at least have a consistent basis
+      basis.col_status[bestBasicCol] = HighsBasisStatus::BASIC;
+      if (solution.row_dual[addedEqRow] > 0)
+        basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+      else
+        basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+    }
+#endif
+  }
+}
+
+void HighsPostsolveStack::EqualityRowAdditions::undo(
+    const HighsOptions& options,
+    const std::vector<std::pair<int, double>>& eqRowValues,
+    const std::vector<std::pair<int, double>>& targetRows, int& numMissingBasic,
+    HighsSolution& solution, HighsBasis& basis) {
+  // nothing more to do if the row is zero in the dual solution or there is
+  // no dual solution
+  if (solution.row_dual.empty()) return;
+
+  // the dual multiplier of the rows where the eq row was added implicitly
+  // increases the dual multiplier of the equation with the scale that was used
+  // for adding the equation
+  HighsCDouble eqRowDual = solution.row_dual[addedEqRow];
+  for (const auto& targetRow : targetRows)
+    eqRowDual +=
+        HighsCDouble(targetRow.second) * solution.row_dual[targetRow.first];
+
+  solution.row_dual[addedEqRow] = double(eqRowDual);
+
+  if (basis.row_status[addedEqRow] == HighsBasisStatus::BASIC &&
+      std::abs(solution.row_dual[addedEqRow]) >
+          options.dual_feasibility_tolerance) {
+    ++numMissingBasic;
+    if (solution.row_dual[addedEqRow] > 0)
+      basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+    else
+      basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
   }
 }
 
@@ -252,7 +244,61 @@ void HighsPostsolveStack::ForcingColumn::undo(
     const HighsOptions& options,
     const std::vector<std::pair<int, double>>& colValues,
     HighsSolution& solution, HighsBasis& basis) {
-  // todo
+  int nonbasicRow = -1;
+  HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::NONBASIC;
+  double colValFromNonbasicRow;
+
+  if (atInfiniteUpper) {
+    colValFromNonbasicRow = -HIGHS_CONST_INF;
+    // choose largest value as then all rows are feasible
+    for (const auto& colVal : colValues) {
+      double colValFromRow = solution.row_value[colVal.first] / colVal.second;
+      if (colValFromRow > colValFromNonbasicRow) {
+        nonbasicRow = colVal.first;
+        colValFromNonbasicRow = colValFromRow;
+        nonbasicRowStatus = colVal.second > 0 ? HighsBasisStatus::LOWER
+                                              : HighsBasisStatus::UPPER;
+      }
+    }
+  } else {
+    colValFromNonbasicRow = HIGHS_CONST_INF;
+    // choose smallest value, as then all rows are feasible
+    for (const auto& colVal : colValues) {
+      double colValFromRow = solution.row_value[colVal.first] / colVal.second;
+      if (colValFromRow < colValFromNonbasicRow) {
+        nonbasicRow = colVal.first;
+        colValFromNonbasicRow = colValFromRow;
+        nonbasicRowStatus = colVal.second > 0 ? HighsBasisStatus::UPPER
+                                              : HighsBasisStatus::LOWER;
+      }
+    }
+  }
+
+  solution.col_value[col] = colValFromNonbasicRow;
+
+  if (solution.col_dual.empty()) return;
+
+  solution.col_dual[col] = 0.0;
+  basis.col_status[col] = HighsBasisStatus::BASIC;
+  basis.row_status[nonbasicRow] = nonbasicRowStatus;
+}
+
+void HighsPostsolveStack::ForcingColumnRemovedRow::undo(
+    const HighsOptions& options,
+    const std::vector<std::pair<int, double>>& rowValues,
+    HighsSolution& solution, HighsBasis& basis) {
+  // we use the row value as storage for the scaled value implied on the column
+  // dual
+  HighsCDouble val = rhs;
+  for (const auto& rowVal : rowValues)
+    val -= rowVal.second * solution.col_value[rowVal.first];
+
+  solution.row_value[row] = double(val);
+
+  if (!solution.row_dual.empty()) {
+    solution.row_dual[row] = 0.0;
+    basis.row_status[row] = HighsBasisStatus::BASIC;
+  }
 }
 
 void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
@@ -499,13 +545,14 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   }
 
   // either no basis for postsolve, or column status is basic. One of
-  // the two columns must become nonbasic. In case of integrality it is simpler
-  // to choose col, since it has a coefficient of +1 in the equation y = col +
-  // colScale * duplicateCol where the merged column is y and is currently using
-  // the index of col. The duplicateCol can have a positive or negative
-  // coefficient. So for postsolve, we first start out with col sitting at the
-  // lower bound and compute the corresponding value for the duplicate column as
-  // (y - colLower)/colScale. Then the following things might happen:
+  // the two columns must become nonbasic. In case of integrality it is
+  // simpler to choose col, since it has a coefficient of +1 in the equation y
+  // = col + colScale * duplicateCol where the merged column is y and is
+  // currently using the index of col. The duplicateCol can have a positive or
+  // negative coefficient. So for postsolve, we first start out with col
+  // sitting at the lower bound and compute the corresponding value for the
+  // duplicate column as (y - colLower)/colScale. Then the following things
+  // might happen:
   // - case 1: the value computed for duplicateCol is within the bounds
   // - case 1.1: duplicateCol is continuous -> accept value, make col nonbasic
   // at lower and duplicateCol basic
@@ -514,9 +561,9 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   // col = y - colScale * duplicateCol
   // - case 2: the value for duplicateCol violates the column bounds: make it
   // sit at the bound that is violated
-  //           and compute the value of col as col = y - colScale * duplicateCol
-  //           for basis postsolve col is basic and duplicateCol nonbasic at
-  //           lower/upper depending on which bound is violated.
+  //           and compute the value of col as col = y - colScale *
+  //           duplicateCol for basis postsolve col is basic and duplicateCol
+  //           nonbasic at lower/upper depending on which bound is violated.
 
   double mergeVal = solution.col_value[col];
   solution.col_value[duplicateCol] =
@@ -548,7 +595,8 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     solution.col_value[col] =
         mergeVal - colScale * solution.col_value[duplicateCol];
   } else if (!basis.col_status.empty()) {
-    // setting col to its lower bound yielded a feasible value for duplicateCol
+    // setting col to its lower bound yielded a feasible value for
+    // duplicateCol
     basis.col_status[duplicateCol] = basis.col_status[col];
     basis.col_status[col] = HighsBasisStatus::LOWER;
     solution.col_value[col] = colLower;
