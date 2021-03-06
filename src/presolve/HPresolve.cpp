@@ -1614,7 +1614,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
   if (colDualUpper <= options->dual_feasibility_tolerance) {
     if (model->colUpper_[col] != HIGHS_CONST_INF)
       fixColToUpper(postSolveStack, col);
-    else if (model->colCost_[col] == 0.0) {
+    else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
       // todo: forcing column, since this implies colDual >= 0 and we
       // already checked that colDual <= 0 and since the cost are 0.0
       // all the rows are at a dual multiplier of zero and we can determine
@@ -1642,7 +1642,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
   if (colDualLower >= -options->dual_feasibility_tolerance) {
     if (model->colLower_[col] != -HIGHS_CONST_INF)
       fixColToLower(postSolveStack, col);
-    else if (model->colCost_[col] == 0.0) {
+    else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
       // forcing column, since this implies colDual <= 0 and we already checked
       // that colDual >= 0
       // printf("removing forcing column of size %d\n", colsize[col]);
@@ -1983,7 +1983,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       fixColToUpper(postSolveStack, col);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
       return checkLimits(postSolveStack);
-    } else if (model->colCost_[col] == 0.0) {
+    } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
       postSolveStack.forcingColumn(col, getColumnVector(col),
                                    model->colCost_[col], true);
       markColDeleted(col);
@@ -2004,7 +2004,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       fixColToLower(postSolveStack, col);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
       return checkLimits(postSolveStack);
-    } else if (model->colCost_[col] == 0.0) {
+    } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
       postSolveStack.forcingColumn(col, getColumnVector(col),
                                    model->colCost_[col], false);
       markColDeleted(col);
