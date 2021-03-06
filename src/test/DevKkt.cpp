@@ -65,7 +65,7 @@ void checkPrimalBounds(const State& state, KktConditionDetails& details) {
         if (dev_print == 1)
           std::cout << "Variable " << i
                     << " infeasible: lb=" << state.colLower[i]
-                    << ", vaule=" << state.colValue[i]
+                    << ", value=" << state.colValue[i]
                     << ",  ub=" << state.colUpper[i] << std::endl;
 
         details.violated++;

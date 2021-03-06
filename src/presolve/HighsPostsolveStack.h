@@ -342,20 +342,6 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
-  void forcingColumnRemovedRow(
-      int forcingCol, int row, double rhs,
-      const HighsMatrixSlice<RowStorageFormat>& rowVec) {
-    rowValues.clear();
-    for (const HighsSliceNonzero& rowVal : rowVec)
-      if (rowVal.index() != forcingCol)
-        rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
-
-    reductionValues.push(ForcingColumnRemovedRow{rhs, origRowIndex[row]});
-    reductionValues.push(rowValues);
-    reductions.push_back(ReductionType::kForcingColumnRemovedRow);
-  }
-
-  template <typename RowStorageFormat>
   void forcingRow(int row, const HighsMatrixSlice<RowStorageFormat>& rowVec,
                   double side, RowType rowType) {
     rowValues.clear();
@@ -378,6 +364,20 @@ class HighsPostsolveStack {
         ForcingColumn{cost, origColIndex[col], atInfiniteUpper});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kForcingColumn);
+  }
+
+  template <typename RowStorageFormat>
+  void forcingColumnRemovedRow(
+      int forcingCol, int row, double rhs,
+      const HighsMatrixSlice<RowStorageFormat>& rowVec) {
+    rowValues.clear();
+    for (const HighsSliceNonzero& rowVal : rowVec)
+      if (rowVal.index() != forcingCol)
+        rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
+
+    reductionValues.push(ForcingColumnRemovedRow{rhs, origRowIndex[row]});
+    reductionValues.push(rowValues);
+    reductions.push_back(ReductionType::kForcingColumnRemovedRow);
   }
 
   void duplicateRow(int row, bool rowUpperTightened, bool rowLowerTightened,

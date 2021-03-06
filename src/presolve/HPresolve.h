@@ -56,6 +56,7 @@ class HPresolve {
 
   // length of rows and columns
   std::vector<int> rowsize;
+  std::vector<int> rowsizeInteger;
   std::vector<int> colsize;
 
   // vector to store the nonzero positions of a row

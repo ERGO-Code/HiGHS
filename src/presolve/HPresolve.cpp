@@ -254,6 +254,8 @@ void HPresolve::link(int pos) {
   impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
   impliedDualRowBounds.add(Acol[pos], Arow[pos], Avalue[pos]);
   ++rowsize[Arow[pos]];
+  if (model->integrality_[Acol[pos]] == HighsVarType::INTEGER)
+    ++rowsizeInteger[Arow[pos]];
 }
 
 void HPresolve::unlink(int pos) {
@@ -288,6 +290,8 @@ void HPresolve::unlink(int pos) {
   highs_splay_unlink(pos, rowroot[Arow[pos]], get_row_left, get_row_right,
                      get_row_key);
   --rowsize[Arow[pos]];
+  if (model->integrality_[Acol[pos]] == HighsVarType::INTEGER)
+    --rowsizeInteger[Arow[pos]];
 
   if (!rowDeleted[Arow[pos]]) {
     if (rowsize[Arow[pos]] <= 1)
@@ -587,6 +591,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
       rowDualUpperSource[newRowIndex[i]] = rowDualUpperSource[i];
       rowroot[newRowIndex[i]] = rowroot[i];
       rowsize[newRowIndex[i]] = rowsize[i];
+      rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
       model->row_names_[newRowIndex[i]] = model->row_names_[i];
       changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
     }
@@ -617,6 +622,7 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
   rowDualUpperSource.resize(model->numRow_);
   rowroot.resize(model->numRow_);
   rowsize.resize(model->numRow_);
+  rowsizeInteger.resize(model->numRow_);
   model->row_names_.resize(model->numRow_);
   changedRowFlag.resize(model->numRow_);
 
@@ -1001,6 +1007,7 @@ void HPresolve::fromCSC(const std::vector<double>& Aval,
   rowroot.assign(model->numRow_, -1);
   colsize.assign(model->numCol_, 0);
   rowsize.assign(model->numRow_, 0);
+  rowsizeInteger.assign(model->numRow_, 0);
 
   impliedRowBounds.setNumSums(0);
   impliedDualRowBounds.setNumSums(0);
@@ -3963,6 +3970,10 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       possibleScales.clear();
 
       int misses = 0;
+      // allow no fillin if a completely continuous row is used to cancel a row
+      // that has integers as there are instances where this leads to a huge
+      // deterioration of cut performance
+      if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0) ++misses;
       for (const HighsSliceNonzero& nonzero : getStoredRow()) {
         double scale;
         if (nonzero.index() == sparsestCol) {
@@ -3970,6 +3981,14 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
         } else {
           int nzPos = findNonzero(candRow, nonzero.index());
           if (nzPos == -1) {
+            if (model->integrality_[nonzero.index()] == HighsVarType::INTEGER &&
+                model->colUpper_[nonzero.index()] -
+                        model->colLower_[nonzero.index()] >
+                    1.5) {
+              // do not allow fillin of general integers
+              misses = 2;
+              break;
+            }
             ++misses;
             if (misses > 1) break;
             continue;
@@ -4012,69 +4031,75 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       if (numCancel > misses) sparsifyRows.emplace_back(candRow, scale);
     }
 
-    // now check for rows which do not contain the sparsest column but all other
-    // columns by scanning the second sparsest column
-    for (const HighsSliceNonzero& colNz :
-         getColumnVector(secondSparsestColumn)) {
-      int candRow = colNz.index();
-      if (candRow == eqrow) continue;
+    if (model->integrality_[sparsestCol] != HighsVarType::INTEGER ||
+        (model->colUpper_[sparsestCol] - model->colLower_[sparsestCol]) < 1.5) {
+      // now check for rows which do not contain the sparsest column but all
+      // other columns by scanning the second sparsest column
+      for (const HighsSliceNonzero& colNz :
+           getColumnVector(secondSparsestColumn)) {
+        int candRow = colNz.index();
+        if (candRow == eqrow) continue;
 
-      int sparsestColPos = findNonzero(candRow, sparsestCol);
-
-      // if the row has a nonzero for the sparsest column we have already
-      // checked it
-      if (sparsestColPos != -1) continue;
-
-      possibleScales.clear();
-      bool skip = false;
-      for (const HighsSliceNonzero& nonzero : getStoredRow()) {
-        double scale;
-        if (nonzero.index() == secondSparsestColumn) {
-          scale = -colNz.value() / nonzero.value();
-        } else {
-          int nzPos = findNonzero(candRow, nonzero.index());
-          if (nzPos == -1) {
-            // we already have a miss for the sparsest column, so with another
-            // one we want to skip the row
-            skip = true;
-            break;
-          }
-          scale = -Avalue[nzPos] / nonzero.value();
-        }
-        if (std::abs(scale) < 1e3) possibleScales.push_back(scale);
-      }
-
-      if (skip) continue;
-
-      std::sort(possibleScales.begin(), possibleScales.end());
-
-      int currScaleStart = 0;
-
-      int numCancel = 0;
-      double scale = 0.0;
-      int nPossibleScales = possibleScales.size();
-      int i;
-      for (i = 1; i != nPossibleScales; ++i) {
-        if (std::abs(possibleScales[currScaleStart] - possibleScales[i]) <=
-            options->small_matrix_value)
+        if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0)
           continue;
+
+        int sparsestColPos = findNonzero(candRow, sparsestCol);
+
+        // if the row has a nonzero for the sparsest column we have already
+        // checked it
+        if (sparsestColPos != -1) continue;
+
+        possibleScales.clear();
+        bool skip = false;
+        for (const HighsSliceNonzero& nonzero : getStoredRow()) {
+          double scale;
+          if (nonzero.index() == secondSparsestColumn) {
+            scale = -colNz.value() / nonzero.value();
+          } else {
+            int nzPos = findNonzero(candRow, nonzero.index());
+            if (nzPos == -1) {
+              // we already have a miss for the sparsest column, so with another
+              // one we want to skip the row
+              skip = true;
+              break;
+            }
+            scale = -Avalue[nzPos] / nonzero.value();
+          }
+          if (std::abs(scale) < 1e3) possibleScales.push_back(scale);
+        }
+
+        if (skip) continue;
+
+        std::sort(possibleScales.begin(), possibleScales.end());
+
+        int currScaleStart = 0;
+
+        int numCancel = 0;
+        double scale = 0.0;
+        int nPossibleScales = possibleScales.size();
+        int i;
+        for (i = 1; i != nPossibleScales; ++i) {
+          if (std::abs(possibleScales[currScaleStart] - possibleScales[i]) <=
+              options->small_matrix_value)
+            continue;
+
+          if (i - currScaleStart > numCancel) {
+            numCancel = i - currScaleStart;
+            scale = possibleScales[currScaleStart];
+          }
+
+          currScaleStart = i;
+        }
 
         if (i - currScaleStart > numCancel) {
           numCancel = i - currScaleStart;
           scale = possibleScales[currScaleStart];
         }
 
-        currScaleStart = i;
+        // cancels at least one nonzero if the scale cancels more than there is
+        // fillin
+        if (numCancel > 1) sparsifyRows.emplace_back(candRow, scale);
       }
-
-      if (i - currScaleStart > numCancel) {
-        numCancel = i - currScaleStart;
-        scale = possibleScales[currScaleStart];
-      }
-
-      // cancels at least one nonzero if the scale cancels more than there is
-      // fillin
-      if (numCancel > 1) sparsifyRows.emplace_back(candRow, scale);
     }
 
     if (sparsifyRows.empty()) continue;
