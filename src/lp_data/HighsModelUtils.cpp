@@ -181,7 +181,7 @@ int maxNameLength(const int num_name, const std::vector<std::string>& names) {
   return max_name_length;
 }
 
-HighsStatus normaliseNames(const HighsOptions& options,
+HighsStatus normaliseNames(const HighsLogOptions& log_options,
                            const std::string name_type, const int num_name,
                            std::vector<std::string>& names,
                            int& max_name_length) {
@@ -203,7 +203,7 @@ HighsStatus normaliseNames(const HighsOptions& options,
     // Construct names, either because they are empty names, or
     // because the existing names are too long
 
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(log_options, HighsLogType::WARNING,
                  "There are empty or excessively-long %s names: using "
                  "constructed names with prefix %s\n",
                  name_type.c_str(), name_prefix.c_str());
