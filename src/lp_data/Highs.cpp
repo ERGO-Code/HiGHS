@@ -40,6 +40,12 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
+Highs::Highs(HighsOptions& options) {
+  options_ = options;
+  options_.setLogOptions();
+  Highs();
+}
+
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
   if (setOptionValue(options_.log_options, option, options_.records, value) ==
@@ -223,10 +229,12 @@ HighsStatus Highs::reset() {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::passModel(HighsLp lp) {
+HighsStatus Highs::passModel(const HighsLp lp) {
   HighsStatus return_status = HighsStatus::OK;
   // move the copy of the LP to the internal LP
   lp_ = std::move(lp);
+  // Ensure that the passed LP is column-wise (if it has any columns)
+  ensureColWiseLp(lp_);
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
@@ -440,7 +448,18 @@ HighsStatus Highs::run() {
   hmos_[0].unscaled_model_status_ = HighsModelStatus::NOTSET;
   model_status_ = hmos_[0].scaled_model_status_;
   scaled_model_status_ = hmos_[0].unscaled_model_status_;
+  // Return immediately if the LP has no columns
+  if (!lp_.numCol_) {
+    model_status_ = HighsModelStatus::MODEL_EMPTY;
+    scaled_model_status_ = model_status_;
+    hmos_[0].unscaled_model_status_ = model_status_;
+    hmos_[0].scaled_model_status_ = model_status_;
+    return_status = highsStatusFromHighsModelStatus(model_status_);
+    return returnFromRun(return_status);
+  }
 
+  // Ensure that the LP has the matrix column-wise
+  ensureColWiseLp(lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -451,16 +470,6 @@ HighsStatus Highs::run() {
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return returnFromRun(return_status);
 #endif
-
-  // Return immediately if the LP has no columns
-  if (!lp_.numCol_) {
-    model_status_ = HighsModelStatus::MODEL_EMPTY;
-    scaled_model_status_ = model_status_;
-    hmos_[0].unscaled_model_status_ = model_status_;
-    hmos_[0].scaled_model_status_ = model_status_;
-    return_status = highsStatusFromHighsModelStatus(model_status_);
-    return returnFromRun(return_status);
-  }
 
   highsSetLogCallback(options_);
 #ifdef HiGHSDEV

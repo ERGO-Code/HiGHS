@@ -28,6 +28,7 @@ set(TEST_SOURCES
     TestHSet.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
+    TestLpOrientation.cpp
     TestRays.cpp
     TestRanging.cpp
     Avgas.cpp)

@@ -262,4 +262,6 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
+void ensureRowWiseLp(HighsLp& lp);
+void ensureColWiseLp(HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_
