@@ -65,6 +65,7 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   model.lp_name_ = origmodel->lp_name_;
   model.model_name_ = origmodel->model_name_;
   model.offset_ = origmodel->offset_;
+  model.orientation_ = origmodel->orientation_;
 
   std::vector<double>& colLower = mipsolver.mipdata_->domain.colLower_;
   std::vector<double>& colUpper = mipsolver.mipdata_->domain.colUpper_;

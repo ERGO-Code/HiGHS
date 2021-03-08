@@ -284,6 +284,7 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
   }
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
+  lp.orientation_ = MatrixOrientation::COLWISE;
   return this->passModel(std::move(lp));
 }
 
