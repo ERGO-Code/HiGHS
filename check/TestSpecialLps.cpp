@@ -377,11 +377,14 @@ void singularStartingBasis(Highs& highs) {
   lp.Astart_ = {0, 2, 4, 6};
   lp.Aindex_ = {0, 1, 0, 1, 0, 1};
   lp.Avalue_ = {1, 2, 2, 4, 1, 3};
+  lp.orientation_ = MatrixOrientation::COLWISE;
 
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
-  REQUIRE(highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED) ==
-          HighsStatus::OK);
+  if (dev_run) {
+    REQUIRE(highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED) ==
+	    HighsStatus::OK);
+  }
 
   REQUIRE(highs.setHighsOptionValue("highs_debug_level", 3) == HighsStatus::OK);
 
@@ -420,6 +423,7 @@ void unconstrained(Highs& highs) {
   lp.colLower_ = {4, 2};
   lp.colUpper_ = {inf, 3};
   lp.Astart_ = {0, 0, 0};
+  lp.orientation_ = MatrixOrientation::COLWISE;
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
