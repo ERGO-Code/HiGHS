@@ -347,6 +347,16 @@ HighsStatus Highs::addRowsInterface(int XnumNewRow, const double* XrowLower,
         if (return_status == HighsStatus::Error) return return_status;
       }
     }
+  } else if (lp.orientation_ == MatrixOrientation::NONE ||
+	     lp.orientation_ == MatrixOrientation::ROWWISE) {
+    // There are no nonzeros, so XARstart/XARindex/XARvalue may be null. Have to
+    // set up starts for empty rows
+    assert(XnumNewRow > 0);
+    appendRowsToLpMatrix(lp, XnumNewRow, 0, NULL, NULL, NULL);
+    if (valid_simplex_lp) {
+      appendRowsToLpMatrix(simplex_lp, XnumNewRow, 0, NULL, NULL, NULL);
+      // Should be extendSimplexLpRandomVectors here
+    }
   }
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasis(lp, basis, XnumNewRow);

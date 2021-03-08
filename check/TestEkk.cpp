@@ -9,6 +9,7 @@ void ekk_solve(Highs& highs, std::string presolve,
                const HighsModelStatus require_model_status,
                const double require_optimal_objective = 0) {
   SpecialLps special_lps;
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
 
   REQUIRE(highs.setHighsOptionValue("simplex_strategy",
@@ -88,9 +89,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
   ekk_distillation(highs);
   ekk_blending(highs);
 }

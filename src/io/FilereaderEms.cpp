@@ -18,6 +18,7 @@
 #include <iomanip>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsLpUtils.h"
 #include "util/stringutil.h"
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
@@ -170,6 +171,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "end_linear") {
       // File read completed OK
       f.close();
+      setOrientation(model);
       return FilereaderRetcode::OK;
     }
 
@@ -198,7 +200,10 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     } else {
       // OK if file just ends after the integer_columns section without
       // end_linear
-      if (!f) return FilereaderRetcode::OK;
+      if (!f) {
+	setOrientation(model);
+	return FilereaderRetcode::OK;
+      }
       highsLogUser(options.log_options, HighsLogType::ERROR,
                    "names not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
@@ -209,6 +214,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                  "EMS file not found\n");
     return FilereaderRetcode::FILENOTFOUND;
   }
+  setOrientation(model);
   return FilereaderRetcode::OK;
 }
 

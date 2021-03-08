@@ -5,6 +5,8 @@
 #include "catch.hpp"
 #include "mip/HighsGFkSolve.h"
 
+const bool dev_run = false;
+
 template <int k>
 void testGFkSolve(const std::vector<int>& Avalue,
                   const std::vector<int>& Aindex,
@@ -38,7 +40,7 @@ void testGFkSolve(const std::vector<int>& Avalue,
   GFkSolve.solve<k>(
       [&](const std::vector<std::pair<int, unsigned int>>& solution) {
         int numSolutionNnz = solution.size();
-        printf("solution (k=%d) has %d nonzeros\n", k, numSolutionNnz);
+        if (dev_run) printf("solution (k=%d) has %d nonzeros\n", k, numSolutionNnz);
 
         std::vector<unsigned int> solSums(numRow);
         for (const auto& solentry : solution) {

@@ -41,8 +41,11 @@ Highs::Highs() {
 }
 
 Highs::Highs(HighsOptions& options) {
-  options_ = options;
-  options_.setLogOptions();
+  // Pass the user's options setting to HiGHS, returning an error if
+  // any is illegal
+  if (passOptions(options_.log_options, options, options_)
+      != OptionStatus::OK)
+    printf("Options not OK\n");
   Highs();
 }
 
@@ -234,7 +237,7 @@ HighsStatus Highs::passModel(const HighsLp lp) {
   // move the copy of the LP to the internal LP
   lp_ = std::move(lp);
   // Ensure that the passed LP is column-wise (if it has any columns)
-  ensureColWiseLp(lp_);
+  ensureColWise(lp_);
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
@@ -459,7 +462,7 @@ HighsStatus Highs::run() {
   }
 
   // Ensure that the LP has the matrix column-wise
-  ensureColWiseLp(lp_);
+  ensureColWise(lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified

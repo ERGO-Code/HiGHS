@@ -36,6 +36,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::SUCCESS:
+	setOrientation(model);
         return FilereaderRetcode::OK;
       case FreeFormatParserReturnCode::PARSERERROR:
         return FilereaderRetcode::PARSERERROR;
@@ -61,6 +62,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
       model.rowUpper_, model.integrality_, model.col_names_, model.row_names_,
       options.keep_n_rows);
+  if (return_code == FilereaderRetcode::OK) setOrientation(model);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
                  "Model has column names with spaces\n");
@@ -81,5 +83,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsLp& model) {
+  assert(model.orientation_ != MatrixOrientation::ROWWISE);
   return writeLpAsMPS(options, filename, model);
 }

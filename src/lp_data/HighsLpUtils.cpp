@@ -971,6 +971,49 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
   return HighsStatus::OK;
 }
 
+void appendToMatrix(HighsLp& lp, const int num_vec, const int num_new_vec,
+		    const int num_new_nz, const int* XAstart,
+		    const int* XAindex, const double* XAvalue) {
+  // Append packed vectors to a matrix
+  // Determine the new number of vectors in the matrix and resize the
+  // starts accordingly.
+  int new_num_vec = num_vec + num_new_vec;
+  lp.Astart_.resize(new_num_vec + 1);
+  // If adding vectors to an empty LP then introduce the start for the
+  // fictitious vector 0
+  if (num_vec == 0) lp.Astart_[0] = 0;
+
+  // Determine the current number of nonzeros and the new number of nonzeros
+  int current_num_nz = lp.Astart_[num_vec];
+  int new_num_nz = current_num_nz + num_new_nz;
+
+  // Append the starts of the new vectors
+  if (num_new_nz) {
+    // Nontrivial number of nonzeros being added, so use XAstart
+    assert(XAstart != NULL);
+    for (int vec = 0; vec < num_new_vec; vec++)
+      lp.Astart_[num_vec + vec] = current_num_nz + XAstart[vec];
+  } else {
+    // No nonzeros being added, so XAstart may be null, but entries of
+    // zero are implied.
+    for (int vec = 0; vec < num_new_vec; vec++)
+      lp.Astart_[num_vec + vec] = current_num_nz;
+  }
+  lp.Astart_[num_vec + num_new_vec] = new_num_nz;
+
+  // If no nonzeros are being added then there's nothing else to do
+  if (num_new_nz <= 0) return;
+
+  // Adding a non-trivial matrix: resize the matrix arrays accordingly
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
+  // Copy in the new indices and values
+  for (int el = 0; el < num_new_nz; el++) {
+    lp.Aindex_[current_num_nz + el] = XAindex[el];
+    lp.Avalue_[current_num_nz + el] = XAvalue[el];
+  }
+}
+
 HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
                                  const int num_new_nz, const int* XAstart,
                                  const int* XAindex, const double* XAvalue) {
@@ -978,6 +1021,15 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
   if (num_new_col == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no rows
   if (num_new_nz > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
+  // Adding a positive number of columns to a matrix
+  if (lp.orientation_ == MatrixOrientation::NONE) {
+    // LP is currently empty, store the matrix column-wise
+    assert(lp.numCol_ == 0 && lp.numRow_ == 0);
+    lp.orientation_ = MatrixOrientation::COLWISE;
+  } else {
+    // Ensure that the matrix is stored column-wise
+    ensureColWise(lp);
+  }
   // Determine the new number of columns in the matrix and resize the
   // starts accordingly.
   int new_num_col = lp.numCol_ + num_new_col;
@@ -1009,6 +1061,7 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
 
   // Adding a non-trivial matrix: resize the column-wise matrix arrays
   // accordingly
+  lp.orientation_ = MatrixOrientation::COLWISE;
   lp.Aindex_.resize(new_num_nz);
   lp.Avalue_.resize(new_num_nz);
   // Copy in the new indices and values
@@ -1026,42 +1079,52 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
-  if (num_new_nz == 0) return HighsStatus::OK;
-  int current_num_nz = lp.Astart_[lp.numCol_];
-  vector<int> Alength;
-  Alength.assign(lp.numCol_, 0);
-  for (int el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
-  // Determine the new number of nonzeros and resize the column-wise matrix
-  // arrays
-  int new_num_nz = current_num_nz + num_new_nz;
-  lp.Aindex_.resize(new_num_nz);
-  lp.Avalue_.resize(new_num_nz);
-
-  // Append the new rows
-  // Shift the existing columns to make space for the new entries
-  int new_el = new_num_nz;
-  for (int col = lp.numCol_ - 1; col >= 0; col--) {
-    int start_col_plus_1 = new_el;
-    new_el -= Alength[col];
-    for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
-      new_el--;
-      lp.Aindex_[new_el] = lp.Aindex_[el];
-      lp.Avalue_[new_el] = lp.Avalue_[el];
-    }
-    lp.Astart_[col + 1] = start_col_plus_1;
+  // Adding a positive number of rows to a matrix
+  if (lp.orientation_ == MatrixOrientation::NONE) {
+  // LP is currently empty, store the matrix row-wise
+    assert(lp.numCol_ == 0 && lp.numRow_ == 0);
+    lp.orientation_ = MatrixOrientation::ROWWISE;
   }
-  assert(new_el == 0);
-
-  // Insert the new entries
-  for (int row = 0; row < num_new_row; row++) {
-    int first_el = XARstart[row];
-    int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
-    for (int el = first_el; el < last_el; el++) {
-      int col = XARindex[el];
-      new_el = lp.Astart_[col + 1] - Alength[col];
-      Alength[col]--;
-      lp.Aindex_[new_el] = lp.numRow_ + row;
-      lp.Avalue_[new_el] = XARvalue[el];
+  if (lp.orientation_ == MatrixOrientation::ROWWISE) {
+    appendToMatrix(lp, lp.numRow_, num_new_row, num_new_nz,
+		   XARstart, XARindex, XARvalue);
+  } else {
+    // Storing the matrix column-wise, so have to insert the new rows
+    assert(lp.orientation_ == MatrixOrientation::COLWISE);
+    int current_num_nz = lp.Astart_[lp.numCol_];
+    vector<int> Alength;
+    Alength.assign(lp.numCol_, 0);
+    for (int el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
+    // Determine the new number of nonzeros and resize the column-wise matrix
+    // arrays
+    int new_num_nz = current_num_nz + num_new_nz;
+    lp.Aindex_.resize(new_num_nz);
+    lp.Avalue_.resize(new_num_nz);
+    // Append the new rows
+    // Shift the existing columns to make space for the new entries
+    int new_el = new_num_nz;
+    for (int col = lp.numCol_ - 1; col >= 0; col--) {
+      int start_col_plus_1 = new_el;
+      new_el -= Alength[col];
+      for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
+	new_el--;
+	lp.Aindex_[new_el] = lp.Aindex_[el];
+	lp.Avalue_[new_el] = lp.Avalue_[el];
+      }
+      lp.Astart_[col + 1] = start_col_plus_1;
+    }
+    assert(new_el == 0);
+    // Insert the new entries
+    for (int row = 0; row < num_new_row; row++) {
+      int first_el = XARstart[row];
+      int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
+      for (int el = first_el; el < last_el; el++) {
+	int col = XARindex[el];
+	new_el = lp.Astart_[col + 1] - Alength[col];
+	Alength[col]--;
+	lp.Aindex_[new_el] = lp.numRow_ + row;
+	lp.Avalue_[new_el] = XARvalue[el];
+      }
     }
   }
   return HighsStatus::OK;
@@ -2345,7 +2408,26 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-void ensureRowWiseLp(HighsLp& lp) {
+void setOrientation(HighsLp& lp) {
+  if (lp.numCol_==0 && lp.numRow_ == 0) {
+    lp.orientation_ = MatrixOrientation::NONE;
+  } else if (lp.numCol_>0) {
+    lp.orientation_ = MatrixOrientation::COLWISE;
+    assert((int)lp.Astart_.size() >= lp.numCol_+1);
+    int numnz = lp.Astart_[lp.numCol_];
+    assert((int)lp.Aindex_.size() >= numnz);
+    assert((int)lp.Avalue_.size() >= numnz);
+  } else {
+    assert(lp.numRow_>0);
+    lp.orientation_ = MatrixOrientation::ROWWISE;
+    assert((int)lp.Astart_.size() >= lp.numRow_+1);
+    int numnz = lp.Astart_[lp.numRow_];
+    assert((int)lp.Aindex_.size() >= numnz);
+    assert((int)lp.Avalue_.size() >= numnz);
+  }
+  
+}
+void ensureRowWise(HighsLp& lp) {
   if (lp.orientation_ == MatrixOrientation::ROWWISE) return;
   if (lp.orientation_ == MatrixOrientation::NONE) {
     assert(lp.numCol_==0 && lp.numRow_ == 0);
@@ -2395,7 +2477,7 @@ void ensureRowWiseLp(HighsLp& lp) {
   lp.orientation_ = MatrixOrientation::ROWWISE;
 }
 
-void ensureColWiseLp(HighsLp& lp) {
+void ensureColWise(HighsLp& lp) {
   if (lp.orientation_ == MatrixOrientation::COLWISE) return;
   if (lp.orientation_ == MatrixOrientation::NONE) {
     assert(lp.numCol_==0 && lp.numRow_ == 0);

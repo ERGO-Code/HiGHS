@@ -13,6 +13,7 @@
  */
 
 #include "io/FilereaderLp.h"
+#include "lp_data/HighsLpUtils.h"
 
 #include <cstdarg>
 #include <exception>
@@ -81,6 +82,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::PARSERERROR;
   }
+  setOrientation(model);
   return FilereaderRetcode::OK;
 }
 
@@ -107,6 +109,7 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsLp& model) {
+  assert(model.orientation_ != MatrixOrientation::ROWWISE);
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
