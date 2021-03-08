@@ -1061,7 +1061,6 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
 
   // Adding a non-trivial matrix: resize the column-wise matrix arrays
   // accordingly
-  lp.orientation_ = MatrixOrientation::COLWISE;
   lp.Aindex_.resize(new_num_nz);
   lp.Avalue_.resize(new_num_nz);
   // Copy in the new indices and values
@@ -1080,10 +1079,30 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
   // Adding a positive number of rows to a matrix
+  int current_num_nz = 0;
   if (lp.orientation_ == MatrixOrientation::NONE) {
   // LP is currently empty, store the matrix row-wise
     assert(lp.numCol_ == 0 && lp.numRow_ == 0);
     lp.orientation_ = MatrixOrientation::ROWWISE;
+  } else if (lp.orientation_ == MatrixOrientation::COLWISE) {
+    assert(lp.numCol_ > 0);
+    assert((int)lp.Astart_.size() >= lp.numCol_);
+    current_num_nz = lp.Astart_[lp.numCol_];
+    if (current_num_nz==0) {
+      // Matrix is currently empty and stored column-wise. It can be
+      // converted trivially to row-wise storage so that rows can be
+      // added easily.
+      //
+      // It's possible that the model could have columns and (empty)
+      // rows - hence the assignment of zero starts for rows
+      // 0...lp.numRow_.
+      //
+      // However, this allows efficient handling of the (common) case
+      // where a modeller defines variables without constraints, and
+      // then constraints one-by-one.
+      lp.orientation_ = MatrixOrientation::ROWWISE;
+      lp.Astart_.assign(lp.numRow_+1, 0);
+    }
   }
   if (lp.orientation_ == MatrixOrientation::ROWWISE) {
     appendToMatrix(lp, lp.numRow_, num_new_row, num_new_nz,
@@ -1091,7 +1110,6 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   } else {
     // Storing the matrix column-wise, so have to insert the new rows
     assert(lp.orientation_ == MatrixOrientation::COLWISE);
-    int current_num_nz = lp.Astart_[lp.numCol_];
     vector<int> Alength;
     Alength.assign(lp.numCol_, 0);
     for (int el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;

@@ -16,6 +16,7 @@
 
 #include <sstream>
 
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -797,6 +798,8 @@ class Highs {
   void setPresolveOptions(const PresolveComponentOptions& options) {
     presolve_.options_ = options;
   }
+  void ensureColWiseMatrix() { ensureColWise(lp_); };
+  void ensureRowWiseMatrix() { ensureRowWise(lp_); };
 
  private:
   HighsSolution solution_;

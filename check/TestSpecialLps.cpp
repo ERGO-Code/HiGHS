@@ -10,6 +10,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
   SpecialLps special_lps;
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
 
   REQUIRE(highs.setHighsOptionValue("solver", solver) == HighsStatus::OK);
@@ -325,6 +326,7 @@ void almostNotUnbounded(Highs& highs) {
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
   lp.Avalue_ = {1 + epsilon, -1, 1, -1, 1, 1};
+  lp.orientation_ = MatrixOrientation::COLWISE;
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
 

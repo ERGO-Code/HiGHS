@@ -108,6 +108,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
     REQUIRE(highs.addRows(1, &one_row_Lower[0], &one_row_Upper[0], one_row_numnz, &one_row_start[0], &one_row_index[0], &one_row_value[0]));
   }
   highs.run();
+  REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   
   

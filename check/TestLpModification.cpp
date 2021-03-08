@@ -8,6 +8,7 @@ const bool dev_run = false;
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
+  if (!dev_run) return;
   highsLogUser(log_options, HighsLogType::INFO, "%s: HighsStatus = %d - %s\n",
                message.c_str(), (int)status,
                HighsStatusToString(status).c_str());
@@ -165,6 +166,7 @@ bool areLpRowEqual(const int num_row0, const double* rowLower0,
 bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
                 const double infinite_bound) {
   bool return_bool;
+  if (lp0.orientation_ != lp1.orientation_) return false;
   if (lp0.numCol_ > 0 && lp1.numCol_ > 0) {
     int lp0_num_nz = lp0.Astart_[lp0.numCol_];
     int lp1_num_nz = lp1.Astart_[lp1.numCol_];
@@ -926,6 +928,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]));
 
+  avgas_highs.ensureColWiseMatrix();
   REQUIRE(
       areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound));
 

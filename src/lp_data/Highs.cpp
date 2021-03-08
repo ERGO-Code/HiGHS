@@ -461,8 +461,10 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
 
-  // Ensure that the LP has the matrix column-wise
+  // Ensure that the LP (and any simplex LP) has the matrix column-wise
   ensureColWise(lp_);
+  if (hmos_[0].ekk_instance_.simplex_lp_status_.valid)
+    ensureColWise(hmos_[0].ekk_instance_.simplex_lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -2323,3 +2325,4 @@ void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
   cols = presolve_.info_.n_cols_removed;
   nnz = presolve_.info_.n_nnz_removed;
 }
+
