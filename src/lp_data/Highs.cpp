@@ -196,7 +196,6 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info,
 
 HighsStatus Highs::writeHighsInfo(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsLp lp = this->lp_;
   FILE* file;
   bool html;
   return_status =
@@ -283,7 +282,7 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
   lp.orientation_ = MatrixOrientation::COLWISE;
-  return this->passModel(std::move(lp));
+  return passModel(std::move(lp));
 }
 
 HighsStatus Highs::readModel(const std::string filename) {
@@ -296,13 +295,12 @@ HighsStatus Highs::readModel(const std::string filename) {
   }
 
   HighsLp model;
-  this->options_.model_file = filename;
+  options_.model_file = filename;
 
-  FilereaderRetcode call_code =
-      reader->readModelFromFile(this->options_, model);
+  FilereaderRetcode call_code = reader->readModelFromFile(options_, model);
   delete reader;
   if (call_code != FilereaderRetcode::OK) {
-    interpretFilereaderRetcode(this->options_.log_options, filename.c_str(),
+    interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
     return_status = interpretCallStatus(HighsStatus::Error, return_status,
                                         "readModelFromFile");
@@ -310,7 +308,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   }
   model.model_name_ = extractModelName(filename);
   return_status =
-      interpretCallStatus(this->passModel(model), return_status, "passModel");
+      interpretCallStatus(passModel(model), return_status, "passModel");
   return returnFromHighs(return_status);
 }
 
@@ -321,7 +319,7 @@ HighsStatus Highs::clearModel() {
   lp_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   return_status =
-      interpretCallStatus(this->clearSolver(), return_status, "clearSolver");
+      interpretCallStatus(clearSolver(), return_status, "clearSolver");
   if (return_status == HighsStatus::Error) return return_status;
   return returnFromHighs(return_status);
 }
@@ -329,7 +327,7 @@ HighsStatus Highs::clearModel() {
 HighsStatus Highs::readBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   // Try to read basis file into read_basis
-  HighsBasis read_basis = this->basis_;
+  HighsBasis read_basis = basis_;
   return_status = interpretCallStatus(
       readBasisFile(options_.log_options, read_basis, filename), return_status,
       "readBasis");
@@ -341,8 +339,8 @@ HighsStatus Highs::readBasis(const std::string filename) {
     return HighsStatus::Error;
   }
   // Update the HiGHS basis and invalidate any simplex basis for the model
-  this->basis_ = read_basis;
-  this->basis_.valid_ = true;
+  basis_ = read_basis;
+  basis_.valid_ = true;
   if (hmos_.size() > 0) {
     clearBasisInterface();
   }
@@ -352,7 +350,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
 
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsLp model = this->lp_;
+  HighsLp model = lp_;
 
   // Ensure that the LP is column-wise
   setOrientation(model);
@@ -378,8 +376,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
-      writeBasisFile(options_.log_options, this->basis_, filename),
-      return_status, "writeBasis");
+      writeBasisFile(options_.log_options, basis_, filename), return_status,
+      "writeBasis");
   return returnFromHighs(return_status);
 }
 
@@ -970,7 +968,7 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   if (row < 0 || row >= numRow) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "Row index %d out of range [0, %d] in getBasisInverseRow\n",
@@ -1001,7 +999,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   if (col < 0 || col >= numRow) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "Column index %d out of range [0, %d] in getBasisInverseCol\n",
@@ -1043,7 +1041,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                  "No invertible representation for getBasisSolve\n");
     return HighsStatus::Error;
   }
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
@@ -1075,7 +1073,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                  "No invertible representation for getBasisTransposeSolve\n");
     return HighsStatus::Error;
   }
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
@@ -1089,8 +1087,8 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
   // Ensure that the LP is column-wise
-  setOrientation(this->lp_);
-  assert(&this->lp_ == &hmos_[0].lp_);
+  setOrientation(lp_);
+  HighsLp& lp = lp_;
   if (row_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "getReducedRow: row_vector is NULL\n");
@@ -1099,10 +1097,10 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not pass_basis_inverse_row_vector
   // NULL - it's the trigger to determine whether it's computed or not
-  if (row < 0 || row >= hmos_[0].lp_.numRow_) {
+  if (row < 0 || row >= lp.numRow_) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "Row index %d out of range [0, %d] in getReducedRow\n", row,
-                 hmos_[0].lp_.numRow_ - 1);
+                 lp.numRow_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
@@ -1111,7 +1109,6 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                  "No invertible representation for getReducedRow\n");
     return HighsStatus::Error;
   }
-  HighsLp& lp = hmos_[0].lp_;
   int numRow = lp.numRow_;
   vector<double> basis_inverse_row;
   double* basis_inverse_row_vector = (double*)pass_basis_inverse_row_vector;
@@ -1146,8 +1143,8 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::Error;
   // Ensure that the LP is column-wise
-  setOrientation(this->lp_);
-  assert(&this->lp_ == &hmos_[0].lp_);
+  setOrientation(lp_);
+  HighsLp& lp = lp_;
   if (col_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "getReducedColumn: col_vector is NULL\n");
@@ -1155,10 +1152,10 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  if (col < 0 || col >= hmos_[0].lp_.numCol_) {
+  if (col < 0 || col >= lp.numCol_) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "Column index %d out of range [0, %d] in getReducedColumn\n",
-                 col, hmos_[0].lp_.numCol_ - 1);
+                 col, lp.numCol_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
@@ -1167,7 +1164,6 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                  "No invertible representation for getReducedColumn\n");
     return HighsStatus::Error;
   }
-  HighsLp& lp = hmos_[0].lp_;
   int numRow = lp.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
@@ -1212,8 +1208,8 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
     return HighsStatus::Error;
   }
   // Update the HiGHS basis
-  this->basis_ = basis;
-  this->basis_.valid_ = true;
+  basis_ = basis;
+  basis_.valid_ = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1223,7 +1219,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
 HighsStatus Highs::setBasis() {
   // Invalidate the basis for HiGHS Don't set to logical basis since
   // that causes presolve to be skipped
-  this->basis_.valid_ = false;
+  basis_.valid_ = false;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1486,7 +1482,7 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
 
 bool Highs::getObjectiveSense(ObjSense& sense) {
   if (!haveHmo("getObjectiveSense")) return false;
-  sense = hmos_[0].lp_.sense_;
+  sense = lp_.sense_;
   return true;
 }
 
@@ -1802,7 +1798,7 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
 
   // Ensure that the LP is column-wise
-  setOrientation(this->lp_);
+  setOrientation(lp_);
 
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
     return HighsPresolveStatus::NullError;
@@ -1944,7 +1940,7 @@ HighsStatus Highs::callSolveMip() {
   // Run the MIP solver
   options_.log_dev_level = LOG_DEV_LEVEL_INFO;
   // Check that the model isn't row-wise
-  assert(this->lp_.orientation_ != MatrixOrientation::ROWWISE);
+  assert(lp_.orientation_ != MatrixOrientation::ROWWISE);
   HighsMipSolver solver(options_, lp_);
   solver.run();
   // Cheating now, but need to set this honestly!
@@ -1989,9 +1985,9 @@ HighsStatus Highs::writeSolution(const std::string filename,
                                  const bool pretty) const {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  HighsLp lp = this->lp_;
-  HighsBasis basis = this->basis_;
-  HighsSolution solution = this->solution_;
+  HighsLp lp = lp_;
+  HighsBasis basis = basis_;
+  HighsSolution solution = solution_;
   FILE* file;
   bool html;
   call_status = openWriteFile(filename, "writeSolution", file, html);
@@ -2011,7 +2007,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
 void Highs::newHighsBasis() {
   if (hmos_.size() > 0) {
     // Copy this basis to the HMO basis
-    hmos_[0].basis_ = this->basis_;
+    hmos_[0].basis_ = basis_;
     // Clear any simplex basis
     clearBasisInterface();
   }
