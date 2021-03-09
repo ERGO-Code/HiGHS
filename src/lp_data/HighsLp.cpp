@@ -35,6 +35,7 @@ bool HighsLp::equalButForNames(const HighsLp& lp) {
   equal = this->Astart_ == lp.Astart_ && equal;
   equal = this->Aindex_ == lp.Aindex_ && equal;
   equal = this->Avalue_ == lp.Avalue_ && equal;
+  equal = this->orientation_ == lp.orientation_ && equal;
   return equal;
 }
 
@@ -53,6 +54,7 @@ void HighsLp::clear() {
 
   this->sense_ = ObjSense::MINIMIZE;
   this->offset_ = 0;
+  this->orientation_ = MatrixOrientation::NONE;
 
   this->model_name_ = "";
   this->lp_name_ = "";

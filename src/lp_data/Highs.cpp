@@ -234,7 +234,7 @@ HighsStatus Highs::passModel(const HighsLp lp) {
   HighsStatus return_status = HighsStatus::OK;
   // move the copy of the LP to the internal LP
   lp_ = std::move(lp);
-  // Ensure that the LP is column-wise (if it has any columns)
+  // Ensure that the LP is column-wise
   setOrientation(lp_);
   // Check validity of the LP, normalising its values
   return_status =
@@ -318,8 +318,6 @@ HighsStatus Highs::clearModel() {
   HighsStatus return_status = HighsStatus::OK;
   // Remove all HighsModelObject entries
   hmos_.clear();
-  // Set up with an empty LP so that addrows/cols can be used to build
-  //  HighsLp empty_lp; lp_ = empty_lp;
   lp_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   return_status =
@@ -356,6 +354,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsLp model = this->lp_;
 
+  // Ensure that the LP is column-wise
+  setOrientation(model);
   if (filename == "") {
     // Empty file name: report model on stdout
     reportLp(options_.log_options, model, HighsLogType::VERBOSE);
@@ -1088,6 +1088,9 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  int* row_num_nz, int* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
+  // Ensure that the LP is column-wise
+  setOrientation(this->lp_);
+  assert(&this->lp_ == &hmos_[0].lp_);
   if (row_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "getReducedRow: row_vector is NULL\n");
@@ -1142,6 +1145,9 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::Error;
+  // Ensure that the LP is column-wise
+  setOrientation(this->lp_);
+  assert(&this->lp_ == &hmos_[0].lp_);
   if (col_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "getReducedColumn: col_vector is NULL\n");
@@ -1794,6 +1800,10 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
 HighsPresolveStatus Highs::runPresolve() {
   // Exit if the problem is empty or if presolve is set to off.
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
+
+  // Ensure that the LP is column-wise
+  setOrientation(this->lp_);
+
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
     return HighsPresolveStatus::NullError;
 
@@ -1911,6 +1921,8 @@ HighsStatus Highs::callSolveLp(const int model_index, const string message) {
   if (!model_index_ok) return HighsStatus::Error;
 
   HighsModelObject& model = hmos_[model_index];
+  // Check that the model isn't row-wise
+  assert(model.lp_.orientation_ != MatrixOrientation::ROWWISE);
 
   // Transfer the LP solver iteration counts to this model
   HighsIterationCounts& iteration_counts = hmos_[model_index].iteration_counts_;
@@ -1931,6 +1943,8 @@ HighsStatus Highs::callSolveMip() {
   HighsStatus return_status = HighsStatus::OK;
   // Run the MIP solver
   options_.log_dev_level = LOG_DEV_LEVEL_INFO;
+  // Check that the model isn't row-wise
+  assert(this->lp_.orientation_ != MatrixOrientation::ROWWISE);
   HighsMipSolver solver(options_, lp_);
   solver.run();
   // Cheating now, but need to set this honestly!
