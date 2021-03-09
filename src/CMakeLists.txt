@@ -329,6 +329,11 @@ if (IPX_ON)
     target_link_libraries(libhighs libipx)
 endif()
 
+if (GAMS_FOUND)
+    # todo replace by adding ${GAMS_ROOT}/apifiles/C/api/gcmt.c to ${sources} if present above
+    target_compile_definitions(libhighs PUBLIC GC_NO_MUTEX)
+endif()
+
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
