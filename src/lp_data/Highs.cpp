@@ -164,7 +164,6 @@ HighsStatus Highs::resetHighsOptions() {
 HighsStatus Highs::writeHighsOptions(
     const std::string filename, const bool report_only_non_default_values) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsLp lp = this->lp_;
   FILE* file;
   bool html;
   return_status = interpretCallStatus(
@@ -236,8 +235,8 @@ HighsStatus Highs::passModel(const HighsLp lp) {
   HighsStatus return_status = HighsStatus::OK;
   // move the copy of the LP to the internal LP
   lp_ = std::move(lp);
-  // Ensure that the passed LP is column-wise (if it has any columns)
-  ensureColWise(lp_);
+  // Ensure that the LP is column-wise (if it has any columns)
+  setOrientation(lp_);
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
@@ -463,9 +462,9 @@ HighsStatus Highs::run() {
   }
 
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  ensureColWise(lp_);
+  setOrientation(lp_);
   if (hmos_[0].ekk_instance_.simplex_lp_status_.valid)
-    ensureColWise(hmos_[0].ekk_instance_.simplex_lp_);
+    setOrientation(hmos_[0].ekk_instance_.simplex_lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -1786,6 +1785,10 @@ std::string Highs::highsModelStatusToString(
 
 std::string Highs::primalDualStatusToString(const int primal_dual_status) {
   return utilPrimalDualStatusToString(primal_dual_status);
+}
+
+void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
+  setOrientation(lp_, desired_orientation);
 }
 
 // Private methods

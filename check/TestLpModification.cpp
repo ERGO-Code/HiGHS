@@ -928,7 +928,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]));
 
-  avgas_highs.ensureColWiseMatrix();
+  avgas_highs.setMatrixOrientation();
   REQUIRE(
       areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound));
 

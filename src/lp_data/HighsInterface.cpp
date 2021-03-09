@@ -536,7 +536,7 @@ HighsStatus Highs::getColsInterface(
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   // Ensure that the matrix is column-wise
-  ensureColWise(lp);
+  setOrientation(lp);
   num_col = 0;
   num_nz = 0;
   for (int k = from_k; k <= to_k; k++) {
@@ -603,7 +603,7 @@ HighsStatus Highs::getRowsInterface(
   int current_set_entry = 0;
   int row_dim = lp.numRow_;
   // Ensure that the matrix is column-wise
-  ensureColWise(lp);
+  setOrientation(lp);
 
   // Set up a row mask so that entries to be got from the column-wise
   // matrix can be identified and have their correct row index.

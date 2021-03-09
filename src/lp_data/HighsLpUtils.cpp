@@ -1028,7 +1028,7 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
     lp.orientation_ = MatrixOrientation::COLWISE;
   } else {
     // Ensure that the matrix is stored column-wise
-    ensureColWise(lp);
+    setOrientation(lp);
   }
   // Determine the new number of columns in the matrix and resize the
   // starts accordingly.
@@ -2426,121 +2426,164 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-void setOrientation(HighsLp& lp) {
+void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation) {
   if (lp.numCol_==0 && lp.numRow_ == 0) {
+    // LP has no rows or columns: orientation can only be NONE
     lp.orientation_ = MatrixOrientation::NONE;
-  } else if (lp.numCol_>0) {
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    assert((int)lp.Astart_.size() >= lp.numCol_+1);
-    int numnz = lp.Astart_[lp.numCol_];
-    assert((int)lp.Aindex_.size() >= numnz);
-    assert((int)lp.Avalue_.size() >= numnz);
+  } else if (desired_orientation == MatrixOrientation::COLWISE) {
+    // Desired orientation is column-wise
+    if (lp.numCol_==0) {
+      // No columns, so orientation can only be ROWWISE, shouldn't
+      // have been set COLWISE, and matrix must be empty
+      assert(lp.numRow_>0);
+      assert(lp.orientation_ != MatrixOrientation::COLWISE);
+      assert((int)lp.Astart_.size() >= lp.numRow_+1);
+      int numnz = lp.Astart_[lp.numRow_];
+      assert(numnz == 0);
+      assert((int)lp.Aindex_.size() >= numnz);
+      assert((int)lp.Avalue_.size() >= numnz);
+      lp.orientation_ = MatrixOrientation::ROWWISE;
+    } else {
+      // Has columns, so can be column-wise
+      ensureColWise(lp);
+    }
   } else {
-    assert(lp.numRow_>0);
-    lp.orientation_ = MatrixOrientation::ROWWISE;
-    assert((int)lp.Astart_.size() >= lp.numRow_+1);
-    int numnz = lp.Astart_[lp.numRow_];
-    assert((int)lp.Aindex_.size() >= numnz);
-    assert((int)lp.Avalue_.size() >= numnz);
+    assert (desired_orientation == MatrixOrientation::ROWWISE);
+    // Desired orientation is row-wise
+    if (lp.numRow_==0) {
+      // No rows, so orientation can only be COLWISE, shouldn't have
+      // been set ROWWISE, and matrix must be empty
+      assert(lp.numCol_>0);
+      assert(lp.orientation_ != MatrixOrientation::ROWWISE);
+      assert((int)lp.Astart_.size() >= lp.numCol_+1);
+      int numnz = lp.Astart_[lp.numCol_];
+      assert(numnz == 0);
+      assert((int)lp.Aindex_.size() >= numnz);
+      assert((int)lp.Avalue_.size() >= numnz);
+      lp.orientation_ = MatrixOrientation::COLWISE;
+    } else {
+      // Has rows, so can be row-wise
+      ensureRowWise(lp);
+    }
   }
-  
 }
+
 void ensureRowWise(HighsLp& lp) {
+  // Don't call this if the matrix can't be row-wise
+  assert(lp.numRow_>0);
   if (lp.orientation_ == MatrixOrientation::ROWWISE) return;
-  if (lp.orientation_ == MatrixOrientation::NONE) {
-    assert(lp.numCol_==0 && lp.numRow_ == 0);
-    return;
+  // Currently may be NONE (because no orientation has been set) or COLWISE
+  int num_nz;
+  if (lp.numRow_ > 0 && lp.orientation_ == MatrixOrientation::ROWWISE) {
+    // Orientation is COLWISE and probably non-empty
+    assert((int)lp.Astart_.size() >= lp.numCol_+1);
+    num_nz = lp.Astart_[lp.numCol_];
+    assert(num_nz >= 0);
+    assert((int)lp.Aindex_.size() >= num_nz);
+    assert((int)lp.Avalue_.size() >= num_nz);
+    if (num_nz>0) {
+      // Matrix is non-empty, so transpose it
+      vector<int>& Astart = lp.Astart_;
+      vector<int>& Aindex = lp.Aindex_;
+      vector<double>& Avalue = lp.Avalue_;
+      vector<int> ARstart;
+      vector<int> ARindex;
+      vector<double> ARvalue;
+      ARstart.resize(lp.numRow_+1);
+      ARindex.resize(num_nz);
+      ARvalue.resize(num_nz);
+      vector<int> ARlength;
+      ARlength.assign(lp.numRow_, 0);
+      for (int iEl = Astart[0]; iEl < num_nz; iEl++) ARlength[Aindex[iEl]]++;
+      ARstart[0] = 0;
+      for (int iRow=0; iRow<lp.numRow_; iRow++)
+	ARstart[iRow+1] = ARstart[iRow]+ARlength[iRow];
+      for (int iCol=0; iCol<lp.numCol_; iCol++){
+	for (int iEl = Astart[iCol]; iEl < Astart[iCol+1]; iEl++) {
+	  int iRow = Aindex[iEl];
+	  int iRow_el = ARstart[iRow];
+	  ARindex[iRow_el] = iCol;
+	  ARvalue[iRow_el] = Avalue[iEl];
+	  ARstart[iRow]++;
+	}   
+      }
+      ARstart[0] = 0;
+      for (int iRow=0; iRow<lp.numRow_; iRow++)
+	ARstart[iRow+1] = ARstart[iRow]+ARlength[iRow];
+      assert(ARstart[lp.numRow_] == num_nz);
+      // Now update the LP's matrix  
+      lp.Astart_ = ARstart;
+      lp.Aindex_ = ARindex;
+      lp.Avalue_ = ARvalue;
+    } else {
+      // Matrix is empty, so set up empty row-wise structure
+      lp.Astart_.assign(lp.numRow_+1, 0);
+    }
   }
-  assert(lp.orientation_ == MatrixOrientation::COLWISE);
-  assert(lp.numCol_>0);
-  
-  assert((int)lp.Astart_.size() >= lp.numCol_+1);
-  int num_nz = lp.Astart_[lp.numCol_];
+  assert((int)lp.Astart_.size() >= lp.numRow_+1);
+  num_nz = lp.Astart_[lp.numRow_];
+  assert(num_nz >= 0);
   assert((int)lp.Aindex_.size() >= num_nz);
   assert((int)lp.Avalue_.size() >= num_nz);
-  
-  vector<int>& Astart = lp.Astart_;
-  vector<int>& Aindex = lp.Aindex_;
-  vector<double>& Avalue = lp.Avalue_;
-  vector<int> ARstart;
-  vector<int> ARindex;
-  vector<double> ARvalue;
-  ARstart.resize(lp.numRow_+1);
-  ARindex.resize(num_nz);
-  ARvalue.resize(num_nz);
-  vector<int> ARlength;
-  ARlength.assign(lp.numRow_, 0);
-  for (int iEl = Astart[0]; iEl < num_nz; iEl++) ARlength[Aindex[iEl]]++;
-  ARstart[0] = 0;
-  for (int iRow=0; iRow<lp.numRow_; iRow++)
-    ARstart[iRow+1] = ARstart[iRow]+ARlength[iRow];
-  for (int iCol=0; iCol<lp.numCol_; iCol++){
-    for (int iEl = Astart[iCol]; iEl < Astart[iCol+1]; iEl++) {
-      int iRow = Aindex[iEl];
-      int iRow_el = ARstart[iRow];
-      ARindex[iRow_el] = iCol;
-      ARvalue[iRow_el] = Avalue[iEl];
-      ARstart[iRow]++;
-    }   
-  }
-  ARstart[0] = 0;
-  for (int iRow=0; iRow<lp.numRow_; iRow++)
-    ARstart[iRow+1] = ARstart[iRow]+ARlength[iRow];
-  assert(ARstart[lp.numRow_] == num_nz);
-
-  // Now update the LP's matrix  
-  lp.Astart_ = ARstart;
-  lp.Aindex_ = ARindex;
-  lp.Avalue_ = ARvalue;
   lp.orientation_ = MatrixOrientation::ROWWISE;
 }
 
 void ensureColWise(HighsLp& lp) {
+  // Don't call this if the matrix can't be col-wise
+  assert(lp.numCol_>0);
   if (lp.orientation_ == MatrixOrientation::COLWISE) return;
-  if (lp.orientation_ == MatrixOrientation::NONE) {
-    assert(lp.numCol_==0 && lp.numRow_ == 0);
-    return;
+  // Currently may be NONE (because no orientation has been set) or ROWWISE
+  int num_nz;
+  if (lp.numRow_ > 0 && lp.orientation_ == MatrixOrientation::ROWWISE) {
+    // Orientation is ROWWISE and probably non-empty
+    assert((int)lp.Astart_.size() >= lp.numRow_+1);
+    num_nz = lp.Astart_[lp.numRow_];
+    assert(num_nz >= 0);
+    assert((int)lp.Aindex_.size() >= num_nz);
+    assert((int)lp.Avalue_.size() >= num_nz);
+    if (num_nz>0) {
+      // Matrix is non-empty, so transpose it
+      vector<int>& ARstart = lp.Astart_;
+      vector<int>& ARindex = lp.Aindex_;
+      vector<double>& ARvalue = lp.Avalue_;
+      vector<int> Astart;
+      vector<int> Aindex;
+      vector<double> Avalue;
+      Astart.resize(lp.numCol_+1);
+      Aindex.resize(num_nz);
+      Avalue.resize(num_nz);
+      vector<int> Alength;
+      Alength.assign(lp.numCol_, 0);
+      for (int iEl = ARstart[0]; iEl < num_nz; iEl++) Alength[ARindex[iEl]]++;
+      Astart[0] = 0;
+      for (int iCol=0; iCol<lp.numCol_; iCol++)
+	Astart[iCol+1] = Astart[iCol]+Alength[iCol];
+      for (int iRow=0; iRow<lp.numRow_; iRow++){
+	for (int iEl = ARstart[iRow]; iEl < ARstart[iRow+1]; iEl++) {
+	  int iCol = ARindex[iEl];
+	  int iCol_el = Astart[iCol];
+	  Aindex[iCol_el] = iRow;
+	  Avalue[iCol_el] = ARvalue[iEl];
+	  Astart[iCol]++;
+	}   
+      }
+      Astart[0] = 0;
+      for (int iCol=0; iCol<lp.numCol_; iCol++)
+	Astart[iCol+1] = Astart[iCol]+Alength[iCol];
+      assert(Astart[lp.numCol_] == num_nz);
+      // Now update the LP's matrix  
+      lp.Astart_ = Astart;
+      lp.Aindex_ = Aindex;
+      lp.Avalue_ = Avalue;
+    } else {
+      // Matrix is empty, so set up empty column-wise structure
+      lp.Astart_.assign(lp.numCol_+1, 0);
+    }
   }
-  assert(lp.orientation_ == MatrixOrientation::ROWWISE);
-  assert(lp.numRow_>0);
-  
-  assert((int)lp.Astart_.size() >= lp.numRow_+1);
-  int num_nz = lp.Astart_[lp.numRow_];
+  assert((int)lp.Astart_.size() >= lp.numCol_+1);
+  num_nz = lp.Astart_[lp.numCol_];
+  assert(num_nz >= 0);
   assert((int)lp.Aindex_.size() >= num_nz);
   assert((int)lp.Avalue_.size() >= num_nz);
-
-  vector<int>& ARstart = lp.Astart_;
-  vector<int>& ARindex = lp.Aindex_;
-  vector<double>& ARvalue = lp.Avalue_;
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  Astart.resize(lp.numCol_+1);
-  Aindex.resize(num_nz);
-  Avalue.resize(num_nz);
-  vector<int> Alength;
-  Alength.assign(lp.numCol_, 0);
-  for (int iEl = ARstart[0]; iEl < num_nz; iEl++) Alength[ARindex[iEl]]++;
-  Astart[0] = 0;
-  for (int iCol=0; iCol<lp.numCol_; iCol++)
-    Astart[iCol+1] = Astart[iCol]+Alength[iCol];
-  for (int iRow=0; iRow<lp.numRow_; iRow++){
-    for (int iEl = ARstart[iRow]; iEl < ARstart[iRow+1]; iEl++) {
-      int iCol = ARindex[iEl];
-      int iCol_el = Astart[iCol];
-      Aindex[iCol_el] = iRow;
-      Avalue[iCol_el] = ARvalue[iEl];
-      Astart[iCol]++;
-    }   
-  }
-  Astart[0] = 0;
-  for (int iCol=0; iCol<lp.numCol_; iCol++)
-    Astart[iCol+1] = Astart[iCol]+Alength[iCol];
-  assert(Astart[lp.numCol_] == num_nz);
-
-  // Now update the LP's matrix  
-  lp.Astart_ = Astart;
-  lp.Aindex_ = Aindex;
-  lp.Avalue_ = Avalue;
   lp.orientation_ = MatrixOrientation::COLWISE;
 }
