@@ -201,8 +201,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       // OK if file just ends after the integer_columns section without
       // end_linear
       if (!f) {
-	setOrientation(model);
-	return FilereaderRetcode::OK;
+        setOrientation(model);
+        return FilereaderRetcode::OK;
       }
       highsLogUser(options.log_options, HighsLogType::ERROR,
                    "names not found in EMS file\n");

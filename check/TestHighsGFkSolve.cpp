@@ -40,7 +40,8 @@ void testGFkSolve(const std::vector<int>& Avalue,
   GFkSolve.solve<k>(
       [&](const std::vector<std::pair<int, unsigned int>>& solution) {
         int numSolutionNnz = solution.size();
-        if (dev_run) printf("solution (k=%d) has %d nonzeros\n", k, numSolutionNnz);
+        if (dev_run)
+          printf("solution (k=%d) has %d nonzeros\n", k, numSolutionNnz);
 
         std::vector<unsigned int> solSums(numRow);
         for (const auto& solentry : solution) {

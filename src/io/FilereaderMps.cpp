@@ -36,7 +36,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::SUCCESS:
-	setOrientation(model);
+        setOrientation(model);
         return FilereaderRetcode::OK;
       case FreeFormatParserReturnCode::PARSERERROR:
         return FilereaderRetcode::PARSERERROR;

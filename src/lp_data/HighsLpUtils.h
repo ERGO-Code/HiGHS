@@ -98,8 +98,8 @@ HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
                                 const int row, const double rowScale);
 
 void appendToMatrix(HighsLp& lp, const int num_vec, const int num_new_vec,
-		    const int num_new_nz, const int* XAstart,
-		    const int* XAindex, const double* XAvalue);
+                    const int num_new_nz, const int* XAstart,
+                    const int* XAindex, const double* XAvalue);
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const vector<double>& colCost,
@@ -266,8 +266,8 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
-void setOrientation(HighsLp& lp,
-		    const MatrixOrientation& desired_orientation=MatrixOrientation::COLWISE);
-void ensureRowWise(HighsLp& lp);
+void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation =
+                                     MatrixOrientation::COLWISE);
 void ensureColWise(HighsLp& lp);
+void ensureRowWise(HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

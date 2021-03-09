@@ -348,7 +348,7 @@ HighsStatus Highs::addRowsInterface(int XnumNewRow, const double* XrowLower,
       }
     }
   } else if (lp.orientation_ == MatrixOrientation::NONE ||
-	     lp.orientation_ == MatrixOrientation::ROWWISE) {
+             lp.orientation_ == MatrixOrientation::ROWWISE) {
     // There are no nonzeros, so XARstart/XARindex/XARvalue may be null. Have to
     // set up starts for empty rows
     assert(XnumNewRow > 0);

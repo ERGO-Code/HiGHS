@@ -222,4 +222,3 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
 }
-

@@ -382,8 +382,8 @@ void singularStartingBasis(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
   if (dev_run) {
-    REQUIRE(highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED) ==
-	    HighsStatus::OK);
+    REQUIRE(highs.setHighsOptionValue(
+                "log_dev_level", LOG_DEV_LEVEL_DETAILED) == HighsStatus::OK);
   }
 
   REQUIRE(highs.setHighsOptionValue("highs_debug_level", 3) == HighsStatus::OK);

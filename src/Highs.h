@@ -798,7 +798,8 @@ class Highs {
   void setPresolveOptions(const PresolveComponentOptions& options) {
     presolve_.options_ = options;
   }
-  void setMatrixOrientation(const MatrixOrientation& desired_orientation=MatrixOrientation::COLWISE);
+  void setMatrixOrientation(const MatrixOrientation& desired_orientation =
+                                MatrixOrientation::COLWISE);
 
  private:
   HighsSolution solution_;

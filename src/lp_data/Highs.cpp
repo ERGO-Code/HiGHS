@@ -43,8 +43,7 @@ Highs::Highs() {
 Highs::Highs(HighsOptions& options) {
   // Pass the user's options setting to HiGHS, returning an error if
   // any is illegal
-  if (passOptions(options_.log_options, options, options_)
-      != OptionStatus::OK)
+  if (passOptions(options_.log_options, options, options_) != OptionStatus::OK)
     printf("Options not OK\n");
   Highs();
 }
@@ -2329,4 +2328,3 @@ void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
   cols = presolve_.info_.n_cols_removed;
   nnz = presolve_.info_.n_nnz_removed;
 }
-

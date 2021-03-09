@@ -32,7 +32,7 @@ void writeModelBoundSol(FILE* file, const bool columns, const int dim,
 bool namesWithSpaces(const int num_name, const std::vector<std::string>& names,
                      const bool report = false);
 int maxNameLength(const int num_name, const std::vector<std::string>& names);
-HighsStatus normaliseNames(const HighsLogOptions& log_options, 
+HighsStatus normaliseNames(const HighsLogOptions& log_options,
                            const std::string name_type, const int num_name,
                            std::vector<std::string>& names,
                            int& max_name_length);

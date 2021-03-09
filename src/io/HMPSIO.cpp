@@ -483,16 +483,18 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   // Normalise the column names
   int max_col_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_col_name_length = 8;
-  HighsStatus col_name_status = normaliseNames(
-      options.log_options, "Column", lp.numCol_, local_col_names, max_col_name_length);
+  HighsStatus col_name_status =
+      normaliseNames(options.log_options, "Column", lp.numCol_, local_col_names,
+                     max_col_name_length);
   if (col_name_status == HighsStatus::Error) return col_name_status;
   warning_found = col_name_status == HighsStatus::Warning || warning_found;
   //
   // Normalise the row names
   int max_row_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_row_name_length = 8;
-  HighsStatus row_name_status = normaliseNames(
-      options.log_options, "Row", lp.numRow_, local_row_names, max_row_name_length);
+  HighsStatus row_name_status =
+      normaliseNames(options.log_options, "Row", lp.numRow_, local_row_names,
+                     max_row_name_length);
   if (row_name_status == HighsStatus::Error) return col_name_status;
   warning_found = row_name_status == HighsStatus::Warning || warning_found;
 
