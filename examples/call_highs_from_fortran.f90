@@ -330,21 +330,21 @@ program fortrantest
   ! (model_file and solution_file) so only run(highs) is required
   highs = Highs_create()
 
-  if (0 .eq. 1) then
-     ! Get and set string options
-     runstatus = Highs_getStringOptionValue(highs, "model_file"//C_NULL_CHAR, file_name)
-     write(*, '(a, a, a)')"Default model_file is |", file_name, "|"
-     runstatus = Highs_setStringOptionValue(highs, "model_file"//C_NULL_CHAR, "F90.mps"//C_NULL_CHAR)!mps_file_name)
-     runstatus = Highs_getStringOptionValue(highs, "model_file"//C_NULL_CHAR, file_name)
-     write(*, '(a, a, a)')"New model_file is |", file_name, "|"
-
-     runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
-     write(*, '(a, a, a)')"Default solution_file is |", file_name, "|"
-     runstatus = Highs_setStringOptionValue(highs, "solution_file"//C_NULL_CHAR, "F90.sol"//C_NULL_CHAR)!solution_file_name)
-     runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
-     write(*, '(a, a, a)')"New solution_file is |", file_name, "|"
-
-  endif
+!  if (0 .eq. 1) then
+!     ! Get and set string options
+!     runstatus = Highs_getStringOptionValue(highs, "model_file"//C_NULL_CHAR, file_name)
+!     write(*, '(a, a, a)')"Default model_file is |", file_name, "|"
+!     runstatus = Highs_setStringOptionValue(highs, "model_file"//C_NULL_CHAR, "F90.mps"//C_NULL_CHAR)!mps_file_name)
+!     runstatus = Highs_getStringOptionValue(highs, "model_file"//C_NULL_CHAR, file_name)
+!     write(*, '(a, a, a)')"New model_file is |", file_name, "|"
+!
+!     runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
+!     write(*, '(a, a, a)')"Default solution_file is |", file_name, "|"
+!     runstatus = Highs_setStringOptionValue(highs, "solution_file"//C_NULL_CHAR, "F90.sol"//C_NULL_CHAR)!solution_file_name)
+!     runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
+!     write(*, '(a, a, a)')"New solution_file is |", file_name, "|"
+!
+!  endif
 
 ! Get and set bool options. NB Cannot pass .true. as it's 4-byte
   runstatus = Highs_getBoolOptionValue(highs, "write_solution_to_file"//C_NULL_CHAR, write_solution_to_file)

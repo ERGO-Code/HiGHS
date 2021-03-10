@@ -109,13 +109,13 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_setDoubleOptionValue
 
-    function Highs_setStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setStringOptionValue' )
-      use iso_c_binding
-      type(c_ptr), VALUE :: h
-      character( c_char ) :: o(*)
-      character( c_char ), VALUE :: v
-      integer ( c_int ) :: s
-    end function Highs_setStringOptionValue
+!    function Highs_setStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setStringOptionValue' )
+!      use iso_c_binding
+!      type(c_ptr), VALUE :: h
+!      character( c_char ) :: o(*)
+!      character( c_char ), VALUE :: v
+!      integer ( c_int ) :: s
+!    end function Highs_setStringOptionValue
 
     function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
       use iso_c_binding
@@ -149,13 +149,13 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getDoubleOptionValue
 
-    function Highs_getStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getStringOptionValue' )
-      use iso_c_binding
-      type(c_ptr), VALUE :: h
-      character( c_char ) :: o(*)
-      character( c_char ) :: v(*)
-      integer ( c_int ) :: s
-    end function Highs_getStringOptionValue
+!    function Highs_getStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getStringOptionValue' )
+!      use iso_c_binding
+!      type(c_ptr), VALUE :: h
+!      character( c_char ) :: o(*)
+!      character( c_char ) :: v(*)
+!      integer ( c_int ) :: s
+!    end function Highs_getStringOptionValue
 
     function Highs_getOptionType ( h, o, v ) result( s ) bind ( c, name='Highs_getOptionType' )
       use iso_c_binding
