@@ -509,157 +509,112 @@ void HighsMipSolverData::basisTransfer() {
   // if a root basis is given, construct a basis for the root LP from
   // in the reduced problem space after presolving
   if (mipsolver.rootbasis) {
-    if (mipsolver.presolve_.data_.presolve_.empty() && !modelcleanup)
-      firstrootbasis = *mipsolver.rootbasis;
-    else {
-      int numColOrig;
-      int numRowOrig;
+    firstrootbasis.col_status.resize(mipsolver.numCol(),
+                                     HighsBasisStatus::NONBASIC);
+    firstrootbasis.row_status.resize(mipsolver.numRow(),
+                                     HighsBasisStatus::NONBASIC);
+    firstrootbasis.valid_ = true;
+    int missingbasic = mipsolver.numRow();
 
-      const HighsLp& model = *mipsolver.model_;
+    for (int i = 0; i != mipsolver.numCol(); ++i) {
+      HighsBasisStatus status =
+          mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
 
-      if (!mipsolver.presolve_.data_.presolve_.empty()) {
-        numColOrig = mipsolver.presolve_.data_.presolve_[0].numColOriginal;
-        numRowOrig = mipsolver.presolve_.data_.presolve_[0].numRowOriginal;
-      } else {
-        numColOrig = modelcleanup->origmodel->numCol_;
-        numRowOrig = modelcleanup->origmodel->numRow_;
+      if (status == HighsBasisStatus::BASIC) {
+        --missingbasic;
+        firstrootbasis.col_status[i] = status;
+
+        if (missingbasic == 0) break;
       }
+    }
 
-      const auto rIndex = [&](int row) {
-        if (!mipsolver.presolve_.data_.presolve_.empty())
-          row = mipsolver.presolve_.data_.presolve_[0].rIndex[row];
+    if (missingbasic != 0) {
+      for (int i = 0; i != mipsolver.numRow(); ++i) {
+        HighsBasisStatus status =
+            mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
 
-        if (modelcleanup && row != -1) row = modelcleanup->rIndex[row];
-
-        return row;
-      };
-
-      const auto cIndex = [&](int col) {
-        if (!mipsolver.presolve_.data_.presolve_.empty())
-          col = mipsolver.presolve_.data_.presolve_[0].cIndex[col];
-
-        if (modelcleanup && col != -1) col = modelcleanup->cIndex[col];
-
-        return col;
-      };
-
-      firstrootbasis.valid_ = true;
-      firstrootbasis.col_status.resize(mipsolver.numCol(),
-                                       HighsBasisStatus::NONBASIC);
-      firstrootbasis.row_status.resize(mipsolver.numRow(),
-                                       HighsBasisStatus::NONBASIC);
-
-      int missingbasic = mipsolver.model_->numRow_;
-
-      for (int i = 0; i != numRowOrig; ++i) {
-        int r = rIndex(i);
-        if (r < 0) continue;
-
-        HighsBasisStatus rowstatus = mipsolver.rootbasis->row_status[i];
-
-        if (rowstatus == HighsBasisStatus::BASIC) {
-          if (missingbasic != 0)
-            --missingbasic;
-          else
-            rowstatus = HighsBasisStatus::NONBASIC;
-        }
-
-        firstrootbasis.row_status[r] = rowstatus;
-      }
-
-      for (int i = 0; i != numColOrig; ++i) {
-        int c = cIndex(i);
-        if (c < 0) continue;
-
-        HighsBasisStatus colstatus = mipsolver.rootbasis->col_status[i];
-
-        if (colstatus == HighsBasisStatus::BASIC) {
-          if (missingbasic != 0)
-            --missingbasic;
-          else
-            colstatus = HighsBasisStatus::NONBASIC;
-        }
-
-        firstrootbasis.col_status[c] = colstatus;
-      }
-
-      // there are missing basic variables; first add the sparsest nonbasic
-      // structural columns to the basis whenever the column does not contain
-      // any basic row. Then proceed by adding logical columns of rows which
-      // contain no basic variables until the basis is complete
-      if (missingbasic != 0) {
-        std::vector<int> nonbasiccols;
-        nonbasiccols.reserve(model.numCol_);
-        for (int i = 0; i != model.numCol_; ++i) {
-          if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
-            nonbasiccols.push_back(i);
-        }
-        std::sort(nonbasiccols.begin(), nonbasiccols.end(),
-                  [&](int col1, int col2) {
-                    int len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
-                    int len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
-                    return len1 < len2;
-                  });
-        nonbasiccols.resize(
-            std::min(nonbasiccols.size(), size_t(missingbasic)));
-        for (int i : nonbasiccols) {
-          const int start = model.Astart_[i];
-          const int end = model.Astart_[i + 1];
-
-          bool hasbasic = false;
-          for (int j = start; j != end; ++j) {
-            if (firstrootbasis.row_status[model.Aindex_[j]] ==
-                HighsBasisStatus::BASIC) {
-              hasbasic = true;
-              break;
-            }
-          }
-
-          if (!hasbasic) {
-            firstrootbasis.col_status[i] = HighsBasisStatus::BASIC;
-            --missingbasic;
-            if (missingbasic == 0) break;
-          }
-        }
-
-        if (missingbasic != 0) {
-          std::vector<std::pair<int, int>> nonbasicrows;
-
-          for (int i = 0; i != model.numRow_; ++i) {
-            if (firstrootbasis.row_status[i] == HighsBasisStatus::BASIC)
-              continue;
-
-            const int start = ARstart_[i];
-            const int end = ARstart_[i + 1];
-
-            int nbasic = 0;
-            for (int j = start; j != end; ++j) {
-              if (firstrootbasis.col_status[ARindex_[j]] ==
-                  HighsBasisStatus::BASIC) {
-                ++nbasic;
-              }
-            }
-
-            if (nbasic == 0) {
-              firstrootbasis.row_status[i] = HighsBasisStatus::BASIC;
-              --missingbasic;
-              if (missingbasic == 0) break;
-            } else {
-              nonbasicrows.emplace_back(nbasic, i);
-            }
-          }
-
-          std::sort(nonbasicrows.begin(), nonbasicrows.end());
-          nonbasicrows.resize(missingbasic);
-
-          for (std::pair<int, int> nonbasicrow : nonbasicrows)
-            firstrootbasis.row_status[nonbasicrow.second] =
-                HighsBasisStatus::BASIC;
+        if (status == HighsBasisStatus::BASIC) {
+          --missingbasic;
+          firstrootbasis.row_status[i] = status;
+          if (missingbasic == 0) break;
         }
       }
     }
 
-    lp.getLpSolver().setBasis(firstrootbasis);
+    const HighsLp& model = *mipsolver.model_;
+
+    // there are missing basic variables; first add the sparsest nonbasic
+    // structural columns to the basis whenever the column does not contain
+    // any basic row. Then proceed by adding logical columns of rows which
+    // contain no basic variables until the basis is complete
+    if (missingbasic != 0) {
+      std::vector<int> nonbasiccols;
+      nonbasiccols.reserve(model.numCol_);
+      for (int i = 0; i != model.numCol_; ++i) {
+        if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
+          nonbasiccols.push_back(i);
+      }
+      std::sort(nonbasiccols.begin(), nonbasiccols.end(),
+                [&](int col1, int col2) {
+                  int len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
+                  int len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
+                  return len1 < len2;
+                });
+      nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
+      for (int i : nonbasiccols) {
+        const int start = model.Astart_[i];
+        const int end = model.Astart_[i + 1];
+
+        bool hasbasic = false;
+        for (int j = start; j != end; ++j) {
+          if (firstrootbasis.row_status[model.Aindex_[j]] ==
+              HighsBasisStatus::BASIC) {
+            hasbasic = true;
+            break;
+          }
+        }
+
+        if (!hasbasic) {
+          firstrootbasis.col_status[i] = HighsBasisStatus::BASIC;
+          --missingbasic;
+          if (missingbasic == 0) break;
+        }
+      }
+
+      if (missingbasic != 0) {
+        std::vector<std::pair<int, int>> nonbasicrows;
+
+        for (int i = 0; i != model.numRow_; ++i) {
+          if (firstrootbasis.row_status[i] == HighsBasisStatus::BASIC) continue;
+
+          const int start = ARstart_[i];
+          const int end = ARstart_[i + 1];
+
+          int nbasic = 0;
+          for (int j = start; j != end; ++j) {
+            if (firstrootbasis.col_status[ARindex_[j]] ==
+                HighsBasisStatus::BASIC) {
+              ++nbasic;
+            }
+          }
+
+          if (nbasic == 0) {
+            firstrootbasis.row_status[i] = HighsBasisStatus::BASIC;
+            --missingbasic;
+            if (missingbasic == 0) break;
+          } else {
+            nonbasicrows.emplace_back(nbasic, i);
+          }
+        }
+
+        std::sort(nonbasicrows.begin(), nonbasicrows.end());
+        nonbasicrows.resize(missingbasic);
+
+        for (std::pair<int, int> nonbasicrow : nonbasicrows)
+          firstrootbasis.row_status[nonbasicrow.second] =
+              HighsBasisStatus::BASIC;
+      }
+    }
   }
 }
 
@@ -806,6 +761,7 @@ void HighsMipSolverData::evaluateRootNode() {
                     mipsolver.options_mip_->message_level, ML_MINIMAL,
                     "\nsolving root node LP relaxation\n");
   lp.loadModel();
+  if (firstrootbasis.valid_) lp.getLpSolver().setBasis(firstrootbasis);
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
   lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
   lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
