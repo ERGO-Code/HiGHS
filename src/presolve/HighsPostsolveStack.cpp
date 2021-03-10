@@ -98,7 +98,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
       double((rhs - HighsCDouble(coef) * solution.col_value[col]) / coefSubst);
 
   // can only do primal postsolve, stop here
-  if (solution.row_dual.empty()) return;
+  if (row == -1 || solution.row_dual.empty()) return;
 
   if (solution.col_dual[col] > options.dual_feasibility_tolerance)
     basis.col_status[col] = HighsBasisStatus::LOWER;
@@ -442,6 +442,7 @@ void HighsPostsolveStack::ForcingRow::undo(
 void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
                                              HighsSolution& solution,
                                              HighsBasis& basis) {
+  if (solution.row_dual.empty()) return;
   if (!rowUpperTightened && !rowLowerTightened) {
     // simple case of row2 being redundant, in which case it just gets a
     // dual multiplier of 0 and is made basic

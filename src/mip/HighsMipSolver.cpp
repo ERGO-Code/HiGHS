@@ -20,6 +20,8 @@
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HPresolve.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveComponent.h"
 #include "util/HighsCDouble.h"
 
@@ -154,11 +156,28 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::NOTSET;
-  orig_model_ = model_;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
   timer_.start(timer_.presolve_clock);
+
+  mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  mipdata_->init();
   if (options_mip_->presolve != "off") {
+    mipdata_->runPresolve();
+
+    if (modelstatus_ != HighsModelStatus::NOTSET) {
+      HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                        ML_MINIMAL, "Presolve: %s\n",
+                        utilHighsModelStatusToString(modelstatus_).c_str());
+      if (modelstatus_ == HighsModelStatus::OPTIMAL) {
+        mipdata_->upper_bound = 0;
+        mipdata_->lower_bound = 0;
+      }
+      timer_.stop(timer_.presolve_clock);
+      cleanupSolve();
+      return;
+    }
+#if 0
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
       case HighsPresolveStatus::Reduced:
@@ -205,10 +224,9 @@ void HighsMipSolver::run() {
       default:
         assert(false);
     }
+#endif
   }
 
-  mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-  mipdata_->init();
   mipdata_->runSetup();
   timer_.stop(timer_.presolve_clock);
   if (modelstatus_ == HighsModelStatus::NOTSET) {
@@ -447,27 +465,21 @@ void HighsMipSolver::cleanupSolve() {
       modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
 
-  if (mipdata_->modelcleanup) {
-    model_ = mipdata_->modelcleanup->origmodel;
-    if (havesolution)
-      mipdata_->modelcleanup->recoverSolution(mipdata_->incumbent);
-  }
-
+  HighsSolution solution;
   if (havesolution) {
-    if (options_mip_->presolve != "off")
-      runPostsolve();
-    else if (!mipdata_->getSolution().empty()) {
-      presolve_.data_.recovered_solution_.col_value = mipdata_->getSolution();
-      calculateRowValues(*model_, presolve_.data_.recovered_solution_);
-    }
+    HighsBasis basis;
+    solution.col_value = mipdata_->incumbent;
+    calculateRowValues(*model_, solution);
+    mipdata_->postSolveStack.undo(*options_mip_, solution, basis);
   }
 
   model_ = orig_model_;
 
+  if (havesolution) calculateRowValues(*model_, solution);
+
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
 
-  const auto& solution = presolve_.data_.recovered_solution_;
   std::string solutionstatus = "-";
   bound_violation_ = 0;
   row_violation_ = 0;
@@ -502,7 +514,7 @@ void HighsMipSolver::cleanupSolve() {
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     solutionstatus = feasible ? "feasible" : "infeasible";
-    solution_ = std::move(presolve_.data_.recovered_solution_.col_value);
+    solution_ = std::move(solution.col_value);
     solution_objective_ = double(obj);
   }
   HighsPrintMessage(options_mip_->output, options_mip_->message_level,

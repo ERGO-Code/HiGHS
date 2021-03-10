@@ -708,10 +708,10 @@ class HighsOptions : public HighsOptionsStruct {
         max_pivot_threshold);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt(
-        "presolve_substitution_maxfillin", "Strategy for CHUZC sort in dual simplex",
-        advanced, &presolve_substitution_maxfillin, 0,
-        10, HIGHS_CONST_I_INF);
+    record_int = new OptionRecordInt("presolve_substitution_maxfillin",
+                                     "Strategy for CHUZC sort in dual simplex",
+                                     advanced, &presolve_substitution_maxfillin,
+                                     0, 10, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(

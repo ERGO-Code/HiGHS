@@ -25,6 +25,7 @@
 #include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "util/HighsTimer.h"
 
 struct HighsMipSolverData {
@@ -37,6 +38,8 @@ struct HighsMipSolverData {
   HighsImplications implications;
   HighsPrimalHeuristics heuristics;
   HighsRedcostFixing redcostfixing;
+  presolve::HighsPostsolveStack postSolveStack;
+  HighsLp presolvedModel;
 
   struct Substitution {
     int substcol;
@@ -128,7 +131,8 @@ struct HighsMipSolverData {
   void init();
   void basisTransfer();
   void checkObjIntegrality();
-  void cliqueExtraction();
+  void runPresolve();
+  void setupDomainPropagation();
   void runSetup();
   void runProbing();
   bool trySolution(const std::vector<double>& solution, char source = ' ');

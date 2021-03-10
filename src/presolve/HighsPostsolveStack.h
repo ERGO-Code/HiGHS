@@ -24,11 +24,12 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HStruct.h"
+#include "lp_data/HighsOptions.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsDataStack.h"
 #include "util/HighsMatrixSlice.h"
 
-class HighsOptions;
+// class HighsOptions;
 namespace presolve {
 class HighsPostsolveStack {
   // now a section of individual classes for each type of each transformation
@@ -253,7 +254,7 @@ class HighsPostsolveStack {
 
     reductionValues.push(
         DoubletonEquation{coef, coefSubst, rhs, substLower, substUpper,
-                          substCost, origRowIndex[row], origColIndex[colSubst],
+                          substCost, row == -1 ? -1 : origRowIndex[row], origColIndex[colSubst],
                           origColIndex[col], lowerTightened, upperTightened});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kDoubletonEquation);

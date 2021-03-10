@@ -13,6 +13,7 @@
 
 #include "lp_data/HighsLpUtils.h"
 #include "presolve/HAggregator.h"
+#include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
@@ -337,6 +338,9 @@ void HighsMipSolverData::removeFixedIndices() {
 }
 
 void HighsMipSolverData::init() {
+  postSolveStack.initializeIndexMaps(mipsolver.model_->numRow_,
+                                     mipsolver.model_->numCol_);
+  mipsolver.orig_model_ = mipsolver.model_;
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->mip_epsilon;
   heuristic_effort = mipsolver.options_mip_->mip_heuristic_effort;
@@ -435,11 +439,6 @@ void HighsMipSolverData::runSetup() {
     maxAbsRowCoef[i] = maxabsval;
   }
 
-  if (model.numCol_ == 0) {
-    mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
-    return;
-  }
-
   // compute row activities and propagate all rows once
   domain.computeRowActivities();
   domain.propagate();
@@ -450,51 +449,13 @@ void HighsMipSolverData::runSetup() {
     return;
   }
 
+  if (model.numCol_ == 0) {
+    mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
+    return;
+  }
+
   if (checkLimits()) return;
   // extract cliques if they have not been extracted before
-  if (!cliquesExtracted) {
-    cliquesExtracted = true;
-    cliquetable.extractCliques(mipsolver);
-    if (!domain.infeasible() && upper_limit != HIGHS_CONST_INF)
-      cliquetable.extractObjCliques(mipsolver);
-    if (domain.infeasible()) {
-      mipsolver.modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-      lower_bound = HIGHS_CONST_INF;
-      pruned_treeweight = 1.0;
-      return;
-    }
-  }
-
-  if (tryProbing) {
-    runProbing();
-    if (domain.infeasible()) {
-      mipsolver.modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-      lower_bound = HIGHS_CONST_INF;
-      pruned_treeweight = 1.0;
-      return;
-    }
-    if (cliquetable.getNumFixings() == 0 &&
-        cliquetable.getSubstitutions().empty() &&
-        implications.substitutions.empty())
-      tryProbing = false;
-  }
-
-  if (!modelcleanup) {
-    int nfixed = cliquetable.getNumFixings();
-    if (nfixed == 0) {
-      for (int i = 0; i != model.numCol_; ++i)
-        if (domain.isFixed(i)) ++nfixed;
-    }
-
-    if (nfixed != 0 || !cliquetable.getDeletedRows().empty() ||
-        !cliquetable.getSubstitutions().empty() ||
-        !implications.substitutions.empty() ||
-        !cliquetable.getCliqueExtensions().empty()) {
-      modelcleanup = decltype(modelcleanup)(new ModelCleanup(mipsolver));
-      runSetup();
-      return;
-    }
-  }
 
   for (int col : domain.getChangedCols()) implications.cleanupVarbounds(col);
   domain.clearChangedCols();
@@ -1080,6 +1041,29 @@ void HighsMipSolverData::checkObjIntegrality() {
                       "objective is always integral with scale %g\n",
                       objintscale);
   }
+}
+
+void HighsMipSolverData::setupDomainPropagation() {
+  const HighsLp& model = *mipsolver.model_;
+  highsSparseTranspose(model.numRow_, model.numCol_, model.Astart_,
+                       model.Aindex_, model.Avalue_, ARstart_, ARindex_,
+                       ARvalue_);
+
+  // compute the maximal absolute coefficients to filter propagation
+  maxAbsRowCoef.resize(mipsolver.model_->numRow_);
+  for (int i = 0; i != mipsolver.model_->numRow_; ++i) {
+    double maxabsval = 0.0;
+
+    int start = ARstart_[i];
+    int end = ARstart_[i + 1];
+    for (int j = start; j != end; ++j)
+      maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
+
+    maxAbsRowCoef[i] = maxabsval;
+  }
+
+  domain = HighsDomain(mipsolver);
+  domain.computeRowActivities();
 }
 
 void HighsMipSolverData::runProbing() {
