@@ -364,8 +364,6 @@ void HighsMipSolverData::init() {
   lower_bound = -HIGHS_CONST_INF;
   upper_bound = HIGHS_CONST_INF;
 
-  if (mipsolver.submip) pseudocost.setMinReliable(0);
-
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
   else if (mipsolver.options_mip_->mip_report_level == 1)
@@ -374,12 +372,27 @@ void HighsMipSolverData::init() {
     dispfreq = 1;
 }
 
+void HighsMipSolverData::runPresolve() {
+  presolve::HPresolve presolve;
+
+  presolve.setInput(mipsolver);
+
+  mipsolver.modelstatus_ = presolve.run(postSolveStack);
+}
+
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
 
   upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound -
                 mipsolver.model_->offset_;
 
+  mipsolver.mipdata_->cutpool = HighsCutPool(
+      mipsolver.model_->numCol_, mipsolver.options_mip_->mip_pool_age_limit,
+      mipsolver.options_mip_->mip_pool_soft_limit);
+  mipsolver.mipdata_->pseudocost = HighsPseudocost(mipsolver.model_->numCol_);
+  if (mipsolver.submip) pseudocost.setMinReliable(0);
+
+  rowMatrixSet = false;
   if (!rowMatrixSet) {
     rowMatrixSet = true;
     highsSparseTranspose(model.numRow_, model.numCol_, model.Astart_,
@@ -408,8 +421,6 @@ void HighsMipSolverData::runSetup() {
       }
     }
   }
-
-  if (mipsolver.submip) pseudocost.setMinReliable(0);
 
   rowintegral.resize(mipsolver.model_->numRow_);
 
@@ -440,6 +451,7 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
+  domain.addCutpool(cutpool);
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {

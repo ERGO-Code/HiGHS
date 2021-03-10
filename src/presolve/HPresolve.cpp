@@ -784,6 +784,26 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
   }
 
+  // first tighten all bounds if they have an implied bound that is tighter
+  // thatn their column bound before probing this is not done for continuous
+  // columns since it may allow stronger dual presolve and more aggregations
+  double hugeBound = options->primal_feasibility_tolerance / HIGHS_CONST_TINY;
+  for (int i = 0; i != model->numCol_; ++i) {
+    if (model->colLower_[i] >= implColLower[i] &&
+        model->colUpper_[i] <= implColUpper[i])
+      continue;
+
+    if (std::abs(implColLower[i]) <= hugeBound) {
+      double newLb = implColLower[i];
+      if (newLb > model->colLower_[i]) changeColLower(i, newLb);
+    }
+
+    if (std::abs(implColUpper[i]) <= hugeBound) {
+      double newUb = implColUpper[i];
+      if (newUb < model->colUpper_[i]) changeColUpper(i, newUb);
+    }
+  }
+
   mipsolver->mipdata_->setupDomainPropagation();
   HighsDomain& domain = mipsolver->mipdata_->domain;
 

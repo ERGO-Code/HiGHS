@@ -254,6 +254,7 @@ void HighsImplications::rebuild(int ncols,
 
   implicationmap.resize(2 * ncols, {-1, 0});
   colsubstituted.resize(ncols);
+  substitutions.clear();
   vubs.clear();
   vubs.shrink_to_fit();
   vubs.resize(ncols);
