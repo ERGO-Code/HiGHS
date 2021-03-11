@@ -348,17 +348,20 @@ class HighsOptions : public HighsOptionsStruct {
   HighsOptions(const HighsOptions& options) {
     initRecords();
     HighsOptionsStruct::operator=(options);
+    setLogOptions();
   }
 
   HighsOptions(HighsOptions&& options) {
     records = std::move(options.records);
     HighsOptionsStruct::operator=(std::move(options));
+    setLogOptions();
   }
 
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
       if ((int)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
+      setLogOptions();
     }
     return *this;
   }
@@ -367,6 +370,7 @@ class HighsOptions : public HighsOptionsStruct {
     if (&other != this) {
       if ((int)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
+      setLogOptions();
     }
     return *this;
   }

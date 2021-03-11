@@ -163,22 +163,22 @@ void HighsMipSolver::run() {
         break;
       case HighsPresolveStatus::Unbounded:
         modelstatus_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-        highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-                    "Presolve: Model detected to be unbounded\n");
+        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                     "Presolve: Model detected to be unbounded\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Infeasible:
         modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-        highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-                    "Presolve: Model detected to be infeasible\n");
+        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                     "Presolve: Model detected to be infeasible\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Timeout:
         modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
-        highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-                    "Time limit reached during presolve\n");
+        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                     "Time limit reached during presolve\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
@@ -222,8 +222,8 @@ void HighsMipSolver::run() {
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
 
-  highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-              "\nstarting tree search\n");
+  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+               "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
 
@@ -498,39 +498,39 @@ void HighsMipSolver::cleanupSolve() {
     solution_ = std::move(presolve_.data_.recovered_solution_.col_value);
     solution_objective_ = double(obj);
   }
-  highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-              "\nSolving report\n"
-              "  Status            %s\n"
-              "  Primal bound      %.12g\n"
-              "  Dual bound        %.12g\n"
-              "  Solution status   %s\n",
-              utilHighsModelStatusToString(modelstatus_).c_str(), primal_bound_,
-              dual_bound_, solutionstatus.c_str());
+  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+               "\nSolving report\n"
+               "  Status            %s\n"
+               "  Primal bound      %.12g\n"
+               "  Dual bound        %.12g\n"
+               "  Solution status   %s\n",
+               utilHighsModelStatusToString(modelstatus_).c_str(),
+               primal_bound_, dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
-    highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-                "                    %.12g (objective)\n"
-                "                    %.12g (bound viol.)\n"
-                "                    %.12g (int. viol.)\n"
-                "                    %.12g (row viol.)\n",
-                solution_objective_, bound_violation_, integrality_violation_,
-                row_violation_);
-  highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-              "  Timing            %.2f (total)\n"
-              "                    %.2f (presolve)\n"
-              "                    %.2f (postsolve)\n"
-              "  Nodes             %llu\n"
-              "  LP iterations     %llu (total)\n"
-              "                    %llu (strong br.)\n"
-              "                    %llu (separation)\n"
-              "                    %llu (heuristics)\n",
-              timer_.read(timer_.solve_clock),
-              timer_.read(timer_.presolve_clock),
-              timer_.read(timer_.postsolve_clock),
-              (long long unsigned)mipdata_->num_nodes,
-              (long long unsigned)mipdata_->total_lp_iterations,
-              (long long unsigned)mipdata_->sb_lp_iterations,
-              (long long unsigned)mipdata_->sepa_lp_iterations,
-              (long long unsigned)mipdata_->heuristic_lp_iterations);
+    highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                 "                    %.12g (objective)\n"
+                 "                    %.12g (bound viol.)\n"
+                 "                    %.12g (int. viol.)\n"
+                 "                    %.12g (row viol.)\n",
+                 solution_objective_, bound_violation_, integrality_violation_,
+                 row_violation_);
+  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+               "  Timing            %.2f (total)\n"
+               "                    %.2f (presolve)\n"
+               "                    %.2f (postsolve)\n"
+               "  Nodes             %llu\n"
+               "  LP iterations     %llu (total)\n"
+               "                    %llu (strong br.)\n"
+               "                    %llu (separation)\n"
+               "                    %llu (heuristics)\n",
+               timer_.read(timer_.solve_clock),
+               timer_.read(timer_.presolve_clock),
+               timer_.read(timer_.postsolve_clock),
+               (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->total_lp_iterations,
+               (long long unsigned)mipdata_->sb_lp_iterations,
+               (long long unsigned)mipdata_->sepa_lp_iterations,
+               (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   assert(modelstatus_ != HighsModelStatus::NOTSET);
 }
