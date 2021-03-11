@@ -264,6 +264,10 @@ class HFactor {
   double pivot_threshold;
   double pivot_tolerance;
   int highs_debug_level;
+
+  bool output_flag;
+  bool log_to_console;
+  int log_dev_level;
   HighsLogOptions log_options;
   bool use_original_HFactor_logic;
   int updateMethod;
