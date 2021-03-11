@@ -500,24 +500,37 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
       cliquesets.resize(k);
     } else
       freespaces.emplace(cliques[cliqueid].end - k, k);
-    if (k - cliques[cliqueid].start == 2) {
-      // due to subsitutions the clique became smaller and is now of size two
-      // as a result we need to link it to the size two cliqueset instead of the
-      // normal cliqueset
-      unlink(cliques[cliqueid].start);
-      unlink(cliques[cliqueid].start + 1);
 
-      cliques[cliqueid].end = k;
+    switch (k - cliques[cliqueid].start) {
+      case 0:
+        // clique empty, so just mark it as deleted
+        cliques[cliqueid].start = -1;
+        freeslots.push_back(cliqueid);
+        break;
+      case 1:
+        // size 1 clique is redundant, so unlink the single linked entry
+        // and mark it as deleted
+        unlink(cliques[cliqueid].start);
+        cliques[cliqueid].start = -1;
+        freeslots.push_back(cliqueid);
+        break;
+      case 2:
+        // due to subsitutions the clique became smaller and is now of size two
+        // as a result we need to link it to the size two cliqueset instead of
+        // the normal cliqueset
+        unlink(cliques[cliqueid].start);
+        unlink(cliques[cliqueid].start + 1);
 
-      cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
-      link(cliques[cliqueid].start);
-      cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
-      link(cliques[cliqueid].start + 1);
-    } else
-      cliques[cliqueid].end = k;
+        cliques[cliqueid].end = k;
 
-    if (cliques[cliqueid].start == cliques[cliqueid].end)
-      freeslots.push_back(cliqueid);
+        cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
+        link(cliques[cliqueid].start);
+        cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
+        link(cliques[cliqueid].start + 1);
+        break;
+      default:
+        cliques[cliqueid].end = k;
+    }
   }
 
   if (cliques[cliqueid].end - cliques[cliqueid].start == 2)
@@ -738,6 +751,7 @@ void HighsCliqueTable::removeClique(int cliqueid) {
     deletedrows.push_back(cliques[cliqueid].origin);
 
   int start = cliques[cliqueid].start;
+  assert(start != -1);
   int end = cliques[cliqueid].end;
   int len = end - start;
   if (len == 2) {
