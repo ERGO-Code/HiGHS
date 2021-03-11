@@ -34,8 +34,8 @@ HighsMipSolver::~HighsMipSolver() = default;
 HighsPresolveStatus HighsMipSolver::runPresolve() {
   // todo: commented out parts or change Highs::runPresolve to operate on a
   // parameter LP rather than Highs::lp_. Not sure which approach is preferable.
-  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                    ML_MINIMAL, "\nrunning MIP presolve\n");
+  highsLogDev(options_mip_->log_options, HighsLogType::INFO,
+              "\nrunning MIP presolve\n");
   const HighsLp& lp_ = *(model_);
 
   // Exit if the problem is empty or if presolve is set to off.
@@ -53,17 +53,15 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
       options_mip_->time_limit < HIGHS_CONST_INF) {
     double left = options_mip_->time_limit - start_presolve;
     if (left <= 0) {
-      HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                        ML_VERBOSE,
-                        "Time limit reached while reading in matrix\n");
+      highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
+                  "Time limit reached while reading in matrix\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                      ML_VERBOSE,
-                      "Time limit set: reading matrix took %.2g, presolve "
-                      "time left: %.2g\n",
-                      start_presolve, left);
+    highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
+                "Time limit set: reading matrix took %.2g, presolve "
+                "time left: %.2g\n",
+                start_presolve, left);
     presolve_.options_.time_limit = left;
   }
 
@@ -76,22 +74,19 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
     double time_init = current - start_presolve;
     double left = presolve_.options_.time_limit - time_init;
     if (left <= 0) {
-      HighsPrintMessage(
-          options_mip_->output, options_mip_->message_level, ML_VERBOSE,
-          "Time limit reached while copying matrix into presolve.\n");
+      highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
+                  "Time limit reached while copying matrix into presolve.\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                      ML_VERBOSE,
-                      "Time limit set: copying matrix took %.2g, presolve "
-                      "time left: %.2g\n",
-                      time_init, left);
+    highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
+                "Time limit set: copying matrix took %.2g, presolve "
+                "time left: %.2g\n",
+                time_init, left);
     presolve_.options_.time_limit = options_mip_->time_limit;
   }
 
-  presolve_.data_.presolve_[0].message_level = options_mip_->message_level;
-  presolve_.data_.presolve_[0].output = options_mip_->output;
+  presolve_.data_.presolve_[0].log_options = options_mip_->log_options;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
@@ -181,36 +176,34 @@ void HighsMipSolver::run() {
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
       case HighsPresolveStatus::Reduced:
-        reportPresolveReductions(*options_mip_, *model_,
+        reportPresolveReductions(options_mip_->log_options, *model_,
                                  presolve_.getReducedProblem());
         model_ = &presolve_.getReducedProblem();
         break;
       case HighsPresolveStatus::Unbounded:
         modelstatus_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                          ML_MINIMAL,
-                          "Presolve: Model detected to be unbounded\n");
+        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                     "Presolve: Model detected to be unbounded\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Infeasible:
         modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                          ML_MINIMAL,
-                          "Presolve: Model detected to be infeasible\n");
+        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                     "Presolve: Model detected to be infeasible\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Timeout:
         modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
-        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                          ML_MINIMAL, "Time limit reached during presolve\n");
+        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                     "Time limit reached during presolve\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::ReducedToEmpty:
         modelstatus_ = HighsModelStatus::OPTIMAL;
-        reportPresolveReductions(*options_mip_, *model_, true);
+        reportPresolveReductions(options_mip_->log_options, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
         mipdata_->init();
         mipdata_->upper_bound = presolve_.data_.presolve_[0].objShift;
@@ -219,7 +212,7 @@ void HighsMipSolver::run() {
         cleanupSolve();
         return;
       case HighsPresolveStatus::NotReduced:
-        reportPresolveReductions(*options_mip_, *model_, false);
+        reportPresolveReductions(options_mip_->log_options, *model_, false);
         break;
       default:
         assert(false);
@@ -247,8 +240,8 @@ void HighsMipSolver::run() {
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
 
-  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                    ML_MINIMAL, "\nstarting tree search\n");
+  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+               "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
 
@@ -354,9 +347,9 @@ void HighsMipSolver::run() {
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
-      HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                        ML_MINIMAL, "added %d global bound changes\n",
-                        (int)mipdata_->domain.getChangedCols().size());
+      highsLogDev(options_mip_->log_options, HighsLogType::INFO,
+                  "added %d global bound changes\n",
+                  (int)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
       for (int col : mipdata_->domain.getChangedCols())
         mipdata_->implications.cleanupVarbounds(col);
@@ -457,6 +450,7 @@ void HighsMipSolver::cleanupSolve() {
   bool havesolution = mipdata_->upper_bound != HIGHS_CONST_INF;
   dual_bound_ = mipdata_->lower_bound + model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
+  node_count_ = mipdata_->num_nodes;
 
   if (modelstatus_ == HighsModelStatus::NOTSET) {
     if (havesolution)
@@ -517,41 +511,39 @@ void HighsMipSolver::cleanupSolve() {
     solution_ = std::move(solution.col_value);
     solution_objective_ = double(obj);
   }
-  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                    ML_MINIMAL,
-                    "\nSolving report\n"
-                    "  Status            %s\n"
-                    "  Primal bound      %.12g\n"
-                    "  Dual bound        %.12g\n"
-                    "  Solution status   %s\n",
-                    utilHighsModelStatusToString(modelstatus_).c_str(),
-                    primal_bound_, dual_bound_, solutionstatus.c_str());
+  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+               "\nSolving report\n"
+               "  Status            %s\n"
+               "  Primal bound      %.12g\n"
+               "  Dual bound        %.12g\n"
+               "  Solution status   %s\n",
+               utilHighsModelStatusToString(modelstatus_).c_str(),
+               primal_bound_, dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
-    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                      ML_MINIMAL,
-                      "                    %.12g (objective)\n"
-                      "                    %.12g (bound viol.)\n"
-                      "                    %.12g (int. viol.)\n"
-                      "                    %.12g (row viol.)\n",
-                      solution_objective_, bound_violation_,
-                      integrality_violation_, row_violation_);
-  HighsPrintMessage(
-      options_mip_->output, options_mip_->message_level, ML_MINIMAL,
-      "  Timing            %.2f (total)\n"
-      "                    %.2f (presolve)\n"
-      "                    %.2f (postsolve)\n"
-      "  Nodes             %llu\n"
-      "  LP iterations     %llu (total)\n"
-      "                    %llu (strong br.)\n"
-      "                    %llu (separation)\n"
-      "                    %llu (heuristics)\n",
-      timer_.read(timer_.solve_clock), timer_.read(timer_.presolve_clock),
-      timer_.read(timer_.postsolve_clock),
-      (long long unsigned)mipdata_->num_nodes,
-      (long long unsigned)mipdata_->total_lp_iterations,
-      (long long unsigned)mipdata_->sb_lp_iterations,
-      (long long unsigned)mipdata_->sepa_lp_iterations,
-      (long long unsigned)mipdata_->heuristic_lp_iterations);
+    highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                 "                    %.12g (objective)\n"
+                 "                    %.12g (bound viol.)\n"
+                 "                    %.12g (int. viol.)\n"
+                 "                    %.12g (row viol.)\n",
+                 solution_objective_, bound_violation_, integrality_violation_,
+                 row_violation_);
+  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+               "  Timing            %.2f (total)\n"
+               "                    %.2f (presolve)\n"
+               "                    %.2f (postsolve)\n"
+               "  Nodes             %llu\n"
+               "  LP iterations     %llu (total)\n"
+               "                    %llu (strong br.)\n"
+               "                    %llu (separation)\n"
+               "                    %llu (heuristics)\n",
+               timer_.read(timer_.solve_clock),
+               timer_.read(timer_.presolve_clock),
+               timer_.read(timer_.postsolve_clock),
+               (long long unsigned)mipdata_->num_nodes,
+               (long long unsigned)mipdata_->total_lp_iterations,
+               (long long unsigned)mipdata_->sb_lp_iterations,
+               (long long unsigned)mipdata_->sepa_lp_iterations,
+               (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   assert(modelstatus_ != HighsModelStatus::NOTSET);
 }

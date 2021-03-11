@@ -36,6 +36,7 @@ class HighsLp {
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
 
+  MatrixOrientation orientation_ = MatrixOrientation::NONE;
   ObjSense sense_ = ObjSense::MINIMIZE;
   double offset_ = 0;
 

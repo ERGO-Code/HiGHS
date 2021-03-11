@@ -241,8 +241,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setHighsOptionValue("output_flag", false);
   }
 
   // Read mps
@@ -319,13 +318,12 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   HighsOptions options;
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setHighsOptionValue("output_flag", false);
   }
   const HighsInfo& info = highs.getHighsInfo();
 
-  //  status = highs.setHighsOptionValue("message_level", 7);REQUIRE(status ==
-  //  HighsStatus::OK);
+  //  status = highs.setHighsOptionValue("log_dev_level",
+  //  LOG_DEV_LEVEL_VERBOSE);
 
   double error;
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";

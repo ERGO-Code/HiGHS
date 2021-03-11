@@ -37,9 +37,10 @@ class HSet {
    */
   bool setup(const int size,       //!< Dimension of the set to be initialised
              const int max_entry,  //!< Maximum entry to be in the set.
-             FILE* output = NULL,  //!< File for output
-             const bool debug = false,       //!< Debug mode
-             const bool allow_assert = true  //!< Allow asserts in debug
+             const bool output_flag = false,  //!< Option for output
+             FILE* log_file_stream = NULL,    //!< File stream for output
+             const bool debug = false,        //!< Debug mode
+             const bool allow_assert = true   //!< Allow asserts in debug
   );
 
   /**
@@ -81,7 +82,8 @@ class HSet {
   bool setup_ = false;
   bool debug_ = false;
   bool allow_assert_ = true;
-  FILE* output_;
+  bool output_flag_ = false;
+  FILE* log_file_;
   int max_entry_;        //!< Maximum entry to be in the set.
   vector<int> pointer_;  //!< Set of pointers into the set
 };

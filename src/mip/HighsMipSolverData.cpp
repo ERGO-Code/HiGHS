@@ -66,6 +66,7 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   model.lp_name_ = origmodel->lp_name_;
   model.model_name_ = origmodel->model_name_;
   model.offset_ = origmodel->offset_;
+  model.orientation_ = origmodel->orientation_;
 
   std::vector<double>& colLower = mipsolver.mipdata_->domain.colLower_;
   std::vector<double>& colUpper = mipsolver.mipdata_->domain.colUpper_;
@@ -223,9 +224,8 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   int numstrengthened = aggregator.strengthenInequalities();
 
   if (numstrengthened != 0)
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_MINIMAL,
-                      "strengthened %d coefficients\n", numstrengthened);
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                "strengthened %d coefficients\n", numstrengthened);
 
   // printf("removed redundant rows: %d removed rows, %d nonzeros\n", nremoved,
   //       aggregator.numNonzeros());
@@ -299,7 +299,8 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   mipsolver.mipdata_->implications.rebuild(cleanedUpModel.numCol_, cIndex,
                                            rIndex);
 
-  reportPresolveReductions(*mipsolver.options_mip_, *origmodel, cleanedUpModel);
+  reportPresolveReductions(mipsolver.options_mip_->log_options, *origmodel,
+                           cleanedUpModel);
 }
 
 void HighsMipSolverData::ModelCleanup::recoverSolution(
@@ -650,9 +651,8 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 void HighsMipSolverData::printDisplayLine(char first) {
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
-    HighsPrintMessage(
-        mipsolver.options_mip_->output, mipsolver.options_mip_->message_level,
-        ML_MINIMAL,
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::INFO,
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
         "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
@@ -672,9 +672,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
-    HighsPrintMessage(
-        mipsolver.options_mip_->output, mipsolver.options_mip_->message_level,
-        ML_MINIMAL,
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %7.2f%% | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
@@ -682,9 +681,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
         ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   } else {
-    HighsPrintMessage(
-        mipsolver.options_mip_->output, mipsolver.options_mip_->message_level,
-        ML_MINIMAL,
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %8.2f | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
@@ -757,23 +755,28 @@ bool HighsMipSolverData::rootSeparationRound(
 
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
-  HighsPrintMessage(mipsolver.options_mip_->output,
-                    mipsolver.options_mip_->message_level, ML_MINIMAL,
-                    "\nsolving root node LP relaxation\n");
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+               "\nsolving root node LP relaxation\n");
   lp.loadModel();
   if (firstrootbasis.valid_) lp.getLpSolver().setBasis(firstrootbasis);
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
-  lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
-  lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
+
+  //  lp.getLpSolver().setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
+  //  lp.getLpSolver().setHighsOptionValue("log_file",
+  //  mipsolver.options_mip_->log_file);
   HighsLpRelaxation::Status status = lp.resolveLp();
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
   firstrootlpiters = maxrootlpiters;
 
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+               "LP solved in %d iterations and %.1fs seconds\n\n",
+               (int)firstrootlpiters, lp.getLpSolver().getHighsRunTime());
+
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
-  lp.getLpSolver().setHighsLogfile();
-  lp.getLpSolver().setHighsOutput();
+  //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
+  //  lp.getLpSolver().setHighsOptionValue("log_dev_level", 0);
   lp.getLpSolver().setHighsOptionValue("parallel", "off");
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;
@@ -947,22 +950,22 @@ bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != HIGHS_CONST_I_INF &&
       num_nodes >= size_t(options.mip_max_nodes)) {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "reached node limit\n");
+    highsLogDev(options.log_options, HighsLogType::INFO,
+                "reached node limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
     return true;
   }
   if (options.mip_max_leaves != HIGHS_CONST_I_INF &&
       num_leaves >= size_t(options.mip_max_leaves)) {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "reached leave node limit\n");
+    highsLogDev(options.log_options, HighsLogType::INFO,
+                "reached leave node limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
     return true;
   }
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "reached time limit\n");
+    highsLogDev(options.log_options, HighsLogType::INFO,
+                "reached time limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
     return true;
   }
@@ -1004,10 +1007,8 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_MINIMAL,
-                      "objective is always integral with scale %g\n",
-                      objintscale);
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                "objective is always integral with scale %g\n", objintscale);
   }
 }
 
@@ -1079,12 +1080,10 @@ void HighsMipSolverData::runProbing() {
         ++nfixed;
     }
 
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_MINIMAL,
-                      "%d probing evaluations: %d fixed binary variables, %d "
-                      "bound changes\n",
-                      nprobed, nfixed,
-                      int(domain.getChangedCols().size()) - nfixed);
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                "%d probing evaluations: %d fixed binary variables, %d "
+                "bound changes\n",
+                nprobed, nfixed, int(domain.getChangedCols().size()) - nfixed);
 
     cliquetable.cleanupFixed(domain);
     if (!mipsolver.mipdata_->modelcleanup) cliquetable.runCliqueMerging(domain);

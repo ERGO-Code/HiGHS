@@ -25,6 +25,16 @@
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
 
+bool isMip(HighsLp& lp) {
+  int integrality_size = lp.integrality_.size();
+  if (integrality_size) {
+    assert(integrality_size == lp.numCol_);
+    for (int iCol = 0; iCol < lp.numCol_; iCol++)
+      if (lp.integrality_[iCol] != HighsVarType::CONTINUOUS) return true;
+  }
+  return false;
+}
+
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
@@ -36,6 +46,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // If the LP has no columns there is nothing left to test
   if (lp.numCol_ == 0) return HighsStatus::OK;
+  assert(lp.orientation_ == MatrixOrientation::COLWISE);
 
   // From here, any LP has lp.numCol_ > 0 and lp.Astart_[lp.numCol_] exists (as
   // the number of nonzeros)
@@ -79,9 +90,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     // the few wierdos who want lp.Astart_[0] to be positive. Hence
     // it's not permitted!
     if (lp.Astart_[0]) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has nonzero value (%d) for the start of column 0\n",
-                      lp.Astart_[0]);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has nonzero value (%d) for the start of column 0\n",
+                   lp.Astart_[0]);
       return HighsStatus::Error;
     }
     call_status = assessMatrix(
@@ -101,9 +112,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   else
     return_status = HighsStatus::OK;
 #ifdef HiGHSDEV
-  HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                  "assess_lp returns HighsStatus = %s",
-                  HighsStatusToString(return_status).c_str());
+  highsLogUser(options.log_options, HighsLogType::INFO,
+               "assess_lp returns HighsStatus = %s\n",
+               HighsStatusToString(return_status).c_str());
 #endif
   return return_status;
 }
@@ -120,8 +131,8 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   // Assess column-related dimensions
   bool legal_num_col = lp.numCol_ >= 0;
   if (!legal_num_col) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "LP has illegal number of cols = %d\n", lp.numCol_);
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "LP has illegal number of cols = %d\n", lp.numCol_);
     error_found = true;
   } else {
     // Check the size of the column vectors
@@ -134,29 +145,29 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     bool legal_col_upper_size = col_lower_size >= lp.numCol_;
 
     if (!legal_col_cost_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has illegal colCost size = %d < %d\n", col_cost_size,
-                      lp.numCol_);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has illegal colCost size = %d < %d\n", col_cost_size,
+                   lp.numCol_);
       error_found = true;
     }
     if (!legal_col_lower_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has illegal colLower size = %d < %d\n",
-                      col_lower_size, lp.numCol_);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has illegal colLower size = %d < %d\n", col_lower_size,
+                   lp.numCol_);
       error_found = true;
     }
     if (!legal_col_upper_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has illegal colUpper size = %d < %d\n",
-                      col_upper_size, lp.numCol_);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has illegal colUpper size = %d < %d\n", col_upper_size,
+                   lp.numCol_);
       error_found = true;
     }
     if (check_matrix_start_size) {
       bool legal_matrix_start_size = matrix_start_size >= lp.numCol_ + 1;
       if (!legal_matrix_start_size) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "LP has illegal Astart size = %d < %d\n",
-                        matrix_start_size, lp.numCol_ + 1);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "LP has illegal Astart size = %d < %d\n",
+                     matrix_start_size, lp.numCol_ + 1);
         error_found = true;
       }
     }
@@ -165,8 +176,8 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   // Assess row-related dimensions
   bool legal_num_row = lp.numRow_ >= 0;
   if (!legal_num_row) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "LP has illegal number of rows = %d\n", lp.numRow_);
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "LP has illegal number of rows = %d\n", lp.numRow_);
     error_found = true;
   } else {
     int row_lower_size = lp.rowLower_.size();
@@ -174,15 +185,15 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     bool legal_row_lower_size = row_lower_size >= lp.numRow_;
     bool legal_row_upper_size = row_lower_size >= lp.numRow_;
     if (!legal_row_lower_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has illegal rowLower size = %d < %d\n",
-                      row_lower_size, lp.numRow_);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has illegal rowLower size = %d < %d\n", row_lower_size,
+                   lp.numRow_);
       error_found = true;
     }
     if (!legal_row_upper_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has illegal rowUpper size = %d < %d\n",
-                      row_upper_size, lp.numRow_);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has illegal rowUpper size = %d < %d\n", row_upper_size,
+                   lp.numRow_);
       error_found = true;
     }
   }
@@ -192,8 +203,8 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     int lp_num_nz = lp.Astart_[lp.numCol_];
     bool legal_num_nz = lp_num_nz >= 0;
     if (!legal_num_nz) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "LP has illegal number of nonzeros = %d\n", lp_num_nz);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "LP has illegal number of nonzeros = %d\n", lp_num_nz);
       error_found = true;
     } else {
       int matrix_index_size = lp.Aindex_.size();
@@ -201,15 +212,15 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
       bool legal_matrix_index_size = matrix_index_size >= lp_num_nz;
       bool legal_matrix_value_size = matrix_value_size >= lp_num_nz;
       if (!legal_matrix_index_size) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "LP has illegal Aindex size = %d < %d\n",
-                        matrix_index_size, lp_num_nz);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "LP has illegal Aindex size = %d < %d\n",
+                     matrix_index_size, lp_num_nz);
         error_found = true;
       }
       if (!legal_matrix_value_size) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "LP has illegal Avalue size = %d < %d\n",
-                        matrix_value_size, lp_num_nz);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "LP has illegal Avalue size = %d < %d\n",
+                     matrix_value_size, lp_num_nz);
         error_found = true;
       }
     }
@@ -227,12 +238,13 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
                         vector<double>& cost, const double infinite_cost) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(options.log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(options.log_options, index_collection, from_k,
+                                to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return return_status;
@@ -261,25 +273,28 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   // columns in the model.
   //
   int local_col;
-  int data_col;
   int ml_col;
+  int usr_col = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_col = k;
-      data_col = k;
     } else {
       local_col = index_collection.set_[k];
-      data_col = k;
+    }
+    if (index_collection.is_interval_) {
+      usr_col++;
+    } else {
+      usr_col = k;
     }
     ml_col = ml_col_os + local_col;
     if (index_collection.is_mask_ && !index_collection.mask_[local_col])
       continue;
-    double abs_cost = fabs(cost[data_col]);
+    double abs_cost = fabs(cost[usr_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Col  %12d has |cost| of %12g >= %12g", ml_col, abs_cost,
-                      infinite_cost);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "Col  %12d has |cost| of %12g >= %12g\n", ml_col, abs_cost,
+                   infinite_cost);
       error_found = !allow_infinite_costs;
     }
   }
@@ -298,12 +313,13 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const double infinite_bound) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(options.log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(options.log_options, index_collection, from_k,
+                                to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
@@ -336,73 +352,76 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   int num_infinite_lower_bound = 0;
   int num_infinite_upper_bound = 0;
   int local_ix;
-  int data_ix;
   int ml_ix;
+  int usr_ix = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_ix = k;
-      data_ix = k;
     } else {
       local_ix = index_collection.set_[k];
-      data_ix = k;
+    }
+    if (index_collection.is_interval_) {
+      usr_ix++;
+    } else {
+      usr_ix = k;
     }
     ml_ix = ml_ix_os + local_ix;
     if (index_collection.is_mask_ && !index_collection.mask_[local_ix])
       continue;
 
-    if (!highs_isInfinity(-lower[data_ix])) {
+    if (!highs_isInfinity(-lower[usr_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
-      bool infinite_lower_bound = lower[data_ix] <= -infinite_bound;
+      bool infinite_lower_bound = lower[usr_ix] <= -infinite_bound;
       if (infinite_lower_bound) {
-        lower[data_ix] = -HIGHS_CONST_INF;
+        lower[usr_ix] = -HIGHS_CONST_INF;
         num_infinite_lower_bound++;
       }
     }
-    if (!highs_isInfinity(upper[data_ix])) {
+    if (!highs_isInfinity(upper[usr_ix])) {
       // Check whether a finite upper bound will be treated as Infinity
-      bool infinite_upper_bound = upper[data_ix] >= infinite_bound;
+      bool infinite_upper_bound = upper[usr_ix] >= infinite_bound;
       if (infinite_upper_bound) {
-        upper[data_ix] = HIGHS_CONST_INF;
+        upper[usr_ix] = HIGHS_CONST_INF;
         num_infinite_upper_bound++;
       }
     }
     // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = lower[data_ix] <= upper[data_ix];
+    bool legalLowerUpperBound = lower[usr_ix] <= upper[usr_ix];
     if (!legalLowerUpperBound) {
       // Leave inconsistent bounds to be used to deduce infeasibility
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "%3s  %12d has inconsistent bounds [%12g, %12g]", type,
-                      ml_ix, lower[data_ix], upper[data_ix]);
+      highsLogUser(options.log_options, HighsLogType::WARNING,
+                   "%3s  %12d has inconsistent bounds [%12g, %12g]\n", type,
+                   ml_ix, lower[usr_ix], upper[usr_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = lower[data_ix] < infinite_bound;
+    bool legalLowerBound = lower[usr_ix] < infinite_bound;
     if (!legalLowerBound) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "%3s  %12d has lower bound of %12g >= %12g", type, ml_ix,
-                      lower[data_ix], infinite_bound);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "%3s  %12d has lower bound of %12g >= %12g\n", type, ml_ix,
+                   lower[usr_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = upper[data_ix] > -infinite_bound;
+    bool legalUpperBound = upper[usr_ix] > -infinite_bound;
     if (!legalUpperBound) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "%3s  %12d has upper bound of %12g <= %12g", type, ml_ix,
-                      upper[data_ix], -infinite_bound);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "%3s  %12d has upper bound of %12g <= %12g\n", type, ml_ix,
+                   upper[usr_ix], -infinite_bound);
       error_found = true;
     }
   }
   if (num_infinite_lower_bound) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
-        "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity", type,
-        num_infinite_lower_bound, -infinite_bound);
+    highsLogUser(
+        options.log_options, HighsLogType::INFO,
+        "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity\n",
+        type, num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
-        "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity", type,
-        num_infinite_upper_bound, infinite_bound);
+    highsLogUser(
+        options.log_options, HighsLogType::INFO,
+        "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity\n",
+        type, num_infinite_upper_bound, infinite_bound);
   }
 
   if (error_found)
@@ -430,8 +449,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 
   // Return a error if the first start is not zero
   if (Astart[0]) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Matrix starts do not begin with 0");
+    highsLogUser(options.log_options, HighsLogType::WARNING,
+                 "Matrix starts do not begin with 0\n");
     return HighsStatus::Error;
   }
   // Assess the starts
@@ -441,18 +460,18 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
     int this_start = Astart[ix];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Matrix packed vector %d has illegal start of %d < %d = "
-                      "previous start",
-                      ix, this_start, previous_start);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "Matrix packed vector %d has illegal start of %d < %d = "
+                   "previous start\n",
+                   ix, this_start, previous_start);
       return HighsStatus::Error;
     }
     bool this_start_too_big = this_start > num_nz;
     if (this_start_too_big) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Matrix packed vector %d has illegal start of %d > %d = "
-                      "number of nonzeros",
-                      ix, this_start, num_nz);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "Matrix packed vector %d has illegal start of %d > %d = "
+                   "number of nonzeros\n",
+                   ix, this_start, num_nz);
       return HighsStatus::Error;
     }
   }
@@ -477,28 +496,27 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       // Check that the index is non-negative
       bool legal_component = component >= 0;
       if (!legal_component) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is illegal index %d", ix, el,
-            component);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "Matrix packed vector %d, entry %d, is illegal index %d\n",
+                     ix, el, component);
         return HighsStatus::Error;
       }
       // Check that the index does not exceed the vector dimension
       legal_component = component < vec_dim;
       if (!legal_component) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Matrix packed vector %d, entry %d, is illegal index "
-                        "%12d >= %d = vector dimension",
-                        ix, el, component, vec_dim);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "Matrix packed vector %d, entry %d, is illegal index "
+                     "%12d >= %d = vector dimension\n",
+                     ix, el, component, vec_dim);
         return HighsStatus::Error;
       }
       // Check that the index has not already ocurred
       legal_component = check_vector[component] == 0;
       if (!legal_component) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el,
-            component);
+        highsLogUser(
+            options.log_options, HighsLogType::ERROR,
+            "Matrix packed vector %d, entry %d, is duplicate index %d\n", ix,
+            el, component);
         return HighsStatus::Error;
       }
       // Indicate that the index has occurred
@@ -509,18 +527,18 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       // Check that the value is not zero
       bool zero_value = abs_value == 0;
       if (zero_value) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Matrix packed vector %d, entry %d, is zero", ix, el);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                        "Matrix packed vector %d, entry %d, is zero\n", ix, el);
         return HighsStatus::Error;
       }
       */
       // Check that the value is not too large
       bool large_value = abs_value > large_matrix_value;
       if (large_value) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is large value |%g| >= %g", ix,
-            el, abs_value, large_matrix_value);
+        highsLogUser(
+            options.log_options, HighsLogType::ERROR,
+            "Matrix packed vector %d, entry %d, is large value |%g| >= %g\n",
+            ix, el, abs_value, large_matrix_value);
         return HighsStatus::Error;
       }
       bool ok_value = abs_value > small_matrix_value;
@@ -554,17 +572,17 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
         if (check_vector[component]) error_found = true;
       }
       if (error_found)
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "assessMatrix: check_vector not zeroed");
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "assessMatrix: check_vector not zeroed\n");
     }
 #endif
   }
   if (num_small_values) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Matrix packed vector contains %d |values| in [%g, %g] "
-                    "less than %g: ignored",
-                    num_small_values, min_small_value, max_small_value,
-                    small_matrix_value);
+    highsLogUser(options.log_options, HighsLogType::WARNING,
+                 "Matrix packed vector contains %d |values| in [%g, %g] "
+                 "less than %g: ignored\n",
+                 num_small_values, min_small_value, max_small_value,
+                 small_matrix_value);
     warning_found = true;
   }
   Astart[num_vec] = num_new_nz;
@@ -584,10 +602,10 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double residual = lp.colLower_[iCol] - lp.colUpper_[iCol];
     if (residual > options.primal_feasibility_tolerance) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Column %d has inconsistent bounds [%g, %g] (residual = "
-                      "%g) after presolve ",
-                      iCol, lp.colLower_[iCol], lp.colUpper_[iCol], residual);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "Column %d has inconsistent bounds [%g, %g] (residual = "
+                   "%g) after presolve\n",
+                   iCol, lp.colLower_[iCol], lp.colUpper_[iCol], residual);
       return HighsStatus::Error;
     } else if (residual > 0) {
       num_change++;
@@ -600,10 +618,10 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     double residual = lp.rowLower_[iRow] - lp.rowUpper_[iRow];
     if (residual > options.primal_feasibility_tolerance) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Row %d has inconsistent bounds [%g, %g] (residual = %g) "
-                      "after presolve ",
-                      iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], residual);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "Row %d has inconsistent bounds [%g, %g] (residual = %g) "
+                   "after presolve\n",
+                   iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], residual);
       return HighsStatus::Error;
     } else if (residual > 0) {
       num_change++;
@@ -614,16 +632,16 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
     }
   }
   if (num_change) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Resolved %d inconsistent bounds (maximum residual = "
-                    "%9.4g) after presolve ",
-                    num_change, max_residual);
+    highsLogUser(options.log_options, HighsLogType::WARNING,
+                 "Resolved %d inconsistent bounds (maximum residual = "
+                 "%9.4g) after presolve\n",
+                 num_change, max_residual);
     return HighsStatus::Warning;
   }
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
                              const HighsScale& scale) {
   if (!scale.is_scaled_) return HighsStatus::OK;
   if ((int)scale.col_.size() < lp.numCol_) return HighsStatus::Error;
@@ -641,16 +659,16 @@ HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
   all_rows.from_ = 0;
   all_rows.to_ = lp.numRow_ - 1;
 
-  scale_error = applyScalingToLpColCost(options, lp, scale.col_, all_cols) !=
-                    HighsStatus::OK ||
+  scale_error = applyScalingToLpColCost(log_options, lp, scale.col_,
+                                        all_cols) != HighsStatus::OK ||
                 scale_error;
-  scale_error = applyScalingToLpColBounds(options, lp, scale.col_, all_cols) !=
-                    HighsStatus::OK ||
+  scale_error = applyScalingToLpColBounds(log_options, lp, scale.col_,
+                                          all_cols) != HighsStatus::OK ||
                 scale_error;
-  scale_error = applyScalingToLpRowBounds(options, lp, scale.row_, all_rows) !=
-                    HighsStatus::OK ||
+  scale_error = applyScalingToLpRowBounds(log_options, lp, scale.row_,
+                                          all_rows) != HighsStatus::OK ||
                 scale_error;
-  scale_error = applyScalingToLpMatrix(options, lp, &scale.col_[0],
+  scale_error = applyScalingToLpMatrix(log_options, lp, &scale.col_[0],
                                        &scale.row_[0], 0, lp.numCol_ - 1, 0,
                                        lp.numRow_ - 1) != HighsStatus::OK ||
                 scale_error;
@@ -659,17 +677,18 @@ HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus applyScalingToLpColCost(
-    const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
+    const HighsLogOptions& log_options, HighsLp& lp,
+    const vector<double>& colScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
 
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
@@ -697,17 +716,18 @@ HighsStatus applyScalingToLpColCost(
 }
 
 HighsStatus applyScalingToLpColBounds(
-    const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
+    const HighsLogOptions& log_options, HighsLp& lp,
+    const vector<double>& colScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
 
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
@@ -738,17 +758,18 @@ HighsStatus applyScalingToLpColBounds(
 }
 
 HighsStatus applyScalingToLpRowBounds(
-    const HighsOptions& options, HighsLp& lp, const vector<double>& rowScale,
+    const HighsLogOptions& log_options, HighsLp& lp,
+    const vector<double>& rowScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
 
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
@@ -778,8 +799,8 @@ HighsStatus applyScalingToLpRowBounds(
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const double* colScale,
+HighsStatus applyScalingToLpMatrix(const HighsLogOptions& log_options,
+                                   HighsLp& lp, const double* colScale,
                                    const double* rowScale, const int from_col,
                                    const int to_col, const int from_row,
                                    const int to_row) {
@@ -864,7 +885,7 @@ void colScaleMatrix(const int max_scale_factor_exponent, double* colScale,
   }
 }
 
-HighsStatus applyScalingToLpCol(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
                                 const int col, const double colScale) {
   if (col < 0) return HighsStatus::Error;
   if (col >= lp.numCol_) return HighsStatus::Error;
@@ -884,7 +905,7 @@ HighsStatus applyScalingToLpCol(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLpRow(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
                                 const int row, const double rowScale) {
   if (row < 0) return HighsStatus::Error;
   if (row >= lp.numRow_) return HighsStatus::Error;
@@ -950,6 +971,49 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
   return HighsStatus::OK;
 }
 
+void appendToMatrix(HighsLp& lp, const int num_vec, const int num_new_vec,
+                    const int num_new_nz, const int* XAstart,
+                    const int* XAindex, const double* XAvalue) {
+  // Append packed vectors to a matrix
+  // Determine the new number of vectors in the matrix and resize the
+  // starts accordingly.
+  int new_num_vec = num_vec + num_new_vec;
+  lp.Astart_.resize(new_num_vec + 1);
+  // If adding vectors to an empty LP then introduce the start for the
+  // fictitious vector 0
+  if (num_vec == 0) lp.Astart_[0] = 0;
+
+  // Determine the current number of nonzeros and the new number of nonzeros
+  int current_num_nz = lp.Astart_[num_vec];
+  int new_num_nz = current_num_nz + num_new_nz;
+
+  // Append the starts of the new vectors
+  if (num_new_nz) {
+    // Nontrivial number of nonzeros being added, so use XAstart
+    assert(XAstart != NULL);
+    for (int vec = 0; vec < num_new_vec; vec++)
+      lp.Astart_[num_vec + vec] = current_num_nz + XAstart[vec];
+  } else {
+    // No nonzeros being added, so XAstart may be null, but entries of
+    // zero are implied.
+    for (int vec = 0; vec < num_new_vec; vec++)
+      lp.Astart_[num_vec + vec] = current_num_nz;
+  }
+  lp.Astart_[num_vec + num_new_vec] = new_num_nz;
+
+  // If no nonzeros are being added then there's nothing else to do
+  if (num_new_nz <= 0) return;
+
+  // Adding a non-trivial matrix: resize the matrix arrays accordingly
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
+  // Copy in the new indices and values
+  for (int el = 0; el < num_new_nz; el++) {
+    lp.Aindex_[current_num_nz + el] = XAindex[el];
+    lp.Avalue_[current_num_nz + el] = XAvalue[el];
+  }
+}
+
 HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
                                  const int num_new_nz, const int* XAstart,
                                  const int* XAindex, const double* XAvalue) {
@@ -957,6 +1021,15 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
   if (num_new_col == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no rows
   if (num_new_nz > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
+  // Adding a positive number of columns to a matrix
+  if (lp.orientation_ == MatrixOrientation::NONE) {
+    // LP is currently empty, store the matrix column-wise
+    assert(lp.numCol_ == 0 && lp.numRow_ == 0);
+    lp.orientation_ = MatrixOrientation::COLWISE;
+  } else {
+    // Ensure that the matrix is stored column-wise
+    setOrientation(lp);
+  }
   // Determine the new number of columns in the matrix and resize the
   // starts accordingly.
   int new_num_col = lp.numCol_ + num_new_col;
@@ -1005,70 +1078,99 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
-  if (num_new_nz == 0) return HighsStatus::OK;
-  int current_num_nz = lp.Astart_[lp.numCol_];
-  vector<int> Alength;
-  Alength.assign(lp.numCol_, 0);
-  for (int el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
-  // Determine the new number of nonzeros and resize the column-wise matrix
-  // arrays
-  int new_num_nz = current_num_nz + num_new_nz;
-  lp.Aindex_.resize(new_num_nz);
-  lp.Avalue_.resize(new_num_nz);
-
-  // Append the new rows
-  // Shift the existing columns to make space for the new entries
-  int new_el = new_num_nz;
-  for (int col = lp.numCol_ - 1; col >= 0; col--) {
-    int start_col_plus_1 = new_el;
-    new_el -= Alength[col];
-    for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
-      new_el--;
-      lp.Aindex_[new_el] = lp.Aindex_[el];
-      lp.Avalue_[new_el] = lp.Avalue_[el];
+  // Adding a positive number of rows to a matrix
+  int current_num_nz = 0;
+  if (lp.orientation_ == MatrixOrientation::NONE) {
+    // LP is currently empty, store the matrix row-wise
+    assert(lp.numCol_ == 0 && lp.numRow_ == 0);
+    lp.orientation_ = MatrixOrientation::ROWWISE;
+  } else if (lp.orientation_ == MatrixOrientation::COLWISE) {
+    assert(lp.numCol_ > 0);
+    assert((int)lp.Astart_.size() >= lp.numCol_);
+    current_num_nz = lp.Astart_[lp.numCol_];
+    if (current_num_nz == 0) {
+      // Matrix is currently empty and stored column-wise. It can be
+      // converted trivially to row-wise storage so that rows can be
+      // added easily.
+      //
+      // It's possible that the model could have columns and (empty)
+      // rows - hence the assignment of zero starts for rows
+      // 0...lp.numRow_.
+      //
+      // However, this allows efficient handling of the (common) case
+      // where a modeller defines variables without constraints, and
+      // then constraints one-by-one.
+      lp.orientation_ = MatrixOrientation::ROWWISE;
+      lp.Astart_.assign(lp.numRow_ + 1, 0);
     }
-    lp.Astart_[col + 1] = start_col_plus_1;
   }
-  assert(new_el == 0);
-
-  // Insert the new entries
-  for (int row = 0; row < num_new_row; row++) {
-    int first_el = XARstart[row];
-    int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
-    for (int el = first_el; el < last_el; el++) {
-      int col = XARindex[el];
-      new_el = lp.Astart_[col + 1] - Alength[col];
-      Alength[col]--;
-      lp.Aindex_[new_el] = lp.numRow_ + row;
-      lp.Avalue_[new_el] = XARvalue[el];
+  if (lp.orientation_ == MatrixOrientation::ROWWISE) {
+    appendToMatrix(lp, lp.numRow_, num_new_row, num_new_nz, XARstart, XARindex,
+                   XARvalue);
+  } else {
+    // Storing the matrix column-wise, so have to insert the new rows
+    assert(lp.orientation_ == MatrixOrientation::COLWISE);
+    vector<int> Alength;
+    Alength.assign(lp.numCol_, 0);
+    for (int el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
+    // Determine the new number of nonzeros and resize the column-wise matrix
+    // arrays
+    int new_num_nz = current_num_nz + num_new_nz;
+    lp.Aindex_.resize(new_num_nz);
+    lp.Avalue_.resize(new_num_nz);
+    // Append the new rows
+    // Shift the existing columns to make space for the new entries
+    int new_el = new_num_nz;
+    for (int col = lp.numCol_ - 1; col >= 0; col--) {
+      int start_col_plus_1 = new_el;
+      new_el -= Alength[col];
+      for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
+        new_el--;
+        lp.Aindex_[new_el] = lp.Aindex_[el];
+        lp.Avalue_[new_el] = lp.Avalue_[el];
+      }
+      lp.Astart_[col + 1] = start_col_plus_1;
+    }
+    assert(new_el == 0);
+    // Insert the new entries
+    for (int row = 0; row < num_new_row; row++) {
+      int first_el = XARstart[row];
+      int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
+      for (int el = first_el; el < last_el; el++) {
+        int col = XARindex[el];
+        new_el = lp.Astart_[col + 1] - Alength[col];
+        Alength[col]--;
+        lp.Aindex_[new_el] = lp.numRow_ + row;
+        lp.Avalue_[new_el] = XARvalue[el];
+      }
     }
   }
   return HighsStatus::OK;
 }
 
-HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
+HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection) {
   int new_num_col;
   HighsStatus call_status;
   call_status =
-      deleteColsFromLpVectors(options, lp, new_num_col, index_collection);
+      deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
   if (call_status != HighsStatus::OK) return call_status;
-  call_status = deleteColsFromLpMatrix(options, lp, index_collection);
+  call_status = deleteColsFromLpMatrix(log_options, lp, index_collection);
   if (call_status != HighsStatus::OK) return call_status;
   lp.numCol_ = new_num_col;
   return HighsStatus::OK;
 }
 
 HighsStatus deleteColsFromLpVectors(
-    const HighsOptions& options, HighsLp& lp, int& new_num_col,
+    const HighsLogOptions& log_options, HighsLp& lp, int& new_num_col,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
@@ -1116,15 +1218,15 @@ HighsStatus deleteColsFromLpVectors(
 }
 
 HighsStatus deleteColsFromLpMatrix(
-    const HighsOptions& options, HighsLp& lp,
+    const HighsLogOptions& log_options, HighsLp& lp,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
@@ -1188,17 +1290,17 @@ HighsStatus deleteColsFromLpMatrix(
   return HighsStatus::OK;
 }
 
-HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
+HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int new_num_row;
   call_status =
-      deleteRowsFromLpVectors(options, lp, new_num_row, index_collection);
+      deleteRowsFromLpVectors(log_options, lp, new_num_row, index_collection);
   return_status = interpretCallStatus(call_status, return_status,
                                       "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
-  call_status = deleteRowsFromLpMatrix(options, lp, index_collection);
+  call_status = deleteRowsFromLpMatrix(log_options, lp, index_collection);
   return_status =
       interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
   if (return_status == HighsStatus::Error) return return_status;
@@ -1207,15 +1309,15 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteRowsFromLpVectors(
-    const HighsOptions& options, HighsLp& lp, int& new_num_row,
+    const HighsLogOptions& log_options, HighsLp& lp, int& new_num_row,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
@@ -1263,15 +1365,15 @@ HighsStatus deleteRowsFromLpVectors(
 }
 
 HighsStatus deleteRowsFromLpMatrix(
-    const HighsOptions& options, HighsLp& lp,
+    const HighsLogOptions& log_options, HighsLp& lp,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
@@ -1380,17 +1482,17 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
   return HighsStatus::OK;
 }
 
-HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
+HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
                           const vector<double>& new_col_cost) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
@@ -1401,49 +1503,55 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
   const int* col_mask = index_collection.mask_;
 
   // Change the costs to the user-supplied costs, according to the technique
-  int usr_col;
+  int lp_col;
+  int usr_col = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
-      usr_col = k;
+      lp_col = k;
     } else {
-      usr_col = col_set[k];
+      lp_col = col_set[k];
     }
-    int col = usr_col;
+    int col = lp_col;
+    if (interval) {
+      usr_col++;
+    } else {
+      usr_col = k;
+    }
     if (mask && !col_mask[col]) continue;
-    lp.colCost_[col] = new_col_cost[k];
+    lp.colCost_[col] = new_col_cost[usr_col];
   }
   return HighsStatus::OK;
 }
 
-HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
+HighsStatus changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_col_lower,
                               const vector<double>& new_col_upper) {
-  return changeBounds(options, lp.colLower_, lp.colUpper_, index_collection,
+  return changeBounds(log_options, lp.colLower_, lp.colUpper_, index_collection,
                       new_col_lower, new_col_upper);
 }
 
-HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
+HighsStatus changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper) {
-  return changeBounds(options, lp.rowLower_, lp.rowUpper_, index_collection,
+  return changeBounds(log_options, lp.rowLower_, lp.rowUpper_, index_collection,
                       new_row_lower, new_row_upper);
 }
 
-HighsStatus changeBounds(const HighsOptions& options, vector<double>& lower,
-                         vector<double>& upper,
+HighsStatus changeBounds(const HighsLogOptions& log_options,
+                         vector<double>& lower, vector<double>& upper,
                          const HighsIndexCollection& index_collection,
                          const vector<double>& new_lower,
                          const vector<double>& new_upper) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(options, index_collection))
+  if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
   int from_k;
   int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
@@ -1454,17 +1562,23 @@ HighsStatus changeBounds(const HighsOptions& options, vector<double>& lower,
   const int* ix_mask = index_collection.mask_;
 
   // Change the bounds to the user-supplied bounds, according to the technique
-  int usr_ix;
+  int lp_ix;
+  int usr_ix = -1;
   for (int k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
-      usr_ix = k;
+      lp_ix = k;
     } else {
-      usr_ix = ix_set[k];
+      lp_ix = ix_set[k];
     }
-    int ix = usr_ix;
+    int ix = lp_ix;
+    if (interval) {
+      usr_ix++;
+    } else {
+      usr_ix = k;
+    }
     if (mask && !ix_mask[ix]) continue;
-    lower[ix] = new_lower[k];
-    upper[ix] = new_upper[k];
+    lower[ix] = new_lower[usr_ix];
+    upper[ix] = new_upper[usr_ix];
   }
   return HighsStatus::OK;
 }
@@ -1535,53 +1649,53 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
-void reportLp(const HighsOptions& options, const HighsLp& lp,
-              const int report_level) {
-  reportLpBrief(options, lp);
-  if (report_level >= 1) {
-    reportLpColVectors(options, lp);
-    reportLpRowVectors(options, lp);
-    if (report_level >= 2) reportLpColMatrix(options, lp);
+void reportLp(const HighsLogOptions& log_options, const HighsLp& lp,
+              const HighsLogType report_level) {
+  reportLpBrief(log_options, lp);
+  if ((int)report_level >= (int)HighsLogType::DETAILED) {
+    reportLpColVectors(log_options, lp);
+    reportLpRowVectors(log_options, lp);
+    if ((int)report_level >= (int)HighsLogType::VERBOSE)
+      reportLpColMatrix(log_options, lp);
   }
 }
 
 // Report the LP briefly
-void reportLpBrief(const HighsOptions& options, const HighsLp& lp) {
-  reportLpDimensions(options, lp);
-  reportLpObjSense(options, lp);
+void reportLpBrief(const HighsLogOptions& log_options, const HighsLp& lp) {
+  reportLpDimensions(log_options, lp);
+  reportLpObjSense(log_options, lp);
 }
 
 // Report the LP dimensions
-void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
+void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
   int lp_num_nz;
   if (lp.numCol_ == 0)
     lp_num_nz = 0;
   else
     lp_num_nz = lp.Astart_[lp.numCol_];
-  HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                    "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
+  highsLogDev(log_options, HighsLogType::INFO, "LP has %d columns, %d rows",
+              lp.numCol_, lp.numRow_);
   int num_int = getNumInt(lp);
   if (num_int) {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      ", %d nonzeros and %d integer columns\n", lp_num_nz,
-                      num_int);
+    highsLogDev(log_options, HighsLogType::INFO,
+                ", %d nonzeros and %d integer columns\n", lp_num_nz, num_int);
   } else {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      " and %d nonzeros\n", lp_num_nz, num_int);
+    highsLogDev(log_options, HighsLogType::INFO, " and %d nonzeros\n",
+                lp_num_nz, num_int);
   }
 }
 
 // Report the LP objective sense
-void reportLpObjSense(const HighsOptions& options, const HighsLp& lp) {
+void reportLpObjSense(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.sense_ == ObjSense::MINIMIZE)
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "Objective sense is minimize\n");
+    highsLogDev(log_options, HighsLogType::INFO,
+                "Objective sense is minimize\n");
   else if (lp.sense_ == ObjSense::MAXIMIZE)
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "Objective sense is maximize\n");
+    highsLogDev(log_options, HighsLogType::INFO,
+                "Objective sense is maximize\n");
   else
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "Objective sense is ill-defined as %d\n", lp.sense_);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "Objective sense is ill-defined as %d\n", lp.sense_);
 }
 
 std::string getBoundType(const double lower, const double upper) {
@@ -1607,31 +1721,27 @@ std::string getBoundType(const double lower, const double upper) {
 }
 
 // Report the vectors of LP column data
-void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
+void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   std::string type;
   int count;
   bool have_integer_columns = getNumInt(lp);
   bool have_col_names = lp.col_names_.size();
 
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                    "  Column        Lower        Upper         Cost       "
-                    "Type        Count");
+  highsLogDev(log_options, HighsLogType::VERBOSE,
+              "  Column        Lower        Upper         Cost       "
+              "Type        Count");
   if (have_integer_columns)
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                      "  Discrete");
-  if (have_col_names)
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                      "  Name");
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+    highsLogDev(log_options, HighsLogType::VERBOSE, "  Discrete");
+  if (have_col_names) highsLogDev(log_options, HighsLogType::VERBOSE, "  Name");
+  highsLogDev(log_options, HighsLogType::VERBOSE, "\n");
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
     count = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                      "%8d %12g %12g %12g         %2s %12d", iCol,
-                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol],
-                      type.c_str(), count);
+    highsLogDev(log_options, HighsLogType::VERBOSE,
+                "%8d %12g %12g %12g         %2s %12d", iCol, lp.colLower_[iCol],
+                lp.colUpper_[iCol], lp.colCost_[iCol], type.c_str(), count);
     if (have_integer_columns) {
       std::string integer_column = "";
       if (lp.integrality_[iCol] == HighsVarType::INTEGER) {
@@ -1641,18 +1751,18 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
           integer_column = "Integer";
         }
       }
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                        "  %-8s", integer_column.c_str());
+      highsLogDev(log_options, HighsLogType::VERBOSE, "  %-8s",
+                  integer_column.c_str());
     }
     if (have_col_names)
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                        "  %-s", lp.col_names_[iCol].c_str());
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+      highsLogDev(log_options, HighsLogType::VERBOSE, "  %-s",
+                  lp.col_names_[iCol].c_str());
+    highsLogDev(log_options, HighsLogType::VERBOSE, "\n");
   }
 }
 
 // Report the vectors of LP row data
-void reportLpRowVectors(const HighsOptions& options, const HighsLp& lp) {
+void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.numRow_ <= 0) return;
   std::string type;
   vector<int> count;
@@ -1663,62 +1773,59 @@ void reportLpRowVectors(const HighsOptions& options, const HighsLp& lp) {
     for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
   }
 
-  HighsPrintMessage(
-      options.output, options.message_level, ML_VERBOSE,
-      "     Row        Lower        Upper       Type        Count");
-  if (have_row_names)
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                      "  Name");
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+  highsLogDev(log_options, HighsLogType::VERBOSE,
+              "     Row        Lower        Upper       Type        Count");
+  if (have_row_names) highsLogDev(log_options, HighsLogType::VERBOSE, "  Name");
+  highsLogDev(log_options, HighsLogType::VERBOSE, "\n");
 
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
     std::string name = "";
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                      "%8d %12g %12g         %2s %12d", iRow,
-                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(),
-                      count[iRow]);
+    highsLogDev(log_options, HighsLogType::VERBOSE,
+                "%8d %12g %12g         %2s %12d", iRow, lp.rowLower_[iRow],
+                lp.rowUpper_[iRow], type.c_str(), count[iRow]);
     if (have_row_names)
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                        "  %-s", lp.row_names_[iRow].c_str());
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+      highsLogDev(log_options, HighsLogType::VERBOSE, "  %-s",
+                  lp.row_names_[iRow].c_str());
+    highsLogDev(log_options, HighsLogType::VERBOSE, "\n");
   }
 }
 
 // Report the LP column-wise matrix
-void reportLpColMatrix(const HighsOptions& options, const HighsLp& lp) {
+void reportLpColMatrix(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   if (lp.numRow_) {
     // With postitive number of rows, can assume that there are index and value
     // vectors to pass
-    reportMatrix(options, "Column", lp.numCol_, lp.Astart_[lp.numCol_],
+    reportMatrix(log_options, "Column", lp.numCol_, lp.Astart_[lp.numCol_],
                  &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
   } else {
     // With no rows, can's assume that there are index and value vectors to pass
-    reportMatrix(options, "Column", lp.numCol_, lp.Astart_[lp.numCol_],
+    reportMatrix(log_options, "Column", lp.numCol_, lp.Astart_[lp.numCol_],
                  &lp.Astart_[0], NULL, NULL);
   }
 }
 
-void reportMatrix(const HighsOptions& options, const std::string message,
+void reportMatrix(const HighsLogOptions& log_options, const std::string message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value) {
   if (num_col <= 0) return;
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                    "%6s Index              Value\n", message.c_str());
+  highsLogDev(log_options, HighsLogType::VERBOSE,
+              "%6s Index              Value\n", message.c_str());
   for (int col = 0; col < num_col; col++) {
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                      "    %8d Start   %10d\n", col, start[col]);
+    highsLogDev(log_options, HighsLogType::VERBOSE, "    %8d Start   %10d\n",
+                col, start[col]);
     int to_el = (col < num_col - 1 ? start[col + 1] : num_nz);
     for (int el = start[col]; el < to_el; el++)
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                        "          %8d %12g\n", index[el], value[el]);
+      highsLogDev(log_options, HighsLogType::VERBOSE, "          %8d %12g\n",
+                  index[el], value[el]);
   }
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                    "             Start   %10d\n", num_nz);
+  highsLogDev(log_options, HighsLogType::VERBOSE, "             Start   %10d\n",
+              num_nz);
 }
 
-void analyseLp(const HighsLp& lp, const std::string message) {
+void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
+               const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;
@@ -1737,21 +1844,39 @@ void analyseLp(const HighsLp& lp, const std::string message) {
     rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
 
   printf("\n%s model data: Analysis\n", message.c_str());
-  analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
-  analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
-  analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
-  analyseVectorValues("Column min abs bound", lp.numCol_, min_colBound);
-  analyseVectorValues("Column range", lp.numCol_, colRange);
-  analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_);
-  analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_);
-  analyseVectorValues("Row min abs bound", lp.numRow_, min_rowBound);
-  analyseVectorValues("Row range", lp.numRow_, rowRange);
-  analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_,
-                      true, lp.model_name_);
-  analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_,
-                        lp.Aindex_);
-  analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
-  analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
+  analyseVectorValues(log_options, "Column costs", lp.numCol_, lp.colCost_);
+  analyseVectorValues(log_options, "Column lower bounds", lp.numCol_,
+                      lp.colLower_);
+  analyseVectorValues(log_options, "Column upper bounds", lp.numCol_,
+                      lp.colUpper_);
+  analyseVectorValues(log_options, "Column min abs bound", lp.numCol_,
+                      min_colBound);
+  analyseVectorValues(log_options, "Column range", lp.numCol_, colRange);
+  analyseVectorValues(log_options, "Row lower bounds", lp.numRow_,
+                      lp.rowLower_);
+  analyseVectorValues(log_options, "Row upper bounds", lp.numRow_,
+                      lp.rowUpper_);
+  analyseVectorValues(log_options, "Row min abs bound", lp.numRow_,
+                      min_rowBound);
+  analyseVectorValues(log_options, "Row range", lp.numRow_, rowRange);
+  analyseVectorValues(log_options, "Matrix sparsity", lp.Astart_[lp.numCol_],
+                      lp.Avalue_, true, lp.model_name_);
+  analyseMatrixSparsity(log_options, "Constraint matrix", lp.numCol_,
+                        lp.numRow_, lp.Astart_, lp.Aindex_);
+  analyseModelBounds(log_options, "Column", lp.numCol_, lp.colLower_,
+                     lp.colUpper_);
+  analyseModelBounds(log_options, "Row", lp.numRow_, lp.rowLower_,
+                     lp.rowUpper_);
+}
+
+void analyseScaledLp(const HighsLogOptions& log_options,
+                     const HighsScale& scale, const HighsLp& scaled_lp) {
+  if (!scale.is_scaled_) return;
+  analyseVectorValues(log_options, "Column scaling factors", scaled_lp.numCol_,
+                      scale.col_);
+  analyseVectorValues(log_options, "Row    scaling factors", scaled_lp.numRow_,
+                      scale.row_);
+  analyseLp(log_options, scaled_lp, "Scaled");
 }
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
@@ -1787,19 +1912,20 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   }
 }
 
-HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
+HighsStatus writeBasisFile(const HighsLogOptions& log_options,
+                           const HighsBasis& basis,
                            const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   if (basis.valid_ == false) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "writeBasisFile: Cannot write an invalid basis");
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "writeBasisFile: Cannot write an invalid basis\n");
     return HighsStatus::Error;
   }
   std::ofstream outFile(filename);
   if (outFile.fail()) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "writeBasisFile: Cannot open writeable file \"%s\"",
-                    filename.c_str());
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "writeBasisFile: Cannot open writeable file \"%s\"\n",
+                 filename.c_str());
     return HighsStatus::Error;
   }
   outFile << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
@@ -1818,16 +1944,16 @@ HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
   return return_status;
 }
 
-HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
+HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename) {
   // Reads a basis file, returning an error if what's read is
   // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::OK;
   std::ifstream inFile(filename);
   if (inFile.fail()) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "readBasisFile: Cannot open readable file \"%s\"",
-                    filename.c_str());
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "readBasisFile: Cannot open readable file \"%s\"\n",
+                 filename.c_str());
     return HighsStatus::Error;
   }
   std::string string_highs, string_version;
@@ -1839,15 +1965,15 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
     int basis_numCol = (int)basis.col_status.size();
     int basis_numRow = (int)basis.row_status.size();
     if (numCol != basis_numCol) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d columns, not %d",
-                      numCol, basis_numCol);
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "readBasisFile: Basis file is for %d columns, not %d\n",
+                   numCol, basis_numCol);
       return HighsStatus::Error;
     }
     if (numRow != basis_numRow) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d rows, not %d",
-                      numRow, basis_numRow);
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "readBasisFile: Basis file is for %d rows, not %d\n", numRow,
+                   basis_numRow);
       return HighsStatus::Error;
     }
     int int_status;
@@ -1860,16 +1986,15 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
     }
     if (inFile.eof()) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "readBasisFile: Reached end of file before reading complete basis");
+      highsLogUser(
+          log_options, HighsLogType::ERROR,
+          "readBasisFile: Reached end of file before reading complete basis\n");
       return_status = HighsStatus::Error;
     }
   } else {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "readBasisFile: Cannot read basis file for HiGHS version %d",
-        highs_version_number);
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "readBasisFile: Cannot read basis file for HiGHS version %d\n",
+                 highs_version_number);
     return_status = HighsStatus::Error;
   }
   inFile.close();
@@ -1925,46 +2050,47 @@ double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
   return sum;
 }
 
-bool isColDataNull(const HighsOptions& options, const double* usr_col_cost,
-                   const double* usr_col_lower, const double* usr_col_upper) {
+bool isColDataNull(const HighsLogOptions& log_options,
+                   const double* usr_col_cost, const double* usr_col_lower,
+                   const double* usr_col_upper) {
   bool null_data = false;
   null_data =
-      doubleUserDataNotNull(options.logfile, usr_col_cost, "column costs") ||
+      doubleUserDataNotNull(log_options, usr_col_cost, "column costs") ||
       null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_lower,
+  null_data = doubleUserDataNotNull(log_options, usr_col_lower,
                                     "column lower bounds") ||
               null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_upper,
+  null_data = doubleUserDataNotNull(log_options, usr_col_upper,
                                     "column upper bounds") ||
               null_data;
   return null_data;
 }
 
-bool isRowDataNull(const HighsOptions& options, const double* usr_row_lower,
-                   const double* usr_row_upper) {
+bool isRowDataNull(const HighsLogOptions& log_options,
+                   const double* usr_row_lower, const double* usr_row_upper) {
   bool null_data = false;
-  null_data = doubleUserDataNotNull(options.logfile, usr_row_lower,
-                                    "row lower bounds") ||
-              null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_row_upper,
-                                    "row upper bounds") ||
-              null_data;
+  null_data =
+      doubleUserDataNotNull(log_options, usr_row_lower, "row lower bounds") ||
+      null_data;
+  null_data =
+      doubleUserDataNotNull(log_options, usr_row_upper, "row upper bounds") ||
+      null_data;
   return null_data;
 }
 
-bool isMatrixDataNull(const HighsOptions& options, const int* usr_matrix_start,
-                      const int* usr_matrix_index,
+bool isMatrixDataNull(const HighsLogOptions& log_options,
+                      const int* usr_matrix_start, const int* usr_matrix_index,
                       const double* usr_matrix_value) {
   bool null_data = false;
   null_data =
-      intUserDataNotNull(options.logfile, usr_matrix_start, "matrix starts") ||
+      intUserDataNotNull(log_options, usr_matrix_start, "matrix starts") ||
       null_data;
   null_data =
-      intUserDataNotNull(options.logfile, usr_matrix_index, "matrix indices") ||
+      intUserDataNotNull(log_options, usr_matrix_index, "matrix indices") ||
       null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_matrix_value,
-                                    "matrix values") ||
-              null_data;
+  null_data =
+      doubleUserDataNotNull(log_options, usr_matrix_value, "matrix values") ||
+      null_data;
   return null_data;
 }
 
@@ -2168,8 +2294,8 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
   return HighsStatus::OK;
 }
 
-void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
-                              const HighsLp& presolve_lp) {
+void reportPresolveReductions(const HighsLogOptions& log_options,
+                              const HighsLp& lp, const HighsLp& presolve_lp) {
   int num_col_from = lp.numCol_;
   int num_row_from = lp.numRow_;
   int num_els_from = lp.Astart_[num_col_from];
@@ -2187,16 +2313,16 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
     elemdelta = -elemdelta;
     elemsignchar = '+';
   }
-  HighsPrintMessage(options.logfile, options.message_level, ML_ALWAYS,
-                    "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
-                    "elements %d(%c%d)\n",
-                    num_row_to, (num_row_from - num_row_to), num_col_to,
-                    (num_col_from - num_col_to), num_els_to, elemsignchar,
-                    elemdelta);
+  highsLogUser(log_options, HighsLogType::INFO,
+               "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
+               "elements %d(%c%d)\n",
+               num_row_to, (num_row_from - num_row_to), num_col_to,
+               (num_col_from - num_col_to), num_els_to, elemsignchar,
+               elemdelta);
 }
 
-void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
-                              const bool presolve_to_empty) {
+void reportPresolveReductions(const HighsLogOptions& log_options,
+                              const HighsLp& lp, const bool presolve_to_empty) {
   int num_col_from = lp.numCol_;
   int num_row_from = lp.numRow_;
   int num_els_from = lp.Astart_[num_col_from];
@@ -2215,15 +2341,15 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
     num_els_to = num_els_from;
     message = "- Not reduced";
   }
-  HighsPrintMessage(options.logfile, options.message_level, ML_ALWAYS,
-                    "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
-                    "elements %d(-%d) %s\n",
-                    num_row_to, (num_row_from - num_row_to), num_col_to,
-                    (num_col_from - num_col_to), num_els_to,
-                    (num_els_from - num_els_to), message.c_str());
+  highsLogUser(log_options, HighsLogType::INFO,
+               "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
+               "elements %d(-%d) %s\n",
+               num_row_to, (num_row_from - num_row_to), num_col_to,
+               (num_col_from - num_col_to), num_els_to,
+               (num_els_from - num_els_to), message.c_str());
 }
 
-bool isLessInfeasibleDSECandidate(const HighsOptions& options,
+bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp) {
   int max_col_num_en = -1;
   const int max_allowed_col_num_en = 24;
@@ -2285,10 +2411,10 @@ bool isLessInfeasibleDSECandidate(const HighsOptions& options,
   if (!all_unit_nonzeros) logic0 = "does not have";
   std::string logic1 = "is not";
   if (LiDSE_candidate) logic1 = "is";
-  HighsLogMessage(
-      options.logfile, HighsMessageType::INFO,
+  highsLogUser(
+      log_options, HighsLogType::INFO,
       "LP %s %s all |entries|=1; max column count = %d (limit %d); average "
-      "column count = %0.2g (limit %d): So %s a candidate for LiDSE",
+      "column count = %0.2g (limit %d): So %s a candidate for LiDSE\n",
       lp.model_name_.c_str(), logic0.c_str(), max_col_num_en,
       max_allowed_col_num_en, average_col_num_en, max_average_col_num_en,
       logic1.c_str());
@@ -2300,43 +2426,155 @@ bool isLessInfeasibleDSECandidate(const HighsOptions& options,
   return LiDSE_candidate;
 }
 
-void convertToMinimization(HighsLp& lp) {
-  if (lp.sense_ != ObjSense::MINIMIZE) {
-    for (int col = 0; col < lp.numCol_; col++)
-      lp.colCost_[col] = -lp.colCost_[col];
+void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation) {
+  if (lp.orientation_ == desired_orientation) return;
+  if (lp.numCol_ == 0 && lp.numRow_ == 0) {
+    // No rows or columns, so either orientation is possible and has
+    // identical data: just requires the start of the fictitious
+    // row/column 0
+    lp.Astart_.assign(1, 0);
+    lp.orientation_ = desired_orientation;
+  } else if (desired_orientation == MatrixOrientation::COLWISE) {
+    if (lp.orientation_ == MatrixOrientation::NONE) {
+      // Assume matrix data are already COLWISE
+      lp.orientation_ = MatrixOrientation::COLWISE;
+      return;
+    }
+    assert(lp.orientation_ == MatrixOrientation::ROWWISE);
+    ensureColWise(lp);
+  } else {
+    if (lp.orientation_ == MatrixOrientation::NONE) {
+      // Assume matrix data are already ROWWISE
+      lp.orientation_ = MatrixOrientation::ROWWISE;
+      return;
+    }
+    assert(lp.orientation_ == MatrixOrientation::COLWISE);
+    ensureRowWise(lp);
   }
 }
 
-bool isEqualityProblem(const HighsLp& lp) {
-  for (int row = 0; row < lp.numRow_; row++)
-    if (lp.rowLower_[row] != lp.rowUpper_[row]) return false;
-
-  return true;
-}
-
-double vectorProduct(const std::vector<double>& v1,
-                     const std::vector<double>& v2) {
-  assert(v1.size() == v2.size());
-  double sum = 0;
-  for (int i = 0; i < (int)v1.size(); i++) sum += v1[i] * v2[i];
-  return sum;
-}
-
-HighsStatus calculateResidual(const HighsLp& lp, HighsSolution& solution,
-                              std::vector<double>& residual) {
-  HighsStatus status = calculateRowValues(lp, solution);
-  if (status != HighsStatus::OK) return status;
-
-  residual.clear();
-  residual.resize(lp.numRow_);
-
-  for (int row = 0; row < lp.numRow_; row++) {
-    if (solution.row_value[row] < lp.rowLower_[row]) {
-      residual[row] = lp.rowLower_[row] - solution.row_value[row];
-    } else if (solution.row_value[row] > lp.rowUpper_[row]) {
-      residual[row] = solution.row_value[row] - lp.rowUpper_[row];
+void ensureColWise(HighsLp& lp) {
+  // Should only call this is orientation is ROWWISE
+  assert(lp.orientation_ == MatrixOrientation::ROWWISE);
+  int num_nz;
+  bool empty_matrix = lp.numCol_ == 0 || lp.numRow_ == 0;
+  if (!empty_matrix) {
+    // Matrix is probably non-empty
+    assert((int)lp.Astart_.size() >= lp.numRow_ + 1);
+    num_nz = lp.Astart_[lp.numRow_];
+    assert(num_nz >= 0);
+    assert((int)lp.Aindex_.size() >= num_nz);
+    assert((int)lp.Avalue_.size() >= num_nz);
+    empty_matrix = num_nz == 0;
+    if (!empty_matrix) {
+      // Matrix is non-empty, so transpose it
+      vector<int>& ARstart = lp.Astart_;
+      vector<int>& ARindex = lp.Aindex_;
+      vector<double>& ARvalue = lp.Avalue_;
+      vector<int> Astart;
+      vector<int> Aindex;
+      vector<double> Avalue;
+      Astart.resize(lp.numCol_ + 1);
+      Aindex.resize(num_nz);
+      Avalue.resize(num_nz);
+      vector<int> Alength;
+      Alength.assign(lp.numCol_, 0);
+      for (int iEl = ARstart[0]; iEl < num_nz; iEl++) Alength[ARindex[iEl]]++;
+      Astart[0] = 0;
+      for (int iCol = 0; iCol < lp.numCol_; iCol++)
+        Astart[iCol + 1] = Astart[iCol] + Alength[iCol];
+      for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+        for (int iEl = ARstart[iRow]; iEl < ARstart[iRow + 1]; iEl++) {
+          int iCol = ARindex[iEl];
+          int iCol_el = Astart[iCol];
+          Aindex[iCol_el] = iRow;
+          Avalue[iCol_el] = ARvalue[iEl];
+          Astart[iCol]++;
+        }
+      }
+      Astart[0] = 0;
+      for (int iCol = 0; iCol < lp.numCol_; iCol++)
+        Astart[iCol + 1] = Astart[iCol] + Alength[iCol];
+      assert(Astart[lp.numCol_] == num_nz);
+      // Now update the LP's matrix
+      lp.Astart_ = Astart;
+      lp.Aindex_ = Aindex;
+      lp.Avalue_ = Avalue;
     }
   }
+  if (empty_matrix) {
+    // Matrix is empty, so set up empty column-wise structure
+    lp.Astart_.assign(lp.numCol_ + 1, 0);
+    lp.Aindex_.clear();
+    lp.Avalue_.clear();
+  }
+  assert((int)lp.Astart_.size() >= lp.numCol_ + 1);
+  num_nz = lp.Astart_[lp.numCol_];
+  assert(num_nz >= 0);
+  assert((int)lp.Aindex_.size() >= num_nz);
+  assert((int)lp.Avalue_.size() >= num_nz);
+  lp.orientation_ = MatrixOrientation::COLWISE;
+}
 
-  return status;
+void ensureRowWise(HighsLp& lp) {
+  // Should only call this is orientation is COLWISE
+  assert(lp.orientation_ == MatrixOrientation::COLWISE);
+  int num_nz;
+  bool empty_matrix = lp.numCol_ == 0 || lp.numRow_ == 0;
+  if (!empty_matrix) {
+    // Matrix is probably non-empty
+    assert((int)lp.Astart_.size() >= lp.numCol_ + 1);
+    num_nz = lp.Astart_[lp.numCol_];
+    assert(num_nz >= 0);
+    assert((int)lp.Aindex_.size() >= num_nz);
+    assert((int)lp.Avalue_.size() >= num_nz);
+    empty_matrix = num_nz == 0;
+    if (!empty_matrix) {
+      // Matrix is non-empty, so transpose it
+      vector<int>& Astart = lp.Astart_;
+      vector<int>& Aindex = lp.Aindex_;
+      vector<double>& Avalue = lp.Avalue_;
+      vector<int> ARstart;
+      vector<int> ARindex;
+      vector<double> ARvalue;
+      ARstart.resize(lp.numRow_ + 1);
+      ARindex.resize(num_nz);
+      ARvalue.resize(num_nz);
+      vector<int> ARlength;
+      ARlength.assign(lp.numRow_, 0);
+      for (int iEl = Astart[0]; iEl < num_nz; iEl++) ARlength[Aindex[iEl]]++;
+      ARstart[0] = 0;
+      for (int iRow = 0; iRow < lp.numRow_; iRow++)
+        ARstart[iRow + 1] = ARstart[iRow] + ARlength[iRow];
+      for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+        for (int iEl = Astart[iCol]; iEl < Astart[iCol + 1]; iEl++) {
+          int iRow = Aindex[iEl];
+          int iRow_el = ARstart[iRow];
+          ARindex[iRow_el] = iCol;
+          ARvalue[iRow_el] = Avalue[iEl];
+          ARstart[iRow]++;
+        }
+      }
+      ARstart[0] = 0;
+      for (int iRow = 0; iRow < lp.numRow_; iRow++)
+        ARstart[iRow + 1] = ARstart[iRow] + ARlength[iRow];
+      assert(ARstart[lp.numRow_] == num_nz);
+      // Now update the LP's matrix
+      lp.Astart_ = ARstart;
+      lp.Aindex_ = ARindex;
+      lp.Avalue_ = ARvalue;
+    }
+  }
+  if (empty_matrix) {
+    // Matrix is empty, so set up empty row-wise structure
+    lp.Astart_.assign(lp.numRow_ + 1, 0);
+    lp.Aindex_.clear();
+    lp.Avalue_.clear();
+  }
+  assert((int)lp.Astart_.size() >= lp.numRow_ + 1);
+  num_nz = lp.Astart_[lp.numRow_];
+  assert(num_nz >= 0);
+  assert((int)lp.Aindex_.size() >= num_nz);
+  assert((int)lp.Avalue_.size() >= num_nz);
+  lp.orientation_ = MatrixOrientation::ROWWISE;
 }

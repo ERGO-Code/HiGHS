@@ -75,6 +75,7 @@ enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
+enum class MatrixOrientation { NONE = 0, COLWISE, ROWWISE };
 
 enum SolverOption {
   SOLVER_OPTION_SIMPLEX = -1,

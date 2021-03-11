@@ -84,9 +84,37 @@ void options() {
   Highs_destroy(highs);
 }
 
+void test_getColsByRange() {
+    void* highs = Highs_create();
+    Highs_addCol(highs, -1.0, 0.0, 1.0, 0, NULL, NULL);
+    Highs_addCol(highs, -1.0, 0.0, 1.0, 0, NULL, NULL);
+    int aindex[2] = {0, 1};
+    double avalue[2] = {1.0, -1.0};
+    Highs_addRow(highs, 0.0, 0.0, 2, aindex, avalue);
+    int num_cols;
+    int num_nz;
+    int matrix_start[2] = {-1, -1};
+    Highs_getColsByRange(highs, 0, 1, &num_cols, NULL, NULL, NULL, &num_nz,
+                         matrix_start, NULL, NULL);
+    assert( num_cols == 2 );
+    assert( num_nz == 2 );
+    assert( matrix_start[0] == 0 );
+    assert( matrix_start[1] == 1 );
+    int matrix_indices[2] = {-1, -1};
+    double matrix_values[2] = {0.0, 0.0};
+    Highs_getColsByRange(highs, 0, 1, &num_cols, NULL, NULL, NULL, &num_nz,
+                         matrix_start, matrix_indices, matrix_values);
+    assert( matrix_indices[0] == 0 );
+    assert( matrix_indices[1] == 0 );
+    assert( matrix_values[0] == 1.0 );
+    assert( matrix_values[1] == -1.0 );
+    Highs_destroy(highs);
+}
+
 int main() {
   minimal_api();
   full_api();
   options();
+  test_getColsByRange();
   return 0;
 }

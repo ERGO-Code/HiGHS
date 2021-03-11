@@ -73,20 +73,20 @@ int Highs_clearModel(void* highs  //!< HiGHS object reference
 );
 
 /*
- * @brief Sets the Logfile and Output to NULL
+ * @brief Sets the Logfile and Output to NULL - Deprecated
  */
 int Highs_runQuiet(void* highs  //!< HiGHS object reference
 );
 
 /*
- * @brief Sets the logfile for printing.
+ * @brief Sets the logfile for printing. - Deprecated
  */
 int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
                           void* logfile  //!< File handle of the logfile
 );
 
 /*
- * @brief Sets the output for printing.
+ * @brief Sets the output for printing. - Deprecated
  */
 int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
                          void* outputfile  //!< File handle of the output file
@@ -281,13 +281,13 @@ int Highs_getPrimalRay(
 );
 
 /**
- * @brief Returns the objective function value (if known)
+ * @brief Returns the objective function value (if known) - Deprecated
  */
 double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
 );
 
 /**
- * @brief Returns the simplex iteration count (if known)
+ * @brief Returns the simplex iteration count (if known) - Deprecated
  */
 int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
 );
@@ -466,6 +466,17 @@ int Highs_changeColCost(
     void* highs,       //!< HiGHS object reference
     const int col,     //!< The index of the column whose cost is to change
     const double cost  //!< The new cost
+);
+
+/**
+ * @brief Change the cost of multiple columns given by an interval
+ */
+int Highs_changeColsCostByRange(
+    void* highs,         //!< HiGHS object reference
+    const int from_col,  //!< The index of the first column whose cost changes
+    const int to_col,    //!< One more than the index of the last column whose
+                         //!< cost changes
+    const double* cost   //!< Array of size num_set_entries with new costs
 );
 
 /**

@@ -67,7 +67,8 @@ void updateSimplexLpStatus(
 
 void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 
-HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+HighsStatus deleteScale(const HighsLogOptions& log_options,
+                        vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
 void getUnscaledInfeasibilitiesAndNewTolerances(
@@ -91,6 +92,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                      HighsScale& scale);
 bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                 HighsScale& scale);
+
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
 /*

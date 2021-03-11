@@ -26,9 +26,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "lp_data/HighsStatus.h"
-//#include "simplex/HDual.h"
 #include "simplex/HEkk.h"
-//#include "simplex/HPrimal.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/SimplexConst.h"
@@ -63,10 +61,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "solveLpEkkSimplex called for LP with non-positive (%d) "
-                    "number of constraints",
-                    highs_model_object.lp_.numRow_);
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "solveLpEkkSimplex called for LP with non-positive (%d) "
+                 "number of constraints\n",
+                 highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
   }
 
@@ -133,21 +131,21 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
     assert(num_unscaled_primal_infeasibility > 0 ||
            num_unscaled_dual_infeasibility > 0);
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-                    "Have num/max/sum primal (%d/%g/%g) and dual (%d/%g/%g) "
-                    "unscaled infeasibilities",
-                    num_unscaled_primal_infeasibility,
-                    solution_params.max_primal_infeasibility,
-                    solution_params.sum_primal_infeasibility,
-                    num_unscaled_dual_infeasibility,
-                    solution_params.max_dual_infeasibility,
-                    solution_params.sum_dual_infeasibility);
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::INFO,
+                 "Have num/max/sum primal (%d/%g/%g) and dual (%d/%g/%g) "
+                 "unscaled infeasibilities\n",
+                 num_unscaled_primal_infeasibility,
+                 solution_params.max_primal_infeasibility,
+                 solution_params.sum_primal_infeasibility,
+                 num_unscaled_dual_infeasibility,
+                 solution_params.max_dual_infeasibility,
+                 solution_params.sum_dual_infeasibility);
     if (ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL)
-      HighsLogMessage(
-          highs_model_object.options_.logfile, HighsMessageType::INFO,
-          "Possibly re-solve with feasibility tolerances of %g "
-          "primal and %g dual",
-          new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+      highsLogUser(highs_model_object.options_.log_options, HighsLogType::INFO,
+                   "Possibly re-solve with feasibility tolerances of %g "
+                   "primal and %g dual\n",
+                   new_primal_feasibility_tolerance,
+                   new_dual_feasibility_tolerance);
     highs_model_object.solution_ = ekk_instance.getSolution();
     if (highs_model_object.scale_.is_scaled_)
       unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);

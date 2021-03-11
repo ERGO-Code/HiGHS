@@ -48,22 +48,23 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
   right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "scale size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "scale size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
-  if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Error scaling check LP");
+  if (applyScalingToLp(options.log_options, check_lp, scale) !=
+      HighsStatus::OK) {
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Check LP and simplex LP not equal");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -73,8 +74,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
         debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
         HighsStatus::Error;
     if (!simplex_basis_correct) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Supposed to be a Simplex basis, but incorrect");
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                   "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -84,9 +85,9 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::Error;
     if (!invert_ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Supposed to be a Simplex basis inverse, but too inaccurate");
+      highsLogUser(
+          options.log_options, HighsLogType::ERROR,
+          "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -105,16 +106,16 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // Check consistency of nonbasicFlag
   if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
       HighsDebugStatus::LOGICAL_ERROR) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag inconsistent");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "nonbasicFlag inconsistent\n");
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool right_size =
       (int)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
   // Check consistency of basicIndex
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "basicIndex size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "basicIndex size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -130,13 +131,13 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
       // Nonzero value for localNonbasicFlag entry means that column is either
       if (flag == NONBASIC_FLAG_TRUE) {
         // Nonbasic...
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Entry basicIndex_[%d] = %d is not basic", iRow, iCol);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "Entry basicIndex_[%d] = %d is not basic\n", iRow, iCol);
       } else {
         // .. or is -1 since it has already been found in basicIndex
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Entry basicIndex_[%d] = %d is already basic", iRow,
-                        iCol);
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "Entry basicIndex_[%d] = %d is already basic\n", iRow,
+                     iCol);
         assert(flag == -1);
       }
       assert(!flag);
@@ -146,34 +147,92 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus debugDualChuzcFail(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const double* workDual,
-    const double selectTheta, const double remainTheta) {
-  // Non-trivially expensive assessment of basis condition
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
-    return HighsDebugStatus::NOT_CHECKED;
-
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "DualChuzC:     No change in loop 2 so return error\n");
-  double workDataNorm = 0;
-  double dualNorm = 0;
+void debugDualChuzcFailNorms(
+    const int workCount, const std::vector<std::pair<int, double>>& workData,
+    double& workDataNorm, const int numVar, const double* workDual,
+    double& workDualNorm) {
+  workDataNorm = 0;
   for (int i = 0; i < workCount; i++) {
-    int iCol = workData[i].first;
     double value = workData[i].second;
     workDataNorm += value * value;
-    value = workDual[iCol];
-    dualNorm += value * value;
   }
-  workDataNorm += sqrt(workDataNorm);
-  dualNorm += sqrt(dualNorm);
-  HighsPrintMessage(
-      options.output, options.message_level, ML_ALWAYS,
-      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
-      workCount, selectTheta, remainTheta);
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
-                    workDataNorm, dualNorm);
+  workDataNorm = sqrt(workDataNorm);
+  workDualNorm = 0;
+  for (int iVar = 0; iVar < numVar; iVar++) {
+    double value = workDual[iVar];
+    workDualNorm += value * value;
+  }
+  workDualNorm = sqrt(workDualNorm);
+}
+
+HighsDebugStatus debugDualChuzcFailQuad0(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const double remainTheta,
+    const bool force) {
+  // Non-trivially expensive assessment of CHUZC failure
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     No change in loop 2 so return error\n");
+  double workDataNorm;
+  double workDualNorm;
+  debugDualChuzcFailNorms(workCount, workData, workDataNorm, numVar, workDual,
+                          workDualNorm);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
+              workCount, selectTheta, remainTheta);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
+              workDataNorm, workDualNorm);
+  return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus debugDualChuzcFailQuad1(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const bool force) {
+  // Non-trivially expensive assessment of CHUZC failure
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  highsLogDev(
+      options.log_options, HighsLogType::INFO,
+      "DualChuzC:     No group identified in quad search so return error\n");
+  double workDataNorm;
+  double workDualNorm;
+  debugDualChuzcFailNorms(workCount, workData, workDataNorm, numVar, workDual,
+                          workDualNorm);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workCount = %d; selectTheta=%g\n", workCount,
+              selectTheta);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
+              workDataNorm, workDualNorm);
+  return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus debugDualChuzcFailHeap(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const bool force) {
+  // Non-trivially expensive assessment of CHUZC failure
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     No entries in heap so return error\n");
+  double workDataNorm;
+  double workDualNorm;
+  debugDualChuzcFailNorms(workCount, workData, workDataNorm, numVar, workDual,
+                          workDualNorm);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workCount = %d; selectTheta=%g\n", workCount,
+              selectTheta);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
+              workDataNorm, workDualNorm);
   return HighsDebugStatus::OK;
 }
 
@@ -186,8 +245,8 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "nonbasicFlag size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -201,9 +260,9 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   }
   bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
   if (!right_num_basic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag has %d, not %d basic variables",
-                    num_basic_variables, simplex_lp.numRow_);
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "nonbasicFlag has %d, not %d basic variables\n",
+                 num_basic_variables, simplex_lp.numRow_);
     assert(right_num_basic_variables);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -305,22 +364,22 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
   right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "scale size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "scale size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Error scaling check LP");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Check LP and simplex LP not equal");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -330,8 +389,8 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
         debugDebugToHighsStatus(debugSimplexBasisCorrect(highs_model_object)) !=
         HighsStatus::Error;
     if (!simplex_basis_correct) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Supposed to be a Simplex basis, but incorrect");
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                      "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -341,9 +400,8 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::Error;
     if (!invert_ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Supposed to be a Simplex basis inverse, but too inaccurate");
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+          "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -360,8 +418,8 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Simplex basis size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "Simplex basis size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -388,9 +446,8 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
       numCol == simplex_lp.numCol_ && numRow == simplex_lp.numRow_;
   assert(dimension_ok);
   if (!dimension_ok) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)", numCol,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+        "LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)\n", numCol,
         simplex_lp.numCol_, numRow, simplex_lp.numRow_);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -403,8 +460,8 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
   right_size = (int)simplex_info.workRange_.size() == numTot && right_size;
   right_size = (int)simplex_info.workValue_.size() == numTot && right_size;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "simplex_info work vector size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "simplex_info work vector size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -439,7 +496,7 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
     computed_absolute_primal_norm += fabs(primal_value[iRow]);
 
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
   return_status = HighsDebugStatus::OK;
   double computed_relative_primal_norm;
   if (primal_rhs_norm) {
@@ -451,22 +508,20 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
   if (computed_relative_primal_norm > computed_primal_excessive_relative_norm ||
       computed_absolute_primal_norm > computed_primal_excessive_absolute_norm) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (computed_relative_primal_norm >
                  computed_primal_large_relative_norm ||
              computed_absolute_primal_norm >
                  computed_primal_large_absolute_norm) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "SMALL";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   }
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "ComputePrimal: %-9s absolute (%9.4g) or relative (%9.4g) norm of "
       "primal values\n",
       value_adjective.c_str(), computed_absolute_primal_norm,
@@ -512,20 +567,19 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
     computed_dual_absolute_nonbasic_dual_norm += fabs(new_dual[iVar]);
   }
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
   return_status = HighsDebugStatus::OK;
   // Comment on the norm of the basic costs being zero
   if (have_basic_costs && !basic_costs_norm) {
-    HighsLogMessage(
-        highs_model_object.options_.logfile, HighsMessageType::WARNING,
-        "ComputeDual:   basic cost norm is = %9.4g", basic_costs_norm);
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::WARNING,
+        "ComputeDual:   basic cost norm is = %9.4g\n", basic_costs_norm);
     return_status = HighsDebugStatus::WARNING;
   }
   // Comment on the norm of the nonbasic duals being zero
   if (!computed_dual_absolute_nonbasic_dual_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "ComputeDual:   nonbasic dual norm is = %9.4g",
+    highsLogUser(highs_model_object.options_.log_options,
+                    HighsLogType::WARNING,
+                    "ComputeDual:   nonbasic dual norm is = %9.4g\n",
                     computed_dual_absolute_nonbasic_dual_norm);
     return_status = HighsDebugStatus::WARNING;
   }
@@ -544,22 +598,20 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
       computed_dual_absolute_basic_dual_norm >
           computed_dual_excessive_absolute_basic_dual_norm) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (computed_dual_relative_basic_dual_norm >
                  computed_dual_large_relative_basic_dual_norm ||
              computed_dual_absolute_basic_dual_norm >
                  computed_dual_large_absolute_basic_dual_norm) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   }
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "ComputeDual:   %-9s absolute (%9.4g) or relative (%9.4g) norm of "
       "   basic dual values\n",
       value_adjective.c_str(), computed_dual_absolute_basic_dual_norm,
@@ -578,22 +630,20 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
       computed_dual_absolute_nonbasic_dual_norm >
           computed_dual_excessive_absolute_nonbasic_dual_norm) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (computed_dual_relative_nonbasic_dual_norm >
                  computed_dual_large_relative_nonbasic_dual_norm ||
              computed_dual_absolute_nonbasic_dual_norm >
                  computed_dual_large_absolute_nonbasic_dual_norm) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   }
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "ComputeDual:   %-9s absolute (%9.4g) or relative (%9.4g) norm of "
       "nonbasic dual values\n",
       value_adjective.c_str(), computed_dual_absolute_nonbasic_dual_norm,
@@ -602,8 +652,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
   if (basic_costs_norm) report_basic_costs_norm = basic_costs_norm;
   double report_row_dual_norm = -1;
   if (row_dual_norm) report_row_dual_norm = row_dual_norm;
-  HighsPrintMessage(highs_model_object.options_.output,
-                    highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
                     "ComputeDual:   B.pi=c_B has |c_B| = %9.4g; |pi| = %9.4g; "
                     "|pi^TA-c| = [basic %9.4g; nonbasic %9.4g]\n",
                     report_basic_costs_norm, report_row_dual_norm,
@@ -631,21 +680,20 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
         computed_dual_absolute_nonbasic_dual_change_norm >
             computed_dual_large_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Large";
-      report_level = ML_ALWAYS;
+      report_level = HighsLogType::ERROR;
       return_status = HighsDebugStatus::WARNING;
     } else if (computed_dual_relative_nonbasic_dual_change_norm >
                    computed_dual_small_relative_nonbasic_dual_change_norm ||
                computed_dual_absolute_nonbasic_dual_change_norm >
                    computed_dual_small_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Small";
-      report_level = ML_DETAILED;
+      report_level = HighsLogType::WARNING;
       return_status = HighsDebugStatus::WARNING;
     } else {
       change_adjective = "OK";
-      report_level = ML_VERBOSE;
+      report_level = HighsLogType::VERBOSE;
     }
-    HighsPrintMessage(highs_model_object.options_.output,
-                      highs_model_object.options_.message_level, report_level,
+    highsLogDev(highs_model_object.options_.log_options, report_level,
                       "ComputeDual:   %-9s absolute (%9.4g) or relative "
                       "(%9.4g) nonbasic dual change\n",
                       change_adjective.c_str(),
@@ -664,7 +712,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
       !force)
     return HighsDebugStatus::NOT_CHECKED;
   if (force)
-    HighsPrintMessage(highs_model_object.options_.output, 1, 1,
+    highsLogDev(highs_model_object.options_.log_options, HighsLogType::INFO,
                       "SmplxDuFeas:   Forcing debug\n");
 
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -700,8 +748,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
     }
   }
   if (num_dual_infeasibilities) {
-    HighsPrintMessage(highs_model_object.options_.output,
-                      highs_model_object.options_.message_level, ML_ALWAYS,
+    highsLogDev(highs_model_object.options_.log_options, HighsLogType::ERROR,
                       "SmplxDuFeas:   num/max/sum simplex dual infeasibilities "
                       "= %d / %g / %g - %s\n",
                       num_dual_infeasibilities, max_dual_infeasibility,
@@ -815,7 +862,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   // Now analyse the error
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   std::string error_adjective;
-  int report_level;
+   HighsLogType report_level;
   bool at_least_small_error =
       updated_objective_relative_error >
           updated_objective_small_relative_error ||
@@ -826,23 +873,21 @@ HighsDebugStatus debugUpdatedObjectiveValue(
       updated_objective_absolute_error >
           updated_objective_large_absolute_error) {
     error_adjective = "Large";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::LARGE_ERROR;
   } else if (updated_objective_relative_error >
                  updated_objective_small_relative_error ||
              updated_objective_absolute_error >
                  updated_objective_small_absolute_error) {
     error_adjective = "Small";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::SMALL_ERROR;
   } else {
     error_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "UpdateObjVal:  %-9s absolute (%9.4g) or relative (%9.4g) error in "
       "updated %s objective value"
       " - objective change - exact (%9.4g) updated (%9.4g) | %s\n",
@@ -884,28 +929,27 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   // Now analyse the error
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   std::string error_adjective;
-  int report_level;
+   HighsLogType report_level;
   if (updated_objective_relative_error >
           updated_objective_large_relative_error ||
       updated_objective_absolute_error >
           updated_objective_large_absolute_error) {
     error_adjective = "Large";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::LARGE_ERROR;
   } else if (updated_objective_relative_error >
                  updated_objective_small_relative_error ||
              updated_objective_absolute_error >
                  updated_objective_small_absolute_error) {
     error_adjective = "Small";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::SMALL_ERROR;
   } else {
     error_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  HighsPrintMessage(highs_model_object.options_.output,
-                    highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
                     "UpdateObjVal:  %-9s large absolute (%9.4g) or relative "
                     "(%9.4g) error in updated %s objective value\n",
                     error_adjective.c_str(), updated_objective_error,
@@ -931,8 +975,7 @@ HighsDebugStatus debugFixedNonbasicMove(
   }
   assert(num_fixed_variable_move_errors == 0);
   if (num_fixed_variable_move_errors) {
-    HighsPrintMessage(highs_model_object.options_.output,
-                      highs_model_object.options_.message_level, ML_ALWAYS,
+    highsLogDev(highs_model_object.options_.log_options, HighsLogType::ERROR,
                       "There are %d fixed nonbasicMove errors",
                       num_fixed_variable_move_errors);
     return HighsDebugStatus::LOGICAL_ERROR;
@@ -957,8 +1000,8 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   bool right_size = (int)simplex_basis.nonbasicMove_.size() == numTot;
   // Check consistency of nonbasicMove
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicMove size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "nonbasicMove size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1017,9 +1060,8 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
       num_fixed_variable_move_errors;
 
   if (num_errors) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d "
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+        "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d \n"
         "boxed; %d fixed",
         num_errors, num_free_variable_move_errors,
         num_lower_bounded_variable_move_errors,
@@ -1038,28 +1080,26 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
     return HighsDebugStatus::NOT_CHECKED;
   double basis_condition = computeBasisCondition(highs_model_object);
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (basis_condition > excessive_basis_condition) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (basis_condition > large_basis_condition) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::WARNING;
   } else if (basis_condition > fair_basis_condition) {
     value_adjective = "Fair";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "BasisCond:     %-9s basis condition estimate (%9.4g) - %s\n",
       value_adjective.c_str(), basis_condition, message.c_str());
   return return_status;
@@ -1098,17 +1138,17 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   // Comment on the norm of the nonbasic duals being zero
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (!cleanup_absolute_nonbasic_dual_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "DualCleanup:   dual norm is = %9.4g",
+    highsLogUser(highs_model_object.options_.log_options,
+                    HighsLogType::WARNING,
+                    "DualCleanup:   dual norm is = %9.4g\n",
                     cleanup_absolute_nonbasic_dual_norm);
     return_status = HighsDebugStatus::WARNING;
   }
   // Comment on the norm of the change being zero
   if (!cleanup_absolute_nonbasic_dual_change_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "DualCleanup:   dual norm is = %9.4g",
+    highsLogUser(highs_model_object.options_.log_options,
+                    HighsLogType::WARNING,
+                    "DualCleanup:   dual norm is = %9.4g\n",
                     cleanup_absolute_nonbasic_dual_change_norm);
     return_status = HighsDebugStatus::WARNING;
   }
@@ -1121,29 +1161,27 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
     cleanup_relative_nonbasic_dual_change_norm = -1;
   }
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
   if (cleanup_absolute_nonbasic_dual_change_norm >
           cleanup_excessive_absolute_nonbasic_dual_change_norm ||
       cleanup_relative_nonbasic_dual_change_norm >
           cleanup_excessive_relative_nonbasic_dual_change_norm) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (cleanup_absolute_nonbasic_dual_change_norm >
                  cleanup_large_absolute_nonbasic_dual_change_norm ||
              cleanup_relative_nonbasic_dual_change_norm >
                  cleanup_large_relative_nonbasic_dual_change_norm) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "DualCleanup:   %-9s absolute (%9.4g) or relative (%9.4g) dual change, "
       "with %d meaningful sign change(s)\n",
       value_adjective.c_str(), cleanup_absolute_nonbasic_dual_change_norm,
@@ -1168,31 +1206,29 @@ HighsDebugStatus debugFreeListNumEntries(
   double pct_freelist_num_entries = (100.0 * freelist_num_entries) / numTot;
 
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
 
   if (pct_freelist_num_entries > freelist_excessive_pct_num_entries) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
   } else if (pct_freelist_num_entries > freelist_large_pct_num_entries) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
   } else if (pct_freelist_num_entries > freelist_fair_pct_num_entries) {
     value_adjective = "Fair";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   } else {
     value_adjective = "OK";
     if (freelist_num_entries) {
-      report_level = ML_ALWAYS;
+      report_level = HighsLogType::ERROR;
     } else {
-      report_level = ML_VERBOSE;
+      report_level = HighsLogType::VERBOSE;
     }
     return_status = HighsDebugStatus::OK;
   }
 
-  HighsPrintMessage(
-      highs_model_object.options_.output,
-      highs_model_object.options_.message_level, report_level,
+  highsLogDev(highs_model_object.options_.log_options, report_level,
       "FreeList   :   %-9s percentage (%6.2g) of %d variables on free list\n",
       value_adjective.c_str(), pct_freelist_num_entries, numTot);
 
@@ -1216,9 +1252,8 @@ void debugDualChuzcWorkDataAndGroupReport(
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   double totalChange = initial_total_change;
   const double totalDelta = fabs(workDelta);
-  HighsPrintMessage(
-      options.output, options.message_level, ML_ALWAYS,
-      "\n%s: totalDelta = %10.4g\nworkData\n  En iCol       Dual      Value    "
+  highsLogDev(options.log_options, HighsLogType::INFO,
+  "\n%s: totalDelta = %10.4g\nworkData\n  En iCol       Dual      Value    "
       "  Ratio     Change\n",
       message.c_str(), totalDelta);
   for (int i = 0; i < report_workCount; i++) {
@@ -1226,22 +1261,22 @@ void debugDualChuzcWorkDataAndGroupReport(
     double value = report_workData[i].second;
     double dual = workMove[iCol] * workDual[iCol];
     totalChange += value * (workRange[iCol]);
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+    highsLogDev(options.log_options, HighsLogType::INFO,
                       "%4d %4d %10.4g %10.4g %10.4g %10.4g\n", i, iCol, dual,
                       value, dual / value, totalChange);
   }
   double selectTheta = workTheta;
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+  highsLogDev(options.log_options, HighsLogType::INFO,
                     "workGroup\n  Ix:   selectTheta Entries\n");
   for (int group = 0; group < (int)report_workGroup.size() - 1; group++) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+    highsLogDev(options.log_options, HighsLogType::INFO,
                       "%4d: selectTheta = %10.4g ", group, selectTheta);
     for (int en = report_workGroup[group]; en < report_workGroup[group + 1];
          en++) {
-      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+      highsLogDev(options.log_options, HighsLogType::INFO,
                         "%4d ", en);
     }
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS, "\n");
+    highsLogDev(options.log_options, HighsLogType::INFO, "\n");
     int en = report_workGroup[group + 1];
     int iCol = report_workData[en].first;
     double value = report_workData[en].second;
@@ -1266,7 +1301,7 @@ HighsDebugStatus debugDualChuzcWorkDataAndGroup(
   int workPivot = workData[breakIndex].first;
   int alt_workPivot = sorted_workData[alt_breakIndex].first;
   if (alt_workPivot != workPivot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+    highsLogDev(options.log_options, HighsLogType::INFO,
                       "Quad workPivot = %d; Heap workPivot = %d\n", workPivot,
                       alt_workPivot);
     return_status = HighsDebugStatus::WARNING;
@@ -1485,26 +1520,24 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
     }
   }
 
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+  highsLogDev(options.log_options, HighsLogType::INFO,
                     "\nHiGHS-simplex solution differences\n");
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
   return_status = HighsDebugStatus::OK;
   if (max_nonbasic_col_value_difference > 0) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Nonbasic column value difference: %9.4g\n",
         value_adjective.c_str(), max_nonbasic_col_value_difference);
   }
   if (max_nonbasic_row_value_difference > 0) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Nonbasic row    value difference: %9.4g\n",
         value_adjective.c_str(), max_nonbasic_row_value_difference);
   }
@@ -1528,19 +1561,17 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
 
   if (max_basic_col_dual_difference > 0) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Basic    column dual difference: %9.4g\n",
         value_adjective.c_str(), max_basic_col_dual_difference);
   }
   if (max_basic_row_dual_difference > 0) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Basic    row     dual difference: %9.4g\n",
         value_adjective.c_str(), max_basic_row_dual_difference);
   }
@@ -1557,21 +1588,21 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (difference <= small_difference) return return_status;
   std::string value_adjective;
-  int report_level;
+   HighsLogType report_level;
 
   if (difference > excessive_difference) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (difference > large_difference) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::WARNING;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   }
-  HighsPrintMessage(options.output, options.message_level, report_level,
+  highsLogDev(options.log_options,report_level,
                     "HighsSimplexD: %-9s %s difference: %9.4g\n",
                     value_adjective.c_str(), type.c_str(), difference);
   return return_status;
@@ -1591,8 +1622,8 @@ HighsDebugStatus debugSimplexBasisCorrect(
       debugBasisConsistent(options, simplex_lp, simplex_basis) !=
       HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Supposed to be a Simplex basis, but not consistent");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                    "Supposed to be a Simplex basis, but not consistent\n");
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1601,9 +1632,8 @@ HighsDebugStatus debugSimplexBasisCorrect(
   const bool correct_nonbasicMove =
       debugNonbasicMove(highs_model_object) != HighsDebugStatus::LOGICAL_ERROR;
   if (!correct_nonbasicMove) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "Supposed to be a Simplex basis, but nonbasicMove is incorrect");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+        "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
     assert(correct_nonbasicMove);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1628,27 +1658,26 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
        simplex_lp_status.has_invert;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since simplex_lp_status.has_basis = %d",
-                      simplex_lp_status.has_basis);
-    if (!simplex_lp_status.has_matrix)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since simplex_lp_status.has_matrix = %d",
-                      simplex_lp_status.has_matrix);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_basis =
+%d\n", simplex_lp_status.has_basis); if (!simplex_lp_status.has_matrix)
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_matrix =
+%d\n", simplex_lp_status.has_matrix);
     //    if (!simplex_lp_status.has_factor_arrays)
-    //      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    //      highsLogUser(options.log_options, HighsLogType::ERROR,
     //                  "Not OK to solve since
-    //      simplex_lp_status.has_factor_arrays = %d",
+    //      simplex_lp_status.has_factor_arrays = %d\n",
     //             simplex_lp_status.has_factor_arrays);
     if (!simplex_lp_status.has_dual_steepest_edge_weights)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since "
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                      "Not OK to solve since \n"
                       "simplex_lp_status.has_dual_steepest_edge_weights = %d",
                       simplex_lp_status.has_dual_steepest_edge_weights);
     if (!simplex_lp_status.has_invert)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since simplex_lp_status.has_invert = %d",
-                      simplex_lp_status.has_invert);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_invert =
+%d\n", simplex_lp_status.has_invert);
   }
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return return_status;
@@ -1686,21 +1715,17 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         ok = simplex_info.workLower_[var] == simplex_lp.colLower_[col];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For col %d, simplex_info.workLower_ should be %g but is %g", col,
-              simplex_lp.colLower_[col], simplex_info.workLower_[var]);
-          return ok;
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+              "For col %d, simplex_info.workLower_ should be %g but is %g\n",
+col, simplex_lp.colLower_[col], simplex_info.workLower_[var]); return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         ok = simplex_info.workUpper_[var] == simplex_lp.colUpper_[col];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For col %d, simplex_info.workUpper_ should be %g but is %g", col,
-              simplex_lp.colUpper_[col], simplex_info.workUpper_[var]);
-          return ok;
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+              "For col %d, simplex_info.workUpper_ should be %g but is %g\n",
+col, simplex_lp.colUpper_[col], simplex_info.workUpper_[var]); return ok;
         }
       }
     }
@@ -1709,21 +1734,17 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         ok = simplex_info.workLower_[var] == -simplex_lp.rowUpper_[row];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For row %d, simplex_info.workLower_ should be %g but is %g", row,
-              -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]);
-          return ok;
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+              "For row %d, simplex_info.workLower_ should be %g but is %g\n",
+row, -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]); return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         ok = simplex_info.workUpper_[var] == -simplex_lp.rowLower_[row];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For row %d, simplex_info.workUpper_ should be %g but is %g", row,
-              -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]);
-          return ok;
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+              "For row %d, simplex_info.workUpper_ should be %g but is %g\n",
+row, -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]); return ok;
         }
       }
     }
@@ -1733,9 +1754,8 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
     ok = simplex_info.workRange_[var] ==
          (simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
     if (!ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+          "For variable %d, simplex_info.workRange_ should be %g = %g - %g \n"
           "but is %g",
           var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
           simplex_info.workUpper_[var], simplex_info.workLower_[var],
@@ -1751,9 +1771,8 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       ok = simplex_info.workCost_[var] ==
            (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "For col %d, simplex_info.workLower_ should be %g but is %g", col,
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "For col %d, simplex_info.workLower_ should be %g but is %g\n", col,
             simplex_lp.colLower_[col], simplex_info.workCost_[var]);
         return ok;
       }
@@ -1762,11 +1781,9 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       int var = simplex_lp.numCol_ + row;
       ok = simplex_info.workCost_[var] == 0.;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "For row %d, simplex_info.workCost_ should be zero but is %g", row,
-            simplex_info.workCost_[var]);
-        return ok;
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "For row %d, simplex_info.workCost_ should be zero but is %g\n",
+row, simplex_info.workCost_[var]); return ok;
       }
     }
   }
@@ -1794,9 +1811,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         // Fixed variable
         ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+              "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, \n"
               "%11g] so nonbasic "
               "move should be zero but is %d",
               var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1806,8 +1822,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         }
         ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
         if (!ok) {
-          HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                          "Fixed variable %d (simplex_lp.numCol_ = %d) so "
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+                          "Fixed variable %d (simplex_lp.numCol_ = %d) so \n"
                           "simplex_info.work value should be %g but "
                           "is %g",
                           var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1819,9 +1835,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
              (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
+          highsLogUser(options.log_options, HighsLogType::ERROR,
+              "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, \n"
               "%11g] range %g so "
               "nonbasic move should be up/down but is  %d",
               var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1833,25 +1848,19 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
           ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
           if (!ok) {
-            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                            "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                            "NONBASIC_MOVE_UP so work "
-                            "value should be %g but is %g",
-                            var, simplex_lp.numCol_,
-                            simplex_info.workLower_[var],
-                            simplex_info.workValue_[var]);
+            highsLogUser(options.log_options, HighsLogType::ERROR,
+                            "Boxed variable %d (simplex_lp.numCol_ = %d) with
+\n" "NONBASIC_MOVE_UP so work " "value should be %g but is %g", var,
+simplex_lp.numCol_, simplex_info.workLower_[var], simplex_info.workValue_[var]);
             return ok;
           }
         } else {
           ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
           if (!ok) {
-            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                            "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                            "NONBASIC_MOVE_DN so work "
-                            "value should be %g but is %g",
-                            var, simplex_lp.numCol_,
-                            simplex_info.workUpper_[var],
-                            simplex_info.workValue_[var]);
+            highsLogUser(options.log_options, HighsLogType::ERROR,
+                            "Boxed variable %d (simplex_lp.numCol_ = %d) with
+\n" "NONBASIC_MOVE_DN so work " "value should be %g but is %g", var,
+simplex_lp.numCol_, simplex_info.workUpper_[var], simplex_info.workValue_[var]);
             return ok;
           }
         }
@@ -1860,9 +1869,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite lower bound and infinite upper bound variable %d "
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "Finite lower bound and infinite upper bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  "
             "%d",
@@ -1873,9 +1881,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite lower bound and infinite upper bound variable %d "
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "Finite lower bound and infinite upper bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) so work value should be %g but is %g",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1888,9 +1895,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite upper bound and infinite lower bound variable %d "
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "Finite upper bound and infinite lower bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
             "%d",
@@ -1901,9 +1907,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite upper bound and infinite lower bound variable %d "
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "Finite upper bound and infinite lower bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) so work value should be %g but is %g",
             var, simplex_lp.numCol_, simplex_info.workUpper_[var],
@@ -1914,9 +1919,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] \n"
             "so nonbasic "
             "move should be zero but is  %d",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1926,9 +1930,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == 0.0;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Free variable %d (simplex_lp.numCol_ = %d) so work value should "
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+            "Free variable %d (simplex_lp.numCol_ = %d) so work value should \n"
             "be zero but "
             "is %g",
             var, simplex_lp.numCol_, simplex_info.workValue_[var]);
@@ -1950,17 +1953,16 @@ bool debugAllNonbasicMoveVsWorkArraysOk(
   bool ok;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; ++var) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] "
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var]
+\n"
         "= %2d",
         var, simplex_basis.nonbasicFlag_[var]);
     if (!simplex_basis.nonbasicFlag_[var]) continue;
     ok = debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var);
     if (!ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Error in NonbasicMoveVsWorkArrays for nonbasic variable %d", var);
+      highsLogUser(options.log_options, HighsLogType::ERROR,
+          "Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n", var);
       assert(ok);
       return ok;
     }
@@ -1999,24 +2001,25 @@ void debugReportReinvertOnNumericalTrouble(
   } else {
     adjective = "clearly satisfies";
   }
-  HighsLogMessage(highs_model_object.options_.logfile,
-                  HighsMessageType::WARNING,
-                  "%s (%s) [Iter %d; Update %d] Col: %11.4g; Row: %11.4g; Diff "
+  highsLogUser(highs_model_object.options_.log_options,
+                  HighsLogType::WARNING,
+                  "%s (%s) [Iter %d; Update %d] Col: %11.4g; Row: %11.4g; Diff
+\n"
                   "= %11.4g: Measure %11.4g %s %11.4g",
                   method_name.c_str(), model_name.c_str(), iteration_count,
                   update_count, abs_alpha_from_col, abs_alpha_from_row,
                   abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
                   numerical_trouble_tolerance);
   if (wrong_sign) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "   Incompatible signs for Col: %11.4g and Row: %11.4g",
+    highsLogUser(highs_model_object.options_.log_options,
+                    HighsLogType::WARNING,
+                    "   Incompatible signs for Col: %11.4g and Row: %11.4g\n",
                     alpha_from_col, alpha_from_row);
   }
   if ((numerical_trouble || wrong_sign) && !reinvert) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "   Numerical trouble or wrong sign and not reinverting");
+    highsLogUser(highs_model_object.options_.log_options,
+                    HighsLogType::WARNING,
+                    "   Numerical trouble or wrong sign and not reinverting\n");
   }
 }
 */

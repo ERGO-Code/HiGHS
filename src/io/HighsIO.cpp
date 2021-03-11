@@ -15,89 +15,147 @@
 
 #include <cstdarg>
 #include <cstdio>
-#include <ctime>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
 void (*printmsgcb)(int, const char*, void*) = NULL;
-void (*logmsgcb)(HighsMessageType, const char*, void*) = NULL;
+void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsPrintMessage(FILE* pass_output, const int pass_message_level,
-                       const int level, const char* format, ...) {
-  if (pass_output == NULL) {
+void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
+                  const char* format, ...) {
+  if (!*log_options_.output_flag ||
+      (log_options_.log_file_stream == NULL && !*log_options_.log_to_console))
     return;
-  }
-  if (pass_message_level & level) {
-    va_list argptr;
-    va_start(argptr, format);
-    if (printmsgcb == NULL)
-      vfprintf(pass_output, format, argptr);
-    else {
-      int len;
-      len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-      if (len >= (int)sizeof(msgbuffer)) {
-        // Output was truncated: for now just ensure string is null-terminated
-        msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-      }
-      printmsgcb(level, msgbuffer, msgcb_data);
-    }
-    va_end(argptr);
-  }
-}
-
-void HighsLogMessage(FILE* pass_logfile, HighsMessageType type,
-                     const char* format, ...) {
-  if (pass_logfile == NULL) {
-    return;
-  }
-
-  time_t rawtime;
-  struct tm* timeinfo;
-
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
+  // highsLogUser should not be passed HighsLogType::DETAILED or
+  // HighsLogType::VERBOSE
+  assert(type != HighsLogType::DETAILED);
+  assert(type != HighsLogType::VERBOSE);
+  const bool prefix =
+      type == HighsLogType::WARNING || type == HighsLogType::ERROR;
   va_list argptr;
   va_start(argptr, format);
-
   if (logmsgcb == NULL) {
-    fprintf(pass_logfile, "%-7s: ", HighsMessageTypeTag[(int)type]);
-    vfprintf(pass_logfile, format, argptr);
-    fprintf(pass_logfile, "\n");
+    if (log_options_.log_file_stream != NULL) {
+      // Write to log file stream
+      if (prefix)
+        fprintf(log_options_.log_file_stream, "%-9s",
+                HighsLogTypeTag[(int)type]);
+      vfprintf(log_options_.log_file_stream, format, argptr);
+      va_start(argptr, format);
+    }
+    if (*log_options_.log_to_console &&
+        log_options_.log_file_stream != stdout) {
+      // Write to stdout unless log file stream is stdout
+      if (prefix) fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
+      vfprintf(stdout, format, argptr);
+    }
   } else {
     int len;
-    len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
-                   timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
-                   HighsMessageTypeTag[(int)type]);
+    len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
+                   HighsLogTypeTag[(int)type]);
     if (len < (int)sizeof(msgbuffer))
       len +=
           vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
-    if (len < (int)sizeof(msgbuffer) - 1) {
-      msgbuffer[len] = '\n';
-      ++len;
-      msgbuffer[len] = '\0';
-    } else
+    if (len >= (int)sizeof(msgbuffer)) {
+      // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    }
     logmsgcb(type, msgbuffer, msgcb_data);
   }
-
   va_end(argptr);
 }
 
-void HighsSetMessageCallback(
-    void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
-    void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
-    void* msgcb_data_) {
+void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
+                 const char* format, ...) {
+  if (!*log_options_.output_flag ||
+      (log_options_.log_file_stream == NULL && !*log_options_.log_to_console) ||
+      !*log_options_.log_dev_level)
+    return;
+  // Always report HighsLogType INFO, WARNING or ERROR
+  //
+  // Report HighsLogType DETAILED if *log_options_.log_dev_level >=
+  // LOG_DEV_LEVEL_DETAILED
+  //
+  // Report HighsLogType VERBOSE if *log_options_.log_dev_level >=
+  // LOG_DEV_LEVEL_VERBOSE
+  if (type == HighsLogType::DETAILED &&
+      *log_options_.log_dev_level < LOG_DEV_LEVEL_DETAILED)
+    return;
+  if (type == HighsLogType::VERBOSE &&
+      *log_options_.log_dev_level < LOG_DEV_LEVEL_VERBOSE)
+    return;
+  va_list argptr;
+  va_start(argptr, format);
+  if (logmsgcb == NULL) {
+    if (log_options_.log_file_stream != NULL) {
+      // Write to log file stream
+      vfprintf(log_options_.log_file_stream, format, argptr);
+      va_start(argptr, format);
+    }
+    if (*log_options_.log_to_console &&
+        log_options_.log_file_stream != stdout) {
+      // Write to stdout unless log file stream is stdout
+      vfprintf(stdout, format, argptr);
+    }
+  } else {
+    int len;
+    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+    if (len >= (int)sizeof(msgbuffer)) {
+      // Output was truncated: for now just ensure string is null-terminated
+      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    }
+    logmsgcb(type, msgbuffer, msgcb_data);
+  }
+  va_end(argptr);
+}
+
+void highsSetLogCallback(void (*printmsgcb_)(int level, const char* msg,
+                                             void* msgcb_data),
+                         void (*logmsgcb_)(HighsLogType type, const char* msg,
+                                           void* msgcb_data),
+                         void* msgcb_data_) {
   printmsgcb = printmsgcb_;
   logmsgcb = logmsgcb_;
   msgcb_data = msgcb_data_;
 }
 
-void HighsSetIO(HighsOptions& options) {
+void highsSetLogCallback(HighsOptions& options) {
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
+}
+
+void highsReportLogOptions(const HighsLogOptions& log_options_) {
+  printf("\nHighs log options\n");
+  if (log_options_.log_file_stream == NULL) {
+    printf("   log_file_stream = NULL\n");
+  } else {
+    printf("   log_file_stream = Not NULL\n");
+  }
+  printf("   output_flag = %s\n",
+         highsBoolToString(*log_options_.output_flag).c_str());
+  printf("   log_to_console = %s\n",
+         highsBoolToString(*log_options_.log_to_console).c_str());
+  printf("   log_dev_level = %d\n\n", *log_options_.log_dev_level);
+}
+
+std::string highsFormatToString(const char* format, ...) {
+  va_list argptr;
+  va_start(argptr, format);
+  int len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+  if (len >= (int)sizeof(msgbuffer)) {
+    // Output was truncated: for now just ensure string is null-terminated
+    msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+  }
+  va_end(argptr);
+  std::string local_string(msgbuffer);
+  return local_string;
+}
+
+const std::string highsBoolToString(const bool b) {
+  return b ? "true" : "false";
 }

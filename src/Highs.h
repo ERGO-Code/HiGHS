@@ -16,6 +16,7 @@
 
 #include <sstream>
 
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -28,7 +29,7 @@ class Highs {
  public:
   // see if an empty lp should have Astart[0] = 0
   Highs();
-  Highs(HighsOptions& options) { options_ = options; }
+  Highs(HighsOptions& options);
 
   virtual ~Highs() {}
 
@@ -113,9 +114,11 @@ class Highs {
       const char* value           //!< The option value
   );
 
+  // Deprecated
   HighsStatus setHighsLogfile(FILE* logfile = NULL  //!< The log file
   );
 
+  // Deprecated
   HighsStatus setHighsOutput(FILE* output = NULL  //!< The log file
   );
 
@@ -209,12 +212,12 @@ class Highs {
   const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
 
   /**
-   * @brief Returns the objective function value (if known)
+   * @brief Returns the objective function value (if known) - Deprecated
    */
   double getObjectiveValue() { return info_.objective_function_value; }
 
   /**
-   * @brief Returns the simplex iteration count (if known)
+   * @brief Returns the simplex iteration count (if known) - Deprecated
    */
   int getSimplexIterationCount() { return info_.simplex_iteration_count; }
 
@@ -485,6 +488,16 @@ class Highs {
   );
 
   /**
+   * @brief Change the cost of multiple columns given by an interval
+   */
+  bool changeColsCost(
+      const int from_col,  //!< The index of the first column whose cost changes
+      const int to_col,    //!< One more than the index of the last column whose
+                           //!< cost changes
+      const double* cost   //!< Array of size num_set_entries with new costs
+  );
+
+  /**
    * @brief Change the cost of multiple columns given by a set of indices
    */
   bool changeColsCost(
@@ -555,6 +568,12 @@ class Highs {
       const double lower,  //!< The new lower bound
       const double upper   //!< The new upper bound
   );
+
+  /**
+   * @brief Change the bounds of multiple rows given by an interval
+   */
+  bool changeRowsBounds(const int from_row, const int to_row,
+                        const double* lower, const double* upper);
 
   /**
    * @brief Change the bounds of multiple rows given by a set of indices
@@ -779,6 +798,8 @@ class Highs {
   void setPresolveOptions(const PresolveComponentOptions& options) {
     presolve_.options_ = options;
   }
+  void setMatrixOrientation(const MatrixOrientation& desired_orientation =
+                                MatrixOrientation::COLWISE);
 
  private:
   HighsSolution solution_;
@@ -807,6 +828,7 @@ class Highs {
   int omp_max_threads = 0;
 
   HighsStatus callSolveLp(const int model_index, const string message);
+  HighsStatus callSolveMip();
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve();

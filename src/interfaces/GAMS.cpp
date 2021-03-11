@@ -59,9 +59,9 @@ static void gevprint(int level, const char* msg, void* msgcb_data) {
   gevLogPChar(gev, msg);
 }
 
-static void gevlog(HighsMessageType type, const char* msg, void* msgcb_data) {
+static void gevlog(HighsLogType type, const char* msg, void* msgcb_data) {
   gevHandle_t gev = (gevHandle_t)msgcb_data;
-  if (type == HighsMessageType::INFO)
+  if (type == HighsLogType::INFO)
     gevLogPChar(gev, msg);
   else
     gevLogStatPChar(gev, msg);
@@ -123,7 +123,7 @@ static int setupOptions(gamshighs_t* gh) {
   gh->options->printmsgcb = gevprint;
   gh->options->logmsgcb = gevlog;
   gh->options->msgcb_data = (void*)gh->gev;
-  HighsSetIO(*gh->options);
+  highsSetLogCallback(*gh->options);
 
   return 0;
 }

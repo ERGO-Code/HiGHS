@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 #include "presolve/HAggregator.h"
@@ -119,8 +120,7 @@ class Presolve : public HPreData {
   }
 
   int iPrint = 0;
-  int message_level;
-  FILE* output;
+  HighsLogOptions log_options;
   double objShift;
 
  private:

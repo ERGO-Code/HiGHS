@@ -57,50 +57,49 @@ void highsSparseTranspose(int numRow, int numCol,
   }
 }
 
-bool assessIndexCollection(const HighsOptions& options,
+bool assessIndexCollection(const HighsLogOptions& log_options,
                            const HighsIndexCollection& index_collection) {
   // Check parameter for each technique of defining an index collection
   if (index_collection.is_interval_) {
     // Changing by interval: check the parameters and that check set and mask
     // are false
     if (index_collection.is_set_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both interval and set");
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index collection is both interval and set\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both interval and mask");
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index collection is both interval and mask\n");
       return false;
     }
     if (index_collection.from_ < 0) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval lower limit is %d < 0",
-                      index_collection.from_);
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index interval lower limit is %d < 0\n",
+                   index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval upper limit is %d > %d",
-                      index_collection.to_, index_collection.dimension_ - 1);
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index interval upper limit is %d > %d\n",
+                   index_collection.to_, index_collection.dimension_ - 1);
       return false;
     }
   } else if (index_collection.is_set_) {
     // Changing by set: check the parameters and check that interval and mask
     // are false
     if (index_collection.is_interval_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both set and interval");
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index collection is both set and interval\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both set and mask");
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index collection is both set and mask\n");
       return false;
     }
     if (index_collection.set_ == NULL) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index set is NULL");
+      highsLogUser(log_options, HighsLogType::ERROR, "Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
@@ -109,16 +108,16 @@ bool assessIndexCollection(const HighsOptions& options,
     int prev_set_entry = -1;
     for (int k = 0; k < index_collection.set_num_entries_; k++) {
       if (set[k] < 0 || set[k] > set_entry_upper) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Index set entry set[%d] = %d is out of bounds [0, %d]",
-                        k, set[k], set_entry_upper);
+        highsLogUser(log_options, HighsLogType::ERROR,
+                     "Index set entry set[%d] = %d is out of bounds [0, %d]\n",
+                     k, set[k], set_entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Index set entry set[%d] = %d is not greater than "
-                        "previous entry %d",
-                        k, set[k], prev_set_entry);
+        highsLogUser(log_options, HighsLogType::ERROR,
+                     "Index set entry set[%d] = %d is not greater than "
+                     "previous entry %d\n",
+                     k, set[k], prev_set_entry);
         return false;
       }
       prev_set_entry = set[k];
@@ -127,30 +126,29 @@ bool assessIndexCollection(const HighsOptions& options,
     // Changing by mask: check the parameters and check that set and interval
     // are false
     if (index_collection.mask_ == NULL) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index mask is NULL");
+      highsLogUser(log_options, HighsLogType::ERROR, "Index mask is NULL\n");
       return false;
     }
     if (index_collection.is_interval_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both mask and interval");
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index collection is both mask and interval\n");
       return false;
     }
     if (index_collection.is_set_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both mask and set");
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Index collection is both mask and set\n");
       return false;
     }
   } else {
     // No method defined
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Undefined index collection");
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "Undefined index collection\n");
     return false;
   }
   return true;
 }
 
-bool limitsForIndexCollection(const HighsOptions& options,
+bool limitsForIndexCollection(const HighsLogOptions& log_options,
                               const HighsIndexCollection& index_collection,
                               int& from_k, int& to_k) {
   if (index_collection.is_interval_) {
@@ -163,8 +161,8 @@ bool limitsForIndexCollection(const HighsOptions& options,
     from_k = 0;
     to_k = index_collection.dimension_ - 1;
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Undefined index collection");
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "Undefined index collection\n");
     return false;
   }
   return true;
@@ -229,24 +227,24 @@ int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection) {
   }
 }
 
-bool intUserDataNotNull(FILE* logfile, const int* user_data,
-                        const std::string name) {
+bool intUserDataNotNull(const HighsLogOptions& log_options,
+                        const int* user_data, const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "User-supplied %s are NULL", name.c_str());
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
   assert(!null_data);
   return null_data;
 }
 
-bool doubleUserDataNotNull(FILE* logfile, const double* user_data,
-                           const std::string name) {
+bool doubleUserDataNotNull(const HighsLogOptions& log_options,
+                           const double* user_data, const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "User-supplied %s are NULL", name.c_str());
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
   assert(!null_data);
@@ -269,7 +267,8 @@ double highsRelativeDifference(const double v0, const double v1) {
   return fabs(v0 - v1) / std::max(v0, std::max(v1, 1.0));
 }
 
-void analyseVectorValues(const char* message, int vecDim,
+void analyseVectorValues(const HighsLogOptions& log_options,
+                         const char* message, int vecDim,
                          const std::vector<double>& vec, bool analyseValueList,
                          std::string model_name) {
   if (vecDim == 0) return;
@@ -361,42 +360,62 @@ void analyseVectorValues(const char* message, int vecDim,
       }
     }
   }
-  printf("%s of dimension %d with %d nonzeros (%3d%%): Analysis\n", message,
-         vecDim, nNz, 100 * nNz / vecDim);
-  if (nNegInfV > 0) printf("%12d values are -Inf\n", nNegInfV);
-  if (nPosInfV > 0) printf("%12d values are +Inf\n", nPosInfV);
+  highsLogDev(log_options, HighsLogType::INFO,
+              "%s of dimension %d with %d nonzeros (%3d%%): Analysis\n",
+              message, vecDim, nNz, 100 * nNz / vecDim);
+  if (nNegInfV > 0)
+    highsLogDev(log_options, HighsLogType::INFO, "%12d values are -Inf\n",
+                nNegInfV);
+  if (nPosInfV > 0)
+    highsLogDev(log_options, HighsLogType::INFO, "%12d values are +Inf\n",
+                nPosInfV);
   int k = nVK;
   int vK = posVK[k];
-  if (vK > 0) printf("%12d values satisfy 10^(%3d) <= v < Inf\n", vK, k);
+  if (vK > 0)
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d values satisfy 10^(%3d) <= v < Inf\n", vK, k);
   for (int k = nVK - 1; k >= 0; k--) {
     int vK = posVK[k];
     if (vK > 0)
-      printf("%12d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, k, k + 1);
+      highsLogDev(log_options, HighsLogType::INFO,
+                  "%12d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, k,
+                  k + 1);
   }
   for (int k = 1; k <= nVK; k++) {
     int vK = negVK[k];
     if (vK > 0)
-      printf("%12d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, -k, 1 - k);
+      highsLogDev(log_options, HighsLogType::INFO,
+                  "%12d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, -k,
+                  1 - k);
   }
   vK = vecDim - nNz;
-  if (vK > 0) printf("%12d values are zero\n", vK);
+  if (vK > 0)
+    highsLogDev(log_options, HighsLogType::INFO, "%12d values are zero\n", vK);
   if (analyseValueList) {
-    printf("           Value distribution:");
-    if (excessVLsV) printf(" More than %d different values", VLsZ);
-    printf("\n            Value        Count\n");
+    highsLogDev(log_options, HighsLogType::INFO,
+                "           Value distribution:");
+    if (excessVLsV)
+      highsLogDev(log_options, HighsLogType::INFO,
+                  " More than %d different values", VLsZ);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "\n            Value        Count\n");
     for (int ix = 0; ix < VLsZ; ix++) {
       int pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
-      printf("     %12g %12d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
+      highsLogDev(log_options, HighsLogType::INFO, "     %12g %12d (%3d%%)\n",
+                  VLsV[ix], VLsK[ix], pct);
     }
-    printf("grep_value_distrib,%s,%d", model_name.c_str(), VLsZ);
-    printf(",");
-    if (excessVLsV) printf("!");
-    for (int ix = 0; ix < VLsZ; ix++) printf(",%g", VLsV[ix]);
-    printf("\n");
+    highsLogDev(log_options, HighsLogType::INFO, "grep_value_distrib,%s,%d",
+                model_name.c_str(), VLsZ);
+    highsLogDev(log_options, HighsLogType::INFO, ",");
+    if (excessVLsV) highsLogDev(log_options, HighsLogType::INFO, "!");
+    for (int ix = 0; ix < VLsZ; ix++)
+      highsLogDev(log_options, HighsLogType::INFO, ",%g", VLsV[ix]);
+    highsLogDev(log_options, HighsLogType::INFO, "\n");
   }
 }
 
-void analyseMatrixSparsity(const char* message, int numCol, int numRow,
+void analyseMatrixSparsity(const HighsLogOptions& log_options,
+                           const char* message, int numCol, int numRow,
                            const std::vector<int>& Astart,
                            const std::vector<int>& Aindex) {
   if (numCol == 0) return;
@@ -450,7 +469,7 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
     rowCatK[fdCat]++;
   }
 
-  printf("\n%s\n\n", message);
+  highsLogDev(log_options, HighsLogType::INFO, "\n%s\n\n", message);
   int lastRpCat;
   for (int cat = 0; cat < maxCat + 1; cat++) {
     if (colCatK[cat]) lastRpCat = cat;
@@ -467,8 +486,9 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
     v = v / numCol + 0.5;
     pct = v;
     sumPct += pct;
-    printf("%12d (%3d%%) columns of count in [%3d, %3d]\n", colCatK[cat], pct,
-           CatV[cat], CatV[cat + 1] - 1);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d (%3d%%) columns of count in [%3d, %3d]\n", colCatK[cat],
+                pct, CatV[cat], CatV[cat + 1] - 1);
   }
 
   cat = lastRpCat;
@@ -478,13 +498,16 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
   pct = v;
   sumPct += pct;
   if (cat == maxCat) {
-    printf("%12d (%3d%%) columns of count in [%3d, inf]\n", colCatK[cat], pct,
-           CatV[cat]);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d (%3d%%) columns of count in [%3d, inf]\n", colCatK[cat],
+                pct, CatV[cat]);
   } else {
-    printf("%12d (%3d%%) columns of count in [%3d, %3d]\n", colCatK[cat], pct,
-           CatV[cat], CatV[cat + 1] - 1);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d (%3d%%) columns of count in [%3d, %3d]\n", colCatK[cat],
+                pct, CatV[cat], CatV[cat + 1] - 1);
   }
-  printf("Max count is %d / %d\n\n", maxColCount, numRow);
+  highsLogDev(log_options, HighsLogType::INFO, "Max count is %d / %d\n\n",
+              maxColCount, numRow);
 
   lastRpCat = -1;
   for (int cat = 0; cat < maxCat + 1; cat++) {
@@ -502,8 +525,9 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
     v = v / numRow + 0.5;
     pct = v;
     sumPct += pct;
-    printf("%12d (%3d%%)    rows of count in [%3d, %3d]\n", rowCatK[cat], pct,
-           CatV[cat], CatV[cat + 1] - 1);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d (%3d%%)    rows of count in [%3d, %3d]\n", rowCatK[cat],
+                pct, CatV[cat], CatV[cat + 1] - 1);
   }
 
   cat = lastRpCat;
@@ -513,13 +537,16 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
   pct = v;
   sumPct += pct;
   if (cat == maxCat) {
-    printf("%12d (%3d%%)    rows of count in [%3d, inf]\n", rowCatK[cat], pct,
-           CatV[cat]);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d (%3d%%)    rows of count in [%3d, inf]\n", rowCatK[cat],
+                pct, CatV[cat]);
   } else {
-    printf("%12d (%3d%%)    rows of count in [%3d, %3d]\n", rowCatK[cat], pct,
-           CatV[cat], CatV[cat + 1] - 1);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d (%3d%%)    rows of count in [%3d, %3d]\n", rowCatK[cat],
+                pct, CatV[cat], CatV[cat + 1] - 1);
   }
-  printf("Max count is %d / %d\n", maxRowCount, numCol);
+  highsLogDev(log_options, HighsLogType::INFO, "Max count is %d / %d\n",
+              maxRowCount, numCol);
 }
 
 bool initialiseValueDistribution(const std::string distribution_name,
@@ -607,13 +634,15 @@ int integerPercentage(const int of, const int in) {
   return (int)double_percentage;
 }
 
-bool printValueDistribution(const HighsValueDistribution& value_distribution,
-                            const int mu) {
+bool logValueDistribution(const HighsLogOptions& log_options,
+                          const HighsValueDistribution& value_distribution,
+                          const int mu) {
   if (value_distribution.sum_count_ <= 0) return false;
   const int num_count = value_distribution.num_count_;
   if (num_count < 0) return false;
   if (value_distribution.distribution_name_ != "")
-    printf("\n%s\n", value_distribution.distribution_name_.c_str());
+    highsLogDev(log_options, HighsLogType::INFO, "\n%s\n",
+                value_distribution.distribution_name_.c_str());
   std::string value_name = value_distribution.value_name_;
   bool not_reported_ones = true;
   int sum_count = value_distribution.num_zero_ + value_distribution.num_one_;
@@ -622,20 +651,23 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
   for (int i = 0; i < num_count + 1; i++)
     sum_count += value_distribution.count_[i];
   if (!sum_count) return false;
-  printf("Min value = %g\n", min_value);
-  printf("     Minimum %svalue is %10.4g", value_name.c_str(), min_value);
+  highsLogDev(log_options, HighsLogType::INFO, "Min value = %g\n", min_value);
+  highsLogDev(log_options, HighsLogType::INFO, "     Minimum %svalue is %10.4g",
+              value_name.c_str(), min_value);
   if (mu > 0) {
-    printf("  corresponding to  %10d / %10d\n", (int)(min_value * mu), mu);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "  corresponding to  %10d / %10d\n", (int)(min_value * mu), mu);
   } else {
-    printf("\n");
+    highsLogDev(log_options, HighsLogType::INFO, "\n");
   }
-  printf("     Maximum %svalue is %10.4g", value_name.c_str(),
-         value_distribution.max_value_);
+  highsLogDev(log_options, HighsLogType::INFO, "     Maximum %svalue is %10.4g",
+              value_name.c_str(), value_distribution.max_value_);
   if (mu > 0) {
-    printf("  corresponding to  %10d / %10d\n",
-           (int)(value_distribution.max_value_ * mu), mu);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "  corresponding to  %10d / %10d\n",
+                (int)(value_distribution.max_value_ * mu), mu);
   } else {
-    printf("\n");
+    highsLogDev(log_options, HighsLogType::INFO, "\n");
   }
   int sum_report_count = 0;
   double percentage;
@@ -645,8 +677,9 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
     percentage = doublePercentage(count, sum_count);
     sum_percentage += percentage;
     int_percentage = percentage;
-    printf("%12d %svalues (%3d%%) are %10.4g\n", count, value_name.c_str(),
-           int_percentage, 0.0);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d %svalues (%3d%%) are %10.4g\n", count, value_name.c_str(),
+                int_percentage, 0.0);
     sum_report_count += count;
   }
   count = value_distribution.count_[0];
@@ -654,15 +687,17 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
     percentage = doublePercentage(count, sum_count);
     sum_percentage += percentage;
     int_percentage = percentage;
-    printf("%12d %svalues (%3d%%) in (%10.4g, %10.4g)", count,
-           value_name.c_str(), int_percentage, 0.0,
-           value_distribution.limit_[0]);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d %svalues (%3d%%) in (%10.4g, %10.4g)", count,
+                value_name.c_str(), int_percentage, 0.0,
+                value_distribution.limit_[0]);
     sum_report_count += count;
     if (mu > 0) {
-      printf(" corresponding to (%10d, %10d)\n", 0,
-             (int)(value_distribution.limit_[0] * mu));
+      highsLogDev(log_options, HighsLogType::INFO,
+                  " corresponding to (%10d, %10d)\n", 0,
+                  (int)(value_distribution.limit_[0] * mu));
     } else {
-      printf("\n");
+      highsLogDev(log_options, HighsLogType::INFO, "\n");
     }
   }
   for (int i = 1; i < num_count; i++) {
@@ -672,13 +707,15 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
         percentage = doublePercentage(count, sum_count);
         sum_percentage += percentage;
         int_percentage = percentage;
-        printf("%12d %svalues (%3d%%) are             %10.4g", count,
-               value_name.c_str(), int_percentage, 1.0);
+        highsLogDev(log_options, HighsLogType::INFO,
+                    "%12d %svalues (%3d%%) are             %10.4g", count,
+                    value_name.c_str(), int_percentage, 1.0);
         sum_report_count += count;
         if (mu > 0) {
-          printf(" corresponding to %10d\n", mu);
+          highsLogDev(log_options, HighsLogType::INFO,
+                      " corresponding to %10d\n", mu);
         } else {
-          printf("\n");
+          highsLogDev(log_options, HighsLogType::INFO, "\n");
         }
       }
       not_reported_ones = false;
@@ -688,16 +725,19 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
       percentage = doublePercentage(count, sum_count);
       sum_percentage += percentage;
       int_percentage = percentage;
-      printf("%12d %svalues (%3d%%) in [%10.4g, %10.4g)", count,
-             value_name.c_str(), int_percentage,
-             value_distribution.limit_[i - 1], value_distribution.limit_[i]);
+      highsLogDev(log_options, HighsLogType::INFO,
+                  "%12d %svalues (%3d%%) in [%10.4g, %10.4g)", count,
+                  value_name.c_str(), int_percentage,
+                  value_distribution.limit_[i - 1],
+                  value_distribution.limit_[i]);
       sum_report_count += count;
       if (mu > 0) {
-        printf(" corresponding to [%10d, %10d)\n",
-               (int)(value_distribution.limit_[i - 1] * mu),
-               (int)(value_distribution.limit_[i] * mu));
+        highsLogDev(log_options, HighsLogType::INFO,
+                    " corresponding to [%10d, %10d)\n",
+                    (int)(value_distribution.limit_[i - 1] * mu),
+                    (int)(value_distribution.limit_[i] * mu));
       } else {
-        printf("\n");
+        highsLogDev(log_options, HighsLogType::INFO, "\n");
       }
     }
   }
@@ -707,13 +747,15 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
       percentage = doublePercentage(count, sum_count);
       sum_percentage += percentage;
       int_percentage = percentage;
-      printf("%12d %svalues (%3d%%) are             %10.4g", count,
-             value_name.c_str(), int_percentage, 1.0);
+      highsLogDev(log_options, HighsLogType::INFO,
+                  "%12d %svalues (%3d%%) are             %10.4g", count,
+                  value_name.c_str(), int_percentage, 1.0);
       sum_report_count += count;
       if (mu > 0) {
-        printf("  corresponding to  %10d\n", mu);
+        highsLogDev(log_options, HighsLogType::INFO,
+                    "  corresponding to  %10d\n", mu);
       } else {
-        printf("\n");
+        highsLogDev(log_options, HighsLogType::INFO, "\n");
       }
     }
     not_reported_ones = false;
@@ -723,15 +765,17 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
     percentage = doublePercentage(count, sum_count);
     sum_percentage += percentage;
     int_percentage = percentage;
-    printf("%12d %svalues (%3d%%) in [%10.4g,        inf)", count,
-           value_name.c_str(), int_percentage,
-           value_distribution.limit_[num_count - 1]);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "%12d %svalues (%3d%%) in [%10.4g,        inf)", count,
+                value_name.c_str(), int_percentage,
+                value_distribution.limit_[num_count - 1]);
     sum_report_count += count;
     if (mu > 0) {
-      printf(" corresponding to [%10d,        inf)\n",
-             (int)(value_distribution.limit_[num_count - 1] * mu));
+      highsLogDev(log_options, HighsLogType::INFO,
+                  " corresponding to [%10d,        inf)\n",
+                  (int)(value_distribution.limit_[num_count - 1] * mu));
     } else {
-      printf("\n");
+      highsLogDev(log_options, HighsLogType::INFO, "\n");
     }
   }
   if (not_reported_ones) {
@@ -740,20 +784,24 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
       percentage = doublePercentage(count, sum_count);
       sum_percentage += percentage;
       int_percentage = percentage;
-      printf("%12d %svalues (%3d%%) are             %10.4g", count,
-             value_name.c_str(), int_percentage, 1.0);
+      highsLogDev(log_options, HighsLogType::INFO,
+                  "%12d %svalues (%3d%%) are             %10.4g", count,
+                  value_name.c_str(), int_percentage, 1.0);
       sum_report_count += count;
       if (mu > 0) {
-        printf("  corresponding to  %10d\n", mu);
+        highsLogDev(log_options, HighsLogType::INFO,
+                    "  corresponding to  %10d\n", mu);
       } else {
-        printf("\n");
+        highsLogDev(log_options, HighsLogType::INFO, "\n");
       }
     }
   }
-  printf("%12d %svalues\n", sum_count, value_name.c_str());
+  highsLogDev(log_options, HighsLogType::INFO, "%12d %svalues\n", sum_count,
+              value_name.c_str());
   if (sum_report_count != sum_count)
-    printf("ERROR: %d = sum_report_count != sum_count = %d\n", sum_report_count,
-           sum_count);
+    highsLogDev(log_options, HighsLogType::INFO,
+                "ERROR: %d = sum_report_count != sum_count = %d\n",
+                sum_report_count, sum_count);
   return true;
 }
 

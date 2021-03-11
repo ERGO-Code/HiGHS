@@ -81,10 +81,10 @@ const double awful_regression_error = 2.0;
 const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
-bool assessIndexCollection(const HighsOptions& options,
+bool assessIndexCollection(const HighsLogOptions& log_options,
                            const HighsIndexCollection& index_collection);
 
-bool limitsForIndexCollection(const HighsOptions& options,
+bool limitsForIndexCollection(const HighsLogOptions& log_options,
                               const HighsIndexCollection& index_collection,
                               int& from_k, int& to_k);
 
@@ -94,10 +94,10 @@ void updateIndexCollectionOutInIndex(
 
 int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
 
-bool intUserDataNotNull(FILE* logfile, const int* user_data,
-                        const std::string name);
-bool doubleUserDataNotNull(FILE* logfile, const double* user_data,
-                           const std::string name);
+bool intUserDataNotNull(const HighsLogOptions& log_options,
+                        const int* user_data, const std::string name);
+bool doubleUserDataNotNull(const HighsLogOptions& log_options,
+                           const double* user_data, const std::string name);
 
 double getNorm2(const std::vector<double> values);
 
@@ -117,6 +117,7 @@ double highsRelativeDifference(const double v0, const double v1);
  * different values
  */
 void analyseVectorValues(
+    const HighsLogOptions& log_options,
     const char* message,             //!< Message to be printed
     int vecDim,                      //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
@@ -128,6 +129,7 @@ void analyseVectorValues(
 );
 
 void analyseMatrixSparsity(
+    const HighsLogOptions& log_options,
     const char* message,             //!< Message to be printed
     int numCol,                      //!< Number of columns
     int numRow,                      //!< Number of rows
@@ -148,8 +150,9 @@ bool updateValueDistribution(const double value,
 int integerPercentage(const int of, const int in);
 double doublePercentage(const int of, const int in);
 
-bool printValueDistribution(const HighsValueDistribution& value_distribution,
-                            const int mu = 0);
+bool logValueDistribution(const HighsLogOptions& log_options,
+                          const HighsValueDistribution& value_distribution,
+                          const int mu = 0);
 bool initialiseScatterData(const int max_num_point,
                            HighsScatterData& scatter_data);
 bool updateScatterData(const double value0, const double value1,

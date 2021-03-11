@@ -27,8 +27,9 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
-                          int mxNumRow, int mxNumCol, int& numRow, int& numCol,
+FilereaderRetcode readMPS(const HighsLogOptions& log_options,
+                          const std::string filename, int mxNumRow,
+                          int mxNumCol, int& numRow, int& numCol,
                           ObjSense& objSense, double& objOffset,
                           vector<int>& Astart, vector<int>& Aindex,
                           vector<double>& Avalue, vector<double>& colCost,
@@ -191,10 +192,10 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   Astart.push_back(Aindex.size());
 
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-                    "COLUMNS section entries contain %8d with row not in ROWS  "
-                    "  section: ignored",
-                    num_alien_entries);
+    highsLogUser(log_options, HighsLogType::WARNING,
+                 "COLUMNS section entries contain %8d with row not in ROWS  "
+                 "  section: ignored",
+                 num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read COLUMNS OK\n");
 #endif
@@ -221,10 +222,10 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
           name = field_5;
         }
         num_alien_entries++;
-        HighsLogMessage(logfile, HighsMessageType::INFO,
-                        "RHS     section contains row %-8s not in ROWS    "
-                        "section, line: %s",
-                        name.c_str(), line);
+        highsLogUser(log_options, HighsLogType::INFO,
+                     "RHS     section contains row %-8s not in ROWS    "
+                     "section, line: %s",
+                     name.c_str(), line);
       }
     } else {
       // Treat negation of a RHS entry for the N row as an objective
@@ -241,10 +242,10 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
     save_flag1 = flag[1];
   }
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-                    "RHS     section entries contain %8d with row not in ROWS  "
-                    "  section: ignored",
-                    num_alien_entries);
+    highsLogUser(log_options, HighsLogType::WARNING,
+                 "RHS     section entries contain %8d with row not in ROWS  "
+                 "  section: ignored",
+                 num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RHS     OK\n");
 #endif
@@ -314,10 +315,10 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
     }
   }
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-                    "RANGES  section entries contain %8d with row not in ROWS  "
-                    "  section: ignored",
-                    num_alien_entries);
+    highsLogUser(log_options, HighsLogType::WARNING,
+                 "RANGES  section entries contain %8d with row not in ROWS  "
+                 "  section: ignored",
+                 num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RANGES  OK\n");
 #endif
@@ -380,10 +381,10 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
     }
   }
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-                    "BOUNDS  section entries contain %8d with col not in "
-                    "COLUMNS section: ignored",
-                    num_alien_entries);
+    highsLogUser(log_options, HighsLogType::WARNING,
+                 "BOUNDS  section entries contain %8d with col not in "
+                 "COLUMNS section: ignored",
+                 num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
@@ -482,16 +483,18 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   // Normalise the column names
   int max_col_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_col_name_length = 8;
-  HighsStatus col_name_status = normaliseNames(
-      options, "Column", lp.numCol_, local_col_names, max_col_name_length);
+  HighsStatus col_name_status =
+      normaliseNames(options.log_options, "Column", lp.numCol_, local_col_names,
+                     max_col_name_length);
   if (col_name_status == HighsStatus::Error) return col_name_status;
   warning_found = col_name_status == HighsStatus::Warning || warning_found;
   //
   // Normalise the row names
   int max_row_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_row_name_length = 8;
-  HighsStatus row_name_status = normaliseNames(
-      options, "Row", lp.numRow_, local_row_names, max_row_name_length);
+  HighsStatus row_name_status =
+      normaliseNames(options.log_options, "Row", lp.numRow_, local_row_names,
+                     max_row_name_length);
   if (row_name_status == HighsStatus::Error) return col_name_status;
   warning_found = row_name_status == HighsStatus::Warning || warning_found;
 
@@ -499,17 +502,17 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   bool use_free_format = free_format;
   if (!free_format) {
     if (max_name_length > 8) {
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "Maximum name length is %d so using free format rather "
-                      "than fixed format",
-                      max_name_length);
+      highsLogUser(options.log_options, HighsLogType::WARNING,
+                   "Maximum name length is %d so using free format rather "
+                   "than fixed format",
+                   max_name_length);
       use_free_format = true;
       warning_found = true;
     }
   }
   HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
-      lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
+      options.log_options, filename, lp.numRow_, lp.numCol_, lp.sense_,
+      lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
       local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::OK && warning_found)
@@ -518,13 +521,13 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
 }
 
 HighsStatus writeMPS(
-    FILE* logfile, const std::string filename, const int& numRow,
-    const int& numCol, const ObjSense& objSense, const double& objOffset,
-    const vector<int>& Astart, const vector<int>& Aindex,
-    const vector<double>& Avalue, const vector<double>& colCost,
-    const vector<double>& colLower, const vector<double>& colUpper,
-    const vector<double>& rowLower, const vector<double>& rowUpper,
-    const vector<HighsVarType>& integerColumn,
+    const HighsLogOptions& log_options, const std::string filename,
+    const int& numRow, const int& numCol, const ObjSense& objSense,
+    const double& objOffset, const vector<int>& Astart,
+    const vector<int>& Aindex, const vector<double>& Avalue,
+    const vector<double>& colCost, const vector<double>& colLower,
+    const vector<double>& colUpper, const vector<double>& rowLower,
+    const vector<double>& rowUpper, const vector<HighsVarType>& integerColumn,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
@@ -535,8 +538,8 @@ HighsStatus writeMPS(
 #endif
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR, "Cannot open file %s",
-                    filename.c_str());
+    highsLogUser(log_options, HighsLogType::ERROR, "Cannot open file %s",
+                 filename.c_str());
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
@@ -547,9 +550,9 @@ HighsStatus writeMPS(
   int max_row_name_length = maxNameLength(numRow, row_names);
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Cannot write fixed MPS with names of length (up to) %d",
-                    max_name_length);
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "Cannot write fixed MPS with names of length (up to) %d",
+                 max_name_length);
     return HighsStatus::Error;
   }
   vector<int> r_ty;
@@ -626,8 +629,8 @@ HighsStatus writeMPS(
   }
 #ifdef HiGHSDEV
   printf("Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
-         BoolToCharStar(have_rhs), BoolToCharStar(have_ranges),
-         BoolToCharStar(have_bounds));
+         highsBoolToString(have_rhs), highsBoolToString(have_ranges),
+         highsBoolToString(have_bounds));
 #endif
 
   // Field:    1           2          3         4         5         6
@@ -804,5 +807,3 @@ HighsStatus writeMPS(
   fclose(file);
   return HighsStatus::OK;
 }
-
-inline const char* BoolToCharStar(bool b) { return b ? "True" : "False"; }

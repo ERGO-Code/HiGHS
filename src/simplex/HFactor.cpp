@@ -155,10 +155,11 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
-                    int highs_debug_level_, FILE* logfile_, FILE* output_,
-                    int message_level_, double pivot_threshold_,
-                    double pivot_tolerance_,
-                    const bool use_original_HFactor_logic_, int updateMethod_) {
+                    double pivot_threshold_, double pivot_tolerance_,
+                    int highs_debug_level_, bool output_flag_,
+                    FILE* log_file_stream_, bool log_to_console_,
+                    int log_dev_level_, const bool use_original_HFactor_logic_,
+                    const int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -166,17 +167,17 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   Aindex = Aindex_;
   Avalue = Avalue_;
   baseIndex = baseIndex_;
-  use_original_HFactor_logic = use_original_HFactor_logic_;
-  updateMethod = updateMethod_;
   pivot_threshold =
       max(min_pivot_threshold, min(pivot_threshold_, max_pivot_threshold));
   pivot_tolerance =
       max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
-
   highs_debug_level = highs_debug_level_;
-  logfile = logfile_;
-  output = output_;
-  message_level = message_level_;
+  log_options.log_file_stream = log_file_stream_;
+  log_options.output_flag = &output_flag_;
+  log_options.log_to_console = &log_to_console_;
+  log_options.log_dev_level = &log_dev_level_;
+  use_original_HFactor_logic = use_original_HFactor_logic_;
+  updateMethod = updateMethod_;
 
   // Allocate for working buffer
   iwork.reserve(numRow * 2);
@@ -274,9 +275,9 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-                    "Rank deficiency of %d identified in basis matrix",
-                    rank_deficiency);
+    highsLogUser(log_options, HighsLogType::WARNING,
+                 "Rank deficiency of %d identified in basis matrix\n",
+                 rank_deficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
     // logical which replaces them
@@ -292,9 +293,9 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
 
   kernel_dim -= rank_deficiency;
-  debugLogRankDeficiency(highs_debug_level, output, message_level,
-                         rank_deficiency, basis_matrix_num_el, invert_num_el,
-                         kernel_dim, kernel_num_el, nwork);
+  debugLogRankDeficiency(highs_debug_level, log_options, rank_deficiency,
+                         basis_matrix_num_el, invert_num_el, kernel_dim,
+                         kernel_num_el, nwork);
   factor_timer.stop(FactorInvert, factor_timer_clock_pointer);
   return rank_deficiency;
 }
@@ -374,10 +375,10 @@ void HFactor::buildSimple() {
       if (MRcountb4[lc_iRow] >= 0) {
         iRow = lc_iRow;
       } else {
-        HighsLogMessage(
-            logfile, HighsMessageType::ERROR,
-            "INVERT Error: Found a logical column with pivot already in row %d",
-            lc_iRow);
+        highsLogUser(log_options, HighsLogType::ERROR,
+                     "INVERT Error: Found a logical column with pivot "
+                     "already in row %d\n",
+                     lc_iRow);
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
         Bvalue[BcountX++] = 1.0;
@@ -394,9 +395,9 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         if (unit_col)
-          HighsLogMessage(
-              logfile, HighsMessageType::ERROR,
-              "INVERT Error: Found a second unit column with pivot in row %d",
+          highsLogUser(
+              log_options, HighsLogType::ERROR,
+              "INVERT Error: Found a second unit column with pivot in row %d\n",
               lc_iRow);
         for (int k = start; k < start + count; k++) {
           MRcountb4[Aindex[k]]++;
@@ -711,9 +712,8 @@ int HFactor::buildKernel() {
     double pivotX = colDelete(jColPivot, iRowPivot);
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
-      HighsLogMessage(logfile, HighsMessageType::WARNING,
-                      "Small |pivot| = %g when nwork = %d\n", fabs(pivotX),
-                      nwork);
+      highsLogUser(log_options, HighsLogType::WARNING,
+                   "Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
     }
@@ -875,9 +875,8 @@ int HFactor::buildKernel() {
 }
 
 void HFactor::buildHandleRankDeficiency() {
-  debugReportRankDeficiency(0, highs_debug_level, output, message_level, numRow,
-                            permute, iwork, baseIndex, rank_deficiency, noPvR,
-                            noPvC);
+  debugReportRankDeficiency(0, highs_debug_level, log_options, numRow, permute,
+                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
   // iwork can now be used as workspace: use it to accumulate the new
   // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
   // Indices of iwork corresponding to missing indices in permute
@@ -910,9 +909,8 @@ void HFactor::buildHandleRankDeficiency() {
     }
   }
   assert(lc_rank_deficiency == rank_deficiency);
-  debugReportRankDeficiency(1, highs_debug_level, output, message_level, numRow,
-                            permute, iwork, baseIndex, rank_deficiency, noPvR,
-                            noPvC);
+  debugReportRankDeficiency(1, highs_debug_level, log_options, numRow, permute,
+                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
   for (int k = 0; k < rank_deficiency; k++) {
     int iRow = noPvR[k];
     int iCol = noPvC[k];
@@ -923,11 +921,10 @@ void HFactor::buildHandleRankDeficiency() {
     UpivotValue.push_back(1);
     Ustart.push_back(Uindex.size());
   }
-  debugReportRankDeficiency(2, highs_debug_level, output, message_level, numRow,
-                            permute, iwork, baseIndex, rank_deficiency, noPvR,
-                            noPvC);
-  debugReportRankDeficientASM(highs_debug_level, output, message_level, numRow,
-                              MCstart, MCcountA, MCindex, MCvalue, iwork,
+  debugReportRankDeficiency(2, highs_debug_level, log_options, numRow, permute,
+                            iwork, baseIndex, rank_deficiency, noPvR, noPvC);
+  debugReportRankDeficientASM(highs_debug_level, log_options, numRow, MCstart,
+                              MCcountA, MCindex, MCvalue, iwork,
                               rank_deficiency, noPvC, noPvR);
 }
 
@@ -935,8 +932,8 @@ void HFactor::buildMarkSingC() {
   // Singular matrix B: reorder the basic variables so that the
   // singular columns are in the position corresponding to the
   // logical which replaces them
-  debugReportMarkSingC(0, highs_debug_level, output, message_level, numRow,
-                       iwork, baseIndex);
+  debugReportMarkSingC(0, highs_debug_level, log_options, numRow, iwork,
+                       baseIndex);
 
   for (int k = 0; k < rank_deficiency; k++) {
     int ASMrow = noPvR[k];
@@ -948,12 +945,12 @@ void HFactor::buildMarkSingC() {
     noPvC[k] = baseIndex[ASMcol];
     baseIndex[ASMcol] = numCol + ASMrow;
   }
-  debugReportMarkSingC(1, highs_debug_level, output, message_level, numRow,
-                       iwork, baseIndex);
+  debugReportMarkSingC(1, highs_debug_level, log_options, numRow, iwork,
+                       baseIndex);
 }
 
 void HFactor::buildFinish() {
-  //  debugPivotValueAnalysis(highs_debug_level, output, message_level, numRow,
+  //  debugPivotValueAnalysis(highs_debug_level, log_options, numRow,
   //  UpivotValue);
   // The look up table
   for (int i = 0; i < numRow; i++) UpivotLookup[UpivotIndex[i]] = i;

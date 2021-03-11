@@ -100,8 +100,9 @@ double HighsLpRelaxation::slackUpper(int row) const {
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
-  lpsolver.setHighsLogfile();
-  lpsolver.setHighsOutput();
+  lpsolver.setHighsOptionValue("output_flag", false);
+  lpsolver.setHighsOptionValue("output_flag", false);
+  //  lpsolver.setHighsOptionValue("log_dev_level", 0);
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance);
@@ -122,8 +123,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored) {
-  lpsolver.setHighsLogfile();
-  lpsolver.setHighsOutput();
+  lpsolver.setHighsOptionValue("output_flag", false);
   lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
@@ -372,9 +372,8 @@ void HighsLpRelaxation::storeDualInfProof() {
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_VERBOSE,
-                      "no dual ray stored\n");
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::VERBOSE,
+                "no dual ray stored\n");
     return;
   }
 
@@ -685,9 +684,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (lpsolver.getModelStatus() == HighsModelStatus::PRIMAL_INFEASIBLE)
         return Status::Infeasible;
 
-      // HighsLogMessage(mipsolver.options_mip_->logfile,
-      //                 HighsMessageType::WARNING,
-      //                 "LP failed to reliably determine infeasibility");
+      // highsLogUser(mipsolver.options_mip_->log_options,
+      //                 HighsLogType::WARNING,
+      //                 "LP failed to reliably determine infeasibility\n");
 
       // printf("error: unreliable infeasiblities, modelstatus = %d (scaled
       // %d)\n",
@@ -735,8 +734,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         Highs ipm;
         ipm.passModel(lpsolver.getLp());
         ipm.setHighsOptionValue("solver", "ipm");
-        ipm.setHighsOutput();
-        ipm.setHighsLogfile();
+        ipm.setHighsOptionValue("output_flag", false);
         ipm.run();
         lpsolver.setBasis(ipm.getBasis());
         return run(false);
@@ -753,9 +751,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     default:
       // printf("error: lpsolver stopped with unexpected status %d\n",
       //        (int)scaledmodelstatus);
-      HighsLogMessage(
-          mipsolver.options_mip_->logfile, HighsMessageType::WARNING,
-          "LP solved to unexpected status (%d)", (int)scaledmodelstatus);
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::WARNING,
+                   "LP solved to unexpected status (%d)\n",
+                   (int)scaledmodelstatus);
       return Status::Error;
   }
 }

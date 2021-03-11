@@ -104,6 +104,7 @@ HighsPresolveStatus PresolveComponent::run() {
 
     data_.reduced_lp_.sense_ = ObjSense::MINIMIZE;
     data_.reduced_lp_.offset_ = data_.presolve_[0].objShift;
+    data_.reduced_lp_.orientation_ = MatrixOrientation::COLWISE;
     data_.reduced_lp_.model_name_ =
         std::move(data_.presolve_[0].modelName);  //"Presolved model";
   }

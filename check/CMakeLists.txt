@@ -28,6 +28,7 @@ set(TEST_SOURCES
     TestHSet.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
+    TestLpOrientation.cpp
     TestRays.cpp
     TestRanging.cpp
     Avgas.cpp)
@@ -37,7 +38,7 @@ if (NOT APPLE)
     # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
     # may be an interface related issue which will pop up soon. 
     # works OK on linux. The test was added to doctest for macOS but still hanging.
-    set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp)
+    set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
 endif()
 
 if (IPX_ON)

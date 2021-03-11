@@ -26,8 +26,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setHighsOptionValue("output_flag", false);
   }
   const HighsInfo& info = highs.getHighsInfo();
 
@@ -102,8 +101,7 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setHighsOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -134,8 +132,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setHighsOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -200,8 +197,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setHighsOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -225,75 +221,4 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
-}
-
-TEST_CASE("filereader-dualize", "[highs_data]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  // Read mps.
-  HighsOptions options;
-  options.model_file = filename;
-
-  HighsLp lp;
-  free_format_parser::HMpsFF parser{};
-  FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp);
-  REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
-
-  HighsLp primal;
-  HighsStatus status;
-  status = transformIntoEqualityProblem(lp, primal);
-  REQUIRE(status == HighsStatus::OK);
-
-  Highs highs_lp;
-  if (!dev_run) {
-    highs_lp.setHighsLogfile();
-    highs_lp.setHighsOutput();
-  }
-  HighsModelStatus model_status;
-  status = highs_lp.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
-  status = highs_lp.run();
-  model_status = highs_lp.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
-
-  Highs highs_primal;
-  if (!dev_run) {
-    highs_primal.setHighsLogfile();
-    highs_primal.setHighsOutput();
-  }
-  status = highs_primal.passModel(primal);
-  REQUIRE(status == HighsStatus::OK);
-  status = highs_primal.run();
-  model_status = highs_lp.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
-
-  double lp_objective;
-  highs_lp.getHighsInfoValue("objective_function_value", lp_objective);
-  double primal_objective;
-  highs_lp.getHighsInfoValue("objective_function_value", primal_objective);
-
-  double diff_equality = lp_objective - primal_objective;
-  REQUIRE(diff_equality < 0.00000001);
-
-  HighsLp dual;
-  status = dualizeEqualityProblem(primal, dual);
-  REQUIRE(status == HighsStatus::OK);
-  Highs highs_dual;
-  if (!dev_run) {
-    highs_dual.setHighsLogfile();
-    highs_dual.setHighsOutput();
-  }
-  status = assessLp(dual, options);
-  REQUIRE(status == HighsStatus::OK);
-  status = highs_dual.passModel(dual);
-  REQUIRE(status == HighsStatus::OK);
-  status = highs_dual.run();
-  model_status = highs_lp.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
-
-  double dual_objective;
-  highs_dual.getHighsInfoValue("objective_function_value", dual_objective);
-
-  double diff_dual = primal_objective + dual_objective;
-  REQUIRE(diff_dual < 0.00000001);
 }

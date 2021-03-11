@@ -28,8 +28,8 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
     return HighsDebugStatus::NOT_CHECKED;
   if (force)
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      "CheckINVERT:   Forcing debug\n");
+    highsLogDev(options.log_options, HighsLogType::INFO,
+                "CheckINVERT:   Forcing debug\n");
 
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
   return_status = HighsDebugStatus::OK;
@@ -73,27 +73,27 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
     solve_error_norm = std::max(solve_error, solve_error_norm);
   }
   std::string value_adjective;
-  int report_level;
+  HighsLogType report_level;
   return_status = HighsDebugStatus::OK;
 
   if (solve_error_norm) {
     if (solve_error_norm > solve_excessive_error) {
       value_adjective = "Excessive";
-      report_level = ML_ALWAYS;
+      report_level = HighsLogType::ERROR;
       return_status = HighsDebugStatus::ERROR;
     } else if (solve_error_norm > solve_large_error) {
       value_adjective = "Large";
-      report_level = ML_DETAILED;
+      report_level = HighsLogType::WARNING;
       return_status = HighsDebugStatus::WARNING;
     } else {
       value_adjective = "Small";
-      report_level = ML_VERBOSE;
+      report_level = HighsLogType::INFO;
     }
 
-    if (force) report_level = ML_MINIMAL;
+    if (force) report_level = HighsLogType::INFO;
 
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsLogDev(
+        options.log_options, report_level,
         "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
         value_adjective.c_str(), solve_error_norm);
   }
@@ -138,26 +138,26 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (inverse_error_norm) {
     if (inverse_error_norm > inverse_excessive_error) {
       value_adjective = "Excessive";
-      report_level = ML_ALWAYS;
+      report_level = HighsLogType::ERROR;
       return_status = HighsDebugStatus::ERROR;
     } else if (inverse_error_norm > inverse_large_error) {
       value_adjective = "Large";
-      report_level = ML_DETAILED;
+      report_level = HighsLogType::WARNING;
       return_status = HighsDebugStatus::WARNING;
     } else {
       value_adjective = "Small";
-      report_level = ML_VERBOSE;
+      report_level = HighsLogType::INFO;
     }
-    HighsPrintMessage(options.output, options.message_level, report_level,
-                      "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
-                      value_adjective.c_str(), inverse_error_norm);
+    highsLogDev(options.log_options, report_level,
+                "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
+                value_adjective.c_str(), inverse_error_norm);
   }
 
   return return_status;
 }
 
 void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
-                               FILE* output, const int message_level,
+                               const HighsLogOptions& log_options,
                                const int numRow, const vector<int>& permute,
                                const vector<int>& iwork, const int* baseIndex,
                                const int rank_deficiency,
@@ -166,60 +166,56 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
   if (call_id == 0) {
     if (numRow > 123) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED,
-                      "buildRankDeficiency0:");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency0:");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nPerm   ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", i);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nPerm   ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", permute[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIwork  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", permute[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIwork  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", iwork[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nBaseI  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", iwork[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nBaseI  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d",
-                        baseIndex[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", baseIndex[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\n");
   } else if (call_id == 1) {
     if (rank_deficiency > 100) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED,
-                      "buildRankDeficiency1:");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency1:");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
     for (int i = 0; i < rank_deficiency; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nnoPvR  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", i);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nnoPvR  ");
     for (int i = 0; i < rank_deficiency; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", noPvR[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nnoPvC  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", noPvR[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nnoPvC  ");
     for (int i = 0; i < rank_deficiency; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", noPvC[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", noPvC[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\n");
     if (numRow > 123) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED, "Index  ");
+    highsLogDev(log_options, HighsLogType::WARNING, "Index  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIwork  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", i);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIwork  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", iwork[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", iwork[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\n");
   } else if (call_id == 2) {
     if (numRow > 123) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED,
-                      "buildRankDeficiency2:");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency2:");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nPerm   ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", i);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nPerm   ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", permute[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", permute[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\n");
   }
 }
 
 void debugReportRankDeficientASM(
-    const int highs_debug_level, FILE* output, const int message_level,
+    const int highs_debug_level, const HighsLogOptions& log_options,
     const int numRow, const vector<int>& MCstart, const vector<int>& MCcountA,
     const vector<int>& MCindex, const vector<double>& MCvalue,
     const vector<int>& iwork, const int rank_deficiency,
@@ -241,96 +237,89 @@ void debugReportRankDeficientASM(
       int ASMrow = MCindex[en];
       int i = -iwork[ASMrow] - 1;
       if (i < 0 || i >= rank_deficiency) {
-        HighsPrintMessage(
-            output, message_level, ML_DETAILED,
-            "STRANGE: 0 > i = %d || %d = i >= rank_deficiency = %d\n", i, i,
-            rank_deficiency);
+        highsLogDev(log_options, HighsLogType::WARNING,
+                    "STRANGE: 0 > i = %d || %d = i >= rank_deficiency = %d\n",
+                    i, i, rank_deficiency);
       } else {
         if (noPvR[i] != ASMrow) {
-          HighsPrintMessage(output, message_level, ML_DETAILED,
-                            "STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i],
-                            ASMrow);
+          highsLogDev(log_options, HighsLogType::WARNING,
+                      "STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i],
+                      ASMrow);
         }
-        HighsPrintMessage(output, message_level, ML_DETAILED,
-                          "Setting ASM(%2d, %2d) = %11.4g\n", i, j,
-                          MCvalue[en]);
+        highsLogDev(log_options, HighsLogType::WARNING,
+                    "Setting ASM(%2d, %2d) = %11.4g\n", i, j, MCvalue[en]);
         ASM[i + j * rank_deficiency] = MCvalue[en];
       }
     }
   }
-  HighsPrintMessage(output, message_level, ML_DETAILED,
-                    "ASM:                    ");
+  highsLogDev(log_options, HighsLogType::WARNING, "ASM:                    ");
   for (int j = 0; j < rank_deficiency; j++)
-    HighsPrintMessage(output, message_level, ML_DETAILED, " %11d", j);
-  HighsPrintMessage(output, message_level, ML_DETAILED,
-                    "\n                        ");
+    highsLogDev(log_options, HighsLogType::WARNING, " %11d", j);
+  highsLogDev(log_options, HighsLogType::WARNING, "\n                        ");
   for (int j = 0; j < rank_deficiency; j++)
-    HighsPrintMessage(output, message_level, ML_DETAILED, " %11d", noPvC[j]);
-  HighsPrintMessage(output, message_level, ML_DETAILED,
-                    "\n                        ");
+    highsLogDev(log_options, HighsLogType::WARNING, " %11d", noPvC[j]);
+  highsLogDev(log_options, HighsLogType::WARNING, "\n                        ");
   for (int j = 0; j < rank_deficiency; j++)
-    HighsPrintMessage(output, message_level, ML_DETAILED, "------------");
-  HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    highsLogDev(log_options, HighsLogType::WARNING, "------------");
+  highsLogDev(log_options, HighsLogType::WARNING, "\n");
   for (int i = 0; i < rank_deficiency; i++) {
-    HighsPrintMessage(output, message_level, ML_DETAILED, "%11d %11d|", i,
-                      noPvR[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "%11d %11d|", i, noPvR[i]);
     for (int j = 0; j < rank_deficiency; j++) {
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %11.4g",
-                        ASM[i + j * rank_deficiency]);
+      highsLogDev(log_options, HighsLogType::WARNING, " %11.4g",
+                  ASM[i + j * rank_deficiency]);
     }
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    highsLogDev(log_options, HighsLogType::WARNING, "\n");
   }
   free(ASM);
 }
 
 void debugReportMarkSingC(const int call_id, const int highs_debug_level,
-                          FILE* output, const int message_level,
-                          const int numRow, const vector<int>& iwork,
-                          const int* baseIndex) {
+                          const HighsLogOptions& log_options, const int numRow,
+                          const vector<int>& iwork, const int* baseIndex) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
   if (numRow > 123) return;
   if (call_id == 0) {
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nMarkSingC1");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nMarkSingC1");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\niwork  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", i);
+    highsLogDev(log_options, HighsLogType::WARNING, "\niwork  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", iwork[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nBaseI  ");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", iwork[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nBaseI  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d",
-                        baseIndex[i]);
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", baseIndex[i]);
   } else if (call_id == 1) {
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nMarkSingC2");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nMarkSingC2");
+    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nNwBaseI");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", i);
+    highsLogDev(log_options, HighsLogType::WARNING, "\nNwBaseI");
     for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d",
-                        baseIndex[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+      highsLogDev(log_options, HighsLogType::WARNING, " %2d", baseIndex[i]);
+    highsLogDev(log_options, HighsLogType::WARNING, "\n");
   }
 }
 
-void debugLogRankDeficiency(const int highs_debug_level, FILE* output,
-                            const int message_level, const int rank_deficiency,
+void debugLogRankDeficiency(const int highs_debug_level,
+                            const HighsLogOptions& log_options,
+                            const int rank_deficiency,
                             const int basis_matrix_num_el,
                             const int invert_num_el, const int& kernel_dim,
                             const int kernel_num_el, const int nwork) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
   if (!rank_deficiency) return;
-  HighsPrintMessage(
-      output, message_level, ML_DETAILED,
+  highsLogDev(
+      log_options, HighsLogType::WARNING,
       "Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d "
       "dim; %d el): nwork = %d\n",
       rank_deficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
       kernel_num_el, nwork);
 }
 
-void debugPivotValueAnalysis(const int highs_debug_level, FILE* output,
-                             const int message_level, const int numRow,
+void debugPivotValueAnalysis(const int highs_debug_level,
+                             const HighsLogOptions& log_options,
+                             const int numRow,
                              const vector<double>& UpivotValue) {
   if (highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP) return;
   double min_pivot = HIGHS_CONST_INF;
@@ -344,8 +333,8 @@ void debugPivotValueAnalysis(const int highs_debug_level, FILE* output,
   }
   mean_pivot = exp(mean_pivot / numRow);
   if (highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP || min_pivot < 1e-8)
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "InvertPivotAnalysis: %d pivots: Min %g; Mean "
-                      "%g; Max %g\n",
-                      numRow, min_pivot, mean_pivot, max_pivot);
+    highsLogDev(log_options, HighsLogType::ERROR,
+                "InvertPivotAnalysis: %d pivots: Min %g; Mean "
+                "%g; Max %g\n",
+                numRow, min_pivot, mean_pivot, max_pivot);
 }

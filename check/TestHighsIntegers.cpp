@@ -2,6 +2,8 @@
 #include "catch.hpp"
 #include "util/HighsIntegers.h"
 
+const bool dev_run = false;
+
 TEST_CASE("HighsIntegers", "[util]") {
   double x1 = 6.4700675;
   double x2 = 0.27425;
@@ -15,7 +17,7 @@ TEST_CASE("HighsIntegers", "[util]") {
   double integralscalar = HighsIntegers::integralScale(tmp, 1e-6, 1e-9);
   REQUIRE(integralscalar == 400000);
 
-  printf("integral scalar is %g\n", integralscalar);
+  if (dev_run) printf("integral scalar is %g\n", integralscalar);
 
   // stress test the algorithm with a constructed case:
   // add 6 fractions with prime number denominators just below 1000.
@@ -35,5 +37,5 @@ TEST_CASE("HighsIntegers", "[util]") {
   REQUIRE(integralscalar == primes[0] * primes[1] * primes[2] * primes[3] *
                                 primes[4] * primes[5]);
 
-  printf("integral scalar is %g\n", integralscalar);
+  if (dev_run) printf("integral scalar is %g\n", integralscalar);
 }

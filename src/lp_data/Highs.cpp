@@ -14,6 +14,7 @@
 #include "Highs.h"
 
 #include <algorithm>
+//#include <string>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -26,6 +27,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "mip/HighsMipSolver.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -38,9 +40,17 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
+Highs::Highs(HighsOptions& options) {
+  // Pass the user's options setting to HiGHS, returning an error if
+  // any is illegal
+  if (passOptions(options_.log_options, options, options_) != OptionStatus::OK)
+    printf("Options not OK\n");
+  Highs();
+}
+
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -48,7 +58,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const int value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -56,7 +66,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const double value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -64,7 +74,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const std::string value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -72,26 +82,26 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const char* value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::setHighsLogfile(FILE* logfile) {
-  options_.logfile = logfile;
+  options_.output_flag = false;
   return HighsStatus::OK;
 }
 
 HighsStatus Highs::setHighsOutput(FILE* output) {
-  options_.output = output;
+  options_.output_flag = false;
   return HighsStatus::OK;
 }
 
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
-    HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-                    "Empty file name so not reading options");
+    highsLogUser(options_.log_options, HighsLogType::WARNING,
+                 "Empty file name so not reading options\n");
     return HighsStatus::Warning;
   }
   options_.options_file = filename;
@@ -100,7 +110,7 @@ HighsStatus Highs::readHighsOptions(const std::string filename) {
 }
 
 HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
-  if (passOptions(options_.logfile, options, options_) == OptionStatus::OK)
+  if (passOptions(options_.log_options, options, options_) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
@@ -108,14 +118,14 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
 const HighsOptions& Highs::getHighsOptions() { return options_; }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, int& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -123,7 +133,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option, int& value) {
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        double& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -131,7 +141,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        std::string& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -139,7 +149,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionType(const std::string& option,
                                       HighsOptionType& type) {
-  if (getOptionType(options_.logfile, option, options_.records, type) ==
+  if (getOptionType(options_.log_options, option, options_.records, type) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -153,7 +163,6 @@ HighsStatus Highs::resetHighsOptions() {
 HighsStatus Highs::writeHighsOptions(
     const std::string filename, const bool report_only_non_default_values) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsLp lp = this->lp_;
   FILE* file;
   bool html;
   return_status = interpretCallStatus(
@@ -187,7 +196,6 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info,
 
 HighsStatus Highs::writeHighsInfo(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsLp lp = this->lp_;
   FILE* file;
   bool html;
   return_status =
@@ -221,10 +229,12 @@ HighsStatus Highs::reset() {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::passModel(HighsLp lp) {
+HighsStatus Highs::passModel(const HighsLp lp) {
   HighsStatus return_status = HighsStatus::OK;
   // move the copy of the LP to the internal LP
   lp_ = std::move(lp);
+  // Ensure that the LP is column-wise
+  setOrientation(lp_);
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
@@ -271,26 +281,26 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
   }
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
-  return this->passModel(std::move(lp));
+  lp.orientation_ = MatrixOrientation::COLWISE;
+  return passModel(std::move(lp));
 }
 
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   Filereader* reader = Filereader::getFilereader(filename);
   if (reader == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Model file %s not supported", filename.c_str());
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "Model file %s not supported\n", filename.c_str());
     return HighsStatus::Error;
   }
 
   HighsLp model;
-  this->options_.model_file = filename;
+  options_.model_file = filename;
 
-  FilereaderRetcode call_code =
-      reader->readModelFromFile(this->options_, model);
+  FilereaderRetcode call_code = reader->readModelFromFile(options_, model);
   delete reader;
   if (call_code != FilereaderRetcode::OK) {
-    interpretFilereaderRetcode(this->options_.logfile, filename.c_str(),
+    interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
     return_status = interpretCallStatus(HighsStatus::Error, return_status,
                                         "readModelFromFile");
@@ -298,7 +308,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   }
   model.model_name_ = extractModelName(filename);
   return_status =
-      interpretCallStatus(this->passModel(model), return_status, "passModel");
+      interpretCallStatus(passModel(model), return_status, "passModel");
   return returnFromHighs(return_status);
 }
 
@@ -306,12 +316,10 @@ HighsStatus Highs::clearModel() {
   HighsStatus return_status = HighsStatus::OK;
   // Remove all HighsModelObject entries
   hmos_.clear();
-  // Set up with an empty LP so that addrows/cols can be used to build
-  //  HighsLp empty_lp; lp_ = empty_lp;
   lp_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   return_status =
-      interpretCallStatus(this->clearSolver(), return_status, "clearSolver");
+      interpretCallStatus(clearSolver(), return_status, "clearSolver");
   if (return_status == HighsStatus::Error) return return_status;
   return returnFromHighs(return_status);
 }
@@ -319,20 +327,20 @@ HighsStatus Highs::clearModel() {
 HighsStatus Highs::readBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   // Try to read basis file into read_basis
-  HighsBasis read_basis = this->basis_;
-  return_status =
-      interpretCallStatus(readBasisFile(options_, read_basis, filename),
-                          return_status, "readBasis");
+  HighsBasis read_basis = basis_;
+  return_status = interpretCallStatus(
+      readBasisFile(options_.log_options, read_basis, filename), return_status,
+      "readBasis");
   if (return_status != HighsStatus::OK) return return_status;
   // Basis read OK: check whether it's consistent with the LP
   if (!isBasisConsistent(lp_, read_basis)) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "readBasis: invalid basis");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "readBasis: invalid basis\n");
     return HighsStatus::Error;
   }
   // Update the HiGHS basis and invalidate any simplex basis for the model
-  this->basis_ = read_basis;
-  this->basis_.valid_ = true;
+  basis_ = read_basis;
+  basis_.valid_ = true;
   if (hmos_.size() > 0) {
     clearBasisInterface();
   }
@@ -342,17 +350,19 @@ HighsStatus Highs::readBasis(const std::string filename) {
 
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsLp model = this->lp_;
+  HighsLp model = lp_;
 
+  // Ensure that the LP is column-wise
+  setOrientation(model);
   if (filename == "") {
     // Empty file name: report model on stdout
-    reportLp(options_, model, 2);
+    reportLp(options_.log_options, model, HighsLogType::VERBOSE);
     return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename);
     if (writer == NULL) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Model file %s not supported", filename.c_str());
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
+                   "Model file %s not supported\n", filename.c_str());
       return HighsStatus::Error;
     }
     return_status =
@@ -365,9 +375,9 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  return_status =
-      interpretCallStatus(writeBasisFile(options_, this->basis_, filename),
-                          return_status, "writeBasis");
+  return_status = interpretCallStatus(
+      writeBasisFile(options_.log_options, basis_, filename), return_status,
+      "writeBasis");
   return returnFromHighs(return_status);
 }
 
@@ -390,9 +400,9 @@ HighsStatus Highs::run() {
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
         "from %d to %d\n",
         options_.highs_debug_level, min_highs_debug_level);
-  writeModel("HighsRunModel.mps");
-  //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
-  //  "LpMatrix", lp_);
+    //  writeModel("HighsRunModel.mps");
+    //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
+    //  "LpMatrix", lp_);
 #endif
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
@@ -417,8 +427,8 @@ HighsStatus Highs::run() {
     // model_file
     if (options_.model_file.compare(FILENAME_DEFAULT) == 0) {
       // model_file is still default value, so return with error
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "No model can be loaded in run()");
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
+                   "No model can be loaded in run()\n");
       return_status = HighsStatus::Error;
       return returnFromRun(return_status);
     } else {
@@ -438,7 +448,20 @@ HighsStatus Highs::run() {
   hmos_[0].unscaled_model_status_ = HighsModelStatus::NOTSET;
   model_status_ = hmos_[0].scaled_model_status_;
   scaled_model_status_ = hmos_[0].unscaled_model_status_;
+  // Return immediately if the LP has no columns
+  if (!lp_.numCol_) {
+    model_status_ = HighsModelStatus::MODEL_EMPTY;
+    scaled_model_status_ = model_status_;
+    hmos_[0].unscaled_model_status_ = model_status_;
+    hmos_[0].scaled_model_status_ = model_status_;
+    return_status = highsStatusFromHighsModelStatus(model_status_);
+    return returnFromRun(return_status);
+  }
 
+  // Ensure that the LP (and any simplex LP) has the matrix column-wise
+  setOrientation(lp_);
+  if (hmos_[0].ekk_instance_.simplex_lp_status_.valid)
+    setOrientation(hmos_[0].ekk_instance_.simplex_lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -450,38 +473,41 @@ HighsStatus Highs::run() {
   if (return_status == HighsStatus::Error) return returnFromRun(return_status);
 #endif
 
-  // Return immediately if the LP has no columns
-  if (!lp_.numCol_) {
-    model_status_ = HighsModelStatus::MODEL_EMPTY;
-    scaled_model_status_ = model_status_;
-    hmos_[0].unscaled_model_status_ = model_status_;
-    hmos_[0].scaled_model_status_ = model_status_;
-    return_status = highsStatusFromHighsModelStatus(model_status_);
-    return returnFromRun(return_status);
-  }
-
-  HighsSetIO(options_);
+  highsSetLogCallback(options_);
 #ifdef HiGHSDEV
-  if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK) {
+  if (checkOptions(options_.log_options, options_.records) !=
+      OptionStatus::OK) {
     return_status = HighsStatus::Error;
     return returnFromRun(return_status);
   }
 #endif
-  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                    "Solving %s\n", lp_.model_name_.c_str());
+  highsLogDev(options_.log_options, HighsLogType::VERBOSE, "Solving %s\n",
+              lp_.model_name_.c_str());
 
+  // Start the HiGHS clock unless it's already running
+  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
+  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
+
+  if (!options_.solver.compare(choose_string) && isMip(lp_)) {
+    // Solve the model as a MIP
+    call_status = callSolveMip();
+    return_status =
+        interpretCallStatus(call_status, return_status, "callSolveMip");
+    if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+    return returnFromRun(return_status);
+  }
+
+  // Solve the model as an LP
+  //
+  // Record the initial time and set the component times and postsolve
+  // iteration count to -1 to identify whether they are not required
+  double initial_time = timer_.readRunHighsClock();
   double this_presolve_time = -1;
   double this_solve_presolved_lp_time = -1;
   double this_postsolve_time = -1;
   double this_solve_original_lp_time = -1;
-
-  // Running as LP solver: start the HiGHS clock unless it's already running
-  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
-  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-  // Record the initial time and set the postsolve iteration count to
-  // -1 to identify whether it's not required
-  double initial_time = timer_.readRunHighsClock();
   int postsolve_iteration_count = -1;
+
   // Define identifiers to refer to the HMO of the original LP (0) and
   // the HMO created when using presolve. The index of this HMO is 1
   // when solving a one-off LP, but greater than one if presolve has
@@ -498,8 +524,8 @@ HighsStatus Highs::run() {
     // If using IPX to solve the reduced LP, crossover must be run
     // since a basic solution is required by postsolve
     if (options_.solver == ipm_string && !options_.run_crossover) {
-      HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-                      "Forcing IPX to use crossover after presolve");
+      highsLogUser(options_.log_options, HighsLogType::WARNING,
+                   "Forcing IPX to use crossover after presolve\n");
       options_.run_crossover = true;
     }
 
@@ -543,7 +569,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        reportPresolveReductions(hmos_[original_hmo].options_,
+        reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_, false);
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
@@ -572,7 +598,7 @@ HighsStatus Highs::run() {
 
         hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
         // Log the presolve reductions
-        reportPresolveReductions(hmos_[original_hmo].options_,
+        reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_,
                                  hmos_[presolve_hmo].lp_);
         // Record the HMO to be solved
@@ -608,7 +634,7 @@ HighsStatus Highs::run() {
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
-        reportPresolveReductions(hmos_[original_hmo].options_,
+        reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_, true);
         hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
         hmos_[original_hmo].scaled_model_status_ =
@@ -625,9 +651,9 @@ HighsStatus Highs::run() {
         } else {
           model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
         }
-        HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                        "Problem status detected on presolve: %s",
-                        highsModelStatusToString(model_status_).c_str());
+        highsLogUser(options_.log_options, HighsLogType::INFO,
+                     "Problem status detected on presolve: %s\n",
+                     highsModelStatusToString(model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -645,23 +671,23 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::Timeout: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                          "Presolve reached timeout\n");
+        highsLogDev(options_.log_options, HighsLogType::ERROR,
+                    "Presolve reached timeout\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
       }
       case HighsPresolveStatus::OptionsError: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                          "Presolve options error.\n");
+        highsLogDev(options_.log_options, HighsLogType::ERROR,
+                    "Presolve options error.\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
       }
       default: {
         // case HighsPresolveStatus::Error
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                          "Presolve failed.\n");
+        highsLogDev(options_.log_options, HighsLogType::ERROR,
+                    "Presolve failed.\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         // Transfer the model status to the scaled model status and orriginal
         // HMO statuses;
@@ -700,8 +726,8 @@ HighsStatus Highs::run() {
         presolve_.info_.postsolve_time = this_postsolve_time;
 
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-          HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                            "Postsolve finished\n");
+          highsLogDev(options_.log_options, HighsLogType::VERBOSE,
+                      "Postsolve finished\n");
           //
           // Now hot-start the simplex solver for the original_hmo:
           //
@@ -736,7 +762,7 @@ HighsStatus Highs::run() {
           HighsOptions& options = hmos_[solved_hmo].options_;
           HighsOptions save_options = options;
           const bool full_logging = false;
-          if (full_logging) options.message_level = ML_ALWAYS;
+          if (full_logging) options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
@@ -771,9 +797,9 @@ HighsStatus Highs::run() {
           postsolve_iteration_count =
               info_.simplex_iteration_count - iteration_count0;
         } else {
-          HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                          "Postsolve return status is %d\n",
-                          (int)postsolve_status);
+          highsLogUser(options_.log_options, HighsLogType::ERROR,
+                       "Postsolve return status is %d\n",
+                       (int)postsolve_status);
           model_status_ = HighsModelStatus::POSTSOLVE_ERROR;
           scaled_model_status_ = model_status_;
           hmos_[0].unscaled_model_status_ = model_status_;
@@ -837,60 +863,57 @@ HighsStatus Highs::run() {
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                      "Postsolve  : \n");
+    highsLogDev(options_.log_options, HighsLogType::INFO, "Postsolve  : \n");
   } else {
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                      "Postsolve  : %d\n", postsolve_iteration_count);
+    highsLogDev(options_.log_options, HighsLogType::INFO, "Postsolve  : %d\n",
+                postsolve_iteration_count);
   }
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time       : %8.2f\n", this_solve_time);
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time Pre   : %8.2f\n", this_presolve_time);
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time PreLP : %8.2f\n", this_solve_presolved_lp_time);
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time PostLP: %8.2f\n", this_solve_original_lp_time);
+  highsLogDev(options_.log_options, HighsLogType::INFO, "Time       : %8.2f\n",
+              this_solve_time);
+  highsLogDev(options_.log_options, HighsLogType::INFO, "Time Pre   : %8.2f\n",
+              this_presolve_time);
+  highsLogDev(options_.log_options, HighsLogType::INFO, "Time PreLP : %8.2f\n",
+              this_solve_presolved_lp_time);
+  highsLogDev(options_.log_options, HighsLogType::INFO, "Time PostLP: %8.2f\n",
+              this_solve_original_lp_time);
   if (this_solve_time > 0) {
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                      "For LP %16s",
-                      hmos_[original_hmo].lp_.model_name_.c_str());
+    highsLogDev(options_.log_options, HighsLogType::INFO, "For LP %16s",
+                hmos_[original_hmo].lp_.model_name_.c_str());
     double sum_time = 0;
     if (this_presolve_time > 0) {
       sum_time += this_presolve_time;
       int pct = (100 * this_presolve_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Presolve %8.2f (%3d%%)", this_presolve_time, pct);
+      highsLogDev(options_.log_options, HighsLogType::INFO,
+                  ": Presolve %8.2f (%3d%%)", this_presolve_time, pct);
     }
     if (this_solve_presolved_lp_time > 0) {
       sum_time += this_solve_presolved_lp_time;
       int pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Solve presolved LP %8.2f (%3d%%)",
-                        this_solve_presolved_lp_time, pct);
+      highsLogDev(options_.log_options, HighsLogType::INFO,
+                  ": Solve presolved LP %8.2f (%3d%%)",
+                  this_solve_presolved_lp_time, pct);
     }
     if (this_postsolve_time > 0) {
       sum_time += this_postsolve_time;
       int pct = (100 * this_postsolve_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Postsolve %8.2f (%3d%%)", this_postsolve_time, pct);
+      highsLogDev(options_.log_options, HighsLogType::INFO,
+                  ": Postsolve %8.2f (%3d%%)", this_postsolve_time, pct);
     }
     if (this_solve_original_lp_time > 0) {
       sum_time += this_solve_original_lp_time;
       int pct = (100 * this_solve_original_lp_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Solve original LP %8.2f (%3d%%)",
-                        this_solve_original_lp_time, pct);
+      highsLogDev(options_.log_options, HighsLogType::INFO,
+                  ": Solve original LP %8.2f (%3d%%)",
+                  this_solve_original_lp_time, pct);
     }
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                      "\n");
+    highsLogDev(options_.log_options, HighsLogType::INFO, "\n");
     double rlv_time_difference =
         fabs(sum_time - this_solve_time) / this_solve_time;
     if (rlv_time_difference > 0.1)
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        "Strange: Solve time = %g; Sum times = %g: relative "
-                        "difference = %g\n",
-                        this_solve_time, sum_time, rlv_time_difference);
+      highsLogDev(options_.log_options, HighsLogType::INFO,
+                  "Strange: Solve time = %g; Sum times = %g: relative "
+                  "difference = %g\n",
+                  this_solve_time, sum_time, rlv_time_difference);
   }
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
@@ -928,8 +951,8 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (!haveHmo("getBasicVariables")) return HighsStatus::Error;
   if (basic_variables == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasicVariables: basic_variables is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasicVariables: basic_variables is NULL\n");
     return HighsStatus::Error;
   }
   return getBasicVariablesInterface(basic_variables);
@@ -939,23 +962,23 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
                                       int* row_num_nz, int* row_indices) {
   if (!haveHmo("getBasisInverseRow")) return HighsStatus::Error;
   if (row_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisInverseRow: row_vector is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasisInverseRow: row_vector is NULL\n");
     return HighsStatus::Error;
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   if (row < 0 || row >= numRow) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Row index %d out of range [0, %d] in getBasisInverseRow",
-                    row, numRow - 1);
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "Row index %d out of range [0, %d] in getBasisInverseRow\n",
+                 row, numRow - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisInverseRow");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "No invertible representation for getBasisInverseRow\n");
     return HighsStatus::Error;
   }
   // Compute a row i of the inverse of the basis matrix by solving B^Tx=e_i
@@ -970,24 +993,23 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
                                       int* col_num_nz, int* col_indices) {
   if (!haveHmo("getBasisInverseCol")) return HighsStatus::Error;
   if (col_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisInverseCol: col_vector is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasisInverseCol: col_vector is NULL\n");
     return HighsStatus::Error;
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   if (col < 0 || col >= numRow) {
-    HighsLogMessage(
-        options_.logfile, HighsMessageType::ERROR,
-        "Column index %d out of range [0, %d] in getBasisInverseCol", col,
-        numRow - 1);
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "Column index %d out of range [0, %d] in getBasisInverseCol\n",
+                 col, numRow - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisInverseCol");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "No invertible representation for getBasisInverseCol\n");
     return HighsStatus::Error;
   }
   // Compute a col i of the inverse of the basis matrix by solving Bx=e_i
@@ -1002,24 +1024,24 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                                  int* solution_num_nz, int* solution_indices) {
   if (!haveHmo("getBasisSolve")) return HighsStatus::Error;
   if (Xrhs == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisSolve: Xrhs is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasisSolve: Xrhs is NULL\n");
     return HighsStatus::Error;
   }
   if (solution_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisSolve: solution_vector is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasisSolve: solution_vector is NULL\n");
     return HighsStatus::Error;
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisSolve");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "No invertible representation for getBasisSolve\n");
     return HighsStatus::Error;
   }
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
@@ -1034,24 +1056,24 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                                           int* solution_indices) {
   if (!haveHmo("getBasisTransposeSolve")) return HighsStatus::Error;
   if (Xrhs == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisTransposeSolve: Xrhs is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasisTransposeSolve: Xrhs is NULL\n");
     return HighsStatus::Error;
   }
   if (solution_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisTransposeSolve: solution_vector is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getBasisTransposeSolve: solution_vector is NULL\n");
     return HighsStatus::Error;
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisTransposeSolve");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "No invertible representation for getBasisTransposeSolve\n");
     return HighsStatus::Error;
   }
-  int numRow = hmos_[0].lp_.numRow_;
+  int numRow = lp_.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
@@ -1064,27 +1086,29 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  int* row_num_nz, int* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
+  // Ensure that the LP is column-wise
+  setOrientation(lp_);
+  HighsLp& lp = lp_;
   if (row_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getReducedRow: row_vector is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getReducedRow: row_vector is NULL\n");
     return HighsStatus::Error;
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not pass_basis_inverse_row_vector
   // NULL - it's the trigger to determine whether it's computed or not
-  if (row < 0 || row >= hmos_[0].lp_.numRow_) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Row index %d out of range [0, %d] in getReducedRow", row,
-                    hmos_[0].lp_.numRow_ - 1);
+  if (row < 0 || row >= lp.numRow_) {
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "Row index %d out of range [0, %d] in getReducedRow\n", row,
+                 lp.numRow_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getReducedRow");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "No invertible representation for getReducedRow\n");
     return HighsStatus::Error;
   }
-  HighsLp& lp = hmos_[0].lp_;
   int numRow = lp.numRow_;
   vector<double> basis_inverse_row;
   double* basis_inverse_row_vector = (double*)pass_basis_inverse_row_vector;
@@ -1118,26 +1142,28 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::Error;
+  // Ensure that the LP is column-wise
+  setOrientation(lp_);
+  HighsLp& lp = lp_;
   if (col_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getReducedColumn: col_vector is NULL");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "getReducedColumn: col_vector is NULL\n");
     return HighsStatus::Error;
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  if (col < 0 || col >= hmos_[0].lp_.numCol_) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Column index %d out of range [0, %d] in getReducedColumn",
-                    col, hmos_[0].lp_.numCol_ - 1);
+  if (col < 0 || col >= lp.numCol_) {
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "Column index %d out of range [0, %d] in getReducedColumn\n",
+                 col, lp.numCol_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getReducedColumn");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "No invertible representation for getReducedColumn\n");
     return HighsStatus::Error;
   }
-  HighsLp& lp = hmos_[0].lp_;
   int numRow = lp.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
@@ -1177,13 +1203,13 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   // Check the user-supplied basis
   if (!isBasisConsistent(lp_, basis)) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "setBasis: invalid basis");
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "setBasis: invalid basis\n");
     return HighsStatus::Error;
   }
   // Update the HiGHS basis
-  this->basis_ = basis;
-  this->basis_.valid_ = true;
+  basis_ = basis;
+  basis_.valid_ = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1193,7 +1219,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
 HighsStatus Highs::setBasis() {
   // Invalidate the basis for HiGHS Don't set to logical basis since
   // that causes presolve to be skipped
-  this->basis_.valid_ = false;
+  basis_.valid_ = false;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1258,6 +1284,23 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
 
 bool Highs::changeColCost(const int col, const double cost) {
   return changeColsCost(1, &col, &cost);
+}
+
+bool Highs::changeColsCost(const int from_col, const int to_col,
+                           const double* cost) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_col;
+  index_collection.to_ = to_col;
+  if (!haveHmo("changeColsCost")) return false;
+  call_status = changeCostsInterface(index_collection, cost);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeCosts");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeColsCost(const int num_set_entries, const int* set,
@@ -1368,6 +1411,23 @@ bool Highs::changeRowBounds(const int row, const double lower,
   return changeRowsBounds(1, &row, &lower, &upper);
 }
 
+bool Highs::changeRowsBounds(const int from_row, const int to_row,
+                             const double* lower, const double* upper) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numRow_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_row;
+  index_collection.to_ = to_row;
+  if (!haveHmo("changeRowsBounds")) return false;
+  call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeRowBounds");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
 bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   if (num_set_entries <= 0) return true;
@@ -1422,7 +1482,7 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
 
 bool Highs::getObjectiveSense(ObjSense& sense) {
   if (!haveHmo("getObjectiveSense")) return false;
-  sense = hmos_[0].lp_.sense_;
+  sense = lp_.sense_;
   return true;
 }
 
@@ -1728,10 +1788,18 @@ std::string Highs::primalDualStatusToString(const int primal_dual_status) {
   return utilPrimalDualStatusToString(primal_dual_status);
 }
 
+void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
+  setOrientation(lp_, desired_orientation);
+}
+
 // Private methods
 HighsPresolveStatus Highs::runPresolve() {
   // Exit if the problem is empty or if presolve is set to off.
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
+
+  // Ensure that the LP is column-wise
+  setOrientation(lp_);
+
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
     return HighsPresolveStatus::NullError;
 
@@ -1743,15 +1811,15 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double left = options_.time_limit - start_presolve;
     if (left <= 0) {
-      HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                        "Time limit reached while reading in matrix\n");
+      highsLogDev(options_.log_options, HighsLogType::ERROR,
+                  "Time limit reached while reading in matrix\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                      "Time limit set: reading matrix took %.2g, presolve "
-                      "time left: %.2g\n",
-                      start_presolve, left);
+    highsLogDev(options_.log_options, HighsLogType::VERBOSE,
+                "Time limit set: reading matrix took %.2g, presolve "
+                "time left: %.2g\n",
+                start_presolve, left);
     presolve_.options_.time_limit = left;
   }
 
@@ -1762,21 +1830,19 @@ HighsPresolveStatus Highs::runPresolve() {
     double time_init = current - start_presolve;
     double left = presolve_.options_.time_limit - time_init;
     if (left <= 0) {
-      HighsPrintMessage(
-          options_.output, options_.message_level, ML_VERBOSE,
-          "Time limit reached while copying matrix into presolve.\n");
+      highsLogDev(options_.log_options, HighsLogType::ERROR,
+                  "Time limit reached while copying matrix into presolve.\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                      "Time limit set: copying matrix took %.2g, presolve "
-                      "time left: %.2g\n",
-                      time_init, left);
+    highsLogDev(options_.log_options, HighsLogType::VERBOSE,
+                "Time limit set: copying matrix took %.2g, presolve "
+                "time left: %.2g\n",
+                time_init, left);
     presolve_.options_.time_limit = options_.time_limit;
   }
 
-  presolve_.data_.presolve_[0].message_level = options_.message_level;
-  presolve_.data_.presolve_[0].output = options_.output;
+  presolve_.data_.presolve_[0].log_options = options_.log_options;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
@@ -1851,6 +1917,8 @@ HighsStatus Highs::callSolveLp(const int model_index, const string message) {
   if (!model_index_ok) return HighsStatus::Error;
 
   HighsModelObject& model = hmos_[model_index];
+  // Check that the model isn't row-wise
+  assert(model.lp_.orientation_ != MatrixOrientation::ROWWISE);
 
   // Transfer the LP solver iteration counts to this model
   HighsIterationCounts& iteration_counts = hmos_[model_index].iteration_counts_;
@@ -1867,13 +1935,65 @@ HighsStatus Highs::callSolveLp(const int model_index, const string message) {
   return return_status;
 }
 
+HighsStatus Highs::callSolveMip() {
+  HighsStatus return_status = HighsStatus::OK;
+  // Run the MIP solver
+  options_.log_dev_level = LOG_DEV_LEVEL_INFO;
+  // Check that the model isn't row-wise
+  assert(lp_.orientation_ != MatrixOrientation::ROWWISE);
+  HighsMipSolver solver(options_, lp_);
+  solver.run();
+  // Cheating now, but need to set this honestly!
+  HighsStatus call_status = HighsStatus::OK;
+  return_status =
+      interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");
+  if (return_status == HighsStatus::Error) return return_status;
+  // Cheating now, but need to set this honestly!
+  scaled_model_status_ = HighsModelStatus::OPTIMAL;
+  scaled_model_status_ = solver.modelstatus_;
+  model_status_ = scaled_model_status_;
+  // Set the values in HighsInfo instance info_
+  info_.mip_node_count = solver.node_count_;
+  info_.simplex_iteration_count = -1;    // Not known
+  info_.ipm_iteration_count = -1;        // Not known
+  info_.crossover_iteration_count = -1;  // Not known
+  info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  info_.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
+  info_.objective_function_value = solver.solution_objective_;
+  info_.mip_dual_bound = solver.dual_bound_;
+  info_.mip_gap =
+      100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
+      std::max(1.0, std::abs(info_.objective_function_value));
+  info_.num_primal_infeasibilities = -1;  // Not known
+  // Are the violations max or sum?
+  info_.max_primal_infeasibility =
+      std::max({solver.bound_violation_, solver.row_violation_,
+                solver.integrality_violation_});
+  info_.sum_primal_infeasibilities = -1;  // Not known
+  info_.num_dual_infeasibilities = -1;    // Not known
+  info_.max_dual_infeasibility = -1;      // Not known
+  info_.sum_dual_infeasibilities = -1;    // Not known
+  // The solution needs to be here, but just resize it for now
+  int solver_solution_size = solver.solution_.size();
+  assert(solver_solution_size >= lp_.numCol_);
+  solution_.col_value.resize(lp_.numCol_);
+  for (int iCol = 0; iCol < lp_.numCol_; iCol++)
+    solution_.col_value[iCol] = solver.solution_[iCol];
+
+  //  assert((int)solution_.col_value.size() == lp_.numCol_);
+  //  assert((int)solution_.row_value.size() == lp_.numRow_);
+  //  solution_.row_value.resize(lp_.numRow_);
+
+  return return_status;
+}
+
 HighsStatus Highs::writeSolution(const std::string filename,
                                  const bool pretty) const {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  HighsLp lp = this->lp_;
-  HighsBasis basis = this->basis_;
-  HighsSolution solution = this->solution_;
+  HighsLp lp = lp_;
+  HighsBasis basis = basis_;
+  HighsSolution solution = solution_;
   FILE* file;
   bool html;
   call_status = openWriteFile(filename, "writeSolution", file, html);
@@ -1893,7 +2013,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
 void Highs::newHighsBasis() {
   if (hmos_.size() > 0) {
     // Copy this basis to the HMO basis
-    hmos_[0].basis_ = this->basis_;
+    hmos_[0].basis_ = basis_;
     // Clear any simplex basis
     clearBasisInterface();
   }
@@ -1950,9 +2070,9 @@ HighsStatus Highs::openWriteFile(const string filename,
   } else {
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Cannot open writeable file \"%s\" in %s",
-                      filename.c_str(), method_name.c_str());
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
+                   "Cannot open writeable file \"%s\" in %s\n",
+                   filename.c_str(), method_name.c_str());
       return HighsStatus::Error;
     }
     const char* dot = strrchr(filename.c_str(), '.');
@@ -2037,9 +2157,9 @@ bool Highs::haveHmo(const string method_name) const {
   bool have_hmo = hmos_.size() > 0;
 #ifdef HiGHSDEV
   if (!have_hmo)
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Method %s called without any HighsModelObject",
-                    method_name.c_str());
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
+                 "Method %s called without any HighsModelObject\n",
+                 method_name.c_str());
 #endif
   assert(have_hmo);
   return have_hmo;
@@ -2192,9 +2312,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
                           HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
-    HighsLogMessage(
-        options_.logfile, HighsMessageType::ERROR,
-        "returnFromHighs: Supposed to be a HiGHS basis, but not consistent");
+    highsLogUser(
+        options_.log_options, HighsLogType::ERROR,
+        "returnFromHighs: Supposed to be a HiGHS basis, but not consistent\n");
     assert(consistent);
     return_status = HighsStatus::Error;
   }
@@ -2203,8 +2323,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     bool simplex_lp_ok =
         ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
     if (!simplex_lp_ok) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "returnFromHighs: Simplex LP not OK");
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
+                   "returnFromHighs: Simplex LP not OK\n");
       assert(simplex_lp_ok);
       return_status = HighsStatus::Error;
     }
@@ -2213,10 +2333,10 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
-  HighsLogMessage(
-      options_.logfile, HighsMessageType::WARNING,
-      "Method %s is still under development and behaviour may be unpredictable",
-      method_name.c_str());
+  highsLogUser(options_.log_options, HighsLogType::WARNING,
+               "Method %s is still under development and behaviour may be "
+               "unpredictable\n",
+               method_name.c_str());
 }
 
 void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {

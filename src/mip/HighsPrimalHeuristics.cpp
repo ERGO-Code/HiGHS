@@ -34,8 +34,7 @@ void HighsPrimalHeuristics::solveSubMip(std::vector<double> colLower,
 
   // set limits
   submipoptions.mip_max_leaves = maxleaves;
-  submipoptions.logfile = nullptr;
-  submipoptions.output = nullptr;
+  submipoptions.output_flag = false;
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
@@ -43,6 +42,7 @@ void HighsPrimalHeuristics::solveSubMip(std::vector<double> colLower,
       mipsolver.mipdata_->upper_limit;
   submipoptions.presolve = "on";
   // setup solver and run it
+
   HighsMipSolver submipsolver(submipoptions, submip, true);
   submipsolver.rootbasis = &mipsolver.mipdata_->firstrootbasis;
   submipsolver.run();
@@ -506,9 +506,6 @@ void HighsPrimalHeuristics::feasibilityPump() {
                                  objinds.size(), objinds.data(), objval.data());
   }
 
-  // lprelax.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
-  // lprelax.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
-
   lprelax.getLpSolver().setHighsOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_PRIMAL);
   lprelax.getLpSolver().setHighsOptionValue(
@@ -594,8 +591,7 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setHighsOptionValue("solver", "ipm");
   ipm.setHighsOptionValue("run_crossover", false);
   ipm.setHighsOptionValue("presolve", "off");
-  ipm.setHighsLogfile(nullptr);
-  ipm.setHighsOutput(nullptr);
+  ipm.setHighsOptionValue("output_flag", false);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);

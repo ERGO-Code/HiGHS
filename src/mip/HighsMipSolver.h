@@ -29,6 +29,7 @@ class HighsMipSolver {
   double row_violation_;
   double dual_bound_;
   double primal_bound_;
+  int64_t node_count_;
 
   bool submip;
   const HighsBasis* rootbasis;

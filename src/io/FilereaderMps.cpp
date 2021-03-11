@@ -33,44 +33,46 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       parser.time_limit = options.time_limit;
 
     FreeFormatParserReturnCode result =
-        parser.loadProblem(options.logfile, filename, model);
+        parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::SUCCESS:
+        setOrientation(model);
         return FilereaderRetcode::OK;
       case FreeFormatParserReturnCode::PARSERERROR:
         return FilereaderRetcode::PARSERERROR;
       case FreeFormatParserReturnCode::FILENOTFOUND:
         return FilereaderRetcode::FILENOTFOUND;
       case FreeFormatParserReturnCode::FIXED_FORMAT:
-        HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                        "Free format reader has detected row/col names with "
-                        "spaces: switching to fixed format parser");
+        highsLogUser(options.log_options, HighsLogType::WARNING,
+                     "Free format reader has detected row/col names with "
+                     "spaces: switching to fixed format parser\n");
         break;
       case FreeFormatParserReturnCode::TIMEOUT:
-        HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                        "Free format reader reached time_limit while parsing "
-                        "the input file");
+        highsLogUser(options.log_options, HighsLogType::WARNING,
+                     "Free format reader reached time_limit while parsing "
+                     "the input file\n");
         return FilereaderRetcode::TIMEOUT;
     }
   }
 
   // else use fixed format parser
-  FilereaderRetcode return_code =
-      readMPS(options.logfile, filename, -1, -1, model.numRow_, model.numCol_,
-              model.sense_, model.offset_, model.Astart_, model.Aindex_,
-              model.Avalue_, model.colCost_, model.colLower_, model.colUpper_,
-              model.rowLower_, model.rowUpper_, model.integrality_,
-              model.col_names_, model.row_names_, options.keep_n_rows);
+  FilereaderRetcode return_code = readMPS(
+      options.log_options, filename, -1, -1, model.numRow_, model.numCol_,
+      model.sense_, model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
+      model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+      model.rowUpper_, model.integrality_, model.col_names_, model.row_names_,
+      options.keep_n_rows);
+  if (return_code == FilereaderRetcode::OK) setOrientation(model);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Model has column names with spaces");
+    highsLogUser(options.log_options, HighsLogType::WARNING,
+                 "Model has column names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numCol_, model.col_names_, true);
 #endif
   }
   if (namesWithSpaces(model.numRow_, model.row_names_)) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Model has row names with spaces");
+    highsLogUser(options.log_options, HighsLogType::WARNING,
+                 "Model has row names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numRow_, model.row_names_, true);
 #endif
@@ -81,5 +83,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsLp& model) {
+  assert(model.orientation_ != MatrixOrientation::ROWWISE);
   return writeLpAsMPS(options, filename, model);
 }
