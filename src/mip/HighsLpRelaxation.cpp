@@ -101,8 +101,6 @@ double HighsLpRelaxation::slackUpper(int row) const {
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setHighsOptionValue("output_flag", false);
-  lpsolver.setHighsOptionValue("output_flag", false);
-  //  lpsolver.setHighsOptionValue("log_dev_level", 0);
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance);

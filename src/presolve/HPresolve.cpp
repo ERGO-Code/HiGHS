@@ -86,7 +86,6 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
   model = &model_;
   options = &options_;
 
-  col_numerics_threshold.resize(model->numCol_);
   colLowerSource.resize(model->numCol_, -1);
   colUpperSource.resize(model->numCol_, -1);
   implColLower.resize(model->numCol_, -HIGHS_CONST_INF);
@@ -104,7 +103,10 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
     if (model->rowUpper_[i] == HIGHS_CONST_INF) rowDualUpper[i] = 0;
   }
 
-  fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
+  if (model_.orientation_ == MatrixOrientation::ROWWISE)
+    fromCSR(model->Avalue_, model->Aindex_, model->Astart_);
+  else
+    fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
 
   // initialize everything as changed, but do not add all indices
   // since the first thing presolve will do is a scan for easy reductions
@@ -323,9 +325,6 @@ void HPresolve::link(int pos) {
   if (Anext[pos] != -1) Aprev[Anext[pos]] = pos;
 
   ++colsize[Acol[pos]];
-  col_numerics_threshold[Acol[pos]] =
-      std::max(options->presolve_pivot_threshold * std::abs(Avalue[pos]),
-               col_numerics_threshold[Acol[pos]]);
 
   ARleft[pos] = -1;
   ARright[pos] = -1;
@@ -967,10 +966,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
       HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
     }
 
-    HighsPrintMessage(options->output, options->message_level, ML_MINIMAL,
-                      "%d probing evaluations: %d deleted rows, %d deleted "
-                      "columns, %d lifted nonzeros\n",
-                      nprobed, numDeletedRows, numDeletedCols, addednnz);
+    highsLogUser(options->log_options, HighsLogType::INFO,
+                 "%d probing evaluations: %d deleted rows, %d deleted "
+                 "columns, %d lifted nonzeros\n",
+                 nprobed, numDeletedRows, numDeletedCols, addednnz);
   }
 
   return checkLimits(postSolveStack);
@@ -1356,6 +1355,26 @@ void HPresolve::fromCSR(const std::vector<double>& ARval,
   Acol.clear();
   Arow.clear();
 
+  freeslots.clear();
+  colhead.assign(model->numCol_, -1);
+  rowroot.assign(model->numRow_, -1);
+  colsize.assign(model->numCol_, 0);
+  rowsize.assign(model->numRow_, 0);
+  rowsizeInteger.assign(model->numRow_, 0);
+  rowsizeImplInt.assign(model->numRow_, 0);
+
+  impliedRowBounds.setNumSums(0);
+  impliedDualRowBounds.setNumSums(0);
+  impliedRowBounds.setBoundArrays(
+      model->colLower_.data(), model->colUpper_.data(), implColLower.data(),
+      implColUpper.data(), colLowerSource.data(), colUpperSource.data());
+  impliedRowBounds.setNumSums(model->numRow_);
+  impliedDualRowBounds.setBoundArrays(
+      rowDualLower.data(), rowDualUpper.data(), implRowDualLower.data(),
+      implRowDualUpper.data(), rowDualLowerSource.data(),
+      rowDualUpperSource.data());
+  impliedDualRowBounds.setNumSums(model->numCol_);
+
   int nrow = ARstart.size() - 1;
   assert(nrow == int(rowroot.size()));
   int nnz = ARval.size();
@@ -1372,13 +1391,19 @@ void HPresolve::fromCSR(const std::vector<double>& ARval,
                 ARindex.begin() + ARstart[i + 1]);
   }
 
+  Anext.resize(nnz);
+  Aprev.resize(nnz);
+  ARleft.resize(nnz);
+  ARright.resize(nnz);
   for (int pos = 0; pos != nnz; ++pos) link(pos);
 
-  eqiters.assign(nrow, equations.end());
-  for (int i = 0; i != nrow; ++i) {
-    // register equation
-    if (model->rowLower_[i] == model->rowUpper_[i])
-      eqiters[i] = equations.emplace(rowsize[i], i).first;
+  if (equations.empty()) {
+    eqiters.assign(nrow, equations.end());
+    for (int i = 0; i != nrow; ++i) {
+      // register equation
+      if (model->rowLower_[i] == model->rowUpper_[i])
+        eqiters[i] = equations.emplace(rowsize[i], i).first;
+    }
   }
 }
 
@@ -1847,8 +1872,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
     // set the bound to one of the values. To heuristically get rid of numerical
     // errors we choose the bound that was not tightened, or the midpoint if
     // both where tightened.
-    if (ub < lb || (ub > lb && (ub - lb) * col_numerics_threshold[col] *
-                                       options->presolve_pivot_threshold <=
+    if (ub < lb || (ub > lb && (ub - lb) * getMaxAbsColVal(col) <=
                                    options->primal_feasibility_tolerance)) {
       if (lowerTightened && upperTightened) {
         ub = 0.5 * (ub + lb);
@@ -2837,96 +2861,110 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   //    - stop
   //
 
-  numForcingRow = 0;
+  // convert model to minimization problem
+  if (model->sense_ == ObjSense::MAXIMIZE) {
+    for (int i = 0; i != model->numCol_; ++i)
+      model->colCost_[i] = -model->colCost_[i];
 
-  HighsPrintMessage(options->output, options->message_level, ML_ALWAYS,
-                    "\nPresolving model\n");
-
-  auto report = [&]() {
-    int numCol = model->numCol_ - numDeletedCols;
-    int numRow = model->numRow_ - numDeletedRows;
-    int numNonz = Avalue.size() - freeslots.size();
-    HighsPrintMessage(options->output, options->message_level, ML_ALWAYS,
-                      "%d rows, %d cols, %d nonzeros\n", numRow, numCol,
-                      numNonz);
-  };
-  HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
-
-  int numParallelRowColCalls = 0;
-  bool trySparsify = true;
-  bool tryProbing = mipsolver != nullptr;
-  while (true) {
-    report();
-
-    HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-
-    storeCurrentProblemSize();
-
-    //    if( ! parallelRowColDetectionCalled )
-    //    {
-    //      HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
-    //      printf("after parallel rows/cols: %d del rows %d del cols\n",
-    //            numDeletedRows, numDeletedCols);
-    //      parallelRowColDetectionCalled = true;
-    //    }
-    if (problemSizeReduction() > 0) {
-      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-    }
-
-    storeCurrentProblemSize();
-
-    HPRESOLVE_CHECKED_CALL(aggregator(postSolveStack));
-
-    if (problemSizeReduction() > 0.05) continue;
-
-    if (trySparsify) {
-      int numNz = numNonzeros();
-      HPRESOLVE_CHECKED_CALL(sparsify(postSolveStack));
-      double nzReduction = 100.0 * (1.0 - (numNonzeros() / (double)numNz));
-
-      if (nzReduction > 0) {
-        HighsPrintMessage(options->output, options->message_level, ML_ALWAYS,
-                          "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
-
-        fastPresolveLoop(postSolveStack);
-      }
-      trySparsify = false;
-    }
-
-    if (numParallelRowColCalls < 5) {
-      if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->numCol_ ||
-                                   numDeletedRows >= 0.5 * model->numRow_)) {
-        shrinkProblem(postSolveStack);
-
-        toCSC(model->Avalue_, model->Aindex_, model->Astart_);
-        fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
-      }
-      storeCurrentProblemSize();
-      HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
-      ++numParallelRowColCalls;
-      if (problemSizeReduction() > 0.05) continue;
-    }
-
-    HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-
-    strengthenInequalities();
-
-    HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-
-    if (tryProbing) {
-      detectImpliedIntegers();
-      storeCurrentProblemSize();
-      runProbing(postSolveStack);
-      tryProbing = problemSizeReduction() > 1.0;
-      trySparsify = true;
-      if (problemSizeReduction() > 0.05) continue;
-      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
-    }
-
-    break;
+    model->sense_ = ObjSense::MINIMIZE;
   }
 
-  report();
+  if (options->presolve == "on") {
+    numForcingRow = 0;
+
+    highsLogUser(options->log_options, HighsLogType::INFO,
+                 "\nPresolving model\n");
+
+    auto report = [&]() {
+      int numCol = model->numCol_ - numDeletedCols;
+      int numRow = model->numRow_ - numDeletedRows;
+      int numNonz = Avalue.size() - freeslots.size();
+      highsLogUser(options->log_options, HighsLogType::INFO,
+                   "%d rows, %d cols, %d nonzeros\n", numRow, numCol, numNonz);
+    };
+    HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
+
+    int numParallelRowColCalls = 0;
+    bool trySparsify = true;
+    bool tryProbing = mipsolver != nullptr;
+    while (true) {
+      report();
+
+      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+
+      storeCurrentProblemSize();
+
+      //    if( ! parallelRowColDetectionCalled )
+      //    {
+      //      HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
+      //      printf("after parallel rows/cols: %d del rows %d del cols\n",
+      //            numDeletedRows, numDeletedCols);
+      //      parallelRowColDetectionCalled = true;
+      //    }
+      if (problemSizeReduction() > 0) {
+        HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+      }
+
+      storeCurrentProblemSize();
+
+      HPRESOLVE_CHECKED_CALL(aggregator(postSolveStack));
+
+      if (problemSizeReduction() > 0.05) continue;
+
+      if (trySparsify) {
+        int numNz = numNonzeros();
+        HPRESOLVE_CHECKED_CALL(sparsify(postSolveStack));
+        double nzReduction = 100.0 * (1.0 - (numNonzeros() / (double)numNz));
+
+        if (nzReduction > 0) {
+          highsLogUser(options->log_options, HighsLogType::INFO,
+                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
+
+          fastPresolveLoop(postSolveStack);
+        }
+        trySparsify = false;
+      }
+
+      if (numParallelRowColCalls < 5) {
+        if (shrinkProblemEnabled && (numDeletedCols >= 0.5 * model->numCol_ ||
+                                     numDeletedRows >= 0.5 * model->numRow_)) {
+          shrinkProblem(postSolveStack);
+
+          toCSC(model->Avalue_, model->Aindex_, model->Astart_);
+          fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
+        }
+        storeCurrentProblemSize();
+        HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
+        ++numParallelRowColCalls;
+        if (problemSizeReduction() > 0.05) continue;
+      }
+
+      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+
+      strengthenInequalities();
+
+      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+
+      if (tryProbing) {
+        detectImpliedIntegers();
+        storeCurrentProblemSize();
+        runProbing(postSolveStack);
+        tryProbing = problemSizeReduction() > 1.0;
+        trySparsify = true;
+        if (problemSizeReduction() > 0.05) continue;
+        HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+      }
+
+      break;
+    }
+
+    report();
+  }
+  else
+  {
+     highsLogUser(options->log_options, HighsLogType::INFO,
+                 "\nPresolve is switched off\n");
+  }
 
   return Result::Ok;
 }
@@ -3042,16 +3080,16 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
   switch (presolve(postSolveStack)) {
     case Result::Stopped:
     case Result::Ok:
-      HighsPrintMessage(options->output, options->message_level, ML_ALWAYS,
-                        "Presolve stopped with status ok\n");
+      highsLogUser(options->log_options, HighsLogType::INFO,
+                   "Presolve stopped with status ok\n");
       break;
     case Result::PrimalInfeasible:
-      HighsPrintMessage(options->output, options->message_level, ML_ALWAYS,
-                        "Presolve detected primal infeasible problem\n");
+      highsLogUser(options->log_options, HighsLogType::INFO,
+                   "Presolve detected primal infeasible problem\n");
       return HighsModelStatus::PRIMAL_INFEASIBLE;
     case Result::DualInfeasible:
-      HighsPrintMessage(options->output, options->message_level, ML_ALWAYS,
-                        "Presolve detected unbounded or infeasible problem\n");
+      highsLogUser(options->log_options, HighsLogType::INFO,
+                   "Presolve detected unbounded or infeasible problem\n");
       return HighsModelStatus::DUAL_INFEASIBLE;
   }
 
@@ -4612,8 +4650,8 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
   // good = 1734357, bad = 1734289;
   // good = 1050606, bad = 1050605;
-  //good = 1811527, bad = 1811526;
-  //reductionLim = bad;
+  // good = 1811527, bad = 1811526;
+  // reductionLim = bad;
   do {
     model = lp;
     model.integrality_.assign(lp.numCol_, HighsVarType::CONTINUOUS);

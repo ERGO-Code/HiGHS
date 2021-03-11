@@ -65,10 +65,6 @@ class HPresolve {
   // vector to store the nonzero positions of a row
   std::vector<int> rowpositions;
 
-  // for each column the threshold of coefficient values for which a
-  // substitution is considered numerically safe
-  std::vector<double> col_numerics_threshold;
-
   // stack to reuse free slots
   std::vector<int> freeslots;
 

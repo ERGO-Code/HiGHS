@@ -119,36 +119,6 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
   return presolve_return_status;
 }
 
-HighsPostsolveStatus HighsMipSolver::runPostsolve() {
-  assert(presolve_.has_run_);
-  if (!mipdata_) return HighsPostsolveStatus::ReducedSolutionEmpty;
-
-  const std::vector<double>& incumbent = mipdata_->getSolution();
-  bool solution_ok =
-      presolve_.getReducedProblem().numCol_ == (int)incumbent.size();
-  if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
-
-  if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
-      presolve_.presolve_status_ != HighsPresolveStatus::ReducedToEmpty)
-    return HighsPostsolveStatus::NoPostsolve;
-
-  // Handle max case.
-  // if (lp_.sense_ == ObjSense::MAXIMIZE)
-  // presolve_.negateReducedLpColDuals(true);
-
-  // Run postsolve
-  HighsPostsolveStatus postsolve_status =
-      presolve_.data_.presolve_[0].primalPostsolve(
-          incumbent, presolve_.data_.recovered_solution_);
-
-  return postsolve_status;
-
-  // if (lp_.sense_ == ObjSense::MAXIMIZE)
-  //   presolve_.negateReducedLpColDuals(false);
-
-  // return HighsPostsolveStatus::SolutionRecovered;
-}
-
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::NOTSET;
   // std::cout << options_mip_->presolve << std::endl;
@@ -161,9 +131,9 @@ void HighsMipSolver::run() {
     mipdata_->runPresolve();
 
     if (modelstatus_ != HighsModelStatus::NOTSET) {
-      HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                        ML_MINIMAL, "Presolve: %s\n",
-                        utilHighsModelStatusToString(modelstatus_).c_str());
+      highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                   "Presolve: %s\n",
+                   utilHighsModelStatusToString(modelstatus_).c_str());
       if (modelstatus_ == HighsModelStatus::OPTIMAL) {
         mipdata_->upper_bound = 0;
         mipdata_->lower_bound = 0;
