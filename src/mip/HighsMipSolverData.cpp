@@ -828,7 +828,7 @@ bool HighsMipSolverData::rootSeparationRound(
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-               "solving root node LP relaxation\n");
+               "\nsolving root node LP relaxation\n");
   lp.loadModel();
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
 
@@ -842,7 +842,7 @@ void HighsMipSolverData::evaluateRootNode() {
   firstrootlpiters = maxrootlpiters;
 
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-               "LP solved in %d iterations and %.1fs seconds\n",
+               "LP solved in %d iterations and %.1fs seconds\n\n",
                (int)firstrootlpiters, lp.getLpSolver().getHighsRunTime());
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
