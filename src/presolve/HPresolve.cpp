@@ -2869,7 +2869,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     model->sense_ = ObjSense::MINIMIZE;
   }
 
-  if (options->presolve == "on") {
+  if (options->presolve != "off") {
     numForcingRow = 0;
 
     highsLogUser(options->log_options, HighsLogType::INFO,
@@ -2959,10 +2959,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     }
 
     report();
-  }
-  else
-  {
-     highsLogUser(options->log_options, HighsLogType::INFO,
+  } else {
+    highsLogUser(options->log_options, HighsLogType::INFO,
                  "\nPresolve is switched off\n");
   }
 
@@ -3080,16 +3078,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
   switch (presolve(postSolveStack)) {
     case Result::Stopped:
     case Result::Ok:
-      highsLogUser(options->log_options, HighsLogType::INFO,
-                   "Presolve stopped with status ok\n");
       break;
     case Result::PrimalInfeasible:
-      highsLogUser(options->log_options, HighsLogType::INFO,
-                   "Presolve detected primal infeasible problem\n");
       return HighsModelStatus::PRIMAL_INFEASIBLE;
     case Result::DualInfeasible:
-      highsLogUser(options->log_options, HighsLogType::INFO,
-                   "Presolve detected unbounded or infeasible problem\n");
       return HighsModelStatus::DUAL_INFEASIBLE;
   }
 
