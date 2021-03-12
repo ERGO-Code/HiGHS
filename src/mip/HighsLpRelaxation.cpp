@@ -134,9 +134,12 @@ void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
   lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
   lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
+  lprows.clear();
   lprows.reserve(lpmodel.numRow_);
   for (int i = 0; i != lpmodel.numRow_; ++i) lprows.push_back(LpRow::model(i));
   lpmodel.integrality_.clear();
+  lpsolver.clearSolver();
+  lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
   mipsolver.mipdata_->domain.clearChangedCols();
 }

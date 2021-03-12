@@ -69,7 +69,10 @@ class HighsMipSolver {
 
   ~HighsMipSolver();
 
-  void setModel(const HighsLp& model) { model_ = &model; }
+  void setModel(const HighsLp& model) {
+    model_ = &model;
+    solution_objective_ = HIGHS_CONST_INF;
+  }
 
   mutable HighsTimer timer_;
   PresolveComponent presolve_;

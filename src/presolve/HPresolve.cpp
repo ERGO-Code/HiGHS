@@ -133,6 +133,11 @@ void HPresolve::setInput(HighsMipSolver& mipsolver) {
   if (mipsolver.model_ != &mipsolver.mipdata_->presolvedModel) {
     mipsolver.mipdata_->presolvedModel = *mipsolver.model_;
     mipsolver.model_ = &mipsolver.mipdata_->presolvedModel;
+  } else {
+    mipsolver.mipdata_->presolvedModel.colLower_ =
+        mipsolver.mipdata_->domain.colLower_;
+    mipsolver.mipdata_->presolvedModel.colUpper_ =
+        mipsolver.mipdata_->domain.colUpper_;
   }
 
   setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_);
@@ -631,6 +636,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
       model->colCost_[newColIndex[i]] = model->colCost_[i];
       model->colLower_[newColIndex[i]] = model->colLower_[i];
       model->colUpper_[newColIndex[i]] = model->colUpper_[i];
+      assert(!std::isnan(model->colLower_[newColIndex[i]]));
+      assert(!std::isnan(model->colUpper_[newColIndex[i]]));
       model->integrality_[newColIndex[i]] = model->integrality_[i];
       implColLower[newColIndex[i]] = implColLower[i];
       implColUpper[newColIndex[i]] = implColUpper[i];
@@ -666,6 +673,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
       newRowIndex[i] = model->numRow_++;
       model->rowLower_[newRowIndex[i]] = model->rowLower_[i];
       model->rowUpper_[newRowIndex[i]] = model->rowUpper_[i];
+      assert(!std::isnan(model->rowLower_[newRowIndex[i]]));
+      assert(!std::isnan(model->rowUpper_[newRowIndex[i]]));
       rowDualLower[newRowIndex[i]] = rowDualLower[i];
       rowDualUpper[newRowIndex[i]] = rowDualUpper[i];
       implRowDualLower[newRowIndex[i]] = implRowDualLower[i];
@@ -807,6 +816,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   HighsDomain& domain = mipsolver->mipdata_->domain;
 
   domain.propagate();
+  if (domain.infeasible()) return Result::PrimalInfeasible;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
   bool firstCall = !mipsolver->mipdata_->cliquesExtracted;
@@ -817,11 +827,19 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   // packing constraints so that the clique merging step can extend/delete them
   if (firstCall) {
     cliquetable.extractCliques(*mipsolver);
-    mipsolver->mipdata_->upper_limit =
-        options->dual_objective_value_upper_bound - model->offset_;
-    if (!domain.infeasible() &&
-        mipsolver->mipdata_->upper_limit != HIGHS_CONST_INF)
+    if (domain.infeasible()) return Result::PrimalInfeasible;
+
+    // during presolve we keep the objective upper bound without the current
+    // offset so we need to update it
+
+    if (mipsolver->mipdata_->upper_limit != HIGHS_CONST_INF) {
+      double tmpLimit = mipsolver->mipdata_->upper_limit;
+      mipsolver->mipdata_->upper_limit = tmpLimit - model->offset_;
       cliquetable.extractObjCliques(*mipsolver);
+      mipsolver->mipdata_->upper_limit = tmpLimit;
+
+      if (domain.infeasible()) return Result::PrimalInfeasible;
+    }
   }
 
   // store binary variables in vector with their number of implications on
@@ -859,7 +877,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         // when a large percentage of columns have been deleted, stop this round
         // of probing
         // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
-        // if (numDel > model->numCol_ * 0.1) break;
+        if (numDel > model->numCol_ * 0.1) break;
         if (contingent + numDel - nprobed < 0) break;
 
         bool fixed = implications.runProbing(i, contingent);
@@ -1547,6 +1565,7 @@ void HPresolve::substitute(int row, int col, double rhs) {
   if (model->colCost_[col] != 0.0) {
     HighsCDouble objscale = model->colCost_[col] * substrowscale;
     model->offset_ = double(model->offset_ - objscale * rhs);
+    assert(std::isfinite(model->offset_));
     for (int rowiter : rowpositions) {
       // printf("changing col cost to %g = %g + %g * %g\n",
       // double(model->colCost_[Acol[rowiter]] + objscale * Avalue[rowiter]),
@@ -2660,6 +2679,7 @@ HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postSolveStack,
 
   return checkLimits(postSolveStack);
 }
+
 HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
                                          int col) {
   assert(!colDeleted[col]);
@@ -2737,7 +2757,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
     }
   } else if (colDualLower >= -options->dual_feasibility_tolerance) {
     // symmetric case for fixing to the lower bound
-    if (model->colLower_[col] != HIGHS_CONST_INF) {
+    if (model->colLower_[col] != -HIGHS_CONST_INF) {
       fixColToLower(postSolveStack, col);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
       return checkLimits(postSolveStack);
@@ -2866,6 +2886,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     for (int i = 0; i != model->numCol_; ++i)
       model->colCost_[i] = -model->colCost_[i];
 
+    model->offset_ = -model->offset_;
+    assert(std::isfinite(model->offset_));
     model->sense_ = ObjSense::MINIMIZE;
   }
 
@@ -3306,6 +3328,7 @@ void HPresolve::substitute(int substcol, int staycol, double offset,
   // substitute column in the objective function
   if (model->colCost_[substcol] != 0.0) {
     model->offset_ += model->colCost_[substcol] * offset;
+    assert(std::isfinite(model->offset_));
 
     model->colCost_[staycol] += scale * model->colCost_[substcol];
 
@@ -3353,6 +3376,7 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postSolveStack, int col) {
   }
 
   model->offset_ += model->colCost_[col] * fixval;
+  assert(std::isfinite(model->offset_));
   model->colCost_[col] = 0;
 }
 
@@ -3394,6 +3418,7 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postSolveStack, int col) {
   }
 
   model->offset_ += model->colCost_[col] * fixval;
+  assert(std::isfinite(model->offset_));
   model->colCost_[col] = 0;
 }
 
@@ -3442,6 +3467,7 @@ void HPresolve::removeFixedCol(int col) {
   }
 
   model->offset_ += model->colCost_[col] * fixval;
+  assert(std::isfinite(model->offset_));
   model->colCost_[col] = 0;
 }
 
@@ -3656,7 +3682,7 @@ int HPresolve::strengthenInequalities() {
       for (int i = indices.size() - 1; i >= 0; --i) {
         double delta = upper[indices[i]] * reducedcost[indices[i]];
 
-        if (lambda <= delta + options->mip_feasibility_tolerance)
+        if (lambda <= delta + 10 * options->mip_feasibility_tolerance)
           cover.push_back(indices[i]);
         else
           lambda -= delta;

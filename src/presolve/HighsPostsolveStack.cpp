@@ -595,11 +595,13 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   if (recomputeCol) {
     solution.col_value[col] =
         mergeVal - colScale * solution.col_value[duplicateCol];
-  } else if (!basis.col_status.empty()) {
+  } else {
     // setting col to its lower bound yielded a feasible value for
     // duplicateCol
-    basis.col_status[duplicateCol] = basis.col_status[col];
-    basis.col_status[col] = HighsBasisStatus::LOWER;
+    if (!basis.col_status.empty()) {
+      basis.col_status[duplicateCol] = basis.col_status[col];
+      basis.col_status[col] = HighsBasisStatus::LOWER;
+    }
     solution.col_value[col] = colLower;
   }
 }
