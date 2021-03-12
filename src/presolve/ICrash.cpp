@@ -250,10 +250,12 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
       // if empty skip.
       if (idata.lp.Astart_[col] == idata.lp.Astart_[col + 1]) continue;
 
-      double delta_x = 0;
+      double old_value = idata.xk.col_value[col];
       minimizeComponentIca(col, idata.mu, idata.lambda, idata.lp, objective_ica,
                            residual_ica, idata.xk);
 
+      double new_value = idata.xk.col_value[col];
+      double delta_x = new_value - old_value;
       if (minor_iteration_details) {
         double quadratic_objective = getQuadraticObjective(idata);
         printMinorIterationDetails(k, col, idata.xk.col_value[col] - delta_x,
