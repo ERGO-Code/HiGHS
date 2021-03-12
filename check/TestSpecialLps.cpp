@@ -497,7 +497,7 @@ TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   mpsUnbounded(highs);
 }
 
-// for some reason hangs on IPX with presolve off: add to doctest 
+// for some reason hangs on IPX with presolve off: add to doctest
 // TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
 //   Highs highs;
 //   if (!dev_run) {

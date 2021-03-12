@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -133,6 +133,14 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        std::string& value) {
   if (getOptionValue(options_.logfile, option, options_.records, value) ==
+      OptionStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getHighsOptionType(const std::string& option,
+                                      HighsOptionType& type) {
+  if (getOptionType(options_.logfile, option, options_.records, type) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;

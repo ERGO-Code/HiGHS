@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -559,13 +559,11 @@ HighsStatus HighsSimplexInterface::getCols(
             num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
       num_col++;
     }
-    if (col_matrix_index != NULL || col_matrix_value != NULL) {
-      for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col + 1];
-           el++) {
-        if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
-        if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
-        num_nz++;
-      }
+    for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col + 1];
+         el++) {
+      if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
+      if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
+      num_nz++;
     }
     if (out_to_col == col_dim - 1 || in_to_col == col_dim - 1) break;
   }

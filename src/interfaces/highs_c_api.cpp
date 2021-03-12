@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,12 +11,13 @@
 
 #include "Highs.h"
 
-int Highs_call(int numcol, int numrow, int numnz, double* colcost,
-               double* collower, double* colupper, double* rowlower,
-               double* rowupper, int* astart, int* aindex, double* avalue,
-               double* colvalue, double* coldual, double* rowvalue,
-               double* rowdual, int* colbasisstatus, int* rowbasisstatus,
-               int* modelstatus) {
+int Highs_call(const int numcol, const int numrow, const int numnz,
+               const double* colcost, const double* collower,
+               const double* colupper, const double* rowlower,
+               const double* rowupper, const int* astart, const int* aindex,
+               const double* avalue, double* colvalue, double* coldual,
+               double* rowvalue, double* rowdual, int* colbasisstatus,
+               int* rowbasisstatus, int* modelstatus) {
   Highs highs;
 
   int status =
@@ -84,9 +85,17 @@ int Highs_passLp(void* highs, const int numcol, const int numrow,
 int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
 
 int Highs_runQuiet(void* highs) {
-  int return_status = (int)((Highs*)highs)->setHighsLogfile(NULL);
+  int return_status = Highs_setHighsLogfile(highs, NULL);
   if (return_status) return return_status;
-  return (int)((Highs*)highs)->setHighsOutput(NULL);
+  return Highs_setHighsOutput(highs, NULL);
+}
+
+int Highs_setHighsLogfile(void* highs, void* logfile) {
+  return (int)((Highs*)highs)->setHighsLogfile((FILE*)logfile);
+}
+
+int Highs_setHighsOutput(void* highs, void* outputfile) {
+  return (int)((Highs*)highs)->setHighsOutput((FILE*)outputfile);
 }
 
 int Highs_setHighsBoolOptionValue(void* highs, const char* option,
@@ -143,6 +152,14 @@ int Highs_getHighsStringOptionValue(void* highs, const char* option,
   return retcode;
 }
 
+int Highs_getHighsOptionType(void* highs, const char* option, int* type) {
+  HighsOptionType t;
+  int retcode =
+      (int)((Highs*)highs)->getHighsOptionType(std::string(option), t);
+  *type = (int)t;
+  return retcode;
+}
+
 int Highs_resetHighsOptions(void* highs) {
   return (int)((Highs*)highs)->resetHighsOptions();
 }
@@ -190,6 +207,21 @@ void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
 
 int Highs_getModelStatus(void* highs, const int scaled_model) {
   return (int)((Highs*)highs)->getModelStatus(scaled_model);
+}
+
+int Highs_getDualRay(void* highs, int* has_dual_ray, double* dual_ray_value) {
+  bool v;
+  int retcode = (int)((Highs*)highs)->getDualRay(v, dual_ray_value);
+  *has_dual_ray = (int)v;
+  return retcode;
+}
+
+int Highs_getPrimalRay(void* highs, int* has_primal_ray,
+                       double* primal_ray_value) {
+  bool v;
+  int retcode = (int)((Highs*)highs)->getPrimalRay(v, primal_ray_value);
+  *has_primal_ray = (int)v;
+  return retcode;
 }
 
 double Highs_getObjectiveValue(void* highs) {
@@ -382,6 +414,11 @@ int Highs_changeRowsBoundsBySet(void* highs, const int num_set_entries,
 int Highs_changeRowsBoundsByMask(void* highs, const int* mask,
                                  const double* lower, const double* upper) {
   return ((Highs*)highs)->changeRowsBounds(mask, lower, upper);
+}
+
+int Highs_changeCoeff(void* highs, const int row, const int col,
+                      const double value) {
+  return ((Highs*)highs)->changeCoeff(row, col, value);
 }
 
 int Highs_getObjectiveSense(void* highs, int* sense) {

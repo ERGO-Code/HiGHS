@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -18,18 +18,22 @@ extern "C" {
  * @brief runs a model using HiGHS
  */
 int Highs_call(
-    int numcol,        //!< number of columns
-    int numrow,        //!< number of rows
-    int numnz,         //!< number of entries in the constraint matrix
-    double* colcost,   //!< array of length [numcol] with column costs
-    double* collower,  //!< array of length [numcol] with lower column bounds
-    double* colupper,  //!< array of length [numcol] with upper column bounds
-    double* rowlower,  //!< array of length [numrow] with lower row bounds
-    double* rowupper,  //!< array of length [numrow] with upper row bounds
-    int* astart,       //!< array of length [numcol+1] with column start indices
-    int*
+    const int numcol,       //!< number of columns
+    const int numrow,       //!< number of rows
+    const int numnz,        //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const int*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const int*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
-    double* avalue,    //!< array of length [numnz] with value of matrix entries
+    const double*
+        avalue,        //!< array of length [numnz] with value of matrix entries
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
@@ -73,9 +77,23 @@ int Highs_clearModel(void* highs  //!< HiGHS object reference
 );
 
 /*
- * @brief
+ * @brief Sets the Logfile and Output to NULL
  */
 int Highs_runQuiet(void* highs  //!< HiGHS object reference
+);
+
+/*
+ * @brief Sets the logfile for printing.
+ */
+int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
+                          void* logfile  //!< File handle of the logfile
+);
+
+/*
+ * @brief Sets the output for printing.
+ */
+int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
+                         void* outputfile  //!< File handle of the output file
 );
 
 /*
@@ -188,6 +206,14 @@ int Highs_getHighsStringOptionValue(
 );
 
 /*
+ * @brief Get the type expected by an option
+ */
+int Highs_getHighsOptionType(void* highs,         //!< HiGHS object reference
+                             const char* option,  //!< The name of the option
+                             int* type            //!< The type of the option.
+);
+
+/*
  * @brief
  */
 int Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
@@ -235,6 +261,27 @@ void Highs_getBasis(
 int Highs_getModelStatus(
     void* highs,            //!< HiGHS object reference
     const int scaled_model  //!< 0 (nonzero) for status of (scaled) model
+);
+
+/**
+ * @brief Returns an unbounded dual ray that is a certificate of primal
+ * infeasibility.
+ */
+int Highs_getDualRay(void* highs,            //!< HiGHS object reference
+                     int* has_dual_ray,      //!< TRUE if the dual ray exists
+                     double* dual_ray_value  //!< array of length [numrow],
+                                             //!< filled with an unbounded ray
+);
+
+/**
+ * @brief Returns an unbounded primal ray that is a certificate of dual
+ * infeasibility.
+ */
+int Highs_getPrimalRay(
+    void* highs,              //!< HiGHS object reference
+    int* has_primal_ray,      //!< TRUE if the primal ray exists
+    double* primal_ray_value  //!< array of length [numcol], filled with an
+                              //!< unbounded ray
 );
 
 /**
@@ -525,6 +572,15 @@ int Highs_changeRowsBoundsByMask(
     const int* mask,      //!< Full length array with 1 => change; 0 => not
     const double* lower,  //!< Full length array of new lower bounds
     const double* upper   //!< Full length array of new upper bounds
+);
+
+/**
+ * @brief Change a coefficient in the constraint matrix.
+ */
+int Highs_changeCoeff(void* highs,        //!< HiGHS object reference
+                      const int row,      //!< The index of the row to change
+                      const int col,      //!< The index of the column to change
+                      const double value  //!< The new coefficient
 );
 
 /**
