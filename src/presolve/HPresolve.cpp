@@ -2911,7 +2911,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
 
     int numParallelRowColCalls = 0;
-    bool trySparsify = true;
+    bool trySparsify = mipsolver != nullptr;
     bool tryProbing = mipsolver != nullptr;
     while (true) {
       report();
@@ -3943,42 +3943,84 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       bool checkDuplicateColImplBounds = true;
       auto colUpperInf = [&]() {
         if (!checkColImplBounds) return false;
-        return colScale > 0 ? model->colUpper_[col] == HIGHS_CONST_INF ||
-                                  implColUpper[col] <
-                                      model->colUpper_[col] -
-                                          options->primal_feasibility_tolerance
-                            : model->colLower_[col] == -HIGHS_CONST_INF ||
-                                  implColLower[col] >
-                                      model->colLower_[col] +
-                                          options->primal_feasibility_tolerance;
+        if (mipsolver == nullptr) {
+          // for LP we check strict reduncancy of the bounds as otherwise dual
+          // postsolve might fail when the bound is used in the optimal solution
+          return colScale > 0
+                     ? model->colUpper_[col] == HIGHS_CONST_INF ||
+                           implColUpper[col] <
+                               model->colUpper_[col] -
+                                   options->primal_feasibility_tolerance
+                     : model->colLower_[col] == -HIGHS_CONST_INF ||
+                           implColLower[col] >
+                               model->colLower_[col] +
+                                   options->primal_feasibility_tolerance;
+        } else {
+          // for MIP we do not need dual postsolve so the reduction is valid if
+          // the bound is weakly redundant
+          return colScale > 0 ? model->colUpper_[col] == HIGHS_CONST_INF ||
+                                    implColUpper[col] <=
+                                        model->colUpper_[col] +
+                                            options->mip_feasibility_tolerance
+                              : model->colLower_[col] == -HIGHS_CONST_INF ||
+                                    implColLower[col] >=
+                                        model->colLower_[col] -
+                                            options->mip_feasibility_tolerance;
+        }
       };
 
       auto colLowerInf = [&]() {
         if (!checkColImplBounds) return false;
-        return colScale > 0 ? model->colLower_[col] == -HIGHS_CONST_INF ||
-                                  implColLower[col] >
-                                      model->colLower_[col] +
-                                          options->primal_feasibility_tolerance
-                            : model->colUpper_[col] == HIGHS_CONST_INF ||
-                                  implColUpper[col] <
-                                      model->colUpper_[col] -
-                                          options->primal_feasibility_tolerance;
+        if (mipsolver == nullptr) {
+          return colScale > 0
+                     ? model->colLower_[col] == -HIGHS_CONST_INF ||
+                           implColLower[col] >
+                               model->colLower_[col] +
+                                   options->primal_feasibility_tolerance
+                     : model->colUpper_[col] == HIGHS_CONST_INF ||
+                           implColUpper[col] <
+                               model->colUpper_[col] -
+                                   options->primal_feasibility_tolerance;
+        } else {
+          return colScale > 0 ? model->colLower_[col] == -HIGHS_CONST_INF ||
+                                    implColLower[col] >=
+                                        model->colLower_[col] -
+                                            options->mip_feasibility_tolerance
+                              : model->colUpper_[col] == HIGHS_CONST_INF ||
+                                    implColUpper[col] <=
+                                        model->colUpper_[col] +
+                                            options->mip_feasibility_tolerance;
+        }
       };
 
       auto duplicateColUpperInf = [&]() {
         if (!checkDuplicateColImplBounds) return false;
-        return model->colUpper_[duplicateCol] == HIGHS_CONST_INF ||
-               implColUpper[duplicateCol] <
-                   model->colUpper_[duplicateCol] -
-                       options->primal_feasibility_tolerance;
+        if (mipsolver == nullptr) {
+          return model->colUpper_[duplicateCol] == HIGHS_CONST_INF ||
+                 implColUpper[duplicateCol] <
+                     model->colUpper_[duplicateCol] -
+                         options->primal_feasibility_tolerance;
+        } else {
+          return model->colUpper_[duplicateCol] == HIGHS_CONST_INF ||
+                 implColUpper[duplicateCol] <=
+                     model->colUpper_[duplicateCol] +
+                         options->mip_feasibility_tolerance;
+        }
       };
 
       auto duplicateColLowerInf = [&]() {
         if (!checkDuplicateColImplBounds) return false;
-        return model->colLower_[duplicateCol] == -HIGHS_CONST_INF ||
-               implColLower[duplicateCol] >
-                   model->colLower_[duplicateCol] +
-                       options->primal_feasibility_tolerance;
+        if (mipsolver == nullptr) {
+          return model->colLower_[duplicateCol] == -HIGHS_CONST_INF ||
+                 implColLower[duplicateCol] >
+                     model->colLower_[duplicateCol] +
+                         options->primal_feasibility_tolerance;
+        } else {
+          return model->colLower_[duplicateCol] == -HIGHS_CONST_INF ||
+                 implColLower[duplicateCol] >=
+                     model->colLower_[duplicateCol] -
+                         options->mip_feasibility_tolerance;
+        }
       };
 
       // Now check the if the variable types rule out domination in one
@@ -4323,6 +4365,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
     const int* numSingletonPtr = numRowSingletons.find(i);
     int numSingleton = numSingletonPtr ? *numSingletonPtr : 0;
+    if (mipsolver == nullptr && numSingleton != 0) continue;
 
     int delRow = -1;
     if (it == buckets.end())
@@ -4335,6 +4378,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       numSingletonPtr = numRowSingletons.find(parallelRowCand);
       const int numSingletonCandidate = numSingletonPtr ? *numSingletonPtr : 0;
+      if (mipsolver == nullptr && numSingletonCandidate != 0) continue;
       if (rowsize[i] - numSingleton !=
           rowsize[parallelRowCand] - numSingletonCandidate)
         continue;
