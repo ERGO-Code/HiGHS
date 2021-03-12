@@ -257,7 +257,7 @@ double getNorm2(const std::vector<double> values) {
   double sum = 0;
   int values_size = values.size();
   for (int i = 0; i < values_size; i++) sum += values[i] * values[i];
-  return sum;
+  return sqrt(sum);
 }
 
 bool highs_isInfinity(double val) {
