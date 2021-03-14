@@ -82,8 +82,8 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
               numBx, numFx);
 }
 
-std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
-                         const double upper) {
+std::string statusToString(const HighsBasisStatus status, const double lower,
+                           const double upper) {
   switch (status) {
     case HighsBasisStatus::LOWER:
       if (lower == upper) {
@@ -119,7 +119,7 @@ void writeModelBoundSol(FILE* file, const bool columns, const int dim,
   const bool have_basis = status.size() > 0;
   const bool have_primal = primal.size() > 0;
   const bool have_dual = dual.size() > 0;
-  std::string ch4_var_status;
+  std::string var_status_string;
   if (columns) {
     fprintf(file, "Columns\n");
   } else {
@@ -135,12 +135,12 @@ void writeModelBoundSol(FILE* file, const bool columns, const int dim,
   }
   for (int ix = 0; ix < dim; ix++) {
     if (have_basis) {
-      ch4_var_status = ch4VarStatus(status[ix], lower[ix], upper[ix]);
+      var_status_string = statusToString(status[ix], lower[ix], upper[ix]);
     } else {
-      ch4_var_status = "";
+      var_status_string = "";
     }
-    fprintf(file, "%9d   %4s %12g %12g", ix, ch4_var_status.c_str(), lower[ix],
-            upper[ix]);
+    fprintf(file, "%9d   %4s %12g %12g", ix, var_status_string.c_str(),
+            lower[ix], upper[ix]);
     if (have_primal) {
       fprintf(file, " %12g", primal[ix]);
     } else {

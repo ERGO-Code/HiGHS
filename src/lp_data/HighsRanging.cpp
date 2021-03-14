@@ -19,6 +19,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsModelUtils.h"
 
 double infProduct(double value) {
   // Multiplying value and HIGHS_CONST_INF
@@ -38,8 +39,8 @@ double possInfProduct(double poss_inf, double value) {
   }
 }
 
-HighsStatus getHighsRanging(HighsRanging& ranging,
-                            const HighsModelObject& highs_model_object) {
+HighsStatus getRangingData(HighsRanging& ranging,
+                           const HighsModelObject& highs_model_object) {
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
                  "Cannot get ranging without an optimal solution\n");
@@ -573,5 +574,61 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   ranging.row_bound_dn.ou_var_ = {b_up_l.begin() + numCol,
                                   b_up_l.begin() + numTotal};
 
+  writeRanging(ranging, highs_model_object);
   return HighsStatus::OK;
+}
+
+void writeRanging(const HighsRanging& ranging,
+                  const HighsModelObject& highs_model_object) {
+  if (!highs_model_object.options_.log_dev_level) return;
+  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL)
+    return;
+  HighsLp& lp = highs_model_object.lp_;
+  HighsLogOptions& log_options = highs_model_object.options_.log_options;
+  highsLogDev(log_options, HighsLogType::VERBOSE,
+              "\nRanging data: Optimal objective = %g\n"
+              "           |                               Bound ranging        "
+              "                           "
+              " |                    Cost ranging\n"
+              "Col Status | DownObj    Down       (Lower      Value      Upper "
+              "    ) Up         UpObj     "
+              " | DownObj    Down       Value      Up         UpObj\n",
+              highs_model_object.solution_params_.objective_function_value);
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    highsLogDev(log_options, HighsLogType::VERBOSE,
+                "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
+                "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
+                iCol,
+                statusToString(highs_model_object.basis_.col_status[iCol],
+                               lp.colLower_[iCol], lp.colUpper_[iCol])
+                    .c_str(),
+                ranging.col_bound_dn.objective_[iCol],
+                ranging.col_bound_dn.value_[iCol], lp.colLower_[iCol],
+                highs_model_object.solution_.col_value[iCol],
+                lp.colUpper_[iCol], ranging.col_bound_up.value_[iCol],
+                ranging.col_bound_up.objective_[iCol],
+                ranging.col_cost_dn.objective_[iCol],
+                ranging.col_cost_dn.value_[iCol], lp.colCost_[iCol],
+                ranging.col_cost_up.value_[iCol],
+                ranging.col_cost_up.objective_[iCol]);
+  }
+  highsLogDev(log_options, HighsLogType::VERBOSE,
+              "           |                               Bound ranging        "
+              "                             \n"
+              "Col Status | DownObj    Down       (Lower      Value      Upper "
+              "    ) Up         UpObj   \n");
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    highsLogDev(log_options, HighsLogType::VERBOSE,
+                "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
+                "%-10.4g |\n",
+                iRow,
+                statusToString(highs_model_object.basis_.row_status[iRow],
+                               lp.rowLower_[iRow], lp.rowUpper_[iRow])
+                    .c_str(),
+                ranging.row_bound_dn.objective_[iRow],
+                ranging.row_bound_dn.value_[iRow], lp.rowLower_[iRow],
+                highs_model_object.solution_.row_value[iRow],
+                lp.rowUpper_[iRow], ranging.row_bound_up.value_[iRow],
+                ranging.row_bound_up.objective_[iRow]);
+  }
 }

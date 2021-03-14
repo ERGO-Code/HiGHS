@@ -945,7 +945,7 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
   underDevelopmentLogMessage("getRanging");
   if (!haveHmo("getRanging")) return HighsStatus::Error;
-  return getHighsRanging(ranging, hmos_[0]);
+  return getRangingData(ranging, hmos_[0]);
 }
 
 HighsStatus Highs::getBasicVariables(int* basic_variables) {

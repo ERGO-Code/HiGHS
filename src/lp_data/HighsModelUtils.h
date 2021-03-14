@@ -54,4 +54,7 @@ void copyHighsIterationCounts(const HighsInfo& info,
                               HighsIterationCounts& iteration_counts);
 
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
+
+std::string statusToString(const HighsBasisStatus status, const double lower,
+                           const double upper);
 #endif
