@@ -208,7 +208,6 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
     reportSolvedLpStats(use_options.log_options, run_status, highs);
   //  HighsRanging ranging; highs.getRanging(ranging);
   //  highs.writeSolution("", true);
-  reportSolvedLpStats(use_options.log_options, run_status, highs);
   return run_status;
 }
 
