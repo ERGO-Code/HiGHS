@@ -354,6 +354,7 @@ void zeroHighsIterationCounts(HighsInfo& info) {
   info.simplex_iteration_count = 0;
   info.ipm_iteration_count = 0;
   info.crossover_iteration_count = 0;
+  info.mip_node_count = -1;
 }
 
 void copyHighsIterationCounts(const HighsIterationCounts& iteration_counts,
@@ -361,6 +362,7 @@ void copyHighsIterationCounts(const HighsIterationCounts& iteration_counts,
   info.simplex_iteration_count = iteration_counts.simplex;
   info.ipm_iteration_count = iteration_counts.ipm;
   info.crossover_iteration_count = iteration_counts.crossover;
+  info.mip_node_count = -1;
 }
 
 void copyHighsIterationCounts(const HighsInfo& info,

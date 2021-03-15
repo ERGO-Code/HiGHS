@@ -204,9 +204,11 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   highs.setBasis();
   HighsStatus run_status = highs.run();
 
-  reportSolvedLpStats(use_options.log_options, run_status, highs);
+  if (highs.getHighsInfo().mip_node_count == -1)
+    reportSolvedLpStats(use_options.log_options, run_status, highs);
   //  HighsRanging ranging; highs.getRanging(ranging);
   //  highs.writeSolution("", true);
+  reportSolvedLpStats(use_options.log_options, run_status, highs);
   return run_status;
 }
 

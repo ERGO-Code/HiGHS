@@ -103,12 +103,15 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
 // todo: when creating the new info don't forget underscores for class
 // variables but no underscores for struct
 struct HighsInfoStruct {
+  int64_t mip_node_count;
   int simplex_iteration_count;
   int ipm_iteration_count;
   int crossover_iteration_count;
   int primal_status;
   int dual_status;
   double objective_function_value;
+  double mip_dual_bound;
+  double mip_gap;
   int num_primal_infeasibilities;
   double max_primal_infeasibility;
   double sum_primal_infeasibilities;

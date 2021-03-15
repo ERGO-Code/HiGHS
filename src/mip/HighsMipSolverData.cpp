@@ -723,7 +723,7 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 void HighsMipSolverData::printDisplayLine(char first) {
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
-    highsLogDev(
+    highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::INFO,
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
@@ -744,7 +744,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
-    highsLogDev(
+    highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %7.2f%% | %7.2f%%\n",
@@ -753,7 +753,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   } else {
-    highsLogDev(
+    highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %8.2f | %7.2f%%\n",
@@ -827,8 +827,8 @@ bool HighsMipSolverData::rootSeparationRound(
 
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
-  highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-              "\nsolving root node LP relaxation\n");
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+               "\nsolving root node LP relaxation\n");
   lp.loadModel();
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
 
@@ -840,6 +840,10 @@ void HighsMipSolverData::evaluateRootNode() {
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
   firstrootlpiters = maxrootlpiters;
+
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+               "LP solved in %d iterations and %.1fs seconds\n\n",
+               (int)firstrootlpiters, lp.getLpSolver().getHighsRunTime());
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
   //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
