@@ -194,7 +194,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   Highs highs(use_options);
   //  const HighsOptions& options = highs.getHighsOptions();
 
-  // // Load problem.
+  // Load problem.
   highs.passModel(lp);
   // HighsStatus read_status = highs.readModel(options.model_file);
   // reportLpStatsOrError(options.log_options, read_status, highs.getLp());
@@ -206,6 +206,9 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
 
   if (highs.getHighsInfo().mip_node_count == -1)
     reportSolvedLpStats(use_options.log_options, run_status, highs);
+  //  HighsRanging ranging; highs.getRanging(ranging);
+  //  highs.writeSolution("", true);
+  reportSolvedLpStats(use_options.log_options, run_status, highs);
   return run_status;
 }
 

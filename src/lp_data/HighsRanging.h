@@ -34,6 +34,8 @@ struct HighsRanging {
   HighsRangingRecord row_bound_dn;
 };
 
-HighsStatus getHighsRanging(HighsRanging& ranging,
-                            const HighsModelObject& highs_model_object);
+HighsStatus getRangingData(HighsRanging& ranging,
+                           const HighsModelObject& highs_model_object);
+void writeRanging(const HighsRanging& ranging,
+                  const HighsModelObject& highs_model_object);
 #endif
