@@ -343,7 +343,10 @@ struct HighsOptionsStruct {
 // variables but no underscores for struct
 class HighsOptions : public HighsOptionsStruct {
  public:
-  HighsOptions() { initRecords(); setLogOptions(); }
+  HighsOptions() {
+    initRecords();
+    setLogOptions();
+  }
 
   HighsOptions(const HighsOptions& options) {
     initRecords();

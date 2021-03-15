@@ -645,7 +645,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
       colUpperSource[newColIndex[i]] = colUpperSource[i];
       colhead[newColIndex[i]] = colhead[i];
       colsize[newColIndex[i]] = colsize[i];
-      model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
+      if ((int)model->col_names_.size() > 0)
+        model->col_names_[newColIndex[i]] = std::move(model->col_names_[i]);
       changedColFlag[newColIndex[i]] = changedColFlag[i];
     }
   }
@@ -660,7 +661,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
   colUpperSource.resize(model->numCol_);
   colhead.resize(model->numCol_);
   colsize.resize(model->numCol_);
-  model->col_names_.resize(model->numCol_);
+  if ((int)model->col_names_.size() > 0)
+    model->col_names_.resize(model->numCol_);
   changedColFlag.resize(model->numCol_);
   numDeletedCols = 0;
   int oldNumRow = model->numRow_;
@@ -685,7 +687,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
       rowsize[newRowIndex[i]] = rowsize[i];
       rowsizeInteger[newRowIndex[i]] = rowsizeInteger[i];
       rowsizeImplInt[newRowIndex[i]] = rowsizeImplInt[i];
-      model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
+      if ((int)model->row_names_.size() > 0)
+        model->row_names_[newRowIndex[i]] = std::move(model->row_names_[i]);
       changedRowFlag[newRowIndex[i]] = changedRowFlag[i];
     }
   }
@@ -717,7 +720,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
   rowsize.resize(model->numRow_);
   rowsizeInteger.resize(model->numRow_);
   rowsizeImplInt.resize(model->numRow_);
-  model->row_names_.resize(model->numRow_);
+  if ((int)model->row_names_.size() > 0)
+    model->row_names_.resize(model->numRow_);
   changedRowFlag.resize(model->numRow_);
 
   numDeletedRows = 0;

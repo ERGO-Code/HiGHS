@@ -252,10 +252,10 @@ class HighsPostsolveStack {
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
-    reductionValues.push(
-        DoubletonEquation{coef, coefSubst, rhs, substLower, substUpper,
-                          substCost, row == -1 ? -1 : origRowIndex[row], origColIndex[colSubst],
-                          origColIndex[col], lowerTightened, upperTightened});
+    reductionValues.push(DoubletonEquation{
+        coef, coefSubst, rhs, substLower, substUpper, substCost,
+        row == -1 ? -1 : origRowIndex[row], origColIndex[colSubst],
+        origColIndex[col], lowerTightened, upperTightened});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kDoubletonEquation);
   }
