@@ -12,10 +12,11 @@
 #include <numeric>
 #include <unordered_set>
 
-#include "HConst.h"
-#include "HighsDomainChange.h"
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsCutGeneration.h"
+#include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsHash.h"
@@ -834,9 +835,11 @@ void HighsPrimalHeuristics::centralRounding() {
         if (mipsolver.variableType(i) == HighsVarType::INTEGER) ++nintfixed;
       }
     }
-    printf(
-        "analytic center information allowed fixing of %d(%d int) variables\n",
-        nfixed, nintfixed);
+    if (nfixed > 0)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                   "Fixing %d columns (%d integers) sitting at bound at "
+                   "analytic center\n",
+                   nfixed, nintfixed);
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
   }
