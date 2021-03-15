@@ -13,6 +13,9 @@
 #include <random>
 #include <vector>
 
+#include "lp_data/HStruct.h"
+#include "lp_data/HighsLp.h"
+
 class HighsMipSolver;
 
 class HighsPrimalHeuristics {
