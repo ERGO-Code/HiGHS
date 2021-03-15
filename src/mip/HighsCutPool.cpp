@@ -11,6 +11,7 @@
 #include "mip/HighsCutPool.h"
 
 #include <cassert>
+#include <numeric>
 
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
@@ -290,6 +291,39 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     for (int j = start; j != end; ++j) {
       assert(offset < selectednnz);
+      cutset.ARvalue_[offset] = ARvalue[j];
+      cutset.ARindex_[offset] = ARindex[j];
+      ++offset;
+    }
+  }
+
+  cutset.ARstart_[cutset.numCuts()] = offset;
+}
+
+void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
+  // should only be called after a restart with a fresh row matrix right now
+  assert(matrix_.getNumDelRows() == 0);
+  int numcuts = matrix_.getNumRows();
+
+  cutset.cutindices.resize(numcuts);
+  std::iota(cutset.cutindices.begin(), cutset.cutindices.end(), 0);
+  cutset.resize(matrix_.nonzeroCapacity());
+
+  int offset = 0;
+  const int* ARindex = matrix_.getARindex();
+  const double* ARvalue = matrix_.getARvalue();
+  for (int i = 0; i != cutset.numCuts(); ++i) {
+    --ageDistribution[ages_[i]];
+    ++numLpCuts;
+    ages_[i] = -1;
+    cutset.ARstart_[i] = offset;
+    int cut = cutset.cutindices[i];
+    int start = matrix_.getRowStart(cut);
+    int end = matrix_.getRowEnd(cut);
+    cutset.upper_[i] = rhs_[cut];
+
+    for (int j = start; j != end; ++j) {
+      assert(offset < (int)matrix_.nonzeroCapacity());
       cutset.ARvalue_[offset] = ARvalue[j];
       cutset.ARindex_[offset] = ARindex[j];
       ++offset;

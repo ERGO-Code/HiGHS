@@ -217,6 +217,23 @@ class HighsPostsolveStack {
 
   int getOrigColIndex(int col) const { return origColIndex[col]; }
 
+  void appendCutsToModel(int numCuts) {
+    int currNumRow = origRowIndex.size();
+    int newNumRow = currNumRow + numCuts;
+    origRowIndex.resize(newNumRow);
+    for (int i = currNumRow; i != newNumRow; ++i)
+      origRowIndex[i] = origNumRow++;
+  }
+
+  void removeCutsFromModel(int numCuts) {
+    int currNumRow = origRowIndex.size();
+    origRowIndex.resize(currNumRow - numCuts);
+  }
+
+  int getOrigNumRow() const { return origNumRow; }
+
+  int getOrigNumCol() const { return origNumCol; }
+
   void initializeIndexMaps(int numRow, int numCol);
 
   void compressIndexMaps(const std::vector<int>& newRowIndex,
@@ -406,7 +423,6 @@ class HighsPostsolveStack {
 
     if (solution.col_value.size() != origColIndex.size()) return;
     if (solution.row_value.size() != origRowIndex.size()) return;
-
     bool dualPostSolve = solution.col_dual.size() == solution.col_value.size();
 
     // expand solution to original index space

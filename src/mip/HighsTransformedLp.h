@@ -58,7 +58,7 @@ class HighsTransformedLp {
 
   bool transform(std::vector<double>& vals, std::vector<double>& upper,
                  std::vector<double>& solval, std::vector<int>& inds,
-                 double& rhs, bool integralPositive, bool preferVbds = false);
+                 double& rhs, bool& integralPositive, bool preferVbds = false);
 
   bool untransform(std::vector<double>& vals, std::vector<int>& inds,
                    double& rhs, bool integral = false);

@@ -364,6 +364,7 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
     if (delete_to_col >= col_dim - 1) break;
     assert(delete_to_col < col_dim);
     for (int col = keep_from_col; col <= keep_to_col; col++) {
+      assert((int)scale.size() > new_num_col);
       scale[new_num_col] = scale[col];
       new_num_col++;
     }

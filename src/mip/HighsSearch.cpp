@@ -289,7 +289,8 @@ int HighsSearch::selectBranchingCandidate() {
   while (true) {
     int candidate = selectBestScore();
 
-    if (upscorereliable[candidate] && downscorereliable[candidate]) {
+    if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
+        mipsolver.mipdata_->checkLimits()) {
       lp->setStoredBasis(std::move(basis));
       lp->recoverBasis();
       lp->run();
@@ -1089,6 +1090,8 @@ void HighsSearch::dive() {
   do {
     ++nnodes;
     evaluateNode();
+
+    if (mipsolver.mipdata_->checkLimits()) return;
 
     if (nodestack.back().opensubtrees == 0) return;
 

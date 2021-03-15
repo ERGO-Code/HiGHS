@@ -40,18 +40,9 @@ struct HighsMipSolverData {
   HighsRedcostFixing redcostfixing;
   presolve::HighsPostsolveStack postSolveStack;
   HighsLp presolvedModel;
-
-  struct Substitution {
-    int substcol;
-    int staycol;
-    double scale;
-    double offset;
-  };
-  std::vector<Substitution> substitutions;
-
   bool cliquesExtracted;
   bool rowMatrixSet;
-  bool tryProbing;
+  int numRestarts;
 
   std::vector<int> ARstart_;
   std::vector<int> ARindex_;
@@ -64,6 +55,7 @@ struct HighsMipSolverData {
   std::vector<int> implint_cols;
   std::vector<int> integral_cols;
   std::vector<int> continuous_cols;
+
   double objintscale;
 
   double feastol;
@@ -89,6 +81,7 @@ struct HighsMipSolverData {
   size_t sb_lp_iterations;
   size_t num_disp_lines;
 
+  int numImprovingSols;
   double lower_bound;
   double upper_bound;
   double upper_limit;
@@ -125,7 +118,7 @@ struct HighsMipSolverData {
   bool rootSeparationRound(HighsSeparation& sepa, int& ncuts,
                            HighsLpRelaxation::Status& status);
   void evaluateRootNode();
-  void addIncumbent(const std::vector<double>& sol, double solobj, char source);
+  bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
 
   const std::vector<double>& getSolution() const;
 

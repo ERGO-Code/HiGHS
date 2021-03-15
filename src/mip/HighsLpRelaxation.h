@@ -222,7 +222,7 @@ class HighsLpRelaxation {
 
   void performAging();
 
-  void removeObsoleteRows();
+  void removeObsoleteRows(bool notifyPool = true);
 
   void removeCuts(int ndelcuts, std::vector<int>& deletemask);
 

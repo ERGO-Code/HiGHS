@@ -24,8 +24,9 @@ class HighsPrimalHeuristics {
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
 
-  void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper,
-                   int maxleaves, int maxnodes);
+  bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
+                   std::vector<double> colLower, std::vector<double> colUpper,
+                   int maxleaves, int maxnodes, int stallnodes);
 
   void RENS(const std::vector<double>& relaxationsol);
 

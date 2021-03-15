@@ -462,14 +462,14 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
   integerinds.reserve(rowlen);
   double maxabsdelta = 0.0;
 
-  std::vector<uint8_t> complementation(rowlen);
+  complementation.resize(rowlen);
 
   for (int i = 0; i != rowlen; ++i) {
     if (lpRelaxation.isColIntegral(inds[i])) {
       integerinds.push_back(i);
 
       if (upper[i] < 2 * solval[i]) {
-        complementation[i] = 1;
+        complementation[i] = 1 - complementation[i];
         rhs -= upper[i] * vals[i];
         vals[i] = -vals[i];
       }
@@ -672,13 +672,6 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
       else
         aj = downaj;
       vals[j] = double(aj * bestdelta);
-    }
-  }
-
-  for (int j = 0; j != rowlen; ++j) {
-    if (complementation[j]) {
-      rhs -= upper[j] * vals[j];
-      vals[j] = -vals[j];
     }
   }
 
@@ -948,7 +941,9 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<int>& inds_,
                                      std::vector<double>& vals_, double& rhs_) {
-  if (!transLp.transform(vals_, upper, solval, inds_, rhs_, true)) return false;
+  bool intsPositive = true;
+  if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
+    return false;
 
   rowlen = inds_.size();
   this->inds = inds_.data();
@@ -961,6 +956,25 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
                                 hasContinuous))
     return false;
+
+  // it can happen that there is an unbounded integer variable during the
+  // transform call so that the integers are not tranformed to positive values.
+  // Now the call to preprocessBaseInequality may have removed the unbounded
+  // integer, e.g. due to a small coefficient value, so that we can still use
+  // the lifted inequalities instead of cmir. We need to make sure, however,
+  // that the cut values are transformed to positive coefficients first, which
+  // we do below.
+  if (!hasUnboundedInts && !intsPositive) {
+    complementation.resize(rowlen);
+
+    for (int i = 0; i != rowlen; ++i) {
+      if (vals[i] > 0 || !lpRelaxation.isColIntegral(inds[i])) continue;
+
+      complementation[i] = 1 - complementation[i];
+      rhs -= upper[i] * vals[i];
+      vals[i] = -vals[i];
+    }
+  }
 
   if (hasUnboundedInts) {
     if (!cmirCutGenerationHeuristic()) return false;
@@ -989,6 +1003,16 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // apply cut postprocessing including scaling and removal of small
   // coeffiicents
   if (!postprocessCut()) return false;
+
+  if (!complementation.empty()) {
+    // remove the complementation if exists
+    for (int i = 0; i != rowlen; ++i) {
+      if (complementation[i]) {
+        rhs -= upper[i] * vals[i];
+        vals[i] = -vals[i];
+      }
+    }
+  }
 
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables

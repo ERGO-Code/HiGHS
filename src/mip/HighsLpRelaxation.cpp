@@ -181,15 +181,16 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
     for (int i = 0; i != numcuts; ++i)
       lprows.push_back(LpRow::cut(cutset.cutindices[i]));
 
-    lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
+    bool success = lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
                      cutset.ARvalue_.size(), cutset.ARstart_.data(),
                      cutset.ARindex_.data(), cutset.ARvalue_.data());
+    assert(success);
     assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
     cutset.clear();
   }
 }
 
-void HighsLpRelaxation::removeObsoleteRows() {
+void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
   int nlprows = numRows();
   int nummodelrows = getNumModelRows();
   std::vector<int> deletemask;
@@ -201,7 +202,7 @@ void HighsLpRelaxation::removeObsoleteRows() {
       if (ndelcuts == 0) deletemask.resize(nlprows);
       ++ndelcuts;
       deletemask[i] = 1;
-      mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
+      if (notifyPool) mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
     }
   }
 
@@ -613,6 +614,10 @@ void HighsLpRelaxation::recoverBasis() {
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
+
+  lpsolver.setHighsOptionValue(
+      "time_limit", mipsolver.options_mip_->time_limit -
+                        mipsolver.timer_.read(mipsolver.timer_.solve_clock));
 
   try {
     callstatus = lpsolver.run();

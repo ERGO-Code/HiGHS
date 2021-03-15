@@ -218,7 +218,7 @@ void HighsMipSolver::run() {
                "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
-
+  size_t numStallNodes = 0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
@@ -351,6 +351,16 @@ void HighsMipSolver::run() {
         search.installNode(mipdata_->nodequeue.popBestNode());
         if (search.getCurrentLowerBound() == mipdata_->lower_bound)
           lastLbLeave = mipdata_->num_leaves;
+      }
+
+      if (search.getCurrentEstimate() >= mipdata_->upper_limit) {
+        ++numStallNodes;
+        if (options_mip_->mip_max_stall_nodes != HIGHS_CONST_I_INF &&
+            numStallNodes >= size_t(options_mip_->mip_max_stall_nodes)) {
+          limit_reached = true;
+          modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+          break;
+        }
       }
 
       assert(search.hasNode());

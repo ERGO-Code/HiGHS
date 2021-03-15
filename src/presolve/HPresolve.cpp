@@ -31,11 +31,12 @@
 namespace presolve {
 
 #ifndef NDEBUG
-void HPresolve::debugPrintRow(int row) {
-  printf("(row %d) %.15g (impl: %.15g) <= ", row, model->rowLower_[row],
-         impliedRowBounds.getSumLower(row));
+void HPresolve::debugPrintRow(HighsPostsolveStack& postSolveStack, int row) {
+  printf(
+      "(row %d) %.15g (impl: %.15g) <= ", postSolveStack.getOrigRowIndex(row),
+      model->rowLower_[row], impliedRowBounds.getSumLower(row));
 
-  for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+  for (const HighsSliceNonzero& nonzero : getSortedRowVector(row)) {
     // for (int rowiter = rowhead[row]; rowiter != -1; rowiter =
     // ARnext[rowiter]) {
     char colchar = model->integrality_[nonzero.index()] == HighsVarType::INTEGER
@@ -43,42 +44,11 @@ void HPresolve::debugPrintRow(int row) {
                        : 'x';
     char signchar = nonzero.value() < 0 ? '-' : '+';
     printf("%c%g %c%d ", signchar, std::abs(nonzero.value()), colchar,
-           nonzero.index());
+           postSolveStack.getOrigColIndex(nonzero.index()));
   }
 
   printf("<= %.15g (impl: %.15g)\n", model->rowUpper_[row],
          impliedRowBounds.getSumUpper(row));
-}
-#endif
-#if 0
-void HPresolve::debugPrintSubMatrix(int row, int col) {
-  printf("submatrix for col %d and row %d:\n", col, row);
-  debugPrintRow(row);
-  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
-    int r = Arow[coliter];
-
-    if (r == row) continue;
-
-    printf("(row %d) %g <= ... ", r, rowLower[r]);
-
-    loopRow(row, [&](int rowiter) {
-      // for (int rowiter = rowhead[row]; rowiter != -1; rowiter =
-      // ARnext[rowiter]) {
-      auto it = entries.find(std::make_pair(r, Acol[rowiter]));
-      if (it != entries.end()) {
-        assert(Acol[it->second] == Acol[rowiter]);
-        char colchar =
-            integrality[Acol[it->second]] == HighsVarType::INTEGER ? 'y' : 'x';
-        char signchar = Avalue[it->second] < 0 ? '-' : '+';
-        printf("%c%g %c%d ", signchar, std::abs(Avalue[it->second]), colchar,
-               Acol[it->second]);
-      }
-
-      return false;
-    });
-
-    printf(" ... <= %g\n", rowUpper[r]);
-  }
 }
 #endif
 
@@ -786,6 +756,9 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
                                              newRowIndex);
     mipsolver->mipdata_->implications.rebuild(model->numCol_, newColIndex,
                                               newRowIndex);
+    mipsolver->mipdata_->cutpool = HighsCutPool(
+        mipsolver->model_->numCol_, mipsolver->options_mip_->mip_pool_age_limit,
+        mipsolver->options_mip_->mip_pool_soft_limit);
   }
 }
 
@@ -946,47 +919,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     }
 
     // finally apply substitutions
-    for (const auto& substitution : implications.substitutions) {
-      if (colDeleted[substitution.substcol] || colDeleted[substitution.staycol])
-        continue;
-
-      postSolveStack.doubletonEquation(-1, substitution.substcol,
-                                       substitution.staycol, 1.0,
-                                       -substitution.scale, substitution.offset,
-                                       model->colLower_[substitution.substcol],
-                                       model->colUpper_[substitution.substcol],
-                                       0.0, false, false, HighsEmptySlice());
-      markColDeleted(substitution.substcol);
-      substitute(substitution.substcol, substitution.staycol,
-                 substitution.offset, substitution.scale);
-      HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
-    }
-
-    implications.substitutions.clear();
-
-    for (HighsCliqueTable::Substitution subst :
-         cliquetable.getSubstitutions()) {
-      if (colDeleted[subst.substcol] || colDeleted[subst.replace.col]) continue;
-
-      double scale;
-      double offset;
-
-      if (subst.replace.val == 0) {
-        scale = -1.0;
-        offset = 1.0;
-      } else {
-        scale = 1.0;
-        offset = 0.0;
-      }
-
-      postSolveStack.doubletonEquation(
-          -1, subst.substcol, subst.replace.col, 1.0, -scale, offset,
-          model->colLower_[subst.substcol], model->colUpper_[subst.substcol],
-          0.0, false, false, HighsEmptySlice());
-      markColDeleted(subst.substcol);
-      substitute(subst.substcol, subst.replace.col, offset, scale);
-      HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
-    }
+    HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postSolveStack));
 
     highsLogUser(options->log_options, HighsLogType::INFO,
                  "%d probing evaluations: %d deleted rows, %d deleted "
@@ -1296,6 +1229,56 @@ void HPresolve::changeImplRowDualLower(int row, double newLower,
     if (newDualImplied && isImpliedFree(nonzero.index()))
       substitutionOpportunities.emplace_back(row, nonzero.index());
   }
+}
+
+HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
+    HighsPostsolveStack& postSolveStack) {
+  HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
+  HighsImplications& implications = mipsolver->mipdata_->implications;
+  for (const auto& substitution : implications.substitutions) {
+    if (colDeleted[substitution.substcol] || colDeleted[substitution.staycol])
+      continue;
+
+    postSolveStack.doubletonEquation(-1, substitution.substcol,
+                                     substitution.staycol, 1.0,
+                                     -substitution.scale, substitution.offset,
+                                     model->colLower_[substitution.substcol],
+                                     model->colUpper_[substitution.substcol],
+                                     0.0, false, false, HighsEmptySlice());
+    markColDeleted(substitution.substcol);
+    substitute(substitution.substcol, substitution.staycol, substitution.offset,
+               substitution.scale);
+    HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
+  }
+
+  implications.substitutions.clear();
+
+  for (HighsCliqueTable::Substitution subst : cliquetable.getSubstitutions()) {
+    if (colDeleted[subst.substcol] || colDeleted[subst.replace.col]) continue;
+
+    double scale;
+    double offset;
+
+    if (subst.replace.val == 0) {
+      scale = -1.0;
+      offset = 1.0;
+    } else {
+      scale = 1.0;
+      offset = 0.0;
+    }
+
+    postSolveStack.doubletonEquation(
+        -1, subst.substcol, subst.replace.col, 1.0, -scale, offset,
+        model->colLower_[subst.substcol], model->colUpper_[subst.substcol], 0.0,
+        false, false, HighsEmptySlice());
+    markColDeleted(subst.substcol);
+    substitute(subst.substcol, subst.replace.col, offset, scale);
+    HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
+  }
+
+  cliquetable.getSubstitutions().clear();
+
+  return Result::Ok;
 }
 
 void HPresolve::storeRow(int row) {
@@ -2908,6 +2891,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
       highsLogUser(options->log_options, HighsLogType::INFO,
                    "%d rows, %d cols, %d nonzeros\n", numRow, numCol, numNonz);
     };
+
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
 
     int numParallelRowColCalls = 0;
@@ -2920,18 +2904,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
       storeCurrentProblemSize();
 
-      //    if( ! parallelRowColDetectionCalled )
-      //    {
-      //      HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
-      //      printf("after parallel rows/cols: %d del rows %d del cols\n",
-      //            numDeletedRows, numDeletedCols);
-      //      parallelRowColDetectionCalled = true;
-      //    }
-      if (problemSizeReduction() > 0) {
-        HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
+      // when presolving after a restart the clique table and implication
+      // structure may contain substitutions which we apply directly before
+      // running the aggregator as they might loose validity otherwise
+      if (mipsolver != nullptr) {
+        HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postSolveStack));
       }
-
-      storeCurrentProblemSize();
 
       HPRESOLVE_CHECKED_CALL(aggregator(postSolveStack));
 
@@ -3111,8 +3089,46 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
       return HighsModelStatus::DUAL_INFEASIBLE;
   }
 
-  // todo: compress index space
   shrinkProblem(postSolveStack);
+
+  if (mipsolver != nullptr && mipsolver->mipdata_->numRestarts != 0) {
+    std::vector<int> cutinds;
+    std::vector<double> cutvals;
+    cutinds.reserve(model->numCol_);
+    cutvals.reserve(model->numCol_);
+    mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
+    int numcuts = 0;
+    for (int i = model->numRow_ - 1; i >= 0; --i) {
+      // check if we already reached the original rows
+      if (postSolveStack.getOrigRowIndex(i) < mipsolver->orig_model_->numRow_)
+        break;
+
+      // row is a cut, remove it from matrix but add to cutpool
+      ++numcuts;
+      storeRow(i);
+      cutinds.clear();
+      cutvals.clear();
+      for (int j : rowpositions) {
+        cutinds.push_back(Acol[j]);
+        cutvals.push_back(Avalue[j]);
+      }
+
+      mipsolver->mipdata_->cutpool.addCut(
+          *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
+          model->rowUpper_[i],
+          rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
+              rowCoefficientsIntegral(i, 1.0));
+
+      markRowDeleted(i);
+      for (int j : rowpositions) unlink(j);
+    }
+
+    postSolveStack.removeCutsFromModel(numcuts);
+    model->numRow_ -= numcuts;
+    model->rowLower_.resize(model->numRow_);
+    model->rowUpper_.resize(model->numRow_);
+    model->row_names_.resize(model->numRow_);
+  }
 
   toCSC(model->Avalue_, model->Aindex_, model->Astart_);
 
@@ -3543,22 +3559,8 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
     assert(eq->first == rowsize[eqrow]);
     assert(model->rowLower_[eqrow] == model->rowUpper_[eqrow]);
 
-    switch (rowsize[eqrow]) {
-      case 0:
-        if (std::abs(model->rowUpper_[eqrow]) >
-            options->primal_feasibility_tolerance)
-          return Result::PrimalInfeasible;
-        break;
-      case 1:
-        // handle empty and singleton rows
-        HPRESOLVE_CHECKED_CALL(singletonRow(postSolveStack, eqrow));
-        break;
-      case 2:
-        HPRESOLVE_CHECKED_CALL(doubletonEq(postSolveStack, eqrow));
-        break;
-      default:
-        return Result::Ok;
-    }
+    if (rowsize[eqrow] > 2) return Result::Ok;
+    HPRESOLVE_CHECKED_CALL(rowPresolve(postSolveStack, eqrow));
   }
 
   return Result::Ok;
@@ -4722,10 +4724,16 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     model = lp;
     model.integrality_.assign(lp.numCol_, HighsVarType::CONTINUOUS);
 
+    {
+      HPresolve presolve;
+      presolve.setInput(model, options);
+      presolve.computeIntermediateMatrix(flagRow, flagCol, reductionLim);
+    }
+#if 1
+    model = lp;
+    model.integrality_.assign(lp.numCol_, HighsVarType::CONTINUOUS);
     HPresolve presolve;
     presolve.setInput(model, options);
-
-#if 0
     HighsPostsolveStack tmp;
     tmp.initializeIndexMaps(model.numRow_, model.numCol_);
     presolve.setReductionLimit(reductionLim);
@@ -4733,7 +4741,8 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     sol = reducedsol;
     basis = reducedbasis;
-    postSolveStack.undoUntil(options, sol, basis, tmp.numReductions());
+    postSolveStack.undoUntil(options, flagRow, flagCol, sol, basis,
+                             tmp.numReductions());
 
     HighsBasis tmpBasis;
     HighsSolution tmpSol;
@@ -4767,7 +4776,6 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
            highs.getSimplexIterationCount());
     checkResult = highs.getSimplexIterationCount() == 0;
 #else
-    presolve.computeIntermediateMatrix(flagRow, flagCol, reductionLim);
 
     if (reductionLim == good) break;
 
@@ -4991,6 +4999,15 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
 
       for (int pos : rowpositions)
         addToMatrix(row, Acol[pos], scale * Avalue[pos]);
+
+      if (model->rowLower_[row] == model->rowUpper_[row] &&
+          eqiters[row] != equations.end() &&
+          eqiters[row]->first != rowsize[row]) {
+        // if that is the case reinsert it into the equation set that is ordered
+        // by sparsity
+        equations.erase(eqiters[row]);
+        eqiters[row] = equations.emplace(rowsize[row], row).first;
+      }
     }
 
     HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));

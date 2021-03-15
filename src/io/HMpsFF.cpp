@@ -849,6 +849,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
         col_binary[colidx] = true;
       } else {
         // continuous: MI, PL or FR
+        col_binary[colidx] = false;
         if (islb) colLower[colidx] = -HIGHS_CONST_INF;
         if (isub) colUpper[colidx] = HIGHS_CONST_INF;
       }

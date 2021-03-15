@@ -155,7 +155,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
                                    std::vector<double>& upper,
                                    std::vector<double>& solval,
                                    std::vector<int>& inds, double& rhs,
-                                   bool integersPositive, bool preferVbds) {
+                                   bool& integersPositive, bool preferVbds) {
   HighsCDouble tmpRhs = rhs;
 
   const HighsMipSolver& mip = lprelaxation.getMipSolver();

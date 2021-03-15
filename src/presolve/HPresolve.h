@@ -165,9 +165,7 @@ class HPresolve {
   bool checkFillin(HighsHashTable<int, int>& fillinCache, int row, int col);
 
 #ifndef NDEBUG
-  void debugPrintRow(int row);
-
-  void debugPrintSubMatrix(int row, int col);
+  void debugPrintRow(HighsPostsolveStack& postSolveStack, int row);
 #endif
 
   int findNonzero(int row, int col);
@@ -220,6 +218,8 @@ class HPresolve {
   void changeImplRowDualUpper(int row, double newUpper, int originCol);
 
   void changeImplRowDualLower(int row, double newLower, int originCol);
+
+  Result applyConflictGraphSubstitutions(HighsPostsolveStack& postSolveStack);
 
   Result fastPresolveLoop(HighsPostsolveStack& postsolveStack);
 

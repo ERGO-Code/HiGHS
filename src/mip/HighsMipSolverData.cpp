@@ -45,8 +45,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
   }
 
-  addIncumbent(solution, double(obj), source);
-  return true;
+  return addIncumbent(solution, double(obj), source);
 }
 
 void HighsMipSolverData::removeFixedIndices() {
@@ -79,6 +78,8 @@ void HighsMipSolverData::init() {
   firstlpsolobj = -HIGHS_CONST_INF;
   rootlpsolobj = -HIGHS_CONST_INF;
 
+  numRestarts = 0;
+  numImprovingSols = 0;
   pruned_treeweight = 0;
   maxrootlpiters = 0;
   num_nodes = 0;
@@ -91,7 +92,6 @@ void HighsMipSolverData::init() {
   last_displeave = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
-  tryProbing = true;
   lower_bound = -HIGHS_CONST_INF;
   upper_bound = HIGHS_CONST_INF;
   upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound;
@@ -99,7 +99,7 @@ void HighsMipSolverData::init() {
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
   else if (mipsolver.options_mip_->mip_report_level == 1)
-    dispfreq = 50;
+    dispfreq = 100;
   else
     dispfreq = 1;
 }
@@ -121,9 +121,6 @@ void HighsMipSolverData::runSetup() {
   upper_bound -= mipsolver.model_->offset_;
 
   redcostfixing = HighsRedcostFixing();
-  mipsolver.mipdata_->cutpool = HighsCutPool(
-      mipsolver.model_->numCol_, mipsolver.options_mip_->mip_pool_age_limit,
-      mipsolver.options_mip_->mip_pool_soft_limit);
   mipsolver.mipdata_->pseudocost = HighsPseudocost(mipsolver.model_->numCol_);
   continuous_cols.clear();
   integer_cols.clear();
@@ -190,7 +187,6 @@ void HighsMipSolverData::runSetup() {
   }
 
   // compute row activities and propagate all rows once
-  domain.addCutpool(cutpool);
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {
@@ -332,22 +328,30 @@ double HighsMipSolverData::transformNewIncumbent(
 
 void HighsMipSolverData::performRestart() {
   HighsBasis rootBasis;
-
-  if (firstrootbasis.valid_) {
+  ++numRestarts;
+  int numLpRows = lp.getLp().numRow_;
+  int numModelRows = mipsolver.numRow();
+  int numCuts = numLpRows - numModelRows;
+  if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
+  auto integrality = std::move(presolvedModel.integrality_);
+  presolvedModel = lp.getLp();
+  presolvedModel.integrality_ = std::move(integrality);
+  const HighsBasis& basis = lp.getLpSolver().getBasis();
+  if (basis.valid_) {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
-    rootBasis.col_status.resize(mipsolver.orig_model_->numCol_);
-    rootBasis.row_status.resize(mipsolver.orig_model_->numRow_);
+    rootBasis.col_status.resize(postSolveStack.getOrigNumCol());
+    rootBasis.row_status.resize(postSolveStack.getOrigNumRow());
     rootBasis.valid_ = true;
 
     for (int i = 0; i != mipsolver.model_->numCol_; ++i)
       rootBasis.col_status[postSolveStack.getOrigColIndex(i)] =
-          firstrootbasis.col_status[i];
+          basis.col_status[i];
 
     for (int i = 0; i != mipsolver.model_->numRow_; ++i)
       rootBasis.row_status[postSolveStack.getOrigRowIndex(i)] =
-          firstrootbasis.row_status[i];
+          basis.row_status[i];
 
     mipsolver.rootbasis = &rootBasis;
   }
@@ -385,12 +389,12 @@ void HighsMipSolverData::basisTransfer() {
   // if a root basis is given, construct a basis for the root LP from
   // in the reduced problem space after presolving
   if (mipsolver.rootbasis) {
+    int numRow = mipsolver.numRow() + cutpool.getNumCuts();
     firstrootbasis.col_status.assign(mipsolver.numCol(),
                                      HighsBasisStatus::NONBASIC);
-    firstrootbasis.row_status.assign(mipsolver.numRow(),
-                                     HighsBasisStatus::NONBASIC);
+    firstrootbasis.row_status.assign(numRow, HighsBasisStatus::NONBASIC);
     firstrootbasis.valid_ = true;
-    int missingbasic = mipsolver.numRow();
+    int missingbasic = numRow;
 
     for (int i = 0; i != mipsolver.numCol(); ++i) {
       HighsBasisStatus status =
@@ -405,7 +409,7 @@ void HighsMipSolverData::basisTransfer() {
     }
 
     if (missingbasic != 0) {
-      for (int i = 0; i != mipsolver.numRow(); ++i) {
+      for (int i = 0; i != numRow; ++i) {
         HighsBasisStatus status =
             mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
 
@@ -498,11 +502,11 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
   return incumbent;
 }
 
-void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
+bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, char source) {
   if (solobj < upper_bound) {
     solobj = transformNewIncumbent(sol);
-    if (solobj >= upper_bound) return;
+    if (solobj >= upper_bound) return false;
     upper_bound = solobj;
     incumbent = sol;
     double new_upper_limit;
@@ -513,24 +517,27 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       new_upper_limit = solobj - feastol;
     }
     if (new_upper_limit < upper_limit) {
+      ++numImprovingSols;
       debugSolution.newIncumbentFound();
       upper_limit = new_upper_limit;
       redcostfixing.propagateRootRedcost(mipsolver);
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
-        return;
+        return true;
       }
       cliquetable.extractObjCliques(mipsolver);
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
         nodequeue.clear();
-        return;
+        return true;
       }
       pruned_treeweight += nodequeue.performBounding(upper_limit);
       printDisplayLine(source);
     }
   }
+
+  return true;
 }
 
 void HighsMipSolverData::printDisplayLine(char first) {
@@ -639,11 +646,23 @@ bool HighsMipSolverData::rootSeparationRound(
 }
 
 void HighsMipSolverData::evaluateRootNode() {
+  int maxSepaRounds = mipsolver.submip ? 5 : HIGHS_CONST_I_INF;
 restart:
   // solve the first root lp
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-               "\nsolving root node LP relaxation\n");
+               "\nSolving root node LP relaxation\n");
   lp.loadModel();
+
+  // add all cuts again after restart
+  if (cutpool.getNumCuts() != 0) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                 "Adding %d cuts to LP after restart\n", cutpool.getNumCuts());
+    assert(numRestarts != 0);
+    HighsCutSet cutset;
+    cutpool.separateLpCutsAfterRestart(cutset);
+    lp.addCuts(cutset);
+  }
+
   if (firstrootbasis.valid_) lp.getLpSolver().setBasis(firstrootbasis);
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
 
@@ -722,10 +741,13 @@ restart:
 
     if (mipsolver.options_mip_->presolve != off_string) {
       double fixingRate =
-          100.0 * (1.0 - double(integer_cols.size()) / numintegercols);
+          100.0 * (1.0 - double(integer_cols.size() +
+                                cliquetable.getSubstitutions().size()) /
+                             numintegercols);
       if (fixingRate >= 10.0) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-                     "%.1f%% fixed integer columns, restarting\n", fixingRate);
+                     "%.1f%% inactive integer columns, restarting\n",
+                     fixingRate);
         performRestart();
         if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) goto restart;
 
@@ -789,7 +811,7 @@ restart:
 
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
     if (ncuts == 0) break;
-    if (mipsolver.submip && nseparounds == 5) break;
+    if (nseparounds == maxSepaRounds) break;
   }
 
   lp.setIterationLimit();
@@ -811,16 +833,18 @@ restart:
     rootlpsolobj = lp.getObjective();
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
 
+    if ((!mipsolver.submip && numRestarts == 0) ||
+        upper_limit == HIGHS_CONST_INF) {
+      heuristics.centralRounding();
+      heuristics.flushStatistics();
+    }
+
     heuristics.RENS(rootlpsol);
     heuristics.flushStatistics();
 
     if (upper_limit == HIGHS_CONST_INF && !mipsolver.submip) {
-      heuristics.centralRounding();
+      heuristics.feasibilityPump();
       heuristics.flushStatistics();
-      if (upper_limit == HIGHS_CONST_INF) {
-        heuristics.feasibilityPump();
-        heuristics.flushStatistics();
-      }
     }
   }
 
@@ -837,28 +861,31 @@ restart:
   }
 
   removeFixedIndices();
-
-  if (mipsolver.options_mip_->presolve != off_string) {
-    double fixingRate =
-        100.0 * (1.0 - double(integer_cols.size()) / numintegercols);
-    if (fixingRate >= 2.5) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-                   "%.1f%% fixed integer columns, restarting\n", fixingRate);
-      performRestart();
-      if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) goto restart;
-
-      return;
-    }
-  }
+  lp.removeObsoleteRows();
+  rootlpsolobj = lp.getObjective();
 
   if (lower_bound <= upper_limit) {
+    if (mipsolver.options_mip_->presolve != off_string) {
+      double fixingRate =
+          100.0 * (1.0 - double(integer_cols.size() +
+                                cliquetable.getSubstitutions().size()) /
+                             numintegercols);
+      if (fixingRate >= 2.5 ||
+          (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                     "%.1f%% inactive integer columns, restarting\n",
+                     fixingRate);
+        maxSepaRounds = std::min(maxSepaRounds, nseparounds);
+        performRestart();
+        if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) goto restart;
+
+        return;
+      }
+    }
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lower_bound,
                           lp.getObjective(), lp.getObjective(), 1);
   }
-
-  lp.removeObsoleteRows();
-  rootlpsolobj = lp.getObjective();
 }
 
 bool HighsMipSolverData::checkLimits() const {

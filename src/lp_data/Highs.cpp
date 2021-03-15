@@ -1957,7 +1957,7 @@ HighsStatus Highs::callSolveMip() {
   info_.simplex_iteration_count = -1;    // Not known
   info_.ipm_iteration_count = -1;        // Not known
   info_.crossover_iteration_count = -1;  // Not known
-  info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  info_.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
   info_.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
   info_.objective_function_value = solver.solution_objective_;
   info_.mip_dual_bound = solver.dual_bound_;
@@ -1974,11 +1974,15 @@ HighsStatus Highs::callSolveMip() {
   info_.max_dual_infeasibility = -1;      // Not known
   info_.sum_dual_infeasibilities = -1;    // Not known
   // The solution needs to be here, but just resize it for now
-  int solver_solution_size = solver.solution_.size();
-  assert(solver_solution_size >= lp_.numCol_);
-  solution_.col_value.resize(lp_.numCol_);
-  for (int iCol = 0; iCol < lp_.numCol_; iCol++)
-    solution_.col_value[iCol] = solver.solution_[iCol];
+  if( solver.solution_objective_ != HIGHS_CONST_INF )
+  {
+    info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    int solver_solution_size = solver.solution_.size();
+    assert(solver_solution_size >= lp_.numCol_);
+    solution_.col_value.resize(lp_.numCol_);
+    for (int iCol = 0; iCol < lp_.numCol_; iCol++)
+      solution_.col_value[iCol] = solver.solution_[iCol];
+  }
 
   //  assert((int)solution_.col_value.size() == lp_.numCol_);
   //  assert((int)solution_.row_value.size() == lp_.numRow_);

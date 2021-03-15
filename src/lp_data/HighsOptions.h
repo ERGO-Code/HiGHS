@@ -314,6 +314,7 @@ struct HighsOptionsStruct {
 
   // Options for MIP solver
   int mip_max_nodes;
+  int mip_max_stall_nodes;
   int mip_max_leaves;
   int mip_lp_age_limit;
   int mip_pool_age_limit;
@@ -582,6 +583,13 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_max_nodes", "MIP solver max number of nodes", advanced,
         &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_stall_nodes",
+        "MIP solver max number of nodes where estimate is above cutoff bound",
+        advanced, &mip_max_stall_nodes, 0, HIGHS_CONST_I_INF,
+        HIGHS_CONST_I_INF);
     records.push_back(record_int);
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(

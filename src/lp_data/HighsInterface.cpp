@@ -475,11 +475,14 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
         highs_model_object.scaled_model_status_;
     basis.valid_ = false;
   }
-  return_status = interpretCallStatus(
-      deleteScale(options.log_options, highs_model_object.scale_.row_,
-                  index_collection),
-      return_status, "deleteScale");
-  if (return_status == HighsStatus::Error) return return_status;
+
+  if (highs_model_object.scale_.is_scaled_) {
+    return_status = interpretCallStatus(
+        deleteScale(options.log_options, highs_model_object.scale_.row_,
+                    index_collection),
+        return_status, "deleteScale");
+    if (return_status == HighsStatus::Error) return return_status;
+  }
 
   highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {

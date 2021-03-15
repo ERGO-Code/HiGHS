@@ -129,6 +129,8 @@ class HighsCutPool {
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
                 HighsCutSet& cutset, double feastol);
 
+  void separateLpCutsAfterRestart(HighsCutSet& cutset);
+
   bool cutIsIntegral(int cut) const { return rowintegral[cut]; }
 
   int getNumCuts() const {
