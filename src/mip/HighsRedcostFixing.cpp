@@ -18,19 +18,23 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
     for (auto it =
              lurkingColLower[col].lower_bound(mipsolver.mipdata_->upper_limit);
          it != lurkingColLower[col].end(); ++it) {
-      if (it->second > mipsolver.mipdata_->domain.colLower_[col])
+      if (it->second > mipsolver.mipdata_->domain.colLower_[col]) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::Lower, col, (double)it->second,
             HighsDomain::Reason::unspecified());
+        if (mipsolver.mipdata_->domain.infeasible()) return;
+      }
     }
 
     for (auto it =
              lurkingColUpper[col].lower_bound(mipsolver.mipdata_->upper_limit);
          it != lurkingColUpper[col].end(); ++it) {
-      if (it->second < mipsolver.mipdata_->domain.colUpper_[col])
+      if (it->second < mipsolver.mipdata_->domain.colUpper_[col]) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::Upper, col, (double)it->second,
             HighsDomain::Reason::unspecified());
+        if (mipsolver.mipdata_->domain.infeasible()) return;
+      }
     }
   }
 

@@ -101,8 +101,6 @@ double HighsLpRelaxation::slackUpper(int row) const {
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setHighsOptionValue("output_flag", false);
-  lpsolver.setHighsOptionValue("output_flag", false);
-  //  lpsolver.setHighsOptionValue("log_dev_level", 0);
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance);
@@ -136,9 +134,12 @@ void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
   lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
   lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
+  lprows.clear();
   lprows.reserve(lpmodel.numRow_);
   for (int i = 0; i != lpmodel.numRow_; ++i) lprows.push_back(LpRow::model(i));
   lpmodel.integrality_.clear();
+  lpsolver.clearSolver();
+  lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
   mipsolver.mipdata_->domain.clearChangedCols();
 }

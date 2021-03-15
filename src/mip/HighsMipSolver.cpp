@@ -20,12 +20,18 @@
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HPresolve.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "presolve/PresolveComponent.h"
 #include "util/HighsCDouble.h"
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                bool submip)
-    : options_mip_(&options), model_(&lp), submip(submip), rootbasis(nullptr) {}
+    : options_mip_(&options),
+      model_(&lp),
+      solution_objective_(HIGHS_CONST_INF),
+      submip(submip),
+      rootbasis(nullptr) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
 
@@ -117,42 +123,29 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
   return presolve_return_status;
 }
 
-HighsPostsolveStatus HighsMipSolver::runPostsolve() {
-  assert(presolve_.has_run_);
-  if (!mipdata_) return HighsPostsolveStatus::ReducedSolutionEmpty;
-
-  const std::vector<double>& incumbent = mipdata_->getSolution();
-  bool solution_ok =
-      presolve_.getReducedProblem().numCol_ == (int)incumbent.size();
-  if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
-
-  if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
-      presolve_.presolve_status_ != HighsPresolveStatus::ReducedToEmpty)
-    return HighsPostsolveStatus::NoPostsolve;
-
-  // Handle max case.
-  // if (lp_.sense_ == ObjSense::MAXIMIZE)
-  // presolve_.negateReducedLpColDuals(true);
-
-  // Run postsolve
-  HighsPostsolveStatus postsolve_status =
-      presolve_.data_.presolve_[0].primalPostsolve(
-          incumbent, presolve_.data_.recovered_solution_);
-
-  return postsolve_status;
-
-  // if (lp_.sense_ == ObjSense::MAXIMIZE)
-  //   presolve_.negateReducedLpColDuals(false);
-
-  // return HighsPostsolveStatus::SolutionRecovered;
-}
-
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::NOTSET;
-  orig_model_ = model_;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
   timer_.start(timer_.presolve_clock);
+
+  mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+  mipdata_->init();
+  mipdata_->runPresolve();
+  if (modelstatus_ != HighsModelStatus::NOTSET) {
+    highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+                 "Presolve: %s\n",
+                 utilHighsModelStatusToString(modelstatus_).c_str());
+    if (modelstatus_ == HighsModelStatus::OPTIMAL) {
+      mipdata_->lower_bound = 0;
+      mipdata_->upper_bound = 0;
+      mipdata_->transformNewIncumbent(std::vector<double>());
+    }
+    timer_.stop(timer_.presolve_clock);
+    cleanupSolve();
+    return;
+  }
+#if 0
   if (options_mip_->presolve != "off") {
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
@@ -199,9 +192,8 @@ void HighsMipSolver::run() {
         assert(false);
     }
   }
+#endif
 
-  mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-  mipdata_->init();
   mipdata_->runSetup();
   timer_.stop(timer_.presolve_clock);
   if (modelstatus_ == HighsModelStatus::NOTSET) {
@@ -429,7 +421,7 @@ void HighsMipSolver::run() {
 
 void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
-  bool havesolution = mipdata_->upper_bound != HIGHS_CONST_INF;
+  bool havesolution = solution_objective_ != HIGHS_CONST_INF;
   dual_bound_ = mipdata_->lower_bound + model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
@@ -441,63 +433,18 @@ void HighsMipSolver::cleanupSolve() {
       modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
 
-  if (mipdata_->modelcleanup) {
-    model_ = mipdata_->modelcleanup->origmodel;
-    if (havesolution)
-      mipdata_->modelcleanup->recoverSolution(mipdata_->incumbent);
-  }
-
-  if (havesolution) {
-    if (options_mip_->presolve != "off")
-      runPostsolve();
-    else if (!mipdata_->getSolution().empty()) {
-      presolve_.data_.recovered_solution_.col_value = mipdata_->getSolution();
-      calculateRowValues(*model_, presolve_.data_.recovered_solution_);
-    }
-  }
-
   model_ = orig_model_;
-
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
 
-  const auto& solution = presolve_.data_.recovered_solution_;
   std::string solutionstatus = "-";
-  bound_violation_ = 0;
-  row_violation_ = 0;
-  integrality_violation_ = 0;
 
-  if (int(solution.col_value.size()) == model_->numCol_) {
-    HighsCDouble obj = model_->offset_;
-    for (int i = 0; i != model_->numCol_; ++i) {
-      obj += model_->colCost_[i] * solution.col_value[i];
-
-      bound_violation_ = std::max(bound_violation_,
-                                  model_->colLower_[i] - solution.col_value[i]);
-      bound_violation_ = std::max(bound_violation_,
-                                  solution.col_value[i] - model_->colUpper_[i]);
-
-      if (model_->integrality_[i] == HighsVarType::INTEGER) {
-        double intval = std::floor(solution.col_value[i] + 0.5);
-        integrality_violation_ = std::max(
-            std::abs(intval - solution.col_value[i]), integrality_violation_);
-      }
-    }
-
-    for (int i = 0; i != model_->numRow_; ++i) {
-      row_violation_ = std::max(row_violation_,
-                                model_->rowLower_[i] - solution.row_value[i]);
-      row_violation_ = std::max(row_violation_,
-                                solution.row_value[i] - model_->rowUpper_[i]);
-    }
-
+  if (havesolution) {
     bool feasible =
         bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     solutionstatus = feasible ? "feasible" : "infeasible";
-    solution_ = std::move(presolve_.data_.recovered_solution_.col_value);
-    solution_objective_ = double(obj);
   }
   highsLogUser(options_mip_->log_options, HighsLogType::INFO,
                "\nSolving report\n"

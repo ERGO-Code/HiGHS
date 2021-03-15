@@ -188,7 +188,7 @@ class HighsCliqueTable {
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
-  void extractCliques(HighsMipSolver& mipsolver);
+  void extractCliques(HighsMipSolver& mipsolver, bool transformRows = true);
 
   void extractObjCliques(HighsMipSolver& mipsolver);
 

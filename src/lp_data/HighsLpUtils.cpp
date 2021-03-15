@@ -2022,7 +2022,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 }
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
-  assert(solution.col_value.size() > 0);
+  // assert(solution.col_value.size() > 0);
   if (int(solution.col_value.size()) != lp.numCol_) return HighsStatus::Error;
 
   solution.row_value.clear();

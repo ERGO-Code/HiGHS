@@ -892,6 +892,12 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   HighsMipSolverData& mipdata = *lp->getMipSolver().mipdata_;
 
   auto propagateAndResolve = [&]() {
+    if (propdomain.infeasible() || mipdata.domain.infeasible()) {
+      status = HighsLpRelaxation::Status::Infeasible;
+      propdomain.clearChangedCols();
+      return true;
+    }
+
     propdomain.propagate();
     mipdata.cliquetable.cleanupFixed(mipdata.domain);
 

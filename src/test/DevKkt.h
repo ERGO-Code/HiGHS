@@ -126,7 +126,7 @@ struct KktInfo {
 
 KktInfo initInfo();
 
-bool checkKkt(const State& state, KktInfo info);
+bool checkKkt(const State& state, KktInfo& info);
 
 void checkPrimalBounds(const State& state, KktConditionDetails& details);
 void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details);

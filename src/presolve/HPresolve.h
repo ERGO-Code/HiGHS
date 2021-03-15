@@ -25,6 +25,7 @@
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
+#include "mip/HighsMipSolver.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsLinearSumBounds.h"
@@ -38,6 +39,7 @@ class HPresolve {
   // pointer to model and options that where presolved
   HighsLp* model;
   const HighsOptions* options;
+  HighsMipSolver* mipsolver;
 
   // triplet storage
   std::vector<double> Avalue;
@@ -56,14 +58,12 @@ class HPresolve {
 
   // length of rows and columns
   std::vector<int> rowsize;
+  std::vector<int> rowsizeInteger;
+  std::vector<int> rowsizeImplInt;
   std::vector<int> colsize;
 
   // vector to store the nonzero positions of a row
   std::vector<int> rowpositions;
-
-  // for each column the threshold of coefficient values for which a
-  // substitution is considered numerically safe
-  std::vector<double> col_numerics_threshold;
 
   // stack to reuse free slots
   std::vector<int> freeslots;
@@ -146,15 +146,15 @@ class HPresolve {
 
   void updateRowDualImpliedBounds(int row, int col, double val);
 
-  bool isRowIntegral(int row, double scale) const;
-
-  bool isRowInteger(int row, double scale) const;
+  bool rowCoefficientsIntegral(int row, double scale) const;
 
   bool isImpliedFree(int col) const;
 
   bool isDualImpliedFree(int row) const;
 
   bool isImpliedIntegral(int col);
+
+  bool isImpliedInteger(int col);
 
   bool isLowerImplied(int col) const;
 
@@ -232,7 +232,11 @@ class HPresolve {
   double problemSizeReduction();
 
  public:
+  // for LP presolve
   void setInput(HighsLp& model_, const HighsOptions& options_);
+
+  // for MIP presolve
+  void setInput(HighsMipSolver& mipsolver);
 
   void setReductionLimit(size_t reductionLimit) {
     this->reductionLimit = reductionLimit;
@@ -243,6 +247,8 @@ class HPresolve {
   void shrinkProblem(HighsPostsolveStack& postSolveStack);
 
   void addToMatrix(int row, int col, double val);
+
+  Result runProbing(HighsPostsolveStack& postSolveStack);
 
   Result doubletonEq(HighsPostsolveStack& postSolveStack, int row);
 
@@ -286,7 +292,11 @@ class HPresolve {
 
   int strengthenInequalities();
 
+  int detectImpliedIntegers();
+
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolveStack);
+
+  Result sparsify(HighsPostsolveStack& postsolveStack);
 
   void setRelaxedImpliedBounds();
 

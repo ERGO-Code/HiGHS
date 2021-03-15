@@ -500,24 +500,37 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
       cliquesets.resize(k);
     } else
       freespaces.emplace(cliques[cliqueid].end - k, k);
-    if (k - cliques[cliqueid].start == 2) {
-      // due to subsitutions the clique became smaller and is now of size two
-      // as a result we need to link it to the size two cliqueset instead of the
-      // normal cliqueset
-      unlink(cliques[cliqueid].start);
-      unlink(cliques[cliqueid].start + 1);
 
-      cliques[cliqueid].end = k;
+    switch (k - cliques[cliqueid].start) {
+      case 0:
+        // clique empty, so just mark it as deleted
+        cliques[cliqueid].start = -1;
+        freeslots.push_back(cliqueid);
+        break;
+      case 1:
+        // size 1 clique is redundant, so unlink the single linked entry
+        // and mark it as deleted
+        unlink(cliques[cliqueid].start);
+        cliques[cliqueid].start = -1;
+        freeslots.push_back(cliqueid);
+        break;
+      case 2:
+        // due to subsitutions the clique became smaller and is now of size two
+        // as a result we need to link it to the size two cliqueset instead of
+        // the normal cliqueset
+        unlink(cliques[cliqueid].start);
+        unlink(cliques[cliqueid].start + 1);
 
-      cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
-      link(cliques[cliqueid].start);
-      cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
-      link(cliques[cliqueid].start + 1);
-    } else
-      cliques[cliqueid].end = k;
+        cliques[cliqueid].end = k;
 
-    if (cliques[cliqueid].start == cliques[cliqueid].end)
-      freeslots.push_back(cliqueid);
+        cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
+        link(cliques[cliqueid].start);
+        cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
+        link(cliques[cliqueid].start + 1);
+        break;
+      default:
+        cliques[cliqueid].end = k;
+    }
   }
 
   if (cliques[cliqueid].end - cliques[cliqueid].start == 2)
@@ -738,6 +751,7 @@ void HighsCliqueTable::removeClique(int cliqueid) {
     deletedrows.push_back(cliques[cliqueid].origin);
 
   int start = cliques[cliqueid].start;
+  assert(start != -1);
   int end = cliques[cliqueid].end;
   int len = end - start;
   if (len == 2) {
@@ -915,7 +929,8 @@ bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
   return equality;
 }
 
-void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver) {
+void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
+                                      bool transformRows) {
   std::vector<int> inds;
   std::vector<double> vals;
   std::vector<int> perm;
@@ -964,6 +979,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver) {
         continue;
       }
     }
+    if (!transformRows) continue;
 
     offset = 0;
     for (int j = start; j != end; ++j) {
@@ -1625,20 +1641,20 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
           extensionvars.end());
     }
 
-    if (extensionvars.empty()) continue;
+    if (!extensionvars.empty()) {
+      // todo, shuffle extension vars?
+      std::shuffle(extensionvars.begin(), extensionvars.end(), randgen);
+      size_t i = 0;
+      while (i < extensionvars.size()) {
+        CliqueVar extvar = extensionvars[i];
+        i += 1;
 
-    // todo, shuffle extension vars?
-    std::shuffle(extensionvars.begin(), extensionvars.end(), randgen);
-    size_t i = 0;
-    while (i < extensionvars.size()) {
-      CliqueVar extvar = extensionvars[i];
-      i += 1;
-
-      extensionvars.erase(
-          std::remove_if(
-              extensionvars.begin() + i, extensionvars.end(),
-              [&](CliqueVar v) { return !haveCommonClique(extvar, v); }),
-          extensionvars.end());
+        extensionvars.erase(
+            std::remove_if(
+                extensionvars.begin() + i, extensionvars.end(),
+                [&](CliqueVar v) { return !haveCommonClique(extvar, v); }),
+            extensionvars.end());
+      }
     }
 
     if (cliques[k].equality) {
@@ -1716,7 +1732,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
       if (extensionvars.size() > 1)
         doAddClique(extensionvars.data(), extensionvars.size(), false,
-                    originrow);
+                    HIGHS_CONST_I_INF);
     }
 
     extensionvars.clear();
@@ -1732,12 +1748,6 @@ void HighsCliqueTable::rebuild(int ncols,
   for (int i = 0; i != ncliques; ++i) {
     if (cliques[i].start == -1) continue;
 
-    int originrow = cliques[i].origin;
-    if (originrow != HIGHS_CONST_I_INF) {
-      originrow = orig2reducedrow[originrow];
-      if (originrow == -1) originrow = HIGHS_CONST_I_INF;
-    }
-
     for (int k = cliques[i].start; k != cliques[i].end; ++k) {
       int col = orig2reducedcol[cliqueentries[k].col];
 
@@ -1751,9 +1761,12 @@ void HighsCliqueTable::rebuild(int ncols,
         &cliqueentries[cliques[i].start], &cliqueentries[cliques[i].end],
         [](CliqueVar v) { return v.col == HIGHS_CONST_I_INF; });
     int numvars = newend - (&cliqueentries[cliques[i].start]);
+    // since we do not know how variables in the clique that have been deleted
+    // are replaced (i.e. are they fixed to 0 or 1, or substituted) we relax
+    // them out which means the equality status needs to be set to false
     if (numvars >= 2)
       newCliqueTable.doAddClique(&cliqueentries[cliques[i].start], numvars,
-                                 cliques[i].equality, originrow);
+                                 false, HIGHS_CONST_I_INF);
   }
 
   *this = std::move(newCliqueTable);

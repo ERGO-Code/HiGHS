@@ -25,6 +25,7 @@
 #include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "util/HighsTimer.h"
 
 struct HighsMipSolverData {
@@ -37,6 +38,8 @@ struct HighsMipSolverData {
   HighsImplications implications;
   HighsPrimalHeuristics heuristics;
   HighsRedcostFixing redcostfixing;
+  presolve::HighsPostsolveStack postSolveStack;
+  HighsLp presolvedModel;
 
   struct Substitution {
     int substcol;
@@ -46,25 +49,9 @@ struct HighsMipSolverData {
   };
   std::vector<Substitution> substitutions;
 
-  struct ModelCleanup {
-    ModelCleanup(HighsMipSolver& mipsolver);
-
-    std::vector<double> origsol;
-    std::vector<HighsSubstitution> substitutionStack;
-
-    HighsLp cleanedUpModel;
-
-    void recoverSolution(const std::vector<double>& reducedSol);
-
-    const HighsLp* origmodel;
-    std::vector<int> rIndex;
-    std::vector<int> cIndex;
-  };
-
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool tryProbing;
-  std::unique_ptr<ModelCleanup> modelcleanup;
 
   std::vector<int> ARstart_;
   std::vector<int> ARindex_;
@@ -88,6 +75,7 @@ struct HighsMipSolverData {
   double firstlpsolobj;
   HighsBasis firstrootbasis;
   double rootlpsolobj;
+  int numintegercols;
 
   HighsCDouble pruned_treeweight;
   size_t maxrootlpiters;
@@ -128,9 +116,11 @@ struct HighsMipSolverData {
   void init();
   void basisTransfer();
   void checkObjIntegrality();
-  void cliqueExtraction();
+  void runPresolve();
+  void setupDomainPropagation();
   void runSetup();
-  void runProbing();
+  double transformNewIncumbent(const std::vector<double>& sol);
+  void performRestart();
   bool trySolution(const std::vector<double>& solution, char source = ' ');
   bool rootSeparationRound(HighsSeparation& sepa, int& ncuts,
                            HighsLpRelaxation::Status& status);
