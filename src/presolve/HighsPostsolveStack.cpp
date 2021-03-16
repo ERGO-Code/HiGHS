@@ -175,38 +175,23 @@ void HighsPostsolveStack::EqualityRowAddition::undo(
   if (basis.row_status[addedEqRow] == HighsBasisStatus::BASIC &&
       std::abs(solution.row_dual[addedEqRow]) >
           options.dual_feasibility_tolerance) {
-    ++numMissingBasic;
-    if (solution.row_dual[addedEqRow] > 0)
-      basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
-    else
-      basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
-#if 0
     // due to redundancy in the linear system it may happen that the equation
     // is basic in the solution. Now it got a nonzero dual multiplier so that
     // we need to make it non-basic. It must however be the case that we have
     // a different column in the equation that we can make basic.
-    int bestBasicCol = -1;
-    double bestBasicColViol = std::abs(solution.row_value[addedEqRow]);
 
     for (const auto& entry : eqRowValues) {
       if (basis.col_status[entry.first] != HighsBasisStatus::BASIC &&
-          std::abs(solution.col_dual[entry.first]) < bestBasicColViol) {
-        bestBasicCol = entry.first;
-        bestBasicColViol = std::abs(solution.col_dual[entry.first]);
+          std::abs(solution.col_dual[entry.first]) <=
+              options.dual_feasibility_tolerance) {
+        basis.col_status[entry.first] = HighsBasisStatus::BASIC;
+        if (solution.row_dual[addedEqRow] > 0)
+          basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+        else
+          basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+        return;
       }
     }
-
-    if (bestBasicCol != -1) {
-      // if we found a column that we can use as basic column instead of the row
-      // such that the dual violation gets smaller, we use that column,
-      // otherwise we leave the row basic to at least have a consistent basis
-      basis.col_status[bestBasicCol] = HighsBasisStatus::BASIC;
-      if (solution.row_dual[addedEqRow] > 0)
-        basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
-      else
-        basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
-    }
-#endif
   }
 }
 
@@ -232,11 +217,31 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
   if (basis.row_status[addedEqRow] == HighsBasisStatus::BASIC &&
       std::abs(solution.row_dual[addedEqRow]) >
           options.dual_feasibility_tolerance) {
-    ++numMissingBasic;
-    if (solution.row_dual[addedEqRow] > 0)
-      basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
-    else
-      basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+    for (const auto& entry : eqRowValues) {
+      if (basis.col_status[entry.first] != HighsBasisStatus::BASIC &&
+          std::abs(solution.col_dual[entry.first]) <=
+              options.dual_feasibility_tolerance) {
+        basis.col_status[entry.first] = HighsBasisStatus::BASIC;
+        if (solution.row_dual[addedEqRow] > 0)
+          basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+        else
+          basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+        return;
+      }
+    }
+
+    for (const auto& targetRow : targetRows) {
+      if (basis.row_status[targetRow.first] != HighsBasisStatus::BASIC &&
+          std::abs(solution.row_dual[targetRow.first]) <=
+              options.dual_feasibility_tolerance) {
+        basis.row_status[targetRow.first] = HighsBasisStatus::BASIC;
+        if (solution.row_dual[addedEqRow] > 0)
+          basis.row_status[addedEqRow] = HighsBasisStatus::LOWER;
+        else
+          basis.row_status[addedEqRow] = HighsBasisStatus::UPPER;
+        return;
+      }
+    }
   }
 }
 

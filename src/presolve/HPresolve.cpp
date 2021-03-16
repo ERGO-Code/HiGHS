@@ -22,6 +22,8 @@
 #include "util/HighsSplay.h"
 #include "util/HighsUtils.h"
 
+#define ENABLE_SPARSIFY_FOR_LP 0
+
 #define HPRESOLVE_CHECKED_CALL(presolveCall)                          \
   do {                                                                \
     HPresolve::Result __result = presolveCall;                        \
@@ -2895,7 +2897,11 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
 
     int numParallelRowColCalls = 0;
+#if ENABLE_SPARSIFY_FOR_LP
+    bool trySparsify = true;  // mipsolver != nullptr;
+#else
     bool trySparsify = mipsolver != nullptr;
+#endif
     bool tryProbing = mipsolver != nullptr;
     while (true) {
       report();
@@ -4370,8 +4376,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
     const int* numSingletonPtr = numRowSingletons.find(i);
     int numSingleton = numSingletonPtr ? *numSingletonPtr : 0;
-    if (mipsolver == nullptr && numSingleton != 0) continue;
 
+#if !ENABLE_SPARSIFY_FOR_LP
+    if (mipsolver == nullptr && numSingleton != 0) continue;
+#endif
     int delRow = -1;
     if (it == buckets.end())
       ++numRowBuckets;
@@ -4383,7 +4391,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       numSingletonPtr = numRowSingletons.find(parallelRowCand);
       const int numSingletonCandidate = numSingletonPtr ? *numSingletonPtr : 0;
+#if !ENABLE_SPARSIFY_FOR_LP
       if (mipsolver == nullptr && numSingletonCandidate != 0) continue;
+#endif
       if (rowsize[i] - numSingleton !=
           rowsize[parallelRowCand] - numSingletonCandidate)
         continue;
