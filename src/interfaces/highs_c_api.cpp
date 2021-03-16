@@ -185,6 +185,7 @@ int Highs_getDoubleOptionValue(void* highs, const char* option, double* value) {
 
 int Highs_getStringOptionValue(void* highs, const char* option, char* value) {
   std::string v;
+  memset(value, 0, 7);
   int retcode =
       (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
   strcpy(value, v.c_str());
