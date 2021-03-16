@@ -22,7 +22,7 @@
 #include "util/HighsHash.h"
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
-    : mipsolver(mipsolver), lp_iterations(0), randgen(0) {
+    : mipsolver(mipsolver), lp_iterations(0), randgen(mipsolver.numCol()) {
   successObservations = 0;
   numSuccessObservations = 0;
   infeasObservations = 0;
@@ -89,7 +89,7 @@ bool HighsPrimalHeuristics::solveSubMip(
 }
 
 double HighsPrimalHeuristics::determineTargetFixingRate() {
-  double lowFixingRate = 0.6;
+  double lowFixingRate = 0.5;
   double highFixingRate = 0.6;
 
   if (numInfeasObservations != 0) {
@@ -101,9 +101,7 @@ double HighsPrimalHeuristics::determineTargetFixingRate() {
   if (numSuccessObservations != 0) {
     double successFixingRate = successObservations / numSuccessObservations;
     lowFixingRate = std::min(lowFixingRate, 0.9 * successFixingRate);
-
-    double maxHighFixingRate = 0.5 * (highFixingRate + successFixingRate * 1.1);
-    highFixingRate = std::min(maxHighFixingRate, highFixingRate);
+    highFixingRate = std::max(successFixingRate * 1.1, highFixingRate);
   }
 
   std::uniform_real_distribution<double> dist(lowFixingRate, highFixingRate);
