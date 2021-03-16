@@ -39,7 +39,7 @@ class HPresolve {
   // pointer to model and options that where presolved
   HighsLp* model;
   const HighsOptions* options;
-  HighsMipSolver* mipsolver;
+  HighsMipSolver* mipsolver = nullptr;
 
   // triplet storage
   std::vector<double> Avalue;

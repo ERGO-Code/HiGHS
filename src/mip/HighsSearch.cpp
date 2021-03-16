@@ -592,55 +592,6 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   lp->flushDomain(localdom);
 }
 
-void HighsSearch::solveSubMip(std::vector<double> colLower,
-                              std::vector<double> colUpper, int maxleaves,
-                              int maxnodes) {
-  HighsOptions submipoptions = *mipsolver.options_mip_;
-  HighsLp submip = *mipsolver.model_;
-
-  // set bounds and restore integrality of the lp relaxation copy
-  submip.colLower_ = std::move(colLower);
-  submip.colUpper_ = std::move(colUpper);
-  submip.integrality_ = mipsolver.model_->integrality_;
-  submip.offset_ = 0;
-
-  // set limits
-  submipoptions.mip_max_leaves = maxleaves;
-  submipoptions.output_flag = false;
-  submipoptions.mip_max_nodes = maxnodes;
-  submipoptions.time_limit -=
-      mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  submipoptions.dual_objective_value_upper_bound =
-      mipsolver.mipdata_->upper_limit;
-  // setup solver and run it
-  HighsMipSolver submipsolver(submipoptions, submip, true);
-  submipsolver.rootbasis = &mipsolver.mipdata_->firstrootbasis;
-  submipsolver.run();
-
-  if (submipsolver.modelstatus_ != HighsModelStatus::PRIMAL_INFEASIBLE &&
-      !submipsolver.presolve_.data_.recovered_solution_.col_value.empty()) {
-    bool integerfeasible;
-    double solobj =
-        checkSol(submipsolver.presolve_.data_.recovered_solution_.col_value,
-                 integerfeasible);
-    assert(std::isfinite(solobj));
-    if (integerfeasible)
-      mipsolver.mipdata_->addIncumbent(
-          submipsolver.presolve_.data_.recovered_solution_.col_value, solobj,
-          'L');
-  }
-
-  if (submipsolver.mipdata_) {
-    double adjustmentfactor =
-        submipsolver.numNonzero() / (double)mipsolver.numNonzero();
-    size_t adjusted_lp_iterations =
-        (size_t)(adjustmentfactor * adjustmentfactor *
-                 submipsolver.mipdata_->total_lp_iterations);
-    heurlpiterations += adjusted_lp_iterations;
-    lpiterations += adjusted_lp_iterations;
-  }
-}
-
 void HighsSearch::flushStatistics() {
   mipsolver.mipdata_->num_nodes += nnodes;
   nnodes = 0;

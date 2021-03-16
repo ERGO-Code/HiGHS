@@ -75,9 +75,6 @@ class HighsMipSolver {
   }
 
   mutable HighsTimer timer_;
-  PresolveComponent presolve_;
-  HighsPresolveStatus runPresolve();
-  HighsPostsolveStatus runPostsolve();
   void cleanupSolve();
 };
 

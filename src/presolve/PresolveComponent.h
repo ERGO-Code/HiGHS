@@ -14,6 +14,7 @@
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
+#include "HighsPostsolveStack.h"
 #include "presolve/HAggregator.h"
 #include "presolve/Presolve.h"
 #include "util/HighsComponent.h"
@@ -25,24 +26,18 @@
 // specific.
 
 struct PresolveComponentData : public HighsComponentData {
-  std::vector<presolve::Presolve> presolve_;
   HighsLp reduced_lp_;
-
-  // todo: make reduced one const.
-  HighsSolution reduced_solution_;
+  presolve::HighsPostsolveStack postSolveStack;
   HighsSolution recovered_solution_;
-
-  HighsBasis reduced_basis_;
   HighsBasis recovered_basis_;
 
   void clear() {
     is_valid = false;
 
-    presolve_.clear();
+    postSolveStack = presolve::HighsPostsolveStack();
+
     reduced_lp_.clear();
-    clearSolutionUtil(reduced_solution_);
     clearSolutionUtil(recovered_solution_);
-    clearBasisUtil(reduced_basis_);
     clearBasisUtil(recovered_basis_);
   }
 
@@ -101,7 +96,7 @@ class PresolveComponent : public HighsComponent {
 
   PresolveComponentInfo info_;
   PresolveComponentData data_;
-  PresolveComponentOptions options_;
+  const HighsOptions* options_;
 
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;

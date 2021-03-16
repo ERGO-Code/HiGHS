@@ -795,9 +795,7 @@ class Highs {
 #endif
   void getPresolveReductionCounts(int& rows, int& cols, int& nnz) const;
   PresolveComponentInfo getPresolveInfo() const { return presolve_.info_; }
-  void setPresolveOptions(const PresolveComponentOptions& options) {
-    presolve_.options_ = options;
-  }
+
   void setMatrixOrientation(const MatrixOrientation& desired_orientation =
                                 MatrixOrientation::COLWISE);
 

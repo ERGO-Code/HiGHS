@@ -73,6 +73,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
     if (model->rowUpper_[i] == HIGHS_CONST_INF) rowDualUpper[i] = 0;
   }
 
+  if (mipsolver == nullptr)
+    model->integrality_.assign(model->numCol_, HighsVarType::CONTINUOUS);
+
   if (model_.orientation_ == MatrixOrientation::ROWWISE)
     fromCSR(model->Avalue_, model->Aindex_, model->Astart_);
   else
@@ -91,9 +94,6 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
   numDeletedCols = 0;
   numDeletedRows = 0;
   reductionLimit = std::numeric_limits<size_t>::max();
-
-  if (mipsolver == nullptr)
-    model->integrality_.assign(model->numCol_, HighsVarType::CONTINUOUS);
 }
 
 // for MIP presolve

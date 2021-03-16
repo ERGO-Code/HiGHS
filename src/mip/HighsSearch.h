@@ -125,9 +125,6 @@ class HighsSearch {
 
   void resetLocalDomain();
 
-  void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper,
-                   int maxleaves, int maxnodes);
-
   size_t getHeuristicLpIterations() const;
 
   size_t getTotalLpIterations() const;

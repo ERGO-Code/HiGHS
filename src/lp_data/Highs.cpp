@@ -712,10 +712,10 @@ HighsStatus Highs::run() {
           clearBasisUtil(hmos_[solved_hmo].basis_);
         }
 
-        presolve_.data_.reduced_solution_ = hmos_[solved_hmo].solution_;
-        presolve_.data_.reduced_basis_.col_status =
+        presolve_.data_.recovered_solution_ = hmos_[solved_hmo].solution_;
+        presolve_.data_.recovered_basis_.col_status =
             hmos_[solved_hmo].basis_.col_status;
-        presolve_.data_.reduced_basis_.row_status =
+        presolve_.data_.recovered_basis_.row_status =
             hmos_[solved_hmo].basis_.row_status;
 
         this_postsolve_time = -timer_.read(timer_.postsolve_clock);
@@ -1798,7 +1798,7 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
 
   // Ensure that the LP is column-wise
-  setOrientation(lp_);
+  // setOrientation(lp_);
 
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
     return HighsPresolveStatus::NullError;
@@ -1820,7 +1820,6 @@ HighsPresolveStatus Highs::runPresolve() {
                 "Time limit set: reading matrix took %.2g, presolve "
                 "time left: %.2g\n",
                 start_presolve, left);
-    presolve_.options_.time_limit = left;
   }
 
   // Presolve.
@@ -1828,7 +1827,7 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double current = timer_.readRunHighsClock();
     double time_init = current - start_presolve;
-    double left = presolve_.options_.time_limit - time_init;
+    double left = presolve_.options_->time_limit - time_init;
     if (left <= 0) {
       highsLogDev(options_.log_options, HighsLogType::ERROR,
                   "Time limit reached while copying matrix into presolve.\n");
@@ -1839,19 +1838,11 @@ HighsPresolveStatus Highs::runPresolve() {
                 "Time limit set: copying matrix took %.2g, presolve "
                 "time left: %.2g\n",
                 time_init, left);
-    presolve_.options_.time_limit = options_.time_limit;
   }
 
-  presolve_.data_.presolve_[0].log_options = options_.log_options;
+  presolve_.options_ = &options_;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
-
-  // Handle max case.
-  if (presolve_return_status == HighsPresolveStatus::Reduced &&
-      lp_.sense_ == ObjSense::MAXIMIZE) {
-    presolve_.negateReducedLpCost();
-    presolve_.data_.reduced_lp_.sense_ = ObjSense::MAXIMIZE;
-  }
 
   // Update reduction counts.
   switch (presolve_.presolve_status_) {
@@ -1878,28 +1869,15 @@ HighsPresolveStatus Highs::runPresolve() {
 HighsPostsolveStatus Highs::runPostsolve() {
   assert(presolve_.has_run_);
   bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
-                                         presolve_.data_.reduced_solution_);
+                                         presolve_.data_.recovered_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
-  if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
-      presolve_.presolve_status_ != HighsPresolveStatus::ReducedToEmpty)
-    return HighsPostsolveStatus::NoPostsolve;
-
   // Handle max case.
+  presolve_.data_.postSolveStack.undo(options_,
+                                      presolve_.data_.recovered_solution_,
+                                      presolve_.data_.recovered_basis_);
+
   if (lp_.sense_ == ObjSense::MAXIMIZE) presolve_.negateReducedLpColDuals(true);
-
-  // Run postsolve
-  HighsPostsolveStatus postsolve_status =
-      presolve_.data_.presolve_[0].postsolve(
-          presolve_.data_.reduced_solution_, presolve_.data_.reduced_basis_,
-          presolve_.data_.recovered_solution_,
-          presolve_.data_.recovered_basis_);
-
-  if (postsolve_status != HighsPostsolveStatus::SolutionRecovered)
-    return postsolve_status;
-
-  if (lp_.sense_ == ObjSense::MAXIMIZE)
-    presolve_.negateReducedLpColDuals(false);
 
   return HighsPostsolveStatus::SolutionRecovered;
 }
@@ -1974,8 +1952,7 @@ HighsStatus Highs::callSolveMip() {
   info_.max_dual_infeasibility = -1;      // Not known
   info_.sum_dual_infeasibilities = -1;    // Not known
   // The solution needs to be here, but just resize it for now
-  if( solver.solution_objective_ != HIGHS_CONST_INF )
-  {
+  if (solver.solution_objective_ != HIGHS_CONST_INF) {
     info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     int solver_solution_size = solver.solution_.size();
     assert(solver_solution_size >= lp_.numCol_);
