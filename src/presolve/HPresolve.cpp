@@ -3564,12 +3564,9 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
     assert(!rowDeleted[eqrow]);
     assert(eq->first == rowsize[eqrow]);
     assert(model->rowLower_[eqrow] == model->rowUpper_[eqrow]);
+    ++eq;
     if (rowsize[eqrow] > 2) return Result::Ok;
     HPRESOLVE_CHECKED_CALL(rowPresolve(postSolveStack, eqrow));
-    if (rowDeleted[eqrow])
-      eq = equations.begin();
-    else
-      ++eq;
   }
 
   return Result::Ok;
