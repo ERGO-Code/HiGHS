@@ -424,6 +424,11 @@ else()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
 
+target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
+if (NOT ${BUILD_SHARED_LIBS})
+    target_compile_options(libhighs PRIVATE "-fPIC" )
+endif()
+
 target_sources(libhighs PRIVATE 
     ../external/filereaderlp/reader.cpp
     io/Filereader.cpp
