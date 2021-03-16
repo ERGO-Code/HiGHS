@@ -22,7 +22,7 @@
 #include "util/HighsHash.h"
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
-    : mipsolver(mipsolver), lp_iterations(0), randgen(mipsolver.numCol()) {
+    : mipsolver(mipsolver), lp_iterations(0), randgen(mipsolver.numNonzero()) {
   successObservations = 0;
   numSuccessObservations = 0;
   infeasObservations = 0;
@@ -89,7 +89,7 @@ bool HighsPrimalHeuristics::solveSubMip(
 }
 
 double HighsPrimalHeuristics::determineTargetFixingRate() {
-  double lowFixingRate = 0.5;
+  double lowFixingRate = 0.6;
   double highFixingRate = 0.6;
 
   if (numInfeasObservations != 0) {

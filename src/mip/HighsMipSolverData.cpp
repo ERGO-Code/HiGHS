@@ -49,7 +49,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
 }
 
 bool HighsMipSolverData::moreHeuristicsAllowed() {
-  if (mipsolver.submip || pruned_treeweight < 1e-3) {
+  if (mipsolver.submip || (pruned_treeweight < 1e-3 && num_leaves < 10)) {
     // in the beginning of the search and in sub-MIP heuristics we only allow
     // what is proportionally for the currently spent effort plus an initial
     // offset. This is because in a sub-MIP we usually do a truncated search and
@@ -66,7 +66,7 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
         heuristic_lp_iterations /
         (heuristic_lp_iterations +
          (total_lp_iterations - heuristic_lp_iterations) /
-             double(pruned_treeweight));
+             std::max(1e-3, double(pruned_treeweight)));
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
     // exploration. Additionally we want to spent the proportional effort
