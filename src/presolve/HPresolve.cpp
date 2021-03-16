@@ -3552,15 +3552,18 @@ HPresolve::Result HPresolve::presolveChangedCols(
 
 HPresolve::Result HPresolve::removeDoubletonEquations(
     HighsPostsolveStack& postSolveStack) {
-  while (!equations.empty()) {
-    auto eq = equations.begin();
+  auto eq = equations.begin();
+  while (eq != equations.end()) {
     int eqrow = eq->second;
     assert(!rowDeleted[eqrow]);
     assert(eq->first == rowsize[eqrow]);
     assert(model->rowLower_[eqrow] == model->rowUpper_[eqrow]);
-
     if (rowsize[eqrow] > 2) return Result::Ok;
     HPRESOLVE_CHECKED_CALL(rowPresolve(postSolveStack, eqrow));
+    if (rowDeleted[eqrow])
+      eq = equations.begin();
+    else
+      ++eq;
   }
 
   return Result::Ok;

@@ -237,8 +237,7 @@ void HighsMipSolver::run() {
     size_t lastLbLeave = mipdata_->num_leaves;
     bool limit_reached = false;
     while (true) {
-      if (mipdata_->heuristic_lp_iterations <
-          mipdata_->total_lp_iterations * mipdata_->heuristic_effort) {
+      if (mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
@@ -273,12 +272,10 @@ void HighsMipSolver::run() {
 
       if (!search.backtrack()) break;
 
-      if (mipdata_->upper_limit == HIGHS_CONST_INF ||
-          search.getCurrentEstimate() >= mipdata_->upper_limit)
-        break;
+      if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
-      if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{100}, mipdata_->num_nodes / 10))
+      if (mipdata_->num_nodes - plungestart >= 100 )
+          //std::min(size_t{100}, mipdata_->num_nodes / 10))
         break;
 
       if (mipdata_->dispfreq != 0) {

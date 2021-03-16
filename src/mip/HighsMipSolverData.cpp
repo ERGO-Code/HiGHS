@@ -48,6 +48,49 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   return addIncumbent(solution, double(obj), source);
 }
 
+bool HighsMipSolverData::moreHeuristicsAllowed() {
+  if (mipsolver.submip || pruned_treeweight < 1e-3) {
+    // in the beginning of the search and in sub-MIP heuristics we only allow
+    // what is proportionally for the currently spent effort plus an initial
+    // offset. This is because in a sub-MIP we usually do a truncated search and
+    // therefore should not extrapolate the time we spent for heuristics as in
+    // the other case. Moreover, since we estimate the total effort for
+    // exploring the tree based on the weight of the already pruned nodes, the
+    // estimated effort the is not expected to be a good prediction in the
+    // beginning.
+    if (heuristic_lp_iterations <
+        total_lp_iterations * heuristic_effort + 10000)
+      return true;
+  } else {
+    double total_heuristic_effort_estim =
+        heuristic_lp_iterations /
+        (heuristic_lp_iterations +
+         (total_lp_iterations - heuristic_lp_iterations) /
+             double(pruned_treeweight));
+    // since heuristics help most in the beginning of the search, we want to
+    // spent the time we have for heuristics in the first 80% of the tree
+    // exploration. Additionally we want to spent the proportional effort
+    // of heuristics that is allowed in the the first 30% of tree exploration as
+    // fast as possible, which is why we have the max(0.3/0.8,...).
+    // Hence, in the first 30% of the tree exploration we allow to spent all
+    // effort available for heuristics in that part of the search as early as
+    // possible, whereas after that we allow the part that is proportionally
+    // adequate when we want to spent all available time in the first 80%.
+    if (total_heuristic_effort_estim <
+        std::max(0.3 / 0.8, double(pruned_treeweight) / 0.8) *
+            heuristic_effort) {
+      printf(
+          "heuristic lp iterations: %ld, total_lp_iterations: %ld, "
+          "total_heur_effort_estim = %.3f%%\n",
+          heuristic_lp_iterations, total_lp_iterations,
+          total_heuristic_effort_estim);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void HighsMipSolverData::removeFixedIndices() {
   integral_cols.erase(
       std::remove_if(integral_cols.begin(), integral_cols.end(),
@@ -505,8 +548,10 @@ const std::vector<double>& HighsMipSolverData::getSolution() const {
 bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
                                       double solobj, char source) {
   if (solobj < upper_bound) {
-    solobj = transformNewIncumbent(sol);
-    if (solobj >= upper_bound) return false;
+    if (solobj <= upper_limit) {
+      solobj = transformNewIncumbent(sol);
+      if (solobj >= upper_bound) return false;
+    }
     upper_bound = solobj;
     incumbent = sol;
     double new_upper_limit;
@@ -839,12 +884,14 @@ restart:
       heuristics.flushStatistics();
     }
 
-    heuristics.RENS(rootlpsol);
-    heuristics.flushStatistics();
-
-    if (upper_limit == HIGHS_CONST_INF && !mipsolver.submip) {
-      heuristics.feasibilityPump();
+    if (moreHeuristicsAllowed() || upper_limit == HIGHS_CONST_INF) {
+      heuristics.RENS(rootlpsol);
       heuristics.flushStatistics();
+
+      if (upper_limit == HIGHS_CONST_INF && !mipsolver.submip) {
+        heuristics.feasibilityPump();
+        heuristics.flushStatistics();
+      }
     }
   }
 

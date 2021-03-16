@@ -22,14 +22,23 @@ class HighsPrimalHeuristics {
  private:
   HighsMipSolver& mipsolver;
   size_t lp_iterations;
+
+  double successObservations;
+  int numSuccessObservations;
+  double infeasObservations;
+  int numInfeasObservations;
+
   std::mt19937 randgen;
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
 
   bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
-                   std::vector<double> colLower, std::vector<double> colUpper,
-                   int maxleaves, int maxnodes, int stallnodes);
+                   double fixingRate, std::vector<double> colLower,
+                   std::vector<double> colUpper, int maxleaves, int maxnodes,
+                   int stallnodes);
+
+  double determineTargetFixingRate();
 
   void RENS(const std::vector<double>& relaxationsol);
 

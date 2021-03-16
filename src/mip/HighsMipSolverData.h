@@ -105,6 +105,7 @@ struct HighsMipSolverData {
     domain.addCutpool(cutpool);
   }
 
+  bool moreHeuristicsAllowed();
   void removeFixedIndices();
   void init();
   void basisTransfer();
