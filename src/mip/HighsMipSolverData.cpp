@@ -79,11 +79,11 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
     if (total_heuristic_effort_estim <
         std::max(0.3 / 0.8, double(pruned_treeweight) / 0.8) *
             heuristic_effort) {
-      printf(
-          "heuristic lp iterations: %ld, total_lp_iterations: %ld, "
-          "total_heur_effort_estim = %.3f%%\n",
-          heuristic_lp_iterations, total_lp_iterations,
-          total_heuristic_effort_estim);
+      // printf(
+      //     "heuristic lp iterations: %ld, total_lp_iterations: %ld, "
+      //     "total_heur_effort_estim = %.3f%%\n",
+      //     heuristic_lp_iterations, total_lp_iterations,
+      //     total_heuristic_effort_estim);
       return true;
     }
   }
