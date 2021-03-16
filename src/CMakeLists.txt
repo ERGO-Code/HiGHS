@@ -349,6 +349,25 @@ endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
 if (IPX_ON)
+    if (UNIX)
+    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+
+    target_compile_options(libhighs PRIVATE "-Wno-unused-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-unused-const-variable")
+    target_compile_options(libhighs PRIVATE "-Wno-sign-compare")
+    target_compile_options(libhighs PRIVATE "-Wno-logical-op-parentheses")
+
+    target_compile_options(libipx PRIVATE "-Wno-defaulted-function-deleted")
+    target_compile_options(libipx PRIVATE "-Wno-return-type-c-linkage")
+    target_compile_options(libipx PRIVATE "-Wno-return-type" "-Wno-switch")
+
+    target_compile_options(libipx PRIVATE "-Wno-unused-variable")
+    target_compile_options(libipx PRIVATE "-Wno-sign-compare")
+    target_compile_options(libipx PRIVATE "-Wno-logical-op-parentheses")
+    endif()
+
     install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
