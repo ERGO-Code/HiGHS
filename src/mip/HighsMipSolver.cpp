@@ -133,6 +133,7 @@ void HighsMipSolver::run() {
   size_t numStallNodes = 0;
   size_t lastHeurLeave = 0;
   size_t lastLbLeave = 0;
+  size_t numQueueLeaves = 0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
@@ -150,8 +151,7 @@ void HighsMipSolver::run() {
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
     while (true) {
-      if (lastHeurLeave < lastLbLeave &&
-          mipdata_->num_leaves >= lastHeurLeave + 10 &&
+      if (numQueueLeaves >= lastHeurLeave + 10 &&
           mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
         if (search.currentNodePruned()) {
@@ -160,7 +160,7 @@ void HighsMipSolver::run() {
           break;
         }
 
-        lastHeurLeave = mipdata_->num_leaves;
+        lastHeurLeave = numQueueLeaves;
         if (mipdata_->incumbent.empty())
           mipdata_->heuristics.randomizedRounding(
               mipdata_->lp.getLpSolver().getSolution().col_value);
@@ -190,8 +190,8 @@ void HighsMipSolver::run() {
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
-      if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{100}, mipdata_->num_nodes / 10))
+      if (mipdata_->num_nodes - plungestart >= 100)
+        // std::min(size_t{100}, mipdata_->num_nodes / 10)
         break;
 
       if (mipdata_->dispfreq != 0) {
@@ -257,14 +257,16 @@ void HighsMipSolver::run() {
       // (int)nodequeue.size());
       assert(!search.hasNode());
 
-      if (mipdata_->num_leaves - lastLbLeave >= 10) {
+      if (numQueueLeaves - lastLbLeave >= 10) {
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
-        lastLbLeave = mipdata_->num_leaves;
+        lastLbLeave = numQueueLeaves;
       } else {
         search.installNode(mipdata_->nodequeue.popBestNode());
         if (search.getCurrentLowerBound() == mipdata_->lower_bound)
-          lastLbLeave = mipdata_->num_leaves;
+          lastLbLeave = numQueueLeaves;
       }
+
+      ++numQueueLeaves;
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) {
         ++numStallNodes;
