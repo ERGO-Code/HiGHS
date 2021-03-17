@@ -81,7 +81,7 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
     // possible, whereas after that we allow the part that is proportionally
     // adequate when we want to spent all available time in the first 80%.
     if (total_heuristic_effort_estim <
-        std::max(0.3 / 0.8, double(pruned_treeweight) / 0.8) *
+        std::max(0.3 / 0.8, std::min(double(pruned_treeweight), 0.8) / 0.8) *
             heuristic_effort) {
       // printf(
       //     "heuristic lp iterations: %ld, total_lp_iterations: %ld, "
