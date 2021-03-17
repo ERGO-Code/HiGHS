@@ -110,6 +110,13 @@ int Highs_writeSolution(void* highs,          //!< HiGHS object reference
 );
 
 /*
+ * @brief Reports the solution and basis status in a human-readable fashion
+ */
+int Highs_writeSolutionPretty(void* highs,          //!< HiGHS object reference
+                        const char* filename  //!< filename
+);
+
+/*
  * @brief pass an LP to HiGHS
  */
 int Highs_passLp(
