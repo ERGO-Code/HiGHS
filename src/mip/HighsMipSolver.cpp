@@ -131,7 +131,6 @@ void HighsMipSolver::run() {
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   size_t numStallNodes = 0;
-  size_t lastHeurLeave = 0;
   size_t lastLbLeave = 0;
   size_t numQueueLeaves = 0;
   while (search.hasNode()) {
@@ -150,9 +149,9 @@ void HighsMipSolver::run() {
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
+    bool heuristicsCalled = false;
     while (true) {
-      if (numQueueLeaves >= lastHeurLeave + 10 &&
-          mipdata_->moreHeuristicsAllowed()) {
+      if (!heuristicsCalled && mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
@@ -160,7 +159,8 @@ void HighsMipSolver::run() {
           break;
         }
 
-        lastHeurLeave = numQueueLeaves;
+        heuristicsCalled = true;
+
         if (mipdata_->incumbent.empty())
           mipdata_->heuristics.randomizedRounding(
               mipdata_->lp.getLpSolver().getSolution().col_value);
@@ -190,8 +190,8 @@ void HighsMipSolver::run() {
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
-      if (mipdata_->num_nodes - plungestart >= 100)
-        // std::min(size_t{100}, mipdata_->num_nodes / 10)
+      if (mipdata_->num_nodes - plungestart >=
+          std::min(size_t{100}, mipdata_->num_nodes / 10))
         break;
 
       if (mipdata_->dispfreq != 0) {
