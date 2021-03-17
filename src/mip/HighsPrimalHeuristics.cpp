@@ -64,6 +64,10 @@ bool HighsPrimalHeuristics::solveSubMip(
         (size_t)(adjustmentfactor * adjustmentfactor *
                  submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
+
+    if (mipsolver.submip)
+      mipsolver.mipdata_->num_nodes += std::max(
+          size_t{1}, size_t(adjustmentfactor * submipsolver.node_count_));
   }
 
   if (submipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE) {
@@ -131,12 +135,11 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   double maxfixingrate = determineTargetFixingRate();
   double fixingrate = 0.0;
   bool stop = false;
-  heurlp.setIterationLimit(mipsolver.mipdata_->maxrootlpiters);
+  // heurlp.setIterationLimit(2 * mipsolver.mipdata_->maxrootlpiters);
   // printf("iterlimit: %d\n",
   //       heurlp.getLpSolver().getHighsOptions().simplex_iteration_limit);
   int targetdepth = 1;
   int nbacktracks = -1;
-
 retry:
   HighsHashTable<int> fixedCols;
   int numGlobalFixed = 0;
@@ -322,7 +325,7 @@ retry:
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 5)) {
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1) return;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
     // printf("infeasible in in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
     goto retry;
@@ -581,7 +584,7 @@ retry:
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 5)) {
     targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1) return;
+    if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
     // printf("infeasible in in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
     goto retry;

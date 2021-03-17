@@ -49,23 +49,27 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
 }
 
 bool HighsMipSolverData::moreHeuristicsAllowed() {
-  if (mipsolver.submip || (pruned_treeweight < 1e-3 && num_leaves < 10)) {
-    // in the beginning of the search and in sub-MIP heuristics we only allow
-    // what is proportionally for the currently spent effort plus an initial
-    // offset. This is because in a sub-MIP we usually do a truncated search and
-    // therefore should not extrapolate the time we spent for heuristics as in
-    // the other case. Moreover, since we estimate the total effort for
-    // exploring the tree based on the weight of the already pruned nodes, the
-    // estimated effort the is not expected to be a good prediction in the
-    // beginning.
+  // in the beginning of the search and in sub-MIP heuristics we only allow
+  // what is proportionally for the currently spent effort plus an initial
+  // offset. This is because in a sub-MIP we usually do a truncated search and
+  // therefore should not extrapolate the time we spent for heuristics as in
+  // the other case. Moreover, since we estimate the total effort for
+  // exploring the tree based on the weight of the already pruned nodes, the
+  // estimated effort the is not expected to be a good prediction in the
+  // beginning.
+  if (mipsolver.submip) {
+    return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
+  } else if (pruned_treeweight < 1e-3 && num_leaves < 10) {
+    // in the main MIP solver allow an initial offset of 10000 heuristic LP
+    // iterations
     if (heuristic_lp_iterations <
         total_lp_iterations * heuristic_effort + 10000)
       return true;
   } else {
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
-        (heuristic_lp_iterations +
-         (total_lp_iterations - heuristic_lp_iterations) /
+        (heuristic_lp_iterations + sb_lp_iterations +
+         (total_lp_iterations - heuristic_lp_iterations - sb_lp_iterations) /
              std::max(1e-3, double(pruned_treeweight)));
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
@@ -721,8 +725,8 @@ restart:
   lp.getLpSolver().setHighsOptionValue("output_flag", false);
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
-  maxrootlpiters = lp.getNumLpIterations();
-  firstrootlpiters = maxrootlpiters;
+  maxrootlpiters = std::max(lp.getNumLpIterations(), maxrootlpiters);
+  if (numRestarts == 0) firstrootlpiters = lp.getNumLpIterations();
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
   //  lp.getLpSolver().setHighsOptionValue("output_flag", false);

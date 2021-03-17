@@ -132,6 +132,7 @@ void HighsMipSolver::run() {
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   size_t numStallNodes = 0;
   size_t lastHeurLeave = 0;
+  size_t lastLbLeave = 0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
@@ -147,10 +148,10 @@ void HighsMipSolver::run() {
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
-    size_t lastLbLeave = mipdata_->num_leaves;
     bool limit_reached = false;
     while (true) {
-      if (mipdata_->num_leaves >= lastHeurLeave + 10 &&
+      if (lastHeurLeave < lastLbLeave &&
+          mipdata_->num_leaves >= lastHeurLeave + 10 &&
           mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
         if (search.currentNodePruned()) {
