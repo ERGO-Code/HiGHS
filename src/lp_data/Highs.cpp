@@ -1867,7 +1867,7 @@ HighsPresolveStatus Highs::runPresolve() {
 }
 
 HighsPostsolveStatus Highs::runPostsolve() {
-  assert(presolve_.has_run_);
+  //assert(presolve_.has_run_);
   bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
                                          presolve_.data_.recovered_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;

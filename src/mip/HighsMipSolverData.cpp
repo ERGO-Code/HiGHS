@@ -65,7 +65,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
     if (heuristic_lp_iterations <
         total_lp_iterations * heuristic_effort + 10000)
       return true;
-  } else {
+  } else if (heuristic_lp_iterations <
+             total_lp_iterations - heuristic_lp_iterations - sb_lp_iterations) {
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
         (heuristic_lp_iterations + sb_lp_iterations +
@@ -1000,8 +1001,8 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-                "objective is always integral with scale %g\n", objintscale);
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+                 "Objective function is integral with scale %g\n", objintscale);
   }
 }
 

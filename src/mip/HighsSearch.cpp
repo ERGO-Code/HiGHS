@@ -191,7 +191,7 @@ void HighsSearch::addInfeasibleConflict() {
   }
 }
 
-int HighsSearch::selectBranchingCandidate() {
+int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
   assert(!lp->getFractionalIntegers().empty());
 
   static constexpr int basisstart_threshold = 20;
@@ -290,6 +290,7 @@ int HighsSearch::selectBranchingCandidate() {
     int candidate = selectBestScore();
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
+        getStrongBranchingLpIterations() >= maxSbIters ||
         mipsolver.mipdata_->checkLimits()) {
       lp->setStoredBasis(std::move(basis));
       lp->recoverBasis();
@@ -761,9 +762,10 @@ bool HighsSearch::branch() {
   while (currnode.opensubtrees == 2 && lp->scaledOptimal(lp->getStatus()) &&
          !lp->getFractionalIntegers().empty()) {
     // evalUnreliableBranchCands();
+    size_t sbmaxiters = 0;
     if (minrel > 0) {
       size_t sbiters = getStrongBranchingLpIterations();
-      size_t sbmaxiters =
+      sbmaxiters =
           100000 + (getTotalLpIterations() - getHeuristicLpIterations() -
                     getStrongBranchingLpIterations()) /
                        2;
@@ -778,7 +780,7 @@ bool HighsSearch::branch() {
       }
     }
 
-    int branchcand = selectBranchingCandidate();
+    int branchcand = selectBranchingCandidate(sbmaxiters);
 
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];

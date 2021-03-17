@@ -3097,43 +3097,46 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
 
   shrinkProblem(postSolveStack);
 
-  if (mipsolver != nullptr && mipsolver->mipdata_->numRestarts != 0) {
-    std::vector<int> cutinds;
-    std::vector<double> cutvals;
-    cutinds.reserve(model->numCol_);
-    cutvals.reserve(model->numCol_);
+  if (mipsolver != nullptr) {
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
-    int numcuts = 0;
-    for (int i = model->numRow_ - 1; i >= 0; --i) {
-      // check if we already reached the original rows
-      if (postSolveStack.getOrigRowIndex(i) < mipsolver->orig_model_->numRow_)
-        break;
 
-      // row is a cut, remove it from matrix but add to cutpool
-      ++numcuts;
-      storeRow(i);
-      cutinds.clear();
-      cutvals.clear();
-      for (int j : rowpositions) {
-        cutinds.push_back(Acol[j]);
-        cutvals.push_back(Avalue[j]);
+    if (mipsolver->mipdata_->numRestarts != 0) {
+      std::vector<int> cutinds;
+      std::vector<double> cutvals;
+      cutinds.reserve(model->numCol_);
+      cutvals.reserve(model->numCol_);
+      int numcuts = 0;
+      for (int i = model->numRow_ - 1; i >= 0; --i) {
+        // check if we already reached the original rows
+        if (postSolveStack.getOrigRowIndex(i) < mipsolver->orig_model_->numRow_)
+          break;
+
+        // row is a cut, remove it from matrix but add to cutpool
+        ++numcuts;
+        storeRow(i);
+        cutinds.clear();
+        cutvals.clear();
+        for (int j : rowpositions) {
+          cutinds.push_back(Acol[j]);
+          cutvals.push_back(Avalue[j]);
+        }
+
+        mipsolver->mipdata_->cutpool.addCut(
+            *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
+            model->rowUpper_[i],
+            rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
+                rowCoefficientsIntegral(i, 1.0));
+
+        markRowDeleted(i);
+        for (int j : rowpositions) unlink(j);
       }
 
-      mipsolver->mipdata_->cutpool.addCut(
-          *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
-          model->rowUpper_[i],
-          rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
-              rowCoefficientsIntegral(i, 1.0));
-
-      markRowDeleted(i);
-      for (int j : rowpositions) unlink(j);
+      postSolveStack.removeCutsFromModel(numcuts);
+      model->numRow_ -= numcuts;
+      model->rowLower_.resize(model->numRow_);
+      model->rowUpper_.resize(model->numRow_);
+      model->row_names_.resize(model->numRow_);
     }
-
-    postSolveStack.removeCutsFromModel(numcuts);
-    model->numRow_ -= numcuts;
-    model->rowLower_.resize(model->numRow_);
-    model->rowUpper_.resize(model->numRow_);
-    model->row_names_.resize(model->numRow_);
   }
 
   toCSC(model->Avalue_, model->Aindex_, model->Astart_);

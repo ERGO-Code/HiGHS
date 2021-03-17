@@ -155,7 +155,7 @@ class HighsSearch {
 
   double solve();
 
-  int selectBranchingCandidate();
+  int selectBranchingCandidate(size_t maxSbIters);
 
   void evalUnreliableBranchCands();
 
