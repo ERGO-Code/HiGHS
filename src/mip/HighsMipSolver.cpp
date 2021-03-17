@@ -190,8 +190,8 @@ void HighsMipSolver::run() {
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
-      if (mipdata_->num_nodes - plungestart >= 100)
-        // std::min(size_t{100}, mipdata_->num_nodes / 10))
+      if (mipdata_->num_nodes - plungestart >=
+          std::min(size_t{100}, mipdata_->num_nodes / 10))
         break;
 
       if (mipdata_->dispfreq != 0) {
