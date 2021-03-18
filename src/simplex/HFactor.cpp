@@ -173,12 +173,11 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
       max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
   highs_debug_level = highs_debug_level_;
   log_options.log_file_stream = log_file_stream_;
-  output_flag = output_flag_;
-  log_to_console = log_to_console_;
-  log_dev_level = log_dev_level_;
-  log_options.output_flag = &output_flag;
-  log_options.log_to_console = &log_to_console;
-  log_options.log_dev_level = &log_dev_level;
+  log_data = decltype(log_data)(new std::tuple<bool, bool, int>(
+      output_flag_, log_to_console_, log_dev_level_));
+  log_options.output_flag = &std::get<0>(*log_data);
+  log_options.log_to_console = &std::get<1>(*log_data);
+  log_options.log_dev_level = &std::get<2>(*log_data);
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
 

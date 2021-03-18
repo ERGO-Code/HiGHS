@@ -636,13 +636,12 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
 bool HighsMipSolverData::rootSeparationRound(
     HighsSeparation& sepa, int& ncuts, HighsLpRelaxation::Status& status) {
-  size_t tmpLpIters = lp.getNumLpIterations();
+  size_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
-  maxrootlpiters =
-      std::max(maxrootlpiters, lp.getNumLpIterations() - tmpLpIters);
-
-  total_lp_iterations = lp.getNumLpIterations();
-  sepa_lp_iterations = total_lp_iterations - firstrootlpiters;
+  tmpLpIters += lp.getNumLpIterations();
+  maxrootlpiters = std::max(maxrootlpiters, tmpLpIters);
+  total_lp_iterations += tmpLpIters;
+  sepa_lp_iterations += tmpLpIters;
 
   if (status == HighsLpRelaxation::Status::Infeasible) {
     pruned_treeweight = 1.0;
@@ -668,14 +667,18 @@ bool HighsMipSolverData::rootSeparationRound(
 
       if (domain.infeasible())
         status = HighsLpRelaxation::Status::Infeasible;
-      else if (!domain.getChangedCols().empty())
+      else if (!domain.getChangedCols().empty()) {
+        tmpLpIters = -lp.getNumLpIterations();
         status = lp.resolveLp(&domain);
+        tmpLpIters += lp.getNumLpIterations();
+        maxrootlpiters = std::max(maxrootlpiters, tmpLpIters);
+        total_lp_iterations += tmpLpIters;
+        sepa_lp_iterations += tmpLpIters;
+      }
 
       if (status == HighsLpRelaxation::Status::Infeasible) {
         pruned_treeweight = 1.0;
         lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
-        total_lp_iterations = lp.getNumLpIterations();
-        sepa_lp_iterations = total_lp_iterations - firstrootlpiters;
         num_nodes = 1;
         num_leaves = 1;
         return true;
@@ -685,7 +688,6 @@ bool HighsMipSolverData::rootSeparationRound(
 
   if (mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
     lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
-    total_lp_iterations = lp.getNumLpIterations();
     pruned_treeweight = 1.0;
     num_nodes = 1;
     num_leaves = 1;
@@ -721,13 +723,17 @@ restart:
   //  lp.getLpSolver().setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
   //  lp.getLpSolver().setHighsOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
+  size_t lpIters = -lp.getNumLpIterations();
   HighsLpRelaxation::Status status = lp.resolveLp();
+  lpIters += lp.getNumLpIterations();
 
   lp.getLpSolver().setHighsOptionValue("output_flag", false);
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
-  maxrootlpiters = std::max(lp.getNumLpIterations(), maxrootlpiters);
-  if (numRestarts == 0) firstrootlpiters = lp.getNumLpIterations();
+  maxrootlpiters = std::max(lpIters, maxrootlpiters);
+  if (numRestarts == 0) firstrootlpiters = lpIters;
+
+  total_lp_iterations += lpIters;
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
   //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
@@ -756,9 +762,6 @@ restart:
       mipsolver.mipdata_->domain.infeasible() ||
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
     lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
-    total_lp_iterations = lp.getNumLpIterations();
-    sepa_lp_iterations =
-        total_lp_iterations - firstrootlpiters - heuristic_lp_iterations;
     pruned_treeweight = 1.0;
     num_nodes = 1;
     num_leaves = 1;
@@ -777,10 +780,6 @@ restart:
 
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
-
-  total_lp_iterations = lp.getNumLpIterations();
-  sepa_lp_iterations =
-      total_lp_iterations - firstrootlpiters - heuristic_lp_iterations;
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
@@ -855,20 +854,17 @@ restart:
     rootlpsolobj = lp.getObjective();
     if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
-    total_lp_iterations = lp.getNumLpIterations();
-    sepa_lp_iterations =
-        total_lp_iterations - firstrootlpiters - heuristic_lp_iterations;
-
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
     if (ncuts == 0) break;
     if (nseparounds == maxSepaRounds) break;
   }
 
   lp.setIterationLimit();
+  lpIters = -lp.getNumLpIterations();
   status = lp.resolveLp(&domain);
-  total_lp_iterations = lp.getNumLpIterations();
-  sepa_lp_iterations =
-      total_lp_iterations - firstrootlpiters - heuristic_lp_iterations;
+  lpIters += lp.getNumLpIterations();
+  total_lp_iterations += lpIters;
+
   if (status == HighsLpRelaxation::Status::Optimal &&
       lp.getFractionalIntegers().empty()) {
     mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;

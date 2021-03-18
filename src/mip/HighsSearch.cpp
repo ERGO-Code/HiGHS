@@ -963,6 +963,7 @@ bool HighsSearch::branch() {
     Highs ipm;
     ipm.passModel(lp->getLp());
     ipm.setHighsOptionValue("solver", "ipm");
+    ipm.setHighsOptionValue("output_flag", false);
     ipm.run();
 
     if (ipm.getBasis().valid_) {
