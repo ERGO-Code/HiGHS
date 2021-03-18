@@ -3910,8 +3910,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       continue;
     }
     auto it = buckets.find(colHashes[i]);
-    decltype(it) last;
-    printf("In HPresolve::detectParallelRowsAndCols: 0 - last = %d\n", last);fflush(stdout);
+    decltype(it) last = it;
+
     int delCol = -1;
     int parallelColCandidate = -2;
 
@@ -3919,7 +3919,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     while (it != buckets.end() && it->first == colHashes[i]) {
       parallelColCandidate = it->second;
       last = it++;
-      printf("In HPresolve::detectParallelRowsAndCols: 1 - last = %d (it = %d)\n", last, it);fflush(stdout);
 
       // we want to check if the columns are parallel, first rule out
       // hash collisions with different size columns
@@ -4355,22 +4354,14 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     }
 
     if (delCol != -1) {
-      if (delCol != i) {
-      printf("In HPresolve::detectParallelRowsAndCols: 2 - buckets.erase(%d)\n", last);fflush(stdout);
-	buckets.erase(last);
-      }
+      if (delCol != i) buckets.erase(last);
 
       // we could have new row singletons since a column was removed. Remove
       // those rows immediately
       HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
     } else {
-      printf("In HPresolve::detectParallelRowsAndCols: before buckets.emplace_hint(%d, %d, %d)\n", last, colHashes[i], i);fflush(stdout);
-    for(int jh = 0; jh < model->numCol_; jh++) {
-      printf("In HPresolve::detectParallelRowsAndCols: colHashes[%d] = %d\n", jh,  colHashes[jh]);fflush(stdout);
-    }
       buckets.emplace_hint(last, colHashes[i], i);
-    printf("In HPresolve::detectParallelRowsAndCols: after buckets.emplace_hint(last, colHashes[i], i)\n");fflush(stdout);
     }
   }
 
@@ -4385,7 +4376,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       continue;
     }
     auto it = buckets.find(rowHashes[i]);
-    decltype(it) last;
+    decltype(it) last = it;
 
     const int* numSingletonPtr = numRowSingletons.find(i);
     int numSingleton = numSingletonPtr ? *numSingletonPtr : 0;
