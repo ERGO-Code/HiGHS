@@ -634,7 +634,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     lpsolver.clearSolver();
 
     if (resolve_on_error) {
-#if 0
       // first try to use the primal simplex solver starting from the last basis
       if (lpsolver.getHighsOptions().simplex_strategy ==
           SIMPLEX_STRATEGY_DUAL) {
@@ -646,7 +645,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
         return retval;
       }
-#endif
 
       // still an error: now try to solve with presolve from scratch
       lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);

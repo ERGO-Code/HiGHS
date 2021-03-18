@@ -1824,6 +1824,7 @@ HighsPresolveStatus Highs::runPresolve() {
 
   // Presolve.
   presolve_.init(lp_, timer_);
+  presolve_.options_ = &options_;
   if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double current = timer_.readRunHighsClock();
     double time_init = current - start_presolve;
@@ -1839,8 +1840,6 @@ HighsPresolveStatus Highs::runPresolve() {
                 "time left: %.2g\n",
                 time_init, left);
   }
-
-  presolve_.options_ = &options_;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
@@ -1867,7 +1866,7 @@ HighsPresolveStatus Highs::runPresolve() {
 }
 
 HighsPostsolveStatus Highs::runPostsolve() {
-  //assert(presolve_.has_run_);
+  // assert(presolve_.has_run_);
   bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
                                          presolve_.data_.recovered_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
