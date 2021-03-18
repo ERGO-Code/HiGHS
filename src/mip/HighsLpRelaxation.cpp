@@ -9,6 +9,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsLpRelaxation.h"
 
+#include <algorithm>
+
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
@@ -69,15 +71,13 @@ double HighsLpRelaxation::LpRow::getMaxAbsVal(
 }
 
 double HighsLpRelaxation::slackLower(int row) const {
-  double rowlower = rowLower(row);
-  if (rowlower != -HIGHS_CONST_INF) return rowlower;
-
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
       return mipsolver.mipdata_->domain.getMinCutActivity(
           mipsolver.mipdata_->cutpool, lprows[row].index);
     case LpRow::kModel:
-      return mipsolver.mipdata_->domain.getMinActivity(lprows[row].index);
+      return std::max(rowLower(row), mipsolver.mipdata_->domain.getMinActivity(
+                                         lprows[row].index));
   };
 
   assert(false);
@@ -85,13 +85,12 @@ double HighsLpRelaxation::slackLower(int row) const {
 }
 
 double HighsLpRelaxation::slackUpper(int row) const {
-  double rowupper = rowUpper(row);
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
-      return rowupper;
+      return rowUpper(row);
     case LpRow::kModel:
-      if (rowupper != HIGHS_CONST_INF) return rowupper;
-      return mipsolver.mipdata_->domain.getMaxActivity(lprows[row].index);
+      return std::min(rowUpper(row), mipsolver.mipdata_->domain.getMaxActivity(
+                                         lprows[row].index));
   };
 
   assert(false);
@@ -181,9 +180,10 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
     for (int i = 0; i != numcuts; ++i)
       lprows.push_back(LpRow::cut(cutset.cutindices[i]));
 
-    bool success = lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
-                     cutset.ARvalue_.size(), cutset.ARstart_.data(),
-                     cutset.ARindex_.data(), cutset.ARvalue_.data());
+    bool success =
+        lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
+                         cutset.ARvalue_.size(), cutset.ARstart_.data(),
+                         cutset.ARindex_.data(), cutset.ARvalue_.data());
     assert(success);
     assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
     cutset.clear();
