@@ -940,23 +940,29 @@ bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != HIGHS_CONST_I_INF &&
       num_nodes >= size_t(options.mip_max_nodes)) {
-    highsLogDev(options.log_options, HighsLogType::INFO,
-                "reached node limit\n");
-    mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+    if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
+      highsLogDev(options.log_options, HighsLogType::INFO,
+                  "reached node limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+    }
     return true;
   }
   if (options.mip_max_leaves != HIGHS_CONST_I_INF &&
       num_leaves >= size_t(options.mip_max_leaves)) {
-    highsLogDev(options.log_options, HighsLogType::INFO,
-                "reached leave node limit\n");
-    mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+    if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
+      highsLogDev(options.log_options, HighsLogType::INFO,
+                  "reached leave node limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+    }
     return true;
   }
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
-    highsLogDev(options.log_options, HighsLogType::INFO,
-                "reached time limit\n");
-    mipsolver.modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
+    if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
+      highsLogDev(options.log_options, HighsLogType::INFO,
+                  "reached time limit\n");
+      mipsolver.modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
+    }
     return true;
   }
 

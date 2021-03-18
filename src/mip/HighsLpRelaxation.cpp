@@ -618,7 +618,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
 
   lpsolver.setHighsOptionValue(
-      "time_limit", mipsolver.options_mip_->time_limit -
+      "time_limit", lpsolver.getHighsRunTime() +
+                        mipsolver.options_mip_->time_limit -
                         mipsolver.timer_.read(mipsolver.timer_.solve_clock));
 
   try {
@@ -634,6 +635,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     lpsolver.clearSolver();
 
     if (resolve_on_error) {
+#if 1
       // first try to use the primal simplex solver starting from the last basis
       if (lpsolver.getHighsOptions().simplex_strategy ==
           SIMPLEX_STRATEGY_DUAL) {
@@ -645,7 +647,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
         return retval;
       }
-
+#endif
       // still an error: now try to solve with presolve from scratch
       lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
       lpsolver.setHighsOptionValue("presolve", "on");
@@ -759,6 +761,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
     //    return Status::Infeasible;
     //  return Status::Error;
+    case HighsModelStatus::REACHED_TIME_LIMIT:
+      return Status::Error;
     default:
       // printf("error: lpsolver stopped with unexpected status %d\n",
       //        (int)scaledmodelstatus);
