@@ -76,8 +76,9 @@ double HighsLpRelaxation::slackLower(int row) const {
       return mipsolver.mipdata_->domain.getMinCutActivity(
           mipsolver.mipdata_->cutpool, lprows[row].index);
     case LpRow::kModel:
-      return std::max(rowLower(row), mipsolver.mipdata_->domain.getMinActivity(
-                                         lprows[row].index));
+      double rowlower = rowLower(row);
+      if (rowlower != -HIGHS_CONST_INF) return rowlower;
+      return mipsolver.mipdata_->domain.getMinActivity(lprows[row].index);
   };
 
   assert(false);
@@ -85,12 +86,13 @@ double HighsLpRelaxation::slackLower(int row) const {
 }
 
 double HighsLpRelaxation::slackUpper(int row) const {
+  double rowupper = rowUpper(row);
   switch (lprows[row].origin) {
     case LpRow::kCutPool:
-      return rowUpper(row);
+      return rowupper;
     case LpRow::kModel:
-      return std::min(rowUpper(row), mipsolver.mipdata_->domain.getMaxActivity(
-                                         lprows[row].index));
+      if (rowupper != HIGHS_CONST_INF) return rowupper;
+      return mipsolver.mipdata_->domain.getMaxActivity(lprows[row].index);
   };
 
   assert(false);
