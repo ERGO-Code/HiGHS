@@ -3911,7 +3911,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     }
     auto it = buckets.find(colHashes[i]);
     decltype(it) last;
-
+    printf("In HPresolve::detectParallelRowsAndCols: 0 - last = %d\n", last);fflush(stdout);
     int delCol = -1;
     int parallelColCandidate = -2;
 
@@ -3919,6 +3919,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     while (it != buckets.end() && it->first == colHashes[i]) {
       parallelColCandidate = it->second;
       last = it++;
+      printf("In HPresolve::detectParallelRowsAndCols: 1 - last = %d (it = %d)\n", last, it);fflush(stdout);
 
       // we want to check if the columns are parallel, first rule out
       // hash collisions with different size columns
@@ -4354,7 +4355,10 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     }
 
     if (delCol != -1) {
-      if (delCol != i) buckets.erase(last);
+      if (delCol != i) {
+      printf("In HPresolve::detectParallelRowsAndCols: 2 - buckets.erase(%d)\n", last);fflush(stdout);
+	buckets.erase(last);
+      }
 
       // we could have new row singletons since a column was removed. Remove
       // those rows immediately
