@@ -4364,13 +4364,14 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // those rows immediately
       HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
-    } else
+    } else {
       printf("In HPresolve::detectParallelRowsAndCols: before buckets.emplace_hint(%d, %d, %d)\n", last, colHashes[i], i);fflush(stdout);
     for(int jh = 0; jh < model->numCol_; jh++) {
       printf("In HPresolve::detectParallelRowsAndCols: colHashes[%d] = %d\n", jh,  colHashes[jh]);fflush(stdout);
     }
       buckets.emplace_hint(last, colHashes[i], i);
     printf("In HPresolve::detectParallelRowsAndCols: after buckets.emplace_hint(last, colHashes[i], i)\n");fflush(stdout);
+    }
   }
 
   buckets.clear();
