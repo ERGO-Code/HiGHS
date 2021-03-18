@@ -3371,7 +3371,6 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postSolveStack, int col) {
   double fixval = model->colLower_[col];
 
   // printf("fixing column %d to %.15g\n", col, fixval);
-  printf("fixing column %d to %.15g cost = %g\n", col, fixval, model->colCost_[col]); fflush(stdout);
 
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its nonzeros

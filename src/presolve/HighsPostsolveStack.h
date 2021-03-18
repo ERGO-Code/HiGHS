@@ -322,8 +322,6 @@ class HighsPostsolveStack {
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
                                   HighsBasisStatus::LOWER});
-    int colValues_size =  colValues.size();
-    printf("fixedColAtLower: colValues.size() = %d)\n", colValues_size); fflush(stdout);
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
