@@ -472,6 +472,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
         complementation[i] = 1 - complementation[i];
         rhs -= upper[i] * vals[i];
         vals[i] = -vals[i];
+        solval[i] = upper[i] - solval[i];
       }
 
       if (solval[i] > feastol) {
