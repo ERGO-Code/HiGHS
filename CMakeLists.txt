@@ -36,6 +36,8 @@ set(CMAKE_MACOSX_RPATH ON)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+
 if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 0)
@@ -59,10 +61,7 @@ set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-
-
 find_program(GIT git)
 if((GIT) AND (EXISTS ${HIGHS_SOURCE_DIR}/.git))
     execute_process(
@@ -386,10 +385,10 @@ set(optionsInstances
     "adlittle\;81\; 2.2549496316\;")
 
 set(infeasibleInstances
-    "bgetam\;        infeasible")
+    "bgetam\;infeasible")
 
 set(unboundedInstances
-     "gas11\;         unbounded")
+     "gas11\;unbounded")
      
 # define settings
 set(settings
