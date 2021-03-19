@@ -291,7 +291,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
   auto basis = lp->getStoredBasis();
 
   while (true) {
-    bool mustStop = maxSbIters >= getStrongBranchingLpIterations() ||
+    bool mustStop = getStrongBranchingLpIterations() >= maxSbIters ||
                     mipsolver.mipdata_->checkLimits();
 
     int candidate = selectBestScore(mustStop);
