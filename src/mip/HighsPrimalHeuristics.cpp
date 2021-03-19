@@ -47,6 +47,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.output_flag = false;
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.mip_max_stall_nodes = stallnodes;
+  submipoptions.mip_pscost_minreliable = 0;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   submipoptions.dual_objective_value_upper_bound =
@@ -56,6 +57,7 @@ bool HighsPrimalHeuristics::solveSubMip(
 
   HighsMipSolver submipsolver(submipoptions, submip, true);
   submipsolver.rootbasis = &basis;
+  submipsolver.pscostinit = &mipsolver.mipdata_->pseudocost;
   submipsolver.run();
   if (submipsolver.mipdata_) {
     double adjustmentfactor =

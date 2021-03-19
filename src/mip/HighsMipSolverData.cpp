@@ -169,12 +169,12 @@ void HighsMipSolverData::runSetup() {
   upper_bound -= mipsolver.model_->offset_;
 
   redcostfixing = HighsRedcostFixing();
-  mipsolver.mipdata_->pseudocost = HighsPseudocost(mipsolver.model_->numCol_);
+  mipsolver.mipdata_->pseudocost = HighsPseudocost(mipsolver);
+
   continuous_cols.clear();
   integer_cols.clear();
   implint_cols.clear();
   integral_cols.clear();
-  if (mipsolver.submip) pseudocost.setMinReliable(0);
 
   rowMatrixSet = false;
   if (!rowMatrixSet) {

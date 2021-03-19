@@ -97,7 +97,7 @@ struct HighsMipSolverData {
                 mipsolver.options_mip_->mip_pool_soft_limit),
         domain(mipsolver),
         lp(mipsolver),
-        pseudocost(mipsolver.numCol()),
+        pseudocost(),
         cliquetable(mipsolver.numCol()),
         implications(mipsolver),
         heuristics(mipsolver),

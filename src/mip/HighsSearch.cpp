@@ -314,6 +314,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
       localdom.changeBound(HighsBoundType::Upper, col, downval);
       localdom.propagate();
       if (localdom.infeasible()) {
+        pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         localdom.clearChangedCols();
         localdom.changeBound(HighsBoundType::Lower, col, upval,
@@ -383,6 +384,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         if (lp->unscaledDualFeasible(status)) {
           if (solobj > getCutoffBound()) {
             addBoundExceedingConflict();
+            pseudocost.addCutoffObservation(col, false);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval,
@@ -396,6 +398,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
+            pseudocost.addCutoffObservation(col, false);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval,
@@ -407,6 +410,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         }
       } else if (status == HighsLpRelaxation::Status::Infeasible) {
         addInfeasibleConflict();
+        pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         lp->flushDomain(localdom);
         localdom.changeBound(HighsBoundType::Lower, col, upval,
@@ -434,6 +438,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
       localdom.changeBound(HighsBoundType::Lower, col, upval);
       localdom.propagate();
       if (localdom.infeasible()) {
+        pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         localdom.clearChangedCols();
         localdom.changeBound(HighsBoundType::Upper, col, downval,
@@ -505,6 +510,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         if (lp->unscaledDualFeasible(status)) {
           if (solobj > getCutoffBound()) {
             addBoundExceedingConflict();
+            pseudocost.addCutoffObservation(col, true);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval,
@@ -518,6 +524,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
+            pseudocost.addCutoffObservation(col, true);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval,
@@ -529,6 +536,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         }
       } else if (status == HighsLpRelaxation::Status::Infeasible) {
         addInfeasibleConflict();
+        pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         lp->flushDomain(localdom);
         localdom.changeBound(HighsBoundType::Upper, col, downval,
@@ -749,6 +757,13 @@ void HighsSearch::evaluateNode() {
 
   if (prune) {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+    const NodeData* parent = getParentNodeData();
+    if (parent != nullptr) {
+      int col = parent->branchingdecision.column;
+      bool upbranch =
+          parent->branchingdecision.boundtype == HighsBoundType::Lower;
+      pseudocost.addCutoffObservation(col, upbranch);
+    }
     treeweight += std::pow(0.5, getCurrentDepth() - 1);
     currnode.opensubtrees = 0;
   }
@@ -763,7 +778,6 @@ bool HighsSearch::branch() {
   inbranching = true;
 
   int minrel = pseudocost.getMinReliable();
-  pseudocost.setSeed(random.integer());
 
   while (currnode.opensubtrees == 2 && lp->scaledOptimal(lp->getStatus()) &&
          !lp->getFractionalIntegers().empty()) {
@@ -780,7 +794,7 @@ bool HighsSearch::branch() {
         double reductionratio =
             (sbiters - sbmaxiters / 2) / (double)(sbmaxiters - sbmaxiters / 2);
 
-        int minrelreduced = int(8.0 - reductionratio * 7.0);
+        int minrelreduced = int(minrel - reductionratio * (minrel - 1));
         pseudocost.setMinReliable(std::min(minrel, minrelreduced));
       }
     }
@@ -917,7 +931,6 @@ bool HighsSearch::branch() {
     // solution branching failed, so choose any integer variable to branch
     // on in case we have a different solution status could happen due to a
     // fail in the LP solution process
-    pseudocost.setSeed(random.integer());
 
     for (int i : mipsolver.mipdata_->integral_cols) {
       if (localdom.colUpper_[i] - localdom.colLower_[i] < 0.5) continue;

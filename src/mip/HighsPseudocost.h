@@ -11,11 +11,10 @@
 #ifndef HIGHS_PSEUDOCOST_H_
 #define HIGHS_PSEUDOCOST_H_
 
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <vector>
-
-#include "util/HighsRandom.h"
 
 class HighsMipSolver;
 
@@ -24,24 +23,17 @@ class HighsPseudocost {
   std::vector<double> pseudocostdown;
   std::vector<int> nsamplesup;
   std::vector<int> nsamplesdown;
+  std::vector<int> ncutoffsup;
+  std::vector<int> ncutoffsdown;
 
   double cost_total;
   size_t nsamplestotal;
+  size_t ncutoffstotal;
   int minreliable;
-  unsigned seed;
 
  public:
-  HighsPseudocost(int ncols, unsigned int seed = 0x533D)
-      : pseudocostup(ncols),
-        pseudocostdown(ncols),
-        nsamplesup(ncols),
-        nsamplesdown(ncols),
-        cost_total(0),
-        nsamplestotal(0),
-        minreliable(8),
-        seed(seed) {}
-
-  void setSeed(unsigned int seed) { seed = seed; }
+  HighsPseudocost() = default;
+  HighsPseudocost(const HighsMipSolver& mipsolver);
 
   void subtractBase(const HighsPseudocost& base) {
     int ncols = pseudocostup.size();
@@ -65,6 +57,14 @@ class HighsPseudocost {
   int getNumObservationsUp(int col) const { return nsamplesup[col]; }
 
   int getNumObservationsDown(int col) const { return nsamplesdown[col]; }
+
+  void addCutoffObservation(int col, bool upbranch) {
+    ++ncutoffstotal;
+    if (upbranch)
+      ncutoffsup[col] += 1;
+    else
+      ncutoffsdown[col] += 1;
+  }
 
   void addObservation(int col, double delta, double objdelta) {
     assert(delta != 0.0);
@@ -147,12 +147,55 @@ class HighsPseudocost {
   }
 
   double getScore(int col, double upcost, double downcost) const {
+    if (cost_total > 1e-12) {
+      double avgCost = getAvgPseudocost();
+
+      upcost += ncutoffsup[col] == 0
+                    ? 0.0
+                    : (avgCost * ncutoffsup[col] /
+                       (double(ncutoffsup[col] + nsamplesup[col])));
+      downcost += ncutoffsdown[col] == 0
+                      ? 0.0
+                      : (avgCost * ncutoffsdown[col] /
+                         (double(ncutoffsdown[col] + nsamplesdown[col])));
+    } else {
+      upcost +=
+          ncutoffsup[col] == 0
+              ? 0.0
+              : (ncutoffsup[col] / (double(ncutoffsup[col] + nsamplesup[col])));
+      downcost += ncutoffsdown[col] == 0
+                      ? 0.0
+                      : (ncutoffsdown[col] /
+                         (double(ncutoffsdown[col] + nsamplesdown[col])));
+    }
     return upcost * downcost;
   }
 
   double getScore(int col, double frac) const {
     double upcost = getPseudocostUp(col, frac);
     double downcost = getPseudocostDown(col, frac);
+
+    if (cost_total > 1e-12) {
+      double avgCost = getAvgPseudocost();
+
+      upcost += ncutoffsup[col] == 0
+                    ? 0.0
+                    : (2 * avgCost * ncutoffsup[col] /
+                       (double(ncutoffsup[col] + nsamplesup[col])));
+      downcost += ncutoffsdown[col] == 0
+                      ? 0.0
+                      : (2 * avgCost * ncutoffsdown[col] /
+                         (double(ncutoffsdown[col] + nsamplesdown[col])));
+    } else {
+      upcost +=
+          ncutoffsup[col] == 0
+              ? 0.0
+              : (ncutoffsup[col] / (double(ncutoffsup[col] + nsamplesup[col])));
+      downcost += ncutoffsdown[col] == 0
+                      ? 0.0
+                      : (ncutoffsdown[col] /
+                         (double(ncutoffsdown[col] + nsamplesdown[col])));
+    }
 
     return upcost * downcost;
   }

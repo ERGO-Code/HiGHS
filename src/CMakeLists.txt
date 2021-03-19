@@ -119,6 +119,7 @@ set(sources
     mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
+    mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
     presolve/HAggregator.cpp
@@ -482,6 +483,7 @@ target_sources(libhighs PRIVATE
     mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
+    mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
     presolve/HAggregator.cpp

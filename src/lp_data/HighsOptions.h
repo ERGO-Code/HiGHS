@@ -319,6 +319,7 @@ struct HighsOptionsStruct {
   int mip_lp_age_limit;
   int mip_pool_age_limit;
   int mip_pool_soft_limit;
+  int mip_pscost_minreliable;
   int mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
@@ -621,6 +622,13 @@ class HighsOptions : public HighsOptionsStruct {
                                      "soft limit on the number of rows in the "
                                      "cutpool for dynamic age adjustment",
                                      advanced, &mip_pool_soft_limit, 1, 10000,
+                                     HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_pscost_minreliable",
+                                     "minimal number of observations before "
+                                     "pseudo costs are considered reliable",
+                                     advanced, &mip_pscost_minreliable, 0, 5,
                                      HIGHS_CONST_I_INF);
     records.push_back(record_int);
 

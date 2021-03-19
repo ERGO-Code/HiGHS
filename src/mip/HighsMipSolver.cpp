@@ -31,7 +31,8 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
       model_(&lp),
       solution_objective_(HIGHS_CONST_INF),
       submip(submip),
-      rootbasis(nullptr) {}
+      rootbasis(nullptr),
+      pscostinit(nullptr) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
 
