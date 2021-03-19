@@ -384,7 +384,6 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         if (lp->unscaledDualFeasible(status)) {
           if (solobj > getCutoffBound()) {
             addBoundExceedingConflict();
-            pseudocost.addCutoffObservation(col, false);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval,
@@ -398,7 +397,6 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
-            pseudocost.addCutoffObservation(col, false);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval,
@@ -510,7 +508,6 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         if (lp->unscaledDualFeasible(status)) {
           if (solobj > getCutoffBound()) {
             addBoundExceedingConflict();
-            pseudocost.addCutoffObservation(col, true);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval,
@@ -524,7 +521,6 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
-            pseudocost.addCutoffObservation(col, true);
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval,
@@ -671,6 +667,14 @@ void HighsSearch::evaluateNode() {
   if (localdom.infeasible()) {
     localdom.clearChangedCols();
     prune = true;
+    const NodeData* parent = getParentNodeData();
+    if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
+        parent->branching_point != parent->branchingdecision.boundval) {
+      int col = parent->branchingdecision.column;
+      bool upbranch =
+          parent->branchingdecision.boundtype == HighsBoundType::Lower;
+      pseudocost.addCutoffObservation(col, upbranch);
+    }
   } else {
     lp->flushDomain(localdom);
 
@@ -751,19 +755,20 @@ void HighsSearch::evaluateNode() {
       }
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       addInfeasibleConflict();
+      const NodeData* parent = getParentNodeData();
+      if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
+          parent->branching_point != parent->branchingdecision.boundval) {
+        int col = parent->branchingdecision.column;
+        bool upbranch =
+            parent->branchingdecision.boundtype == HighsBoundType::Lower;
+        pseudocost.addCutoffObservation(col, upbranch);
+      }
       prune = true;
     }
   }
 
   if (prune) {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-    const NodeData* parent = getParentNodeData();
-    if (parent != nullptr) {
-      int col = parent->branchingdecision.column;
-      bool upbranch =
-          parent->branchingdecision.boundtype == HighsBoundType::Lower;
-      pseudocost.addCutoffObservation(col, upbranch);
-    }
     treeweight += std::pow(0.5, getCurrentDepth() - 1);
     currnode.opensubtrees = 0;
   }
