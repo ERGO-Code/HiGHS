@@ -62,6 +62,10 @@ class HighsPseudocost {
     return nsamplesup[col] + nsamplesdown[col];
   }
 
+  int getNumObservationsUp(int col) const { return nsamplesup[col]; }
+
+  int getNumObservationsDown(int col) const { return nsamplesdown[col]; }
+
   void addObservation(int col, double delta, double objdelta) {
     assert(delta != 0.0);
     assert(objdelta >= 0.0);

@@ -191,7 +191,7 @@ void HighsSearch::addInfeasibleConflict() {
   }
 }
 
-int HighsSearch::selectBranchingCandidate() {
+int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
   assert(!lp->getFractionalIntegers().empty());
 
   static constexpr int basisstart_threshold = 20;
@@ -246,21 +246,25 @@ int HighsSearch::selectBranchingCandidate() {
                                                       fracints[k].second);
   };
 
-  auto selectBestScore = [&]() {
+  auto selectBestScore = [&](bool finalSelection) {
     int best = -1;
     double bestscore = -1.0;
     double bestnodes = -1.0;
     size_t bestnumnodes = 0;
+
     for (int k : evalqueue) {
       double score;
       if ((upscore[k] == 0.0 && upscorereliable[k]) ||
           (downscore[k] == 0.0 && downscorereliable[k]))
         score = pseudocost.getScore(fracints[k].first, 0.0, 0.0);
-      else
+      else {
         score = upscore[k] == HIGHS_CONST_INF || downscore[k] == HIGHS_CONST_INF
-                    ? HIGHS_CONST_INF
+                    ? finalSelection ? pseudocost.getScore(fracints[k].first,
+                                                           fracints[k].second)
+                                     : HIGHS_CONST_INF
                     : pseudocost.getScore(fracints[k].first, upscore[k],
                                           downscore[k]);
+      }
 
       size_t upnodes = numNodesUp(k);
       size_t downnodes = numNodesDown(k);
@@ -287,10 +291,13 @@ int HighsSearch::selectBranchingCandidate() {
   auto basis = lp->getStoredBasis();
 
   while (true) {
-    int candidate = selectBestScore();
+    bool mustStop = maxSbIters >= getStrongBranchingLpIterations() ||
+                    mipsolver.mipdata_->checkLimits();
+
+    int candidate = selectBestScore(mustStop);
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
-        mipsolver.mipdata_->checkLimits()) {
+        mustStop) {
       lp->setStoredBasis(std::move(basis));
       lp->recoverBasis();
       lp->run();
@@ -760,10 +767,10 @@ bool HighsSearch::branch() {
 
   while (currnode.opensubtrees == 2 && lp->scaledOptimal(lp->getStatus()) &&
          !lp->getFractionalIntegers().empty()) {
-    // evalUnreliableBranchCands();
+    size_t sbmaxiters = 0;
     if (minrel > 0) {
       size_t sbiters = getStrongBranchingLpIterations();
-      size_t sbmaxiters =
+      sbmaxiters =
           100000 + (getTotalLpIterations() - getHeuristicLpIterations() -
                     getStrongBranchingLpIterations()) /
                        2;
@@ -778,7 +785,7 @@ bool HighsSearch::branch() {
       }
     }
 
-    int branchcand = selectBranchingCandidate();
+    int branchcand = selectBranchingCandidate(sbmaxiters);
 
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];

@@ -153,7 +153,7 @@ class HighsSearch {
 
   void addInfeasibleConflict();
 
-  int selectBranchingCandidate();
+  int selectBranchingCandidate(size_t maxSbIters);
 
   void evalUnreliableBranchCands();
 
