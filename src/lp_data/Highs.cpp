@@ -1871,7 +1871,6 @@ HighsPostsolveStatus Highs::runPostsolve() {
                                          presolve_.data_.recovered_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
-  // Handle max case.
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);

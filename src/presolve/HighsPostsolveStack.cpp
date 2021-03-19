@@ -161,7 +161,7 @@ void HighsPostsolveStack::DoubletonEquation::undo(
 void HighsPostsolveStack::EqualityRowAddition::undo(
     const HighsOptions& options,
     const std::vector<std::pair<int, double>>& eqRowValues,
-    int& numMissingBasic, HighsSolution& solution, HighsBasis& basis) {
+    HighsSolution& solution, HighsBasis& basis) {
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
   if (solution.row_dual.empty() || solution.row_dual[row] == 0.0) return;
@@ -198,7 +198,7 @@ void HighsPostsolveStack::EqualityRowAddition::undo(
 void HighsPostsolveStack::EqualityRowAdditions::undo(
     const HighsOptions& options,
     const std::vector<std::pair<int, double>>& eqRowValues,
-    const std::vector<std::pair<int, double>>& targetRows, int& numMissingBasic,
+    const std::vector<std::pair<int, double>>& targetRows,
     HighsSolution& solution, HighsBasis& basis) {
   // nothing more to do if the row is zero in the dual solution or there is
   // no dual solution
@@ -366,9 +366,12 @@ void HighsPostsolveStack::FixedCol::undo(
   if (solution.row_dual.empty()) return;
 
   // compute reduced cost
+
   HighsCDouble reducedCost = colCost;
-  for (const auto& colVal : colValues)
+  for (const auto& colVal : colValues) {
+    assert((int)solution.row_dual.size() > colVal.first);
     reducedCost += colVal.second * solution.row_dual[colVal.first];
+  }
 
   solution.col_dual[col] = double(reducedCost);
 

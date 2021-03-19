@@ -628,7 +628,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("mip_pscost_minreliable",
                                      "minimal number of observations before "
                                      "pseudo costs are considered reliable",
-                                     advanced, &mip_pscost_minreliable, 0, 5,
+                                     advanced, &mip_pscost_minreliable, 0, 8,
                                      HIGHS_CONST_I_INF);
     records.push_back(record_int);
 

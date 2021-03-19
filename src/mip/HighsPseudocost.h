@@ -91,16 +91,13 @@ class HighsPseudocost {
   }
 
   bool isReliable(int col) const {
-    return std::min(nsamplesup[col] + ncutoffsup[col],
-                    nsamplesdown[col] + ncutoffsdown[col]) >= minreliable;
+    return std::min(nsamplesup[col], nsamplesdown[col]) >= minreliable;
   }
 
-  bool isReliableUp(int col) const {
-    return nsamplesup[col] + ncutoffsup[col] >= minreliable;
-  }
+  bool isReliableUp(int col) const { return nsamplesup[col] >= minreliable; }
 
   bool isReliableDown(int col) const {
-    return nsamplesdown[col] + ncutoffsdown[col] >= minreliable;
+    return nsamplesdown[col] >= minreliable;
   }
 
   double getAvgPseudocost() const { return cost_total; }
@@ -150,61 +147,12 @@ class HighsPseudocost {
   }
 
   double getScore(int col, double upcost, double downcost) const {
-    if (cost_total > 1e-12) {
-      double avgCost = getAvgPseudocost();
-
-      double cutoffweightup =
-          ncutoffsup[col] /
-          std::max(1.0, double(ncutoffsup[col] + nsamplesup[col]));
-      double costweightup = 1.0 - cutoffweightup;
-      upcost = upcost * costweightup + 2 * avgCost * cutoffweightup;
-
-      double cutoffweightdown =
-          ncutoffsdown[col] /
-          std::max(1.0, double(ncutoffsdown[col] + nsamplesdown[col]));
-      double costweightdown = 1.0 - cutoffweightdown;
-      downcost = downcost * costweightdown + 2 * avgCost * cutoffweightdown;
-    } else {
-      upcost +=
-          ncutoffsup[col] == 0
-              ? 0.0
-              : (ncutoffsup[col] / (double(ncutoffsup[col] + nsamplesup[col])));
-      downcost += ncutoffsdown[col] == 0
-                      ? 0.0
-                      : (ncutoffsdown[col] /
-                         (double(ncutoffsdown[col] + nsamplesdown[col])));
-    }
     return upcost * downcost;
   }
 
   double getScore(int col, double frac) const {
     double upcost = getPseudocostUp(col, frac);
     double downcost = getPseudocostDown(col, frac);
-
-    if (cost_total > 1e-12) {
-      double avgCost = getAvgPseudocost();
-
-      double cutoffweightup =
-          ncutoffsup[col] /
-          std::max(1.0, double(ncutoffsup[col] + nsamplesup[col]));
-      double costweightup = 1.0 - cutoffweightup;
-      upcost = upcost * costweightup + 2 * avgCost * cutoffweightup;
-
-      double cutoffweightdown =
-          ncutoffsdown[col] /
-          std::max(1.0, double(ncutoffsdown[col] + nsamplesdown[col]));
-      double costweightdown = 1.0 - cutoffweightdown;
-      downcost = downcost * costweightdown + 2 * avgCost * cutoffweightdown;
-    } else {
-      upcost +=
-          ncutoffsup[col] == 0
-              ? 0.0
-              : (ncutoffsup[col] / (double(ncutoffsup[col] + nsamplesup[col])));
-      downcost += ncutoffsdown[col] == 0
-                      ? 0.0
-                      : (ncutoffsdown[col] /
-                         (double(ncutoffsdown[col] + nsamplesdown[col])));
-    }
 
     return upcost * downcost;
   }

@@ -291,10 +291,7 @@ double HighsMipSolverData::transformNewIncumbent(
   solution.col_value = sol;
   calculateRowValues(*mipsolver.model_, solution);
 
-  // todo, add interface to postSolveStack that does not expect a basis
-  HighsBasis basis;
-
-  postSolveStack.undo(*mipsolver.options_mip_, solution, basis);
+  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
   calculateRowValues(*mipsolver.orig_model_, solution);
 
   // compute the objective value in the original space

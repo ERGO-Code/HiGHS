@@ -92,7 +92,7 @@ class HighsPostsolveStack {
 
     void undo(const HighsOptions& options,
               const std::vector<std::pair<int, double>>& eqRowValues,
-              int& numMissingBasic, HighsSolution& solution, HighsBasis& basis);
+              HighsSolution& solution, HighsBasis& basis);
   };
 
   struct EqualityRowAdditions {
@@ -101,7 +101,7 @@ class HighsPostsolveStack {
     void undo(const HighsOptions& options,
               const std::vector<std::pair<int, double>>& eqRowValues,
               const std::vector<std::pair<int, double>>& targetRows,
-              int& numMissingBasic, HighsSolution& solution, HighsBasis& basis);
+              HighsSolution& solution, HighsBasis& basis);
   };
   struct SingletonRow {
     double coef;
@@ -456,7 +456,6 @@ class HighsPostsolveStack {
       }
     }
 
-    int numMissingBasic = 0;
     // now undo the changes
     for (int i = reductions.size() - 1; i >= 0; --i) {
       switch (reductions[i]) {
@@ -479,7 +478,7 @@ class HighsPostsolveStack {
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, numMissingBasic, solution, basis);
+          reduction.undo(options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAdditions: {
@@ -487,8 +486,7 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, numMissingBasic,
-                         solution, basis);
+          reduction.undo(options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
@@ -544,30 +542,114 @@ class HighsPostsolveStack {
         }
       }
     }
+  }
 
-    // maybe handle the case of a basic equality row in the end
-    // by choosing nonbasic structural/logical nonbasic columns
-    // with zero reduced cost as replacement in the basis?
-    if (numMissingBasic != 0) {
-      for (int i = 0; i != origNumRow; ++i) {
-        if (basis.row_status[i] != HighsBasisStatus::BASIC &&
-            std::abs(solution.row_dual[i]) <=
-                options.dual_feasibility_tolerance) {
-          basis.row_status[i] = HighsBasisStatus::BASIC;
-          --numMissingBasic;
-          if (numMissingBasic == 0) break;
+  void undoPrimal(const HighsOptions& options, HighsSolution& solution) {
+    reductionValues.resetPosition();
+
+    if (solution.col_value.size() != origColIndex.size()) return;
+    if (solution.row_value.size() != origRowIndex.size()) return;
+
+    // expand solution to original index space
+    solution.col_value.resize(origNumCol);
+    for (int i = origColIndex.size() - 1; i >= 0; --i) {
+      assert(origColIndex[i] >= i);
+      solution.col_value[origColIndex[i]] = solution.col_value[i];
+    }
+
+    solution.row_value.resize(origNumRow);
+    for (int i = origRowIndex.size() - 1; i >= 0; --i) {
+      assert(origRowIndex[i] >= i);
+      solution.row_value[origRowIndex[i]] = solution.row_value[i];
+    }
+
+    solution.row_dual.clear();
+    solution.col_dual.clear();
+
+    HighsBasis basis;
+    // now undo the changes
+    for (int i = reductions.size() - 1; i >= 0; --i) {
+      switch (reductions[i]) {
+        case ReductionType::kFreeColSubstitution: {
+          FreeColSubstitution reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, colValues, solution, basis);
+          break;
         }
-      }
-
-      if (numMissingBasic != 0) {
-        for (int i = 0; i != origNumCol; ++i) {
-          if (basis.col_status[i] != HighsBasisStatus::BASIC &&
-              std::abs(solution.col_dual[i]) <=
-                  options.dual_feasibility_tolerance) {
-            basis.col_status[i] = HighsBasisStatus::BASIC;
-            --numMissingBasic;
-            if (numMissingBasic == 0) break;
-          }
+        case ReductionType::kDoubletonEquation: {
+          DoubletonEquation reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kEqualityRowAddition: {
+          EqualityRowAddition reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kEqualityRowAdditions: {
+          EqualityRowAdditions reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kSingletonRow: {
+          SingletonRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution, basis);
+          break;
+        }
+        case ReductionType::kFixedCol: {
+          FixedCol reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kRedundantRow: {
+          RedundantRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution, basis);
+          break;
+        }
+        case ReductionType::kForcingRow: {
+          ForcingRow reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kForcingColumn: {
+          ForcingColumn reduction;
+          reductionValues.pop(colValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, colValues, solution, basis);
+          break;
+        }
+        case ReductionType::kForcingColumnRemovedRow: {
+          ForcingColumnRemovedRow reduction;
+          reductionValues.pop(rowValues);
+          reductionValues.pop(reduction);
+          reduction.undo(options, rowValues, solution, basis);
+          break;
+        }
+        case ReductionType::kDuplicateRow: {
+          DuplicateRow reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution, basis);
+          break;
+        }
+        case ReductionType::kDuplicateColumn: {
+          DuplicateColumn reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution, basis);
         }
       }
     }
@@ -614,8 +696,6 @@ class HighsPostsolveStack {
       }
     }
 
-    int numMissingBasic = 0;
-
     // now undo the changes
     for (int i = reductions.size() - 1; i >= numReductions; --i) {
       switch (reductions[i]) {
@@ -638,7 +718,7 @@ class HighsPostsolveStack {
           EqualityRowAddition reduction;
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, numMissingBasic, solution, basis);
+          reduction.undo(options, rowValues, solution, basis);
           break;
         }
         case ReductionType::kEqualityRowAdditions: {
@@ -646,8 +726,7 @@ class HighsPostsolveStack {
           reductionValues.pop(colValues);
           reductionValues.pop(rowValues);
           reductionValues.pop(reduction);
-          reduction.undo(options, rowValues, colValues, numMissingBasic,
-                         solution, basis);
+          reduction.undo(options, rowValues, colValues, solution, basis);
           break;
         }
         case ReductionType::kSingletonRow: {
@@ -700,32 +779,6 @@ class HighsPostsolveStack {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
           reduction.undo(options, solution, basis);
-        }
-      }
-    }
-
-    if (numMissingBasic != 0) {
-      for (int i = 0; i != origNumRow; ++i) {
-        if (!flagRow[i]) continue;
-        if (basis.row_status[i] != HighsBasisStatus::BASIC &&
-            std::abs(solution.row_dual[i]) <=
-                options.dual_feasibility_tolerance) {
-          basis.row_status[i] = HighsBasisStatus::BASIC;
-          --numMissingBasic;
-          if (numMissingBasic == 0) break;
-        }
-      }
-
-      if (numMissingBasic != 0) {
-        for (int i = 0; i != origNumCol; ++i) {
-          if (!flagCol[i]) continue;
-          if (basis.col_status[i] != HighsBasisStatus::BASIC &&
-              std::abs(solution.col_dual[i]) <=
-                  options.dual_feasibility_tolerance) {
-            basis.col_status[i] = HighsBasisStatus::BASIC;
-            --numMissingBasic;
-            if (numMissingBasic == 0) break;
-          }
         }
       }
     }
