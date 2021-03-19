@@ -292,10 +292,12 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
     double abs_cost = fabs(cost[usr_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      error_found = !allow_infinite_costs;
+      HighsLogType log_type = HighsLogType::WARNING;
+      if (error_found) log_type = HighsLogType::ERROR;
+      highsLogUser(options.log_options, log_type,
                    "Col  %12d has |cost| of %12g >= %12g\n", ml_col, abs_cost,
                    infinite_cost);
-      error_found = !allow_infinite_costs;
     }
   }
   if (error_found)

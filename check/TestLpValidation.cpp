@@ -97,47 +97,51 @@ TEST_CASE("LP-validation", "[highs_data]") {
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool == require_return_bool);
+  
   XcolCost[0] = -my_infinity;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool == require_return_bool);
+
+  // Reset to a legitimate cost
   XcolCost[0] = 1;
 
   // Add a column with bound inconsistency due to upper
+  XcolLower[0] = 0;
   XcolUpper[0] = -1;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
-  XcolUpper[0] = 0;
 
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = 1;
+  XcolUpper[0] = 0;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
-  XcolLower[0] = 0;
 
   // Add a column with illegal bound due to lower
   XcolLower[0] = my_infinity;
+  XcolUpper[0] = 0;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(!return_bool);
-  XcolLower[0] = 0;
 
   // Add a column with illegal bound due to upper
+  XcolLower[0] = 0;
   XcolUpper[0] = -my_infinity;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(!return_bool);
-  XcolUpper[0] = 0;
 
   // Add a legitimate column
   XcolLower[0] = 0;
+  XcolUpper[0] = 0;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
@@ -189,8 +193,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_bool);
 
-  //  reportLp(lp, HighsLogType::VERBOSE);
-
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -210,6 +212,10 @@ TEST_CASE("LP-validation", "[highs_data]") {
   const double value = -3;
   REQUIRE(highs.getCoeff(check_row, check_col, check_value));
   REQUIRE(check_value == value);
+
+  // This is a highly anomalous LP. It has two pairs of inconsistent
+  // bounds (cols 11 and 12) but also has costs of 1e+30 and -1e+30
+  // for columns 9 and 10.
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
