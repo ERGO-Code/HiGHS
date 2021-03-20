@@ -27,9 +27,9 @@
 HighsSeparation::HighsSeparation(const HighsMipSolver& mipsolver) {
   implBoundClock = mipsolver.timer_.clock_def("Implbound sepa", "Ibd");
   cliqueClock = mipsolver.timer_.clock_def("Clique sepa", "Clq");
-  separators.emplace_back(new HighsTableauSeparator(mipsolver));
   separators.emplace_back(new HighsPathSeparator(mipsolver));
   separators.emplace_back(new HighsModkSeparator(mipsolver));
+  separators.emplace_back(new HighsTableauSeparator(mipsolver));
 }
 
 #if 0
@@ -954,103 +954,6 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   return ncuts;
 }
 
-#if 0
-void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
-                                               HighsDomain& localdomain,
-                                               std::vector<int>& inds,
-                                               std::vector<double>& vals,
-                                               double rowupper) {
-  int len = inds.size();
-  std::vector<double> solvals(len);
-  std::vector<int8_t> complementation(len);
-  std::vector<double> upper(len);
-  HighsCDouble rhs = rowupper;
-
-  mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
-                                             inds.size(), rowupper);
-
-  int nbin = 0;
-  int nint = 0;
-  int ncont = 0;
-  int nunbndint = 0;
-
-  const HighsDomain& globaldomain = mipsolver.mipdata_->domain;
-
-  double minact = 0.0;
-
-  for (int i = 0; i != len; ++i) {
-    int col = inds[i];
-    assert(globaldomain.colUpper_[col] != HIGHS_CONST_INF ||
-           globaldomain.colLower_[col] != -HIGHS_CONST_INF);
-
-    if (globaldomain.colUpper_[col] == HIGHS_CONST_INF ||
-        globaldomain.colLower_[col] == -HIGHS_CONST_INF) {
-      upper[i] = HIGHS_CONST_INF;
-    } else {
-      upper[i] = globaldomain.colUpper_[col] - globaldomain.colLower_[col];
-    }
-
-    if (mipsolver.variableType(col) != HighsVarType::CONTINUOUS) {
-      if (upper[i] < 1.5) {
-        upper[i] = 1.0;
-        ++nbin;
-      } else if (upper[i] != HIGHS_CONST_INF) {
-        upper[i] = std::floor(upper[i] + 0.5);
-        ++nint;
-      } else {
-        ++nunbndint;
-      }
-    } else {
-      ++ncont;
-    }
-
-    if (vals[i] < 0 && globaldomain.colUpper_[col] != HIGHS_CONST_INF) {
-      vals[i] = complementWithUpper(vals[i], globaldomain.colUpper_[col], rhs);
-      complementation[i] = -1;
-      solvals[i] = globaldomain.colUpper_[col] - localdomain.colUpper_[col];
-    } else {
-      vals[i] = complementWithLower(vals[i], globaldomain.colLower_[col], rhs);
-      complementation[i] = 1;
-      solvals[i] = localdomain.colLower_[col] - globaldomain.colLower_[col];
-    }
-
-    minact += solvals[i] * vals[i];
-  }
-
-  bool cutintegral;
-  bool success =
-      generateCut(mipsolver, upper, nbin, nint, ncont, nunbndint, solvals,
-                  complementation, inds, vals, rhs, cutintegral);
-
-  if (success) {
-    int offset = 0;
-
-    for (int i = 0; i != len; ++i) {
-      // skip zeros
-      if (vals[i] == 0) continue;
-
-      // undo complementation
-      if (complementation[i] == 1)
-        rhs += vals[i] * globaldomain.colLower_[inds[i]];
-      else {
-        assert(complementation[i] == -1);
-        vals[i] = -vals[i];
-        rhs += vals[i] * globaldomain.colUpper_[inds[i]];
-      }
-
-      // store back
-      if (offset < i) {
-        vals[offset] = vals[i];
-        inds[offset] = inds[i];
-      }
-      ++offset;
-    }
-
-    mipsolver.mipdata_->cutpool.addCut(mipsolver, inds.data(), vals.data(),
-                                       offset, double(rhs), cutintegral);
-  }
-}
-#endif
 void HighsSeparation::separate(HighsDomain& propdomain) {
   HighsLpRelaxation::Status status = lp->getStatus();
   const HighsMipSolver& mipsolver = lp->getMipSolver();

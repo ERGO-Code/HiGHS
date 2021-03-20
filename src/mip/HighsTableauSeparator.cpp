@@ -13,6 +13,8 @@
 
 #include "mip/HighsTableauSeparator.h"
 
+#include <algorithm>
+
 #include "mip/HighsCutGeneration.h"
 #include "mip/HighsLpAggregator.h"
 #include "mip/HighsLpRelaxation.h"
@@ -25,7 +27,9 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                                HighsCutPool& cutpool) {
   std::vector<int> basisinds;
   Highs& lpSolver = lpRelaxation.getLpSolver();
+  const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   int numrow = lpRelaxation.numRows();
+  if (cutpool.getNumCuts() > mip.options_mip_->mip_pool_soft_limit) return;
   basisinds.resize(numrow);
   lpRelaxation.getLpSolver().getBasicVariables(basisinds.data());
 
@@ -40,11 +44,11 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<int> baseRowInds;
   std::vector<double> baseRowVals;
 
-  const HighsMipSolver& mip = lpRelaxation.getMipSolver();
-
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
+  std::vector<std::pair<double, int>> fractionalBasisvars;
 
   for (int i = 0; i != int(basisinds.size()); ++i) {
+    if (cutpool.getNumCuts() > mip.options_mip_->mip_pool_soft_limit) break;
     double fractionality;
     if (basisinds[i] < 0) {
       int row = -basisinds[i] - 1;
@@ -62,6 +66,16 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     if (fractionality < 1e-4) continue;
+
+    fractionalBasisvars.emplace_back(fractionality, i);
+  }
+
+  std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
+            [](const std::pair<double, int>& a,
+               const std::pair<double, int>& b) { return a.first > b.first; });
+  int numCuts = cutpool.getNumCuts();
+  for (const auto& fracvar : fractionalBasisvars) {
+    int i = fracvar.second;
     if (lpSolver.getBasisInverseRow(i, rowWeights.data(), &numNonzeroWeights,
                                     nonzeroWeights.data()) != HighsStatus::OK)
       continue;
@@ -102,5 +116,9 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
     lpAggregator.clear();
+
+    if (cutpool.getNumCuts() - numCuts >
+        0.1 * mip.options_mip_->mip_pool_soft_limit)
+      break;
   }
 }
