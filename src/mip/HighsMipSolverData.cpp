@@ -784,6 +784,10 @@ restart:
     printDisplayLine();
     if (checkLimits()) return;
 
+    if (nseparounds == maxSepaRounds) break;
+    if (cutpool.getNumCuts() > 2 * mipsolver.options_mip_->mip_pool_soft_limit)
+      break;
+
     removeFixedIndices();
 
     if (mipsolver.options_mip_->presolve != off_string) {
@@ -854,7 +858,6 @@ restart:
 
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
     if (ncuts == 0) break;
-    if (nseparounds == maxSepaRounds) break;
   }
 
   lp.setIterationLimit();
