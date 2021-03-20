@@ -24,16 +24,32 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       cost_total = mipsolver.pscostinit->cost_total;
       nsamplestotal = 1;
     }
+    if (mipsolver.pscostinit->ninferencestotal != 0) {
+      inferences_total = mipsolver.pscostinit->ninferencestotal;
+      ninferencestotal = 1;
+    }
     ncutoffstotal = mipsolver.pscostinit->ncutoffstotal;
     for (int i = 0; i != mipsolver.numCol(); ++i) {
       int origCol = mipsolver.mipdata_->postSolveStack.getOrigColIndex(i);
+
       if (mipsolver.pscostinit->nsamplesup[origCol] != 0) {
         pseudocostup[i] = mipsolver.pscostinit->pseudocostup[origCol];
         nsamplesup[i] = 1;
       }
+
       if (mipsolver.pscostinit->nsamplesdown[origCol] != 0) {
         pseudocostdown[i] = mipsolver.pscostinit->pseudocostdown[origCol];
         nsamplesdown[i] = 1;
+      }
+
+      if (mipsolver.pscostinit->ninferencesup[origCol] != 0) {
+        inferencesup[i] = mipsolver.pscostinit->inferencesup[origCol];
+        ninferencesup[i] = 1;
+      }
+
+      if (mipsolver.pscostinit->ninferencesdown[origCol] != 0) {
+        inferencesdown[i] = mipsolver.pscostinit->inferencesdown[origCol];
+        ninferencesdown[i] = 1;
       }
     }
   }
