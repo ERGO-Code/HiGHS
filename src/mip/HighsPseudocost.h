@@ -23,11 +23,17 @@ class HighsPseudocost {
   std::vector<double> pseudocostdown;
   std::vector<int> nsamplesup;
   std::vector<int> nsamplesdown;
+  std::vector<double> inferencesup;
+  std::vector<double> inferencesdown;
+  std::vector<int> ninferencesup;
+  std::vector<int> ninferencesdown;
   std::vector<int> ncutoffsup;
   std::vector<int> ncutoffsdown;
 
   double cost_total;
+  double inferences_total;
   size_t nsamplestotal;
+  size_t ninferencestotal;
   size_t ncutoffstotal;
   int minreliable;
 
@@ -90,6 +96,21 @@ class HighsPseudocost {
     }
   }
 
+  void addInferenceObservation(int col, int ninferences, bool upbranch) {
+    double d = ninferences - inferences_total;
+    ++ninferencestotal;
+    inferences_total += d / ninferencestotal;
+    if (upbranch) {
+      d = ninferences - inferencesup[col];
+      ninferencesup[col] += 1;
+      inferencesup[col] += d / ninferencesup[col];
+    } else {
+      d = ninferences - inferencesdown[col];
+      ninferencesdown[col] += 1;
+      inferencesdown[col] += d / ninferencesdown[col];
+    }
+  }
+
   bool isReliable(int col) const {
     return std::min(nsamplesup[col], nsamplesdown[col]) >= minreliable;
   }
@@ -147,14 +168,35 @@ class HighsPseudocost {
   }
 
   double getScore(int col, double upcost, double downcost) const {
-    return upcost * downcost;
+    double costScore =
+        std::sqrt(upcost * downcost) / std::max(1e-6, cost_total);
+    double inferenceScore = std::sqrt(inferencesup[col] * inferencesdown[col]) /
+                            (std::max(1e-6, inferences_total));
+
+    double cutoffRateUp =
+        ncutoffsup[col] /
+        double(std::max(1, ncutoffsup[col] + nsamplesup[col]));
+    double cutoffRateDown =
+        ncutoffsdown[col] /
+        double(std::max(1, ncutoffsdown[col] + nsamplesdown[col]));
+    double avgCutoffRate =
+        ncutoffstotal /
+        double(std::max(size_t{1}, nsamplestotal + ncutoffstotal));
+
+    double cutoffScore = std::sqrt(cutoffRateUp * cutoffRateDown) /
+                         std::max(1e-6, avgCutoffRate);
+
+    auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
+
+    return mapScore(costScore) +
+           1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore));
   }
 
   double getScore(int col, double frac) const {
     double upcost = getPseudocostUp(col, frac);
     double downcost = getPseudocostDown(col, frac);
 
-    return upcost * downcost;
+    return getScore(col, upcost, downcost);
   }
 };
 

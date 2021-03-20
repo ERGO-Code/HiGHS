@@ -11,7 +11,9 @@
 
 #include <numeric>
 
+#include "lp_data/HConst.h"
 #include "mip/HighsCutGeneration.h"
+#include "mip/HighsDomainChange.h"
 #include "mip/HighsMipSolverData.h"
 
 HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
@@ -312,7 +314,9 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
     if (!downscorereliable[candidate]) {
       // evaluate down branch
       localdom.changeBound(HighsBoundType::Upper, col, downval);
+      size_t inferences = -localdom.getDomainChangeStack().size();
       localdom.propagate();
+      inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
@@ -322,6 +326,8 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         lp->setStoredBasis(std::move(basis));
         return -1;
       }
+
+      pseudocost.addInferenceObservation(col, inferences, false);
 
       lp->flushDomain(localdom);
 
@@ -434,7 +440,9 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
     } else {
       // evaluate up branch
       localdom.changeBound(HighsBoundType::Lower, col, upval);
+      size_t inferences = -localdom.getDomainChangeStack().size();
       localdom.propagate();
+      inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
@@ -445,6 +453,7 @@ int HighsSearch::selectBranchingCandidate(size_t maxSbIters) {
         return -1;
       }
 
+      pseudocost.addInferenceObservation(col, inferences, true);
       lp->flushDomain(localdom);
 
       size_t numiters = lp->getNumLpIterations();
@@ -657,17 +666,29 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
 }
 
 void HighsSearch::evaluateNode() {
-  localdom.propagate();
-
   assert(!nodestack.empty());
   NodeData& currnode = nodestack.back();
+  const NodeData* parent = getParentNodeData();
+
+  const auto& domchgstack = localdom.getDomainChangeStack();
+  size_t inferences = -domchgstack.size();
+  bool addInferenceObservation =
+      parent != nullptr && parent->branchingdecision == domchgstack.back() &&
+      parent->lp_objective != HIGHS_CONST_INF;
+
+  localdom.propagate();
+
+  inferences += domchgstack.size();
+  if (addInferenceObservation)
+    pseudocost.addInferenceObservation(
+        parent->branchingdecision.column, inferences,
+        parent->branchingdecision.boundtype == HighsBoundType::Lower);
 
   bool prune = false;
 
   if (localdom.infeasible()) {
     localdom.clearChangedCols();
     prune = true;
-    const NodeData* parent = getParentNodeData();
     if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
         parent->branching_point != parent->branchingdecision.boundval) {
       int col = parent->branchingdecision.column;
@@ -695,7 +716,6 @@ void HighsSearch::evaluateNode() {
       currnode.estimate = lp->computeBestEstimate(pseudocost);
       currnode.lp_objective = lp->getObjective();
 
-      const NodeData* parent = getParentNodeData();
       if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
           parent->branching_point != parent->branchingdecision.boundval) {
         int col = parent->branchingdecision.column;
@@ -755,7 +775,6 @@ void HighsSearch::evaluateNode() {
       }
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       addInfeasibleConflict();
-      const NodeData* parent = getParentNodeData();
       if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
           parent->branching_point != parent->branchingdecision.boundval) {
         int col = parent->branchingdecision.column;

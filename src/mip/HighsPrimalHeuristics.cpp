@@ -244,6 +244,7 @@ retry:
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
         // if objcetive is zero round to nearest integer
+        assert(col < (int)mipsolver.mipdata_->rootlpsol.size());
         double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
         if (rootchange >= 0.4)
           fixval = std::ceil(fracval);
@@ -612,6 +613,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
 
   if (numintcols != mipsolver.numCol()) {
     HighsLpRelaxation lprelax(mipsolver);
+    lprelax.loadModel();
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.colLower_.data(),
                                            localdom.colUpper_.data());

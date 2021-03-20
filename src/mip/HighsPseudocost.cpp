@@ -7,10 +7,16 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       pseudocostdown(mipsolver.numCol()),
       nsamplesup(mipsolver.numCol()),
       nsamplesdown(mipsolver.numCol()),
+      inferencesup(mipsolver.numCol()),
+      inferencesdown(mipsolver.numCol()),
+      ninferencesup(mipsolver.numCol()),
+      ninferencesdown(mipsolver.numCol()),
       ncutoffsup(mipsolver.numCol()),
       ncutoffsdown(mipsolver.numCol()),
       cost_total(0),
+      inferences_total(0),
       nsamplestotal(0),
+      ninferencestotal(0),
       ncutoffstotal(0),
       minreliable(mipsolver.options_mip_->mip_pscost_minreliable) {
   if (mipsolver.pscostinit != nullptr) {
@@ -29,9 +35,6 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
         pseudocostdown[i] = mipsolver.pscostinit->pseudocostdown[origCol];
         nsamplesdown[i] = 1;
       }
-
-      ncutoffsup[i] = mipsolver.pscostinit->ncutoffsup[origCol];
-      ncutoffsdown[i] = mipsolver.pscostinit->ncutoffsdown[origCol];
     }
   }
 }

@@ -24,6 +24,11 @@ struct HighsDomainChange {
     if ((int)boundtype < (int)other.boundtype) return true;
     return false;
   }
+
+  bool operator==(const HighsDomainChange& other) const {
+    return boundtype == other.boundtype && column == other.column &&
+           boundval == other.boundval;
+  }
 };
 
 struct HighsSubstitution {

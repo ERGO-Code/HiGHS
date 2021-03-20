@@ -34,6 +34,8 @@ bool HighsImplications::computeImplications(int col, bool val) {
     return true;
   }
 
+  size_t numImplications = -domchgstack.size();
+
   cliquetable.addImplications(globaldomain, col, val);
 
   size_t stackimplicstart = domchgstack.size();
@@ -49,6 +51,9 @@ bool HighsImplications::computeImplications(int col, bool val) {
     return true;
   }
 
+  numImplications += domchgstack.size();
+  mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,
+                                                         val);
   size_t stackimplicend = domchgstack.size();
 
   int loc = 2 * col + val;

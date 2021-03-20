@@ -12,6 +12,7 @@
 #include <random>
 
 #include "lp_data/HighsLpUtils.h"
+#include "mip/HighsPseudocost.h"
 #include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
@@ -882,7 +883,8 @@ restart:
       heuristics.flushStatistics();
     }
 
-    if (moreHeuristicsAllowed() || upper_limit == HIGHS_CONST_INF) {
+    if (!rootlpsol.empty() &&
+        (moreHeuristicsAllowed() || upper_limit == HIGHS_CONST_INF)) {
       heuristics.RENS(rootlpsol);
       heuristics.flushStatistics();
 
@@ -1010,6 +1012,8 @@ void HighsMipSolverData::setupDomainPropagation() {
   highsSparseTranspose(model.numRow_, model.numCol_, model.Astart_,
                        model.Aindex_, model.Avalue_, ARstart_, ARindex_,
                        ARvalue_);
+
+  pseudocost = HighsPseudocost(mipsolver);
 
   // compute the maximal absolute coefficients to filter propagation
   maxAbsRowCoef.resize(mipsolver.model_->numRow_);
