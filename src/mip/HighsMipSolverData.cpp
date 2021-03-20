@@ -785,8 +785,6 @@ restart:
     if (checkLimits()) return;
 
     if (nseparounds == maxSepaRounds) break;
-    if (cutpool.getNumCuts() > 2 * mipsolver.options_mip_->mip_pool_soft_limit)
-      break;
 
     removeFixedIndices();
 
@@ -843,9 +841,11 @@ restart:
       double alpha = 1.0 / 3.0;
       double nextprogress = (1.0 - alpha) * smoothprogress + alpha * progress;
 
-      if (nextprogress < smoothprogress * 1.01 &&
-          (lp.getObjective() - firstlpsolobj) <=
-              (rootlpsolobj - firstlpsolobj) * 1.001)
+      if ((cutpool.getNumCuts() >
+           2 * mipsolver.options_mip_->mip_pool_soft_limit) ||
+          (nextprogress < smoothprogress * 1.01 &&
+           (lp.getObjective() - firstlpsolobj) <=
+               (rootlpsolobj - firstlpsolobj) * 1.001))
         ++stall;
       else {
         stall = 0;
