@@ -29,7 +29,6 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   Highs& lpSolver = lpRelaxation.getLpSolver();
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   int numrow = lpRelaxation.numRows();
-  if (cutpool.getNumCuts() > mip.options_mip_->mip_pool_soft_limit) return;
   basisinds.resize(numrow);
   lpRelaxation.getLpSolver().getBasicVariables(basisinds.data());
 
@@ -117,7 +116,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpAggregator.clear();
 
-    if (cutpool.getNumCuts() - numCuts >
+    if (cutpool.getNumCuts() - numCuts >=
         0.1 * mip.options_mip_->mip_pool_soft_limit)
       break;
   }
