@@ -579,7 +579,6 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
   if (!localdom.infeasible()) {
     nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
                           nodestack.back().lower_bound,
-                          nodestack.back().lp_objective,
                           nodestack.back().estimate, getCurrentDepth());
   } else
     treeweight += std::pow(0.5, getCurrentDepth() - 1);
@@ -598,7 +597,6 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
     if (!localdom.infeasible()) {
       nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
                             nodestack.back().lower_bound,
-                            nodestack.back().lp_objective,
                             nodestack.back().estimate, getCurrentDepth());
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);

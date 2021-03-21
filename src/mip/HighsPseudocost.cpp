@@ -28,7 +28,6 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       inferences_total = mipsolver.pscostinit->ninferencestotal;
       ninferencestotal = 1;
     }
-    ncutoffstotal = mipsolver.pscostinit->ncutoffstotal;
     for (int i = 0; i != mipsolver.numCol(); ++i) {
       int origCol = mipsolver.mipdata_->postSolveStack.getOrigColIndex(i);
 

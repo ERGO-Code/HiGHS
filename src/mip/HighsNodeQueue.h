@@ -27,7 +27,6 @@ class HighsNodeQueue {
     std::vector<HighsDomainChange> domchgstack;
     std::vector<std::multimap<double, int>::iterator> domchglinks;
     double lower_bound;
-    double lp_objective;
     double estimate;
     int depth;
     int leftlower;
@@ -46,10 +45,9 @@ class HighsNodeQueue {
           rightestimate(-1) {}
 
     OpenNode(std::vector<HighsDomainChange>&& domchgstack, double lower_bound,
-             double lp_objective, double estimate, int depth)
+             double estimate, int depth)
         : domchgstack(domchgstack),
           lower_bound(lower_bound),
-          lp_objective(lp_objective),
           estimate(estimate),
           depth(depth),
           leftlower(-1),
@@ -97,7 +95,7 @@ class HighsNodeQueue {
   void setNumCol(int numcol);
 
   void emplaceNode(std::vector<HighsDomainChange>&& domchgs, double lower_bound,
-                   double lp_objective, double estimate, int depth);
+                   double estimate, int depth);
 
   OpenNode popBestNode();
 
