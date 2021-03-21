@@ -38,8 +38,8 @@ class HighsNodeQueue {
     OpenNode()
         : domchgstack(),
           lower_bound(-HIGHS_CONST_INF),
-          estimate(-HIGHS_CONST_INF),
           lp_objective(-HIGHS_CONST_INF),
+          estimate(-HIGHS_CONST_INF),
           depth(0),
           leftlower(-1),
           rightlower(-1),
