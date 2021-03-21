@@ -331,6 +331,9 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
       return "Primal and dual infeasible";
       break;
+    case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
+      return "Primal infeasible or unbounded";
+      break;
     case HighsModelStatus::DUAL_INFEASIBLE:
       return "Dual infeasible";
       break;
@@ -389,11 +392,13 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::Error;
     case HighsModelStatus::MODEL_EMPTY:
       return HighsStatus::OK;
+    case HighsModelStatus::OPTIMAL:
+      return HighsStatus::OK;
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
+    case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
       return HighsStatus::OK;
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::PRIMAL_UNBOUNDED:
       return HighsStatus::OK;
     case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
       return HighsStatus::OK;

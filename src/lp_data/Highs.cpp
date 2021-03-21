@@ -530,17 +530,10 @@ HighsStatus Highs::run() {
     }
 
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
-    // Presolve. runPresolve handles the level of presolving (0 = don't
-    // presolve).
-
-    //    printf("Writing before_presolve.mps\n");
-    //    writeModel("before_presolve.mps");
-
-    // Run and time presolve.
+    // Possibly presolve - according to option_.presolve
     const double from_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time = -from_presolve_time;
     timer_.start(timer_.presolve_clock);
-
     HighsPresolveStatus presolve_status = runPresolve();
     timer_.stop(timer_.presolve_clock);
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
@@ -649,7 +642,12 @@ HighsStatus Highs::run() {
         if (presolve_status == HighsPresolveStatus::Infeasible) {
           model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
         } else {
-          model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+	  // If presolve returns (primal) unbounded, the problem may
+	  // not be feasible, in which case
+	  // HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED rather
+	  // than HighsModelStatus::PRIMAL_UNBOUNDED should be
+	  // returned
+          model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED;
         }
         highsLogUser(options_.log_options, HighsLogType::INFO,
                      "Problem status detected on presolve: %s\n",
@@ -2200,10 +2198,31 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::OK);
         break;
 
+      case HighsModelStatus::OPTIMAL:
+        have_solution = true;
+        // The following is an aspiration
+        //        assert(info_.primal_status ==
+        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        //        assert(info_.dual_status ==
+        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        assert(model_status_ == HighsModelStatus::NOTSET ||
+               model_status_ == HighsModelStatus::OPTIMAL);
+        assert(return_status == HighsStatus::OK);
+        break;
+
       case HighsModelStatus::PRIMAL_INFEASIBLE:
         clearSolution();
         // May have a basis, according to whether infeasibility was
         // detected in presolve or solve
+        assert(model_status_ == scaled_model_status_);
+        assert(return_status == HighsStatus::OK);
+        break;
+
+      case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
+        clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
@@ -2214,18 +2233,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         // detected in presolve or solve
         clearInfo();
         assert(model_status_ == scaled_model_status_);
-        assert(return_status == HighsStatus::OK);
-        break;
-
-      case HighsModelStatus::OPTIMAL:
-        have_solution = true;
-        // The following is an aspiration
-        //        assert(info_.primal_status ==
-        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-        //        assert(info_.dual_status ==
-        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-        assert(model_status_ == HighsModelStatus::NOTSET ||
-               model_status_ == HighsModelStatus::OPTIMAL);
         assert(return_status == HighsStatus::OK);
         break;
 

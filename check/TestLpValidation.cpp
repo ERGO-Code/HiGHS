@@ -217,11 +217,21 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // bounds (cols 11 and 12) but also has costs of 1e+30 and -1e+30
   // for columns 9 and 10.
 
-  HighsStatus run_status = highs.run();
+  // LP is found to be unbounded by presolve, but is primal infeasible
+  HighsStatus run_status;
+  HighsModelStatus model_status;
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::OK);
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED);
+
+  // Without presolve LP is found primal unbounded! ToDo: Fix this to be infeasible
+  highs.setHighsOptionValue("presolve", "off");
+  run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
 
-  HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::PRIMAL_INFEASIBLE);
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
 
   REQUIRE(!highs.changeCoeff(-1, 0, check_value));
   REQUIRE(!highs.changeCoeff(0, -1, check_value));
