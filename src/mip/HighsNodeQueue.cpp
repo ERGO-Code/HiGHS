@@ -24,7 +24,8 @@ void HighsNodeQueue::link_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+    return std::make_tuple(LOWERBOUND_WEIGHT * std::max(nodes[n].lower_bound,
+                                                        nodes[n].lp_objective) +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
                            -int(nodes[n].domchgstack.size()), n);
   };
@@ -38,7 +39,8 @@ void HighsNodeQueue::unlink_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+    return std::make_tuple(LOWERBOUND_WEIGHT * std::max(nodes[n].lower_bound,
+                                                        nodes[n].lp_objective) +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
                            -int(nodes[n].domchgstack.size()), n);
   };
@@ -279,7 +281,8 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lp_objective +
+    return std::make_tuple(LOWERBOUND_WEIGHT * std::max(nodes[n].lp_objective,
+                                                        nodes[n].lower_bound) +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
                            -int(nodes[n].domchgstack.size()), n);
   };
