@@ -932,7 +932,7 @@ restart:
     }
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lower_bound,
-                          lp.getObjective(), lp.getObjective(), 1);
+                          lp.getObjective(), 1);
   }
 }
 

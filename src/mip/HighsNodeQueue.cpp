@@ -252,23 +252,20 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 }
 
 void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
-                                 double lower_bound, double lp_objective,
-                                 double estimate, int depth) {
+                                 double lower_bound, double estimate,
+                                 int depth) {
   int pos;
 
   if (freeslots.empty()) {
     pos = nodes.size();
-    nodes.emplace_back(std::move(domchgs), lower_bound, lp_objective, estimate,
-                       depth);
+    nodes.emplace_back(std::move(domchgs), lower_bound, estimate, depth);
   } else {
     pos = freeslots.top();
     freeslots.pop();
-    nodes[pos] = OpenNode(std::move(domchgs), lower_bound, lp_objective,
-                          estimate, depth);
+    nodes[pos] = OpenNode(std::move(domchgs), lower_bound, estimate, depth);
   }
 
   assert(nodes[pos].lower_bound == lower_bound);
-  assert(nodes[pos].lp_objective == lp_objective);
   assert(nodes[pos].estimate == estimate);
   assert(nodes[pos].depth == depth);
 
