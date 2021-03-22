@@ -59,8 +59,8 @@ bool HighsImplications::computeImplications(int col, bool val) {
   int loc = 2 * col + val;
   int implstart = implications.size();
 
-  implications.insert(implications.end(), &domchgstack[stackimplicstart],
-                      &domchgstack[stackimplicend]);
+  implications.insert(implications.end(), domchgstack.data() + stackimplicstart,
+                      domchgstack.data() + stackimplicend);
 
   globaldomain.backtrack();
   globaldomain.clearChangedCols(changedend);

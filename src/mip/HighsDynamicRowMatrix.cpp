@@ -147,5 +147,5 @@ void HighsDynamicRowMatrix::replaceRowValues(int rowindex, double* Rvalue) {
   int start = ARrange_[rowindex].first;
   int end = ARrange_[rowindex].second;
 
-  std::copy(Rvalue, Rvalue + (end - start), &ARvalue_[start]);
+  std::copy(Rvalue, Rvalue + (end - start), ARvalue_.data() + start);
 }
