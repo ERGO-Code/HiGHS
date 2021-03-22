@@ -14,6 +14,7 @@
 
 #include "lp_data/HConst.h"
 #include "mip/HighsDomain.h"
+#include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsSplay.h"
 
@@ -306,6 +307,62 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
   unlink(bestboundnode);
 
   return std::move(nodes[bestboundnode]);
+}
+
+HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
+    const HighsLpRelaxation& lprelax) {
+  const HighsSolution& sol = lprelax.getSolution();
+  if ((int)sol.col_dual.size() != lprelax.numCols()) return popBestNode();
+  double bestRedCost = 0.0;
+  int bestCol = -1;
+  for (int i : lprelax.getMipSolver().mipdata_->integral_cols) {
+    if (sol.col_dual[i] > std::abs(bestRedCost)) {
+      if (numNodesDown(i, sol.col_value[i] - 0.5) > 0) {
+        bestCol = i;
+        bestRedCost = sol.col_dual[i];
+      }
+    } else if (sol.col_dual[i] < -std::abs(bestRedCost)) {
+      if (numNodesUp(i, sol.col_value[i] + 0.5) < 0) {
+        bestCol = i;
+        bestRedCost = sol.col_dual[i];
+      }
+    }
+  }
+
+  if (bestCol == -1) return popBestNode();
+
+  std::multimap<double, int>::iterator start;
+  std::multimap<double, int>::iterator end;
+  if (bestRedCost > 0) {
+    start = colUpperNodes[bestCol].begin();
+    end = colUpperNodes[bestCol].lower_bound(sol.col_value[bestCol] - 0.5);
+  } else {
+    start = colLowerNodes[bestCol].upper_bound(sol.col_value[bestCol] + 0.5);
+    end = colLowerNodes[bestCol].end();
+  }
+
+  int bestNode = -1;
+  double bestNodeCriterion = HIGHS_CONST_INF;
+  for (auto i = start; i != end; ++i) {
+    double nodeCriterion = ESTIMATE_WEIGHT * nodes[i->second].estimate +
+                           LOWERBOUND_WEIGHT * nodes[i->second].lower_bound;
+    if (nodeCriterion < bestNodeCriterion) {
+      bestNode = i->second;
+      bestNodeCriterion = nodeCriterion;
+    }
+  }
+
+  assert(bestNode != -1);
+
+  // printf(
+  //     "popping related node %d with lower bound %g and estimate %g which has "
+  //     "col %d with reduced cost %g flipped\n",
+  //     bestNode, nodes[bestNode].lower_bound, nodes[bestNode].estimate, bestCol,
+  //     bestRedCost);
+
+  unlink(bestNode);
+
+  return std::move(nodes[bestNode]);
 }
 
 double HighsNodeQueue::getBestLowerBound() {
