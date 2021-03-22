@@ -1668,8 +1668,8 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
         cliqueextensions.emplace_back(originrow, v);
 
       extensionvars.insert(extensionvars.end(),
-                           &cliqueentries[cliques[k].start],
-                           &cliqueentries[cliques[k].end]);
+                           cliqueentries.begin() + cliques[k].start,
+                           cliqueentries.begin() + cliques[k].end);
       removeClique(k);
 
       for (CliqueVar v : extensionvars) {
@@ -1757,10 +1757,11 @@ void HighsCliqueTable::rebuild(int ncols,
         cliqueentries[k].col = col;
     }
 
-    CliqueVar* newend = std::remove_if(
-        &cliqueentries[cliques[i].start], &cliqueentries[cliques[i].end],
-        [](CliqueVar v) { return v.col == HIGHS_CONST_I_INF; });
-    int numvars = newend - (&cliqueentries[cliques[i].start]);
+    auto newend =
+        std::remove_if(cliqueentries.begin() + cliques[i].start,
+                       cliqueentries.begin() + cliques[i].end,
+                       [](CliqueVar v) { return v.col == HIGHS_CONST_I_INF; });
+    int numvars = newend - (cliqueentries.begin() + cliques[i].start);
     // since we do not know how variables in the clique that have been deleted
     // are replaced (i.e. are they fixed to 0 or 1, or substituted) we relax
     // them out which means the equality status needs to be set to false

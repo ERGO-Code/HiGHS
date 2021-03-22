@@ -832,8 +832,8 @@ void HighsDomain::propagate() {
           int start = mipsolver->mipdata_->ARstart_[i];
           int end = mipsolver->mipdata_->ARstart_[i + 1];
           int Rlen = end - start;
-          const int* Rindex = &mipsolver->mipdata_->ARindex_[start];
-          const double* Rvalue = &mipsolver->mipdata_->ARvalue_[start];
+          const int* Rindex = mipsolver->mipdata_->ARindex_.data() + start;
+          const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
           int numchgs = 0;
 
           if (mipsolver->rowUpper(i) != HIGHS_CONST_INF) {

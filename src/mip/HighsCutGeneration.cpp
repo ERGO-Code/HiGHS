@@ -65,7 +65,8 @@ bool HighsCutGeneration::determineCover() {
     return contributionA > contributionB;
   });
 
-  const double minlambda = 10 * feastol;
+  const double minlambda =
+      std::max(10 * feastol, feastol * std::abs(double(rhs)));
 
   for (; coversize != maxCoverSize; ++coversize) {
     double lambda = double(coverweight - rhs);
@@ -79,7 +80,7 @@ bool HighsCutGeneration::determineCover() {
   coverweight.renormalize();
   lambda = coverweight - rhs;
 
-  if (lambda <= 10 * feastol) return false;
+  if (lambda <= minlambda) return false;
 
   cover.resize(coversize);
   assert(lambda > feastol);

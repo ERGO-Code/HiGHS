@@ -243,9 +243,10 @@ retry:
         // reinforce direction of this solution away from root
         // solution if the change is at least 0.4
         // otherwise take the direction where the objective gets worse
-        // if objcetive is zero round to nearest integer
-        assert(col < (int)mipsolver.mipdata_->rootlpsol.size());
-        double rootchange = fracval - mipsolver.mipdata_->rootlpsol[col];
+        // if objective is zero round to nearest integer
+        double rootchange = mipsolver.mipdata_->rootlpsol.empty()
+                                ? 0.0
+                                : fracval - mipsolver.mipdata_->rootlpsol[col];
         if (rootchange >= 0.4)
           fixval = std::ceil(fracval);
         else if (rootchange <= -0.4)

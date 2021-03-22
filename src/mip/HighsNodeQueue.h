@@ -20,6 +20,7 @@
 #include "util/HighsCDouble.h"
 
 class HighsDomain;
+class HighsLpRelaxation;
 
 class HighsNodeQueue {
  public:
@@ -100,6 +101,8 @@ class HighsNodeQueue {
   OpenNode popBestNode();
 
   OpenNode popBestBoundNode();
+
+  OpenNode popRelatedNode(const HighsLpRelaxation& lprelax);
 
   size_t numNodesUp(int col) const { return colLowerNodes[col].size(); }
 
