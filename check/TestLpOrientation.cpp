@@ -4,7 +4,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("LP-orientation", "[lp_orientation]") {

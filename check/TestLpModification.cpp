@@ -4,7 +4,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
