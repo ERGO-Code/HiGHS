@@ -66,7 +66,7 @@ bool HighsCutGeneration::determineCover() {
   });
 
   const double minlambda =
-      std::max(10 * feastol, std::abs(double(rhs)) * feastol);
+      std::max(10 * feastol, 10 * epsilon * std::abs(double(rhs)));
 
   for (; coversize != maxCoverSize; ++coversize) {
     double lambda = double(coverweight - rhs);
