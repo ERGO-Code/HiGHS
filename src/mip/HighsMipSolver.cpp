@@ -262,7 +262,7 @@ void HighsMipSolver::run() {
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
         lastLbLeave = numQueueLeaves;
       } else {
-        search.installNode(mipdata_->nodequeue.popRelatedNode(mipdata_->lp));
+        search.installNode(mipdata_->nodequeue.popBestNode());
         if (search.getCurrentLowerBound() == mipdata_->lower_bound)
           lastLbLeave = numQueueLeaves;
       }
