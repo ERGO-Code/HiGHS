@@ -355,9 +355,9 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
   assert(bestNode != -1);
 
   // printf(
-  //     "popping related node %d with lower bound %g and estimate %g which has "
-  //     "col %d with reduced cost %g flipped\n",
-  //     bestNode, nodes[bestNode].lower_bound, nodes[bestNode].estimate, bestCol,
+  //     "popping related node %d with lower bound %g and estimate %g which has
+  //     " "col %d with reduced cost %g flipped\n", bestNode,
+  //     nodes[bestNode].lower_bound, nodes[bestNode].estimate, bestCol,
   //     bestRedCost);
 
   unlink(bestNode);

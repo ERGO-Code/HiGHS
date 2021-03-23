@@ -15,9 +15,9 @@
 #define HFACTOR_H_
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <tuple>
-#include <cmath>
 #include <vector>
 
 #include "HConfig.h"
@@ -267,7 +267,7 @@ class HFactor {
   double pivot_tolerance;
   int highs_debug_level;
 
-  std::unique_ptr<std::tuple<bool,bool,int>> log_data;
+  std::unique_ptr<std::tuple<bool, bool, int>> log_data;
   HighsLogOptions log_options;
   bool use_original_HFactor_logic;
   int updateMethod;

@@ -642,11 +642,11 @@ HighsStatus Highs::run() {
         if (presolve_status == HighsPresolveStatus::Infeasible) {
           model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
         } else {
-	  // If presolve returns (primal) unbounded, the problem may
-	  // not be feasible, in which case
-	  // HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED rather
-	  // than HighsModelStatus::PRIMAL_UNBOUNDED should be
-	  // returned
+          // If presolve returns (primal) unbounded, the problem may
+          // not be feasible, in which case
+          // HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED rather
+          // than HighsModelStatus::PRIMAL_UNBOUNDED should be
+          // returned
           model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED;
         }
         highsLogUser(options_.log_options, HighsLogType::INFO,

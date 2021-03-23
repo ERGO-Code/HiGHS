@@ -1,4 +1,5 @@
 #include "util/HighsLinearSumBounds.h"
+
 #include <algorithm>
 
 void HighsLinearSumBounds::add(int sum, int var, double coefficient) {

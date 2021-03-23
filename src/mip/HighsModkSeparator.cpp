@@ -113,7 +113,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     bool integralPositive = false;
-    if (!transLp.transform(vals, upper, solval, inds, rhs, integralPositive, true))
+    if (!transLp.transform(vals, upper, solval, inds, rhs, integralPositive,
+                           true))
       continue;
 
     rowlen = inds.size();

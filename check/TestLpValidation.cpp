@@ -97,7 +97,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool == require_return_bool);
-  
+
   XcolCost[0] = -my_infinity;
   return_bool =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
@@ -225,7 +225,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED);
 
-  // Without presolve LP is found primal unbounded! ToDo: Fix this to be infeasible
+  // Without presolve LP is found primal unbounded! ToDo: Fix this to be
+  // infeasible
   highs.setHighsOptionValue("presolve", "off");
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
