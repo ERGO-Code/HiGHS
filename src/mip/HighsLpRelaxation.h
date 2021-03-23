@@ -11,6 +11,7 @@
 #define HIGHS_LP_RELAXATION_H_
 
 #include <memory>
+#include <cstdint>
 
 #include "Highs.h"
 #include "mip/HighsMipSolver.h"
@@ -68,7 +69,7 @@ class HighsLpRelaxation {
   double objective;
   std::shared_ptr<const HighsBasis> basischeckpoint;
   bool currentbasisstored;
-  size_t numlpiters;
+  int64_t numlpiters;
   size_t epochs;
   size_t maxNumFractional;
   Status status;
@@ -143,7 +144,7 @@ class HighsLpRelaxation {
 
   Status getStatus() const { return status; }
 
-  size_t getNumLpIterations() const { return numlpiters; }
+  int64_t getNumLpIterations() const { return numlpiters; }
 
   bool integerFeasible() const {
     if ((status == Status::Optimal ||
