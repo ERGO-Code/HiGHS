@@ -50,7 +50,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  reportLp(lp, HighsLogType::VERBOSE);
 
   const double my_infinity = 1e30;
-  Highs highs(options);
+  Highs highs;
+  highs.passHighsOptions(options);
 
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   return_bool =

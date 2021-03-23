@@ -27,9 +27,8 @@
  */
 class Highs {
  public:
-  // see if an empty lp should have Astart[0] = 0
   Highs();
-  Highs(HighsOptions& options);
+  //  Highs(HighsOptions& options);
 
   virtual ~Highs() {}
 

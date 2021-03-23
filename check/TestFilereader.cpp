@@ -17,14 +17,15 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   HighsStatus run_status;
   HighsStatus return_status;
   HighsStatus read_status;
-  HighsOptions options;
+  //  HighsOptions options;
 
   // Several tests don't pass, but should, so possibly skip them
   const bool test_garbage_mps = false;
   const bool test_garbage_ems = true;
   const bool test_garbage_lp = false;
 
-  Highs highs(options);
+  Highs highs;
+  //  highs.passHighsOptions(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -97,9 +98,10 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   HighsStatus status;
 
   // Read mps
-  HighsOptions options;
+  //  HighsOptions options;
 
-  Highs highs(options);
+  Highs highs;
+  //  highs.passHighsOptions(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -128,9 +130,10 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   HighsStatus status;
 
   // Read mps
-  HighsOptions options;
+  //  HighsOptions options;
 
-  Highs highs(options);
+  Highs highs;
+  //  highs.passHighsOptions(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -193,9 +196,9 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
       HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS};
 
   HighsStatus status;
-  HighsOptions options;
+  //  HighsOptions options;
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }

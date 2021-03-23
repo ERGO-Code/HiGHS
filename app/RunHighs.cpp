@@ -191,7 +191,8 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
 
 HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   // Solve LP case.
-  Highs highs(use_options);
+  Highs highs;
+  highs.passHighsOptions(use_options);
   //  const HighsOptions& options = highs.getHighsOptions();
 
   // Load problem.

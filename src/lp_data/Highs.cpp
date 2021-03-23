@@ -40,14 +40,14 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
+/*
 Highs::Highs(HighsOptions& options) {
   // Pass the user's options setting to HiGHS, returning an error if
   // any is illegal
-  if (passOptions(options_.log_options, options, options_) != OptionStatus::OK)
-    printf("Options not OK\n");
+  passOptions(options_.log_options, options, options_);
   Highs();
 }
-
+*/
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
   if (setOptionValue(options_.log_options, option, options_.records, value) ==

@@ -233,13 +233,12 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   simplex_strategy_iteration_count.resize(
       (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM);
 
-  HighsOptions options;
   HighsLp lp;
   //  HighsStatus run_status;
   HighsStatus return_status;
   HighsStatus read_status;
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -315,8 +314,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   const double larger_min_dual_objective_value_upper_bound = -45.876;
   const double use_max_dual_objective_value_upper_bound = 150.0;
   double save_dual_objective_value_upper_bound;
-  HighsOptions options;
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }

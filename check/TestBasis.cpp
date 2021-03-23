@@ -119,14 +119,14 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
-  HighsOptions options;
+  //  HighsOptions options;
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -188,14 +188,13 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 
 // No commas in test case name.
 TEST_CASE("Basis-data", "[highs_basis_data]") {
-  HighsOptions options;
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
