@@ -32,10 +32,10 @@ class HighsSearch {
   HighsDomain localdom;
   HighsPseudocost pseudocost;
   HighsRandom random;
-  size_t nnodes;
-  size_t lpiterations;
-  size_t heurlpiterations;
-  size_t sblpiterations;
+  int64_t nnodes;
+  int64_t lpiterations;
+  int64_t heurlpiterations;
+  int64_t sblpiterations;
   double upper_limit;
   std::vector<int> inds;
   std::vector<double> vals;
@@ -53,6 +53,14 @@ class HighsSearch {
     BestCost,
     WorstCost,
     Disjunction,
+  };
+
+  enum class NodeResult {
+    BoundExceeding,
+    DomainInfeasible,
+    LpInfeasible,
+    Branched,
+    Open,
   };
 
  private:
@@ -125,13 +133,13 @@ class HighsSearch {
 
   void resetLocalDomain();
 
-  size_t getHeuristicLpIterations() const;
+  int64_t getHeuristicLpIterations() const;
 
-  size_t getTotalLpIterations() const;
+  int64_t getTotalLpIterations() const;
 
-  size_t getLocalLpIterations() const;
+  int64_t getLocalLpIterations() const;
 
-  size_t getStrongBranchingLpIterations() const;
+  int64_t getStrongBranchingLpIterations() const;
 
   bool hasNode() const { return !nodestack.empty(); }
 
@@ -153,21 +161,21 @@ class HighsSearch {
 
   void addInfeasibleConflict();
 
-  int selectBranchingCandidate(size_t maxSbIters);
+  int selectBranchingCandidate(int64_t maxSbIters);
 
   void evalUnreliableBranchCands();
 
   const NodeData* getParentNodeData() const;
 
-  void evaluateNode();
+  NodeResult evaluateNode();
 
-  bool branch();
+  NodeResult branch();
 
   bool backtrack();
 
   void printDisplayLine(char first, bool header = false);
 
-  void dive();
+  NodeResult dive();
 
   HighsDomain& getLocalDomain() { return localdom; }
 
@@ -177,7 +185,7 @@ class HighsSearch {
 
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
-  void solveDepthFirst(size_t maxbacktracks = 1);
+  void solveDepthFirst(int64_t maxbacktracks = 1);
 };
 
 #endif
