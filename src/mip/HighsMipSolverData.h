@@ -61,7 +61,7 @@ struct HighsMipSolverData {
   double feastol;
   double epsilon;
   double heuristic_effort;
-  size_t dispfreq;
+  int64_t dispfreq;
   std::vector<double> firstlpsol;
   std::vector<double> rootlpsol;
   double firstlpsolobj;
@@ -70,16 +70,16 @@ struct HighsMipSolverData {
   int numintegercols;
 
   HighsCDouble pruned_treeweight;
-  size_t maxrootlpiters;
-  size_t firstrootlpiters;
-  size_t num_nodes;
-  size_t last_displeave;
-  size_t num_leaves;
-  size_t total_lp_iterations;
-  size_t heuristic_lp_iterations;
-  size_t sepa_lp_iterations;
-  size_t sb_lp_iterations;
-  size_t num_disp_lines;
+  int64_t maxrootlpiters;
+  int64_t firstrootlpiters;
+  int64_t num_nodes;
+  int64_t last_displeave;
+  int64_t num_leaves;
+  int64_t total_lp_iterations;
+  int64_t heuristic_lp_iterations;
+  int64_t sepa_lp_iterations;
+  int64_t sb_lp_iterations;
+  int64_t num_disp_lines;
 
   int numImprovingSols;
   double lower_bound;

@@ -131,9 +131,9 @@ void HighsMipSolver::run() {
                "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
-  size_t numStallNodes = 0;
-  size_t lastLbLeave = 0;
-  size_t numQueueLeaves = 0;
+  int64_t numStallNodes = 0;
+  int64_t lastLbLeave = 0;
+  int64_t numQueueLeaves = 0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
@@ -142,7 +142,7 @@ void HighsMipSolver::run() {
         10 *
         int(mipdata_->total_lp_iterations - mipdata_->sb_lp_iterations -
             mipdata_->sepa_lp_iterations) /
-        (double)std::max(size_t{1}, mipdata_->num_nodes);
+        (double)std::max(int64_t(1), mipdata_->num_nodes);
     iterlimit = std::max(10000, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
@@ -192,13 +192,13 @@ void HighsMipSolver::run() {
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
       if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{100}, mipdata_->num_nodes / 10))
+          std::min(100., mipdata_->num_nodes * 0.1))
         break;
 
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=
-            std::min(size_t{mipdata_->dispfreq},
-                     1 + size_t(0.01 * mipdata_->num_leaves)))
+            std::min(mipdata_->dispfreq,
+                     1 + int64_t(0.01 * mipdata_->num_leaves)))
           mipdata_->printDisplayLine();
       }
 
@@ -212,8 +212,8 @@ void HighsMipSolver::run() {
 
     if (mipdata_->dispfreq != 0) {
       if (mipdata_->num_leaves - mipdata_->last_displeave >=
-          std::min(size_t{mipdata_->dispfreq},
-                   1 + size_t(0.01 * mipdata_->num_leaves)))
+          std::min(mipdata_->dispfreq,
+                   1 + int64_t(0.01 * mipdata_->num_leaves)))
         mipdata_->printDisplayLine();
     }
 
@@ -272,7 +272,7 @@ void HighsMipSolver::run() {
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) {
         ++numStallNodes;
         if (options_mip_->mip_max_stall_nodes != HIGHS_CONST_I_INF &&
-            numStallNodes >= size_t(options_mip_->mip_max_stall_nodes)) {
+            numStallNodes >= options_mip_->mip_max_stall_nodes) {
           limit_reached = true;
           modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
           break;
@@ -318,8 +318,8 @@ void HighsMipSolver::run() {
 
         if (mipdata_->dispfreq != 0) {
           if (mipdata_->num_leaves - mipdata_->last_displeave >=
-              std::min(size_t{mipdata_->dispfreq},
-                       1 + size_t(0.01 * mipdata_->num_leaves)))
+              std::min(mipdata_->dispfreq,
+                       1 + int64_t(0.01 * mipdata_->num_leaves)))
             mipdata_->printDisplayLine();
         }
         continue;
