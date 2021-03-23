@@ -481,8 +481,9 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
 #endif
-  highsLogDev(options_.log_options, HighsLogType::VERBOSE, "Solving %s\n",
-              lp_.model_name_.c_str());
+  if (lp_.model_name_.compare(""))
+    highsLogDev(options_.log_options, HighsLogType::VERBOSE,
+                "Solving model: %s\n", lp_.model_name_.c_str());
 
   // Start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
