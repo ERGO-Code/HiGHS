@@ -3681,11 +3681,11 @@ int HPresolve::strengthenInequalities() {
       continue;
     }
 
-    const double minLambda =
+    const double smallVal =
         std::max(10 * options->mip_feasibility_tolerance,
                  options->mip_feasibility_tolerance * double(maxviolation));
     while (true) {
-      if (maxviolation - continuouscontribution <= minLambda || indices.empty())
+      if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
 
       std::sort(indices.begin(), indices.end(), [&](int i1, int i2) {
@@ -3700,13 +3700,13 @@ int HPresolve::strengthenInequalities() {
       for (int i = indices.size() - 1; i >= 0; --i) {
         double delta = upper[indices[i]] * reducedcost[indices[i]];
 
-        if (lambda - delta <= minLambda)
+        if (reducedcost[indices[i]] > smallVal && lambda - delta <= smallVal)
           cover.push_back(indices[i]);
         else
           lambda -= delta;
       }
 
-      if (cover.empty()) break;
+      if (cover.empty() || lambda <= smallVal) break;
 
       int alpos = *std::min_element(
           cover.begin(), cover.end(),
