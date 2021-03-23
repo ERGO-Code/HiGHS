@@ -765,11 +765,10 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
-  if (numDeletedCols + numDeletedRows != 0) {
-    shrinkProblem(postSolveStack);
-    toCSC(model->Avalue_, model->Aindex_, model->Astart_);
-    fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
-  }
+  if (numDeletedCols + numDeletedRows != 0) shrinkProblem(postSolveStack);
+
+  toCSC(model->Avalue_, model->Aindex_, model->Astart_);
+  fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
 
   // first tighten all bounds if they have an implied bound that is tighter
   // thatn their column bound before probing this is not done for continuous
