@@ -27,7 +27,7 @@ set(TEST_SOURCES
     TestHighsIntegers.cpp
     TestHSet.cpp
     TestLpValidation.cpp
-#    TestLpModification.cpp
+    TestLpModification.cpp
     TestLpOrientation.cpp
     TestRays.cpp
     TestRanging.cpp

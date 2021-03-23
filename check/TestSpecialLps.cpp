@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -226,8 +226,9 @@ void primalDualInfeasible1(Highs& highs) {
   HighsModelStatus require_model_status;
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  // Presolve doesn't reduce the LP
-  solve(highs, "on", "simplex", require_model_status);
+  // Presolve doesn't reduce the LP, but does identify primal infeasibility
+  solve(highs, "on", "simplex", HighsModelStatus::PRIMAL_INFEASIBLE);
+  solve(highs, "off", "simplex", require_model_status);
   // Don't run the IPX test until it's fixed
   //  solve(highs, "on", "ipm", require_model_status);
 }
@@ -241,8 +242,10 @@ void primalDualInfeasible2(Highs& highs) {
   HighsModelStatus require_model_status;
   special_lps.primalDualInfeasible2Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  // Presolve doesn't reduce the LP
-  // solve(highs, "on", "simplex", require_model_status);
+  // Presolve doesn't reduce the LP, but does identify primal infeasibility
+  solve(highs, "on", "simplex", HighsModelStatus::PRIMAL_INFEASIBLE);
+  // ERROR without presolve because primal simplex solver not available
+  //  solve(highs, "off", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
 }
 
@@ -266,7 +269,9 @@ void mpsUnbounded(Highs& highs) {
 
   REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
 
-  solve(highs, "on", "simplex", require_model_status);
+  // Presolve identifies HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED
+  solve(highs, "on", "simplex",
+        HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED);
   solve(highs, "off", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
   //  solve(highs, "off", "ipm", require_model_status);
@@ -480,6 +485,7 @@ TEST_CASE("LP-285", "[highs_test_special_lps]") {
   }
   issue285(highs);
 }
+
 TEST_CASE("LP-295", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
@@ -487,6 +493,7 @@ TEST_CASE("LP-295", "[highs_test_special_lps]") {
   }
   issue295(highs);
 }
+
 TEST_CASE("LP-306", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
