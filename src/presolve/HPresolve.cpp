@@ -765,11 +765,10 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
-  if (numDeletedCols + numDeletedRows != 0) {
-    shrinkProblem(postSolveStack);
-    toCSC(model->Avalue_, model->Aindex_, model->Astart_);
-    fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
-  }
+  if (numDeletedCols + numDeletedRows != 0) shrinkProblem(postSolveStack);
+
+  toCSC(model->Avalue_, model->Aindex_, model->Astart_);
+  fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
 
   // first tighten all bounds if they have an implied bound that is tighter
   // thatn their column bound before probing this is not done for continuous
@@ -3682,10 +3681,11 @@ int HPresolve::strengthenInequalities() {
       continue;
     }
 
+    const double smallVal =
+        std::max(10 * options->mip_feasibility_tolerance,
+                 options->mip_feasibility_tolerance * double(maxviolation));
     while (true) {
-      if (maxviolation <=
-              continuouscontribution + options->mip_feasibility_tolerance ||
-          indices.empty())
+      if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
 
       std::sort(indices.begin(), indices.end(), [&](int i1, int i2) {
@@ -3700,13 +3700,13 @@ int HPresolve::strengthenInequalities() {
       for (int i = indices.size() - 1; i >= 0; --i) {
         double delta = upper[indices[i]] * reducedcost[indices[i]];
 
-        if (lambda <= delta + 10 * options->mip_feasibility_tolerance)
+        if (reducedcost[indices[i]] > smallVal && lambda - delta <= smallVal)
           cover.push_back(indices[i]);
         else
           lambda -= delta;
       }
 
-      if (cover.empty()) break;
+      if (cover.empty() || lambda <= smallVal) break;
 
       int alpos = *std::min_element(
           cover.begin(), cover.end(),

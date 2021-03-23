@@ -56,6 +56,9 @@ struct HighsDebugSol {
 
   void checkCut(const int* Rindex, const double* Rvalue, int Rlen, double rhs);
 
+  void checkRow(const int* Rindex, const double* Rvalue, int Rlen,
+                double Rlower, double Rupper);
+
   void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen);
 
   void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const;
@@ -86,6 +89,9 @@ struct HighsDebugSol {
 
   void checkCut(const int* Rindex, const double* Rvalue, int Rlen,
                 double rhs) const {}
+
+  void checkRow(const int* Rindex, const double* Rvalue, int Rlen,
+                double Rlower, double Rupper) {}
 
   void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen) const {}
 

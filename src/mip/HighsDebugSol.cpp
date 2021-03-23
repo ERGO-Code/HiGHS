@@ -36,13 +36,8 @@ void HighsDebugSol::activate() {
       double varval;
       std::map<std::string, int> nametoidx;
 
-      if (mipsolver->model_->col_names_.empty()) {
-        for (int i = 0; i != mipsolver->model_->numCol_; ++i)
-          nametoidx["C" + std::to_string(i)] = i;
-      } else {
-        for (int i = 0; i != mipsolver->model_->numCol_; ++i)
-          nametoidx[mipsolver->model_->col_names_[i]] = i;
-      }
+      for (int i = 0; i != mipsolver->model_->numCol_; ++i)
+        nametoidx["C" + std::to_string(i)] = i;
 
       debugSolution.resize(mipsolver->model_->numCol_, 0.0);
       while (!file.eof()) {
@@ -71,6 +66,8 @@ void HighsDebugSol::activate() {
                    "debug solution: could not open file '%s'\n",
                    mipsolver->options_mip_->mip_debug_solution_file.c_str());
       HighsLp model = *mipsolver->model_;
+      model.col_names_.clear();
+      model.row_names_.clear();
       model.colLower_ = mipsolver->mipdata_->domain.colLower_;
       model.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
@@ -143,6 +140,19 @@ void HighsDebugSol::checkCut(const int* Rindex, const double* Rvalue, int Rlen,
     violation += debugSolution[Rindex[i]] * Rvalue[i];
 
   assert(violation <= mipsolver->mipdata_->feastol);
+}
+
+void HighsDebugSol::checkRow(const int* Rindex, const double* Rvalue, int Rlen,
+                             double Rlower, double Rupper) {
+  if (!debugSolActive) return;
+
+  HighsCDouble activity = 0;
+
+  for (int i = 0; i != Rlen; ++i)
+    activity += debugSolution[Rindex[i]] * Rvalue[i];
+
+  assert(activity - mipsolver->mipdata_->feastol <= Rupper);
+  assert(activity + mipsolver->mipdata_->feastol >= Rlower);
 }
 
 void HighsDebugSol::resetDomain(const HighsDomain& domain) {
