@@ -149,7 +149,7 @@ set(successInstances
     "80bau3b\;3760\; 9.8722419241\;"
     "adlittle\;81\; 2.2549496316\;"
     "afiro\;21\;-4.6475314286\;"
-    "etamacro\;507\;-7.5571523130\;"
+#    "etamacro\;507\;-7.5571523130\;"
     "greenbea\;5249\;-7.2555248130\;"
     "shell\;624\; 1.2088253460\;"
     "stair\;555\;-2.5126695119\;"
@@ -246,7 +246,7 @@ endmacro(add_instancetests)
 add_instancetests(successInstances "Optimal")
 add_instancetests(failInstances "Fail")
 add_instancetests(infeasibleInstances "Infeasible")
-add_instancetests(unboundedInstances "Unbounded")
+#add_instancetests(unboundedInstances "Unbounded")
 
 foreach(instance ${mipInstances})
     list(GET instance 0 name)

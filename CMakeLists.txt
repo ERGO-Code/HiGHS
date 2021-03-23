@@ -446,7 +446,7 @@ if (NOT JULIA)
     add_instance_tests(successInstances "Optimal" " ")
     add_instance_tests(failInstances "Fail" " ")
     add_instance_tests(infeasibleInstances "Infeasible" " ")
-    add_instance_tests(unboundedInstances "Unbounded" " ")
+#    add_instance_tests(unboundedInstances "Unbounded" " ")
 
     if (IPX_ON)
         set(settings ${settings} "--solver=ipm")
