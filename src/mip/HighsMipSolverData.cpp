@@ -634,7 +634,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
 bool HighsMipSolverData::rootSeparationRound(
     HighsSeparation& sepa, int& ncuts, HighsLpRelaxation::Status& status) {
-  size_t tmpLpIters = -lp.getNumLpIterations();
+  int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
   tmpLpIters += lp.getNumLpIterations();
   maxrootlpiters = std::max(maxrootlpiters, tmpLpIters);
@@ -721,7 +721,7 @@ restart:
   //  lp.getLpSolver().setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
   //  lp.getLpSolver().setHighsOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
-  size_t lpIters = -lp.getNumLpIterations();
+  int64_t lpIters = -lp.getNumLpIterations();
   HighsLpRelaxation::Status status = lp.resolveLp();
   lpIters += lp.getNumLpIterations();
 
@@ -939,7 +939,7 @@ restart:
 bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != HIGHS_CONST_I_INF &&
-      num_nodes >= size_t(options.mip_max_nodes)) {
+      num_nodes >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
       highsLogDev(options.log_options, HighsLogType::INFO,
                   "reached node limit\n");
@@ -948,7 +948,7 @@ bool HighsMipSolverData::checkLimits() const {
     return true;
   }
   if (options.mip_max_leaves != HIGHS_CONST_I_INF &&
-      num_leaves >= size_t(options.mip_max_leaves)) {
+      num_leaves >= options.mip_max_leaves) {
     if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
       highsLogDev(options.log_options, HighsLogType::INFO,
                   "reached leave node limit\n");

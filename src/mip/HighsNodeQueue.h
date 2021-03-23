@@ -104,18 +104,18 @@ class HighsNodeQueue {
 
   OpenNode popRelatedNode(const HighsLpRelaxation& lprelax);
 
-  size_t numNodesUp(int col) const { return colLowerNodes[col].size(); }
+  int64_t numNodesUp(int col) const { return colLowerNodes[col].size(); }
 
-  size_t numNodesDown(int col) const { return colUpperNodes[col].size(); }
+  int64_t numNodesDown(int col) const { return colUpperNodes[col].size(); }
 
-  size_t numNodesUp(int col, double val) const {
+  int64_t numNodesUp(int col, double val) const {
     auto it = colLowerNodes[col].upper_bound(val);
     if (it == colLowerNodes[col].begin()) return colLowerNodes[col].size();
     return std::distance(colLowerNodes[col].upper_bound(val),
                          colLowerNodes[col].end());
   }
 
-  size_t numNodesDown(int col, double val) const {
+  int64_t numNodesDown(int col, double val) const {
     auto it = colUpperNodes[col].lower_bound(val);
     if (it == colUpperNodes[col].end()) return colUpperNodes[col].size();
     return std::distance(colUpperNodes[col].begin(), it);
@@ -132,7 +132,7 @@ class HighsNodeQueue {
 
   bool empty() const { return nodes.size() == freeslots.size(); }
 
-  size_t numNodes() const { return nodes.size() - freeslots.size(); }
+  int64_t numNodes() const { return nodes.size() - freeslots.size(); }
 };
 
 #endif

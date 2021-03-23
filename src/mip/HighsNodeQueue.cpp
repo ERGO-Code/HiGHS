@@ -322,7 +322,7 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
         bestRedCost = sol.col_dual[i];
       }
     } else if (sol.col_dual[i] < -std::abs(bestRedCost)) {
-      if (numNodesUp(i, sol.col_value[i] + 0.5) < 0) {
+      if (numNodesUp(i, sol.col_value[i] + 0.5) > 0) {
         bestCol = i;
         bestRedCost = sol.col_dual[i];
       }

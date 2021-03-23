@@ -4826,7 +4826,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 }
 
 HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
-  std::vector<std::pair<int, double>> sparsifyRows;
+  std::vector<HighsPostsolveStack::Nonzero> sparsifyRows;
   HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
   HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
   std::vector<int> tmpEquations;
@@ -5005,8 +5005,8 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
     postSolveStack.equalityRowAdditions(eqrow, getStoredRow(), sparsifyRows);
     double rhs = model->rowLower_[eqrow];
     for (const auto& sparsifyRow : sparsifyRows) {
-      int row = sparsifyRow.first;
-      double scale = sparsifyRow.second;
+      int row = sparsifyRow.index;
+      double scale = sparsifyRow.value;
 
       if (model->rowLower_[row] != -HIGHS_CONST_INF)
         model->rowLower_[row] += scale * rhs;

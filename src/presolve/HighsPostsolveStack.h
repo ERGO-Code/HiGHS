@@ -52,6 +52,13 @@ class HighsPostsolveStack {
     Leq,
     Eq,
   };
+  struct Nonzero {
+    int index;
+    double value;
+
+    Nonzero(int index, double value) : index(index), value(value) {}
+    Nonzero() = default;
+  };
 
  private:
   struct FreeColSubstitution {
@@ -62,9 +69,9 @@ class HighsPostsolveStack {
     RowType rowType;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& rowValues,
-              const std::vector<std::pair<int, double>>& colValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& rowValues,
+              const std::vector<Nonzero>& colValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct DoubletonEquation {
@@ -81,8 +88,8 @@ class HighsPostsolveStack {
     bool upperTightened;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& colValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& colValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct EqualityRowAddition {
@@ -91,17 +98,17 @@ class HighsPostsolveStack {
     double eqRowScale;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& eqRowValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& eqRowValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct EqualityRowAdditions {
     int addedEqRow;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& eqRowValues,
-              const std::vector<std::pair<int, double>>& targetRows,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& eqRowValues,
+              const std::vector<Nonzero>& targetRows, HighsSolution& solution,
+              HighsBasis& basis);
   };
   struct SingletonRow {
     double coef;
@@ -122,8 +129,8 @@ class HighsPostsolveStack {
     HighsBasisStatus fixType;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& colValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& colValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct RedundantRow {
@@ -139,8 +146,8 @@ class HighsPostsolveStack {
     RowType rowType;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& rowValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct ForcingColumn {
@@ -149,16 +156,16 @@ class HighsPostsolveStack {
     bool atInfiniteUpper;
 
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& colValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& colValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct ForcingColumnRemovedRow {
     double rhs;
     int row;
     void undo(const HighsOptions& options,
-              const std::vector<std::pair<int, double>>& rowValues,
-              HighsSolution& solution, HighsBasis& basis);
+              const std::vector<Nonzero>& rowValues, HighsSolution& solution,
+              HighsBasis& basis);
   };
 
   struct DuplicateRow {
@@ -207,8 +214,9 @@ class HighsPostsolveStack {
   std::vector<ReductionType> reductions;
   std::vector<int> origColIndex;
   std::vector<int> origRowIndex;
-  std::vector<std::pair<int, double>> rowValues;
-  std::vector<std::pair<int, double>> colValues;
+
+  std::vector<Nonzero> rowValues;
+  std::vector<Nonzero> colValues;
   int origNumCol = -1;
   int origNumRow = -1;
 
@@ -291,9 +299,9 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
-  void equalityRowAdditions(
-      int addedEqRow, const HighsMatrixSlice<RowStorageFormat>& eqRowVec,
-      const std::vector<std::pair<int, double>>& targetRows) {
+  void equalityRowAdditions(int addedEqRow,
+                            const HighsMatrixSlice<RowStorageFormat>& eqRowVec,
+                            const std::vector<Nonzero>& targetRows) {
     rowValues.clear();
     for (const HighsSliceNonzero& rowVal : eqRowVec)
       rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
