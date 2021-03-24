@@ -264,7 +264,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.resetHighsOptions();
   REQUIRE(return_status == HighsStatus::OK);
 
-  //if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
 
   model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   read_status = highs.readModel(model_file);
@@ -279,7 +279,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getHighsInfo();
   REQUIRE(info.num_dual_infeasibilities == 2);
 
-  REQUIRE(info.simplex_iteration_count == 415);
+  REQUIRE(info.simplex_iteration_count == 426);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::NOTSET);
@@ -295,7 +295,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
 
-  REQUIRE(info.simplex_iteration_count == 531);
+  REQUIRE(info.simplex_iteration_count == 657);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
