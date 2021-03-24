@@ -2659,11 +2659,10 @@ HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postSolveStack,
   else if (model->colCost_[col] < 0 ||
            std::abs(model->colUpper_[col]) < std::abs(model->colLower_[col]))
     fixColToUpper(postSolveStack, col);
-  else {
-    assert(model->colLower_[col] != -HIGHS_CONST_INF);
-    // todo, handle free empty column
+  else if (model->colLower_[col] != -HIGHS_CONST_INF)
     fixColToLower(postSolveStack, col);
-  }
+  else
+    fixColToZero(postSolveStack, col);
 
   return checkLimits(postSolveStack);
 }
@@ -3447,6 +3446,36 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postSolveStack, int col) {
 
   model->offset_ += model->colCost_[col] * fixval;
   assert(std::isfinite(model->offset_));
+  model->colCost_[col] = 0;
+}
+
+void HPresolve::fixColToZero(HighsPostsolveStack& postSolveStack, int col) {
+  postSolveStack.fixedColAtZero(col, model->colCost_[col],
+                                getColumnVector(col));
+  // mark the column as deleted first so that it is not registered as singleton
+  // column upon removing its nonzeros
+  markColDeleted(col);
+
+  for (int coliter = colhead[col]; coliter != -1;) {
+    int colrow = Arow[coliter];
+    double colval = Avalue[coliter];
+    assert(Acol[coliter] == col);
+
+    int colpos = coliter;
+    coliter = Anext[coliter];
+
+    unlink(colpos);
+
+    if (model->rowLower_[colrow] == model->rowUpper_[colrow] &&
+        eqiters[colrow] != equations.end() &&
+        eqiters[colrow]->first != rowsize[colrow]) {
+      // if that is the case reinsert it into the equation set that is ordered
+      // by sparsity
+      equations.erase(eqiters[colrow]);
+      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
+    }
+  }
+
   model->colCost_[col] = 0;
 }
 

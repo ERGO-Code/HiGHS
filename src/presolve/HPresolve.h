@@ -201,6 +201,8 @@ class HPresolve {
 
   void fixColToUpper(HighsPostsolveStack& postsolveStack, int col);
 
+  void fixColToZero(HighsPostsolveStack& postsolveStack, int col);
+
   void substitute(int row, int col, double rhs);
 
   void changeColUpper(int col, double newUpper);

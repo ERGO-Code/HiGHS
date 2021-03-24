@@ -349,6 +349,19 @@ class HighsPostsolveStack {
   }
 
   template <typename ColStorageFormat>
+  void fixedColAtZero(int col, double colCost,
+                      const HighsMatrixSlice<ColStorageFormat>& colVec) {
+    colValues.clear();
+    for (const HighsSliceNonzero& colVal : colVec)
+      colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
+
+    reductionValues.push(
+        FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::ZERO});
+    reductionValues.push(colValues);
+    reductions.push_back(ReductionType::kFixedCol);
+  }
+
+  template <typename ColStorageFormat>
   void removedFixedCol(int col, double fixValue, double colCost,
                        const HighsMatrixSlice<ColStorageFormat>& colVec) {
     assert(std::isfinite(fixValue));
