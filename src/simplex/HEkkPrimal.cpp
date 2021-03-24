@@ -981,7 +981,7 @@ void HEkkPrimal::phase1ChooseRow() {
   // [kO(log(n))].
 
   analysis->simplexTimerStart(Chuzr2Clock);
-  std::sort(ph1SorterR.begin(), ph1SorterR.end());
+  std::stable_sort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
   double dGradient = fabs(theta_dual);
   for (unsigned int i = 0; i < ph1SorterR.size(); i++) {
@@ -997,7 +997,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   // Find out the biggest possible alpha for pivot
-  std::sort(ph1SorterT.begin(), ph1SorterT.end());
+  std::stable_sort(ph1SorterT.begin(), ph1SorterT.end());
   double dMaxAlpha = 0.0;
   unsigned int iLast = ph1SorterT.size();
   for (unsigned int i = 0; i < ph1SorterT.size(); i++) {

@@ -72,7 +72,7 @@ bool HighsImplications::computeImplications(int col, bool val) {
                        return !globaldomain.isBinary(a.column);
                      });
 
-  std::sort(implications.begin() + implstart, binstart);
+  std::stable_sort(implications.begin() + implstart, binstart);
 
   HighsCliqueTable::CliqueVar clique[2];
   clique[0] = HighsCliqueTable::CliqueVar(col, val);

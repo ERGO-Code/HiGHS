@@ -321,7 +321,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
     PminusNu.push_back(data.P[i]);
   }
 
-  std::sort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
+  std::stable_sort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
     return a.weight(data.sol) > b.weight(data.sol);
   });
 
@@ -828,7 +828,7 @@ void HighsCliqueTable::extractCliques(
   // only one binary means we do have no cliques
   if (nbin <= 1) return;
 
-  std::sort(perm.begin(), binaryend,
+  std::stable_sort(perm.begin(), binaryend,
             [&](int p1, int p2) { return vals[p1] > vals[p2]; });
   // check if any cliques exists
   if (vals[perm[0]] + vals[perm[1]] <= rhs + feastol) return;

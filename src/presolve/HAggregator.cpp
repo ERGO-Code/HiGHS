@@ -895,7 +895,7 @@ HAggregator::PostsolveStack HAggregator::run() {
     // now sort the candidates to prioritize sparse columns, tiebreak by
     // preferring columns with a larger coefficient in this row which is better
     // for numerics
-    std::sort(
+    std::stable_sort(
         aggr_cands.begin(), aggr_cands.end(),
         [&](const std::pair<int, double>& cand1,
             const std::pair<int, double>& cand2) {
@@ -1241,7 +1241,7 @@ int HAggregator::strengthenInequalities() {
           indices.empty())
         break;
 
-      std::sort(indices.begin(), indices.end(), [&](int i1, int i2) {
+      std::stable_sort(indices.begin(), indices.end(), [&](int i1, int i2) {
         return reducedcost[i1] > reducedcost[i2];
       });
 

@@ -54,7 +54,7 @@ int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
   // create a permutation array for the nonzeros within the assigned space
   // and sort it by the column indices
   std::iota(ARindex_.begin() + start, ARindex_.begin() + end, 0);
-  std::sort(ARindex_.begin() + start, ARindex_.begin() + end,
+  std::stable_sort(ARindex_.begin() + start, ARindex_.begin() + end,
             [Rindex](int a, int b) { return Rindex[a] < Rindex[b]; });
 
   // register the range of values for this row with a reused or a new index

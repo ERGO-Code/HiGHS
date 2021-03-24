@@ -725,7 +725,7 @@ class AggregationHeuristic {
     if (currpathlen == maxAggr || bounddistpos.empty()) return false;
 
     // sort by decreasing bound distance
-    std::sort(bounddistpos.begin(), bounddistpos.end(), [&](int a, int b) {
+    std::stable_sort(bounddistpos.begin(), bounddistpos.end(), [&](int a, int b) {
       int col1 = baseinds[a];
       int col2 = baseinds[b];
       return bounddistance[col1] > bounddistance[col2];

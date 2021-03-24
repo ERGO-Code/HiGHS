@@ -177,7 +177,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     // aggregation heuristic
     if (weights.size() <= 1) return;
 
-    std::sort(weights.begin(), weights.end());
+    std::stable_sort(weights.begin(), weights.end());
     if (!usedWeights.insert(weights)) return;
 
     for (const auto& w : weights) {

@@ -832,7 +832,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   }
   if (!binaries.empty()) {
     // sort variables with many implications on other binaries first
-    std::sort(binaries.begin(), binaries.end());
+    std::stable_sort(binaries.begin(), binaries.end());
 
     int nfixed = 0;
     int contingent = 1000;
@@ -3182,7 +3182,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
                      }),
       substitutionOpportunities.end());
 
-  std::sort(
+  std::stable_sort(
       substitutionOpportunities.begin(), substitutionOpportunities.end(),
       [&](const std::pair<int, int>& nz1, const std::pair<int, int>& nz2) {
         int minLen1 = std::min(rowsize[nz1.first], colsize[nz1.second]);
@@ -3717,7 +3717,7 @@ int HPresolve::strengthenInequalities() {
       if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
 
-      std::sort(indices.begin(), indices.end(), [&](int i1, int i2) {
+      std::stable_sort(indices.begin(), indices.end(), [&](int i1, int i2) {
         return reducedcost[i1] > reducedcost[i2];
       });
 
@@ -4927,7 +4927,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
 
       if (misses > 1 || possibleScales.empty()) continue;
 
-      std::sort(possibleScales.begin(), possibleScales.end());
+      std::stable_sort(possibleScales.begin(), possibleScales.end());
 
       int currScaleStart = 0;
 
@@ -4997,7 +4997,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
 
         if (skip) continue;
 
-        std::sort(possibleScales.begin(), possibleScales.end());
+        std::stable_sort(possibleScales.begin(), possibleScales.end());
 
         int currScaleStart = 0;
 

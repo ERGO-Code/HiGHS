@@ -263,7 +263,7 @@ retry:
         return fixval;
       };
 
-      std::sort(heurlp.getFractionalIntegers().begin(),
+      std::stable_sort(heurlp.getFractionalIntegers().begin(),
                 heurlp.getFractionalIntegers().end(),
                 [&](const std::pair<int, double>& a,
                     const std::pair<int, double>& b) {
@@ -523,7 +523,7 @@ retry:
 
     // now sort the variables by their distance towards the value they will be
     // fixed to
-    std::sort(
+    std::stable_sort(
         heurlp.getFractionalIntegers().begin(), fixcandend,
         [&](const std::pair<int, double>& a, const std::pair<int, double>& b) {
           return std::abs(getFixVal(a.first, a.second) - a.second) <

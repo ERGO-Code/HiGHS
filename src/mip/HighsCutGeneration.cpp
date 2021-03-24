@@ -55,7 +55,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 
   // sort the remaining variables by the contribution to the rows activity in
   // the current solution
-  std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
+  std::stable_sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
             [&](int i, int j) {
               double contributionA = solval[i] * vals[i];
               double contributionB = solval[j] * vals[j];
@@ -101,7 +101,7 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
   S.resize(coversize);
   std::vector<int8_t> coverflag;
   coverflag.resize(rowlen);
-  std::sort(cover.begin(), cover.end(),
+  std::stable_sort(cover.begin(), cover.end(),
             [&](int a, int b) { return vals[a] > vals[b]; });
 
   HighsCDouble abartmp = vals[cover[0]];
@@ -190,7 +190,7 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
 
   for (int i = 0; i != coversize; ++i) coverflag[cover[i]] = 1;
 
-  std::sort(cover.begin(), cover.end(),
+  std::stable_sort(cover.begin(), cover.end(),
             [&](int a, int b) { return vals[a] > vals[b]; });
   HighsCDouble sum = 0;
 
@@ -249,7 +249,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   for (int i : cover) coverflag[i] = 1;
 
   auto comp = [&](int a, int b) { return vals[a] > vals[b]; };
-  std::sort(cover.begin(), cover.end(), comp);
+  std::stable_sort(cover.begin(), cover.end(), comp);
 
   std::vector<HighsCDouble> a;
   std::vector<HighsCDouble> u;
@@ -498,7 +498,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
 
   if (deltas.empty()) return false;
 
-  std::sort(deltas.begin(), deltas.end());
+  std::stable_sort(deltas.begin(), deltas.end());
   double curdelta = deltas[0];
   for (size_t i = 1; i < deltas.size(); ++i) {
     if (deltas[i] - curdelta <= feastol)
