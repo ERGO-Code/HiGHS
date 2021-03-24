@@ -357,7 +357,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
   // set solution value
   solution.col_value[col] = fixValue;
 
-  if (solution.row_dual.empty()) return;
+  if (solution.col_dual.empty()) return;
 
   // compute reduced cost
 

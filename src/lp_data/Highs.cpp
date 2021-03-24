@@ -1793,6 +1793,7 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve() {
+  presolve_.clear();
   // Exit if the problem is empty or if presolve is set to off.
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
 
@@ -1803,7 +1804,6 @@ HighsPresolveStatus Highs::runPresolve() {
     return HighsPresolveStatus::NullError;
 
   // Clear info from previous runs if lp_ has been modified.
-  if (presolve_.has_run_) presolve_.clear();
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
