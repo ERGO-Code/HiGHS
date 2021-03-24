@@ -264,7 +264,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.resetHighsOptions();
   REQUIRE(return_status == HighsStatus::OK);
 
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  //if (!dev_run) highs.setHighsOptionValue("output_flag", false);
 
   model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   read_status = highs.readModel(model_file);
