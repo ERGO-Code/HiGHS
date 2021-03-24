@@ -11,6 +11,7 @@
 #ifndef HIGHS_PSEUDOCOST_H_
 #define HIGHS_PSEUDOCOST_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <limits>
