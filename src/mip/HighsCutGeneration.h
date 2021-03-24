@@ -49,7 +49,7 @@ class HighsCutGeneration {
   bool integralCoefficients;
   int rowlen;
 
-  bool determineCover();
+  bool determineCover(bool lpSol = true);
 
   void separateLiftedKnapsackCover();
 
