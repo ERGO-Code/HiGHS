@@ -20,7 +20,7 @@ HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
       feastol(lpRelaxation.getMipSolver().mipdata_->feastol),
       epsilon(lpRelaxation.getMipSolver().mipdata_->epsilon) {}
 
-bool HighsCutGeneration::determineCover() {
+bool HighsCutGeneration::determineCover(bool lpSol) {
   if (rhs <= 10 * feastol) return false;
 
   cover.clear();
@@ -34,36 +34,40 @@ bool HighsCutGeneration::determineCover() {
     cover.push_back(j);
   }
 
-  // take all variables that sit at their upper bound always into the cover
-  int coversize =
-      std::partition(cover.begin(), cover.end(),
-                     [&](int j) { return solval[j] >= upper[j] - feastol; }) -
-      cover.begin();
   int maxCoverSize = cover.size();
-
+  int coversize = 0;
   coverweight = 0.0;
-  for (int i = 0; i != coversize; ++i) {
-    int j = cover[i];
+  if (lpSol) {
+    // take all variables that sit at their upper bound always into the cover
+    coversize =
+        std::partition(cover.begin(), cover.end(),
+                       [&](int j) { return solval[j] >= upper[j] - feastol; }) -
+        cover.begin();
 
-    assert(solval[j] >= upper[j] - feastol);
+    for (int i = 0; i != coversize; ++i) {
+      int j = cover[i];
 
-    coverweight += vals[j] * upper[j];
+      assert(solval[j] >= upper[j] - feastol);
+
+      coverweight += vals[j] * upper[j];
+    }
   }
 
   // sort the remaining variables by the contribution to the rows activity in
   // the current solution
-  std::sort(&cover[coversize], &cover[maxCoverSize], [&](int i, int j) {
-    double contributionA = solval[i] * vals[i];
-    double contributionB = solval[j] * vals[j];
+  std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
+            [&](int i, int j) {
+              double contributionA = solval[i] * vals[i];
+              double contributionB = solval[j] * vals[j];
 
-    // for equal contributions take the larger coefficients first because
-    // this makes some of the lifting functions more likely to generate
-    // a facet
-    if (std::abs(contributionA - contributionB) <= feastol)
-      return vals[i] > vals[j];
+              // for equal contributions take the larger coefficients first
+              // because this makes some of the lifting functions more likely to
+              // generate a facet
+              if (std::abs(contributionA - contributionB) <= feastol)
+                return vals[i] > vals[j];
 
-    return contributionA > contributionB;
-  });
+              return contributionA > contributionB;
+            });
 
   const double minlambda =
       std::max(10 * feastol, feastol * std::abs(double(rhs)));
@@ -1101,7 +1105,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
     // 1. Determine a cover, cover does not need to be minimal as neither of the
     //    lifting functions have minimality of the cover as necessary facet
     //    condition
-    if (!determineCover()) return false;
+    if (!determineCover(false)) return false;
 
     // 2. use superadditive lifting function depending on structure of base
     //    inequality:
