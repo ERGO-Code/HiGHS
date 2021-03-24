@@ -56,18 +56,18 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   // sort the remaining variables by the contribution to the rows activity in
   // the current solution
   std::stable_sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
-            [&](int i, int j) {
-              double contributionA = solval[i] * vals[i];
-              double contributionB = solval[j] * vals[j];
+                   [&](int i, int j) {
+                     double contributionA = solval[i] * vals[i];
+                     double contributionB = solval[j] * vals[j];
 
-              // for equal contributions take the larger coefficients first
-              // because this makes some of the lifting functions more likely to
-              // generate a facet
-              if (std::abs(contributionA - contributionB) <= feastol)
-                return vals[i] > vals[j];
+                     // for equal contributions take the larger coefficients
+                     // first because this makes some of the lifting functions
+                     // more likely to generate a facet
+                     if (std::abs(contributionA - contributionB) <= feastol)
+                       return vals[i] > vals[j];
 
-              return contributionA > contributionB;
-            });
+                     return contributionA > contributionB;
+                   });
 
   const double minlambda =
       std::max(10 * feastol, feastol * std::abs(double(rhs)));
@@ -102,7 +102,7 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
   std::vector<int8_t> coverflag;
   coverflag.resize(rowlen);
   std::stable_sort(cover.begin(), cover.end(),
-            [&](int a, int b) { return vals[a] > vals[b]; });
+                   [&](int a, int b) { return vals[a] > vals[b]; });
 
   HighsCDouble abartmp = vals[cover[0]];
   HighsCDouble sigma = lambda;
@@ -191,7 +191,7 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
   for (int i = 0; i != coversize; ++i) coverflag[cover[i]] = 1;
 
   std::stable_sort(cover.begin(), cover.end(),
-            [&](int a, int b) { return vals[a] > vals[b]; });
+                   [&](int a, int b) { return vals[a] > vals[b]; });
   HighsCDouble sum = 0;
 
   int p = coversize;
