@@ -144,7 +144,7 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   return_status = setOptionValue(options.log_options, model_file_string,
                                  options.records, model_file);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::UNKNOWN_OPTION);
 
   if (dev_run) reportOptions(stdout, options.records);
 
@@ -167,12 +167,6 @@ TEST_CASE("internal-options", "[highs_options]") {
                                  options.records, get_small_matrix_value);
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_small_matrix_value == small_matrix_value);
-
-  std::string get_model_file;
-  return_status = getOptionValue(options.log_options, "model_file",
-                                 options.records, get_model_file);
-  REQUIRE(return_status == OptionStatus::OK);
-  REQUIRE(get_model_file == model_file);
 
   return_status = checkOptions(options.log_options, options.records);
   REQUIRE(return_status == OptionStatus::OK);
@@ -286,7 +280,7 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   return_status = highs.setHighsOptionValue(model_file_string, model_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::Error);
 
   return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
@@ -328,17 +322,11 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(highs_option_type == HighsOptionType::DOUBLE);
 
-  std::string get_model_file;
-  return_status = highs.getHighsOptionValue("model_file", get_model_file);
-  REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(get_model_file == model_file);
-
-  return_status = highs.getHighsOptionType("model_file", highs_option_type);
+  return_status = highs.getHighsOptionType("log_file", highs_option_type);
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(highs_option_type == HighsOptionType::STRING);
 
   HighsOptions options = highs.getHighsOptions();
-  REQUIRE(options.model_file == model_file);
   REQUIRE(options.small_matrix_value == small_matrix_value);
   REQUIRE(options.allowed_simplex_matrix_scale_factor ==
           allowed_simplex_matrix_scale_factor);

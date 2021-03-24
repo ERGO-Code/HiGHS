@@ -8,9 +8,6 @@ const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("LP-orientation", "[lp_orientation]") {
-  HighsOptions options;
-  options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
-
   Avgas avgas;
   const int avgas_num_col = 8;
   const int avgas_num_row = 10;
@@ -45,11 +42,14 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   assert(num_col_nz == num_row_nz);
 
   double optimal_objective_function_value = -7.75;
-  //  Highs highs_options(options);
-  Highs highs;  //(options);
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsOptionValue("output_flag", false);
+  } else {
+    highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
+  }
   const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getHighsInfo();
-  highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
 
   REQUIRE(highs_lp.orientation_ == MatrixOrientation::NONE);
 

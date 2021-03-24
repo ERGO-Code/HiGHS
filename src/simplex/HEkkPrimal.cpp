@@ -343,12 +343,17 @@ void HEkkPrimal::solvePhase1() {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
-  // Determine whether primal infeasiblility has been identified
-  if (variable_in < 0) {
-    // Optimal in phase 1, so should have primal infeasiblilities
-    assert(ekk_instance_.simplex_info_.num_primal_infeasibility > 0);
-    ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-    solvePhase = SOLVE_PHASE_EXIT;
+  // Possible to have switched to phase 2 without any iterations - if
+  // LP with inconsistent bounds is being solved. Not that this should
+  // be allowed to happen! ToDo add inconsistent bounds check in run()
+  if (solvePhase == SOLVE_PHASE_1) {
+    // Determine whether primal infeasiblility has been identified
+    if (variable_in < 0) {
+      // Optimal in phase 1, so should have primal infeasiblilities
+      assert(ekk_instance_.simplex_info_.num_primal_infeasibility > 0);
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+      solvePhase = SOLVE_PHASE_EXIT;
+    }
   }
 }
 

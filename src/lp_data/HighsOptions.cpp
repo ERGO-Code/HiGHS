@@ -364,8 +364,6 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
                             std::vector<OptionRecord*>& option_records,
                             const std::string value) {
   int index;
-  //  printf("setOptionValue: \"%s\" with value string %s\n", name.c_str(),
-  //  value.c_str());
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
@@ -373,8 +371,6 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
   if (type == HighsOptionType::BOOL) {
     bool value_bool;
     bool return_status = boolFromString(value, value_bool);
-    //    printf("boolFromString for \"%s\" returns %d from \"%s\" with status
-    //    %d\n", name.c_str(), value_bool, value.c_str(), return_status);
     if (!return_status) {
       highsLogUser(
           log_options, HighsLogType::ERROR,
@@ -391,23 +387,11 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
     sscanf(value_char, "%d%n", &value_int, &scanned_num_char);
     const int value_num_char = strlen(value_char);
     const bool converted_ok = scanned_num_char == value_num_char;
-    /*
-      value_int = atoi(value_char);
-      double value_double = atof(value_char);
-      double value_int_double = value_int;
-      converted_ok = value_double == value_int_double;
-    */
     if (!converted_ok) {
-      highsLogUser(log_options, HighsLogType::ERROR,
-                   "setOptionValue: Value = \"%s\" converts via sscanf as %d "
-                   "by scanning %d of %d characters\n",
-                   value.c_str(), value_int, scanned_num_char, value_num_char);
-      /*
-        highsLogUser(log_options, HighsLogType::ERROR,
-                        "setOptionValue: Value = \"%s\" converts via atoi as %d
-        " "so is %g as double, but as %g via atof\n", value.c_str(), value_int,
-        value_int_double, value_double);
-      */
+      highsLogDev(log_options, HighsLogType::ERROR,
+                  "setOptionValue: Value = \"%s\" converts via sscanf as %d "
+                  "by scanning %d of %d characters\n",
+                  value.c_str(), value_int, scanned_num_char, value_num_char);
       return OptionStatus::ILLEGAL_VALUE;
     }
     return setOptionValue(
@@ -417,17 +401,16 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
     double value_double = atof(value.c_str());
     double value_int_double = value_int;
     if (value_double == value_int_double) {
-      highsLogUser(log_options, HighsLogType::INFO,
-                   "setOptionValue: Value = \"%s\" converts via atoi as %d "
-                   "so is %g as double, and %g via atof\n",
-                   value.c_str(), value_int, value_int_double, value_double);
+      highsLogDev(log_options, HighsLogType::INFO,
+                  "setOptionValue: Value = \"%s\" converts via atoi as %d "
+                  "so is %g as double, and %g via atof\n",
+                  value.c_str(), value_int, value_int_double, value_double);
     }
     return setOptionValue(log_options,
                           ((OptionRecordDouble*)option_records[index])[0],
                           atof(value.c_str()));
   } else {
-    OptionStatus option_status = setOptionValue(
-        log_options, ((OptionRecordString*)option_records[index])[0], value);
+    // Setting a string option value
     if (!name.compare(log_file_string)) {
       // Changing the name of the log file
       if (log_options.log_file_stream != NULL) {
@@ -443,7 +426,16 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
         log_options.log_file_stream = NULL;
       }
     }
-    return option_status;
+    if (!name.compare(model_file_string)) {
+      // Don't allow model filename to be changed - it's only an
+      // option so that reading of run-time options works
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "setOptionValue: model filename cannot be set\n");
+      return OptionStatus::UNKNOWN_OPTION;
+    } else {
+      return setOptionValue(
+          log_options, ((OptionRecordString*)option_records[index])[0], value);
+    }
   }
 }
 

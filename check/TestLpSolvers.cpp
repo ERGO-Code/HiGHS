@@ -1,7 +1,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 struct IterationCount {
   int simplex;
@@ -22,6 +22,7 @@ void testSolver(Highs& highs, const std::string solver,
 
   const HighsInfo& info = highs.getHighsInfo();
 
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
   return_status = highs.setHighsOptionValue("solver", solver);
   REQUIRE(return_status == HighsStatus::OK);
 
@@ -184,9 +185,9 @@ void testSolversSetup(const std::string model,
                       vector<int>& simplex_strategy_iteration_count) {
   if (model.compare("adlittle") == 0) {
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_CHOOSE] = 113;
+        int)SimplexStrategy::SIMPLEX_STRATEGY_CHOOSE] = 80;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_PLAIN] = 113;
+        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_PLAIN] = 80;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS] = 72;
     simplex_strategy_iteration_count[(
@@ -239,18 +240,13 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   HighsStatus read_status;
 
   Highs highs;
-  if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
 
   // Read mps
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   testSolversSetup(model, model_iteration_count,
                    simplex_strategy_iteration_count);
-
-  return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
 
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == HighsStatus::OK);
@@ -268,10 +264,9 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.resetHighsOptions();
   REQUIRE(return_status == HighsStatus::OK);
 
-  model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
-  return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
 
+  model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == HighsStatus::OK);
 
@@ -325,7 +320,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   double error;
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";
-  status = highs.setHighsOptionValue("model_file", filename);
+  status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
 
   // Solve vanilla

@@ -17,7 +17,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   HighsStatus run_status;
   HighsStatus return_status;
   HighsStatus read_status;
-  //  HighsOptions options;
 
   // Several tests don't pass, but should, so possibly skip them
   const bool test_garbage_mps = false;
@@ -25,68 +24,59 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = false;
 
   Highs highs;
-  //  highs.passHighsOptions(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
   const HighsInfo& info = highs.getHighsInfo();
 
-  // Try to run HiGHS with default options. No model loaded so fails
+  // Try to run HiGHS with default options. No model loaded so OK
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::Error);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::MODEL_EMPTY);
+  REQUIRE(run_status == HighsStatus::OK);
 
-  // Set model_file to non-existent file and try to run HiGHS
+  // Load a non-existent file and try to run HiGHS
   model = "";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  return_status = highs.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::Error);
 
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::Error);
+  REQUIRE(run_status == HighsStatus::OK);
 
-  // Set model_file to non-supported file type and try to run HiGHS
+  // Load a non-supported file type and try to run HiGHS
   model = "model";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
-  return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  return_status = highs.readModel(model_file);
+  REQUIRE(return_status == HighsStatus::Error);
 
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::Error);
+  REQUIRE(run_status == HighsStatus::OK);
 
-  // Set model_file to existing MPS file and run HiGHS
+  // Load an existing MPS file and run HiGHS
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  return_status = highs.setHighsOptionValue("model_file", model_file);
+  return_status = highs.readModel(model_file);
   REQUIRE(return_status == HighsStatus::OK);
 
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
-  REQUIRE(info.simplex_iteration_count == 80);  // 72);
+  REQUIRE(info.simplex_iteration_count == 80);
 
   model = "garbage";
   if (test_garbage_mps) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-    return_status = highs.setHighsOptionValue("model_file", model_file);
-    REQUIRE(return_status == HighsStatus::OK);
-
     read_status = highs.readModel(model_file);
     REQUIRE(read_status == HighsStatus::Error);
   }
 
   if (test_garbage_ems) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
-    return_status = highs.setHighsOptionValue("model_file", model_file);
-    REQUIRE(return_status == HighsStatus::OK);
-
     read_status = highs.readModel(model_file);
     REQUIRE(read_status == HighsStatus::Error);
   }
 
   if (test_garbage_lp) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
-    return_status = highs.setHighsOptionValue("model_file", model_file);
-    REQUIRE(return_status == HighsStatus::OK);
-
     read_status = highs.readModel(model_file);
     REQUIRE(read_status == HighsStatus::Error);
   }
@@ -94,14 +84,9 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-
   HighsStatus status;
 
-  // Read mps
-  //  HighsOptions options;
-
   Highs highs;
-  //  highs.passHighsOptions(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -130,10 +115,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   HighsStatus status;
 
   // Read mps
-  //  HighsOptions options;
-
   Highs highs;
-  //  highs.passHighsOptions(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }

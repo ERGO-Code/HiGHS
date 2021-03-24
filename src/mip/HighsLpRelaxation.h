@@ -10,8 +10,8 @@
 #ifndef HIGHS_LP_RELAXATION_H_
 #define HIGHS_LP_RELAXATION_H_
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 
 #include "Highs.h"
 #include "mip/HighsMipSolver.h"

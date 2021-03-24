@@ -49,19 +49,19 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
     case FilereaderRetcode::OK:
       break;
     case FilereaderRetcode::FILENOTFOUND:
-      highsLogUser(log_options, HighsLogType::ERROR, "File %s not found",
+      highsLogUser(log_options, HighsLogType::ERROR, "File %s not found\n",
                    filename.c_str());
       break;
     case FilereaderRetcode::PARSERERROR:
-      highsLogUser(log_options, HighsLogType::ERROR, "Parser error reading %s",
-                   filename.c_str());
+      highsLogUser(log_options, HighsLogType::ERROR,
+                   "Parser error reading %s\n", filename.c_str());
       break;
     case FilereaderRetcode::NOT_IMPLEMENTED:
       highsLogUser(log_options, HighsLogType::ERROR,
                    "Parser not implemented for %s", filename.c_str());
       break;
     case FilereaderRetcode::TIMEOUT:
-      highsLogUser(log_options, HighsLogType::ERROR, "Parser reached timeout.",
+      highsLogUser(log_options, HighsLogType::ERROR, "Parser reached timeout\n",
                    filename.c_str());
       break;
   }

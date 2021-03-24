@@ -40,14 +40,6 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
-/*
-Highs::Highs(HighsOptions& options) {
-  // Pass the user's options setting to HiGHS, returning an error if
-  // any is illegal
-  passOptions(options_.log_options, options, options_);
-  Highs();
-}
-*/
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
   if (setOptionValue(options_.log_options, option, options_.records, value) ==
@@ -384,6 +376,9 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
+  if (!haveHmo("run")) return HighsStatus::Error;
+  // Ensure that there is exactly one Highs model object
+  assert((int)hmos_.size() == 1);
   int min_highs_debug_level = HIGHS_DEBUG_LEVEL_MIN;
   //  HIGHS_DEBUG_LEVEL_CHEAP;
   //  HIGHS_DEBUG_LEVEL_COSTLY;
@@ -420,28 +415,6 @@ HighsStatus Highs::run() {
   HighsStatus call_status;
   // Zero the HiGHS iteration counts
   zeroHighsIterationCounts(info_);
-  // Determine whether a model has been loaded.
-  assert((int)hmos_.size() <= 1);
-  if (hmos_.size() == 0) {
-    // No Highs model object, so load model according to value of
-    // model_file
-    if (options_.model_file.compare(FILENAME_DEFAULT) == 0) {
-      // model_file is still default value, so return with error
-      highsLogUser(options_.log_options, HighsLogType::ERROR,
-                   "No model can be loaded in run()\n");
-      return_status = HighsStatus::Error;
-      return returnFromRun(return_status);
-    } else {
-      std::string model_file = options_.model_file;
-      call_status = readModel(model_file);
-      return_status =
-          interpretCallStatus(call_status, return_status, "readModel");
-      if (return_status == HighsStatus::Error)
-        return returnFromRun(return_status);
-    }
-  }
-  // Ensure that there is exactly one Highs model object
-  assert((int)hmos_.size() == 1);
 
   // Initialise the HiGHS model status values
   hmos_[0].scaled_model_status_ = HighsModelStatus::NOTSET;

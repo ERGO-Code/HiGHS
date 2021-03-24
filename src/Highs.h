@@ -28,8 +28,6 @@
 class Highs {
  public:
   Highs();
-  //  Highs(HighsOptions& options);
-
   virtual ~Highs() {}
 
   /**
