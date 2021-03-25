@@ -69,12 +69,16 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     fractionalBasisvars.emplace_back(fractionality, i);
   }
 
-  std::sort(
-      fractionalBasisvars.begin(), fractionalBasisvars.end(),
-      [](const std::pair<double, int>& a, const std::pair<double, int>& b) {
-        return std::make_pair(a.first, HighsHashHelpers::hash(a)) >
-               std::make_pair(b.first, HighsHashHelpers::hash(b));
-      });
+  std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
+            [&fractionalBasisvars](const std::pair<double, int>& a,
+                                   const std::pair<double, int>& b) {
+              return std::make_pair(a.first, HighsHashHelpers::hash(
+                                                 (uint64_t(a.second) << 32) +
+                                                 fractionalBasisvars.size())) >
+                     std::make_pair(b.first, HighsHashHelpers::hash(
+                                                 (uint64_t(b.second) << 32) +
+                                                 fractionalBasisvars.size()));
+            });
   int numCuts = cutpool.getNumCuts();
   for (const auto& fracvar : fractionalBasisvars) {
     int i = fracvar.second;
