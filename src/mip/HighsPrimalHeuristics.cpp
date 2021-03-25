@@ -536,12 +536,14 @@ retry:
         [&](const std::pair<int, double>& a, const std::pair<int, double>& b) {
           return std::make_pair(
                      std::abs(getFixVal(a.first, a.second) - a.second),
-                     HighsHashHelpers::hash(std::make_pair(
-                         a.first, heurlp.getFractionalIntegers().size()))) <
+                     HighsHashHelpers::hash(
+                         (uint64_t(a.first) << 32) +
+                         heurlp.getFractionalIntegers().size())) <
                  std::make_pair(
                      std::abs(getFixVal(b.first, b.second) - b.second),
-                     HighsHashHelpers::hash(std::make_pair(
-                         a.first, heurlp.getFractionalIntegers().size())));
+                     HighsHashHelpers::hash(
+                         (uint64_t(b.first) << 32) +
+                         heurlp.getFractionalIntegers().size()));
         });
 
     double change = 0.0;
