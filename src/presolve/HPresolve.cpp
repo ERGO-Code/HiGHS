@@ -3195,11 +3195,11 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         if (sizeProd1 < sizeProd2) return true;
         if (sizeProd2 < sizeProd1) return false;
 
-        int sizeSum1 = rowsize[nz1.first] + colsize[nz1.second];
-        int sizeSum2 = rowsize[nz2.first] + colsize[nz2.second];
+        int minSize1 = std::min(rowsize[nz1.first], colsize[nz1.second]);
+        int minSize2 = std::min(rowsize[nz2.first], colsize[nz2.second]);
 
-        if (sizeSum1 < sizeSum2) return true;
-        if (sizeSum2 < sizeSum1) return false;
+        if (minSize1 < minSize2) return true;
+        if (minSize2 < minSize1) return false;
 
         return HighsHashHelpers::hash(nz1) < HighsHashHelpers::hash(nz2);
       });
