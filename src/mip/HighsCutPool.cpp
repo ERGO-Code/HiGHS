@@ -215,7 +215,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
       }
     }
 
-    double sparsity = 1.0 - (end - start) / (double)domain.colLower_.size();
+    double sparsity = 1.01 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
     ++ageDistribution[0];
     double score = double(sparsity * (1e-3 + viol / sqrt(double(rownorm))));
@@ -230,10 +230,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                                 const std::pair<double, int>& b) {
               if (a.first > b.first) return true;
               if (a.first < b.first) return false;
-              return HighsHashHelpers::hash(
-                         std::make_pair(a.second, efficacious_cuts.size())) >
-                     HighsHashHelpers::hash(
-                         std::make_pair(a.second, efficacious_cuts.size()));
+              return HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                            efficacious_cuts.size()) >
+                     HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                            efficacious_cuts.size());
             });
 
   bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
