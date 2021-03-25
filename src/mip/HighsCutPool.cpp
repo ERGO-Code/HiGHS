@@ -225,16 +225,13 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   if (efficacious_cuts.empty()) return;
 
-  std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
-            [&efficacious_cuts](const std::pair<double, int>& a,
-                                const std::pair<double, int>& b) {
-              if (a.first > b.first) return true;
-              if (a.first < b.first) return false;
-              return HighsHashHelpers::hash(
-                         std::make_pair(a.second, efficacious_cuts.size())) >
-                     HighsHashHelpers::hash(
-                         std::make_pair(a.second, efficacious_cuts.size()));
-            });
+  std::sort(
+      efficacious_cuts.begin(), efficacious_cuts.end(),
+      [](const std::pair<double, int>& a, const std::pair<double, int>& b) {
+        if (a.first > b.first) return true;
+        if (a.first < b.first) return false;
+        return HighsHashHelpers::hash(a) > HighsHashHelpers::hash(b);
+      });
 
   bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
   double minScore = minScoreFactor * bestObservedScore;

@@ -45,7 +45,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
   std::vector<std::pair<double, int>> fractionalBasisvars;
-
+  fractionalBasisvars.reserve(basisinds.size());
   for (int i = 0; i != int(basisinds.size()); ++i) {
     if (cutpool.getNumCuts() > mip.options_mip_->mip_pool_soft_limit) break;
     double fractionality;
@@ -69,16 +69,12 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     fractionalBasisvars.emplace_back(fractionality, i);
   }
 
-  std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
-            [&fractionalBasisvars](const std::pair<double, int>& a,
-                                   const std::pair<double, int>& b) {
-              return std::make_pair(
-                         a.first, HighsHashHelpers::hash(std::make_pair(
-                                      a.second, fractionalBasisvars.size()))) >
-                     std::make_pair(b.first,
-                                    HighsHashHelpers::hash(std::make_pair(
-                                        b.second, fractionalBasisvars.size())));
-            });
+  std::sort(
+      fractionalBasisvars.begin(), fractionalBasisvars.end(),
+      [](const std::pair<double, int>& a, const std::pair<double, int>& b) {
+        return std::make_pair(a.first, HighsHashHelpers::hash(a)) >
+               std::make_pair(b.first, HighsHashHelpers::hash(b));
+      });
   int numCuts = cutpool.getNumCuts();
   for (const auto& fracvar : fractionalBasisvars) {
     int i = fracvar.second;

@@ -248,8 +248,8 @@ struct HighsHashHelpers {
                                     int>::type = 0>
   static size_t hash(const T& val) {
     std::array<u32, 4> bytes;
-    if (sizeof(T) < 12) bytes[4] = 0;
-    if (sizeof(T) < 16) bytes[5] = 0;
+    if (sizeof(T) < 12) bytes[2] = 0;
+    if (sizeof(T) < 16) bytes[3] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
     return (pair_hash<0>(bytes[0], bytes[1]) +
             pair_hash<1>(bytes[2], bytes[3])) >>
