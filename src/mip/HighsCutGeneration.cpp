@@ -63,8 +63,17 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
               // for equal contributions take the larger coefficients first
               // because this makes some of the lifting functions more likely to
               // generate a facet
-              if (std::abs(contributionA - contributionB) <= feastol)
+              if (std::abs(contributionA - contributionB) <= feastol) {
+                // if the value is equal too, choose a random tiebreaker based
+                // on hashing the column index and the current number of pool
+                // cuts
+                if (std::abs(vals[i] - vals[j]) <= feastol)
+                  return HighsHashHelpers::hash(
+                             std::make_pair(inds[i], cutpool.getNumCuts())) >
+                         HighsHashHelpers::hash(
+                             std::make_pair(inds[j], cutpool.getNumCuts()));
                 return vals[i] > vals[j];
+              }
 
               return contributionA > contributionB;
             });

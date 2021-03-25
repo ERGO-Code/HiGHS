@@ -263,13 +263,20 @@ retry:
         return fixval;
       };
 
-      std::sort(heurlp.getFractionalIntegers().begin(),
-                heurlp.getFractionalIntegers().end(),
-                [&](const std::pair<int, double>& a,
-                    const std::pair<int, double>& b) {
-                  return std::abs(getFixVal(a.first, a.second) - a.second) <
-                         std::abs(getFixVal(b.first, b.second) - b.second);
-                });
+      std::sort(
+          heurlp.getFractionalIntegers().begin(),
+          heurlp.getFractionalIntegers().end(),
+          [&](const std::pair<int, double>& a,
+              const std::pair<int, double>& b) {
+            return std::make_pair(
+                       std::abs(getFixVal(a.first, a.second) - a.second),
+                       HighsHashHelpers::hash(std::make_pair(
+                           a.first, heurlp.getFractionalIntegers().size()))) <
+                   std::make_pair(
+                       std::abs(getFixVal(b.first, b.second) - b.second),
+                       HighsHashHelpers::hash(std::make_pair(
+                           a.first, heurlp.getFractionalIntegers().size())));
+          });
 
       double change = 0.0;
       // select a set of fractional variables to fix
@@ -526,8 +533,14 @@ retry:
     std::sort(
         heurlp.getFractionalIntegers().begin(), fixcandend,
         [&](const std::pair<int, double>& a, const std::pair<int, double>& b) {
-          return std::abs(getFixVal(a.first, a.second) - a.second) <
-                 std::abs(getFixVal(b.first, b.second) - b.second);
+          return std::make_pair(
+                     std::abs(getFixVal(a.first, a.second) - a.second),
+                     HighsHashHelpers::hash(std::make_pair(
+                         a.first, heurlp.getFractionalIntegers().size()))) <
+                 std::make_pair(
+                     std::abs(getFixVal(b.first, b.second) - b.second),
+                     HighsHashHelpers::hash(std::make_pair(
+                         a.first, heurlp.getFractionalIntegers().size())));
         });
 
     double change = 0.0;

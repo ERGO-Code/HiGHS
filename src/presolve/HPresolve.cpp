@@ -3190,8 +3190,18 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         if (minLen1 == 2 && minLen2 != 2) return true;
         if (minLen2 == 2 && minLen1 != 2) return false;
 
-        return rowsize[nz1.first] * colsize[nz1.second] <
-               rowsize[nz2.first] * colsize[nz2.second];
+        int64_t sizeProd1 = int64_t(rowsize[nz1.first]) * colsize[nz1.second];
+        int64_t sizeProd2 = int64_t(rowsize[nz2.first]) * colsize[nz2.second];
+        if (sizeProd1 < sizeProd2) return true;
+        if (sizeProd2 < sizeProd1) return false;
+
+        int sizeSum1 = rowsize[nz1.first] + colsize[nz1.second];
+        int sizeSum2 = rowsize[nz2.first] + colsize[nz2.second];
+
+        if (sizeSum1 < sizeSum2) return true;
+        if (sizeSum2 < sizeSum1) return false;
+
+        return HighsHashHelpers::hash(nz1) < HighsHashHelpers::hash(nz2);
       });
 
   int nfail = 0;
@@ -3718,7 +3728,8 @@ int HPresolve::strengthenInequalities() {
         break;
 
       std::sort(indices.begin(), indices.end(), [&](int i1, int i2) {
-        return reducedcost[i1] > reducedcost[i2];
+        return std::make_pair(reducedcost[i1], i1) >
+               std::make_pair(reducedcost[i2], i2);
       });
 
       HighsCDouble lambda = maxviolation - continuouscontribution;
