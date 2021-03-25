@@ -3194,12 +3194,8 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         int64_t sizeProd2 = int64_t(rowsize[nz2.first]) * colsize[nz2.second];
         if (sizeProd1 < sizeProd2) return true;
         if (sizeProd2 < sizeProd1) return false;
-
-        int minSize1 = std::min(rowsize[nz1.first], colsize[nz1.second]);
-        int minSize2 = std::min(rowsize[nz2.first], colsize[nz2.second]);
-
-        if (minSize1 < minSize2) return true;
-        if (minSize2 < minSize1) return false;
+        if (minLen1 < minLen2) return true;
+        if (minLen2 < minLen1) return false;
 
         return HighsHashHelpers::hash(nz1) < HighsHashHelpers::hash(nz2);
       });
