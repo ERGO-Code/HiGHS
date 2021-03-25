@@ -480,12 +480,12 @@ void HighsMipSolverData::basisTransfer() {
         if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
           nonbasiccols.push_back(i);
       }
-      std::stable_sort(
-          nonbasiccols.begin(), nonbasiccols.end(), [&](int col1, int col2) {
-            int len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
-            int len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
-            return len1 < len2;
-          });
+      std::stable_sort(nonbasiccols.begin(), nonbasiccols.end(),
+                [&](int col1, int col2) {
+                  int len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
+                  int len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
+                  return len1 < len2;
+                });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
       for (int i : nonbasiccols) {
         const int start = model.Astart_[i];

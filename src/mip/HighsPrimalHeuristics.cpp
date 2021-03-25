@@ -263,14 +263,13 @@ retry:
         return fixval;
       };
 
-      std::stable_sort(
-          heurlp.getFractionalIntegers().begin(),
-          heurlp.getFractionalIntegers().end(),
-          [&](const std::pair<int, double>& a,
-              const std::pair<int, double>& b) {
-            return std::abs(getFixVal(a.first, a.second) - a.second) <
-                   std::abs(getFixVal(b.first, b.second) - b.second);
-          });
+      std::stable_sort(heurlp.getFractionalIntegers().begin(),
+                heurlp.getFractionalIntegers().end(),
+                [&](const std::pair<int, double>& a,
+                    const std::pair<int, double>& b) {
+                  return std::abs(getFixVal(a.first, a.second) - a.second) <
+                         std::abs(getFixVal(b.first, b.second) - b.second);
+                });
 
       double change = 0.0;
       // select a set of fractional variables to fix

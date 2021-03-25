@@ -55,7 +55,7 @@ int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
   // and sort it by the column indices
   std::iota(ARindex_.begin() + start, ARindex_.begin() + end, 0);
   std::stable_sort(ARindex_.begin() + start, ARindex_.begin() + end,
-                   [Rindex](int a, int b) { return Rindex[a] < Rindex[b]; });
+            [Rindex](int a, int b) { return Rindex[a] < Rindex[b]; });
 
   // register the range of values for this row with a reused or a new index
   if (deletedrows_.empty()) {
