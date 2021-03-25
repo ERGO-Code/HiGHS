@@ -225,7 +225,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   if (efficacious_cuts.empty()) return;
 
-  std::stable_sort(efficacious_cuts.begin(), efficacious_cuts.end(),
+  std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
             [](const std::pair<double, int>& a,
                const std::pair<double, int>& b) { return a.first > b.first; });
 

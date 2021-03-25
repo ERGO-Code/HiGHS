@@ -69,7 +69,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     fractionalBasisvars.emplace_back(fractionality, i);
   }
 
-  std::stable_sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
+  std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
             [](const std::pair<double, int>& a,
                const std::pair<double, int>& b) { return a.first > b.first; });
   int numCuts = cutpool.getNumCuts();
