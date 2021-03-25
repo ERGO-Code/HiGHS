@@ -87,7 +87,7 @@ class HighsImplications {
 
     assert(implicationmap[loc].start != -1);
 
-    implicationsstart = &implications[implicationmap[loc].start];
+    implicationsstart = implications.data() + implicationmap[loc].start;
 
     return implicationmap[loc].num;
   }
