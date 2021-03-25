@@ -164,8 +164,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   int numNz = inds.size();
   bool removeZeros = false;
 
-  boundTypes.resize(vals.size());
-
   for (int i = 0; i != numNz; ++i) {
     int col = inds[i];
 
