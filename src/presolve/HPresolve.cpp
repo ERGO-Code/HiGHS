@@ -860,7 +860,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         // break in case of too many new implications to not spent ages in
         // probing
         if (cliquetable.numCliques() - numCliquesStart >
-            std::max(1000000, 2 * numNonzeros()))
+            std::max(1000000, numNonzeros()))
           break;
 
         int numDel = probingNumDelCol + implications.substitutions.size() +
