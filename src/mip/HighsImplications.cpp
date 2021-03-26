@@ -327,13 +327,14 @@ void HighsImplications::separateImpliedBounds(
 
     bool infeas;
     const HighsDomainChange* implics = nullptr;
+
     int nimplics = getImplications(col, 1, implics, infeas);
     if (globaldomain.infeasible()) return;
 
     if (infeas) {
       vals[0] = 1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, 0.0);
+      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, false);
       continue;
     }
 
@@ -367,7 +368,7 @@ void HighsImplications::separateImpliedBounds(
 
       if (viol > feastol) {
         // printf("added implied bound cut to pool\n");
-        cutpool.addCut(mipsolver, inds, vals, 2, rhs);
+        cutpool.addCut(mipsolver, inds, vals, 2, rhs, false, false);
       }
     }
 
@@ -377,7 +378,7 @@ void HighsImplications::separateImpliedBounds(
     if (infeas) {
       vals[0] = -1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, -1.0);
+      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, false);
       continue;
     }
 
@@ -410,7 +411,7 @@ void HighsImplications::separateImpliedBounds(
 
       if (viol > feastol) {
         // printf("added implied bound cut to pool\n");
-        cutpool.addCut(mipsolver, inds, vals, 2, rhs);
+        cutpool.addCut(mipsolver, inds, vals, 2, rhs, false, false);
       }
     }
   }

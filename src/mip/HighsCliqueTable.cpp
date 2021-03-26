@@ -888,9 +888,9 @@ void HighsCliqueTable::extractCliques(
 
     // printf("extracted this clique:\n");
     // printClique(clique);
-    runCliqueSubsumption(globaldom, clique);
 
     if (clique.size() >= 2) {
+      if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
     }
@@ -990,7 +990,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
               coef = implcolub - globaldom.colUpper_[col];
               constant = globaldom.colUpper_[col];
             }
-            // printf("extracted VUB from cut\n");
+            // printf("extracted VUB from cut: x%d <= %g*y%d + %g\n", col, coef,
+            //        bincol, constant);
             implics.addVUB(col, bincol, coef, constant);
           }
         } else {
@@ -1008,6 +1009,8 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
               constant = globaldom.colLower_[col];
             }
 
+            // printf("extracted VLB from cut: x%d >= %g*y%d + %g\n", col, coef,
+            //        bincol, constant);
             implics.addVLB(col, bincol, coef, constant);
             // printf("extracted VLB from cut\n");
           }
@@ -1060,7 +1063,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     // printClique(clique);
     if (clique.size() >= 2) {
       // printf("extracted clique from cut\n");
-      runCliqueSubsumption(globaldom, clique);
+      if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
 
       addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
@@ -1460,7 +1463,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 
     rhs = std::floor(rhs + 0.5);
 
-    cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs, true);
+    cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs, true,
+                   false);
   }
 
   if (runcliquesubsumption) {

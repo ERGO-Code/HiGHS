@@ -342,7 +342,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 }
 
 int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
-                         double* Rvalue, int Rlen, double rhs, bool integral) {
+                         double* Rvalue, int Rlen, double rhs, bool integral, bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   size_t sh = support_hash(Rindex, Rlen);
@@ -386,6 +386,12 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
 
   for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)
     propagationdomain->cutAdded(rowindex);
+
+  if (extractCliques && this == &mipsolver.mipdata_->cutpool) {
+    // if this is the global cutpool extract cliques from the cut
+    mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,
+                                                          Rvalue, Rlen, rhs);
+  }
 
   return rowindex;
 }
