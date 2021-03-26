@@ -855,7 +855,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         // when a large percentage of columns have been deleted, stop this round
         // of probing
         // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
-        if (numDel > model->numCol_ * 0.1) break;
+        if (numDel > (model->numRow_ + model->numCol_) * 0.05) break;
         if (contingent + numDel - nprobed < 0) break;
 
         bool fixed = implications.runProbing(i, contingent);
