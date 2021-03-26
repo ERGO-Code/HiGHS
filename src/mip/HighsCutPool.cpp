@@ -215,11 +215,11 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
       }
     }
 
-    double sparsity = 1.0 - (end - start) / (double)domain.colLower_.size();
+    double sparsity =
+        1.0000001 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
     ++ageDistribution[0];
-    double score =
-        double((1e-6 + sparsity) * (1e-6 + viol / sqrt(double(rownorm))));
+    double score = double((sparsity) * (1e-3 + viol / sqrt(double(rownorm))));
 
     efficacious_cuts.emplace_back(score, i);
   }
@@ -233,7 +233,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
               if (a.first < b.first) return false;
               return HighsHashHelpers::hash((uint64_t(a.second) << 32) +
                                             efficacious_cuts.size()) >
-                     HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                     HighsHashHelpers::hash((uint64_t(b.second) << 32) +
                                             efficacious_cuts.size());
             });
 
