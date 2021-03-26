@@ -112,10 +112,9 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   }
 
   for (int col : mipsolver.mipdata_->integral_cols) {
-    if (mipsolver.mipdata_->domain.isBinary(col)) {
-      double bestub = mipsolver.mipdata_->domain.colUpper_[col];
-      double bestlb = mipsolver.mipdata_->domain.colLower_[col];
-
+    double bestub = mipsolver.mipdata_->domain.colUpper_[col];
+    double bestlb = mipsolver.mipdata_->domain.colLower_[col];
+    if (bestub - bestlb < 20.5) {
       if (bestlb == bestub) continue;
 
       lbDist[col] = lpSolution.col_value[col] - bestlb;
@@ -129,9 +128,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       mipsolver.mipdata_->implications.cleanupVarbounds(col);
       if (mipsolver.mipdata_->domain.infeasible()) return;
 
-      if (mipsolver.mipdata_->domain.isFixed(col)) continue;
+      if (bestlb == bestub) continue;
 
-      double bestub = mipsolver.mipdata_->domain.colUpper_[col];
       simpleUbDist[col] = bestub - lpSolution.col_value[col];
       if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
         simpleUbDist[col] = 0.0;
@@ -200,15 +198,6 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
       ubDist[col] = bestub - lpSolution.col_value[col];
       if (ubDist[col] <= mipsolver.mipdata_->feastol) ubDist[col] = 0.0;
-
-      if ((ubDist[col] == 0 &&
-           simpleUbDist[col] > mipsolver.mipdata_->feastol) ||
-          (lbDist[col] == 0 &&
-           simpleLbDist[col] > mipsolver.mipdata_->feastol)) {
-        // printf("lbDist: %g (simple:%g), ubDist: %g (simple:%g)\n",
-        // lbDist[col],
-        //        simpleLbDist[col], ubDist[col], simpleUbDist[col]);
-      }
 
       boundDist[col] = std::min(lbDist[col], ubDist[col]);
     }
