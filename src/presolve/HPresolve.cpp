@@ -863,16 +863,18 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
             std::max(1000000, numNonzeros()))
           break;
 
-        int numDel = probingNumDelCol + implications.substitutions.size() +
+        int numDel = probingNumDelCol - numDelStart +
+                     implications.substitutions.size() +
                      cliquetable.getSubstitutions().size();
         // when a large percentage of columns have been deleted, stop this round
         // of probing
         // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
-        if (numDel - numDelStart > (model->numRow_ + model->numCol_) * 0.05)
-          break;
-        if (probingContingent + numDel - numProbed < 0) break;
+        if (numDel > (model->numRow_ + model->numCol_) * 0.05) break;
+        if (probingContingent - numProbed < 0) break;
 
-        bool fixed = implications.runProbing(i, probingContingent);
+        int numBoundChgs = 0;
+        bool fixed = implications.runProbing(i, numBoundChgs);
+        probingContingent += numBoundChgs;
         if (fixed) probingContingent += numDel;
 
         ++numProbed;
@@ -2974,7 +2976,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         detectImpliedIntegers();
         storeCurrentProblemSize();
         runProbing(postSolveStack);
-        tryProbing = problemSizeReduction() > 1.0;
+        tryProbing =
+            probingContingent > numProbed && problemSizeReduction() > 1.0;
         trySparsify = true;
         if (problemSizeReduction() > 0.05) continue;
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));

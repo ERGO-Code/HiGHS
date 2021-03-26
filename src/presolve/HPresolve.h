@@ -110,7 +110,7 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
-  int probingContingent;
+  int64_t probingContingent;
   int probingNumDelCol;
   int numProbed;
 
