@@ -137,7 +137,6 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       double minbestub = bestub;
       size_t bestvubnodes = 0;
 
-      double bestlb = mipsolver.mipdata_->domain.colLower_[col];
       simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
       if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
         simpleLbDist[col] = 0.0;
