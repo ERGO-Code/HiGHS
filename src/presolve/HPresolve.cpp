@@ -758,8 +758,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->rowMatrixSet = false;
     mipsolver->mipdata_->domain = HighsDomain(*mipsolver);
-    mipsolver->mipdata_->cliquetable.rebuild(model->numCol_, newColIndex,
-                                             newRowIndex);
+    mipsolver->mipdata_->cliquetable.rebuild(
+        model->numCol_, mipsolver->mipdata_->domain, newColIndex, newRowIndex);
     mipsolver->mipdata_->implications.rebuild(model->numCol_, newColIndex,
                                               newRowIndex);
     mipsolver->mipdata_->cutpool = HighsCutPool(

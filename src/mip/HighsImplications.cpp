@@ -276,6 +276,8 @@ void HighsImplications::rebuild(int ncols,
     for (const auto& oldvub : oldvubs[i]) {
       if (orig2reducedcol[oldvub.first] == -1) continue;
 
+      if (!mipsolver.mipdata_->domain.isBinary(orig2reducedcol[oldvub.first]))
+        continue;
       addVUB(newi, orig2reducedcol[oldvub.first], oldvub.second.coef,
              oldvub.second.constant);
     }
@@ -283,6 +285,8 @@ void HighsImplications::rebuild(int ncols,
     for (const auto& oldvlb : oldvlbs[i]) {
       if (orig2reducedcol[oldvlb.first] == -1) continue;
 
+      if (!mipsolver.mipdata_->domain.isBinary(orig2reducedcol[oldvlb.first]))
+        continue;
       addVLB(newi, orig2reducedcol[oldvlb.first], oldvlb.second.coef,
              oldvlb.second.constant);
     }

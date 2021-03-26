@@ -1886,7 +1886,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   }
 }
 
-void HighsCliqueTable::rebuild(int ncols,
+void HighsCliqueTable::rebuild(int ncols, const HighsDomain& globaldomain,
                                const std::vector<int>& orig2reducedcol,
                                const std::vector<int>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
@@ -1897,7 +1897,7 @@ void HighsCliqueTable::rebuild(int ncols,
     for (int k = cliques[i].start; k != cliques[i].end; ++k) {
       int col = orig2reducedcol[cliqueentries[k].col];
 
-      if (col == -1)
+      if (col == -1 || !globaldomain.isBinary(col))
         cliqueentries[k].col = HIGHS_CONST_I_INF;
       else
         cliqueentries[k].col = col;

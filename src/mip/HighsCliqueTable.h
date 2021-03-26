@@ -191,7 +191,7 @@ class HighsCliqueTable {
   void extractCliques(HighsMipSolver& mipsolver, bool transformRows = true);
 
   void extractCliquesFromCut(const HighsMipSolver& mipsolver, const int* inds,
-                      const double* vals, int len, double rhs);
+                             const double* vals, int len, double rhs);
 
   void extractObjCliques(HighsMipSolver& mipsolver);
 
@@ -229,12 +229,10 @@ class HighsCliqueTable {
 
   void runCliqueMerging(HighsDomain& globaldomain);
 
-  void rebuild(int ncols, const std::vector<int>& cIndex,
-               const std::vector<int>& rIndex);
+  void rebuild(int ncols, const HighsDomain& globaldomain,
+               const std::vector<int>& cIndex, const std::vector<int>& rIndex);
 
-  int numCliques() const {
-    return cliques.size() - freeslots.size();
-  }
+  int numCliques() const { return cliques.size() - freeslots.size(); }
 };
 
 #endif
