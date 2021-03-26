@@ -219,7 +219,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     ages_[i] = 0;
     ++ageDistribution[0];
     double score =
-        double((1e-3 + sparsity) * (1e-3 + viol / sqrt(double(rownorm))));
+        double((1e-6 + sparsity) * (1e-6 + viol / sqrt(double(rownorm))));
 
     efficacious_cuts.emplace_back(score, i);
   }
