@@ -3129,7 +3129,6 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
         for (int j : rowpositions) unlink(j);
       }
 
-      postSolveStack.removeCutsFromModel(numcuts);
       model->numRow_ -= numcuts;
       model->rowLower_.resize(model->numRow_);
       model->rowUpper_.resize(model->numRow_);
