@@ -228,6 +228,10 @@ class HighsCliqueTable {
 
   void rebuild(int ncols, const std::vector<int>& cIndex,
                const std::vector<int>& rIndex);
+
+  int numCliques() const {
+    return cliques.size() - freeslots.size();
+  }
 };
 
 #endif

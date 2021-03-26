@@ -839,6 +839,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     int nprobed = 0;
     size_t numChangedCols = 0;
 
+    int numCliquesStart = cliquetable.numCliques();
+
+    // printf("start probing wit %d cliques\n");
     for (std::tuple<int, int, int> binvar : binaries) {
       int i = std::get<2>(binvar);
 
@@ -849,6 +852,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
           if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
             ++nfixed;
         }
+
+        // break in case of too many new implications to not spent ages in probing
+        if (cliquetable.numCliques() - numCliquesStart > 2 * numNonzeros())
+          break;
 
         int numDel = nfixed + implications.substitutions.size() +
                      cliquetable.getSubstitutions().size();
@@ -3627,6 +3634,11 @@ int HPresolve::strengthenInequalities() {
     if (rowsize[row] <= 1) continue;
     if (model->rowLower_[row] != -HIGHS_CONST_INF &&
         model->rowUpper_[row] != HIGHS_CONST_INF)
+      continue;
+
+    // do not run on very dense rows as this could get expensive
+    if (rowsize[row] >
+        std::max(1000, int(0.05 * (model->numCol_ - numDeletedCols))))
       continue;
 
     // printf("strengthening knapsack of %d vars\n", rowsize[row]);
