@@ -110,7 +110,9 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
-  int numForcingRow = 0;
+  int probingContingent;
+  int probingNumDelCol;
+  int numProbed;
 
   // counters for number of deleted rows and columns
   int numDeletedRows;

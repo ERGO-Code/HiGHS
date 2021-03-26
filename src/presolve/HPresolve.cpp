@@ -102,6 +102,10 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
 void HPresolve::setInput(HighsMipSolver& mipsolver) {
   this->mipsolver = &mipsolver;
 
+  probingContingent = 1000;
+  probingNumDelCol = 0;
+  numProbed = 0;
+
   if (mipsolver.model_ != &mipsolver.mipdata_->presolvedModel) {
     mipsolver.mipdata_->presolvedModel = *mipsolver.model_;
     mipsolver.model_ = &mipsolver.mipdata_->presolvedModel;
@@ -790,6 +794,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     }
   }
 
+  int oldNumProbed = numProbed;
+
   mipsolver->mipdata_->setupDomainPropagation();
   HighsDomain& domain = mipsolver->mipdata_->domain;
 
@@ -834,12 +840,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     // sort variables with many implications on other binaries first
     std::sort(binaries.begin(), binaries.end());
 
-    int nfixed = 0;
-    int contingent = 1000;
-    int nprobed = 0;
     size_t numChangedCols = 0;
 
     int numCliquesStart = cliquetable.numCliques();
+    int numDelStart = probingNumDelCol;
 
     // printf("start probing wit %d cliques\n");
     for (std::tuple<int, int, int> binvar : binaries) {
@@ -850,25 +854,30 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
       if (domain.isBinary(i)) {
         while (domain.getChangedCols().size() != numChangedCols) {
           if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
-            ++nfixed;
+            ++probingNumDelCol;
         }
 
-        // break in case of too many new implications to not spent ages in probing
-        if (cliquetable.numCliques() - numCliquesStart > 2 * numNonzeros())
+        // break in case of too many new implications to not spent ages in
+        // probing
+        if (cliquetable.numCliques() - numCliquesStart >
+            std::max(1000000, 2 * numNonzeros()))
           break;
 
-        int numDel = nfixed + implications.substitutions.size() +
+        int numDel = probingNumDelCol + implications.substitutions.size() +
                      cliquetable.getSubstitutions().size();
         // when a large percentage of columns have been deleted, stop this round
         // of probing
         // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
-        if (numDel > (model->numRow_ + model->numCol_) * 0.05) break;
-        if (contingent + numDel - nprobed < 0) break;
+        if (numDel - numDelStart > (model->numRow_ + model->numCol_) * 0.05)
+          break;
+        if (probingContingent + numDel - numProbed < 0) break;
 
-        bool fixed = implications.runProbing(i, contingent);
-        if (fixed) contingent += numDel;
+        bool fixed = implications.runProbing(i, probingContingent);
+        if (fixed) probingContingent += numDel;
 
-        ++nprobed;
+        ++numProbed;
+        // printf("nprobed: %d, numCliques: %d\n", nprobed,
+        //       cliquetable.numCliques());
         if (domain.infeasible()) {
           return Result::PrimalInfeasible;
         }
@@ -932,7 +941,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     highsLogUser(options->log_options, HighsLogType::INFO,
                  "%d probing evaluations: %d deleted rows, %d deleted "
                  "columns, %d lifted nonzeros\n",
-                 nprobed, numDeletedRows, numDeletedCols, addednnz);
+                 numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
+                 addednnz);
   }
 
   return checkLimits(postSolveStack);
@@ -1247,6 +1257,8 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
     if (colDeleted[substitution.substcol] || colDeleted[substitution.staycol])
       continue;
 
+    ++probingNumDelCol;
+
     postSolveStack.doubletonEquation(-1, substitution.substcol,
                                      substitution.staycol, 1.0,
                                      -substitution.scale, substitution.offset,
@@ -1266,6 +1278,8 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
 
     double scale;
     double offset;
+
+    ++probingNumDelCol;
 
     if (subst.replace.val == 0) {
       scale = -1.0;
@@ -2537,7 +2551,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
     }
 
     if (nfixings == rowsize[row]) {
-      ++numForcingRow;
       postSolveStack.forcingRow(row, rowVector, model->rowLower_[row],
                                 HighsPostsolveStack::RowType::Geq);
       // already mark the row as deleted, since otherwise it would be registered
@@ -2597,7 +2610,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
       }
     }
     if (nfixings == rowsize[row]) {
-      ++numForcingRow;
       postSolveStack.forcingRow(row, rowVector, model->rowUpper_[row],
                                 HighsPostsolveStack::RowType::Leq);
       markRowDeleted(row);
@@ -2886,8 +2898,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   }
 
   if (options->presolve != "off") {
-    numForcingRow = 0;
-
     highsLogUser(options->log_options, HighsLogType::INFO,
                  "\nPresolving model\n");
 
