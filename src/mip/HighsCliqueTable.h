@@ -190,6 +190,9 @@ class HighsCliqueTable {
 
   void extractCliques(HighsMipSolver& mipsolver, bool transformRows = true);
 
+  void extractCliquesFromCut(const HighsMipSolver& mipsolver, const int* inds,
+                      const double* vals, int len, double rhs);
+
   void extractObjCliques(HighsMipSolver& mipsolver);
 
   void vertexInfeasible(HighsDomain& globaldom, int col, int val);
