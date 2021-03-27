@@ -506,12 +506,24 @@ void HPresolve::updateColImpliedBounds(int row, int col, double val) {
         if (val > 0) {
           // bound is an upper bound
           // check if we may round the bound due to integrality restrictions
-          if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
-            double roundedBound =
-                std::floor(impliedBound + options->mip_feasibility_tolerance);
+          if (mipsolver != nullptr) {
+            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+              double roundedBound =
+                  std::floor(impliedBound + options->mip_feasibility_tolerance);
 
-            if (roundedBound < model->colUpper_[col])
-              changeColUpper(col, roundedBound);
+              if (roundedBound < model->colUpper_[col])
+                changeColUpper(col, roundedBound);
+            }
+
+            if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
+                mipsolver->orig_model_->numRow_) {
+              if (impliedBound <
+                  model->colUpper_[col] -
+                      1000 * options->primal_feasibility_tolerance)
+                changeColUpper(col, impliedBound);
+
+              impliedBound = HIGHS_CONST_INF;
+            }
           }
 
           // only tighten bound if it is tighter by a wide enough margin
@@ -521,12 +533,27 @@ void HPresolve::updateColImpliedBounds(int row, int col, double val) {
         } else {
           // bound is a lower bound
           // check if we may round the bound due to integrality restrictions
-          if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
-            double roundedBound =
-                std::ceil(impliedBound - options->mip_feasibility_tolerance);
+          if (mipsolver != nullptr) {
+            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+              double roundedBound =
+                  std::ceil(impliedBound - options->mip_feasibility_tolerance);
 
-            if (roundedBound > model->colLower_[col])
-              changeColLower(col, roundedBound);
+              if (roundedBound > model->colLower_[col])
+                changeColLower(col, roundedBound);
+            }
+
+            // do not use the implied bound if this a not a model row, since the
+            // row can be removed and should not be used, e.g., to identify a
+            // column as implied free
+            if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
+                mipsolver->orig_model_->numRow_) {
+              if (impliedBound >
+                  model->colLower_[col] +
+                      1000 * options->primal_feasibility_tolerance)
+                changeColLower(col, impliedBound);
+
+              impliedBound = -HIGHS_CONST_INF;
+            }
           }
 
           // only tighten bound if it is tighter by a wide enough margin
@@ -551,13 +578,25 @@ void HPresolve::updateColImpliedBounds(int row, int col, double val) {
         if (val > 0) {
           // bound is a lower bound
           // check if we may round the bound due to integrality restrictions
-          if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
-            double roundedBound =
-                std::ceil(impliedBound - options->mip_feasibility_tolerance);
+          if (mipsolver != nullptr) {
+            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+              double roundedBound =
+                  std::ceil(impliedBound - options->mip_feasibility_tolerance);
 
-            // change bounds of integers immediately
-            if (roundedBound > model->colLower_[col])
-              changeColLower(col, roundedBound);
+              // change bounds of integers immediately
+              if (roundedBound > model->colLower_[col])
+                changeColLower(col, roundedBound);
+            }
+
+            if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
+                mipsolver->orig_model_->numRow_) {
+              if (impliedBound >
+                  model->colLower_[col] +
+                      1000 * options->primal_feasibility_tolerance)
+                changeColLower(col, impliedBound);
+
+              impliedBound = -HIGHS_CONST_INF;
+            }
           }
 
           // only tighten bound if it is tighter by a wide enough margin
@@ -567,13 +606,25 @@ void HPresolve::updateColImpliedBounds(int row, int col, double val) {
         } else {
           // bound is an upper bound
           // check if we may round the bound due to integrality restrictions
-          if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
-            double roundedBound =
-                std::floor(impliedBound + options->mip_feasibility_tolerance);
+          if (mipsolver != nullptr) {
+            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+              double roundedBound =
+                  std::floor(impliedBound + options->mip_feasibility_tolerance);
 
-            // change bounds of integers immediately
-            if (roundedBound < model->colUpper_[col])
-              changeColUpper(col, roundedBound);
+              // change bounds of integers immediately
+              if (roundedBound < model->colUpper_[col])
+                changeColUpper(col, roundedBound);
+            }
+
+            if (mipsolver->mipdata_->postSolveStack.getOrigRowIndex(row) >=
+                mipsolver->orig_model_->numRow_) {
+              if (impliedBound <
+                  model->colUpper_[col] -
+                      1000 * options->primal_feasibility_tolerance)
+                changeColUpper(col, impliedBound);
+
+              impliedBound = HIGHS_CONST_INF;
+            }
           }
 
           // only tighten bound if it is tighter by a wide enough margin
