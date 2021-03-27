@@ -127,6 +127,7 @@ class HighsNodeQueue {
 
   void clear() {
     HighsNodeQueue nodequeue;
+    nodequeue.setNumCol(colUpperNodes.size());
     std::swap(*this, nodequeue);
   }
 

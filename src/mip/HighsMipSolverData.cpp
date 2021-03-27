@@ -172,6 +172,7 @@ void HighsMipSolverData::runSetup() {
 
   redcostfixing = HighsRedcostFixing();
   mipsolver.mipdata_->pseudocost = HighsPseudocost(mipsolver);
+  nodequeue.setNumCol(mipsolver.numCol());
 
   continuous_cols.clear();
   integer_cols.clear();
@@ -281,7 +282,6 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
     }
   }
-  nodequeue.setNumCol(mipsolver.numCol());
   numintegercols = integer_cols.size();
 
   heuristics.setupIntCols();
