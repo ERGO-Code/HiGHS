@@ -342,7 +342,8 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 }
 
 int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
-                         double* Rvalue, int Rlen, double rhs, bool integral, bool extractCliques) {
+                         double* Rvalue, int Rlen, double rhs, bool integral,
+                         bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   size_t sh = support_hash(Rindex, Rlen);

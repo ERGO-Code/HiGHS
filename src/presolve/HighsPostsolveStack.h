@@ -223,8 +223,9 @@ class HighsPostsolveStack {
  public:
   int getOrigRowIndex(int row) const {
     int origRowIndex_size = origRowIndex.size();
-    assert(row<origRowIndex_size);
-    return origRowIndex[row]; }
+    assert(row < origRowIndex_size);
+    return origRowIndex[row];
+  }
 
   int getOrigColIndex(int col) const { return origColIndex[col]; }
 

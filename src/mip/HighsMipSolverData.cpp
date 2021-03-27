@@ -332,7 +332,7 @@ double HighsMipSolverData::transformNewIncumbent(
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
       row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
-  assert(feasible);
+  // assert(feasible);
   // store the solution as incumbent in the original space if there is no
   // solution or if it is feasible
   if (feasible) {
