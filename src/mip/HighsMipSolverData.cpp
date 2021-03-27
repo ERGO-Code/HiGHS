@@ -422,6 +422,8 @@ void HighsMipSolverData::performRestart() {
   }
   runSetup();
 
+  postSolveStack.removeCutsFromModel(cutpool.getNumCuts());
+
   pruned_treeweight = 0;
   nodequeue.clear();
   // HighsNodeQueue oldNodeQueue;

@@ -888,9 +888,9 @@ void HighsCliqueTable::extractCliques(
 
     // printf("extracted this clique:\n");
     // printClique(clique);
-    runCliqueSubsumption(globaldom, clique);
 
     if (clique.size() >= 2) {
+      if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
     }
@@ -929,6 +929,149 @@ bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
   processInfeasibleVertices(globaldom);
 
   return equality;
+}
+
+void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
+                                             const int* inds,
+                                             const double* vals, int len,
+                                             double rhs) {
+  HighsImplications& implics = mipsolver.mipdata_->implications;
+  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+
+  const double feastol = mipsolver.mipdata_->feastol;
+
+  HighsCDouble minact = 0.0;
+  int nbin = 0;
+  for (int i = 0; i != len; ++i) {
+    if (globaldom.isBinary(inds[i])) ++nbin;
+
+    if (vals[i] > 0) {
+      if (globaldom.colLower_[inds[i]] == -HIGHS_CONST_INF) return;
+      minact += vals[i] * globaldom.colLower_[inds[i]];
+    } else {
+      if (globaldom.colUpper_[inds[i]] == HIGHS_CONST_INF) return;
+      minact += vals[i] * globaldom.colUpper_[inds[i]];
+    }
+  }
+  if (nbin == 0) return;
+
+  std::vector<int> perm;
+  perm.resize(len);
+  std::iota(perm.begin(), perm.end(), 0);
+
+  auto binaryend = std::partition(perm.begin(), perm.end(), [&](int pos) {
+    return globaldom.isBinary(inds[pos]);
+  });
+  assert(nbin == binaryend - perm.begin());
+
+  // if not all variables are binary, we extract variable upper and lower bounds
+  // constraints on the non-binary variable for each binary variable in the
+  // constraint
+  if (nbin < len) {
+    for (int i = 0; i != nbin; ++i) {
+      int bincol = inds[perm[i]];
+      HighsCDouble impliedActivity = rhs - minact - std::abs(vals[perm[i]]);
+      for (int j = nbin; j != len; ++j) {
+        int col = inds[perm[j]];
+        if (globaldom.isFixed(col)) continue;
+
+        if (vals[perm[j]] > 0) {
+          double implcolub = double(impliedActivity +
+                                    vals[perm[j]] * globaldom.colLower_[col]) /
+                             vals[perm[j]];
+
+          if (implcolub < globaldom.colUpper_[col] - feastol) {
+            double coef;
+            double constant;
+            if (vals[perm[i]] < 0) {
+              coef = globaldom.colUpper_[col] - implcolub;
+              constant = implcolub;
+            } else {
+              coef = implcolub - globaldom.colUpper_[col];
+              constant = globaldom.colUpper_[col];
+            }
+            // printf("extracted VUB from cut: x%d <= %g*y%d + %g\n", col, coef,
+            //        bincol, constant);
+            implics.addVUB(col, bincol, coef, constant);
+          }
+        } else {
+          double implcollb = double(impliedActivity +
+                                    vals[perm[j]] * globaldom.colUpper_[col]) /
+                             vals[perm[j]];
+          if (implcollb > globaldom.colLower_[col] + feastol) {
+            double coef;
+            double constant;
+            if (vals[perm[i]] < 0) {
+              coef = globaldom.colLower_[col] - implcollb;
+              constant = implcollb;
+            } else {
+              coef = implcollb - globaldom.colLower_[col];
+              constant = globaldom.colLower_[col];
+            }
+
+            // printf("extracted VLB from cut: x%d >= %g*y%d + %g\n", col, coef,
+            //        bincol, constant);
+            implics.addVLB(col, bincol, coef, constant);
+            // printf("extracted VLB from cut\n");
+          }
+        }
+      }
+    }
+  }
+
+  // only one binary means we do have no cliques
+  if (nbin <= 1) return;
+
+  std::vector<CliqueVar> clique;
+  clique.reserve(nbin);
+
+  std::sort(perm.begin(), binaryend, [&](int p1, int p2) {
+    return std::make_pair(std::abs(vals[p1]), p1) >
+           std::make_pair(std::abs(vals[p2]), p2);
+  });
+  // check if any cliques exists
+  if (std::abs(vals[perm[0]]) + std::abs(vals[perm[1]]) <=
+      double(rhs - minact + feastol))
+    return;
+
+  for (int k = nbin - 1; k != 0; --k) {
+    double mincliqueval =
+        double(rhs - minact - std::abs(vals[perm[k]]) + feastol);
+    auto cliqueend = std::partition_point(
+        perm.begin(), perm.begin() + k,
+        [&](int p) { return std::abs(vals[p]) > mincliqueval; });
+
+    // no clique for this variable
+    if (cliqueend == perm.begin()) continue;
+
+    clique.clear();
+
+    for (auto j = perm.begin(); j != cliqueend; ++j) {
+      int pos = *j;
+      if (vals[pos] < 0)
+        clique.emplace_back(inds[pos], 0);
+      else
+        clique.emplace_back(inds[pos], 1);
+    }
+
+    if (vals[perm[k]] < 0)
+      clique.emplace_back(inds[perm[k]], 0);
+    else
+      clique.emplace_back(inds[perm[k]], 1);
+
+    // printf("extracted this clique:\n");
+    // printClique(clique);
+    if (clique.size() >= 2) {
+      // printf("extracted clique from cut\n");
+      if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
+
+      addClique(mipsolver, clique.data(), clique.size());
+      if (globaldom.infeasible()) return;
+    }
+
+    // further cliques are just subsets of this clique
+    if (cliqueend == perm.begin() + k) return;
+  }
 }
 
 void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
@@ -1320,7 +1463,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 
     rhs = std::floor(rhs + 0.5);
 
-    cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs);
+    cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs, true,
+                   false);
   }
 
   if (runcliquesubsumption) {
@@ -1742,7 +1886,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   }
 }
 
-void HighsCliqueTable::rebuild(int ncols,
+void HighsCliqueTable::rebuild(int ncols, const HighsDomain& globaldomain,
                                const std::vector<int>& orig2reducedcol,
                                const std::vector<int>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
@@ -1753,7 +1897,7 @@ void HighsCliqueTable::rebuild(int ncols,
     for (int k = cliques[i].start; k != cliques[i].end; ++k) {
       int col = orig2reducedcol[cliqueentries[k].col];
 
-      if (col == -1)
+      if (col == -1 || !globaldomain.isBinary(col))
         cliqueentries[k].col = HIGHS_CONST_I_INF;
       else
         cliqueentries[k].col = col;

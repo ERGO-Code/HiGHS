@@ -276,6 +276,8 @@ void HighsImplications::rebuild(int ncols,
     for (const auto& oldvub : oldvubs[i]) {
       if (orig2reducedcol[oldvub.first] == -1) continue;
 
+      if (!mipsolver.mipdata_->domain.isBinary(orig2reducedcol[oldvub.first]))
+        continue;
       addVUB(newi, orig2reducedcol[oldvub.first], oldvub.second.coef,
              oldvub.second.constant);
     }
@@ -283,6 +285,8 @@ void HighsImplications::rebuild(int ncols,
     for (const auto& oldvlb : oldvlbs[i]) {
       if (orig2reducedcol[oldvlb.first] == -1) continue;
 
+      if (!mipsolver.mipdata_->domain.isBinary(orig2reducedcol[oldvlb.first]))
+        continue;
       addVLB(newi, orig2reducedcol[oldvlb.first], oldvlb.second.coef,
              oldvlb.second.constant);
     }
@@ -327,13 +331,14 @@ void HighsImplications::separateImpliedBounds(
 
     bool infeas;
     const HighsDomainChange* implics = nullptr;
+
     int nimplics = getImplications(col, 1, implics, infeas);
     if (globaldomain.infeasible()) return;
 
     if (infeas) {
       vals[0] = 1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, 0.0);
+      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, false);
       continue;
     }
 
@@ -367,7 +372,7 @@ void HighsImplications::separateImpliedBounds(
 
       if (viol > feastol) {
         // printf("added implied bound cut to pool\n");
-        cutpool.addCut(mipsolver, inds, vals, 2, rhs);
+        cutpool.addCut(mipsolver, inds, vals, 2, rhs, false, false);
       }
     }
 
@@ -377,7 +382,7 @@ void HighsImplications::separateImpliedBounds(
     if (infeas) {
       vals[0] = -1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, -1.0);
+      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, false);
       continue;
     }
 
@@ -410,7 +415,7 @@ void HighsImplications::separateImpliedBounds(
 
       if (viol > feastol) {
         // printf("added implied bound cut to pool\n");
-        cutpool.addCut(mipsolver, inds, vals, 2, rhs);
+        cutpool.addCut(mipsolver, inds, vals, 2, rhs, false, false);
       }
     }
   }

@@ -216,10 +216,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     }
 
     double sparsity =
-        std::min(1.01 - (end - start) / (double)domain.colLower_.size(), 1.0);
+        1.0000001 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
     ++ageDistribution[0];
-    double score = double(sparsity * (1e-3 + viol / sqrt(double(rownorm))));
+    double score = double((sparsity) * (1e-3 + viol / sqrt(double(rownorm))));
 
     efficacious_cuts.emplace_back(score, i);
   }
@@ -233,7 +233,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
               if (a.first < b.first) return false;
               return HighsHashHelpers::hash((uint64_t(a.second) << 32) +
                                             efficacious_cuts.size()) >
-                     HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                     HighsHashHelpers::hash((uint64_t(b.second) << 32) +
                                             efficacious_cuts.size());
             });
 
@@ -342,7 +342,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 }
 
 int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
-                         double* Rvalue, int Rlen, double rhs, bool integral) {
+                         double* Rvalue, int Rlen, double rhs, bool integral, bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   size_t sh = support_hash(Rindex, Rlen);
@@ -386,6 +386,12 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
 
   for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)
     propagationdomain->cutAdded(rowindex);
+
+  if (extractCliques && this == &mipsolver.mipdata_->cutpool) {
+    // if this is the global cutpool extract cliques from the cut
+    mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,
+                                                          Rvalue, Rlen, rhs);
+  }
 
   return rowindex;
 }
