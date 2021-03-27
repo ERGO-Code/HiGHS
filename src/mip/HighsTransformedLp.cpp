@@ -114,9 +114,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   for (int col : mipsolver.mipdata_->integral_cols) {
     double bestub = mipsolver.mipdata_->domain.colUpper_[col];
     double bestlb = mipsolver.mipdata_->domain.colLower_[col];
-    if (bestub - bestlb < 20.5) {
+    if (bestub - bestlb < 100.5) {
       if (bestlb == bestub) continue;
-
       lbDist[col] = lpSolution.col_value[col] - bestlb;
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
       simpleLbDist[col] = lbDist[col];
@@ -127,9 +126,6 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     } else {
       mipsolver.mipdata_->implications.cleanupVarbounds(col);
       if (mipsolver.mipdata_->domain.infeasible()) return;
-
-      if (bestlb == bestub) continue;
-
       simpleUbDist[col] = bestub - lpSolution.col_value[col];
       if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
         simpleUbDist[col] = 0.0;
@@ -280,8 +276,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       }
 
       if (!useVbd) continue;
-
-      // printf("using vbd on integral var\n");
     } else {
       if (lbDist[col] < ubDist[col] - mip.mipdata_->feastol) {
         if (!bestVlb[col])
