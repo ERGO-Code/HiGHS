@@ -260,8 +260,8 @@ restart:
       if (currNodeEstim >=
           1000 * (mipdata_->numRestarts + 1) * mipdata_->num_nodes) {
         ++numHugeTreeEstim;
-        if (!submip)
-          printf("%d (nodeestim: %.1f)\n", numHugeTreeEstim, currNodeEstim);
+        // if (!submip)
+        //   printf("%d (nodeestim: %.1f)\n", numHugeTreeEstim, currNodeEstim);
       } else {
         numHugeTreeEstim = 0;
         treeweightLastCheck = double(mipdata_->pruned_treeweight);
