@@ -126,8 +126,8 @@ class HighsNodeQueue {
   double getBestLowerBound();
 
   void clear() {
-    nodes.clear();
-    decltype(freeslots)().swap(freeslots);
+    HighsNodeQueue nodequeue;
+    std::swap(*this, nodequeue);
   }
 
   bool empty() const { return nodes.size() == freeslots.size(); }

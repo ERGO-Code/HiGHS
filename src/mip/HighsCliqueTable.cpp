@@ -1714,6 +1714,33 @@ int HighsCliqueTable::getNumImplications(int col) const {
   return numimplics;
 }
 
+int HighsCliqueTable::getNumImplications(int col, bool val) const {
+  std::vector<int> stack;
+  int numimplics = 0;
+
+  if (cliquesetroot[CliqueVar(col, val).index()] != -1)
+    stack.emplace_back(cliquesetroot[CliqueVar(col, val).index()]);
+  if (sizeTwoCliquesetRoot[CliqueVar(col, val).index()] != -1)
+    stack.emplace_back(sizeTwoCliquesetRoot[CliqueVar(col, val).index()]);
+
+  while (!stack.empty()) {
+    int node = stack.back();
+    stack.pop_back();
+
+    if (cliquesets[node].left != -1) stack.emplace_back(cliquesets[node].left);
+    if (cliquesets[node].right != -1)
+      stack.emplace_back(cliquesets[node].right);
+
+    int nimplics = cliques[cliquesets[node].cliqueid].end -
+                   cliques[cliquesets[node].cliqueid].start - 1;
+    nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
+
+    numimplics += nimplics;
+  }
+
+  return numimplics;
+}
+
 void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   std::vector<CliqueVar> extensionvars;
   std::vector<int> stack;

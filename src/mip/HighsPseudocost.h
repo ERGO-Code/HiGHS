@@ -18,8 +18,33 @@
 #include <vector>
 
 class HighsMipSolver;
+namespace presolve {
+class HighsPostsolveStack;
+}
 
+class HighsPseudocost;
+
+struct HighsPseudocostInitialization {
+  std::vector<double> pseudocostup;
+  std::vector<double> pseudocostdown;
+  std::vector<int> nsamplesup;
+  std::vector<int> nsamplesdown;
+  std::vector<double> inferencesup;
+  std::vector<double> inferencesdown;
+  std::vector<int> ninferencesup;
+  std::vector<int> ninferencesdown;
+  double cost_total;
+  double inferences_total;
+  int64_t nsamplestotal;
+  int64_t ninferencestotal;
+
+  HighsPseudocostInitialization(const HighsPseudocost& pscost, int maxCount);
+  HighsPseudocostInitialization(
+      const HighsPseudocost& pscost, int maxCount,
+      const presolve::HighsPostsolveStack& postsolveStack);
+};
 class HighsPseudocost {
+  friend class HighsPseudocostInitialization;
   std::vector<double> pseudocostup;
   std::vector<double> pseudocostdown;
   std::vector<int> nsamplesup;
@@ -33,9 +58,9 @@ class HighsPseudocost {
 
   double cost_total;
   double inferences_total;
-  size_t nsamplestotal;
-  size_t ninferencestotal;
-  size_t ncutoffstotal;
+  int64_t nsamplestotal;
+  int64_t ninferencestotal;
+  int64_t ncutoffstotal;
   int minreliable;
 
  public:
@@ -182,7 +207,7 @@ class HighsPseudocost {
         double(std::max(1, ncutoffsdown[col] + nsamplesdown[col]));
     double avgCutoffRate =
         ncutoffstotal /
-        double(std::max(size_t{1}, nsamplestotal + ncutoffstotal));
+        double(std::max(int64_t{1}, nsamplestotal + ncutoffstotal));
 
     double cutoffScore = std::sqrt(cutoffRateUp * cutoffRateDown) /
                          std::max(1e-6, avgCutoffRate);

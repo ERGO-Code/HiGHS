@@ -70,6 +70,8 @@ class HighsLpRelaxation {
   std::shared_ptr<const HighsBasis> basischeckpoint;
   bool currentbasisstored;
   int64_t numlpiters;
+  double avgSolveIters;
+  int64_t numSolved;
   size_t epochs;
   size_t maxNumFractional;
   Status status;
@@ -99,6 +101,8 @@ class HighsLpRelaxation {
     assert(row < (int)lprows.size());
     return lprows[row].isIntegral(mipsolver);
   }
+
+  double getAvgSolveIters() { return avgSolveIters; }
 
   int getRowLen(int row) const { return lprows[row].getRowLen(mipsolver); }
 
@@ -196,7 +200,7 @@ class HighsLpRelaxation {
   }
 
   void storeBasis() {
-    if (!currentbasisstored) {
+    if (!currentbasisstored && lpsolver.getBasis().valid_) {
       basischeckpoint = std::make_shared<HighsBasis>(lpsolver.getBasis());
       currentbasisstored = true;
     }

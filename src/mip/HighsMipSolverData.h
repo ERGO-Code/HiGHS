@@ -70,11 +70,13 @@ struct HighsMipSolverData {
   int numintegercols;
 
   HighsCDouble pruned_treeweight;
-  int64_t maxrootlpiters;
+  double avgrootlpiters;
   int64_t firstrootlpiters;
   int64_t num_nodes;
   int64_t last_displeave;
   int64_t num_leaves;
+  int64_t num_leaves_before_run;
+  int64_t num_nodes_before_run;
   int64_t total_lp_iterations;
   int64_t heuristic_lp_iterations;
   int64_t sepa_lp_iterations;

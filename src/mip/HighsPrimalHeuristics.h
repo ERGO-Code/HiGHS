@@ -30,8 +30,12 @@ class HighsPrimalHeuristics {
 
   std::mt19937 randgen;
 
+  std::vector<int> intcols;
+
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
+
+  void setupIntCols();
 
   bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
                    double fixingRate, std::vector<double> colLower,
@@ -49,8 +53,6 @@ class HighsPrimalHeuristics {
   void centralRounding();
 
   void flushStatistics();
-
-  void clique();
 
   bool tryRoundedPoint(const std::vector<double>& point, char source);
 

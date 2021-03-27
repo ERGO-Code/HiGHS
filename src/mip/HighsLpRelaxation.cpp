@@ -110,6 +110,8 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
       mipsolver.options_mip_->mip_feasibility_tolerance * 0.1);
   status = Status::NotSet;
   numlpiters = 0;
+  avgSolveIters = 0;
+  numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
   currentbasisstored = false;
@@ -127,6 +129,8 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
   numlpiters = 0;
+  avgSolveIters = 0;
+  numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
 }
@@ -187,6 +191,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
                          cutset.ARvalue_.size(), cutset.ARstart_.data(),
                          cutset.ARindex_.data(), cutset.ARvalue_.data());
     assert(success);
+    (void)success;
     assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
     cutset.clear();
   }
@@ -629,7 +634,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
 
   const HighsInfo& info = lpsolver.getHighsInfo();
-  numlpiters += std::max(0, info.simplex_iteration_count);
+  int itercount = std::max(0, info.simplex_iteration_count);
+  numlpiters += itercount;
 
   if (callstatus == HighsStatus::Error) {
     lpsolver.clearSolver();
@@ -669,10 +675,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::Error;
     case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
     case HighsModelStatus::PRIMAL_INFEASIBLE: {
+      ++numSolved;
+      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+
       storeDualInfProof();
-      if (checkDualProof()) {
-        return Status::Infeasible;
-      }
+      if (checkDualProof()) return Status::Infeasible;
       hasdualproof = false;
 
       int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
@@ -708,6 +715,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     case HighsModelStatus::OPTIMAL:
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
+      ++numSolved;
+      avgSolveIters += (itercount - avgSolveIters) / numSolved;
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::Optimal;

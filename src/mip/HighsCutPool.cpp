@@ -23,6 +23,7 @@ static size_t support_hash(const int* Rindex, const int Rlen) {
   return HighsHashHelpers::vector_hash(Rindex, Rlen);
 }
 
+#if 0
 static void printCut(const int* Rindex, const double* Rvalue, int Rlen,
                      double rhs) {
   for (int i = 0; i != Rlen; ++i) {
@@ -34,6 +35,7 @@ static void printCut(const int* Rindex, const double* Rvalue, int Rlen,
 
   printf("<= %g\n", rhs);
 }
+#endif
 
 bool HighsCutPool::isDuplicate(size_t hash, double norm, int* Rindex,
                                double* Rvalue, int Rlen, double rhs) {
@@ -231,10 +233,14 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                                 const std::pair<double, int>& b) {
               if (a.first > b.first) return true;
               if (a.first < b.first) return false;
-              return HighsHashHelpers::hash((uint64_t(a.second) << 32) +
-                                            efficacious_cuts.size()) >
-                     HighsHashHelpers::hash((uint64_t(b.second) << 32) +
-                                            efficacious_cuts.size());
+              return std::make_pair(
+                         HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                                efficacious_cuts.size()),
+                         a.second) >
+                     std::make_pair(
+                         HighsHashHelpers::hash((uint64_t(b.second) << 32) +
+                                                efficacious_cuts.size()),
+                         b.second);
             });
 
   bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
@@ -342,7 +348,8 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 }
 
 int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
-                         double* Rvalue, int Rlen, double rhs, bool integral, bool extractCliques) {
+                         double* Rvalue, int Rlen, double rhs, bool integral,
+                         bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   size_t sh = support_hash(Rindex, Rlen);

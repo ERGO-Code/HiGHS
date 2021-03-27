@@ -828,13 +828,17 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
 
   // store binary variables in vector with their number of implications on
   // other binaries
-  std::vector<std::tuple<int, int, int>> binaries;
+  std::vector<std::tuple<int64_t, int, int, int>> binaries;
   binaries.reserve(model->numCol_);
   HighsRandom random;
   for (int i = 0; i != model->numCol_; ++i) {
-    if (domain.isBinary(i))
-      binaries.emplace_back(-std::min(100, cliquetable.getNumImplications(i)),
+    if (domain.isBinary(i)) {
+      int implicsUp = cliquetable.getNumImplications(i, 1);
+      int implicsDown = cliquetable.getNumImplications(i, 0);
+      binaries.emplace_back(-int64_t(implicsUp) * implicsDown,
+                            -std::min(100, implicsUp + implicsDown),
                             random.integer(), i);
+    }
   }
   if (!binaries.empty()) {
     // sort variables with many implications on other binaries first
@@ -846,8 +850,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     int numDelStart = probingNumDelCol;
 
     // printf("start probing wit %d cliques\n");
-    for (std::tuple<int, int, int> binvar : binaries) {
-      int i = std::get<2>(binvar);
+    for (std::tuple<int, int, int, int> binvar : binaries) {
+      int i = std::get<3>(binvar);
 
       if (cliquetable.getSubstitution(i) != nullptr) continue;
 
@@ -3216,7 +3220,10 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         if (minLen1 < minLen2) return true;
         if (minLen2 < minLen1) return false;
 
-        return HighsHashHelpers::hash(nz1) < HighsHashHelpers::hash(nz2);
+        return std::make_tuple(HighsHashHelpers::hash(nz1), nz1.first,
+                               nz1.second) <
+               std::make_tuple(HighsHashHelpers::hash(nz2), nz2.first,
+                               nz2.second);
       });
 
   int nfail = 0;
@@ -3483,7 +3490,6 @@ void HPresolve::fixColToZero(HighsPostsolveStack& postSolveStack, int col) {
 
   for (int coliter = colhead[col]; coliter != -1;) {
     int colrow = Arow[coliter];
-    double colval = Avalue[coliter];
     assert(Acol[coliter] == col);
 
     int colpos = coliter;
@@ -4668,7 +4674,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           rowLower = model->rowUpper_[i] * rowScale;
           rowUpper = model->rowLower_[i] * rowScale;
         }
-
         // todo: two inequalities with one singleton. check whether the rows can
         // be converted to equations by introducing a shared slack variable
         // which is the case if the singletons have similar properties
@@ -4678,6 +4683,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // doubleton equation.
         //        printf("todo, two inequalities with one additional
         //        singleton\n");
+        (void)rowLower;
+        (void)rowUpper;
       }
     }
 

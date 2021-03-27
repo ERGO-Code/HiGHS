@@ -109,6 +109,7 @@ void HighsMipSolver::run() {
 
   mipdata_->runSetup();
   timer_.stop(timer_.presolve_clock);
+restart:
   if (modelstatus_ == HighsModelStatus::NOTSET) {
     mipdata_->evaluateRootNode();
   }
@@ -134,15 +135,14 @@ void HighsMipSolver::run() {
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
+  int numHugeTreeEstim = 0;
+  int64_t numNodesLastCheck = mipdata_->num_nodes;
+  double treeweightLastCheck = 0.0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit =
-        10 *
-        int(mipdata_->total_lp_iterations - mipdata_->sb_lp_iterations -
-            mipdata_->sepa_lp_iterations) /
-        (double)std::max(int64_t(1), mipdata_->num_nodes);
+    int iterlimit = 10 * mipdata_->lp.getAvgSolveIters();
     iterlimit = std::max(10000, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
@@ -247,6 +247,31 @@ void HighsMipSolver::run() {
 
       mipdata_->domain.clearChangedCols();
       mipdata_->removeFixedIndices();
+    }
+
+    if (!submip) {
+      double currNodeEstim =
+          numNodesLastCheck + (mipdata_->num_nodes - numNodesLastCheck) *
+                                  double(1.0 - mipdata_->pruned_treeweight) /
+                                  std::max(double(mipdata_->pruned_treeweight -
+                                                  treeweightLastCheck),
+                                           mipdata_->feastol);
+
+      if (currNodeEstim >=
+          1000 * (mipdata_->numRestarts + 1) * mipdata_->num_nodes) {
+        ++numHugeTreeEstim;
+        if (!submip)
+          printf("%d (nodeestim: %.1f)\n", numHugeTreeEstim, currNodeEstim);
+      } else {
+        numHugeTreeEstim = 0;
+        treeweightLastCheck = double(mipdata_->pruned_treeweight);
+        numNodesLastCheck = mipdata_->num_nodes;
+      }
+
+      if (numHugeTreeEstim >= 50) {
+        mipdata_->performRestart();
+        goto restart;
+      }
     }
 
     // remove the iteration limit when installing a new node

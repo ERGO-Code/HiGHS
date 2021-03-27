@@ -130,9 +130,10 @@ void HighsMipSolverData::init() {
   numRestarts = 0;
   numImprovingSols = 0;
   pruned_treeweight = 0;
-  maxrootlpiters = 0;
+  avgrootlpiters = 0;
   num_nodes = 0;
   num_leaves = 0;
+  num_leaves_before_run = 0;
   total_lp_iterations = 0;
   heuristic_lp_iterations = 0;
   sepa_lp_iterations = 0;
@@ -283,6 +284,7 @@ void HighsMipSolverData::runSetup() {
   nodequeue.setNumCol(mipsolver.numCol());
   numintegercols = integer_cols.size();
 
+  heuristics.setupIntCols();
   debugSolution.activate();
 }
 
@@ -332,7 +334,7 @@ double HighsMipSolverData::transformNewIncumbent(
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
       row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
-  assert(feasible);
+
   // store the solution as incumbent in the original space if there is no
   // solution or if it is feasible
   if (feasible) {
@@ -351,6 +353,12 @@ double HighsMipSolverData::transformNewIncumbent(
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance;
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::WARNING,
+        "Untransformed solution with objective %g is violated by %.12g for the "
+        "original model\n",
+        double(obj),
+        std::max({bound_violation_, integrality_violation_, row_violation_}));
     if (!currentFeasible) {
       // if the current incumbent is non existent or also not feasible we still
       // store the new one
@@ -374,7 +382,14 @@ double HighsMipSolverData::transformNewIncumbent(
 
 void HighsMipSolverData::performRestart() {
   HighsBasis rootBasis;
+  HighsPseudocostInitialization pscostinit(
+      pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
+      postSolveStack);
+
+  mipsolver.pscostinit = &pscostinit;
   ++numRestarts;
+  num_leaves_before_run = num_leaves;
+  num_nodes_before_run = num_nodes;
   int numLpRows = lp.getLp().numRow_;
   int numModelRows = mipsolver.numRow();
   int numCuts = numLpRows - numModelRows;
@@ -411,6 +426,8 @@ void HighsMipSolverData::performRestart() {
   // remove the current incumbent. Any incumbent is already transformed into the
   // original space and kept there
   incumbent.clear();
+  pruned_treeweight = 0;
+  nodequeue.clear();
 
   runPresolve();
 
@@ -424,13 +441,12 @@ void HighsMipSolverData::performRestart() {
 
   postSolveStack.removeCutsFromModel(cutpool.getNumCuts());
 
-  pruned_treeweight = 0;
-  nodequeue.clear();
   // HighsNodeQueue oldNodeQueue;
   // std::swap(nodequeue, oldNodeQueue);
 
   // remove the pointer into the stack-space of this function
   if (mipsolver.rootbasis == &rootBasis) mipsolver.rootbasis = nullptr;
+  mipsolver.pscostinit = nullptr;
 }
 
 void HighsMipSolverData::basisTransfer() {
@@ -639,7 +655,7 @@ bool HighsMipSolverData::rootSeparationRound(
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
   tmpLpIters += lp.getNumLpIterations();
-  maxrootlpiters = std::max(maxrootlpiters, tmpLpIters);
+  avgrootlpiters = lp.getAvgSolveIters();
   total_lp_iterations += tmpLpIters;
   sepa_lp_iterations += tmpLpIters;
 
@@ -671,7 +687,7 @@ bool HighsMipSolverData::rootSeparationRound(
         tmpLpIters = -lp.getNumLpIterations();
         status = lp.resolveLp(&domain);
         tmpLpIters += lp.getNumLpIterations();
-        maxrootlpiters = std::max(maxrootlpiters, tmpLpIters);
+        avgrootlpiters = lp.getAvgSolveIters();
         total_lp_iterations += tmpLpIters;
         sepa_lp_iterations += tmpLpIters;
       }
@@ -730,12 +746,12 @@ restart:
   lp.getLpSolver().setHighsOptionValue("output_flag", false);
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
-  maxrootlpiters = std::max(lpIters, maxrootlpiters);
+  avgrootlpiters = lp.getAvgSolveIters();
   if (numRestarts == 0) firstrootlpiters = lpIters;
 
   total_lp_iterations += lpIters;
 
-  lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
+  lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
   //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
   //  lp.getLpSolver().setHighsOptionValue("log_dev_level", 0);
   lp.getLpSolver().setHighsOptionValue("parallel", "off");
@@ -856,7 +872,7 @@ restart:
     rootlpsolobj = lp.getObjective();
     if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
-    lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
+    lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
   }
 
@@ -868,17 +884,19 @@ restart:
 
   if (status == HighsLpRelaxation::Status::Optimal &&
       lp.getFractionalIntegers().empty()) {
-    mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
-    pruned_treeweight = 1.0;
-    num_nodes = 1;
-    num_leaves = 1;
     addIncumbent(lp.getLpSolver().getSolution().col_value, lp.getObjective(),
                  'T');
-    return;
+    if (lower_bound > upper_limit) {
+      mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
+      pruned_treeweight = 1.0;
+      num_nodes = 1;
+      num_leaves = 1;
+      return;
+    }
   } else {
     rootlpsol = lp.getLpSolver().getSolution().col_value;
     rootlpsolobj = lp.getObjective();
-    lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
+    lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
     if ((!mipsolver.submip && numRestarts == 0) ||
         upper_limit == HIGHS_CONST_INF) {

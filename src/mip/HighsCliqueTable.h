@@ -227,6 +227,8 @@ class HighsCliqueTable {
 
   int getNumImplications(int col) const;
 
+  int getNumImplications(int col, bool val) const;
+
   void runCliqueMerging(HighsDomain& globaldomain);
 
   void rebuild(int ncols, const HighsDomain& globaldomain,
