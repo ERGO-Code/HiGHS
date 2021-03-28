@@ -64,7 +64,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       fractionality = std::abs(std::round(solval) - solval);
     }
 
-    if (fractionality < 100 * mip.mipdata_->feastol) continue;
+    if (fractionality < 1000 * mip.mipdata_->feastol) continue;
 
     fractionalBasisvars.emplace_back(fractionality, i);
   }
