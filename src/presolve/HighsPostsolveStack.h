@@ -222,12 +222,14 @@ class HighsPostsolveStack {
 
  public:
   int getOrigRowIndex(int row) const {
-    int origRowIndex_size = origRowIndex.size();
-    assert(row < origRowIndex_size);
+    assert(row < (int)origRowIndex.size());
     return origRowIndex[row];
   }
 
-  int getOrigColIndex(int col) const { return origColIndex[col]; }
+  int getOrigColIndex(int col) const {
+    assert(col < (int)origColIndex.size());
+    return origColIndex[col];
+  }
 
   void appendCutsToModel(int numCuts) {
     int currNumRow = origRowIndex.size();
