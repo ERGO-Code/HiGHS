@@ -4981,7 +4981,10 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
 
     for (const HighsSliceNonzero& colNz : getColumnVector(sparsestCol)) {
       int candRow = colNz.index();
-      if (candRow == eqrow) continue;
+      if (candRow == eqrow ||
+          (mipsolver != nullptr && postSolveStack.getOrigRowIndex(candRow) >=
+                                       mipsolver->orig_model_->numRow_))
+        continue;
 
       possibleScales.clear();
 
@@ -5054,7 +5057,10 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       for (const HighsSliceNonzero& colNz :
            getColumnVector(secondSparsestColumn)) {
         int candRow = colNz.index();
-        if (candRow == eqrow) continue;
+        if (candRow == eqrow ||
+            (mipsolver != nullptr && postSolveStack.getOrigRowIndex(candRow) >=
+                                         mipsolver->orig_model_->numRow_))
+          continue;
 
         if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0)
           continue;

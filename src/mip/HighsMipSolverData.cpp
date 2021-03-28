@@ -719,6 +719,9 @@ restart:
   // solve the first root lp
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
                "\nSolving root node LP relaxation\n");
+  // lp.getLpSolver().setHighsOptionValue(
+  //     "dual_simplex_cost_perturbation_multiplier", 10.0);
+  lp.setIterationLimit();
   lp.loadModel();
 
   // add all cuts again after restart
