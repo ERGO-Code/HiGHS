@@ -303,6 +303,7 @@ double HighsMipSolverData::transformNewIncumbent(
   double integrality_violation_ = 0;
 
   HighsCDouble obj = mipsolver.orig_model_->offset_;
+  assert((int)solution.col_value.size() == mipsolver.orig_model_->numCol_);
   for (int i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
     obj += mipsolver.orig_model_->colCost_[i] * solution.col_value[i];
 
@@ -439,7 +440,7 @@ void HighsMipSolverData::performRestart() {
   }
   runSetup();
 
-  postSolveStack.removeCutsFromModel(cutpool.getNumCuts());
+  postSolveStack.removeCutsFromModel(numCuts);
 
   // HighsNodeQueue oldNodeQueue;
   // std::swap(nodequeue, oldNodeQueue);

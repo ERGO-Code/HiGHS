@@ -234,8 +234,15 @@ class HighsPostsolveStack {
   }
 
   void removeCutsFromModel(int numCuts) {
-    int currNumRow = origRowIndex.size();
-    origRowIndex.resize(currNumRow - numCuts);
+    origNumRow -= numCuts;
+
+    int origRowIndexSize = origRowIndex.size();
+    for (int i = origRowIndex.size() - 1; i >= 0; --i) {
+      if (origRowIndex[i] < origNumRow) break;
+      --origRowIndexSize;
+    }
+
+    origRowIndex.resize(origRowIndexSize);
   }
 
   int getOrigNumRow() const { return origNumRow; }
