@@ -94,6 +94,7 @@ class HEkk {
   void initialiseForNewLp();
   HighsStatus initialiseForSolve();
   void setSimplexOptions();
+  void updateSimplexOptions();
   void initialiseSimplexLpRandomVectors();
   void setNonbasicMove();
   bool getNonsingularInverse(const int solve_phase = 0);

@@ -75,7 +75,7 @@ HighsStatus HEkk::solve() {
   simplex_lp_status_.has_primal_ray = false;
 
   chooseSimplexStrategyThreads(options_, simplex_info_);
-  int simplex_strategy = simplex_info_.simplex_strategy;
+  int& simplex_strategy = simplex_info_.simplex_strategy;
 
   // Initial solve according to strategy
   if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
@@ -492,6 +492,7 @@ HighsStatus HEkk::initialiseForSolve() {
   if (error_return) return HighsStatus::Error;
   assert(simplex_lp_status_.has_basis);
 
+  updateSimplexOptions();
   initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
@@ -518,7 +519,8 @@ void HEkk::setSimplexOptions() {
   // will become valuable when "choose" becomes a HiGHS strategy value
   // that will need converting into a specific simplex strategy value.
   //
-  simplex_info_.simplex_strategy = options_.simplex_strategy;
+  // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
+  //
   simplex_info_.dual_edge_weight_strategy =
       options_.simplex_dual_edge_weight_strategy;
   simplex_info_.price_strategy = options_.simplex_price_strategy;
@@ -531,6 +533,20 @@ void HEkk::setSimplexOptions() {
 
   // Set values of internal options
   simplex_info_.store_squared_primal_infeasibility = true;
+}
+
+void HEkk::updateSimplexOptions() {
+  // Update some simplex option values from HighsOptions when
+  // (re-)solving an LP. Others aren't changed because better values
+  // may have been learned due to solving this LP (possibly with some
+  // modification) before.
+  //
+  // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
+  //
+  simplex_info_.dual_simplex_cost_perturbation_multiplier =
+      options_.dual_simplex_cost_perturbation_multiplier;
+  simplex_info_.primal_simplex_bound_perturbation_multiplier =
+      options_.primal_simplex_bound_perturbation_multiplier;
 }
 
 void HEkk::initialiseSimplexLpRandomVectors() {
@@ -577,26 +593,25 @@ void HEkk::initialiseSimplexLpRandomVectors() {
 
 void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
                                         HighsSimplexInfo& simplex_info) {
-  // Given a simplex basis and solution, use the number of primal and
-  // dual infeasibilities to determine which simplex variant to use.
-  //
-  // 1. If it is "CHOOSE", in which case an approapriate stratgy is
-  // used
-  //
-  // 2. If re-solving choose the strategy appropriate to primal or
-  // dual feasibility
-  //
-  int simplex_strategy = options.simplex_strategy;
-  if (simplex_info.num_primal_infeasibility > 0) {
-    // Not primal feasible, so use dual simplex if choice is permitted
-    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+  // Ensure that this is not called with an optimal basis
+  assert(simplex_info.num_dual_infeasibility > 0 ||
+         simplex_info.num_primal_infeasibility > 0);
+  // Set the internal simplex strategy and number of threads for dual
+  // simplex
+  int& simplex_strategy = simplex_info.simplex_strategy;
+  // By default, use the HighsOptions strategy. If this is
+  // SIMPLEX_STRATEGY_CHOOSE, then the strategy used will depend on
+  // whether the current basis is primal feasible.
+  simplex_strategy = options.simplex_strategy;
+  if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
+    // HiGHS is left to choose the simplex strategy
+    if (simplex_info.num_primal_infeasibility > 0) {
+      // Not primal feasible, so use dual simplex
       simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-  } else {
-    // Primal feasible - so must be dual infeasible
-    assert(simplex_info.num_dual_infeasibility > 0);
-    // Use primal simplex if choice is permitted
-    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+    } else {
+      // Primal feasible. so use primal simplex
       simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+    }
   }
   // Set min/max_threads to correspond to serial code. They will be
   // set to other values if parallel options are used.
@@ -658,17 +673,6 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
         "Number of OMP threads available = %d < %d = Number of HiGHS threads "
         "to be used: Parallel performance will be less than anticipated\n",
         omp_max_threads, simplex_info.num_threads);
-  }
-  // Simplex strategy is now fixed - so set the value to be referred
-  // to in the simplex solver
-  simplex_info.simplex_strategy = simplex_strategy;
-  // Official start of solver Start the solve clock - because
-  // setupForSimplexSolve has simplex computations
-
-  if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
-                 "Primal simplex solver unavailable\n");
-    simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   }
 }
 
