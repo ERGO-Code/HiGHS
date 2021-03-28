@@ -1092,6 +1092,10 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     int start = mipsolver.mipdata_->ARstart_[i];
     int end = mipsolver.mipdata_->ARstart_[i + 1];
 
+    if (mipsolver.mipdata_->postSolveStack.getOrigRowIndex(i) >=
+        mipsolver.orig_model_->numRow_)
+      break;
+
     // catch set packing and partitioning constraints that already have the form
     // of a clique without transformations and add those cliques with the rows
     // being recorded
