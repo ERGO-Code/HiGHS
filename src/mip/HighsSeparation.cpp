@@ -899,9 +899,14 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
     }
 
     propdomain.propagate();
-    mipdata.cliquetable.cleanupFixed(mipdata.domain);
+    if (propdomain.infeasible()) {
+      status = HighsLpRelaxation::Status::Infeasible;
+      propdomain.clearChangedCols();
+      return true;
+    }
 
-    if (propdomain.infeasible() || mipdata.domain.infeasible()) {
+    mipdata.cliquetable.cleanupFixed(mipdata.domain);
+    if (mipdata.domain.infeasible()) {
       status = HighsLpRelaxation::Status::Infeasible;
       propdomain.clearChangedCols();
       return true;
