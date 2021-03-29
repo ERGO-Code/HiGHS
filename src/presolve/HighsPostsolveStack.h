@@ -152,6 +152,7 @@ class HighsPostsolveStack {
 
   struct ForcingColumn {
     double colCost;
+    double colBound;
     int col;
     bool atInfiniteUpper;
 
@@ -407,13 +408,13 @@ class HighsPostsolveStack {
 
   template <typename ColStorageFormat>
   void forcingColumn(int col, const HighsMatrixSlice<ColStorageFormat>& colVec,
-                     double cost, bool atInfiniteUpper) {
+                     double cost, double boundVal, bool atInfiniteUpper) {
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(
-        ForcingColumn{cost, origColIndex[col], atInfiniteUpper});
+        ForcingColumn{cost, boundVal, origColIndex[col], atInfiniteUpper});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kForcingColumn);
   }

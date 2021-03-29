@@ -246,10 +246,9 @@ void HighsPostsolveStack::ForcingColumn::undo(
     HighsSolution& solution, HighsBasis& basis) {
   int nonbasicRow = -1;
   HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::NONBASIC;
-  double colValFromNonbasicRow;
+  double colValFromNonbasicRow = colBound;
 
   if (atInfiniteUpper) {
-    colValFromNonbasicRow = -HIGHS_CONST_INF;
     // choose largest value as then all rows are feasible
     for (const auto& colVal : colValues) {
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
@@ -261,7 +260,6 @@ void HighsPostsolveStack::ForcingColumn::undo(
       }
     }
   } else {
-    colValFromNonbasicRow = HIGHS_CONST_INF;
     // choose smallest value, as then all rows are feasible
     for (const auto& colVal : colValues) {
       double colValFromRow = solution.row_value[colVal.index] / colVal.value;
@@ -279,8 +277,13 @@ void HighsPostsolveStack::ForcingColumn::undo(
   if (solution.col_dual.empty()) return;
 
   solution.col_dual[col] = 0.0;
-  basis.col_status[col] = HighsBasisStatus::BASIC;
-  basis.row_status[nonbasicRow] = nonbasicRowStatus;
+  if (nonbasicRow == -1) {
+    basis.col_status[col] =
+        atInfiniteUpper ? HighsBasisStatus::LOWER : HighsBasisStatus::UPPER;
+  } else {
+    basis.col_status[col] = HighsBasisStatus::BASIC;
+    basis.row_status[nonbasicRow] = nonbasicRowStatus;
+  }
 }
 
 void HighsPostsolveStack::ForcingColumnRemovedRow::undo(

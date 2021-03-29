@@ -2037,7 +2037,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
       // which is chosen such that the values of all rows are primal feasible
       // printf("removing forcing column of size %d\n", colsize[col]);
       postSolveStack.forcingColumn(col, getColumnVector(col),
-                                   model->colCost_[col], true);
+                                   model->colCost_[col], model->colLower_[col],
+                                   true);
       markColDeleted(col);
       int coliter = colhead[col];
       while (coliter != -1) {
@@ -2061,7 +2062,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
       // that colDual >= 0
       // printf("removing forcing column of size %d\n", colsize[col]);
       postSolveStack.forcingColumn(col, getColumnVector(col),
-                                   model->colCost_[col], false);
+                                   model->colCost_[col], model->colUpper_[col],
+                                   false);
       markColDeleted(col);
       int coliter = colhead[col];
       while (coliter != -1) {
@@ -2805,7 +2807,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       return checkLimits(postSolveStack);
     } else if (impliedDualRowBounds.getSumUpperOrig(col) == 0.0) {
       postSolveStack.forcingColumn(col, getColumnVector(col),
-                                   model->colCost_[col], true);
+                                   model->colCost_[col], model->colLower_[col],
+                                   true);
       markColDeleted(col);
       int coliter = colhead[col];
       while (coliter != -1) {
@@ -2826,7 +2829,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       return checkLimits(postSolveStack);
     } else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
       postSolveStack.forcingColumn(col, getColumnVector(col),
-                                   model->colCost_[col], false);
+                                   model->colCost_[col], model->colUpper_[col],
+                                   false);
       markColDeleted(col);
       int coliter = colhead[col];
       while (coliter != -1) {

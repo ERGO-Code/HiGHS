@@ -420,10 +420,12 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
   cliques[cliqueid].origin = origin;
 
   std::set<std::pair<int, int>>::iterator it;
+  int maxEnd;
   if (freespaces.empty() || (it = freespaces.lower_bound(std::make_pair(
                                  numcliquevars, -1))) == freespaces.end()) {
     cliques[cliqueid].start = cliqueentries.size();
     cliques[cliqueid].end = cliques[cliqueid].start + numcliquevars;
+    maxEnd = cliques[cliqueid].end;
     cliqueentries.resize(cliques[cliqueid].end);
     cliquesets.resize(cliques[cliqueid].end);
   } else {
@@ -431,7 +433,8 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     freespaces.erase(it);
 
     cliques[cliqueid].start = freespace.second;
-    cliques[cliqueid].end = cliques[cliqueid].start + freespace.first;
+    cliques[cliqueid].end = cliques[cliqueid].start + numcliquevars;
+    maxEnd = cliques[cliqueid].start + freespace.first;
   }
 
   bool fixtozero = false;
@@ -495,42 +498,47 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     ++k;
   }
 
-  if (cliques[cliqueid].end > k) {
-    if (int(cliqueentries.size()) == cliques[cliqueid].end) {
+  if (maxEnd > k) {
+    if (int(cliqueentries.size()) == maxEnd) {
       cliqueentries.resize(k);
       cliquesets.resize(k);
     } else
-      freespaces.emplace(cliques[cliqueid].end - k, k);
+      freespaces.emplace(maxEnd - k, k);
 
-    switch (k - cliques[cliqueid].start) {
-      case 0:
-        // clique empty, so just mark it as deleted
-        cliques[cliqueid].start = -1;
-        freeslots.push_back(cliqueid);
-        break;
-      case 1:
-        // size 1 clique is redundant, so unlink the single linked entry
-        // and mark it as deleted
-        unlink(cliques[cliqueid].start);
-        cliques[cliqueid].start = -1;
-        freeslots.push_back(cliqueid);
-        break;
-      case 2:
-        // due to subsitutions the clique became smaller and is now of size two
-        // as a result we need to link it to the size two cliqueset instead of
-        // the normal cliqueset
-        unlink(cliques[cliqueid].start);
-        unlink(cliques[cliqueid].start + 1);
+    if (cliques[cliqueid].end > k) {
+      switch (k - cliques[cliqueid].start) {
+        case 0:
+          // clique empty, so just mark it as deleted
+          cliques[cliqueid].start = -1;
+          freeslots.push_back(cliqueid);
+          break;
+        case 1:
+          // size 1 clique is redundant, so unlink the single linked entry
+          // and mark it as deleted
+          unlink(cliques[cliqueid].start);
+          cliques[cliqueid].start = -1;
+          freeslots.push_back(cliqueid);
+          break;
+        case 2:
+          // due to subsitutions the clique became smaller and is now of size
+          // two as a result we need to link it to the size two cliqueset
+          // instead of the normal cliqueset
+          assert(cliqueid >= 0 && cliqueid < (int)cliques.size());
+          assert(cliques[cliqueid].start >= 0 &&
+                 cliques[cliqueid].start < (int)cliqueentries.size());
+          unlink(cliques[cliqueid].start);
+          unlink(cliques[cliqueid].start + 1);
 
-        cliques[cliqueid].end = k;
+          cliques[cliqueid].end = k;
 
-        cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
-        link(cliques[cliqueid].start);
-        cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
-        link(cliques[cliqueid].start + 1);
-        break;
-      default:
-        cliques[cliqueid].end = k;
+          cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
+          link(cliques[cliqueid].start);
+          cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
+          link(cliques[cliqueid].start + 1);
+          break;
+        default:
+          cliques[cliqueid].end = k;
+      }
     }
   }
 
