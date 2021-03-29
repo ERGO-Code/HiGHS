@@ -114,6 +114,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
+  objective = -HIGHS_CONST_INF;
   currentbasisstored = false;
 }
 
@@ -133,6 +134,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
+  objective = -HIGHS_CONST_INF;
 }
 
 void HighsLpRelaxation::loadModel() {
