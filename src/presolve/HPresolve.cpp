@@ -4991,7 +4991,9 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       // allow no fillin if a completely continuous row is used to cancel a row
       // that has integers as there are instances where this leads to a huge
       // deterioration of cut performance
-      if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0) ++misses;
+      int maxMisses = 1;
+      if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0)
+        --maxMisses;
       for (const HighsSliceNonzero& nonzero : getStoredRow()) {
         double candRowVal;
         if (nonzero.index() == sparsestCol) {
@@ -5008,7 +5010,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
               break;
             }
             ++misses;
-            if (misses > 1) break;
+            if (misses > maxMisses) break;
             continue;
           }
           candRowVal = Avalue[nzPos];
@@ -5041,7 +5043,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
           possibleScales.emplace(scale, 1);
       }
 
-      if (misses > 1 || possibleScales.empty()) continue;
+      if (misses > maxMisses || possibleScales.empty()) continue;
 
       int numCancel = 0;
       double scale = 0.0;
