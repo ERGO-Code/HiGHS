@@ -827,8 +827,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                   break;
               }
 
-              assert(lpsolver.getLp().colLower_[subst->replace.col] !=
-                     lpsolver.getLp().colUpper_[subst->replace.col]);
               col = subst->replace.col;
               if (subst->replace.val == 0) val = 1.0 - val;
 
