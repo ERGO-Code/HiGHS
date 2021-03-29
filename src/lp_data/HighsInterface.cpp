@@ -1175,6 +1175,7 @@ HighsStatus Highs::setNonbasicStatusInterface(
           basis.col_status[iCol] = HighsBasisStatus::ZERO;
         }
         if (has_simplex_basis) {
+          // todo @ Julian this assert fails on glass4
           assert(simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_TRUE);
           int move = illegal_move_value;
           if (lower == upper) {
