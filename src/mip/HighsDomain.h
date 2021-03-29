@@ -228,7 +228,7 @@ class HighsDomain {
 
   void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack);
 
-  void propagate();
+  bool propagate();
 
   void tightenCoefficients(int* inds, double* vals, int len, double& rhs) const;
 

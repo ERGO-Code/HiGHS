@@ -782,7 +782,7 @@ HighsDomainChange HighsDomain::backtrack() {
   return backtrackboundchg;
 }
 
-void HighsDomain::propagate() {
+bool HighsDomain::propagate() {
   std::vector<int> propagateinds;
 
   auto havePropagationRows = [&]() {
@@ -799,7 +799,7 @@ void HighsDomain::propagate() {
     return haverows;
   };
 
-  if (!havePropagationRows()) return;
+  if (!havePropagationRows()) return false;
 
   size_t changedboundsize = 2 * mipsolver->mipdata_->ARvalue_.size();
 
@@ -954,6 +954,8 @@ void HighsDomain::propagate() {
       }
     }
   }
+
+  return true;
 }
 
 void HighsDomain::tightenCoefficients(int* inds, double* vals, int len,

@@ -4949,6 +4949,9 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
   HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
   std::vector<int> tmpEquations;
   tmpEquations.reserve(equations.size());
+
+  const double minNonzeroVal = std::sqrt(options->primal_feasibility_tolerance);
+
   for (const auto& eq : equations) tmpEquations.emplace_back(eq.second);
   for (int eqrow : tmpEquations) {
     if (rowDeleted[eqrow]) continue;
@@ -4975,16 +4978,12 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
 
     assert(sparsestCol != -1 && secondSparsestColumn != -1);
 
-    std::vector<double> possibleScales;
-    possibleScales.reserve(rowsize[eqrow]);
+    std::map<double, int> possibleScales;
     sparsifyRows.clear();
 
     for (const HighsSliceNonzero& colNz : getColumnVector(sparsestCol)) {
       int candRow = colNz.index();
-      if (candRow == eqrow ||
-          (mipsolver != nullptr && postSolveStack.getOrigRowIndex(candRow) >=
-                                       mipsolver->orig_model_->numRow_))
-        continue;
+      if (candRow == eqrow) continue;
 
       possibleScales.clear();
 
@@ -4994,9 +4993,9 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       // deterioration of cut performance
       if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0) ++misses;
       for (const HighsSliceNonzero& nonzero : getStoredRow()) {
-        double scale;
+        double candRowVal;
         if (nonzero.index() == sparsestCol) {
-          scale = -colNz.value() / nonzero.value();
+          candRowVal = colNz.value();
         } else {
           int nzPos = findNonzero(candRow, nonzero.index());
           if (nzPos == -1) {
@@ -5012,38 +5011,52 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
             if (misses > 1) break;
             continue;
           }
-          scale = -Avalue[nzPos] / nonzero.value();
+          candRowVal = Avalue[nzPos];
         }
-        if (std::abs(scale) <= 1e3) possibleScales.push_back(scale);
+
+        double scale = -candRowVal / nonzero.value();
+        if (std::abs(scale) > 1e3) continue;
+
+        double scaleTolerance = minNonzeroVal / std::abs(nonzero.value());
+        auto it = possibleScales.lower_bound(scale - scaleTolerance);
+        if (it != possibleScales.end() &&
+            std::abs(it->first - scale) <= scaleTolerance) {
+          // there already is a scale that is very close and could produces
+          // a matrix value for this nonzero that is below the allowed
+          // threshold. Therefore we check if the matrix value is small enough
+          // for this nonzero to be deleted, in which case the number of
+          // deleted nonzeros for the other scale is increased. If it is not
+          // small enough we do not use this scale or the other one because
+          // such small matrix values may lead to numerical troubles.
+
+          // scale is already marked to be numerically bad
+          if (it->second == -1) continue;
+
+          if (std::abs(it->first * nonzero.value() + candRowVal) <=
+              options->small_matrix_value)
+            it->second += 1;
+          else
+            it->second = -1;
+        } else
+          possibleScales.emplace(scale, 1);
       }
 
       if (misses > 1 || possibleScales.empty()) continue;
 
-      std::sort(possibleScales.begin(), possibleScales.end());
-
-      int currScaleStart = 0;
-
       int numCancel = 0;
       double scale = 0.0;
-      int nPossibleScales = possibleScales.size();
-      int i;
-      for (i = 1; i != nPossibleScales; ++i) {
-        if (std::abs(possibleScales[currScaleStart] - possibleScales[i]) <=
-            options->small_matrix_value)
-          continue;
 
-        if (i - currScaleStart > numCancel) {
-          numCancel = i - currScaleStart;
-          scale = possibleScales[currScaleStart];
+      for (const auto& s : possibleScales) {
+        if (s.second <= misses) continue;
+
+        if (s.second > numCancel ||
+            (s.second == numCancel && std::abs(s.first) < std::abs(scale))) {
+          scale = s.first;
+          numCancel = s.second;
         }
-
-        currScaleStart = i;
       }
 
-      if (i - currScaleStart > numCancel) {
-        numCancel = i - currScaleStart;
-        scale = possibleScales[currScaleStart];
-      }
+      assert(scale != 0.0 || numCancel == 0);
 
       // cancels at least one nonzero if the scale cancels more than there is
       // fillin
@@ -5057,10 +5070,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       for (const HighsSliceNonzero& colNz :
            getColumnVector(secondSparsestColumn)) {
         int candRow = colNz.index();
-        if (candRow == eqrow ||
-            (mipsolver != nullptr && postSolveStack.getOrigRowIndex(candRow) >=
-                                         mipsolver->orig_model_->numRow_))
-          continue;
+        if (candRow == eqrow) continue;
 
         if (rowsizeInteger[eqrow] == 0 && rowsizeInteger[candRow] != 0)
           continue;
@@ -5074,9 +5084,9 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
         possibleScales.clear();
         bool skip = false;
         for (const HighsSliceNonzero& nonzero : getStoredRow()) {
-          double scale;
+          double candRowVal;
           if (nonzero.index() == secondSparsestColumn) {
-            scale = -colNz.value() / nonzero.value();
+            candRowVal = colNz.value();
           } else {
             int nzPos = findNonzero(candRow, nonzero.index());
             if (nzPos == -1) {
@@ -5085,38 +5095,55 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
               skip = true;
               break;
             }
-            scale = -Avalue[nzPos] / nonzero.value();
+
+            candRowVal = Avalue[nzPos];
           }
-          if (std::abs(scale) < 1e3) possibleScales.push_back(scale);
+
+          double scale = -candRowVal / nonzero.value();
+          if (std::abs(scale) > 1e3) continue;
+
+          double scaleTolerance = minNonzeroVal / std::abs(nonzero.value());
+          auto it = possibleScales.lower_bound(scale - scaleTolerance);
+          if (it != possibleScales.end() &&
+              std::abs(it->first - scale) <= scaleTolerance) {
+            // there already is a scale that is very close and could produces
+            // a matrix value for this nonzero that is below the allowed
+            // threshold. Therefore we check if the matrix value is small enough
+            // for this nonzero to be deleted, in which case the number of
+            // deleted nonzeros for the other scale is increased. If it is not
+            // small enough we do not use this scale or the other one because
+            // such small matrix values may lead to numerical troubles.
+
+            // scale is already marked to be numerically bad
+            if (it->second == -1) continue;
+
+            if (std::abs(it->first * nonzero.value() + candRowVal) <=
+                options->small_matrix_value) {
+              it->second += 1;
+            } else {
+              // mark scale to be numerically bad
+              it->second = -1;
+              continue;
+            }
+          } else
+            possibleScales.emplace(scale, 1);
         }
 
-        if (skip) continue;
-
-        std::sort(possibleScales.begin(), possibleScales.end());
-
-        int currScaleStart = 0;
+        if (skip || possibleScales.empty()) continue;
 
         int numCancel = 0;
         double scale = 0.0;
-        int nPossibleScales = possibleScales.size();
-        int i;
-        for (i = 1; i != nPossibleScales; ++i) {
-          if (std::abs(possibleScales[currScaleStart] - possibleScales[i]) <=
-              options->small_matrix_value)
-            continue;
 
-          if (i - currScaleStart > numCancel) {
-            numCancel = i - currScaleStart;
-            scale = possibleScales[currScaleStart];
+        for (const auto& s : possibleScales) {
+          if (s.second <= 1) continue;
+          if (s.second > numCancel ||
+              (s.second == numCancel && std::abs(s.first) < std::abs(scale))) {
+            scale = s.first;
+            numCancel = s.second;
           }
-
-          currScaleStart = i;
         }
 
-        if (i - currScaleStart > numCancel) {
-          numCancel = i - currScaleStart;
-          scale = possibleScales[currScaleStart];
-        }
+        assert(scale != 0.0 || numCancel == 0);
 
         // cancels at least one nonzero if the scale cancels more than there is
         // fillin

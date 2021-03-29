@@ -674,13 +674,15 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       parent != nullptr && parent->branchingdecision == domchgstack.back() &&
       parent->lp_objective != HIGHS_CONST_INF;
 
-  localdom.propagate();
+  bool propagatedRows = localdom.propagate();
 
-  inferences += domchgstack.size();
-  if (addInferenceObservation)
-    pseudocost.addInferenceObservation(
-        parent->branchingdecision.column, inferences,
-        parent->branchingdecision.boundtype == HighsBoundType::Lower);
+  if (propagatedRows) {
+    inferences += domchgstack.size();
+    if (addInferenceObservation)
+      pseudocost.addInferenceObservation(
+          parent->branchingdecision.column, inferences,
+          parent->branchingdecision.boundtype == HighsBoundType::Lower);
+  }
 
   NodeResult result = NodeResult::Open;
 
@@ -984,45 +986,51 @@ HighsSearch::NodeResult HighsSearch::branch() {
   if (currnode.branchingdecision.column == -1) {
     lp->setIterationLimit();
 
-    lp->getLpSolver().clearSolver();
+    // create a fresh LP only with model rows since all integer columns are
+    // fixed, the cutting planes are not required and the LP could not be solved
+    // so we want to make it as easy as possible
+    HighsLpRelaxation lpCopy(mipsolver);
+    lpCopy.loadModel();
+    lpCopy.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
+                                          localdom.colLower_.data(),
+                                          localdom.colUpper_.data());
+    // temporarily use the fresh LP for the HighsSearch class
+    HighsLpRelaxation* tmpLp = &lpCopy;
+    std::swap(tmpLp, lp);
+
+    // reevaluate the node with LP presolve enabled
     lp->getLpSolver().setHighsOptionValue("presolve", "on");
     result = evaluateNode();
 
-    if (result != NodeResult::Open) {
-      lp->getLpSolver().setHighsOptionValue("presolve", "off");
-      return result;
-    }
-
-    lp->getLpSolver().clearSolver();
-    lp->getLpSolver().setHighsOptionValue("simplex_strategy",
-                                          SIMPLEX_STRATEGY_PRIMAL);
-    result = evaluateNode();
-    lp->getLpSolver().setHighsOptionValue("simplex_strategy",
-                                          SIMPLEX_STRATEGY_DUAL);
-    lp->getLpSolver().setHighsOptionValue("presolve", "off");
-
-    if (result != NodeResult::Open) return result;
-
-    Highs ipm;
-    ipm.passModel(lp->getLp());
-    ipm.setHighsOptionValue("solver", "ipm");
-    ipm.setHighsOptionValue("output_flag", false);
-    ipm.run();
-
-    if (ipm.getBasis().valid_) {
+    if (result == NodeResult::Open) {
+      // LP still not solved, reevaluate with primal simplex
       lp->getLpSolver().clearSolver();
-      lp->getLpSolver().setBasis(ipm.getBasis());
+      lp->getLpSolver().setHighsOptionValue("simplex_strategy",
+                                            SIMPLEX_STRATEGY_PRIMAL);
       result = evaluateNode();
-      if (result != NodeResult::Open) {
-        // printf(
-        //    "WARNING: all integers colls are fixed, LP may be unstable,
-        //    possibly " "pruning optimal solution, lp status: scaled=%d
-        //    unscaled=%d\n", (int)lp->getLpSolver().getModelStatus(true),
-        //    (int)lp->getLpSolver().getModelStatus(false));
-        currnode.opensubtrees = 0;
-        result = NodeResult::LpInfeasible;
+      lp->getLpSolver().setHighsOptionValue("simplex_strategy",
+                                            SIMPLEX_STRATEGY_DUAL);
+      if (result == NodeResult::Open) {
+        // LP still not solved, reevaluate with IPM instead of simplex
+        lp->getLpSolver().clearSolver();
+        lp->getLpSolver().setHighsOptionValue("solver", "ipm");
+        result = evaluateNode();
+
+        if (result == NodeResult::Open) {
+          highsLogUser(mipsolver.options_mip_->log_options,
+                       HighsLogType::WARNING,
+                       "Failed to solve node with all integer columns "
+                       "fixed. Declaring node infeasible.\n");
+          // LP still not solved, give up and declare as infeasible
+          currnode.opensubtrees = 0;
+          result = NodeResult::LpInfeasible;
+        }
       }
     }
+
+    // restore old lp relaxation
+    std::swap(tmpLp, lp);
+
     return result;
   }
 
