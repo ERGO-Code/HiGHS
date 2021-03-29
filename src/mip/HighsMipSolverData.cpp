@@ -672,6 +672,14 @@ bool HighsMipSolverData::rootSeparationRound(
   if (incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
     heuristics.flushStatistics();
+
+    if (domain.infeasible()) {
+      pruned_treeweight = 1.0;
+      lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+      num_nodes = 1;
+      num_leaves = 1;
+      return true;
+    }
   }
 
   if (lp.unscaledDualFeasible(status)) {
@@ -922,9 +930,7 @@ restart:
   // if global propagation found bound changes, we update the local domain
   if (!domain.getChangedCols().empty()) {
     int ncuts;
-    if (rootSeparationRound(sepa, ncuts, status)) {
-      return;
-    }
+    if (rootSeparationRound(sepa, ncuts, status)) return;
 
     if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
