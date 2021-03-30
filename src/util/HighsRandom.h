@@ -33,7 +33,7 @@ class HighsRandom {
     state = seed;
     do {
       state = HighsHashHelpers::pair_hash<0>(state, 0);
-      state ^= (HighsHashHelpers::pair_hash<1>(state, seed) >> 32);
+      state ^= (HighsHashHelpers::pair_hash<1>(state >> 32, seed) >> 32);
     } while (state == 0);
   }
 
