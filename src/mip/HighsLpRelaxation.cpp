@@ -102,6 +102,8 @@ double HighsLpRelaxation::slackUpper(int row) const {
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setHighsOptionValue("output_flag", false);
+  lpsolver.setHighsOptionValue("highs_random_seed",
+                               mipsolver.options_mip_->highs_random_seed);
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance);
