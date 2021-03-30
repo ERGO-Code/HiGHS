@@ -40,7 +40,7 @@ class HighsRandom {
 
   void advance() {
     // advance state with simple xorshift the outputs are produced by applying
-    // strongly universal hash functions to the state so that the bits lower
+    // strongly universal hash functions to the state so that the lower
     // order bits are as strong as the upper order bits
     state ^= state >> 12;
     state ^= state << 25;
@@ -90,7 +90,7 @@ class HighsRandom {
         (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 26))
             << 26 |
         HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26);
-    // compute output / (2^52) which is in the interval half-open interval [0,1)
+    // compute output / (2^52) which is in the half-open interval [0,1)
     return output * 2.22044604925031308e-16;
   }
 
