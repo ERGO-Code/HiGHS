@@ -265,7 +265,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
     }
 
     if (data.Z.begin() != extensionend) {
-      std::shuffle(data.Z.begin(), extensionend, randgen);
+      randgen.shuffle(data.Z.data(), extensionend - data.Z.begin());
 
       for (auto it = data.Z.begin(); it != extensionend; ++it) {
         extensionend = std::partition(it + 1, extensionend, [&](CliqueVar z) {
@@ -1828,7 +1828,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
     if (!extensionvars.empty()) {
       // todo, shuffle extension vars?
-      std::shuffle(extensionvars.begin(), extensionvars.end(), randgen);
+      randgen.shuffle(extensionvars.data(), extensionvars.size());
       size_t i = 0;
       while (i < extensionvars.size()) {
         CliqueVar extvar = extensionvars[i];

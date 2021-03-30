@@ -47,7 +47,7 @@ void HEkkDualRHS::chooseNormal(int* chIndex) {
   // call. NB Must still call int to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
   // call!!
-  int random = ekk_instance_.random_.integer();
+  // int random = ekk_instance_.random_.integer();
   if (workCount == 0) {
     *chIndex = -1;
     return;
@@ -64,7 +64,7 @@ void HEkkDualRHS::chooseNormal(int* chIndex) {
   if (workCount < 0) {
     // DENSE mode
     const int numRow = -workCount;
-    int randomStart = random % numRow;
+    int randomStart = ekk_instance_.random_.integer(numRow);
     double bestMerit = 0;
     int bestIndex = -1;
     for (int section = 0; section < 2; section++) {
@@ -93,7 +93,7 @@ void HEkkDualRHS::chooseNormal(int* chIndex) {
     //      return;
     //    }
 
-    int randomStart = random % workCount;
+    int randomStart = ekk_instance_.random_.integer(workCount);
     double bestMerit = 0;
     int bestIndex = -1;
     for (int section = 0; section < 2; section++) {
@@ -143,12 +143,10 @@ void HEkkDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
   vector<pair<double, int>> setP;
   setP.reserve(chooseCHECK);
 
-  int random = ekk_instance_.random_.integer();
-
   if (workCount < 0) {
     // DENSE mode
     const int numRow = -workCount;
-    int randomStart = random % numRow;
+    int randomStart = ekk_instance_.random_.integer(numRow);
     double cutoffMerit = 0;
     // Now
     for (int section = 0; section < 2; section++) {
@@ -178,7 +176,7 @@ void HEkkDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
     // SPARSE Mode
     int randomStart;
     if (workCount) {
-      randomStart = random % workCount;
+      randomStart = ekk_instance_.random_.integer(workCount);
     } else {
       // workCount = 0
       randomStart = 0;
@@ -249,11 +247,10 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
   *chCount = 0;
 
-  int random = ekk_instance_.random_.integer();
   if (workCount < 0) {
     // DENSE mode
     const int numRow = -workCount;
-    int randomStart = random % numRow;
+    int randomStart = ekk_instance_.random_.integer(numRow);
     vector<double> bestMerit(chLimit, 0);
     vector<int> bestIndex(chLimit, -1);
     for (int section = 0; section < 2; section++) {
@@ -285,7 +282,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
       return;
     }
 
-    int randomStart = random % workCount;
+    int randomStart = ekk_instance_.random_.integer(workCount);
     vector<double> bestMerit(chLimit, 0);
     vector<int> bestIndex(chLimit, -1);
     for (int section = 0; section < 2; section++) {

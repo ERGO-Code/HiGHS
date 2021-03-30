@@ -34,6 +34,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsLp& lp = lpRelaxation.getLp();
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
+  randgen.initialise(mip.options_mip_->highs_random_seed +
+                     lpRelaxation.getNumLpIterations());
   std::vector<RowType> rowtype;
   rowtype.resize(lp.numRow_);
   for (int i = 0; i != lp.numRow_; ++i) {
@@ -244,20 +246,16 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       if (bestInArcCol == -1 ||
           (bestOutArcCol != -1 &&
            outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
-        std::uniform_int_distribution<int> dist(
-            colInArcs[bestOutArcCol].first,
-            colInArcs[bestOutArcCol].second - 1);
-        int inArcRow = dist(randgen);
+        int inArcRow = randgen.integer(colInArcs[bestOutArcCol].first,
+                                       colInArcs[bestOutArcCol].second);
 
         int row = inArcRows[inArcRow].first;
         double weight = -outArcColVal / inArcRows[inArcRow].second;
 
         lpAggregator.addRow(row, weight);
       } else {
-        std::uniform_int_distribution<int> dist(
-            colOutArcs[bestInArcCol].first,
-            colOutArcs[bestInArcCol].second - 1);
-        int outArcRow = dist(randgen);
+        int outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
+                                        colOutArcs[bestInArcCol].second);
 
         int row = outArcRows[outArcRow].first;
         double weight = -inArcColVal / outArcRows[outArcRow].second;

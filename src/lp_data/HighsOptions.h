@@ -266,6 +266,7 @@ struct HighsOptionsStruct {
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
   double dual_objective_value_upper_bound;
+  int highs_random_seed;
   int highs_debug_level;
   int highs_analysis_level;
   int simplex_strategy;
@@ -468,6 +469,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &dual_objective_value_upper_bound, -HIGHS_CONST_INF,
         HIGHS_CONST_INF, HIGHS_CONST_INF);
     records.push_back(record_double);
+
+    record_int = new OptionRecordInt(
+        "highs_random_seed", "random seed used in HiGHS", advanced,
+        &highs_random_seed, 0, 0, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
 
     record_int =
         new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",

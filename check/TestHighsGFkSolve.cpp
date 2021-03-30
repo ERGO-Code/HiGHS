@@ -1,9 +1,9 @@
 
 #include <numeric>
-#include <random>
 
 #include "catch.hpp"
 #include "mip/HighsGFkSolve.h"
+#include "util/HighsRandom.h"
 
 const bool dev_run = false;
 
@@ -68,11 +68,9 @@ TEST_CASE("GFkSolve", "[mip]") {
   std::vector<int> Aindex;
   std::vector<int> Astart;
 
-  std::mt19937 randgen;
-  std::uniform_int_distribution<int> valuedist(-10000, 10000);
+  HighsRandom randgen;
   int numRow = 10;
   int numCol = 100;
-  std::uniform_int_distribution<int> numColEntryDist(5, 10);
 
   std::vector<int> rowInds(numRow);
   std::iota(rowInds.begin(), rowInds.end(), 0);
@@ -80,13 +78,13 @@ TEST_CASE("GFkSolve", "[mip]") {
   Astart.push_back(0);
 
   for (int i = 0; i != numCol; ++i) {
-    std::shuffle(rowInds.begin(), rowInds.end(), randgen);
-    int numentry = numColEntryDist(randgen);
+    randgen.shuffle(rowInds.data(), rowInds.size());
+    int numentry = randgen.integer(5, 11);
 
     for (int j = 0; j != numentry; ++j) {
-      int val = valuedist(randgen);
+      int val = randgen.integer(-10000, 10001);
       if (val == 0) ++val;
-      Avalue.push_back(valuedist(randgen));
+      Avalue.push_back(randgen.integer(-10000, 10001));
       Aindex.push_back(rowInds[j]);
     }
 

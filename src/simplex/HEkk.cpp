@@ -530,6 +530,7 @@ void HEkk::setSimplexOptions() {
       options_.primal_simplex_bound_perturbation_multiplier;
   simplex_info_.factor_pivot_threshold = options_.factor_pivot_threshold;
   simplex_info_.update_limit = options_.simplex_update_limit;
+  random_.initialise(options_.highs_random_seed);
 
   // Set values of internal options
   simplex_info_.store_squared_primal_infeasibility = true;
@@ -556,32 +557,26 @@ void HEkk::initialiseSimplexLpRandomVectors() {
   // Instantiate and (re-)initialise the random number generator
   //  HighsRandom random;
   HighsRandom& random = random_;
-  random.initialise();
+  //  random.initialise();
 
   if (num_col) {
     // Generate a random permutation of the column indices
-    simplex_info_.numColPermutation_.resize(num_col);
     vector<int>& numColPermutation = simplex_info_.numColPermutation_;
+    numColPermutation.resize(num_col);
     for (int i = 0; i < num_col; i++) numColPermutation[i] = i;
-    for (int i = num_col - 1; i >= 1; i--) {
-      int j = random.integer() % (i + 1);
-      std::swap(numColPermutation[i], numColPermutation[j]);
-    }
+    random.shuffle(numColPermutation.data(), num_col);
   }
 
   // Re-initialise the random number generator and generate the
   // random vectors in the same order as hsol to maintain repeatable
   // performance
-  random.initialise();
-  //
+  // random.initialise();
+
   // Generate a random permutation of all the indices
-  simplex_info_.numTotPermutation_.resize(num_tot);
   vector<int>& numTotPermutation = simplex_info_.numTotPermutation_;
+  numTotPermutation.resize(num_tot);
   for (int i = 0; i < num_tot; i++) numTotPermutation[i] = i;
-  for (int i = num_tot - 1; i >= 1; i--) {
-    int j = random.integer() % (i + 1);
-    std::swap(numTotPermutation[i], numTotPermutation[j]);
-  }
+  random.shuffle(numTotPermutation.data(), num_tot);
 
   // Generate a vector of random reals
   simplex_info_.numTotRandomValue_.resize(num_tot);

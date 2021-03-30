@@ -17,15 +17,14 @@
 #ifndef MIP_HIGHS_PATH_SEPARATOR_H_
 #define MIP_HIGHS_PATH_SEPARATOR_H_
 
-#include <random>
-
 #include "mip/HighsSeparator.h"
+#include "util/HighsRandom.h"
 
 /// Helper class to compute single-row relaxations from the current LP
 /// relaxation by substituting bounds and aggregating rows
 class HighsPathSeparator : public HighsSeparator {
  private:
-  std::mt19937 randgen;
+  HighsRandom randgen;
 
  public:
   void separateLpSolution(HighsLpRelaxation& lpRelaxation,

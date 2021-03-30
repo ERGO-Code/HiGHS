@@ -10,11 +10,11 @@
 #ifndef HIGHS_PRIMAL_HEURISTICS_H_
 #define HIGHS_PRIMAL_HEURISTICS_H_
 
-#include <random>
 #include <vector>
 
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
+#include "util/HighsRandom.h"
 
 class HighsMipSolver;
 
@@ -28,7 +28,7 @@ class HighsPrimalHeuristics {
   double infeasObservations;
   int numInfeasObservations;
 
-  std::mt19937 randgen;
+  HighsRandom randgen;
 
   std::vector<int> intcols;
 

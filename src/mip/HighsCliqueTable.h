@@ -11,12 +11,12 @@
 #define HIGHS_CLIQUE_TABLE_H_
 
 #include <cstdint>
-#include <random>
 #include <set>
 #include <vector>
 
 #include "lp_data/HConst.h"
 #include "util/HighsHash.h"
+#include "util/HighsRandom.h"
 
 class HighsCutPool;
 class HighsDomain;
@@ -91,7 +91,7 @@ class HighsCliqueTable {
   // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, int> sizeTwoCliques;
 
-  std::mt19937 randgen;
+  HighsRandom randgen;
   int nfixings;
 
   int splay(int cliqueid, int root);

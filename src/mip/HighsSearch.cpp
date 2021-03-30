@@ -867,7 +867,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
           }
           break;
         case ChildSelectionRule::Random:
-          if (random.integer() % 2 == 0) {
+          if (random.bit()) {
             currnode.branchingdecision.boundtype = HighsBoundType::Lower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
