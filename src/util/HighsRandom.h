@@ -32,9 +32,8 @@ class HighsRandom {
   void initialise(unsigned seed = 0) {
     state = seed;
     do {
-      state = (HighsHashHelpers::pair_hash<0>(state, 0) >> 32);
-      state =
-          (state << 32) ^ (HighsHashHelpers::pair_hash<1>(state, seed) >> 32);
+      state = HighsHashHelpers::pair_hash<0>(state, 0);
+      state ^= (HighsHashHelpers::pair_hash<1>(state, seed) >> 32);
     } while (state == 0);
   }
 
@@ -73,9 +72,8 @@ class HighsRandom {
     advance();
     // 52 bit output is in interval [0,2^52-1]
     uint64_t output =
-        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 26))
-            << 26 |
-        HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26);
+        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 52)) ^
+        (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26));
     // compute (1+output) / (2^52+1) which is strictly between 0 and 1
     return (1 + output) * 2.2204460492503125e-16;
   }
@@ -87,9 +85,8 @@ class HighsRandom {
     advance();
     // 52 bit result is in interval [0,2^52-1]
     uint64_t output =
-        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 26))
-            << 26 |
-        HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26);
+        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 52)) ^
+        (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26));
     // compute output / (2^52) which is in the half-open interval [0,1)
     return output * 2.22044604925031308e-16;
   }
