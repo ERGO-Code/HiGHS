@@ -265,24 +265,24 @@ class SpecialLps {
   void blendingMaxLp(HighsLp& lp, HighsModelStatus& require_model_status,
                      double& optimal_objective) {
     blendingLp(lp, require_model_status, optimal_objective);
-    for (int iCol = 0; iCol < lp.numCol_; iCol++)
+    for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
       lp.colCost_[iCol] = -lp.colCost_[iCol];
     lp.sense_ = ObjSense::MAXIMIZE;
     optimal_objective = -optimal_objective;
   }
 
-  void reportIssue(const int issue, const bool dev_run = false) {
+  void reportIssue(const HighsInt issue, const bool dev_run = false) {
     if (dev_run)
       printf("\n *************\n * Issue %3d *\n *************\n", issue);
   }
 
   void reportLpName(const std::string lp_name, const bool dev_run = false) {
     if (dev_run) {
-      int lp_name_length = lp_name.length();
+      HighsInt lp_name_length = lp_name.length();
       printf("\n **");
-      for (int i = 0; i < lp_name_length; i++) printf("*");
+      for (HighsInt i = 0; i < lp_name_length; i++) printf("*");
       printf("**\n * %s *\n **", lp_name.c_str());
-      for (int i = 0; i < lp_name_length; i++) printf("*");
+      for (HighsInt i = 0; i < lp_name_length; i++) printf("*");
       printf("**\n");
     }
   }
@@ -306,11 +306,11 @@ class SpecialLps {
       const HighsSolution& solution = highs.getSolution();
       printf("Solution\n");
       printf("Col       Value        Dual\n");
-      for (int iCol = 0; iCol < highs.getLp().numCol_; iCol++)
+      for (HighsInt iCol = 0; iCol < highs.getLp().numCol_; iCol++)
         printf("%3d %11.4g %11.4g\n", iCol, solution.col_value[iCol],
                solution.col_dual[iCol]);
       printf("Row       Value        Dual\n");
-      for (int iRow = 0; iRow < highs.getLp().numRow_; iRow++)
+      for (HighsInt iRow = 0; iRow < highs.getLp().numRow_; iRow++)
         printf("%3d %11.4g %11.4g\n", iRow, solution.row_value[iRow],
                solution.row_dual[iRow]);
     } else {

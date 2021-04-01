@@ -4,8 +4,8 @@
 const bool dev_run = false;
 
 TEST_CASE("HSet", "[highs_test_hset]") {
-  const int size = 5;
-  const int max_entry = 10;
+  const HighsInt size = 5;
+  const HighsInt max_entry = 10;
   HSet set;
   REQUIRE(!set.setup(-1, max_entry));
   REQUIRE(!set.setup(0, max_entry));
@@ -60,9 +60,9 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   REQUIRE(set.add(7));
   REQUIRE(set.add(5));
   set.print();
-  const int& count = set.count();
-  const vector<int>& entry = set.entry();
-  int entry_size = entry.size();
+  const HighsInt& count = set.count();
+  const vector<HighsInt>& entry = set.entry();
+  HighsInt entry_size = entry.size();
   REQUIRE(count == 4);
   REQUIRE(entry_size == 8);
   REQUIRE(entry[0] == 3);
@@ -71,7 +71,7 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   REQUIRE(entry[3] == 5);
   if (dev_run) {
     printf("Set(%d, %d)\nEntries: ", entry_size, count);
-    for (int ix = 0; ix < count; ix++) printf(" %d", entry[ix]);
+    for (HighsInt ix = 0; ix < count; ix++) printf(" %d", entry[ix]);
     printf("\n");
   }
 }

@@ -23,7 +23,7 @@ class HighsCliqueTable;
 
 class HighsSeparation {
  public:
-  int separationRound(HighsDomain& propdomain,
+  HighsInt separationRound(HighsDomain& propdomain,
                       HighsLpRelaxation::Status& status);
 
   void separate(HighsDomain& propdomain);
@@ -33,8 +33,8 @@ class HighsSeparation {
   HighsSeparation(const HighsMipSolver& mipsolver);
 
  private:
-  int implBoundClock;
-  int cliqueClock;
+  HighsInt implBoundClock;
+  HighsInt cliqueClock;
   std::vector<std::unique_ptr<HighsSeparator>> separators;
   HighsCutSet cutset;
   HighsLpRelaxation* lp;

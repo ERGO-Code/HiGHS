@@ -19,14 +19,14 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-static size_t support_hash(const int* Rindex, const int Rlen) {
+static size_t support_hash(const HighsInt* Rindex, const HighsInt Rlen) {
   return HighsHashHelpers::vector_hash(Rindex, Rlen);
 }
 
 #if 0
-static void printCut(const int* Rindex, const double* Rvalue, int Rlen,
+static void printCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                      double rhs) {
-  for (int i = 0; i != Rlen; ++i) {
+  for (HighsInt i = 0; i != Rlen; ++i) {
     if (Rvalue[i] > 0)
       printf("+%g<x%d> ", Rvalue[i], Rindex[i]);
     else
@@ -37,21 +37,21 @@ static void printCut(const int* Rindex, const double* Rvalue, int Rlen,
 }
 #endif
 
-bool HighsCutPool::isDuplicate(size_t hash, double norm, int* Rindex,
-                               double* Rvalue, int Rlen, double rhs) {
+bool HighsCutPool::isDuplicate(size_t hash, double norm, HighsInt* Rindex,
+                               double* Rvalue, HighsInt Rlen, double rhs) {
   auto range = supportmap.equal_range(hash);
   const double* ARvalue = matrix_.getARvalue();
-  const int* ARindex = matrix_.getARindex();
+  const HighsInt* ARindex = matrix_.getARindex();
   for (auto it = range.first; it != range.second; ++it) {
-    int rowindex = it->second;
-    int start = matrix_.getRowStart(rowindex);
-    int end = matrix_.getRowEnd(rowindex);
+    HighsInt rowindex = it->second;
+    HighsInt start = matrix_.getRowStart(rowindex);
+    HighsInt end = matrix_.getRowEnd(rowindex);
 
     if (end - start != Rlen) continue;
     if (std::equal(Rindex, Rindex + Rlen, &ARindex[start])) {
       HighsCDouble dotprod = 0.0;
 
-      for (int i = 0; i != Rlen; ++i) dotprod += Rvalue[i] * ARvalue[start + i];
+      for (HighsInt i = 0; i != Rlen; ++i) dotprod += Rvalue[i] * ARvalue[start + i];
 
       double parallelism = double(dotprod) * rownormalization_[rowindex] * norm;
 
@@ -76,20 +76,20 @@ bool HighsCutPool::isDuplicate(size_t hash, double norm, int* Rindex,
   return false;
 }
 
-double HighsCutPool::getParallelism(int row1, int row2) const {
-  int i1 = matrix_.getRowStart(row1);
-  const int end1 = matrix_.getRowEnd(row1);
+double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2) const {
+  HighsInt i1 = matrix_.getRowStart(row1);
+  const HighsInt end1 = matrix_.getRowEnd(row1);
 
-  int i2 = matrix_.getRowStart(row2);
-  const int end2 = matrix_.getRowEnd(row2);
+  HighsInt i2 = matrix_.getRowStart(row2);
+  const HighsInt end2 = matrix_.getRowEnd(row2);
 
-  const int* ARindex = matrix_.getARindex();
+  const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
 
   double dotprod = 0.0;
   while (i1 != end1 && i2 != end2) {
-    int col1 = ARindex[i1];
-    int col2 = ARindex[i2];
+    HighsInt col1 = ARindex[i1];
+    HighsInt col2 = ARindex[i2];
 
     if (col1 < col2)
       ++i1;
@@ -105,23 +105,23 @@ double HighsCutPool::getParallelism(int row1, int row2) const {
   return dotprod * rownormalization_[row1] * rownormalization_[row2];
 }
 
-void HighsCutPool::lpCutRemoved(int cut) {
+void HighsCutPool::lpCutRemoved(HighsInt cut) {
   ages_[cut] = 1;
   --numLpCuts;
   ++ageDistribution[1];
 }
 
 void HighsCutPool::performAging() {
-  int cutIndexEnd = matrix_.getNumRows();
+  HighsInt cutIndexEnd = matrix_.getNumRows();
 
-  int agelim = agelim_;
-  int numActiveCuts = getNumCuts() - numLpCuts;
+  HighsInt agelim = agelim_;
+  HighsInt numActiveCuts = getNumCuts() - numLpCuts;
   while (agelim > 1 && numActiveCuts > softlimit_) {
     numActiveCuts -= ageDistribution[agelim];
     --agelim;
   }
 
-  for (int i = 0; i != cutIndexEnd; ++i) {
+  for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     if (ages_[i] < 0) continue;
 
     ageDistribution[ages_[i]] -= 1;
@@ -139,33 +139,33 @@ void HighsCutPool::performAging() {
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                             HighsCutSet& cutset, double feastol) {
-  int nrows = matrix_.getNumRows();
-  const int* ARindex = matrix_.getARindex();
+  HighsInt nrows = matrix_.getNumRows();
+  const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
 
   assert(cutset.empty());
 
   std::vector<std::pair<double, int>> efficacious_cuts;
 
-  int agelim = agelim_;
+  HighsInt agelim = agelim_;
 
-  int numCuts = getNumCuts() - numLpCuts;
+  HighsInt numCuts = getNumCuts() - numLpCuts;
   while (agelim > 1 && numCuts > softlimit_) {
     numCuts -= ageDistribution[agelim];
     --agelim;
   }
 
-  for (int i = 0; i < nrows; ++i) {
+  for (HighsInt i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped
     if (ages_[i] < 0) continue;
 
-    int start = matrix_.getRowStart(i);
-    int end = matrix_.getRowEnd(i);
+    HighsInt start = matrix_.getRowStart(i);
+    HighsInt end = matrix_.getRowEnd(i);
 
     HighsCDouble viol(-rhs_[i]);
 
-    for (int j = start; j != end; ++j) {
-      int col = ARindex[j];
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex[j];
       double solval = sol[col];
 
       viol += ARvalue[j] * solval;
@@ -205,8 +205,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     // though the cut dominates the clique cut where all those entries are
     // relaxed out.
     HighsCDouble rownorm = 0.0;
-    for (int j = start; j != end; ++j) {
-      int col = ARindex[j];
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex[j];
       double solval = sol[col];
       if (ARvalue[j] > 0) {
         if (solval - feastol > domain.colLower_[col])
@@ -246,7 +246,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
   double minScore = minScoreFactor * bestObservedScore;
 
-  int numefficacious =
+  HighsInt numefficacious =
       std::upper_bound(efficacious_cuts.begin(), efficacious_cuts.end(),
                        minScore,
                        [](double mscore, std::pair<double, int> const& c) {
@@ -254,8 +254,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                        }) -
       efficacious_cuts.begin();
 
-  int lowerThreshold = 0.05 * efficacious_cuts.size();
-  int upperThreshold = efficacious_cuts.size() - 1;
+  HighsInt lowerThreshold = 0.05 * efficacious_cuts.size();
+  HighsInt upperThreshold = efficacious_cuts.size() - 1;
 
   if (numefficacious <= lowerThreshold) {
     numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
@@ -267,14 +267,14 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   efficacious_cuts.resize(numefficacious);
 
-  int selectednnz = 0;
+  HighsInt selectednnz = 0;
 
   assert(cutset.empty());
 
   for (const std::pair<double, int>& p : efficacious_cuts) {
     bool discard = false;
     double maxpar = 0.1;
-    for (int k : cutset.cutindices) {
+    for (HighsInt k : cutset.cutindices) {
       if (getParallelism(k, p.second) > maxpar) {
         discard = true;
         break;
@@ -295,15 +295,15 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   assert(int(cutset.ARvalue_.size()) == selectednnz);
   assert(int(cutset.ARindex_.size()) == selectednnz);
 
-  int offset = 0;
-  for (int i = 0; i != cutset.numCuts(); ++i) {
+  HighsInt offset = 0;
+  for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
     cutset.ARstart_[i] = offset;
-    int cut = cutset.cutindices[i];
-    int start = matrix_.getRowStart(cut);
-    int end = matrix_.getRowEnd(cut);
+    HighsInt cut = cutset.cutindices[i];
+    HighsInt start = matrix_.getRowStart(cut);
+    HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
 
-    for (int j = start; j != end; ++j) {
+    for (HighsInt j = start; j != end; ++j) {
       assert(offset < selectednnz);
       cutset.ARvalue_[offset] = ARvalue[j];
       cutset.ARindex_[offset] = ARindex[j];
@@ -317,27 +317,27 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   // should only be called after a restart with a fresh row matrix right now
   assert(matrix_.getNumDelRows() == 0);
-  int numcuts = matrix_.getNumRows();
+  HighsInt numcuts = matrix_.getNumRows();
 
   cutset.cutindices.resize(numcuts);
   std::iota(cutset.cutindices.begin(), cutset.cutindices.end(), 0);
   cutset.resize(matrix_.nonzeroCapacity());
 
-  int offset = 0;
-  const int* ARindex = matrix_.getARindex();
+  HighsInt offset = 0;
+  const HighsInt* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
-  for (int i = 0; i != cutset.numCuts(); ++i) {
+  for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
     --ageDistribution[ages_[i]];
     ++numLpCuts;
     ages_[i] = -1;
     cutset.ARstart_[i] = offset;
-    int cut = cutset.cutindices[i];
-    int start = matrix_.getRowStart(cut);
-    int end = matrix_.getRowEnd(cut);
+    HighsInt cut = cutset.cutindices[i];
+    HighsInt start = matrix_.getRowStart(cut);
+    HighsInt end = matrix_.getRowEnd(cut);
     cutset.upper_[i] = rhs_[cut];
 
-    for (int j = start; j != end; ++j) {
-      assert(offset < (int)matrix_.nonzeroCapacity());
+    for (HighsInt j = start; j != end; ++j) {
+      assert(offset < (HighsInt)matrix_.nonzeroCapacity());
       cutset.ARvalue_[offset] = ARvalue[j];
       cutset.ARindex_[offset] = ARindex[j];
       ++offset;
@@ -347,8 +347,8 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   cutset.ARstart_[cutset.numCuts()] = offset;
 }
 
-int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
-                         double* Rvalue, int Rlen, double rhs, bool integral,
+HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
+                         double* Rvalue, HighsInt Rlen, double rhs, bool integral,
                          bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
@@ -358,7 +358,7 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
   // we use HighsCDouble to compute it as accurately as possible
   HighsCDouble norm = 0.0;
   double maxabscoef = 0.0;
-  for (int i = 0; i != Rlen; ++i) {
+  for (HighsInt i = 0; i != Rlen; ++i) {
     norm += Rvalue[i] * Rvalue[i];
     maxabscoef = std::max(maxabscoef, std::abs(Rvalue[i]));
   }
@@ -369,7 +369,7 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
   if (isDuplicate(sh, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
 
   // if no such cut exists we append the new cut
-  int rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
+  HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
   supportmap.emplace(sh, rowindex);
 
   if (rowindex == int(rhs_.size())) {

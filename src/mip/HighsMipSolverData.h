@@ -42,19 +42,19 @@ struct HighsMipSolverData {
   HighsLp presolvedModel;
   bool cliquesExtracted;
   bool rowMatrixSet;
-  int numRestarts;
+  HighsInt numRestarts;
 
-  std::vector<int> ARstart_;
-  std::vector<int> ARindex_;
+  std::vector<HighsInt> ARstart_;
+  std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
   std::vector<uint8_t> rowintegral;
-  std::vector<int> uplocks;
-  std::vector<int> downlocks;
-  std::vector<int> integer_cols;
-  std::vector<int> implint_cols;
-  std::vector<int> integral_cols;
-  std::vector<int> continuous_cols;
+  std::vector<HighsInt> uplocks;
+  std::vector<HighsInt> downlocks;
+  std::vector<HighsInt> integer_cols;
+  std::vector<HighsInt> implint_cols;
+  std::vector<HighsInt> integral_cols;
+  std::vector<HighsInt> continuous_cols;
 
   double objintscale;
 
@@ -67,7 +67,7 @@ struct HighsMipSolverData {
   double firstlpsolobj;
   HighsBasis firstrootbasis;
   double rootlpsolobj;
-  int numintegercols;
+  HighsInt numintegercols;
 
   HighsCDouble pruned_treeweight;
   double avgrootlpiters;
@@ -83,7 +83,7 @@ struct HighsMipSolverData {
   int64_t sb_lp_iterations;
   int64_t num_disp_lines;
 
-  int numImprovingSols;
+  HighsInt numImprovingSols;
   double lower_bound;
   double upper_bound;
   double upper_limit;
@@ -118,7 +118,7 @@ struct HighsMipSolverData {
   double transformNewIncumbent(const std::vector<double>& sol);
   void performRestart();
   bool trySolution(const std::vector<double>& solution, char source = ' ');
-  bool rootSeparationRound(HighsSeparation& sepa, int& ncuts,
+  bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
   void evaluateRootNode();
   bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
@@ -127,9 +127,9 @@ struct HighsMipSolverData {
 
   void printDisplayLine(char first = ' ');
 
-  void getRow(int row, int& rowlen, const int*& rowinds,
+  void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
-    int start = ARstart_[row];
+    HighsInt start = ARstart_[row];
     rowlen = ARstart_[row + 1] - start;
     rowinds = ARindex_.data() + start;
     rowvals = ARvalue_.data() + start;

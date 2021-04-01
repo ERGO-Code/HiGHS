@@ -19,9 +19,9 @@
 #include "lp_data/HConst.h"
 
 struct HighsIterationCounts {
-  int simplex = 0;
-  int ipm = 0;
-  int crossover = 0;
+  HighsInt simplex = 0;
+  HighsInt ipm = 0;
+  HighsInt crossover = 0;
 };
 
 struct HighsScale {
@@ -48,14 +48,14 @@ struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  int primal_status = PrimalDualStatus::STATUS_NOTSET;
-  int dual_status = PrimalDualStatus::STATUS_NOTSET;
+  HighsInt primal_status = PrimalDualStatus::STATUS_NOTSET;
+  HighsInt dual_status = PrimalDualStatus::STATUS_NOTSET;
   // Output from solution analysis method
   double objective_function_value;
-  int num_primal_infeasibility;
+  HighsInt num_primal_infeasibility;
   double sum_primal_infeasibility;
   double max_primal_infeasibility;
-  int num_dual_infeasibility;
+  HighsInt num_dual_infeasibility;
   double sum_dual_infeasibility;
   double max_dual_infeasibility;
 };

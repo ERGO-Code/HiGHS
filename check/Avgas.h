@@ -16,19 +16,21 @@
 
 #include <vector>
 
+#include "util/HighsInt.h"
+
 /**
  * @brief Utilities for tests with AVGAS
  */
 class Avgas {
  public:
-  void row(int row, int& num_row, int& num_row_nz,
+  void row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
            std::vector<double>& rowLower, std::vector<double>& rowUpper,
-           std::vector<int>& ARstart, std::vector<int>& ARindex,
+           std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
            std::vector<double>& ARvalue);
 
-  void col(int col, int& num_col, int& num_col_nz, std::vector<double>& colCost,
-           std::vector<double>& colLower, std::vector<double>& colUpper,
-           std::vector<int>& Astart, std::vector<int>& Aindex,
-           std::vector<double>& Avalue);
+  void col(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
+           std::vector<double>& colCost, std::vector<double>& colLower,
+           std::vector<double>& colUpper, std::vector<HighsInt>& Astart,
+           std::vector<HighsInt>& Aindex, std::vector<double>& Avalue);
 };
 #endif /* SIMPLEX_AVGAS_H_ */

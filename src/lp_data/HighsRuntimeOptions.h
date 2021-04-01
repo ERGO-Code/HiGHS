@@ -52,8 +52,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     if (result.count(model_file_string)) {
       auto& v = result[model_file_string].as<std::vector<std::string>>();
       if (v.size() > 1) {
-        int nonEmpty = 0;
-        for (int i = 0; i < (int)v.size(); i++) {
+        HighsInt nonEmpty = 0;
+        for (HighsInt i = 0; i < (HighsInt)v.size(); i++) {
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;

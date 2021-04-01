@@ -8,7 +8,7 @@
 
 namespace presolve {
 
-void HighsPostsolveStack::initializeIndexMaps(int numRow, int numCol) {
+void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow, HighsInt numCol) {
   origNumRow = numRow;
   origNumCol = numCol;
 
@@ -20,10 +20,10 @@ void HighsPostsolveStack::initializeIndexMaps(int numRow, int numCol) {
 }
 
 void HighsPostsolveStack::compressIndexMaps(
-    const std::vector<int>& newRowIndex, const std::vector<int>& newColIndex) {
+    const std::vector<HighsInt>& newRowIndex, const std::vector<HighsInt>& newColIndex) {
   // loop over rows, decrease row counter for deleted rows (marked with -1),
   // store original index at new index position otherwise
-  int numRow = origRowIndex.size();
+  HighsInt numRow = origRowIndex.size();
   for (size_t i = 0; i != newRowIndex.size(); ++i) {
     if (newRowIndex[i] == -1)
       --numRow;
@@ -34,7 +34,7 @@ void HighsPostsolveStack::compressIndexMaps(
   origRowIndex.resize(numRow);
 
   // now compress the column array
-  int numCol = origColIndex.size();
+  HighsInt numCol = origColIndex.size();
   for (size_t i = 0; i != newColIndex.size(); ++i) {
     if (newColIndex[i] == -1)
       --numCol;
@@ -244,7 +244,7 @@ void HighsPostsolveStack::EqualityRowAdditions::undo(
 void HighsPostsolveStack::ForcingColumn::undo(
     const HighsOptions& options, const std::vector<Nonzero>& colValues,
     HighsSolution& solution, HighsBasis& basis) {
-  int nonbasicRow = -1;
+  HighsInt nonbasicRow = -1;
   HighsBasisStatus nonbasicRowStatus = HighsBasisStatus::NONBASIC;
   double colValFromNonbasicRow = colBound;
 
@@ -366,7 +366,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
 
   HighsCDouble reducedCost = colCost;
   for (const auto& colVal : colValues) {
-    assert((int)solution.row_dual.size() > colVal.index);
+    assert((HighsInt)solution.row_dual.size() > colVal.index);
     reducedCost += colVal.value * solution.row_dual[colVal.index];
   }
 
@@ -400,7 +400,7 @@ void HighsPostsolveStack::ForcingRow::undo(
   if (solution.row_dual.empty()) return;
 
   // compute the row dual multiplier and determine the new basic column
-  int basicCol = -1;
+  HighsInt basicCol = -1;
   double dualDelta = 0;
   if (rowType == RowType::Leq) {
     for (const auto& rowVal : rowValues) {

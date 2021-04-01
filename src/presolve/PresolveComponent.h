@@ -48,9 +48,9 @@ struct PresolveComponentData : public HighsComponentData {
 // of HiGHS like execution information. Times are recorded at the end of
 // Highs::run()
 struct PresolveComponentInfo : public HighsComponentInfo {
-  int n_rows_removed = 0;
-  int n_cols_removed = 0;
-  int n_nnz_removed = 0;
+  HighsInt n_rows_removed = 0;
+  HighsInt n_cols_removed = 0;
+  HighsInt n_nnz_removed = 0;
 
   double init_time = 0;
   double presolve_time = 0;
@@ -69,7 +69,7 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   std::vector<presolve::Presolver> order;
 
   std::string iteration_strategy = "smart";
-  int max_iterations = 0;
+  HighsInt max_iterations = 0;
 
   double time_limit = -1;
   bool dev = false;

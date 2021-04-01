@@ -18,7 +18,7 @@
 #include "simplex/SimplexConst.h"
 
 void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
-                                  const int iteration_count,
+                                  const HighsInt iteration_count,
                                   const HighsSimplexInfo& simplex_info,
                                   const bool initialise = false);
 #endif  // SIMPLEX_HSIMPLEXREPORT_H_

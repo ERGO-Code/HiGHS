@@ -23,7 +23,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
 
   HighsCDouble obj = 0;
 
-  for (int i = 0; i != mipsolver.model_->numCol_; ++i) {
+  for (HighsInt i = 0; i != mipsolver.model_->numCol_; ++i) {
     if (solution[i] < mipsolver.model_->colLower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->colUpper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::INTEGER &&
@@ -33,13 +33,13 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
     obj += mipsolver.colCost(i) * solution[i];
   }
 
-  for (int i = 0; i != mipsolver.model_->numRow_; ++i) {
+  for (HighsInt i = 0; i != mipsolver.model_->numRow_; ++i) {
     double rowactivity = 0.0;
 
-    int start = ARstart_[i];
-    int end = ARstart_[i + 1];
+    HighsInt start = ARstart_[i];
+    HighsInt end = ARstart_[i + 1];
 
-    for (int j = start; j != end; ++j)
+    for (HighsInt j = start; j != end; ++j)
       rowactivity += solution[ARindex_[j]] * ARvalue_[j];
 
     if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
@@ -100,19 +100,19 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
 void HighsMipSolverData::removeFixedIndices() {
   integral_cols.erase(
       std::remove_if(integral_cols.begin(), integral_cols.end(),
-                     [&](int col) { return domain.isFixed(col); }),
+                     [&](HighsInt col) { return domain.isFixed(col); }),
       integral_cols.end());
   integer_cols.erase(
       std::remove_if(integer_cols.begin(), integer_cols.end(),
-                     [&](int col) { return domain.isFixed(col); }),
+                     [&](HighsInt col) { return domain.isFixed(col); }),
       integer_cols.end());
   implint_cols.erase(
       std::remove_if(implint_cols.begin(), implint_cols.end(),
-                     [&](int col) { return domain.isFixed(col); }),
+                     [&](HighsInt col) { return domain.isFixed(col); }),
       implint_cols.end());
   continuous_cols.erase(
       std::remove_if(continuous_cols.begin(), continuous_cols.end(),
-                     [&](int col) { return domain.isFixed(col); }),
+                     [&](HighsInt col) { return domain.isFixed(col); }),
       continuous_cols.end());
 }
 
@@ -187,11 +187,11 @@ void HighsMipSolverData::runSetup() {
                          ARvalue_);
     uplocks.resize(model.numCol_);
     downlocks.resize(model.numCol_);
-    for (int i = 0; i != model.numCol_; ++i) {
-      int start = model.Astart_[i];
-      int end = model.Astart_[i + 1];
-      for (int j = start; j != end; ++j) {
-        int row = model.Aindex_[j];
+    for (HighsInt i = 0; i != model.numCol_; ++i) {
+      HighsInt start = model.Astart_[i];
+      HighsInt end = model.Astart_[i + 1];
+      for (HighsInt j = start; j != end; ++j) {
+        HighsInt row = model.Aindex_[j];
 
         if (model.rowLower_[row] != -HIGHS_CONST_INF) {
           if (model.Avalue_[j] < 0)
@@ -213,13 +213,13 @@ void HighsMipSolverData::runSetup() {
 
   // compute the maximal absolute coefficients to filter propagation
   maxAbsRowCoef.resize(mipsolver.model_->numRow_);
-  for (int i = 0; i != mipsolver.model_->numRow_; ++i) {
+  for (HighsInt i = 0; i != mipsolver.model_->numRow_; ++i) {
     double maxabsval = 0.0;
 
-    int start = ARstart_[i];
-    int end = ARstart_[i + 1];
+    HighsInt start = ARstart_[i];
+    HighsInt end = ARstart_[i + 1];
     bool integral = true;
-    for (int j = start; j != end; ++j) {
+    for (HighsInt j = start; j != end; ++j) {
       if (integral) {
         if (mipsolver.variableType(ARindex_[j]) == HighsVarType::CONTINUOUS)
           integral = false;
@@ -255,7 +255,7 @@ void HighsMipSolverData::runSetup() {
   if (checkLimits()) return;
   // extract cliques if they have not been extracted before
 
-  for (int col : domain.getChangedCols()) implications.cleanupVarbounds(col);
+  for (HighsInt col : domain.getChangedCols()) implications.cleanupVarbounds(col);
   domain.clearChangedCols();
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
@@ -268,7 +268,7 @@ void HighsMipSolverData::runSetup() {
   checkObjIntegrality();
   basisTransfer();
 
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
       case HighsVarType::CONTINUOUS:
         continuous_cols.push_back(i);
@@ -303,8 +303,8 @@ double HighsMipSolverData::transformNewIncumbent(
   double integrality_violation_ = 0;
 
   HighsCDouble obj = mipsolver.orig_model_->offset_;
-  assert((int)solution.col_value.size() == mipsolver.orig_model_->numCol_);
-  for (int i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
+  assert((HighsInt)solution.col_value.size() == mipsolver.orig_model_->numCol_);
+  for (HighsInt i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
     obj += mipsolver.orig_model_->colCost_[i] * solution.col_value[i];
 
     bound_violation_ =
@@ -321,7 +321,7 @@ double HighsMipSolverData::transformNewIncumbent(
     }
   }
 
-  for (int i = 0; i != mipsolver.orig_model_->numRow_; ++i) {
+  for (HighsInt i = 0; i != mipsolver.orig_model_->numRow_; ++i) {
     row_violation_ =
         std::max(row_violation_,
                  mipsolver.orig_model_->rowLower_[i] - solution.row_value[i]);
@@ -390,9 +390,9 @@ void HighsMipSolverData::performRestart() {
   ++numRestarts;
   num_leaves_before_run = num_leaves;
   num_nodes_before_run = num_nodes;
-  int numLpRows = lp.getLp().numRow_;
-  int numModelRows = mipsolver.numRow();
-  int numCuts = numLpRows - numModelRows;
+  HighsInt numLpRows = lp.getLp().numRow_;
+  HighsInt numModelRows = mipsolver.numRow();
+  HighsInt numCuts = numLpRows - numModelRows;
   if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
   presolvedModel = lp.getLp();
@@ -406,11 +406,11 @@ void HighsMipSolverData::performRestart() {
     rootBasis.row_status.resize(postSolveStack.getOrigNumRow());
     rootBasis.valid_ = true;
 
-    for (int i = 0; i != mipsolver.model_->numCol_; ++i)
+    for (HighsInt i = 0; i != mipsolver.model_->numCol_; ++i)
       rootBasis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
-    for (int i = 0; i != mipsolver.model_->numRow_; ++i)
+    for (HighsInt i = 0; i != mipsolver.model_->numRow_; ++i)
       rootBasis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
@@ -453,14 +453,14 @@ void HighsMipSolverData::basisTransfer() {
   // if a root basis is given, construct a basis for the root LP from
   // in the reduced problem space after presolving
   if (mipsolver.rootbasis) {
-    int numRow = mipsolver.numRow() + cutpool.getNumCuts();
+    HighsInt numRow = mipsolver.numRow() + cutpool.getNumCuts();
     firstrootbasis.col_status.assign(mipsolver.numCol(),
                                      HighsBasisStatus::NONBASIC);
     firstrootbasis.row_status.assign(numRow, HighsBasisStatus::NONBASIC);
     firstrootbasis.valid_ = true;
-    int missingbasic = numRow;
+    HighsInt missingbasic = numRow;
 
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       HighsBasisStatus status =
           mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
 
@@ -473,7 +473,7 @@ void HighsMipSolverData::basisTransfer() {
     }
 
     if (missingbasic != 0) {
-      for (int i = 0; i != numRow; ++i) {
+      for (HighsInt i = 0; i != numRow; ++i) {
         HighsBasisStatus status =
             mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
 
@@ -492,25 +492,25 @@ void HighsMipSolverData::basisTransfer() {
     // any basic row. Then proceed by adding logical columns of rows which
     // contain no basic variables until the basis is complete
     if (missingbasic != 0) {
-      std::vector<int> nonbasiccols;
+      std::vector<HighsInt> nonbasiccols;
       nonbasiccols.reserve(model.numCol_);
-      for (int i = 0; i != model.numCol_; ++i) {
+      for (HighsInt i = 0; i != model.numCol_; ++i) {
         if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
           nonbasiccols.push_back(i);
       }
       std::sort(
-          nonbasiccols.begin(), nonbasiccols.end(), [&](int col1, int col2) {
-            int len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
-            int len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
+          nonbasiccols.begin(), nonbasiccols.end(), [&](HighsInt col1, HighsInt col2) {
+            HighsInt len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
+            HighsInt len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
             return std::make_pair(len1, col1) < std::make_pair(len2, col2);
           });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
-      for (int i : nonbasiccols) {
-        const int start = model.Astart_[i];
-        const int end = model.Astart_[i + 1];
+      for (HighsInt i : nonbasiccols) {
+        const HighsInt start = model.Astart_[i];
+        const HighsInt end = model.Astart_[i + 1];
 
         bool hasbasic = false;
-        for (int j = start; j != end; ++j) {
+        for (HighsInt j = start; j != end; ++j) {
           if (firstrootbasis.row_status[model.Aindex_[j]] ==
               HighsBasisStatus::BASIC) {
             hasbasic = true;
@@ -526,16 +526,16 @@ void HighsMipSolverData::basisTransfer() {
       }
 
       if (missingbasic != 0) {
-        std::vector<std::pair<int, int>> nonbasicrows;
+        std::vector<std::pair<HighsInt, int>> nonbasicrows;
 
-        for (int i = 0; i != model.numRow_; ++i) {
+        for (HighsInt i = 0; i != model.numRow_; ++i) {
           if (firstrootbasis.row_status[i] == HighsBasisStatus::BASIC) continue;
 
-          const int start = ARstart_[i];
-          const int end = ARstart_[i + 1];
+          const HighsInt start = ARstart_[i];
+          const HighsInt end = ARstart_[i + 1];
 
-          int nbasic = 0;
-          for (int j = start; j != end; ++j) {
+          HighsInt nbasic = 0;
+          for (HighsInt j = start; j != end; ++j) {
             if (firstrootbasis.col_status[ARindex_[j]] ==
                 HighsBasisStatus::BASIC) {
               ++nbasic;
@@ -554,7 +554,7 @@ void HighsMipSolverData::basisTransfer() {
         std::sort(nonbasicrows.begin(), nonbasicrows.end());
         nonbasicrows.resize(missingbasic);
 
-        for (std::pair<int, int> nonbasicrow : nonbasicrows)
+        for (std::pair<HighsInt, int> nonbasicrow : nonbasicrows)
           firstrootbasis.row_status[nonbasicrow.second] =
               HighsBasisStatus::BASIC;
       }
@@ -623,7 +623,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   double lb = mipsolver.mipdata_->lower_bound + offset;
   double ub = HIGHS_CONST_INF;
   double gap = HIGHS_CONST_INF;
-  int lpcuts = mipsolver.mipdata_->lp.numRows() - mipsolver.model_->numRow_;
+  HighsInt lpcuts = mipsolver.mipdata_->lp.numRows() - mipsolver.model_->numRow_;
 
   if (upper_bound != HIGHS_CONST_INF) {
     ub = upper_bound + offset;
@@ -651,7 +651,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
 }
 
 bool HighsMipSolverData::rootSeparationRound(
-    HighsSeparation& sepa, int& ncuts, HighsLpRelaxation::Status& status) {
+    HighsSeparation& sepa, HighsInt& ncuts, HighsLpRelaxation::Status& status) {
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
   tmpLpIters += lp.getNumLpIterations();
@@ -722,7 +722,7 @@ bool HighsMipSolverData::rootSeparationRound(
 }
 
 void HighsMipSolverData::evaluateRootNode() {
-  int maxSepaRounds = mipsolver.submip ? 5 : HIGHS_CONST_I_INF;
+  HighsInt maxSepaRounds = mipsolver.submip ? 5 : HIGHS_CONST_I_INF;
 restart:
   // solve the first root lp
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
@@ -801,9 +801,9 @@ restart:
   avgdirection.resize(mipsolver.numCol());
   curdirection.resize(mipsolver.numCol());
 
-  int stall = 0;
+  HighsInt stall = 0;
   double smoothprogress = 0.0;
-  int nseparounds = 0;
+  HighsInt nseparounds = 0;
 
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
@@ -835,13 +835,13 @@ restart:
 
     ++nseparounds;
 
-    int ncuts;
+    HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
     HighsCDouble sqrnorm = 0.0;
     const auto& solvals = lp.getSolution().col_value;
 
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       curdirection[i] = firstlpsol[i] - solvals[i];
 
       // if (mip.integrality_[i] == 2 && lp.getObjective() > firstobj &&
@@ -855,7 +855,7 @@ restart:
     double scale = double(1.0 / sqrt(sqrnorm));
     sqrnorm = 0.0;
     HighsCDouble dotproduct = 0.0;
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       avgdirection[i] += scale * curdirection[i];
       sqrnorm += avgdirection[i] * avgdirection[i];
       dotproduct += avgdirection[i] * curdirection[i];
@@ -929,7 +929,7 @@ restart:
 
   // if global propagation found bound changes, we update the local domain
   if (!domain.getChangedCols().empty()) {
-    int ncuts;
+    HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
     if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
@@ -1001,7 +1001,7 @@ bool HighsMipSolverData::checkLimits() const {
 void HighsMipSolverData::checkObjIntegrality() {
   objintscale = 600.0;
 
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     if (mipsolver.colCost(i) == 0.0) continue;
 
     if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) {
@@ -1019,7 +1019,7 @@ void HighsMipSolverData::checkObjIntegrality() {
 
   if (objintscale != 0.0) {
     int64_t currgcd = 0;
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       if (mipsolver.colCost(i) == 0.0) continue;
       int64_t intval = std::floor(mipsolver.colCost(i) * objintscale + 0.5);
       if (currgcd == 0) {
@@ -1047,12 +1047,12 @@ void HighsMipSolverData::setupDomainPropagation() {
 
   // compute the maximal absolute coefficients to filter propagation
   maxAbsRowCoef.resize(mipsolver.model_->numRow_);
-  for (int i = 0; i != mipsolver.model_->numRow_; ++i) {
+  for (HighsInt i = 0; i != mipsolver.model_->numRow_; ++i) {
     double maxabsval = 0.0;
 
-    int start = ARstart_[i];
-    int end = ARstart_[i + 1];
-    for (int j = start; j != end; ++j)
+    HighsInt start = ARstart_[i];
+    HighsInt end = ARstart_[i + 1];
+    for (HighsInt j = start; j != end; ++j)
       maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
 
     maxAbsRowCoef[i] = maxabsval;

@@ -40,23 +40,23 @@ class HighsMipSolver {
 
   void run();
 
-  int numCol() const { return model_->numCol_; }
+  HighsInt numCol() const { return model_->numCol_; }
 
-  int numRow() const { return model_->numRow_; }
+  HighsInt numRow() const { return model_->numRow_; }
 
-  int numNonzero() const { return model_->Aindex_.size(); }
+  HighsInt numNonzero() const { return model_->Aindex_.size(); }
 
   const double* colCost() const { return model_->colCost_.data(); }
 
-  double colCost(int col) const { return model_->colCost_[col]; }
+  double colCost(HighsInt col) const { return model_->colCost_[col]; }
 
   const double* rowLower() const { return model_->rowLower_.data(); }
 
-  double rowLower(int col) const { return model_->rowLower_[col]; }
+  double rowLower(HighsInt col) const { return model_->rowLower_[col]; }
 
   const double* rowUpper() const { return model_->rowUpper_.data(); }
 
-  double rowUpper(int col) const { return model_->rowUpper_[col]; }
+  double rowUpper(HighsInt col) const { return model_->rowUpper_[col]; }
 
   bool isSolutionFeasible(const std::vector<double>& solution) const;
 
@@ -64,7 +64,7 @@ class HighsMipSolver {
     return model_->integrality_.data();
   }
 
-  HighsVarType variableType(int col) const { return model_->integrality_[col]; }
+  HighsVarType variableType(HighsInt col) const { return model_->integrality_[col]; }
 
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                  bool submip = false);

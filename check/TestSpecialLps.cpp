@@ -28,7 +28,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
                                     require_optimal_objective, dev_run));
   }
   if (require_iteration_count >= 0) {
-    int iteration_count;
+    HighsInt iteration_count;
     if (solver == "simplex") {
       iteration_count = highs.getSimplexIterationCount();
     } else {

@@ -16,8 +16,8 @@
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
-  primal_status = (int)PrimalDualStatus::STATUS_NOTSET;
-  dual_status = (int)PrimalDualStatus::STATUS_NOTSET;
+  primal_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
+  dual_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
   objective_function_value = 0;
   num_primal_infeasibilities = illegal_infeasibility_count;
   max_primal_infeasibility = illegal_infeasibility_measure;
@@ -37,8 +37,8 @@ std::string infoEntryType2string(const HighsInfoType type) {
 
 InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
-                        int& index) {
-  int num_info = info_records.size();
+                        HighsInt& index) {
+  HighsInt num_info = info_records.size();
   for (index = 0; index < num_info; index++)
     if (info_records[index]->name == name) return InfoStatus::OK;
   highsLogUser(options.log_options, HighsLogType::ERROR,
@@ -49,12 +49,12 @@ InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
 InfoStatus checkInfo(const HighsOptions& options,
                      const std::vector<InfoRecord*>& info_records) {
   bool error_found = false;
-  int num_info = info_records.size();
-  for (int index = 0; index < num_info; index++) {
+  HighsInt num_info = info_records.size();
+  for (HighsInt index = 0; index < num_info; index++) {
     std::string name = info_records[index]->name;
     HighsInfoType type = info_records[index]->type;
     // Check that there are no other info with the same name
-    for (int check_index = 0; check_index < num_info; check_index++) {
+    for (HighsInt check_index = 0; check_index < num_info; check_index++) {
       if (check_index == index) continue;
       std::string check_name = info_records[check_index]->name;
       if (check_name == name) {
@@ -66,11 +66,11 @@ InfoStatus checkInfo(const HighsOptions& options,
       }
     }
     if (type == HighsInfoType::INT) {
-      // Check int info
+      // Check HighsInt info
       InfoRecordInt& info = ((InfoRecordInt*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
-      int* value_pointer = info.value;
-      for (int check_index = 0; check_index < num_info; check_index++) {
+      HighsInt* value_pointer = info.value;
+      for (HighsInt check_index = 0; check_index < num_info; check_index++) {
         if (check_index == index) continue;
         InfoRecordInt& check_info =
             ((InfoRecordInt*)info_records[check_index])[0];
@@ -90,7 +90,7 @@ InfoStatus checkInfo(const HighsOptions& options,
       InfoRecordDouble& info = ((InfoRecordDouble*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
       double* value_pointer = info.value;
-      for (int check_index = 0; check_index < num_info; check_index++) {
+      for (HighsInt check_index = 0; check_index < num_info; check_index++) {
         if (check_index == index) continue;
         InfoRecordDouble& check_info =
             ((InfoRecordDouble*)info_records[check_index])[0];
@@ -115,8 +115,8 @@ InfoStatus checkInfo(const HighsOptions& options,
 
 InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
-                        int& value) {
-  int index;
+                        HighsInt& value) {
+  HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
@@ -135,7 +135,7 @@ InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
 InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         double& value) {
-  int index;
+  HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
@@ -178,8 +178,8 @@ HighsStatus writeInfoToFile(FILE* file,
 
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
                 const bool html) {
-  int num_info = info_records.size();
-  for (int index = 0; index < num_info; index++) {
+  HighsInt num_info = info_records.size();
+  for (HighsInt index = 0; index < num_info; index++) {
     HighsInfoType type = info_records[index]->type;
     // Skip the advanced info when creating HTML
     if (html && info_records[index]->advanced) continue;
@@ -197,12 +197,12 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: int, advanced: %s\n",
+    fprintf(file, "type: HighsInt, advanced: %s\n",
             highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: int, advanced: %s]\n",
+    fprintf(file, "# [type: HighsInt, advanced: %s]\n",
             highsBoolToString(info.advanced).c_str());
     fprintf(file, "%s = %d\n", info.name.c_str(), *info.value);
   }

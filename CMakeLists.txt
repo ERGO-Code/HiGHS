@@ -176,6 +176,11 @@ if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
     message(STATUS "HiGHS development: " ${HiGHSDEV})
 endif()
 
+option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
+if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
+    message(STATUS "HIGHSINT64: " ${HIGHSINT64})
+endif()
+
 set(OSI_ROOT "" CACHE PATH "Osi root folder.")
 if (NOT "${OSI_ROOT}" STREQUAL "")
     # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH

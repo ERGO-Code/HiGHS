@@ -39,7 +39,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
                              bool& integerfeasible) const {
   HighsCDouble objval = 0.0;
   integerfeasible = true;
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     objval += sol[i] * mipsolver.colCost(i);
     assert(std::isfinite(sol[i]));
 
@@ -61,7 +61,7 @@ double HighsSearch::getCutoffBound() const {
 
 void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
                                        const std::vector<double>& relaxsol) {
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
     if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
 
@@ -80,7 +80,7 @@ void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
 }
 
 void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
     if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
 
@@ -106,11 +106,11 @@ void HighsSearch::createNewNode() { nodestack.emplace_back(); }
 
 void HighsSearch::cutoffNode() { nodestack.back().opensubtrees = 0; }
 
-void HighsSearch::setMinReliable(int minreliable) {
+void HighsSearch::setMinReliable(HighsInt minreliable) {
   pseudocost.setMinReliable(minreliable);
 }
 
-void HighsSearch::branchDownwards(int col, double newub, double branchpoint) {
+void HighsSearch::branchDownwards(HighsInt col, double newub, double branchpoint) {
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
@@ -126,7 +126,7 @@ void HighsSearch::branchDownwards(int col, double newub, double branchpoint) {
   nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
 }
 
-void HighsSearch::branchUpwards(int col, double newlb, double branchpoint) {
+void HighsSearch::branchUpwards(HighsInt col, double newlb, double branchpoint) {
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
@@ -161,7 +161,7 @@ void HighsSearch::addInfeasibleConflict() {
   if (lp->computeDualInfProof(mipsolver.mipdata_->domain, inds, vals, rhs)) {
     // double minactlocal = 0.0;
     // double minactglobal = 0.0;
-    // for (int i = 0; i < int(inds.size()); ++i) {
+    // for (HighsInt i = 0; i < int(inds.size()); ++i) {
     //  if (vals[i] > 0.0) {
     //    minactlocal += localdom.colLower_[inds[i]] * vals[i];
     //    minactglobal += globaldom.colLower_[inds[i]] * vals[i];
@@ -170,7 +170,7 @@ void HighsSearch::addInfeasibleConflict() {
     //    minactglobal += globaldom.colUpper_[inds[i]] * vals[i];
     //  }
     //}
-    // int oldnumcuts = cutpool.getNumCuts();
+    // HighsInt oldnumcuts = cutpool.getNumCuts();
     HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
     mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                                inds.size(), rhs);
@@ -188,21 +188,21 @@ void HighsSearch::addInfeasibleConflict() {
     //      " activity %g, and rhs % g\n ",
     //      minactlocal, minactglobal, rhs);
     //}
-    // int cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(), rhs);
+    // HighsInt cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(), rhs);
     // localdom.cutAdded(cutind);
   }
 }
 
-int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
+HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
   assert(!lp->getFractionalIntegers().empty());
 
-  static constexpr int basisstart_threshold = 20;
+  static constexpr HighsInt basisstart_threshold = 20;
   std::vector<double> upscore;
   std::vector<double> downscore;
   std::vector<uint8_t> upscorereliable;
   std::vector<uint8_t> downscorereliable;
 
-  int numfrac = lp->getFractionalIntegers().size();
+  HighsInt numfrac = lp->getFractionalIntegers().size();
   const auto& fracints = lp->getFractionalIntegers();
 
   upscore.resize(numfrac, HIGHS_CONST_INF);
@@ -213,8 +213,8 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
   // initialize up and down scores of variables that have a
   // reliable pseudocost so that they do not get evaluated
-  for (int k = 0; k != numfrac; ++k) {
-    int col = fracints[k].first;
+  for (HighsInt k = 0; k != numfrac; ++k) {
+    HighsInt col = fracints[k].first;
     double fracval = fracints[k].second;
 
     assert(fracval > localdom.colLower_[col] + mipsolver.mipdata_->feastol);
@@ -228,11 +228,11 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     }
   }
 
-  std::vector<int> evalqueue;
+  std::vector<HighsInt> evalqueue;
   evalqueue.resize(numfrac);
   std::iota(evalqueue.begin(), evalqueue.end(), 0);
 
-  auto numNodesUp = [&](int k) {
+  auto numNodesUp = [&](HighsInt k) {
     if (mipsolver.mipdata_->domain.isBinary(fracints[k].first))
       return mipsolver.mipdata_->nodequeue.numNodesUp(fracints[k].first);
 
@@ -240,7 +240,7 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
                                                     fracints[k].second);
   };
 
-  auto numNodesDown = [&](int k) {
+  auto numNodesDown = [&](HighsInt k) {
     if (mipsolver.mipdata_->domain.isBinary(fracints[k].first))
       return mipsolver.mipdata_->nodequeue.numNodesDown(fracints[k].first);
 
@@ -249,12 +249,12 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
   };
 
   auto selectBestScore = [&](bool finalSelection) {
-    int best = -1;
+    HighsInt best = -1;
     double bestscore = -1.0;
     double bestnodes = -1.0;
     int64_t bestnumnodes = 0;
 
-    for (int k : evalqueue) {
+    for (HighsInt k : evalqueue) {
       double score;
       if ((upscore[k] == 0.0 && upscorereliable[k]) ||
           (downscore[k] == 0.0 && downscorereliable[k]))
@@ -296,7 +296,7 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     bool mustStop = getStrongBranchingLpIterations() >= maxSbIters ||
                     mipsolver.mipdata_->checkLimits();
 
-    int candidate = selectBestScore(mustStop);
+    HighsInt candidate = selectBestScore(mustStop);
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
@@ -306,7 +306,7 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       return candidate;
     }
 
-    int col = fracints[candidate].first;
+    HighsInt col = fracints[candidate].first;
     double fracval = fracints[candidate].second;
     double upval = std::ceil(fracval);
     double downval = std::floor(fracval);
@@ -352,7 +352,7 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         markBranchingVarDownReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
 
-        for (int k = 0; k != numfrac; ++k) {
+        for (HighsInt k = 0; k != numfrac; ++k) {
           double otherfracval = fracints[k].second;
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
@@ -478,7 +478,7 @@ int HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         markBranchingVarUpReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
 
-        for (int k = 0; k != numfrac; ++k) {
+        for (HighsInt k = 0; k != numfrac; ++k) {
           double otherfracval = fracints[k].second;
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
@@ -648,7 +648,7 @@ void HighsSearch::resetLocalDomain() {
   localdom = mipsolver.mipdata_->domain;
 
 #ifndef NDEBUG
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
            mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
     assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
@@ -691,7 +691,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     localdom.clearChangedCols();
     if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
         parent->branching_point != parent->branchingdecision.boundval) {
-      int col = parent->branchingdecision.column;
+      HighsInt col = parent->branchingdecision.column;
       bool upbranch =
           parent->branchingdecision.boundtype == HighsBoundType::Lower;
       pseudocost.addCutoffObservation(col, upbranch);
@@ -700,7 +700,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     lp->flushDomain(localdom);
 
 #ifndef NDEBUG
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
              mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
       assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
@@ -718,7 +718,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
       if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
           parent->branching_point != parent->branchingdecision.boundval) {
-        int col = parent->branchingdecision.column;
+        HighsInt col = parent->branchingdecision.column;
         double delta =
             parent->branchingdecision.boundval - parent->branching_point;
         double objdelta =
@@ -777,7 +777,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       addInfeasibleConflict();
       if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
           parent->branching_point != parent->branchingdecision.boundval) {
-        int col = parent->branchingdecision.column;
+        HighsInt col = parent->branchingdecision.column;
         bool upbranch =
             parent->branchingdecision.boundtype == HighsBoundType::Lower;
         pseudocost.addCutoffObservation(col, upbranch);
@@ -802,7 +802,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
   currnode.branchingdecision.column = -1;
   inbranching = true;
 
-  int minrel = pseudocost.getMinReliable();
+  HighsInt minrel = pseudocost.getMinReliable();
 
   NodeResult result = NodeResult::Open;
   while (currnode.opensubtrees == 2 && lp->scaledOptimal(lp->getStatus()) &&
@@ -820,19 +820,19 @@ HighsSearch::NodeResult HighsSearch::branch() {
         double reductionratio =
             (sbiters - sbmaxiters / 2) / (double)(sbmaxiters - sbmaxiters / 2);
 
-        int minrelreduced = int(minrel - reductionratio * (minrel - 1));
+        HighsInt minrelreduced = int(minrel - reductionratio * (minrel - 1));
         pseudocost.setMinReliable(std::min(minrel, minrelreduced));
       }
     }
 
-    int branchcand = selectBranchingCandidate(sbmaxiters);
+    HighsInt branchcand = selectBranchingCandidate(sbmaxiters);
 
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];
       currnode.branchingdecision.column = branching.first;
       currnode.branching_point = branching.second;
 
-      int col = branching.first;
+      HighsInt col = branching.first;
       switch (childselrule) {
         case ChildSelectionRule::Up:
           currnode.branchingdecision.boundtype = HighsBoundType::Lower;
@@ -959,7 +959,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     // on in case we have a different solution status could happen due to a
     // fail in the LP solution process
 
-    for (int i : mipsolver.mipdata_->integral_cols) {
+    for (HighsInt i : mipsolver.mipdata_->integral_cols) {
       if (localdom.colUpper_[i] - localdom.colLower_[i] < 0.5) continue;
 
       double fracval;

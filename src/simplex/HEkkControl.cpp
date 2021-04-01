@@ -93,9 +93,9 @@ bool HEkk::switchToDevex() {
     simplex_info_.num_costly_DSE_iteration++;
     simplex_info_.costly_DSE_frequency += running_average_multiplier * 1.0;
     // What if non-dual iterations have been performed: need to think about this
-    int local_iteration_count =
+    HighsInt local_iteration_count =
         iteration_count_ - simplex_info_.control_iteration_count0;
-    int local_num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+    HighsInt local_num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
     // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations
     // have been costly
     switch_to_devex =

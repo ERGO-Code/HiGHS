@@ -28,8 +28,8 @@ HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status);
 HighsDebugStatus debugWorseStatus(const HighsDebugStatus status0,
                                   const HighsDebugStatus status1);
 
-bool debugVectorRightSize(const std::vector<double> v, const int right_size);
+bool debugVectorRightSize(const std::vector<double> v, const HighsInt right_size);
 
-bool debugVectorRightSize(const std::vector<int> v, const int right_size);
+bool debugVectorRightSize(const std::vector<HighsInt> v, const HighsInt right_size);
 
 #endif  // SIMPLEX_HIGHSDEBUG_H_

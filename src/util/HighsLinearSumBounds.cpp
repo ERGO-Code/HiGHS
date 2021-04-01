@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-void HighsLinearSumBounds::add(int sum, int var, double coefficient) {
+void HighsLinearSumBounds::add(HighsInt sum, HighsInt var, double coefficient) {
   double vLower = implVarLowerSource[var] == sum
                       ? varLower[var]
                       : std::max(implVarLower[var], varLower[var]);
@@ -57,7 +57,7 @@ void HighsLinearSumBounds::add(int sum, int var, double coefficient) {
   }
 }
 
-void HighsLinearSumBounds::remove(int sum, int var, double coefficient) {
+void HighsLinearSumBounds::remove(HighsInt sum, HighsInt var, double coefficient) {
   double vLower = implVarLowerSource[var] == sum
                       ? varLower[var]
                       : std::max(implVarLower[var], varLower[var]);
@@ -112,7 +112,7 @@ void HighsLinearSumBounds::remove(int sum, int var, double coefficient) {
   }
 }
 
-void HighsLinearSumBounds::updatedVarUpper(int sum, int var, double coefficient,
+void HighsLinearSumBounds::updatedVarUpper(HighsInt sum, HighsInt var, double coefficient,
                                            double oldVarUpper) {
   double oldVUpper = implVarUpperSource[var] == sum
                          ? oldVarUpper
@@ -167,7 +167,7 @@ void HighsLinearSumBounds::updatedVarUpper(int sum, int var, double coefficient,
   }
 }
 
-void HighsLinearSumBounds::updatedVarLower(int sum, int var, double coefficient,
+void HighsLinearSumBounds::updatedVarLower(HighsInt sum, HighsInt var, double coefficient,
                                            double oldVarLower) {
   double oldVLower = implVarLowerSource[var] == sum
                          ? oldVarLower
@@ -224,10 +224,10 @@ void HighsLinearSumBounds::updatedVarLower(int sum, int var, double coefficient,
   }
 }
 
-void HighsLinearSumBounds::updatedImplVarUpper(int sum, int var,
+void HighsLinearSumBounds::updatedImplVarUpper(HighsInt sum, HighsInt var,
                                                double coefficient,
                                                double oldImplVarUpper,
-                                               int oldImplVarUpperSource) {
+                                               HighsInt oldImplVarUpperSource) {
   double oldVUpper = oldImplVarUpperSource == sum
                          ? varUpper[var]
                          : std::min(oldImplVarUpper, varUpper[var]);
@@ -261,10 +261,10 @@ void HighsLinearSumBounds::updatedImplVarUpper(int sum, int var,
   }
 }
 
-void HighsLinearSumBounds::updatedImplVarLower(int sum, int var,
+void HighsLinearSumBounds::updatedImplVarLower(HighsInt sum, HighsInt var,
                                                double coefficient,
                                                double oldImplVarLower,
-                                               int oldImplVarLowerSource) {
+                                               HighsInt oldImplVarLowerSource) {
   double oldVLower = oldImplVarLowerSource == sum
                          ? varLower[var]
                          : std::max(oldImplVarLower, varLower[var]);
@@ -299,7 +299,7 @@ void HighsLinearSumBounds::updatedImplVarLower(int sum, int var,
   }
 }
 
-double HighsLinearSumBounds::getResidualSumLower(int sum, int var,
+double HighsLinearSumBounds::getResidualSumLower(HighsInt sum, HighsInt var,
                                                  double coefficient) const {
   switch (numInfSumLower[sum]) {
     case 0:
@@ -335,7 +335,7 @@ double HighsLinearSumBounds::getResidualSumLower(int sum, int var,
   }
 }
 
-double HighsLinearSumBounds::getResidualSumUpper(int sum, int var,
+double HighsLinearSumBounds::getResidualSumUpper(HighsInt sum, HighsInt var,
                                                  double coefficient) const {
   switch (numInfSumUpper[sum]) {
     case 0:
@@ -371,7 +371,7 @@ double HighsLinearSumBounds::getResidualSumUpper(int sum, int var,
   }
 }
 
-double HighsLinearSumBounds::getResidualSumLowerOrig(int sum, int var,
+double HighsLinearSumBounds::getResidualSumLowerOrig(HighsInt sum, HighsInt var,
                                                      double coefficient) const {
   switch (numInfSumLowerOrig[sum]) {
     case 0:
@@ -393,7 +393,7 @@ double HighsLinearSumBounds::getResidualSumLowerOrig(int sum, int var,
   }
 }
 
-double HighsLinearSumBounds::getResidualSumUpperOrig(int sum, int var,
+double HighsLinearSumBounds::getResidualSumUpperOrig(HighsInt sum, HighsInt var,
                                                      double coefficient) const {
   switch (numInfSumUpperOrig[sum]) {
     case 0:
@@ -415,10 +415,10 @@ double HighsLinearSumBounds::getResidualSumUpperOrig(int sum, int var,
   }
 }
 
-void HighsLinearSumBounds::shrink(const std::vector<int>& newIndices,
-                                  int newSize) {
-  int oldNumInds = newIndices.size();
-  for (int i = 0; i != oldNumInds; ++i) {
+void HighsLinearSumBounds::shrink(const std::vector<HighsInt>& newIndices,
+                                  HighsInt newSize) {
+  HighsInt oldNumInds = newIndices.size();
+  for (HighsInt i = 0; i != oldNumInds; ++i) {
     if (newIndices[i] != -1) {
       sumLower[newIndices[i]] = sumLower[i];
       sumUpper[newIndices[i]] = sumUpper[i];

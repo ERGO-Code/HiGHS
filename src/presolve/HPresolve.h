@@ -43,84 +43,84 @@ class HPresolve {
 
   // triplet storage
   std::vector<double> Avalue;
-  std::vector<int> Arow;
-  std::vector<int> Acol;
+  std::vector<HighsInt> Arow;
+  std::vector<HighsInt> Acol;
 
   // linked list links for column based links for each nonzero
-  std::vector<int> colhead;
-  std::vector<int> Anext;
-  std::vector<int> Aprev;
+  std::vector<HighsInt> colhead;
+  std::vector<HighsInt> Anext;
+  std::vector<HighsInt> Aprev;
 
   // splay tree links for row based iteration and nonzero lookup
-  std::vector<int> rowroot;
-  std::vector<int> ARleft;
-  std::vector<int> ARright;
+  std::vector<HighsInt> rowroot;
+  std::vector<HighsInt> ARleft;
+  std::vector<HighsInt> ARright;
 
   // length of rows and columns
-  std::vector<int> rowsize;
-  std::vector<int> rowsizeInteger;
-  std::vector<int> rowsizeImplInt;
-  std::vector<int> colsize;
+  std::vector<HighsInt> rowsize;
+  std::vector<HighsInt> rowsizeInteger;
+  std::vector<HighsInt> rowsizeImplInt;
+  std::vector<HighsInt> colsize;
 
   // vector to store the nonzero positions of a row
-  std::vector<int> rowpositions;
+  std::vector<HighsInt> rowpositions;
 
   // stack to reuse free slots
-  std::vector<int> freeslots;
+  std::vector<HighsInt> freeslots;
 
   // vectors holding implied bounds on primal and dual variables as well as
   // their origins
   std::vector<double> implColLower;
   std::vector<double> implColUpper;
-  std::vector<int> colLowerSource;
-  std::vector<int> colUpperSource;
+  std::vector<HighsInt> colLowerSource;
+  std::vector<HighsInt> colUpperSource;
   std::vector<double> rowDualLower;
   std::vector<double> rowDualUpper;
   std::vector<double> implRowDualLower;
   std::vector<double> implRowDualUpper;
-  std::vector<int> rowDualLowerSource;
-  std::vector<int> rowDualUpperSource;
+  std::vector<HighsInt> rowDualLowerSource;
+  std::vector<HighsInt> rowDualUpperSource;
 
   // implied bounds on values of primal and dual rows computed from the bounds
   // of primal and dual variables
   HighsLinearSumBounds impliedRowBounds;
   HighsLinearSumBounds impliedDualRowBounds;
 
-  std::vector<int> changedRowIndices;
+  std::vector<HighsInt> changedRowIndices;
   std::vector<uint8_t> changedRowFlag;
-  std::vector<int> changedColIndices;
+  std::vector<HighsInt> changedColIndices;
   std::vector<uint8_t> changedColFlag;
 
-  std::vector<std::pair<int, int>> substitutionOpportunities;
+  std::vector<std::pair<HighsInt, HighsInt>> substitutionOpportunities;
 
   // set with the sizes and indices of equation rows sorted by the size and a
   // vector to access there iterator positions in the set by index for quick
   // removal
-  std::set<std::pair<int, int>> equations;
-  std::vector<std::set<std::pair<int, int>>::iterator> eqiters;
+  std::set<std::pair<HighsInt, HighsInt>> equations;
+  std::vector<std::set<std::pair<HighsInt, HighsInt>>::iterator> eqiters;
 
   bool shrinkProblemEnabled;
   size_t reductionLimit;
 
   // vectors storing singleton rows and columns
-  std::vector<int> singletonRows;
-  std::vector<int> singletonColumns;
+  std::vector<HighsInt> singletonRows;
+  std::vector<HighsInt> singletonColumns;
 
   // flags to mark rows/columns as deleted
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
   int64_t probingContingent;
-  int probingNumDelCol;
-  int numProbed;
+  HighsInt probingNumDelCol;
+  HighsInt numProbed;
 
   // counters for number of deleted rows and columns
-  int numDeletedRows;
-  int numDeletedCols;
+  HighsInt numDeletedRows;
+  HighsInt numDeletedCols;
 
   // store old problem sizes to compute percentage redunctions in presolve loop
-  int oldNumCol;
-  int oldNumRow;
+  HighsInt oldNumCol;
+  HighsInt oldNumRow;
 
   enum class Result {
     Ok,
@@ -132,96 +132,100 @@ class HPresolve {
   // private functions for different shared functionality and matrix
   // modification
 
-  void link(int pos);
+  void link(HighsInt pos);
 
-  void unlink(int pos);
+  void unlink(HighsInt pos);
 
-  void markChangedRow(int row);
+  void markChangedRow(HighsInt row);
 
-  void markChangedCol(int col);
+  void markChangedCol(HighsInt col);
 
-  double getMaxAbsColVal(int col) const;
+  double getMaxAbsColVal(HighsInt col) const;
 
-  double getMaxAbsRowVal(int row) const;
+  double getMaxAbsRowVal(HighsInt row) const;
 
-  void updateColImpliedBounds(int row, int col, double val);
+  void updateColImpliedBounds(HighsInt row, HighsInt col, double val);
 
-  void updateRowDualImpliedBounds(int row, int col, double val);
+  void updateRowDualImpliedBounds(HighsInt row, HighsInt col, double val);
 
-  bool rowCoefficientsIntegral(int row, double scale) const;
+  bool rowCoefficientsIntegral(HighsInt row, double scale) const;
 
-  bool isImpliedFree(int col) const;
+  bool isImpliedFree(HighsInt col) const;
 
-  bool isDualImpliedFree(int row) const;
+  bool isDualImpliedFree(HighsInt row) const;
 
-  bool isImpliedIntegral(int col);
+  bool isImpliedIntegral(HighsInt col);
 
-  bool isImpliedInteger(int col);
+  bool isImpliedInteger(HighsInt col);
 
-  bool isLowerImplied(int col) const;
+  bool isLowerImplied(HighsInt col) const;
 
-  bool isUpperImplied(int col) const;
+  bool isUpperImplied(HighsInt col) const;
 
-  int countFillin(int row);
+  HighsInt countFillin(HighsInt row);
 
-  bool checkFillin(HighsHashTable<int, int>& fillinCache, int row, int col);
+  bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
+                   HighsInt row, HighsInt col);
 
 #ifndef NDEBUG
-  void debugPrintRow(HighsPostsolveStack& postSolveStack, int row);
+  void debugPrintRow(HighsPostsolveStack& postSolveStack, HighsInt row);
 #endif
 
-  int findNonzero(int row, int col);
+  HighsInt findNonzero(HighsInt row, HighsInt col);
 
-  void fromCSC(const std::vector<double>& Aval, const std::vector<int>& Aindex,
-               const std::vector<int>& Astart);
+  void fromCSC(const std::vector<double>& Aval,
+               const std::vector<HighsInt>& Aindex,
+               const std::vector<HighsInt>& Astart);
 
   void fromCSR(const std::vector<double>& ARval,
-               const std::vector<int>& ARindex,
-               const std::vector<int>& ARstart);
+               const std::vector<HighsInt>& ARindex,
+               const std::vector<HighsInt>& ARstart);
 
-  void toCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
-             std::vector<int>& Astart);
+  void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
+             std::vector<HighsInt>& Astart);
 
-  void toCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
-             std::vector<int>& ARstart);
+  void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
+             std::vector<HighsInt>& ARstart);
 
-  void storeRow(int row);
+  void storeRow(HighsInt row);
 
   HighsTripletPositionSlice getStoredRow() const;
 
-  HighsTripletListSlice getColumnVector(int col) const;
+  HighsTripletListSlice getColumnVector(HighsInt col) const;
 
-  HighsTripletTreeSlicePreOrder getRowVector(int row) const;
+  HighsTripletTreeSlicePreOrder getRowVector(HighsInt row) const;
 
-  HighsTripletTreeSliceInOrder getSortedRowVector(int row) const;
+  HighsTripletTreeSliceInOrder getSortedRowVector(HighsInt row) const;
 
-  void markRowDeleted(int row);
+  void markRowDeleted(HighsInt row);
 
-  void markColDeleted(int col);
+  void markColDeleted(HighsInt col);
 
-  void fixColToLower(HighsPostsolveStack& postsolveStack, int col);
+  void fixColToLower(HighsPostsolveStack& postsolveStack, HighsInt col);
 
-  void fixColToUpper(HighsPostsolveStack& postsolveStack, int col);
+  void fixColToUpper(HighsPostsolveStack& postsolveStack, HighsInt col);
 
-  void fixColToZero(HighsPostsolveStack& postsolveStack, int col);
+  void fixColToZero(HighsPostsolveStack& postsolveStack, HighsInt col);
 
-  void substitute(int row, int col, double rhs);
+  void substitute(HighsInt row, HighsInt col, double rhs);
 
-  void changeColUpper(int col, double newUpper);
+  void changeColUpper(HighsInt col, double newUpper);
 
-  void changeColLower(int col, double newLower);
+  void changeColLower(HighsInt col, double newLower);
 
-  void changeRowDualUpper(int row, double newUpper);
+  void changeRowDualUpper(HighsInt row, double newUpper);
 
-  void changeRowDualLower(int row, double newLower);
+  void changeRowDualLower(HighsInt row, double newLower);
 
-  void changeImplColUpper(int col, double newUpper, int originRow);
+  void changeImplColUpper(HighsInt col, double newUpper, HighsInt originRow);
 
-  void changeImplColLower(int col, double newLower, int originRow);
+  void changeImplColLower(HighsInt col, double newLower, HighsInt originRow);
 
-  void changeImplRowDualUpper(int row, double newUpper, int originCol);
+  void changeImplRowDualUpper(HighsInt row, double newUpper,
+                              HighsInt originCol);
 
-  void changeImplRowDualLower(int row, double newLower, int originCol);
+  void changeImplRowDualLower(HighsInt row, double newLower,
+                              HighsInt originCol);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postSolveStack);
 
@@ -246,41 +250,43 @@ class HPresolve {
     this->reductionLimit = reductionLimit;
   }
 
-  int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
+  HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
 
   void shrinkProblem(HighsPostsolveStack& postSolveStack);
 
-  void addToMatrix(int row, int col, double val);
+  void addToMatrix(HighsInt row, HighsInt col, double val);
 
   Result runProbing(HighsPostsolveStack& postSolveStack);
 
-  Result doubletonEq(HighsPostsolveStack& postSolveStack, int row);
+  Result doubletonEq(HighsPostsolveStack& postSolveStack, HighsInt row);
 
-  Result singletonRow(HighsPostsolveStack& postSolveStack, int row);
+  Result singletonRow(HighsPostsolveStack& postSolveStack, HighsInt row);
 
-  Result emptyCol(HighsPostsolveStack& postSolveStack, int col);
+  Result emptyCol(HighsPostsolveStack& postSolveStack, HighsInt col);
 
-  Result singletonCol(HighsPostsolveStack& postSolveStack, int col);
+  Result singletonCol(HighsPostsolveStack& postSolveStack, HighsInt col);
 
-  Result rowPresolve(HighsPostsolveStack& postSolveStack, int row);
+  Result rowPresolve(HighsPostsolveStack& postSolveStack, HighsInt row);
 
-  Result colPresolve(HighsPostsolveStack& postSolveStack, int col);
+  Result colPresolve(HighsPostsolveStack& postSolveStack, HighsInt col);
 
-  Result solveOneRowComponent(HighsPostsolveStack& postsolveStack, int row);
+  Result solveOneRowComponent(HighsPostsolveStack& postsolveStack,
+                              HighsInt row);
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postSolveStack);
 
   HighsModelStatus run(HighsPostsolveStack& postSolveStack);
 
-  void computeIntermediateMatrix(std::vector<int>& flagRow,
-                                 std::vector<int>& flagCol,
+  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
+                                 std::vector<HighsInt>& flagCol,
                                  size_t& numreductions);
 
-  void substitute(int substcol, int staycol, double offset, double scale);
+  void substitute(HighsInt substcol, HighsInt staycol, double offset,
+                  double scale);
 
-  void removeFixedCol(int col);
+  void removeFixedCol(HighsInt col);
 
-  void removeRow(int row);
+  void removeRow(HighsInt row);
 
   Result aggregator(HighsPostsolveStack& postSolveStack);
 
@@ -294,9 +300,9 @@ class HPresolve {
 
   Result removeDoubletonEquations(HighsPostsolveStack& postSolveStack);
 
-  int strengthenInequalities();
+  HighsInt strengthenInequalities();
 
-  int detectImpliedIntegers();
+  HighsInt detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolveStack);
 

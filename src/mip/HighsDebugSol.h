@@ -54,16 +54,16 @@ struct HighsDebugSol {
 
   void nodePruned(const HighsDomain& localdomain);
 
-  void checkCut(const int* Rindex, const double* Rvalue, int Rlen, double rhs);
+  void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen, double rhs);
 
-  void checkRow(const int* Rindex, const double* Rvalue, int Rlen,
+  void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double Rlower, double Rupper);
 
-  void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen);
+  void checkClique(const HighsCliqueTable::CliqueVar* clq, HighsInt clqlen);
 
-  void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const;
+  void checkVub(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant) const;
 
-  void checkVlb(int col, int vlbcol, double vlbcoef, double vlbconstant) const;
+  void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant) const;
 };
 
 #else
@@ -87,18 +87,18 @@ struct HighsDebugSol {
 
   void nodePruned(const HighsDomain& localdomain) {}
 
-  void checkCut(const int* Rindex, const double* Rvalue, int Rlen,
+  void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double rhs) const {}
 
-  void checkRow(const int* Rindex, const double* Rvalue, int Rlen,
+  void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double Rlower, double Rupper) {}
 
-  void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen) const {}
+  void checkClique(const HighsCliqueTable::CliqueVar* clq, HighsInt clqlen) const {}
 
-  void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const {
+  void checkVub(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant) const {
   }
 
-  void checkVlb(int col, int vlbcol, double vlbcoef, double vlbconstant) const {
+  void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant) const {
   }
 };
 #endif

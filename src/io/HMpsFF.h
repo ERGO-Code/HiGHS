@@ -33,9 +33,10 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"  // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
+#include "util/HighsInt.h"
 #include "util/stringutil.h"
 
-using Triplet = std::tuple<int, int, double>;
+using Triplet = std::tuple<HighsInt, HighsInt, double>;
 
 enum class FreeFormatParserReturnCode {
   SUCCESS,
@@ -65,16 +66,16 @@ class HMpsFF {
  private:
   double start_time;
 
-  int numRow;
-  int numCol;
-  int nnz;
+  HighsInt numRow;
+  HighsInt numCol;
+  HighsInt nnz;
   std::string mpsName;
 
   ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
   double objOffset = 0;
 
-  std::vector<int> Astart;
-  std::vector<int> Aindex;
+  std::vector<HighsInt> Astart;
+  std::vector<HighsInt> Aindex;
   std::vector<double> Avalue;
   std::vector<double> colCost;
   std::vector<double> colLower;
@@ -94,8 +95,8 @@ class HMpsFF {
   std::vector<bool> col_binary;
 
   /// load LP from MPS file as transposed triplet matrix
-  int parseFile(std::string filename);
-  int fillMatrix();
+  HighsInt parseFile(std::string filename);
+  HighsInt fillMatrix();
 
   const bool any_first_non_blank_as_star_implies_comment = false;
   const bool handle_bv_in_bounds = false;
@@ -120,10 +121,10 @@ class HMpsFF {
 
   enum class boundtype { LE, EQ, GE, FR };
   std::vector<boundtype> row_type;
-  std::vector<int> integer_column;
+  std::vector<HighsInt> integer_column;
 
   std::vector<Triplet> entries;
-  std::vector<std::pair<int, double>> coeffobj;
+  std::vector<std::pair<HighsInt, double>> coeffobj;
 
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
@@ -131,8 +132,8 @@ class HMpsFF {
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
   /// checks first word of strline and wraps it by it_begin and it_end
-  HMpsFF::parsekey checkFirstWord(std::string& strline, int& start, int& end,
-                                  std::string& word) const;
+  HMpsFF::parsekey checkFirstWord(std::string& strline, HighsInt& start,
+                                  HighsInt& end, std::string& word) const;
 
   HMpsFF::parsekey parseDefault(std::ifstream& file);
   HMpsFF::parsekey parseObjsense(const HighsLogOptions& log_options,

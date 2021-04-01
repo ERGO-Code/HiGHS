@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
   HighsStatus run_status = HighsStatus::Error;
 
   bool is_mip = false;
-  for (int i = 0; i < (int)lp.integrality_.size(); i++)
+  for (HighsInt i = 0; i < (HighsInt)lp.integrality_.size(); i++)
     if (lp.integrality_[i] == HighsVarType::INTEGER) {
       is_mip = true;
       break;
@@ -119,8 +119,8 @@ void reportLpStatsOrError(const HighsLogOptions& log_options,
                  lp.numCol_);
     highsLogUser(log_options, HighsLogType::INFO, "Nonzeros : %d\n",
                  lp.Avalue_.size());
-    int num_int = 0;
-    for (unsigned int i = 0; i < lp.integrality_.size(); i++)
+    HighsInt num_int = 0;
+    for (HighsUInt i = 0; i < lp.integrality_.size(); i++)
       if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
     if (num_int)
       highsLogUser(log_options, HighsLogType::INFO, "Integer  : %d\n", num_int);

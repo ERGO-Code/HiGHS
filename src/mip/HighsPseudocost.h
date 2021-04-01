@@ -17,6 +17,8 @@
 #include <limits>
 #include <vector>
 
+#include "util/HighsInt.h"
+
 class HighsMipSolver;
 namespace presolve {
 class HighsPostsolveStack;
@@ -27,50 +29,51 @@ class HighsPseudocost;
 struct HighsPseudocostInitialization {
   std::vector<double> pseudocostup;
   std::vector<double> pseudocostdown;
-  std::vector<int> nsamplesup;
-  std::vector<int> nsamplesdown;
+  std::vector<HighsInt> nsamplesup;
+  std::vector<HighsInt> nsamplesdown;
   std::vector<double> inferencesup;
   std::vector<double> inferencesdown;
-  std::vector<int> ninferencesup;
-  std::vector<int> ninferencesdown;
+  std::vector<HighsInt> ninferencesup;
+  std::vector<HighsInt> ninferencesdown;
   double cost_total;
   double inferences_total;
   int64_t nsamplestotal;
   int64_t ninferencestotal;
 
-  HighsPseudocostInitialization(const HighsPseudocost& pscost, int maxCount);
+  HighsPseudocostInitialization(const HighsPseudocost& pscost,
+                                HighsInt maxCount);
   HighsPseudocostInitialization(
-      const HighsPseudocost& pscost, int maxCount,
+      const HighsPseudocost& pscost, HighsInt maxCount,
       const presolve::HighsPostsolveStack& postsolveStack);
 };
 class HighsPseudocost {
   friend class HighsPseudocostInitialization;
   std::vector<double> pseudocostup;
   std::vector<double> pseudocostdown;
-  std::vector<int> nsamplesup;
-  std::vector<int> nsamplesdown;
+  std::vector<HighsInt> nsamplesup;
+  std::vector<HighsInt> nsamplesdown;
   std::vector<double> inferencesup;
   std::vector<double> inferencesdown;
-  std::vector<int> ninferencesup;
-  std::vector<int> ninferencesdown;
-  std::vector<int> ncutoffsup;
-  std::vector<int> ncutoffsdown;
+  std::vector<HighsInt> ninferencesup;
+  std::vector<HighsInt> ninferencesdown;
+  std::vector<HighsInt> ncutoffsup;
+  std::vector<HighsInt> ncutoffsdown;
 
   double cost_total;
   double inferences_total;
   int64_t nsamplestotal;
   int64_t ninferencestotal;
   int64_t ncutoffstotal;
-  int minreliable;
+  HighsInt minreliable;
 
  public:
   HighsPseudocost() = default;
   HighsPseudocost(const HighsMipSolver& mipsolver);
 
   void subtractBase(const HighsPseudocost& base) {
-    int ncols = pseudocostup.size();
+    HighsInt ncols = pseudocostup.size();
 
-    for (int i = 0; i != ncols; ++i) {
+    for (HighsInt i = 0; i != ncols; ++i) {
       pseudocostup[i] -= base.pseudocostup[i];
       pseudocostdown[i] -= base.pseudocostdown[i];
       nsamplesup[i] -= base.nsamplesup[i];
@@ -78,19 +81,21 @@ class HighsPseudocost {
     }
   }
 
-  void setMinReliable(int minreliable) { this->minreliable = minreliable; }
+  void setMinReliable(HighsInt minreliable) { this->minreliable = minreliable; }
 
-  int getMinReliable() const { return minreliable; }
+  HighsInt getMinReliable() const { return minreliable; }
 
-  int getNumObservations(int col) const {
+  HighsInt getNumObservations(HighsInt col) const {
     return nsamplesup[col] + nsamplesdown[col];
   }
 
-  int getNumObservationsUp(int col) const { return nsamplesup[col]; }
+  HighsInt getNumObservationsUp(HighsInt col) const { return nsamplesup[col]; }
 
-  int getNumObservationsDown(int col) const { return nsamplesdown[col]; }
+  HighsInt getNumObservationsDown(HighsInt col) const {
+    return nsamplesdown[col];
+  }
 
-  void addCutoffObservation(int col, bool upbranch) {
+  void addCutoffObservation(HighsInt col, bool upbranch) {
     ++ncutoffstotal;
     if (upbranch)
       ncutoffsup[col] += 1;
@@ -98,7 +103,7 @@ class HighsPseudocost {
       ncutoffsdown[col] += 1;
   }
 
-  void addObservation(int col, double delta, double objdelta) {
+  void addObservation(HighsInt col, double delta, double objdelta) {
     assert(delta != 0.0);
     assert(objdelta >= 0.0);
     if (delta > 0.0) {
@@ -122,7 +127,8 @@ class HighsPseudocost {
     }
   }
 
-  void addInferenceObservation(int col, int ninferences, bool upbranch) {
+  void addInferenceObservation(HighsInt col, HighsInt ninferences,
+                               bool upbranch) {
     double d = ninferences - inferences_total;
     ++ninferencestotal;
     inferences_total += d / ninferencestotal;
@@ -137,19 +143,21 @@ class HighsPseudocost {
     }
   }
 
-  bool isReliable(int col) const {
+  bool isReliable(HighsInt col) const {
     return std::min(nsamplesup[col], nsamplesdown[col]) >= minreliable;
   }
 
-  bool isReliableUp(int col) const { return nsamplesup[col] >= minreliable; }
+  bool isReliableUp(HighsInt col) const {
+    return nsamplesup[col] >= minreliable;
+  }
 
-  bool isReliableDown(int col) const {
+  bool isReliableDown(HighsInt col) const {
     return nsamplesdown[col] >= minreliable;
   }
 
   double getAvgPseudocost() const { return cost_total; }
 
-  double getPseudocostUp(int col, double frac, double offset) const {
+  double getPseudocostUp(HighsInt col, double frac, double offset) const {
     double up = std::ceil(frac) - frac;
     double cost;
 
@@ -164,7 +172,7 @@ class HighsPseudocost {
     return up * (offset + cost);
   }
 
-  double getPseudocostDown(int col, double frac, double offset) const {
+  double getPseudocostDown(HighsInt col, double frac, double offset) const {
     double down = frac - std::floor(frac);
     double cost;
 
@@ -181,19 +189,19 @@ class HighsPseudocost {
     return down * (offset + cost);
   }
 
-  double getPseudocostUp(int col, double frac) const {
+  double getPseudocostUp(HighsInt col, double frac) const {
     double up = std::ceil(frac) - frac;
     if (nsamplesup[col] == 0) return up * cost_total;
     return up * pseudocostup[col];
   }
 
-  double getPseudocostDown(int col, double frac) const {
+  double getPseudocostDown(HighsInt col, double frac) const {
     double down = frac - std::floor(frac);
     if (nsamplesdown[col] == 0) return down * cost_total;
     return down * pseudocostdown[col];
   }
 
-  double getScore(int col, double upcost, double downcost) const {
+  double getScore(HighsInt col, double upcost, double downcost) const {
     double costScore =
         std::sqrt(upcost * downcost) / std::max(1e-6, cost_total);
     double inferenceScore = std::sqrt(inferencesup[col] * inferencesdown[col]) /
@@ -201,10 +209,10 @@ class HighsPseudocost {
 
     double cutoffRateUp =
         ncutoffsup[col] /
-        double(std::max(1, ncutoffsup[col] + nsamplesup[col]));
+        double(std::max(HighsInt{1}, ncutoffsup[col] + nsamplesup[col]));
     double cutoffRateDown =
         ncutoffsdown[col] /
-        double(std::max(1, ncutoffsdown[col] + nsamplesdown[col]));
+        double(std::max(HighsInt{1}, ncutoffsdown[col] + nsamplesdown[col]));
     double avgCutoffRate =
         ncutoffstotal /
         double(std::max(int64_t{1}, nsamplestotal + ncutoffstotal));
@@ -218,7 +226,7 @@ class HighsPseudocost {
            1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore));
   }
 
-  double getScore(int col, double frac) const {
+  double getScore(HighsInt col, double frac) const {
     double upcost = getPseudocostUp(col, frac);
     double downcost = getPseudocostDown(col, frac);
 

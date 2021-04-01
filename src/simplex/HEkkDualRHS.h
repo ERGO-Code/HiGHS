@@ -43,16 +43,16 @@ class HEkkDualRHS {
    * @brief Choose the row index of a good variable to leave the basis (CHUZR)
    */
   void chooseNormal(
-      int* chIndex  //!< Row index of variable chosen to leave the basis
+      HighsInt* chIndex  //!< Row index of variable chosen to leave the basis
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void chooseMultiGlobal(int* chIndex,  //!< Set of indices of chosen rows
-                         int* chCount,  //!< Number of chosen rows
-                         int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiGlobal(HighsInt* chIndex,  //!< Set of indices of chosen rows
+                         HighsInt* chCount,  //!< Number of chosen rows
+                         HighsInt chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
@@ -60,9 +60,9 @@ class HEkkDualRHS {
    * (Multiple CHUZR)
    */
   void chooseMultiHyperGraphAuto(
-      int* chIndex,  //!< Set of indices of chosen rows
-      int* chCount,  //!< Number of chosen rows
-      int chLimit    //!< Limit on number of of chosen rows
+      HighsInt* chIndex,  //!< Set of indices of chosen rows
+      HighsInt* chCount,  //!< Number of chosen rows
+      HighsInt chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
@@ -70,9 +70,9 @@ class HEkkDualRHS {
    * (Multiple CHUZR)
    */
   void chooseMultiHyperGraphPart(
-      int* chIndex,  //!< Set of indices of chosen rows
-      int* chCount,  //!< Number of chosen rows
-      int chLimit    //!< Limit on number of of chosen rows
+      HighsInt* chIndex,  //!< Set of indices of chosen rows
+      HighsInt* chCount,  //!< Number of chosen rows
+      HighsInt chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
@@ -103,7 +103,7 @@ class HEkkDualRHS {
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void updatePivots(int iRow,     //!< row where the basis change has occurred
+  void updatePivots(HighsInt iRow,     //!< row where the basis change has occurred
                     double value  //!< New primal value in this row
   );
 
@@ -130,11 +130,11 @@ class HEkkDualRHS {
 
   double workCutoff;  //!< Limit for row to be in list with greatest primal
                       //!< infeasibilities
-  int workCount;      //!< Number of rows in list with greatest primal
+  HighsInt workCount;      //!< Number of rows in list with greatest primal
                       //!< infeasibilities
   std::vector<char> workMark;  //!< Flag set if row is in list of those with
                                //!< greatest primal infeasibilities
-  std::vector<int>
+  std::vector<HighsInt>
       workIndex;  //!< List of rows with greatest primal infeasibilities
   std::vector<double>
       work_infeasibility;            //!< Vector of all primal infeasiblities
@@ -142,12 +142,12 @@ class HEkkDualRHS {
   std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
                                      //!< are scattered during INVERT
 
-  int partNum;
-  int partNumRow;
-  int partNumCol;
-  int partNumCut;
-  int partSwitch;
-  std::vector<int> workPartition;
+  HighsInt partNum;
+  HighsInt partNumRow;
+  HighsInt partNumCol;
+  HighsInt partNumCut;
+  HighsInt partSwitch;
+  std::vector<HighsInt> workPartition;
   const double min_dual_steepest_edge_weight = 1e-4;
   HighsSimplexAnalysis* analysis;
 };

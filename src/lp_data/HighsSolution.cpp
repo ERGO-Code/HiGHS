@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "ipm/IpxSolution.h"
+#include "io/HighsIO.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsOptions.h"
@@ -38,10 +39,10 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
       solution_params.dual_feasibility_tolerance;
 
   // solution_params are the values computed in this method.
-  int& num_primal_infeasibility = solution_params.num_primal_infeasibility;
+  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibility;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
   double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
-  int& num_dual_infeasibility = solution_params.num_dual_infeasibility;
+  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibility;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
   double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
@@ -59,16 +60,16 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
   double value;
   double dual;
   HighsBasisStatus status;
-  for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+  for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     if (iVar < lp.numCol_) {
-      int iCol = iVar;
+      HighsInt iCol = iVar;
       lower = lp.colLower_[iCol];
       upper = lp.colUpper_[iCol];
       value = solution.col_value[iCol];
       dual = solution.col_dual[iCol];
       status = basis.col_status[iCol];
     } else {
-      int iRow = iVar - lp.numCol_;
+      HighsInt iRow = iVar - lp.numCol_;
       lower = lp.rowLower_[iRow];
       upper = lp.rowUpper_[iRow];
       value = solution.row_value[iRow];
@@ -76,7 +77,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
       status = basis.row_status[iRow];
     }
     // Flip dual according to lp.sense_
-    dual *= (int)lp.sense_;
+    dual *= (HighsInt)lp.sense_;
 
     double primal_residual = std::max(lower - value, value - upper);
     // @primal_infeasibility calculation
@@ -139,9 +140,9 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
   assert(isBasisRightSize(lp, basis));
   const bool have_highs_solution = isSolutionRightSize(lp, solution);
 
-  const int num_col = lp.numCol_;
-  const int num_row = lp.numRow_;
-  for (int iCol = 0; iCol < num_col; iCol++) {
+  const HighsInt num_col = lp.numCol_;
+  const HighsInt num_row = lp.numRow_;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (basis.col_status[iCol] != HighsBasisStatus::NONBASIC) continue;
     const double lower = lp.colLower_[iCol];
     const double upper = lp.colUpper_[iCol];
@@ -175,7 +176,7 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
     basis.col_status[iCol] = status;
   }
 
-  for (int iRow = 0; iRow < num_row; iRow++) {
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (basis.row_status[iRow] != HighsBasisStatus::NONBASIC) continue;
     const double lower = lp.rowLower_[iRow];
     const double upper = lp.rowUpper_[iRow];
@@ -214,7 +215,7 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
 HighsStatus ipxSolutionToHighsSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
-    const int ipx_num_col, const int ipx_num_row,
+    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     // const std::vector<double>& ipx_y,
     HighsSolution& highs_solution) {
@@ -241,21 +242,21 @@ HighsStatus ipxSolutionToHighsSolution(
   get_row_activities = get_row_activities || ipx_num_col > lp.numCol_;
 #endif
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
-  for (int col = 0; col < lp.numCol_; col++) {
+  for (HighsInt col = 0; col < lp.numCol_; col++) {
     highs_solution.col_value[col] = ipx_col_value[col];
     //    highs_solution.col_dual[col] = ipx_col_dual[col];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
-      for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-        int row = lp.Aindex_[el];
+      for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
+        HighsInt row = lp.Aindex_[el];
         row_activity[row] += highs_solution.col_value[col] * lp.Avalue_[el];
       }
     }
   }
-  int ipx_row = 0;
-  int ipx_slack = lp.numCol_;
-  int num_boxed_rows = 0;
-  for (int row = 0; row < lp.numRow_; row++) {
+  HighsInt ipx_row = 0;
+  HighsInt ipx_slack = lp.numCol_;
+  HighsInt num_boxed_rows = 0;
+  for (HighsInt row = 0; row < lp.numRow_; row++) {
     double lower = lp.rowLower_[row];
     double upper = lp.rowUpper_[row];
     if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
@@ -285,11 +286,11 @@ HighsStatus ipxSolutionToHighsSolution(
 
   // Flip dual according to lp.sense_
   /*
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    highs_solution.col_dual[iCol] *= (int)lp.sense_;
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+    highs_solution.col_dual[iCol] *= (HighsInt)lp.sense_;
   }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    highs_solution.row_dual[iRow] *= (int)lp.sense_;
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+    highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
   }
   */
   return HighsStatus::OK;
@@ -331,8 +332,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   get_row_activities = get_row_activities || ipx_solution.num_col > lp.numCol_;
 #endif
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
-  int num_basic_variables = 0;
-  for (int col = 0; col < lp.numCol_; col++) {
+  HighsInt num_basic_variables = 0;
+  for (HighsInt col = 0; col < lp.numCol_; col++) {
     bool unrecognised = false;
     if (ipx_col_status[col] == ipx_basic) {
       // Column is basic
@@ -360,7 +361,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
       printf(
           "\nError in IPX conversion: Unrecognised value ipx_col_status[%2d] = "
           "%d\n",
-          col, (int)ipx_col_status[col]);
+          col, (HighsInt)ipx_col_status[col]);
 #endif
     }
 #ifdef HiGHSDEV
@@ -370,7 +371,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
       printf(
           "Col %2d ipx_col_status[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = "
           "%11.4g\n",
-          col, col, (int)ipx_col_status[col], col, ipx_col_value[col], col,
+          col, col, (HighsInt)ipx_col_status[col], col, ipx_col_value[col], col,
           ipx_col_dual[col]);
 #endif
     assert(!unrecognised);
@@ -381,25 +382,25 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     }
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
-      for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-        int row = lp.Aindex_[el];
+      for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
+        HighsInt row = lp.Aindex_[el];
         row_activity[row] += highs_solution.col_value[col] * lp.Avalue_[el];
       }
     }
     if (highs_basis.col_status[col] == HighsBasisStatus::BASIC)
       num_basic_variables++;
   }
-  int ipx_row = 0;
-  int ipx_slack = lp.numCol_;
-  int num_boxed_rows = 0;
-  int num_boxed_rows_basic = 0;
-  int num_boxed_row_slacks_basic = 0;
-  for (int row = 0; row < lp.numRow_; row++) {
+  HighsInt ipx_row = 0;
+  HighsInt ipx_slack = lp.numCol_;
+  HighsInt num_boxed_rows = 0;
+  HighsInt num_boxed_rows_basic = 0;
+  HighsInt num_boxed_row_slacks_basic = 0;
+  for (HighsInt row = 0; row < lp.numRow_; row++) {
     bool unrecognised = false;
     double lower = lp.rowLower_[row];
     double upper = lp.rowUpper_[row];
 #ifdef HiGHSDEV
-    int this_ipx_row = ipx_row;
+    HighsInt this_ipx_row = ipx_row;
 #endif
     if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
       // Free row - removed by IPX so make it basic at its row activity
@@ -445,7 +446,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
           printf(
               "\nError in IPX conversion: Row %2d (IPX row %2d) has "
               "unrecognised value ipx_col_status[%2d] = %d\n",
-              row, ipx_row, ipx_slack, (int)ipx_col_status[ipx_slack]);
+              row, ipx_row, ipx_slack, (HighsInt)ipx_col_status[ipx_slack]);
 #endif
         }
         // Update the slack to be used for boxed rows
@@ -496,8 +497,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
       printf(
           "Row %2d ipx_row_status[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = "
           "%11.4g\n",
-          row, this_ipx_row, (int)ipx_row_status[this_ipx_row], this_ipx_row,
-          ipx_row_value[this_ipx_row], this_ipx_row,
+          row, this_ipx_row, (HighsInt)ipx_row_status[this_ipx_row],
+          this_ipx_row, ipx_row_value[this_ipx_row], this_ipx_row,
           ipx_row_dual[this_ipx_row]);
 #endif
     assert(!unrecognised);
@@ -515,11 +516,11 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   assert(ipx_slack == ipx_solution.num_col);
 
   // Flip dual according to lp.sense_
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    highs_solution.col_dual[iCol] *= (int)lp.sense_;
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+    highs_solution.col_dual[iCol] *= (HighsInt)lp.sense_;
   }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    highs_solution.row_dual[iRow] *= (int)lp.sense_;
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+    highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
   }
 
 #ifdef HiGHSDEV
@@ -534,7 +535,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
   std::string iteration_statement = "";
   bool not_first = false;
-  int num_positive_count = 0;
+  HighsInt num_positive_count = 0;
   if (iterations_counts.simplex) num_positive_count++;
   if (iterations_counts.ipm) num_positive_count++;
   if (iterations_counts.crossover) num_positive_count++;
@@ -543,7 +544,7 @@ std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
     return iteration_statement;
   }
   if (num_positive_count > 1) iteration_statement += "(";
-  int count;
+  HighsInt count;
   std::string count_str;
   count = iterations_counts.simplex;
   if (count) {
@@ -658,12 +659,12 @@ void copyFromSolutionParams(HighsInfo& highs_info,
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   bool consistent = true;
   consistent = isBasisRightSize(lp, basis) && consistent;
-  int num_basic_variables = 0;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+  HighsInt num_basic_variables = 0;
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     if (basis.col_status[iCol] == HighsBasisStatus::BASIC)
       num_basic_variables++;
   }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
       num_basic_variables++;
   }
@@ -674,17 +675,17 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
 
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
   bool right_size = true;
-  right_size = (int)solution.col_value.size() == lp.numCol_ && right_size;
-  right_size = (int)solution.col_dual.size() == lp.numCol_ && right_size;
-  right_size = (int)solution.row_value.size() == lp.numRow_ && right_size;
-  right_size = (int)solution.row_dual.size() == lp.numRow_ && right_size;
+  right_size = (HighsInt)solution.col_value.size() == lp.numCol_ && right_size;
+  right_size = (HighsInt)solution.col_dual.size() == lp.numCol_ && right_size;
+  right_size = (HighsInt)solution.row_value.size() == lp.numRow_ && right_size;
+  right_size = (HighsInt)solution.row_dual.size() == lp.numRow_ && right_size;
   return right_size;
 }
 
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
   bool right_size = true;
-  right_size = (int)basis.col_status.size() == lp.numCol_ && right_size;
-  right_size = (int)basis.row_status.size() == lp.numRow_ && right_size;
+  right_size = (HighsInt)basis.col_status.size() == lp.numCol_ && right_size;
+  right_size = (HighsInt)basis.row_status.size() == lp.numRow_ && right_size;
   return right_size;
 }
 

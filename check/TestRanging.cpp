@@ -77,25 +77,25 @@ void testRanging(Highs& highs) {
   vector<double>& row_dual = solution.row_dual;
 
   lp = highs.getLp();
-  int numRow = lp.numRow_;
-  int numCol = lp.numCol_;
+  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.numCol_;
 
   const double relative_error_tolerance = 1e-10;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));
   const double initial_error_report_threshold = relative_error_tolerance / 1e6;
   double error_report_threshold;
-  int num_relative_error = 0;
+  HighsInt num_relative_error = 0;
   double sum_relative_error = 0;
   double max_relative_error = 0;
-  int num_lines_printed;
+  HighsInt num_lines_printed;
 
   double max_col_cost_relative_error = 0;
-  int max_col_cost_relative_error_col = -1;
+  HighsInt max_col_cost_relative_error_col = -1;
   double max_col_bound_relative_error = 0;
-  int max_col_bound_relative_error_col = -1;
+  HighsInt max_col_bound_relative_error_col = -1;
   double max_row_bound_relative_error = 0;
-  int max_row_bound_relative_error_row = -1;
-  const int small_dim = 10;
+  HighsInt max_row_bound_relative_error_row = -1;
+  const HighsInt small_dim = 10;
 
   if (dev_run) printf(" --- Testing cost ranging ---\n");
   bool small_numCol = numCol < small_dim;
@@ -105,11 +105,11 @@ void testRanging(Highs& highs) {
   const bool test_all_col_cost = test_all;
   const bool test_all_col_bound = test_all;
   const bool test_all_row_bound = test_all;
-  int test_col_cost = min(0, numCol - 1);
-  int test_col_bound = min(0, numCol - 1);
-  int test_row_bound = min(0, numRow - 1);
-  int from_i;
-  int to_i;
+  HighsInt test_col_cost = min(HighsInt{0}, numCol - 1);
+  HighsInt test_col_bound = min(HighsInt{0}, numCol - 1);
+  HighsInt test_row_bound = min(HighsInt{0}, numRow - 1);
+  HighsInt from_i;
+  HighsInt to_i;
   if (test_all_col_cost) {
     from_i = 0;
     to_i = numCol;
@@ -117,7 +117,7 @@ void testRanging(Highs& highs) {
     from_i = test_col_cost;
     to_i = from_i + 1;
   }
-  for (int i = from_i; i < to_i; i++) {
+  for (HighsInt i = from_i; i < to_i; i++) {
     double col_cost_up_value = ranging.col_cost_up.value_[i];
     double col_cost_up_objective = ranging.col_cost_up.objective_[i];
     double col_cost_dn_value = ranging.col_cost_dn.value_[i];
@@ -213,7 +213,7 @@ void testRanging(Highs& highs) {
     from_i = test_col_bound;
     to_i = from_i + 1;
   }
-  for (int i = from_i; i < to_i; i++) {
+  for (HighsInt i = from_i; i < to_i; i++) {
     double col_bound_up_value = ranging.col_bound_up.value_[i];
     double col_bound_up_objective = ranging.col_bound_up.objective_[i];
     double col_bound_dn_value = ranging.col_bound_dn.value_[i];
@@ -350,7 +350,7 @@ void testRanging(Highs& highs) {
     from_i = test_row_bound;
     to_i = from_i + 1;
   }
-  for (int i = from_i; i < to_i; i++) {
+  for (HighsInt i = from_i; i < to_i; i++) {
     double row_bound_up_value = ranging.row_bound_up.value_[i];
     double row_bound_up_objective = ranging.row_bound_up.objective_[i];
     double row_bound_dn_value = ranging.row_bound_dn.value_[i];

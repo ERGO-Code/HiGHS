@@ -36,18 +36,18 @@ HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status) {
 
 HighsDebugStatus debugWorseStatus(const HighsDebugStatus status0,
                                   const HighsDebugStatus status1) {
-  return static_cast<HighsDebugStatus>(std::max((int)status0, (int)status1));
+  return static_cast<HighsDebugStatus>(std::max((HighsInt)status0, (HighsInt)status1));
 }
 
-bool debugVectorRightSize(const std::vector<double> v, const int right_size) {
-  const int v_size = v.size();
+bool debugVectorRightSize(const std::vector<double> v, const HighsInt right_size) {
+  const HighsInt v_size = v.size();
   const bool is_right_size = v_size == right_size;
   assert(is_right_size);
   return is_right_size;
 }
 
-bool debugVectorRightSize(const std::vector<int> v, const int right_size) {
-  const int v_size = v.size();
+bool debugVectorRightSize(const std::vector<HighsInt> v, const HighsInt right_size) {
+  const HighsInt v_size = v.size();
   const bool is_right_size = v_size == right_size;
   assert(is_right_size);
   return is_right_size;

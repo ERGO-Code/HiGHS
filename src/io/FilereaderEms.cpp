@@ -24,13 +24,13 @@
 FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                                                    HighsLp& model) {
   std::ifstream f;
-  int i;
+  HighsInt i;
 
   const std::string filename = options.model_file;
   f.open(filename, std::ios::in);
   if (f.is_open()) {
     std::string line;
-    int numCol, numRow, AcountX, num_int;
+    HighsInt numCol, numRow, AcountX, num_int;
     bool indices_from_one = false;
 
     // counts
@@ -154,7 +154,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       f >> num_int;
       if (num_int) {
         model.integrality_.resize(model.numCol_, HighsVarType::CONTINUOUS);
-        int iCol;
+        HighsInt iCol;
         for (i = 0; i < num_int; i++) {
           f >> iCol;
           if (indices_from_one) iCol--;
@@ -223,7 +223,7 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
                                             const HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
-  int num_nz = model.Astart_[model.numCol_];
+  HighsInt num_nz = model.Astart_[model.numCol_];
 
   // counts
   f << "n_rows" << std::endl;
@@ -235,55 +235,55 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
 
   // matrix
   f << "matrix" << std::endl;
-  for (int i = 0; i < model.numCol_ + 1; i++) f << model.Astart_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_ + 1; i++) f << model.Astart_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < num_nz; i++) f << model.Aindex_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << model.Aindex_[i] << " ";
   f << std::endl;
 
   f << std::setprecision(9);
-  for (int i = 0; i < num_nz; i++) f << model.Avalue_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << model.Avalue_[i] << " ";
   f << std::endl;
 
   // cost and bounds
   f << std::setprecision(9);
 
   f << "column_bounds" << std::endl;
-  for (int i = 0; i < model.numCol_; i++) f << model.colLower_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_; i++) f << model.colLower_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < model.numCol_; i++) f << model.colUpper_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_; i++) f << model.colUpper_[i] << " ";
   f << std::endl;
 
   f << "row_bounds" << std::endl;
   f << std::setprecision(9);
-  for (int i = 0; i < model.numRow_; i++) f << model.rowLower_[i] << " ";
+  for (HighsInt i = 0; i < model.numRow_; i++) f << model.rowLower_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < model.numRow_; i++) f << model.rowUpper_[i] << " ";
+  for (HighsInt i = 0; i < model.numRow_; i++) f << model.rowUpper_[i] << " ";
   f << std::endl;
 
   f << "column_costs" << std::endl;
-  for (int i = 0; i < model.numCol_; i++)
-    f << (int)model.sense_ * model.colCost_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_; i++)
+    f << (HighsInt)model.sense_ * model.colCost_[i] << " ";
   f << std::endl;
 
   if (model.row_names_.size() > 0 && model.col_names_.size() > 0) {
     f << "names" << std::endl;
 
     f << "columns" << std::endl;
-    for (int i = 0; i < (int)model.col_names_.size(); i++)
+    for (HighsInt i = 0; i < (HighsInt)model.col_names_.size(); i++)
       f << model.col_names_[i] << std::endl;
 
     f << "rows" << std::endl;
-    for (int i = 0; i < (int)model.row_names_.size(); i++)
+    for (HighsInt i = 0; i < (HighsInt)model.row_names_.size(); i++)
       f << model.row_names_[i] << std::endl;
   }
 
   // todo: integer variables.
 
   if (model.offset_ != 0)
-    f << "shift" << std::endl << (int)model.sense_ * model.offset_ << std::endl;
+    f << "shift" << std::endl << (HighsInt)model.sense_ * model.offset_ << std::endl;
 
   f << std::endl;
   f.close();

@@ -28,24 +28,24 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp& simplex_lp,
                                       const SimplexBasis& simplex_basis);
 void debugDualChuzcFailNorms(
-    const int workCount, const std::vector<std::pair<int, double>>& workData,
-    double& workDataNorm, const int numVar, const double* workDual,
+    const HighsInt workCount, const std::vector<std::pair<HighsInt, double>>& workData,
+    double& workDataNorm, const HighsInt numVar, const double* workDual,
     double& workDualNorm);
 
 HighsDebugStatus debugDualChuzcFailQuad0(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const HighsOptions& options, const HighsInt workCount,
+    const std::vector<std::pair<HighsInt, double>>& workData, const HighsInt numVar,
     const double* workDual, const double selectTheta, const double remainTheta,
     const bool force = false);
 
 HighsDebugStatus debugDualChuzcFailQuad1(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const HighsOptions& options, const HighsInt workCount,
+    const std::vector<std::pair<HighsInt, double>>& workData, const HighsInt numVar,
     const double* workDual, const double selectTheta, const bool force = false);
 
 HighsDebugStatus debugDualChuzcFailHeap(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const HighsOptions& options, const HighsInt workCount,
+    const std::vector<std::pair<HighsInt, double>>& workData, const HighsInt numVar,
     const double* workDual, const double selectTheta, const bool force = false);
 
 HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
@@ -85,7 +85,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     HighsModelObject& highs_model_object, const SimplexAlgorithm algorithm,
-    const int phase, const std::string message, const bool force = false);
+    const HighsInt phase, const std::string message, const bool force = false);
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     const HighsModelObject& highs_model_object,
@@ -99,21 +99,21 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
                               const std::vector<double>& original_dual);
 HighsDebugStatus debugFreeListNumEntries(
-    const HighsModelObject& highs_model_object, const std::set<int>& freeList);
+    const HighsModelObject& highs_model_object, const std::set<HighsInt>& freeList);
 
 void debugDualChuzcWorkDataAndGroupReport(
     const HighsModelObject& highs_model_object, const double workDelta,
     const double workTheta, const std::string message,
-    const int report_workCount,
-    const std::vector<std::pair<int, double>>& report_workData,
-    const std::vector<int>& report_workGroup);
+    const HighsInt report_workCount,
+    const std::vector<std::pair<HighsInt, double>>& report_workData,
+    const std::vector<HighsInt>& report_workGroup);
 HighsDebugStatus debugDualChuzcWorkDataAndGroup(
     const HighsModelObject& highs_model_object, const double workDelta,
-    const double workTheta, const int workCount, const int alt_workCount,
-    const int breakIndex, const int alt_breakIndex,
-    const std::vector<std::pair<int, double>>& workData,
-    const std::vector<std::pair<int, double>>& sorted_workData,
-    const std::vector<int>& workGroup, const std::vector<int>& alt_workGroup);
+    const double workTheta, const HighsInt workCount, const HighsInt alt_workCount,
+    const HighsInt breakIndex, const HighsInt alt_breakIndex,
+    const std::vector<std::pair<HighsInt, double>>& workData,
+    const std::vector<std::pair<HighsInt, double>>& sorted_workData,
+    const std::vector<HighsInt>& workGroup, const std::vector<HighsInt>& alt_workGroup);
 
 HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object);
@@ -126,15 +126,15 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
                                                    const double difference);
 
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
-                                 const int phase);
+                                 const HighsInt phase);
 
 // Methods below are not called externally
 
 bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
-                       const int phase);
+                       const HighsInt phase);
 
 bool debugOneNonbasicMoveVsWorkArraysOk(
-    const HighsModelObject& highs_model_object, const int var);
+    const HighsModelObject& highs_model_object, const HighsInt var);
 
 bool debugAllNonbasicMoveVsWorkArraysOk(
     const HighsModelObject& highs_model_object);

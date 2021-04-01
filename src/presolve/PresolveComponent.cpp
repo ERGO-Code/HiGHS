@@ -30,7 +30,7 @@ HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
 }
 
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
-  for (int col = 0; col < data_.reduced_lp_.numCol_; col++)
+  for (HighsInt col = 0; col < data_.reduced_lp_.numCol_; col++)
     data_.recovered_solution_.col_dual[col] =
         -data_.recovered_solution_.col_dual[col];
   return;

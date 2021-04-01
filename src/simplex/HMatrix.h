@@ -17,6 +17,8 @@
 
 #include <vector>
 
+#include "util/HighsInt.h"
+
 class HVector;
 
 /**
@@ -31,13 +33,13 @@ class HMatrix {
    * solver
    */
   void setup(
-      int numCol,              //!< Number of columns in the source matrix
-      int numRow,              //!< Number of rows in the source matrix
-      const int* Astart,       //!< Pointer to the starts of the source matrix
-      const int* Aindex,       //!< Pointer to the indices of the source matrix
+      HighsInt numCol,         //!< Number of columns in the source matrix
+      HighsInt numRow,         //!< Number of rows in the source matrix
+      const HighsInt* Astart,  //!< Pointer to the starts of the source matrix
+      const HighsInt* Aindex,  //!< Pointer to the indices of the source matrix
       const double* Avalue,    //!< Pointer to the values of the source matrix
-      const int* nonbasicFlag  //!< Pointer to the flags indicating which
-                               //!< columns are basic and nonbasic
+      const HighsInt* nonbasicFlag  //!< Pointer to the flags indicating which
+                                    //!< columns are basic and nonbasic
   );
   /**
    * @brief For a logical basis, sets up the column-wise and
@@ -45,11 +47,11 @@ class HMatrix {
    * the simplex solver
    */
   void setup_lgBs(
-      int numCol,           //!< Number of columns in the source matrix
-      int numRow,           //!< Number of rows in the source matrix
-      const int* Astart,    //!< Pointer to the starts of the source matrix
-      const int* Aindex,    //!< Pointer to the indices of the source matrix
-      const double* Avalue  //!< Pointer to the values of the source matrix
+      HighsInt numCol,         //!< Number of columns in the source matrix
+      HighsInt numRow,         //!< Number of rows in the source matrix
+      const HighsInt* Astart,  //!< Pointer to the starts of the source matrix
+      const HighsInt* Aindex,  //!< Pointer to the indices of the source matrix
+      const double* Avalue     //!< Pointer to the values of the source matrix
   );
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T A \f$
@@ -77,7 +79,7 @@ class HMatrix {
       const HVector& row_ep,      //!< Vector \f$ \mathbf{x}\f$
       double historical_density,  //!< Historical density of PRICE results to be
                                   //!< used
-      int from_i,                 //!< Index of row to work from
+      HighsInt from_i,            //!< Index of row to work from
       double switch_density) const;  //!< Density for switch to not maintaining
                                      //!< indices of nonzeros
   /**
@@ -86,9 +88,9 @@ class HMatrix {
    * result
    */
   void priceByRowDenseResult(
-      HVector& row_ap,        //!< Vector \f$ \mathbf{y}\f$
-      const HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
-      int from_i) const;      //!< Index of row to work from
+      HVector& row_ap,         //!< Vector \f$ \mathbf{y}\f$
+      const HVector& row_ep,   //!< Vector \f$ \mathbf{x}\f$
+      HighsInt from_i) const;  //!< Index of row to work from
   /**
    * @brief Remove indices of zeros from vector \f$ \mathbf{y}\f$ created by
    * cancellation in PRICE
@@ -100,34 +102,34 @@ class HMatrix {
    * to columns coming in and out of the set of indices of basic
    * variables
    */
-  void update(int variable_in,  //!< Column entering the set of indices of basic
-                                //!< variables
-              int variable_out  //!< Column leaving the set of indices of basic
-                                //!< variables
+  void update(HighsInt variable_in,  //!< Column entering the set of indices of
+                                     //!< basic variables
+              HighsInt variable_out  //!< Column leaving the set of indices of
+                                     //!< basic variables
   );
   /**
    * @brief Compute the dot product between a vector and particular
    * column of the constraint matrix: \f$ \mathbf{x}^T\mathbf{a}_i \f$
    */
-  double compute_dot(HVector& vector,  //!< Vector \f$ \mathbf{x} \f$
-                     int iCol) const;  //!< Index  \f$ i\f$ of column
+  double compute_dot(HVector& vector,       //!< Vector \f$ \mathbf{x} \f$
+                     HighsInt iCol) const;  //!< Index  \f$ i\f$ of column
   /**
    * @brief Add into a vector, a multiple of a particular column of
    * the constraint matrix \f$ \mathbf{x} := \mathbf{x} + \mu \mathbf{a}_i \f$
    */
   void collect_aj(HVector& vector,           //!< Vector \f$ \mathbf{x} \f$
-                  int iCol,                  //!< Index  \f$ i\f$ of column
+                  HighsInt iCol,             //!< Index  \f$ i\f$ of column
                   double multiplier) const;  //!< Multiplier \f$ \mu \f$
 
   /**
    * @brief Get the pointer to the starts of the column-wise matrix
    */
-  const int* getAstart() const { return &Astart[0]; }
+  const HighsInt* getAstart() const { return &Astart[0]; }
 
   /**
    * @brief Get the pointer to the indices of the column-wise matrix
    */
-  const int* getAindex() const { return &Aindex[0]; }
+  const HighsInt* getAindex() const { return &Aindex[0]; }
 
   /**
    * @brief Get the pointer to the values of the column-wise matrix
@@ -141,15 +143,15 @@ class HMatrix {
   const double hyperPRICE = 0.10;
 
  private:
-  int numCol;
-  int numRow;
-  std::vector<int> Astart;
-  std::vector<int> Aindex;
+  HighsInt numCol;
+  HighsInt numRow;
+  std::vector<HighsInt> Astart;
+  std::vector<HighsInt> Aindex;
   std::vector<double> Avalue;
 
-  std::vector<int> ARstart;
-  std::vector<int> AR_Nend;
-  std::vector<int> ARindex;
+  std::vector<HighsInt> ARstart;
+  std::vector<HighsInt> AR_Nend;
+  std::vector<HighsInt> ARindex;
   std::vector<double> ARvalue;
 };
 

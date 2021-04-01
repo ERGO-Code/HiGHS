@@ -38,7 +38,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                      lpRelaxation.getNumLpIterations());
   std::vector<RowType> rowtype;
   rowtype.resize(lp.numRow_);
-  for (int i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (lp.rowLower_[i] == lp.rowUpper_[i]) {
       rowtype[i] = RowType::Eq;
       continue;
@@ -62,33 +62,33 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       rowtype[i] = RowType::Leq;
   }
 
-  std::vector<int> numContinuous(lp.numRow_);
+  std::vector<HighsInt> numContinuous(lp.numRow_);
 
   size_t maxAggrRowSize = 0;
-  for (int col : mip.mipdata_->continuous_cols) {
+  for (HighsInt col : mip.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0.0) continue;
 
     maxAggrRowSize += lp.Astart_[col + 1] - lp.Astart_[col];
-    for (int i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i)
+    for (HighsInt i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i)
       ++numContinuous[lp.Aindex_[i]];
   }
 
-  std::vector<std::pair<int, double>> colSubstitutions(lp.numCol_,
+  std::vector<std::pair<HighsInt, double>> colSubstitutions(lp.numCol_,
                                                        std::make_pair(-1, 0.0));
 
   // identify equality rows where only a single continuous variable with nonzero
   // transformed solution value is present. Mark those columns and remember the
   // rows so that we can always substitute such columns away using this equation
   // and block the equation from being used as a start row
-  for (int i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (rowtype[i] == RowType::Eq && numContinuous[i] == 1) {
-      int len;
-      const int* rowinds;
+      HighsInt len;
+      const HighsInt* rowinds;
       const double* rowvals;
 
       lpRelaxation.getRow(i, len, rowinds, rowvals);
 
-      int j;
+      HighsInt j;
       for (j = 0; j != len; ++j) {
         if (mip.variableType(rowinds[j]) != HighsVarType::CONTINUOUS) continue;
         if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
@@ -96,7 +96,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         break;
       }
 
-      int col = rowinds[j];
+      HighsInt col = rowinds[j];
       double val = rowvals[j];
 
       assert(mip.variableType(rowinds[j]) == HighsVarType::CONTINUOUS);
@@ -121,21 +121,21 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   // path an orientation and avoid this situation. For each aggregation of rows
   // the cut generation will try the reversed orientation in any case too.
 
-  std::vector<std::pair<int, double>> inArcRows;
+  std::vector<std::pair<HighsInt, double>> inArcRows;
   inArcRows.reserve(maxAggrRowSize);
-  std::vector<std::pair<int, int>> colInArcs(lp.numCol_);
+  std::vector<std::pair<HighsInt, int>> colInArcs(lp.numCol_);
 
-  std::vector<std::pair<int, double>> outArcRows;
+  std::vector<std::pair<HighsInt, double>> outArcRows;
   outArcRows.reserve(maxAggrRowSize);
-  std::vector<std::pair<int, int>> colOutArcs(lp.numCol_);
+  std::vector<std::pair<HighsInt, int>> colOutArcs(lp.numCol_);
 
-  for (int col : mip.mipdata_->continuous_cols) {
+  for (HighsInt col : mip.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0.0) continue;
     if (colSubstitutions[col].first != -1) continue;
 
     colInArcs[col].first = inArcRows.size();
     colOutArcs[col].first = outArcRows.size();
-    for (int i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i) {
+    for (HighsInt i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i) {
       switch (rowtype[lp.Aindex_[i]]) {
         case RowType::Unusuable:
           continue;
@@ -160,11 +160,11 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   }
 
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
-  std::vector<int> baseRowInds;
+  std::vector<HighsInt> baseRowInds;
   std::vector<double> baseRowVals;
-  const int maxPathLen = 6;
+  const HighsInt maxPathLen = 6;
 
-  for (int i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.numRow_; ++i) {
     switch (rowtype[i]) {
       case RowType::Unusuable:
         continue;
@@ -175,23 +175,23 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         lpAggregator.addRow(i, 1.0);
     }
 
-    int currPathLen = 1;
+    HighsInt currPathLen = 1;
 
     while (currPathLen != maxPathLen) {
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
-      int baseRowLen = baseRowInds.size();
+      HighsInt baseRowLen = baseRowInds.size();
       bool addedSubstitutionRows = false;
 
-      int bestOutArcCol = -1;
+      HighsInt bestOutArcCol = -1;
       double outArcColVal = 0.0;
       double outArcColBoundDist = 0.0;
 
-      int bestInArcCol = -1;
+      HighsInt bestInArcCol = -1;
       double inArcColVal = 0.0;
       double inArcColBoundDist = 0.0;
 
-      for (int j = 0; j != baseRowLen; ++j) {
-        int col = baseRowInds[j];
+      for (HighsInt j = 0; j != baseRowLen; ++j) {
+        HighsInt col = baseRowInds[j];
         if (transLp.boundDistance(col) == 0.0 ||
             lpRelaxation.isColIntegral(col))
           continue;
@@ -246,18 +246,18 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       if (bestInArcCol == -1 ||
           (bestOutArcCol != -1 &&
            outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
-        int inArcRow = randgen.integer(colInArcs[bestOutArcCol].first,
+        HighsInt inArcRow = randgen.integer(colInArcs[bestOutArcCol].first,
                                        colInArcs[bestOutArcCol].second);
 
-        int row = inArcRows[inArcRow].first;
+        HighsInt row = inArcRows[inArcRow].first;
         double weight = -outArcColVal / inArcRows[inArcRow].second;
 
         lpAggregator.addRow(row, weight);
       } else {
-        int outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
+        HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
                                         colOutArcs[bestInArcCol].second);
 
-        int row = outArcRows[outArcRow].first;
+        HighsInt row = outArcRows[outArcRow].first;
         double weight = -inArcColVal / outArcRows[outArcRow].second;
 
         lpAggregator.addRow(row, weight);

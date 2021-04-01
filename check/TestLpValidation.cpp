@@ -17,30 +17,30 @@ TEST_CASE("LP-validation", "[highs_data]") {
   if (!dev_run) options.output_flag = false;
 
   Avgas avgas;
-  const int avgas_num_col = 8;
-  const int avgas_num_row = 10;
-  int num_row = 0;
-  int num_row_nz = 0;
+  const HighsInt avgas_num_col = 8;
+  const HighsInt avgas_num_row = 10;
+  HighsInt num_row = 0;
+  HighsInt num_row_nz = 0;
   vector<double> rowLower;
   vector<double> rowUpper;
-  vector<int> ARstart;
-  vector<int> ARindex;
+  vector<HighsInt> ARstart;
+  vector<HighsInt> ARindex;
   vector<double> ARvalue;
 
-  for (int row = 0; row < avgas_num_row; row++) {
+  for (HighsInt row = 0; row < avgas_num_row; row++) {
     avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
   }
 
-  int num_col = 0;
-  int num_col_nz = 0;
+  HighsInt num_col = 0;
+  HighsInt num_col_nz = 0;
   vector<double> colCost;
   vector<double> colLower;
   vector<double> colUpper;
-  vector<int> Astart;
-  vector<int> Aindex;
+  vector<HighsInt> Astart;
+  vector<HighsInt> Aindex;
   vector<double> Avalue;
-  for (int col = 0; col < avgas_num_col; col++) {
+  for (HighsInt col = 0; col < avgas_num_col; col++) {
     avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
               Aindex, Avalue);
   }
@@ -63,8 +63,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(return_bool);
 
   // Create an empty column
-  int XnumNewCol = 1;
-  int XnumNewNZ = 0;
+  HighsInt XnumNewCol = 1;
+  HighsInt XnumNewNZ = 0;
   vector<double> XcolCost;
   XcolCost.resize(XnumNewCol);
   XcolCost[0] = 1;
@@ -74,9 +74,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<double> XcolUpper;
   XcolUpper.resize(XnumNewCol);
   XcolUpper[0] = 1e25;
-  vector<int> XAstart;
+  vector<HighsInt> XAstart;
   XAstart.resize(XnumNewCol);
-  vector<int> XAindex;
+  vector<HighsInt> XAindex;
   vector<double> XAvalue;
   // Add an empty column
   return_bool =
@@ -205,8 +205,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(!highs.getCoeff(internal_lp.numRow_, 0, check_value));
   REQUIRE(!highs.getCoeff(0, internal_lp.numCol_, check_value));
 
-  const int check_col = 4;
-  const int check_row = 7;
+  const HighsInt check_col = 4;
+  const HighsInt check_row = 7;
   REQUIRE(highs.getCoeff(check_col, check_row, check_value));
   REQUIRE(check_value == 0);
 

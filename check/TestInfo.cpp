@@ -52,7 +52,7 @@ TEST_CASE("highs-info", "[highs_info]") {
     printf("From getHighsInfoValue: objective_function_value = %g\n",
            objective_function_value);
 
-  int simplex_iteration_count;
+  HighsInt simplex_iteration_count;
   return_status =
       highs.getHighsInfoValue("iteration_count", simplex_iteration_count);
   REQUIRE(return_status == HighsStatus::Error);

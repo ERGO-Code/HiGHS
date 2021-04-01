@@ -37,7 +37,7 @@ class FilereaderLp : public Filereader {
 
  private:
   // functions to write files
-  int linelength;
+  HighsInt linelength;
   void writeToFile(FILE* file, const char* format, ...);
   void writeToFileLineend(FILE* file);
 };

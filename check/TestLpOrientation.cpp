@@ -9,32 +9,32 @@ const bool dev_run = false;
 // No commas in test case name.
 TEST_CASE("LP-orientation", "[lp_orientation]") {
   Avgas avgas;
-  const int avgas_num_col = 8;
-  const int avgas_num_row = 10;
-  int num_row = 0;
-  int num_row_nz = 0;
+  const HighsInt avgas_num_col = 8;
+  const HighsInt avgas_num_row = 10;
+  HighsInt num_row = 0;
+  HighsInt num_row_nz = 0;
   vector<double> rowLower;
   vector<double> rowUpper;
-  vector<int> ARstart;
-  vector<int> ARindex;
+  vector<HighsInt> ARstart;
+  vector<HighsInt> ARindex;
   vector<double> ARvalue;
 
-  for (int row = 0; row < avgas_num_row; row++)
+  for (HighsInt row = 0; row < avgas_num_row; row++)
     avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex,
               ARvalue);
 
   ARstart.resize(num_row + 1);
   ARstart[num_row] = num_row_nz;
 
-  int num_col = 0;
-  int num_col_nz = 0;
+  HighsInt num_col = 0;
+  HighsInt num_col_nz = 0;
   vector<double> colCost;
   vector<double> colLower;
   vector<double> colUpper;
-  vector<int> Astart;
-  vector<int> Aindex;
+  vector<HighsInt> Astart;
+  vector<HighsInt> Aindex;
   vector<double> Avalue;
-  for (int col = 0; col < avgas_num_col; col++)
+  for (HighsInt col = 0; col < avgas_num_col; col++)
     avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart,
               Aindex, Avalue);
   Astart.resize(num_col + 1);
@@ -97,12 +97,12 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
                 NULL);
   vector<double> one_row_Lower;
   vector<double> one_row_Upper;
-  vector<int> one_row_start;
-  vector<int> one_row_index;
+  vector<HighsInt> one_row_start;
+  vector<HighsInt> one_row_index;
   vector<double> one_row_value;
-  for (int row = 0; row < avgas_num_row; row++) {
-    int one_row_numnz = 0;
-    int one_row_numrow = 0;
+  for (HighsInt row = 0; row < avgas_num_row; row++) {
+    HighsInt one_row_numnz = 0;
+    HighsInt one_row_numrow = 0;
     avgas.row(row, one_row_numrow, one_row_numnz, one_row_Lower, one_row_Upper,
               one_row_start, one_row_index, one_row_value);
     REQUIRE(highs.addRows(1, &one_row_Lower[0], &one_row_Upper[0],

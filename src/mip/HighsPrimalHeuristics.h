@@ -24,13 +24,13 @@ class HighsPrimalHeuristics {
   size_t lp_iterations;
 
   double successObservations;
-  int numSuccessObservations;
+  HighsInt numSuccessObservations;
   double infeasObservations;
-  int numInfeasObservations;
+  HighsInt numInfeasObservations;
 
   HighsRandom randgen;
 
-  std::vector<int> intcols;
+  std::vector<HighsInt> intcols;
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
@@ -39,8 +39,8 @@ class HighsPrimalHeuristics {
 
   bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
                    double fixingRate, std::vector<double> colLower,
-                   std::vector<double> colUpper, int maxleaves, int maxnodes,
-                   int stallnodes);
+                   std::vector<double> colUpper, HighsInt maxleaves, HighsInt maxnodes,
+                   HighsInt stallnodes);
 
   double determineTargetFixingRate();
 

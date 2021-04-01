@@ -18,33 +18,33 @@ HighsLpAggregator::HighsLpAggregator(const HighsLpRelaxation& lprelaxation)
                          lprelaxation.getLp().numCol_);
 }
 
-void HighsLpAggregator::addRow(int row, double weight) {
-  int len;
+void HighsLpAggregator::addRow(HighsInt row, double weight) {
+  HighsInt len;
   const double* vals;
-  const int* inds;
+  const HighsInt* inds;
   lprelaxation.getRow(row, len, inds, vals);
 
-  for (int i = 0; i != len; ++i) vectorsum.add(inds[i], weight * vals[i]);
+  for (HighsInt i = 0; i != len; ++i) vectorsum.add(inds[i], weight * vals[i]);
 
   vectorsum.add(lprelaxation.getLp().numCol_ + row, -weight);
 }
 
-void HighsLpAggregator::getCurrentAggregation(std::vector<int>& inds,
+void HighsLpAggregator::getCurrentAggregation(std::vector<HighsInt>& inds,
                                               std::vector<double>& vals,
                                               bool negate) {
   const double droptol =
       lprelaxation.getMipSolver().options_mip_->small_matrix_value;
   vectorsum.cleanup(
-      [droptol](int col, double val) { return std::abs(val) <= droptol; });
+      [droptol](HighsInt col, double val) { return std::abs(val) <= droptol; });
 
   inds = vectorsum.getNonzeros();
-  int len = inds.size();
+  HighsInt len = inds.size();
   vals.resize(len);
 
   if (negate)
-    for (int i = 0; i != len; ++i) vals[i] = -vectorsum.getValue(inds[i]);
+    for (HighsInt i = 0; i != len; ++i) vals[i] = -vectorsum.getValue(inds[i]);
   else
-    for (int i = 0; i != len; ++i) vals[i] = vectorsum.getValue(inds[i]);
+    for (HighsInt i = 0; i != len; ++i) vals[i] = vectorsum.getValue(inds[i]);
 }
 
 void HighsLpAggregator::clear() { vectorsum.clear(); }

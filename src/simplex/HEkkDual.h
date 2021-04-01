@@ -33,7 +33,7 @@ class HFactor;
  * Limit on the number of column slices for parallel calculations. SIP uses
  * num_threads-2 slices; PAMI uses num_threads-1 slices
  */
-const int HIGHS_SLICED_LIMIT =
+const HighsInt HIGHS_SLICED_LIMIT =
     HIGHS_THREAD_LIMIT;  // Was 100, but can't see why this should be higher
                          // than HIGHS_THREAD_LIMIT;
 
@@ -47,7 +47,7 @@ const int HIGHS_SLICED_LIMIT =
  * 2) There have been max(minAbsNumberDevexIterations,
  * numRow/minRlvNumberDevexIterations) Devex iterations
  */
-const int minAbsNumberDevexIterations = 25;
+const HighsInt minAbsNumberDevexIterations = 25;
 const double minRlvNumberDevexIterations = 1e-2;
 const double maxAllowedDevexWeightRatio = 3.0;
 
@@ -69,7 +69,7 @@ class HEkkDual {
   HEkkDual(HEkk& simplex)
       : ekk_instance_(simplex), dualRow(simplex), dualRHS(simplex) {
     dualRow.setup();
-    for (int i = 0; i < HIGHS_SLICED_LIMIT; i++)
+    for (HighsInt i = 0; i < HIGHS_SLICED_LIMIT; i++)
       slice_dualRow.push_back(HEkkDualRow(simplex));
     dualRHS.setup();
   }
@@ -111,7 +111,7 @@ class HEkkDual {
    * used with non-logical initial basis
    */
   void initSlice(
-      const int init_sliced_num  //!< Ideal number of slices - true number
+      const HighsInt init_sliced_num  //!< Ideal number of slices - true number
                                  //!< is modified in light of limits
   );
 
@@ -196,7 +196,7 @@ class HEkkDual {
   /**
    * @brief Single line report after rebuild
    */
-  void reportRebuild(const int reason_for_rebuild = -1);
+  void reportRebuild(const HighsInt reason_for_rebuild = -1);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -273,8 +273,8 @@ class HEkkDual {
    */
   void updatePivots();
 
-  void shiftCost(const int iCol, const double amount);
-  void shiftBack(const int iCol);
+  void shiftCost(const HighsInt iCol, const double amount);
+  void shiftBack(const HighsInt iCol);
 
   /**
    * @brief Initialise a Devex framework: reference set is all basic
@@ -287,7 +287,7 @@ class HEkkDual {
    * other actions
    */
   void interpretDualEdgeWeightStrategy(
-      const int simplex_dual_edge_weight_strategy);
+      const HighsInt simplex_dual_edge_weight_strategy);
 
   bool reachedExactDualObjectiveValueUpperBound();
   double computeExactDualObjectiveValue();
@@ -400,7 +400,7 @@ class HEkkDual {
                        //!< calling function
 
   // Devex scalars
-  int num_devex_iterations =
+  HighsInt num_devex_iterations =
       0;  //!< Number of Devex iterations with the current framework
   bool new_devex_framework = false;  //!< Set a new Devex framework
   bool minor_new_devex_framework =
@@ -410,15 +410,15 @@ class HEkkDual {
   HEkk& ekk_instance_;
 
   // Model
-  int solver_num_row;
-  int solver_num_col;
-  int solver_num_tot;
+  HighsInt solver_num_row;
+  HighsInt solver_num_col;
+  HighsInt solver_num_tot;
 
   const HMatrix* matrix;
   const HFactor* factor;
   HighsSimplexAnalysis* analysis;
 
-  const int* jMove;
+  const HighsInt* jMove;
   const double* workRange;
   const double* baseLower;
   const double* baseUpper;
@@ -429,7 +429,7 @@ class HEkkDual {
   double* colUpper;
   double* rowLower;
   double* rowUpper;
-  int* nonbasicFlag;
+  HighsInt* nonbasicFlag;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
@@ -445,8 +445,8 @@ class HEkkDual {
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
 
-  int solvePhase;
-  int rebuild_reason;
+  HighsInt solvePhase;
+  HighsInt rebuild_reason;
 
   HVector row_ep;
   HVector row_ap;
@@ -457,15 +457,15 @@ class HEkkDual {
   HEkkDualRow dualRow;
 
   // Solving related buffers
-  int dualInfeasCount;
+  HighsInt dualInfeasCount;
 
   HEkkDualRHS dualRHS;
 
   // Simplex pivotal information
-  int row_out;
-  int variable_out;
-  int move_out;  // -1 from small to lower, +1 to upper
-  int variable_in;
+  HighsInt row_out;
+  HighsInt variable_out;
+  HighsInt move_out;  // -1 from small to lower, +1 to upper
+  HighsInt variable_in;
   double delta_primal;
   double theta_dual;
   double theta_primal;
@@ -478,9 +478,9 @@ class HEkkDual {
   bool check_invert_condition = false;
 
   // Partitioned coefficient matrix
-  int slice_num;
-  int slice_PRICE;
-  int slice_start[HIGHS_SLICED_LIMIT + 1];
+  HighsInt slice_num;
+  HighsInt slice_PRICE;
+  HighsInt slice_start[HIGHS_SLICED_LIMIT + 1];
   HMatrix slice_matrix[HIGHS_SLICED_LIMIT];
   HVector slice_row_ap[HIGHS_SLICED_LIMIT];
   std::vector<HEkkDualRow> slice_dualRow;
@@ -489,7 +489,7 @@ class HEkkDual {
    * @brief Multiple CHUZR data
    */
   struct MChoice {
-    int row_out;
+    HighsInt row_out;
     double baseValue;
     double baseLower;
     double baseUpper;
@@ -505,13 +505,13 @@ class HEkkDual {
    * @brief Multiple minor iteration data
    */
   struct MFinish {
-    int move_in;
+    HighsInt move_in;
     double shiftOut;
-    std::vector<int> flipList;
+    std::vector<HighsInt> flipList;
 
-    int row_out;
-    int variable_out;
-    int variable_in;
+    HighsInt row_out;
+    HighsInt variable_out;
+    HighsInt variable_in;
     double alpha_row;
     double theta_primal;
     double basicBound;
@@ -522,12 +522,12 @@ class HEkkDual {
     HVector_ptr col_BFRT;
   };
 
-  int multi_num;
-  int multi_chosen;
-  int multi_iChoice;
-  int multi_nFinish;
-  int multi_iteration;
-  int multi_chooseAgain;
+  HighsInt multi_num;
+  HighsInt multi_chosen;
+  HighsInt multi_iChoice;
+  HighsInt multi_nFinish;
+  HighsInt multi_iteration;
+  HighsInt multi_chooseAgain;
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 

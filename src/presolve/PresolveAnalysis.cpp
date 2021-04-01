@@ -18,7 +18,7 @@
 namespace presolve {
 
 void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
-  assert((int)rules.size() == 0);
+  assert((HighsInt)rules.size() == 0);
 
   rules.push_back(PresolveRuleInfo(EMPTY_ROW, "Empty row", "EMR"));
   rules.push_back(PresolveRuleInfo(FIXED_COL, "Fixed col", "FXC"));
@@ -64,7 +64,7 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   //       PresolveRuleInfo(SING_ONLY, "Sing only row", "SOR"));
 
   // Plus one for the total resize time.
-  assert((int)rules.size() == PRESOLVE_RULES_COUNT);
+  assert((HighsInt)rules.size() == PRESOLVE_RULES_COUNT);
 }
 
 void PresolveTimer::updateInfo() {

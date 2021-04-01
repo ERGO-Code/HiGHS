@@ -6,11 +6,11 @@
 const bool dev_run = false;
 const double zero_ray_value_tolerance = 1e-8;
 
-void checkRayDirection(const int dim, const vector<double>& ray_value,
+void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
                        const vector<double>& expected_ray_value) {
   bool ray_error = false;
-  int from_ix = -1;
-  for (int ix = 0; ix < dim; ix++) {
+  HighsInt from_ix = -1;
+  for (HighsInt ix = 0; ix < dim; ix++) {
     if (fabs(expected_ray_value[ix]) > zero_ray_value_tolerance) {
       // Found a nonzero in the expected ray values
       from_ix = ix;
@@ -27,7 +27,7 @@ void checkRayDirection(const int dim, const vector<double>& ray_value,
   REQUIRE(!ray_error);
   if (from_ix < 0) return;
   double scale = ray_value[from_ix] / expected_ray_value[from_ix];
-  for (int ix = from_ix + 1; ix < dim; ix++) {
+  for (HighsInt ix = from_ix + 1; ix < dim; ix++) {
     double scaled_expected_ray_value = expected_ray_value[ix] * scale;
     if (fabs(ray_value[ix] - scaled_expected_ray_value) >
         zero_ray_value_tolerance) {
@@ -40,8 +40,8 @@ void checkRayDirection(const int dim, const vector<double>& ray_value,
 
 void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   const HighsLp& lp = highs.getLp();
-  int numCol = lp.numCol_;
-  int numRow = lp.numRow_;
+  HighsInt numCol = lp.numCol_;
+  HighsInt numRow = lp.numRow_;
   double ray_error_norm = 0;
   const vector<double>& colLower = lp.colLower_;
   const vector<double>& colUpper = lp.colUpper_;
@@ -51,14 +51,14 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
   vector<double> tableau_row;
   tableau_row.assign(numCol, 0.0);
-  for (int iCol = 0; iCol < numCol; iCol++) {
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (col_status[iCol] == HighsBasisStatus::BASIC) continue;
     // Get the tableau row entry for this nonbasic column
-    for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
+    for (HighsInt iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
       tableau_row[iCol] += dual_ray_value[lp.Aindex_[iEl]] * lp.Avalue_[iEl];
   }
 
-  for (int iCol = 0; iCol < numCol; iCol++) {
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     // Nothing to check if basic or fixed (so value can be anything)
     if (col_status[iCol] == HighsBasisStatus::BASIC ||
         colLower[iCol] == colUpper[iCol])
@@ -94,7 +94,7 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       }
     }
   }
-  for (int iRow = 0; iRow < numRow; iRow++) {
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (row_status[iRow] == HighsBasisStatus::BASIC ||
         rowLower[iRow] == rowUpper[iRow])
       continue;
@@ -136,8 +136,8 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
 
 void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   const HighsLp& lp = highs.getLp();
-  int numCol = lp.numCol_;
-  int numRow = lp.numRow_;
+  HighsInt numCol = lp.numCol_;
+  HighsInt numRow = lp.numRow_;
   double ray_error_norm = 0;
   const vector<double>& colLower = lp.colLower_;
   const vector<double>& colUpper = lp.colUpper_;
@@ -148,12 +148,12 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
                             dual_feasibility_tolerance);
   vector<double> row_ray_value;
   row_ray_value.assign(numRow, 0.0);
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    for (HighsInt iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
       row_ray_value[lp.Aindex_[iEl]] +=
           primal_ray_value[iCol] * lp.Avalue_[iEl];
   }
-  for (int iCol = 0; iCol < numCol; iCol++) {
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
       // Upper bound must be infinite
       if (colUpper[iCol] < HIGHS_CONST_INF) {
@@ -176,7 +176,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       }
     }
   }
-  for (int iRow = 0; iRow < numRow; iRow++) {
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (row_ray_value[iRow] > 0) {
       // Upper bound must be infinite
       if (rowUpper[iRow] > HIGHS_CONST_INF) {
@@ -310,7 +310,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
   if (dev_run) {
     printf("Dual ray:\nRow    computed    expected\n");
-    for (int iRow = 0; iRow < lp.numRow_; iRow++)
+    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
       printf("%3d %11.4g %11.4g\n", iRow, dual_ray_value[iRow],
              expected_dual_ray[iRow]);
   }
@@ -352,7 +352,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> expected_primal_ray = {0.5, -1};
   if (dev_run) {
     printf("Primal ray:\nRow    computed    expected\n");
-    for (int iRow = 0; iRow < lp.numRow_; iRow++)
+    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
       printf("%3d %11.4g %11.4g\n", iRow, primal_ray_value[iRow],
              expected_primal_ray[iRow]);
   }
@@ -406,7 +406,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   double inf = highs.getHighsInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
-  int aindex[2] = {0, 1};
+  HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
   highs.setHighsOptionValue("presolve", "off");
@@ -436,7 +436,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   double inf = highs.getHighsInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
-  int aindex[2] = {0, 1};
+  HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
   highs.setHighsOptionValue("presolve", "off");

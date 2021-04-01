@@ -34,8 +34,8 @@ class HighsTransformedLp {
   const HighsLpRelaxation& lprelaxation;
   HighsImplications& implications;
 
-  std::vector<const std::pair<const int, HighsImplications::VarBound>*> bestVub;
-  std::vector<const std::pair<const int, HighsImplications::VarBound>*> bestVlb;
+  std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*> bestVub;
+  std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*> bestVlb;
   std::vector<double> simpleLbDist;
   std::vector<double> simpleUbDist;
   std::vector<double> lbDist;
@@ -54,13 +54,13 @@ class HighsTransformedLp {
   HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
                      HighsImplications& implications);
 
-  double boundDistance(int col) const { return boundDist[col]; }
+  double boundDistance(HighsInt col) const { return boundDist[col]; }
 
   bool transform(std::vector<double>& vals, std::vector<double>& upper,
-                 std::vector<double>& solval, std::vector<int>& inds,
+                 std::vector<double>& solval, std::vector<HighsInt>& inds,
                  double& rhs, bool& integralPositive, bool preferVbds = false);
 
-  bool untransform(std::vector<double>& vals, std::vector<int>& inds,
+  bool untransform(std::vector<double>& vals, std::vector<HighsInt>& inds,
                    double& rhs, bool integral = false);
 };
 

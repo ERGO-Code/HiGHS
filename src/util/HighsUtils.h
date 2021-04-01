@@ -21,42 +21,42 @@
 #include "HConfig.h"
 #include "lp_data/HighsOptions.h"
 
-void highsSparseTranspose(int numRow, int numCol,
-                          const std::vector<int>& Astart,
-                          const std::vector<int>& Aindex,
+void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
+                          const std::vector<HighsInt>& Astart,
+                          const std::vector<HighsInt>& Aindex,
                           const std::vector<double>& Avalue,
-                          std::vector<int>& ARstart, std::vector<int>& ARindex,
+                          std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
                           std::vector<double>& ARvalue);
 
 struct HighsIndexCollection {
-  int dimension_ = -1;
+  HighsInt dimension_ = -1;
   bool is_interval_ = false;
-  int from_ = -1;
-  int to_ = -2;
+  HighsInt from_ = -1;
+  HighsInt to_ = -2;
   bool is_set_ = false;
-  int set_num_entries_ = -1;
-  int* set_ = NULL;
+  HighsInt set_num_entries_ = -1;
+  HighsInt* set_ = NULL;
   bool is_mask_ = false;
-  int* mask_ = NULL;
+  HighsInt* mask_ = NULL;
 };
 
 struct HighsValueDistribution {
   std::string distribution_name_;
   std::string value_name_;
-  int num_count_;
-  int num_zero_;
-  int num_one_;
+  HighsInt num_count_;
+  HighsInt num_zero_;
+  HighsInt num_one_;
   double min_value_;
   double max_value_;
   std::vector<double> limit_;
-  std::vector<int> count_;
-  int sum_count_;
+  std::vector<HighsInt> count_;
+  HighsInt sum_count_;
 };
 
 struct HighsScatterData {
-  int max_num_point_;
-  int num_point_;
-  int last_point_;
+  HighsInt max_num_point_;
+  HighsInt num_point_;
+  HighsInt last_point_;
   std::vector<double> value0_;
   std::vector<double> value1_;
   bool have_regression_coeff_;
@@ -66,15 +66,15 @@ struct HighsScatterData {
   double log_coeff0_;
   double log_coeff1_;
   double log_regression_error_;
-  int num_error_comparison_;
-  int num_awful_linear_;
-  int num_awful_log_;
-  int num_bad_linear_;
-  int num_bad_log_;
-  int num_fair_linear_;
-  int num_fair_log_;
-  int num_better_linear_;
-  int num_better_log_;
+  HighsInt num_error_comparison_;
+  HighsInt num_awful_linear_;
+  HighsInt num_awful_log_;
+  HighsInt num_bad_linear_;
+  HighsInt num_bad_log_;
+  HighsInt num_fair_linear_;
+  HighsInt num_fair_log_;
+  HighsInt num_better_linear_;
+  HighsInt num_better_log_;
 };
 
 const double awful_regression_error = 2.0;
@@ -86,16 +86,16 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
 
 bool limitsForIndexCollection(const HighsLogOptions& log_options,
                               const HighsIndexCollection& index_collection,
-                              int& from_k, int& to_k);
+                              HighsInt& from_k, HighsInt& to_k);
 
 void updateIndexCollectionOutInIndex(
-    const HighsIndexCollection& index_collection, int& out_from_ix,
-    int& out_to_ix, int& in_from_ix, int& in_to_ix, int& current_set_entry);
+    const HighsIndexCollection& index_collection, HighsInt& out_from_ix,
+    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix, HighsInt& current_set_entry);
 
-int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
+HighsInt dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
 
 bool intUserDataNotNull(const HighsLogOptions& log_options,
-                        const int* user_data, const std::string name);
+                        const HighsInt* user_data, const std::string name);
 bool doubleUserDataNotNull(const HighsLogOptions& log_options,
                            const double* user_data, const std::string name);
 
@@ -119,7 +119,7 @@ double highsRelativeDifference(const double v0, const double v1);
 void analyseVectorValues(
     const HighsLogOptions& log_options,
     const char* message,             //!< Message to be printed
-    int vecDim,                      //!< Dimension of vector
+    HighsInt vecDim,                      //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
                                      //!< different values in the vector
@@ -131,10 +131,10 @@ void analyseVectorValues(
 void analyseMatrixSparsity(
     const HighsLogOptions& log_options,
     const char* message,             //!< Message to be printed
-    int numCol,                      //!< Number of columns
-    int numRow,                      //!< Number of rows
-    const std::vector<int>& Astart,  //!< Matrix column starts
-    const std::vector<int>& Aindex   //!< Matrix row indices
+    HighsInt numCol,                      //!< Number of columns
+    HighsInt numRow,                      //!< Number of rows
+    const std::vector<HighsInt>& Astart,  //!< Matrix column starts
+    const std::vector<HighsInt>& Aindex   //!< Matrix row indices
 );
 
 bool initialiseValueDistribution(const std::string distribution_name,
@@ -147,13 +147,13 @@ bool initialiseValueDistribution(const std::string distribution_name,
 bool updateValueDistribution(const double value,
                              HighsValueDistribution& value_distribution);
 
-int integerPercentage(const int of, const int in);
-double doublePercentage(const int of, const int in);
+HighsInt integerPercentage(const HighsInt of, const HighsInt in);
+double doublePercentage(const HighsInt of, const HighsInt in);
 
 bool logValueDistribution(const HighsLogOptions& log_options,
                           const HighsValueDistribution& value_distribution,
-                          const int mu = 0);
-bool initialiseScatterData(const int max_num_point,
+                          const HighsInt mu = 0);
+bool initialiseScatterData(const HighsInt max_num_point,
                            HighsScatterData& scatter_data);
 bool updateScatterData(const double value0, const double value1,
                        HighsScatterData& scatter_data);

@@ -79,9 +79,9 @@ const double original_multi_numerical_trouble_tolerance = 1e-8;
 const double multi_numerical_trouble_tolerance = 1e-7;
 // original_multi_numerical_trouble_tolerance;
 
-const int synthetic_tick_reinversion_min_update_count = 50;
-const int original_multi_synthetic_tick_reinversion_min_update_count = 201;
-const int multi_synthetic_tick_reinversion_min_update_count =
+const HighsInt synthetic_tick_reinversion_min_update_count = 50;
+const HighsInt original_multi_synthetic_tick_reinversion_min_update_count = 201;
+const HighsInt multi_synthetic_tick_reinversion_min_update_count =
     synthetic_tick_reinversion_min_update_count;
 // original_multi_synthetic_tick_reinversion_min_update_count;
 
@@ -133,18 +133,19 @@ class HFactor {
    * count-link-list, L factor and U factor
    */
   void setup(
-      int numCol,            //!< Number of columns
-      int numRow,            //!< Number of rows
-      const int* Astart,     //!< Column starts of constraint matrix
-      const int* Aindex,     //!< Row indices of constraint matrix
-      const double* Avalue,  //!< Row values of constraint matrix
-      int* baseIndex,        //!< Indices of basic variables
+      HighsInt numCol,         //!< Number of columns
+      HighsInt numRow,         //!< Number of rows
+      const HighsInt* Astart,  //!< Column starts of constraint matrix
+      const HighsInt* Aindex,  //!< Row indices of constraint matrix
+      const double* Avalue,    //!< Row values of constraint matrix
+      HighsInt* baseIndex,     //!< Indices of basic variables
       double pivot_threshold = default_pivot_threshold,  //!< Pivoting threshold
       double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
-      int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN, bool output_flag = false,
-      FILE* logfile = NULL, bool log_to_console = true, int log_dev_level = 0,
+      HighsInt highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
+      bool output_flag = false, FILE* logfile = NULL,
+      bool log_to_console = true, int log_dev_level = 0,
       const bool use_original_HFactor_logic = true,
-      const int updateMethod = UPDATE_METHOD_FT);
+      const HighsInt updateMethod = UPDATE_METHOD_FT);
 
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
@@ -153,7 +154,7 @@ class HFactor {
    * @return 0 if successful, otherwise rank_deficiency>0
    *
    */
-  int build(HighsTimerClock* factor_timer_clock_pointer = NULL);
+  HighsInt build(HighsTimerClock* factor_timer_clock_pointer = NULL);
 
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
@@ -173,10 +174,10 @@ class HFactor {
    * @brief Update according to
    * \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
    */
-  void update(HVector* aq,  //!< Vector \f$B^{-1}\mathbf{a}_q\f$
-              HVector* ep,  //!< Vector \f$B^{-T}\mathbf{e}_p\f$
-              int* iRow,    //!< Index of pivotal row
-              int* hint     //!< Reinversion status
+  void update(HVector* aq,     //!< Vector \f$B^{-1}\mathbf{a}_q\f$
+              HVector* ep,     //!< Vector \f$B^{-T}\mathbf{e}_p\f$
+              HighsInt* iRow,  //!< Index of pivotal row
+              HighsInt* hint   //!< Reinversion status
   );
 
   /**
@@ -205,32 +206,32 @@ class HFactor {
   /**
    * @brief Degree of rank deficiency in \f$B\f$
    */
-  int rank_deficiency;
+  HighsInt rank_deficiency;
 
   /**
    * @brief Rows not pivoted on
    */
-  vector<int> noPvR;
+  vector<HighsInt> noPvR;
 
   /**
    * @brief Columns not pivoted on
    */
-  vector<int> noPvC;
+  vector<HighsInt> noPvC;
 
   /**
    * @brief Gets baseIndex since it is private
    */
-  const int* getBaseIndex() const { return baseIndex; }
+  const HighsInt* getBaseIndex() const { return baseIndex; }
 
   /**
    * @brief Gets Astart since it is private
    */
-  const int* getAstart() const { return Astart; }
+  const HighsInt* getAstart() const { return Astart; }
 
   /**
    * @brief Gets Aindex since it is private
    */
-  const int* getAindex() const { return Aindex; }
+  const HighsInt* getAindex() const { return Aindex; }
 
   /**
    * @brief Gets Avalue since it is private
@@ -239,15 +240,15 @@ class HFactor {
 
   // Properties of data held in HFactor.h. To "have" them means that
   // they are assigned.
-  int haveArrays;
+  HighsInt haveArrays;
   // The representation of B^{-1} corresponds to the current basis
-  int haveInvert;
+  HighsInt haveInvert;
   // The representation of B^{-1} corresponds to the current basis and is fresh
-  int haveFreshInvert;
-  int basis_matrix_num_el = 0;
-  int invert_num_el = 0;
-  int kernel_dim = 0;
-  int kernel_num_el = 0;
+  HighsInt haveFreshInvert;
+  HighsInt basis_matrix_num_el = 0;
+  HighsInt invert_num_el = 0;
+  HighsInt kernel_dim = 0;
+  HighsInt kernel_num_el = 0;
 
   /**
    * Data of the factor
@@ -255,105 +256,105 @@ class HFactor {
 
   // private:
   // Problem size, coefficient matrix and update method
-  int numRow;
-  int numCol;
+  HighsInt numRow;
+  HighsInt numCol;
 
  private:
-  const int* Astart;
-  const int* Aindex;
+  const HighsInt* Astart;
+  const HighsInt* Aindex;
   const double* Avalue;
-  int* baseIndex;
+  HighsInt* baseIndex;
   double pivot_threshold;
   double pivot_tolerance;
-  int highs_debug_level;
+  HighsInt highs_debug_level;
 
-  std::unique_ptr<std::tuple<bool, bool, int>> log_data;
+  std::unique_ptr<std::tuple<bool, bool, HighsInt>> log_data;
   HighsLogOptions log_options;
   bool use_original_HFactor_logic;
-  int updateMethod;
+  HighsInt updateMethod;
 
   // Working buffer
-  int nwork;
-  vector<int> iwork;
+  HighsInt nwork;
+  vector<HighsInt> iwork;
   vector<double> dwork;
 
   // Basis matrix
-  vector<int> Bstart;
-  vector<int> Bindex;
+  vector<HighsInt> Bstart;
+  vector<HighsInt> Bindex;
   vector<double> Bvalue;
 
   // Permutation
-  vector<int> permute;
+  vector<HighsInt> permute;
 
   // Kernel matrix
-  vector<int> MCstart;
-  vector<int> MCcountA;
-  vector<int> MCcountN;
-  vector<int> MCspace;
-  vector<int> MCindex;
+  vector<HighsInt> MCstart;
+  vector<HighsInt> MCcountA;
+  vector<HighsInt> MCcountN;
+  vector<HighsInt> MCspace;
+  vector<HighsInt> MCindex;
   vector<double> MCvalue;
   vector<double> MCminpivot;
 
   // Row wise kernel matrix
-  vector<int> MRstart;
-  vector<int> MRcount;
-  vector<int> MRspace;
-  vector<int> MRcountb4;
-  vector<int> MRindex;
+  vector<HighsInt> MRstart;
+  vector<HighsInt> MRcount;
+  vector<HighsInt> MRspace;
+  vector<HighsInt> MRcountb4;
+  vector<HighsInt> MRindex;
 
   // Kernel column buffer
-  vector<int> mwz_column_index;
+  vector<HighsInt> mwz_column_index;
   vector<char> mwz_column_mark;
   vector<double> mwz_column_array;
 
   // Count link list
-  vector<int> clinkFirst;
-  vector<int> clinkNext;
-  vector<int> clinkLast;
+  vector<HighsInt> clinkFirst;
+  vector<HighsInt> clinkNext;
+  vector<HighsInt> clinkLast;
 
-  vector<int> rlinkFirst;
-  vector<int> rlinkNext;
-  vector<int> rlinkLast;
+  vector<HighsInt> rlinkFirst;
+  vector<HighsInt> rlinkNext;
+  vector<HighsInt> rlinkLast;
 
   // Factor L
-  vector<int> LpivotLookup;
-  vector<int> LpivotIndex;
+  vector<HighsInt> LpivotLookup;
+  vector<HighsInt> LpivotIndex;
 
-  vector<int> Lstart;
-  vector<int> Lindex;
+  vector<HighsInt> Lstart;
+  vector<HighsInt> Lindex;
   vector<double> Lvalue;
-  vector<int> LRstart;
-  vector<int> LRindex;
+  vector<HighsInt> LRstart;
+  vector<HighsInt> LRindex;
   vector<double> LRvalue;
 
   // Factor U
-  vector<int> UpivotLookup;
-  vector<int> UpivotIndex;
+  vector<HighsInt> UpivotLookup;
+  vector<HighsInt> UpivotIndex;
   vector<double> UpivotValue;
 
-  int UmeritX;
-  int UtotalX;
-  vector<int> Ustart;
-  vector<int> Ulastp;
-  vector<int> Uindex;
+  HighsInt UmeritX;
+  HighsInt UtotalX;
+  vector<HighsInt> Ustart;
+  vector<HighsInt> Ulastp;
+  vector<HighsInt> Uindex;
   vector<double> Uvalue;
-  vector<int> URstart;
-  vector<int> URlastp;
-  vector<int> URspace;
-  vector<int> URindex;
+  vector<HighsInt> URstart;
+  vector<HighsInt> URlastp;
+  vector<HighsInt> URspace;
+  vector<HighsInt> URindex;
   vector<double> URvalue;
 
   // Update buffer
   vector<double> PFpivotValue;
-  vector<int> PFpivotIndex;
-  vector<int> PFstart;
-  vector<int> PFindex;
+  vector<HighsInt> PFpivotIndex;
+  vector<HighsInt> PFstart;
+  vector<HighsInt> PFindex;
   vector<double> PFvalue;
 
   // Implementation
   void buildSimple();
   //    void buildKernel();
-  int buildKernel();
+  HighsInt buildKernel();
   void buildHandleRankDeficiency();
   void buildReportRankDeficiency();
   void buildMarkSingC();
@@ -377,35 +378,35 @@ class HFactor {
   void ftranAPF(HVector& vector) const;
   void btranAPF(HVector& vector) const;
 
-  void updateCFT(HVector* aq, HVector* ep, int* iRow);
-  void updateFT(HVector* aq, HVector* ep, int iRow);
-  void updatePF(HVector* aq, int iRow, int* hint);
-  void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
-  void updateAPF(HVector* aq, HVector* ep, int iRow);
+  void updateCFT(HVector* aq, HVector* ep, HighsInt* iRow);
+  void updateFT(HVector* aq, HVector* ep, HighsInt iRow);
+  void updatePF(HVector* aq, HighsInt iRow, HighsInt* hint);
+  void updateMPF(HVector* aq, HVector* ep, HighsInt iRow, HighsInt* hint);
+  void updateAPF(HVector* aq, HVector* ep, HighsInt iRow);
 
   /**
    * Local in-line functions
    */
-  void colInsert(const int iCol, const int iRow, const double value) {
-    const int iput = MCstart[iCol] + MCcountA[iCol]++;
+  void colInsert(const HighsInt iCol, const HighsInt iRow, const double value) {
+    const HighsInt iput = MCstart[iCol] + MCcountA[iCol]++;
     MCindex[iput] = iRow;
     MCvalue[iput] = value;
   }
-  void colStoreN(const int iCol, const int iRow, const double value) {
-    const int iput = MCstart[iCol] + MCspace[iCol] - (++MCcountN[iCol]);
+  void colStoreN(const HighsInt iCol, const HighsInt iRow, const double value) {
+    const HighsInt iput = MCstart[iCol] + MCspace[iCol] - (++MCcountN[iCol]);
     MCindex[iput] = iRow;
     MCvalue[iput] = value;
   }
-  void colFixMax(const int iCol) {
+  void colFixMax(const HighsInt iCol) {
     double maxValue = 0;
-    for (int k = MCstart[iCol]; k < MCstart[iCol] + MCcountA[iCol]; k++)
+    for (HighsInt k = MCstart[iCol]; k < MCstart[iCol] + MCcountA[iCol]; k++)
       maxValue = max(maxValue, fabs(MCvalue[k]));
     MCminpivot[iCol] = maxValue * pivot_threshold;
   }
 
-  double colDelete(const int iCol, const int iRow) {
-    int idel = MCstart[iCol];
-    int imov = idel + (--MCcountA[iCol]);
+  double colDelete(const HighsInt iCol, const HighsInt iRow) {
+    HighsInt idel = MCstart[iCol];
+    HighsInt imov = idel + (--MCcountA[iCol]);
     while (MCindex[idel] != iRow) idel++;
     double pivotX = MCvalue[idel];
     MCindex[idel] = MCindex[imov];
@@ -413,29 +414,29 @@ class HFactor {
     return pivotX;
   }
 
-  void rowInsert(const int iCol, const int iRow) {
-    int iput = MRstart[iRow] + MRcount[iRow]++;
+  void rowInsert(const HighsInt iCol, const HighsInt iRow) {
+    HighsInt iput = MRstart[iRow] + MRcount[iRow]++;
     MRindex[iput] = iCol;
   }
 
-  void rowDelete(const int iCol, const int iRow) {
-    int idel = MRstart[iRow];
-    int imov = idel + (--MRcount[iRow]);
+  void rowDelete(const HighsInt iCol, const HighsInt iRow) {
+    HighsInt idel = MRstart[iRow];
+    HighsInt imov = idel + (--MRcount[iRow]);
     while (MRindex[idel] != iCol) idel++;
     MRindex[idel] = MRindex[imov];
   }
 
-  void clinkAdd(const int index, const int count) {
-    const int mover = clinkFirst[count];
+  void clinkAdd(const HighsInt index, const HighsInt count) {
+    const HighsInt mover = clinkFirst[count];
     clinkLast[index] = -2 - count;
     clinkNext[index] = mover;
     clinkFirst[count] = index;
     if (mover >= 0) clinkLast[mover] = index;
   }
 
-  void clinkDel(const int index) {
-    const int xlast = clinkLast[index];
-    const int xnext = clinkNext[index];
+  void clinkDel(const HighsInt index) {
+    const HighsInt xlast = clinkLast[index];
+    const HighsInt xnext = clinkNext[index];
     if (xlast >= 0)
       clinkNext[xlast] = xnext;
     else
@@ -443,17 +444,17 @@ class HFactor {
     if (xnext >= 0) clinkLast[xnext] = xlast;
   }
 
-  void rlinkAdd(const int index, const int count) {
-    const int mover = rlinkFirst[count];
+  void rlinkAdd(const HighsInt index, const HighsInt count) {
+    const HighsInt mover = rlinkFirst[count];
     rlinkLast[index] = -2 - count;
     rlinkNext[index] = mover;
     rlinkFirst[count] = index;
     if (mover >= 0) rlinkLast[mover] = index;
   }
 
-  void rlinkDel(const int index) {
-    const int xlast = rlinkLast[index];
-    const int xnext = rlinkNext[index];
+  void rlinkDel(const HighsInt index) {
+    const HighsInt xlast = rlinkLast[index];
+    const HighsInt xnext = rlinkNext[index];
     if (xlast >= 0)
       rlinkNext[xlast] = xnext;
     else

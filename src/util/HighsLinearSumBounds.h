@@ -24,21 +24,21 @@
 class HighsLinearSumBounds {
   std::vector<HighsCDouble> sumLowerOrig;
   std::vector<HighsCDouble> sumUpperOrig;
-  std::vector<int> numInfSumLowerOrig;
-  std::vector<int> numInfSumUpperOrig;
+  std::vector<HighsInt> numInfSumLowerOrig;
+  std::vector<HighsInt> numInfSumUpperOrig;
   std::vector<HighsCDouble> sumLower;
   std::vector<HighsCDouble> sumUpper;
-  std::vector<int> numInfSumLower;
-  std::vector<int> numInfSumUpper;
+  std::vector<HighsInt> numInfSumLower;
+  std::vector<HighsInt> numInfSumUpper;
   const double* varLower;
   const double* varUpper;
   const double* implVarLower;
   const double* implVarUpper;
-  const int* implVarLowerSource;
-  const int* implVarUpperSource;
+  const HighsInt* implVarLowerSource;
+  const HighsInt* implVarUpperSource;
 
  public:
-  void setNumSums(int numSums) {
+  void setNumSums(HighsInt numSums) {
     numInfSumLower.resize(numSums);
     numInfSumUpper.resize(numSums);
     sumLower.resize(numSums);
@@ -51,8 +51,8 @@ class HighsLinearSumBounds {
 
   void setBoundArrays(const double* varLower, const double* varUpper,
                       const double* implVarLower, const double* implVarUpper,
-                      const int* implVarLowerSource,
-                      const int* implVarUpperSource) {
+                      const HighsInt* implVarLowerSource,
+                      const HighsInt* implVarUpperSource) {
     this->varLower = varLower;
     this->varUpper = varUpper;
     this->implVarLower = implVarLower;
@@ -61,77 +61,77 @@ class HighsLinearSumBounds {
     this->implVarUpperSource = implVarUpperSource;
   }
 
-  void add(int sum, int var, double coefficient);
+  void add(HighsInt sum, HighsInt var, double coefficient);
 
-  void remove(int sum, int var, double coefficient);
+  void remove(HighsInt sum, HighsInt var, double coefficient);
 
-  void updatedVarUpper(int sum, int var, double coefficient,
+  void updatedVarUpper(HighsInt sum, HighsInt var, double coefficient,
                        double oldVarUpper);
 
-  void updatedVarLower(int sum, int var, double coefficient,
+  void updatedVarLower(HighsInt sum, HighsInt var, double coefficient,
                        double oldVarLower);
 
-  void updatedImplVarUpper(int sum, int var, double coefficient,
-                           double oldImplVarUpper, int oldImplVarUpperSource);
+  void updatedImplVarUpper(HighsInt sum, HighsInt var, double coefficient,
+                           double oldImplVarUpper, HighsInt oldImplVarUpperSource);
 
-  void updatedImplVarLower(int sum, int var, double coefficient,
-                           double oldImplVarLower, int oldImplVarLowerSource);
+  void updatedImplVarLower(HighsInt sum, HighsInt var, double coefficient,
+                           double oldImplVarLower, HighsInt oldImplVarLowerSource);
 
-  double getResidualSumLower(int sum, int var, double coefficient) const;
+  double getResidualSumLower(HighsInt sum, HighsInt var, double coefficient) const;
 
-  double getResidualSumUpper(int sum, int var, double coefficient) const;
+  double getResidualSumUpper(HighsInt sum, HighsInt var, double coefficient) const;
 
-  double getResidualSumLowerOrig(int sum, int var, double coefficient) const;
+  double getResidualSumLowerOrig(HighsInt sum, HighsInt var, double coefficient) const;
 
-  double getResidualSumUpperOrig(int sum, int var, double coefficient) const;
+  double getResidualSumUpperOrig(HighsInt sum, HighsInt var, double coefficient) const;
 
-  double getSumLowerOrig(int sum) const {
+  double getSumLowerOrig(HighsInt sum) const {
     return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
                                         : -HIGHS_CONST_INF;
   }
 
-  double getSumUpperOrig(int sum) const {
+  double getSumUpperOrig(HighsInt sum) const {
     return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum])
                                         : HIGHS_CONST_INF;
   }
 
-  double getSumLower(int sum) const {
+  double getSumLower(HighsInt sum) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -HIGHS_CONST_INF;
   }
 
-  double getSumUpper(int sum) const {
+  double getSumUpper(HighsInt sum) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : HIGHS_CONST_INF;
   }
 
-  double getSumLower(int sum, double offset) const {
+  double getSumLower(HighsInt sum, double offset) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
                                     : -HIGHS_CONST_INF;
   }
 
-  double getSumUpper(int sum, double offset) const {
+  double getSumUpper(HighsInt sum, double offset) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
                                     : HIGHS_CONST_INF;
   }
 
-  double getSumLower(int sum, HighsCDouble offset) const {
+  double getSumLower(HighsInt sum, HighsCDouble offset) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
                                     : -HIGHS_CONST_INF;
   }
 
-  double getSumUpper(int sum, HighsCDouble offset) const {
+  double getSumUpper(HighsInt sum, HighsCDouble offset) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
                                     : HIGHS_CONST_INF;
   }
 
-  int getNumInfSumLower(int sum) const { return numInfSumLower[sum]; }
+  HighsInt getNumInfSumLower(HighsInt sum) const { return numInfSumLower[sum]; }
 
-  int getNumInfSumUpper(int sum) const { return numInfSumUpper[sum]; }
+  HighsInt getNumInfSumUpper(HighsInt sum) const { return numInfSumUpper[sum]; }
 
-  int getNumInfSumLowerOrig(int sum) const { return numInfSumLowerOrig[sum]; }
+  HighsInt getNumInfSumLowerOrig(HighsInt sum) const { return numInfSumLowerOrig[sum]; }
 
-  int getNumInfSumUpperOrig(int sum) const { return numInfSumUpperOrig[sum]; }
+  HighsInt getNumInfSumUpperOrig(HighsInt sum) const { return numInfSumUpperOrig[sum]; }
 
-  void shrink(const std::vector<int>& newIndices, int newSize);
+  void shrink(const std::vector<HighsInt>& newIndices, HighsInt newSize);
 };
 
 #endif

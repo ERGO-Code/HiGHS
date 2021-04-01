@@ -20,7 +20,7 @@
 HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
-                                 const int phase,
+                                 const HighsInt phase,
                                  const bool initialise = false);
 
 HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance);
@@ -30,17 +30,17 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance);
 
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
-                                    const int phase,
+                                    const HighsInt phase,
                                     const HighsModelStatus scaled_model_status);
 
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const SimplexAlgorithm algorithm, const int phase,
+                          const SimplexAlgorithm algorithm, const HighsInt phase,
                           const HighsModelStatus scaled_model_status);
 
 bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
-                                           const int var);
+                                           const HighsInt var);
 
 void ekkDebugReportReinvertOnNumericalTrouble(
     const std::string method_name, const HEkk& ekk_instance,
@@ -53,7 +53,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
                                      const double computed_dual);
 
 HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
-    const HEkk& ekk_instance, const int num_free_col,
+    const HEkk& ekk_instance, const HighsInt num_free_col,
     const HSet nonbasic_free_col_set);
 
 HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance);

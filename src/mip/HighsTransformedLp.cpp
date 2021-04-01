@@ -20,7 +20,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   const HighsMipSolver& mipsolver = implications.mipsolver;
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
 
-  int numTransformedCol = lprelaxation.numCols() + lprelaxation.numRows();
+  HighsInt numTransformedCol = lprelaxation.numCols() + lprelaxation.numRows();
 
   boundDist.resize(numTransformedCol);
   simpleLbDist.resize(numTransformedCol);
@@ -32,7 +32,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   boundTypes.resize(numTransformedCol);
   vectorsum.setDimension(numTransformedCol);
 
-  for (int col : mipsolver.mipdata_->continuous_cols) {
+  for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
     mipsolver.mipdata_->implications.cleanupVarbounds(col);
     if (mipsolver.mipdata_->domain.infeasible()) return;
 
@@ -111,7 +111,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     boundDist[col] = std::min(lbDist[col], ubDist[col]);
   }
 
-  for (int col : mipsolver.mipdata_->integral_cols) {
+  for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     double bestub = mipsolver.mipdata_->domain.colUpper_[col];
     double bestlb = mipsolver.mipdata_->domain.colLower_[col];
     if (bestub - bestlb < 100.5) {
@@ -199,10 +199,10 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   }
 
   // setup information of slackVariables
-  int numLpRow = lprelaxation.numRows();
-  int indexOffset = mipsolver.numCol();
-  for (int row = 0; row != numLpRow; ++row) {
-    int slackIndex = indexOffset + row;
+  HighsInt numLpRow = lprelaxation.numRows();
+  HighsInt indexOffset = mipsolver.numCol();
+  for (HighsInt row = 0; row != numLpRow; ++row) {
+    HighsInt slackIndex = indexOffset + row;
     double bestub = lprelaxation.slackUpper(row);
     double bestlb = lprelaxation.slackLower(row);
 
@@ -225,18 +225,18 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
 bool HighsTransformedLp::transform(std::vector<double>& vals,
                                    std::vector<double>& upper,
                                    std::vector<double>& solval,
-                                   std::vector<int>& inds, double& rhs,
+                                   std::vector<HighsInt>& inds, double& rhs,
                                    bool& integersPositive, bool preferVbds) {
   HighsCDouble tmpRhs = rhs;
 
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
-  const int slackOffset = lprelaxation.numCols();
+  const HighsInt slackOffset = lprelaxation.numCols();
 
-  int numNz = inds.size();
+  HighsInt numNz = inds.size();
   bool removeZeros = false;
 
-  for (int i = 0; i != numNz; ++i) {
-    int col = inds[i];
+  for (HighsInt i = 0; i != numNz; ++i) {
+    HighsInt col = inds[i];
 
     double lb;
     double ub;
@@ -245,7 +245,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       lb = mip.mipdata_->domain.colLower_[col];
       ub = mip.mipdata_->domain.colUpper_[col];
     } else {
-      int row = col - slackOffset;
+      HighsInt row = col - slackOffset;
       lb = lprelaxation.slackLower(row);
       ub = lprelaxation.slackUpper(row);
     }
@@ -339,12 +339,12 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   }
 
   if (!vectorsum.getNonzeros().empty()) {
-    for (int i = 0; i != numNz; ++i) {
+    for (HighsInt i = 0; i != numNz; ++i) {
       if (vals[i] != 0.0) vectorsum.add(inds[i], vals[i]);
     }
 
     double maxError = 0.0;
-    auto IsZero = [&](int col, double val) {
+    auto IsZero = [&](HighsInt col, double val) {
       double absval = std::abs(val);
       if (absval <= mip.options_mip_->small_matrix_value) return true;
 
@@ -359,11 +359,11 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     numNz = inds.size();
 
     vals.resize(numNz);
-    for (int j = 0; j != numNz; ++j) vals[j] = vectorsum.getValue(inds[j]);
+    for (HighsInt j = 0; j != numNz; ++j) vals[j] = vectorsum.getValue(inds[j]);
 
     vectorsum.clear();
   } else if (removeZeros) {
-    for (int i = numNz - 1; i >= 0; --i) {
+    for (HighsInt i = numNz - 1; i >= 0; --i) {
       if (vals[i] == 0) {
         --numNz;
         vals[i] = vals[numNz];
@@ -379,8 +379,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
   if (integersPositive) {
     // complement integers to make coefficients positive
-    for (int j = 0; j != numNz; ++j) {
-      int col = inds[j];
+    for (HighsInt j = 0; j != numNz; ++j) {
+      HighsInt col = inds[j];
       if (!lprelaxation.isColIntegral(inds[j])) continue;
 
       if (vals[j] > 0)
@@ -390,8 +390,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     }
   } else {
     // complement integers with closest bound
-    for (int j = 0; j != numNz; ++j) {
-      int col = inds[j];
+    for (HighsInt j = 0; j != numNz; ++j) {
+      HighsInt col = inds[j];
       if (!lprelaxation.isColIntegral(inds[j])) continue;
 
       if (lbDist[col] < ubDist[col])
@@ -404,8 +404,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
   upper.resize(numNz);
   solval.resize(numNz);
 
-  for (int j = 0; j != numNz; ++j) {
-    int col = inds[j];
+  for (HighsInt j = 0; j != numNz; ++j) {
+    HighsInt col = inds[j];
 
     double lb;
     double ub;
@@ -414,7 +414,7 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       lb = mip.mipdata_->domain.colLower_[col];
       ub = mip.mipdata_->domain.colUpper_[col];
     } else {
-      int row = col - slackOffset;
+      HighsInt row = col - slackOffset;
       lb = lprelaxation.slackLower(row);
       ub = lprelaxation.slackUpper(row);
     }
@@ -454,17 +454,17 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 }
 
 bool HighsTransformedLp::untransform(std::vector<double>& vals,
-                                     std::vector<int>& inds, double& rhs,
+                                     std::vector<HighsInt>& inds, double& rhs,
                                      bool integral) {
   HighsCDouble tmpRhs = rhs;
   const HighsMipSolver& mip = lprelaxation.getMipSolver();
-  const int slackOffset = mip.numCol();
+  const HighsInt slackOffset = mip.numCol();
 
-  int numNz = inds.size();
+  HighsInt numNz = inds.size();
 
-  for (int i = 0; i != numNz; ++i) {
+  for (HighsInt i = 0; i != numNz; ++i) {
     if (vals[i] == 0.0) continue;
-    int col = inds[i];
+    HighsInt col = inds[i];
 
     switch (boundTypes[col]) {
       case BoundType::kVariableLb: {
@@ -485,15 +485,15 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           tmpRhs += vals[i] * mip.mipdata_->domain.colLower_[col];
           vectorsum.add(col, vals[i]);
         } else {
-          int row = col - slackOffset;
+          HighsInt row = col - slackOffset;
           tmpRhs += vals[i] * lprelaxation.slackLower(row);
 
-          int rowlen;
-          const int* rowinds;
+          HighsInt rowlen;
+          const HighsInt* rowinds;
           const double* rowvals;
           lprelaxation.getRow(row, rowlen, rowinds, rowvals);
 
-          for (int j = 0; j != rowlen; ++j)
+          for (HighsInt j = 0; j != rowlen; ++j)
             vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
         }
         break;
@@ -503,16 +503,16 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
           tmpRhs -= vals[i] * mip.mipdata_->domain.colUpper_[col];
           vectorsum.add(col, -vals[i]);
         } else {
-          int row = col - slackOffset;
+          HighsInt row = col - slackOffset;
           tmpRhs -= vals[i] * lprelaxation.slackUpper(row);
           vals[i] = -vals[i];
 
-          int rowlen;
-          const int* rowinds;
+          HighsInt rowlen;
+          const HighsInt* rowinds;
           const double* rowvals;
           lprelaxation.getRow(row, rowlen, rowinds, rowvals);
 
-          for (int j = 0; j != rowlen; ++j)
+          for (HighsInt j = 0; j != rowlen; ++j)
             vectorsum.add(rowinds[j], vals[i] * rowvals[j]);
         }
       }
@@ -524,7 +524,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     // right hand side to the nearest integral value, as small deviation
     // only come from numerical errors during resubstitution of slack variables
 
-    auto IsZero = [&](int col, double val) {
+    auto IsZero = [&](HighsInt col, double val) {
       assert(col < mip.numCol());
       return std::round(val) == 0.0;
     };
@@ -533,7 +533,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     rhs = std::round(double(tmpRhs));
   } else {
     bool abort = false;
-    auto IsZero = [&](int col, double val) {
+    auto IsZero = [&](HighsInt col, double val) {
       assert(col < mip.numCol());
       double absval = std::abs(val);
       if (absval <= mip.options_mip_->small_matrix_value) return true;
@@ -568,10 +568,10 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
   vals.resize(numNz);
 
   if (integral)
-    for (int i = 0; i != numNz; ++i)
+    for (HighsInt i = 0; i != numNz; ++i)
       vals[i] = std::round(vectorsum.getValue(inds[i]));
   else
-    for (int i = 0; i != numNz; ++i) vals[i] = vectorsum.getValue(inds[i]);
+    for (HighsInt i = 0; i != numNz; ++i) vals[i] = vectorsum.getValue(inds[i]);
   vectorsum.clear();
 
   return true;

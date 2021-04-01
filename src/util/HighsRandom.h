@@ -24,12 +24,12 @@ class HighsRandom {
   /**
    * @brief Initialisations
    */
-  HighsRandom(unsigned seed = 0) { initialise(seed); }
+  HighsRandom(HighsUInt seed = 0) { initialise(seed); }
 
   /**
    * @brief (Re-)initialise the random number generator
    */
-  void initialise(unsigned seed = 0) {
+  void initialise(HighsUInt seed = 0) {
     state = seed;
     do {
       state = HighsHashHelpers::pair_hash<0>(state, 0);
@@ -49,21 +49,30 @@ class HighsRandom {
   /**
    * @brief Return a random integer between 0 and 2147483647
    */
-  int integer() {
-    // use 31 bits of the 64 bit result
+  HighsInt integer() {
     advance();
+#ifdef HIGHSINT64
+    // use 63 bits of the first hash result and use second hash for lower half
+    // of bits
+    return (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> 1) ^
+           (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> 32);
+#else
+    // use 31 bits of the 64 bit result
     return HighsHashHelpers::pair_hash<0>(state, state >> 32) >> 33;
+#endif
   }
 
   /**
    * @brief Return a random integer between [0,sup)
    */
-  int integer(int sup) { return fractionOrZero() * sup; }
+  HighsInt integer(HighsInt sup) { return fractionOrZero() * sup; }
 
   /**
    * @brief Return a random integer between [min,sup)
    */
-  int integer(int min, int sup) { return min + integer(sup - min); }
+  HighsInt integer(HighsInt min, HighsInt sup) {
+    return min + integer(sup - min);
+  }
 
   /**
    * @brief Return a random fraction - real in (0, 1)
@@ -101,16 +110,16 @@ class HighsRandom {
    */
   bool bit() {
     advance();
-    return state >> 63;
+    return HighsHashHelpers::pair_hash<0>(state, state >> 32) >> 63;
   }
 
   /**
    * @brief shuffle the given data array
    */
   template <typename T>
-  void shuffle(T* data, int N) {
-    for (int i = N; i > 1; --i) {
-      int pos = integer(i);
+  void shuffle(T* data, HighsInt N) {
+    for (HighsInt i = N; i > 1; --i) {
+      HighsInt pos = integer(i);
       std::swap(data[pos], data[i - 1]);
     }
   }

@@ -135,15 +135,15 @@ restart:
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
-  int numHugeTreeEstim = 0;
+  HighsInt numHugeTreeEstim = 0;
   int64_t numNodesLastCheck = mipdata_->num_nodes;
   double treeweightLastCheck = 0.0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit = 10 * mipdata_->lp.getAvgSolveIters();
-    iterlimit = std::max(10000, iterlimit);
+    HighsInt iterlimit = 10 * mipdata_->lp.getAvgSolveIters();
+    iterlimit = std::max(HighsInt{10000}, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
@@ -237,9 +237,9 @@ restart:
     if (!mipdata_->domain.getChangedCols().empty()) {
       highsLogDev(options_mip_->log_options, HighsLogType::INFO,
                   "added %d global bound changes\n",
-                  (int)mipdata_->domain.getChangedCols().size());
+                  (HighsInt)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
-      for (int col : mipdata_->domain.getChangedCols())
+      for (HighsInt col : mipdata_->domain.getChangedCols())
         mipdata_->implications.cleanupVarbounds(col);
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -280,7 +280,7 @@ restart:
     // loop to install the next node for the search
     while (!mipdata_->nodequeue.empty()) {
       // printf("popping node from nodequeue (length = %d)\n",
-      // (int)nodequeue.size());
+      // (HighsInt)nodequeue.size());
       assert(!search.hasNode());
 
       if (numQueueLeaves - lastLbLeave >= 10) {

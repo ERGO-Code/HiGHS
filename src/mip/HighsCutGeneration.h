@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "util/HighsCDouble.h"
+#include "util/HighsInt.h"
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -33,7 +34,7 @@ class HighsCutGeneration {
  private:
   const HighsLpRelaxation& lpRelaxation;
   HighsCutPool& cutpool;
-  std::vector<int> cover;
+  std::vector<HighsInt> cover;
   HighsCDouble coverweight;
   HighsCDouble lambda;
   std::vector<double> upper;
@@ -43,11 +44,11 @@ class HighsCutGeneration {
   const double epsilon;
 
   double* vals;
-  int* inds;
+  HighsInt* inds;
   HighsCDouble rhs;
   bool integralSupport;
   bool integralCoefficients;
-  int rowlen;
+  HighsInt rowlen;
 
   bool determineCover(bool lpSol = true);
 
@@ -69,12 +70,12 @@ class HighsCutGeneration {
                      HighsCutPool& cutpool);
 
   /// separates the LP solution for the given single row relaxation
-  bool generateCut(HighsTransformedLp& transLp, std::vector<int>& inds,
+  bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
                    std::vector<double>& vals, double& rhs);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain
-  bool generateConflict(HighsDomain& localdom, std::vector<int>& proofinds,
+  bool generateConflict(HighsDomain& localdom, std::vector<HighsInt>& proofinds,
                         std::vector<double>& proofvals, double& proofrhs);
 };
 

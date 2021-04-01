@@ -18,7 +18,7 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   const double fractional_tolerance = 1e-7;
   assert(node.integer_variables.size() == node.primal_solution.size());
 
-  for (int col = 0; col < (int)node.integer_variables.size(); col++) {
+  for (HighsInt col = 0; col < (HighsInt)node.integer_variables.size(); col++) {
     if (!node.integer_variables[col]) continue;
 
     // Get the value, lower and upper bounds for the column. NB Expensive to
@@ -85,7 +85,7 @@ bool Tree::branch(Node& node) {
     return false;
   }
 
-  int col = static_cast<int>(branch_col);
+  HighsInt col = static_cast<HighsInt>(branch_col);
   double value = node.primal_solution[col];
   const double value_ceil = std::ceil(value);
   const double value_floor = std::floor(value);
@@ -98,7 +98,7 @@ bool Tree::branch(Node& node) {
       << " right child lb: " << value_ceil << std::endl;
     */
     printf("Branch on %2d (%9d, %9d) left UB: %4d; right LB: %4d\n", col,
-           num_nodes + 1, num_nodes + 2, (int)value_floor, (int)value_ceil);
+           num_nodes + 1, num_nodes + 2, (HighsInt)value_floor, (HighsInt)value_ceil);
   }
   // Branch.
   // Create children and add to node.
@@ -131,10 +131,10 @@ bool Tree::branch(Node& node) {
   return true;
 }
 
-double Tree::getBestBound(int& best_node) {
-  int stack_size = nodes_.size();
+double Tree::getBestBound(HighsInt& best_node) {
+  HighsInt stack_size = nodes_.size();
   double best_bound = HIGHS_CONST_INF;
-  for (int entry = 0; entry < stack_size; entry++) {
+  for (HighsInt entry = 0; entry < stack_size; entry++) {
     Node& node = nodes_[entry];
     if (node.parent_objective < best_bound) {
       best_bound = node.parent_objective;

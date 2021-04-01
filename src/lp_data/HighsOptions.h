@@ -65,13 +65,13 @@ class OptionRecordBool : public OptionRecord {
 
 class OptionRecordInt : public OptionRecord {
  public:
-  int* value;
-  int lower_bound;
-  int default_value;
-  int upper_bound;
+  HighsInt* value;
+  HighsInt lower_bound;
+  HighsInt default_value;
+  HighsInt upper_bound;
   OptionRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  int* Xvalue_pointer, int Xlower_bound, int Xdefault_value,
-                  int Xupper_bound)
+                  HighsInt* Xvalue_pointer, HighsInt Xlower_bound,
+                  HighsInt Xdefault_value, HighsInt Xupper_bound)
       : OptionRecord(HighsOptionType::INT, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
@@ -80,7 +80,7 @@ class OptionRecordInt : public OptionRecord {
     *value = default_value;
   }
 
-  void assignvalue(int Xvalue) { *value = Xvalue; }
+  void assignvalue(HighsInt Xvalue) { *value = Xvalue; }
 
   virtual ~OptionRecordInt() {}
 };
@@ -136,7 +136,7 @@ bool boolFromString(const std::string value, bool& bool_value);
 OptionStatus getOptionIndex(const HighsLogOptions& log_options,
                             const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
-                            int& index);
+                            HighsInt& index);
 
 OptionStatus checkOptions(const HighsLogOptions& log_options,
                           const std::vector<OptionRecord*>& option_records);
@@ -147,7 +147,7 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
 
 OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
-                              const int value);
+                              const HighsInt value);
 OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
                               const double value);
@@ -162,7 +162,15 @@ OptionStatus setOptionValue(const HighsLogOptions& log_options,
 OptionStatus setOptionValue(const HighsLogOptions& log_options,
                             const std::string& name,
                             std::vector<OptionRecord*>& option_records,
-                            const int value);
+                            const HighsInt value);
+#ifdef HIGHSINT64
+inline OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                                   const std::string& name,
+                                   std::vector<OptionRecord*>& option_records,
+                                   const int value) {
+  return setOptionValue(log_options, name, option_records, HighsInt{value});
+}
+#endif
 OptionStatus setOptionValue(const HighsLogOptions& log_options,
                             const std::string& name,
                             std::vector<OptionRecord*>& option_records,
@@ -178,7 +186,7 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
 OptionStatus setOptionValue(const HighsLogOptions& log_options,
-                            OptionRecordInt& option, const int value);
+                            OptionRecordInt& option, const HighsInt value);
 OptionStatus setOptionValue(const HighsLogOptions& log_options,
                             OptionRecordDouble& option, const double value);
 OptionStatus setOptionValue(const HighsLogOptions& log_options,
@@ -196,7 +204,7 @@ OptionStatus getOptionValue(const HighsLogOptions& log_options,
 OptionStatus getOptionValue(const HighsLogOptions& log_options,
                             const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
-                            int& value);
+                            HighsInt& value);
 OptionStatus getOptionValue(const HighsLogOptions& log_options,
                             const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
@@ -233,9 +241,9 @@ const string simplex_string = "simplex";
 const string ipm_string = "ipm";
 const string mip_string = "mip";
 
-const int KEEP_N_ROWS_DELETE_ROWS = -1;
-const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
-const int KEEP_N_ROWS_KEEP_ROWS = 1;
+const HighsInt KEEP_N_ROWS_DELETE_ROWS = -1;
+const HighsInt KEEP_N_ROWS_DELETE_ENTRIES = 0;
+const HighsInt KEEP_N_ROWS_KEEP_ROWS = 1;
 
 // Strings for command line options
 const string model_file_string = "model_file";
@@ -266,19 +274,19 @@ struct HighsOptionsStruct {
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
   double dual_objective_value_upper_bound;
-  int highs_random_seed;
-  int highs_debug_level;
-  int highs_analysis_level;
-  int simplex_strategy;
-  int simplex_scale_strategy;
-  int simplex_crash_strategy;
-  int simplex_dual_edge_weight_strategy;
-  int simplex_primal_edge_weight_strategy;
-  int simplex_iteration_limit;
-  int simplex_update_limit;
-  int ipm_iteration_limit;
-  int highs_min_threads;
-  int highs_max_threads;
+  HighsInt highs_random_seed;
+  HighsInt highs_debug_level;
+  HighsInt highs_analysis_level;
+  HighsInt simplex_strategy;
+  HighsInt simplex_scale_strategy;
+  HighsInt simplex_crash_strategy;
+  HighsInt simplex_dual_edge_weight_strategy;
+  HighsInt simplex_primal_edge_weight_strategy;
+  HighsInt simplex_iteration_limit;
+  HighsInt simplex_update_limit;
+  HighsInt ipm_iteration_limit;
+  HighsInt highs_min_threads;
+  HighsInt highs_max_threads;
   std::string solution_file;
   std::string log_file;
   bool write_solution_to_file;
@@ -288,18 +296,18 @@ struct HighsOptionsStruct {
   bool log_to_console;
 
   // Advanced options
-  int log_dev_level;
+  HighsInt log_dev_level;
   bool run_crossover;
   bool mps_parser_type_free;
-  int keep_n_rows;
-  int allowed_simplex_matrix_scale_factor;
-  int allowed_simplex_cost_scale_factor;
-  int simplex_dualise_strategy;
-  int simplex_permute_strategy;
-  int dual_simplex_cleanup_strategy;
-  int simplex_price_strategy;
-  int dual_chuzc_sort_strategy;
-  int presolve_substitution_maxfillin;
+  HighsInt keep_n_rows;
+  HighsInt allowed_simplex_matrix_scale_factor;
+  HighsInt allowed_simplex_cost_scale_factor;
+  HighsInt simplex_dualise_strategy;
+  HighsInt simplex_permute_strategy;
+  HighsInt dual_simplex_cleanup_strategy;
+  HighsInt simplex_price_strategy;
+  HighsInt dual_chuzc_sort_strategy;
+  HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
@@ -314,14 +322,14 @@ struct HighsOptionsStruct {
   bool use_original_HFactor_logic;
 
   // Options for MIP solver
-  int mip_max_nodes;
-  int mip_max_stall_nodes;
-  int mip_max_leaves;
-  int mip_lp_age_limit;
-  int mip_pool_age_limit;
-  int mip_pool_soft_limit;
-  int mip_pscost_minreliable;
-  int mip_report_level;
+  HighsInt mip_max_nodes;
+  HighsInt mip_max_stall_nodes;
+  HighsInt mip_max_leaves;
+  HighsInt mip_lp_age_limit;
+  HighsInt mip_pool_age_limit;
+  HighsInt mip_pool_soft_limit;
+  HighsInt mip_pscost_minreliable;
+  HighsInt mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
   double mip_heuristic_effort;
@@ -365,7 +373,7 @@ class HighsOptions : public HighsOptionsStruct {
 
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
-      if ((int)records.size() == 0) initRecords();
+      if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
       setLogOptions();
     }
@@ -374,7 +382,7 @@ class HighsOptions : public HighsOptionsStruct {
 
   const HighsOptions& operator=(HighsOptions&& other) {
     if (&other != this) {
-      if ((int)records.size() == 0) initRecords();
+      if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
       setLogOptions();
     }
@@ -685,7 +693,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
     record_int = new OptionRecordInt(
         "allowed_simplex_matrix_scale_factor",
-        "Largest power-of-two factor permitted when scaling the constraint "
+        "Largest power-of-two factor permitted when scaling the "
+        "constraint "
         "matrix for the simplex solver",
         advanced, &allowed_simplex_matrix_scale_factor, 0, 10, 20);
     records.push_back(record_int);
@@ -819,7 +828,7 @@ class HighsOptions : public HighsOptionsStruct {
   }
 
   void deleteRecords() {
-    for (unsigned int i = 0; i < records.size(); i++) delete records[i];
+    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
   }
 
  public:

@@ -17,7 +17,8 @@
 #include <stdint.h>
 
 #include <vector>
-typedef int64_t ipxint;
+#include "util/HighsInt.h"
+typedef HighsInt ipxint;
 
 struct IpxSolution {
   ipxint num_col;

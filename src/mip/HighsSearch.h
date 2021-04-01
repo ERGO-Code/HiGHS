@@ -37,9 +37,9 @@ class HighsSearch {
   int64_t heurlpiterations;
   int64_t sblpiterations;
   double upper_limit;
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
-  int depthoffset;
+  HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
 
@@ -90,18 +90,18 @@ class HighsSearch {
   };
 
   std::vector<NodeData> nodestack;
-  HighsHashTable<int, int> reliableatnode;
+  HighsHashTable<HighsInt, int> reliableatnode;
 
-  bool branchingVarReliableAtNode(int col) const {
+  bool branchingVarReliableAtNode(HighsInt col) const {
     auto it = reliableatnode.find(col);
     if (it == nullptr || *it != 3) return false;
 
     return true;
   }
 
-  void markBranchingVarUpReliableAtNode(int col) { reliableatnode[col] |= 1; }
+  void markBranchingVarUpReliableAtNode(HighsInt col) { reliableatnode[col] |= 1; }
 
-  void markBranchingVarDownReliableAtNode(int col) { reliableatnode[col] |= 2; }
+  void markBranchingVarDownReliableAtNode(HighsInt col) { reliableatnode[col] |= 2; }
 
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
@@ -121,11 +121,11 @@ class HighsSearch {
 
   void cutoffNode();
 
-  void branchDownwards(int col, double newub, double branchpoint);
+  void branchDownwards(HighsInt col, double newub, double branchpoint);
 
-  void branchUpwards(int col, double newlb, double branchpoint);
+  void branchUpwards(HighsInt col, double newlb, double branchpoint);
 
-  void setMinReliable(int minreliable);
+  void setMinReliable(HighsInt minreliable);
 
   void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
 
@@ -149,7 +149,7 @@ class HighsSearch {
 
   double getCurrentLowerBound() const { return nodestack.back().lower_bound; }
 
-  int getCurrentDepth() const { return nodestack.size() + depthoffset; }
+  HighsInt getCurrentDepth() const { return nodestack.size() + depthoffset; }
 
   void openNodesToQueue(HighsNodeQueue& nodequeue);
 
@@ -161,7 +161,7 @@ class HighsSearch {
 
   void addInfeasibleConflict();
 
-  int selectBranchingCandidate(int64_t maxSbIters);
+  HighsInt selectBranchingCandidate(int64_t maxSbIters);
 
   void evalUnreliableBranchCands();
 

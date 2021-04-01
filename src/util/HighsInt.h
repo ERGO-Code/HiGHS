@@ -7,25 +7,24 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsAnalysis.h
- * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+/**@file HighsInt.h
+ * @brief The definition for the integer type to use
+ * @author Leona Gottwald
  */
-#ifndef LP_DATA_HIGHS_ANALYSIS_H_
-#define LP_DATA_HIGHS_ANALYSIS_H_
 
-#include <vector>
+#ifndef UTIL_HIGHS_INT_H_
+#define UTIL_HIGHS_INT_H_
+
+#include <stdint.h>
 
 #include "HConfig.h"
-#include "util/HighsTimer.h"
 
-//#ifdef HiGHSDEV
-struct HighsTimerClock {
-  HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
+#ifdef HIGHSINT64
+typedef int64_t HighsInt;
+typedef uint64_t HighsUInt;
+#else
+typedef int HighsInt;
+typedef unsigned int HighsUInt;
+#endif
 
-  HighsTimer& timer_;
-  std::vector<HighsInt> clock_;
-};
-//#endif
-
-#endif /* LP_DATA_HIGHS_ANALYSIS_H_ */
+#endif

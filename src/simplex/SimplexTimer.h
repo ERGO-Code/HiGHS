@@ -119,7 +119,7 @@ class SimplexTimer {
  public:
   void initialiseSimplexClocks(HighsTimerClock& simplex_timer_clock) {
     HighsTimer& timer = simplex_timer_clock.timer_;
-    std::vector<int>& clock = simplex_timer_clock.clock_;
+    std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
     clock.resize(SimplexNumClock);
     clock[SimplexTotalClock] = timer.clock_def("Simplex total", "STT");
     clock[SimplexIzDseWtClock] = timer.clock_def("Iz DSE Wt", "IWT");
@@ -213,28 +213,28 @@ class SimplexTimer {
   }
 
   void reportSimplexClockList(const char* grepStamp,
-                              std::vector<int> simplex_clock_list,
+                              std::vector<HighsInt> simplex_clock_list,
                               HighsTimerClock& simplex_timer_clock) {
     HighsTimer& timer = simplex_timer_clock.timer_;
-    std::vector<int>& clock = simplex_timer_clock.clock_;
-    int simplex_clock_list_size = simplex_clock_list.size();
-    std::vector<int> clockList;
+    std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
+    HighsInt simplex_clock_list_size = simplex_clock_list.size();
+    std::vector<HighsInt> clockList;
     clockList.resize(simplex_clock_list_size);
-    for (int en = 0; en < simplex_clock_list_size; en++) {
+    for (HighsInt en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = clock[simplex_clock_list[en]];
     }
     const double ideal_sum_time = timer.clock_time[clock[SimplexTotalClock]];
     timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
-  void reportChuzc3ClockList(std::vector<int> simplex_clock_list,
+  void reportChuzc3ClockList(std::vector<HighsInt> simplex_clock_list,
                              HighsTimerClock& simplex_timer_clock) {
     HighsTimer& timer = simplex_timer_clock.timer_;
-    std::vector<int>& clock = simplex_timer_clock.clock_;
-    int simplex_clock_list_size = simplex_clock_list.size();
-    std::vector<int> clockList;
+    std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
+    HighsInt simplex_clock_list_size = simplex_clock_list.size();
+    std::vector<HighsInt> clockList;
     clockList.resize(simplex_clock_list_size);
-    for (int en = 0; en < simplex_clock_list_size; en++) {
+    for (HighsInt en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = clock[simplex_clock_list[en]];
     }
     const double ideal_sum_time = timer.read(clock[Chuzc3Clock]);
@@ -243,13 +243,13 @@ class SimplexTimer {
   };
 
   void reportSimplexTotalClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{SimplexTotalClock};
+    std::vector<HighsInt> simplex_clock_list{SimplexTotalClock};
     reportSimplexClockList("SimplexTotal", simplex_clock_list,
                            simplex_timer_clock);
   };
 
   void reportSimplexPhasesClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{
+    std::vector<HighsInt> simplex_clock_list{
         SimplexIzDseWtClock, SimplexDualPhase1Clock, SimplexDualPhase2Clock,
         SimplexPrimalPhase2Clock};
     reportSimplexClockList("SimplexPhases", simplex_clock_list,
@@ -257,13 +257,13 @@ class SimplexTimer {
   };
 
   void reportDualSimplexIterateClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{IterateClock};
+    std::vector<HighsInt> simplex_clock_list{IterateClock};
     reportSimplexClockList("SimplexIterate", simplex_clock_list,
                            simplex_timer_clock);
   };
 
   void reportDualSimplexOuterClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{
+    std::vector<HighsInt> simplex_clock_list{
         IterateDualRebuildClock, IterateChuzrClock,   IterateChuzcClock,
         IterateFtranClock,       IterateVerifyClock,  IterateDualClock,
         IteratePrimalClock,      IterateDevexIzClock, IteratePivotsClock};
@@ -272,115 +272,117 @@ class SimplexTimer {
   };
 
   void reportSimplexInnerClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{initialiseSimplexLpBasisAndFactorClock,
-                                        allocateSimplexArraysClock,
-                                        initialiseSimplexCostBoundsClock,
-                                        setNonbasicMoveClock,
-                                        DevexIzClock,
-                                        DseIzClock,
-                                        ComputeDualClock,
-                                        CorrectDualClock,
-                                        ComputePrimalClock,
-                                        CollectPrIfsClock,
-                                        ComputePrIfsClock,
-                                        ComputeDuIfsClock,
-                                        ComputeDuObjClock,
-                                        ComputePrObjClock,
-                                        InvertClock,
-                                        ReportRebuildClock,
-                                        PermWtClock,
-                                        ChuzcPrimalClock,
-                                        ChuzcHyperInitialiselClock,
-                                        ChuzcHyperBasicFeasibilityChangeClock,
-                                        ChuzcHyperDualClock,
-                                        ChuzcHyperClock,
-                                        Chuzc0Clock,
-                                        Chuzc1Clock,
-                                        Chuzc2Clock,
-                                        Chuzc3Clock,
-                                        Chuzc4Clock,
-                                        FtranClock,
-                                        ChuzrDualClock,
-                                        Chuzr1Clock,
-                                        Chuzr2Clock,
-                                        BtranClock,
-                                        PriceClock,
-                                        BtranBasicFeasibilityChangeClock,
-                                        PriceBasicFeasibilityChangeClock,
-                                        UpdateDualBasicFeasibilityChangeClock,
-                                        FtranBfrtClock,
-                                        FtranDseClock,
-                                        BtranFullClock,
-                                        PriceFullClock,
-                                        DevexWtClock,
-                                        DevexUpdateWeightClock,
-                                        DseUpdateWeightClock,
-                                        UpdatePrimalClock,
-                                        UpdateDualClock,
-                                        UpdatePivotsClock,
-                                        UpdateFactorClock,
-                                        UpdateMatrixClock};
+    std::vector<HighsInt> simplex_clock_list{
+        initialiseSimplexLpBasisAndFactorClock,
+        allocateSimplexArraysClock,
+        initialiseSimplexCostBoundsClock,
+        setNonbasicMoveClock,
+        DevexIzClock,
+        DseIzClock,
+        ComputeDualClock,
+        CorrectDualClock,
+        ComputePrimalClock,
+        CollectPrIfsClock,
+        ComputePrIfsClock,
+        ComputeDuIfsClock,
+        ComputeDuObjClock,
+        ComputePrObjClock,
+        InvertClock,
+        ReportRebuildClock,
+        PermWtClock,
+        ChuzcPrimalClock,
+        ChuzcHyperInitialiselClock,
+        ChuzcHyperBasicFeasibilityChangeClock,
+        ChuzcHyperDualClock,
+        ChuzcHyperClock,
+        Chuzc0Clock,
+        Chuzc1Clock,
+        Chuzc2Clock,
+        Chuzc3Clock,
+        Chuzc4Clock,
+        FtranClock,
+        ChuzrDualClock,
+        Chuzr1Clock,
+        Chuzr2Clock,
+        BtranClock,
+        PriceClock,
+        BtranBasicFeasibilityChangeClock,
+        PriceBasicFeasibilityChangeClock,
+        UpdateDualBasicFeasibilityChangeClock,
+        FtranBfrtClock,
+        FtranDseClock,
+        BtranFullClock,
+        PriceFullClock,
+        DevexWtClock,
+        DevexUpdateWeightClock,
+        DseUpdateWeightClock,
+        UpdatePrimalClock,
+        UpdateDualClock,
+        UpdatePivotsClock,
+        UpdateFactorClock,
+        UpdateMatrixClock};
     reportSimplexClockList("SimplexInner", simplex_clock_list,
                            simplex_timer_clock);
   };
 
   void reportSimplexChuzc3Clock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{Chuzc3a0Clock, Chuzc3a1Clock,
-                                        Chuzc3bClock,  Chuzc3cClock,
-                                        Chuzc3dClock,  Chuzc3eClock};
+    std::vector<HighsInt> simplex_clock_list{Chuzc3a0Clock, Chuzc3a1Clock,
+                                             Chuzc3bClock,  Chuzc3cClock,
+                                             Chuzc3dClock,  Chuzc3eClock};
     reportChuzc3ClockList(simplex_clock_list, simplex_timer_clock);
   };
 
   void reportSimplexMultiInnerClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{ScaleClock,
-                                        CrashClock,
-                                        BasisConditionClock,
-                                        DseIzClock,
-                                        InvertClock,
-                                        PermWtClock,
-                                        ComputeDualClock,
-                                        CorrectDualClock,
-                                        ComputePrimalClock,
-                                        CollectPrIfsClock,
-                                        ComputePrIfsClock,
-                                        ComputeDuIfsClock,
-                                        ComputeDuObjClock,
-                                        ComputePrObjClock,
-                                        ReportRebuildClock,
-                                        ChuzrDualClock,
-                                        Chuzr1Clock,
-                                        Chuzr2Clock,
-                                        BtranClock,
-                                        BtranBasicFeasibilityChangeClock,
-                                        BtranFullClock,
-                                        PriceClock,
-                                        PriceBasicFeasibilityChangeClock,
-                                        PriceFullClock,
-                                        ChuzcPrimalClock,
-                                        ChuzcHyperInitialiselClock,
-                                        ChuzcHyperClock,
-                                        Chuzc0Clock,
-                                        PriceChuzc1Clock,
-                                        Chuzc1Clock,
-                                        Chuzc2Clock,
-                                        Chuzc3Clock,
-                                        Chuzc4Clock,
-                                        DevexWtClock,
-                                        FtranClock,
-                                        FtranBfrtClock,
-                                        FtranDseClock,
-                                        FtranMixParClock,
-                                        FtranMixFinalClock,
-                                        UpdateRowClock,
-                                        UpdateDualClock,
-                                        UpdateDualBasicFeasibilityChangeClock,
-                                        UpdatePrimalClock,
-                                        DevexUpdateWeightClock,
-                                        DseUpdateWeightClock,
-                                        DevexIzClock,
-                                        UpdatePivotsClock,
-                                        UpdateFactorClock,
-                                        UpdateMatrixClock};
+    std::vector<HighsInt> simplex_clock_list{
+        ScaleClock,
+        CrashClock,
+        BasisConditionClock,
+        DseIzClock,
+        InvertClock,
+        PermWtClock,
+        ComputeDualClock,
+        CorrectDualClock,
+        ComputePrimalClock,
+        CollectPrIfsClock,
+        ComputePrIfsClock,
+        ComputeDuIfsClock,
+        ComputeDuObjClock,
+        ComputePrObjClock,
+        ReportRebuildClock,
+        ChuzrDualClock,
+        Chuzr1Clock,
+        Chuzr2Clock,
+        BtranClock,
+        BtranBasicFeasibilityChangeClock,
+        BtranFullClock,
+        PriceClock,
+        PriceBasicFeasibilityChangeClock,
+        PriceFullClock,
+        ChuzcPrimalClock,
+        ChuzcHyperInitialiselClock,
+        ChuzcHyperClock,
+        Chuzc0Clock,
+        PriceChuzc1Clock,
+        Chuzc1Clock,
+        Chuzc2Clock,
+        Chuzc3Clock,
+        Chuzc4Clock,
+        DevexWtClock,
+        FtranClock,
+        FtranBfrtClock,
+        FtranDseClock,
+        FtranMixParClock,
+        FtranMixFinalClock,
+        UpdateRowClock,
+        UpdateDualClock,
+        UpdateDualBasicFeasibilityChangeClock,
+        UpdatePrimalClock,
+        DevexUpdateWeightClock,
+        DseUpdateWeightClock,
+        DevexIzClock,
+        UpdatePivotsClock,
+        UpdateFactorClock,
+        UpdateMatrixClock};
     reportSimplexClockList("SimplexMultiInner", simplex_clock_list,
                            simplex_timer_clock);
   };

@@ -152,22 +152,22 @@ enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
 
 enum class PriceMode { ROW = 0, COL };
 
-const int PARALLEL_THREADS_DEFAULT = 8;
-const int DUAL_TASKS_MIN_THREADS = 3;
-const int DUAL_MULTI_MIN_THREADS = 1;  // 2;
+const HighsInt PARALLEL_THREADS_DEFAULT = 8;
+const HighsInt DUAL_TASKS_MIN_THREADS = 3;
+const HighsInt DUAL_MULTI_MIN_THREADS = 1;  // 2;
 
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
-    class since they are used as int to replace conditional statements
+    class since they are used as HighsInt to replace conditional statements
     by multiplication */
-const int NONBASIC_FLAG_TRUE = 1;   // Nonbasic
-const int NONBASIC_FLAG_FALSE = 0;  // Basic
+const HighsInt NONBASIC_FLAG_TRUE = 1;   // Nonbasic
+const HighsInt NONBASIC_FLAG_FALSE = 0;  // Basic
 
 /** Simplex nonbasicMove status for columns and rows. Don't use enum
     class since they are used in conditional statements */
-const int NONBASIC_MOVE_UP = 1;   // Free to move (only) up
-const int NONBASIC_MOVE_DN = -1;  // Free to move (only) down
-const int NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
-const int illegal_move_value =
+const HighsInt NONBASIC_MOVE_UP = 1;   // Free to move (only) up
+const HighsInt NONBASIC_MOVE_DN = -1;  // Free to move (only) down
+const HighsInt NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
+const HighsInt illegal_move_value =
     -99;  // Used to see whether valid move value has been set
 //
 // Relation between HiGHS basis and Simplex basis
