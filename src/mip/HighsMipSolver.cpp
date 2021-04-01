@@ -226,7 +226,7 @@ restart:
         mipdata_->domain, mipdata_->feastol);
 
     // if global propagation detected infeasibility, stop here
-    if (mipdata_->domain.infeasible()) {
+    if (mipdata_->domain.infeasible() || mipdata_->nodequeue.empty()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->lower_bound = std::min(HIGHS_CONST_INF, mipdata_->upper_bound);
