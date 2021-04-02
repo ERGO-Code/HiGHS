@@ -44,9 +44,9 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<double> baseRowVals;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
-  std::vector<std::pair<double, int>> fractionalBasisvars;
+  std::vector<std::pair<double, HighsInt>> fractionalBasisvars;
   fractionalBasisvars.reserve(basisinds.size());
-  for (HighsInt i = 0; i != int(basisinds.size()); ++i) {
+  for (HighsInt i = 0; i != HighsInt(basisinds.size()); ++i) {
     if (cutpool.getNumCuts() > mip.options_mip_->mip_pool_soft_limit) break;
     double fractionality;
     if (basisinds[i] < 0) {
@@ -70,8 +70,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   }
 
   std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
-            [&fractionalBasisvars](const std::pair<double, int>& a,
-                                   const std::pair<double, int>& b) {
+            [&fractionalBasisvars](const std::pair<double, HighsInt>& a,
+                                   const std::pair<double, HighsInt>& b) {
               return std::make_tuple(
                          a.first,
                          HighsHashHelpers::hash((uint64_t(a.second) << 32) +
