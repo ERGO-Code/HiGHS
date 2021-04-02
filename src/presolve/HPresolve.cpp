@@ -3294,10 +3294,12 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         if (minLen1 < minLen2) return true;
         if (minLen2 < minLen1) return false;
 
-        return std::make_tuple(HighsHashHelpers::hash(nz1), nz1.first,
-                               nz1.second) <
-               std::make_tuple(HighsHashHelpers::hash(nz2), nz2.first,
-                               nz2.second);
+        return std::make_tuple(HighsHashHelpers::hash(std::make_pair(
+                                   uint32_t(nz1.first), uint32_t(nz1.second))),
+                               nz1.first, nz1.second) <
+               std::make_tuple(HighsHashHelpers::hash(std::make_pair(
+                                   uint32_t(nz2.first), uint32_t(nz2.second))),
+                               nz2.first, nz2.second);
       });
 
   HighsInt nfail = 0;
