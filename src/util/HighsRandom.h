@@ -192,7 +192,6 @@ class HighsRandom {
    */
   HighsInt integer(HighsInt sup) {  // let overload resolution select the 32bit
                                     // or the 64bit version
-    assert(sup > 1);
     if (sup <= 1) return 0;
     int nbits = log2i(HighsUInt(sup - 1)) + 1;
     return drawUniform(HighsUInt(sup), nbits);
