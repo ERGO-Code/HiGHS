@@ -75,7 +75,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           //	  printf("Dense: Row %4" HIGHSINT_FORMAT " weight = %g\n", iRow,
-          //myWeight);
+          // myWeight);
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
