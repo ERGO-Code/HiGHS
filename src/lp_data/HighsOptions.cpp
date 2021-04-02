@@ -400,10 +400,10 @@ OptionStatus setOptionValue(HighsLogOptions& log_options,
                           value_bool);
   } else if (type == HighsOptionType::INT) {
     HighsInt value_int;
-    HighsInt scanned_num_char;
+    int scanned_num_char;
     const char* value_char = value.c_str();
     sscanf(value_char, "%" HIGHSINT_FORMAT "%n", &value_int, &scanned_num_char);
-    const HighsInt value_num_char = strlen(value_char);
+    const int value_num_char = strlen(value_char);
     const bool converted_ok = scanned_num_char == value_num_char;
     if (!converted_ok) {
       highsLogDev(log_options, HighsLogType::ERROR,

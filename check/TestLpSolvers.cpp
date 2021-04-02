@@ -277,9 +277,9 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   const HighsInfo& info = highs.getHighsInfo();
-  REQUIRE(info.num_dual_infeasibilities == 2);
+  REQUIRE(info.num_dual_infeasibilities == 1);
 
-  REQUIRE(info.simplex_iteration_count == 378);
+  REQUIRE(info.simplex_iteration_count == 403);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::NOTSET);
@@ -295,7 +295,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
 
-  REQUIRE(info.simplex_iteration_count == 583);
+  REQUIRE(info.simplex_iteration_count == 598);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

@@ -25,7 +25,7 @@ class HighsRandom {
   // unrolled loop and requires few instructions that can be well optimized.
 
   int log2i(uint64_t n) {
-    int x = -(n == 0);
+    int x = 0;
 
     auto log2Iteration = [&](int p) {
       if (n >= uint64_t{1} << p) {
@@ -45,7 +45,7 @@ class HighsRandom {
   }
 
   int log2i(uint32_t n) {
-    int x = -(n == 0);
+    int x = 0;
 
     auto log2Iteration = [&](int p) {
       if (n >= 1u << p) {
@@ -69,6 +69,7 @@ class HighsRandom {
     // until we get one that is in the desired range we first use all available
     // output functions for the same state before we advance the state again. We
     // expect nbits to be at most 32 for this 32 bit version.
+    assert(sup <= uint32_t{1} << nbits);
     while (true) {
       advance();
       uint32_t lo = state;
@@ -106,6 +107,7 @@ class HighsRandom {
     // 32 bits
     if (nbits <= 32) return drawUniform(uint32_t(sup), nbits);
 
+    assert(sup <= uint64_t{1} << nbits);
     while (true) {
       advance();
       uint32_t lo = state;
