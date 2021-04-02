@@ -250,6 +250,7 @@ set(headers
     util/HighsComponent.h
     util/HighsDataStack.h
     util/HighsHash.h
+    util/HighsInt.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h
@@ -636,6 +637,7 @@ set(headers_fast_build_
     util/HighsComponent.h
     util/HighsDataStack.h
     util/HighsHash.h
+    util/HighsInt.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h
