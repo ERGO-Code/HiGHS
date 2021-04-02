@@ -3317,12 +3317,12 @@ String toString(double long in) { return fpToString(in, 15); }
         return buf;                                                                                \
     }
 
-DOCTEST_TO_STRING_OVERLOAD(char, "%" HIGHSINT_FORMAT "")
-DOCTEST_TO_STRING_OVERLOAD(char signed, "%" HIGHSINT_FORMAT "")
+DOCTEST_TO_STRING_OVERLOAD(char, "%d")
+DOCTEST_TO_STRING_OVERLOAD(char signed, "%d")
 DOCTEST_TO_STRING_OVERLOAD(char unsigned, "%u")
-DOCTEST_TO_STRING_OVERLOAD(int short, "%" HIGHSINT_FORMAT "")
+DOCTEST_TO_STRING_OVERLOAD(int short, "%d")
 DOCTEST_TO_STRING_OVERLOAD(int short unsigned, "%u")
-DOCTEST_TO_STRING_OVERLOAD(int, "%" HIGHSINT_FORMAT "")
+DOCTEST_TO_STRING_OVERLOAD(int, "%d")
 DOCTEST_TO_STRING_OVERLOAD(unsigned, "%u")
 DOCTEST_TO_STRING_OVERLOAD(int long, "%ld")
 DOCTEST_TO_STRING_OVERLOAD(int long unsigned, "%lu")
@@ -4953,7 +4953,7 @@ DOCTEST_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wdeprecated-declarations") // gmtime
                 timeInfo = std::gmtime(&rawtime);
 
                 char timeStamp[timeStampSize];
-                const char* const fmt = "%Y-%m-%" HIGHSINT_FORMAT "T%H:%M:%SZ";
+                const char* const fmt = "%Y-%m-%dT%H:%M:%SZ";
 
                 std::strftime(timeStamp, timeStampSize, fmt, timeInfo);
                 return std::string(timeStamp);
