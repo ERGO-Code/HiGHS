@@ -53,10 +53,10 @@ void HighsPrimalHeuristics::setupIntCols() {
 
     return std::make_tuple(uplocks1 * downlocks1,
                            cliqueImplicsUp1 * cliqueImplicsDown1,
-                           HighsHashHelpers::hash(c1), c1) >
+                           HighsHashHelpers::hash(uint64_t(c1)), c1) >
            std::make_tuple(uplocks2 * downlocks2,
                            cliqueImplicsUp2 * cliqueImplicsDown2,
-                           HighsHashHelpers::hash(c2), c2);
+                           HighsHashHelpers::hash(uint64_t(c2)), c2);
   });
 }
 
