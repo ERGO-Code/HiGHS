@@ -235,7 +235,6 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
     set(HiGHSRELEASE ON)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 include_directories(
