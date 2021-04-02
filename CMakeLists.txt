@@ -177,7 +177,7 @@ if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
 endif()
 
 option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
-if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
+if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
     message(STATUS "HIGHSINT64: " ${HIGHSINT64})
 endif()
 
