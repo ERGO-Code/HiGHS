@@ -140,7 +140,8 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
          highsBoolToString(*log_options_.output_flag).c_str());
   printf("   log_to_console = %s\n",
          highsBoolToString(*log_options_.log_to_console).c_str());
-  printf("   log_dev_level = %d\n\n", *log_options_.log_dev_level);
+  printf("   log_dev_level = %" HIGHSINT_FORMAT "\n\n",
+         *log_options_.log_dev_level);
 }
 
 std::string highsFormatToString(const char* format, ...) {

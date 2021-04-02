@@ -262,8 +262,8 @@ class HighsPostsolveStack {
                          const std::vector<HighsInt>& newColIndex);
 
   template <typename RowStorageFormat, typename ColStorageFormat>
-  void freeColSubstitution(HighsInt row, HighsInt col, double rhs, double colCost,
-                           RowType rowType,
+  void freeColSubstitution(HighsInt row, HighsInt col, double rhs,
+                           double colCost, RowType rowType,
                            const HighsMatrixSlice<RowStorageFormat>& rowVec,
                            const HighsMatrixSlice<ColStorageFormat>& colVec) {
     rowValues.clear();
@@ -282,9 +282,9 @@ class HighsPostsolveStack {
   }
 
   template <typename ColStorageFormat>
-  void doubletonEquation(HighsInt row, HighsInt colSubst, HighsInt col, double coefSubst,
-                         double coef, double rhs, double substLower,
-                         double substUpper, double substCost,
+  void doubletonEquation(HighsInt row, HighsInt colSubst, HighsInt col,
+                         double coefSubst, double coef, double rhs,
+                         double substLower, double substUpper, double substCost,
                          bool lowerTightened, bool upperTightened,
                          const HighsMatrixSlice<ColStorageFormat>& colVec) {
     colValues.clear();
@@ -326,8 +326,8 @@ class HighsPostsolveStack {
     reductions.push_back(ReductionType::kEqualityRowAdditions);
   }
 
-  void singletonRow(HighsInt row, HighsInt col, double coef, bool tightenedColLower,
-                    bool tightenedColUpper) {
+  void singletonRow(HighsInt row, HighsInt col, double coef,
+                    bool tightenedColLower, bool tightenedColUpper) {
     reductionValues.push(SingletonRow{coef, origRowIndex[row],
                                       origColIndex[col], tightenedColLower,
                                       tightenedColUpper});
@@ -395,8 +395,9 @@ class HighsPostsolveStack {
   }
 
   template <typename RowStorageFormat>
-  void forcingRow(HighsInt row, const HighsMatrixSlice<RowStorageFormat>& rowVec,
-                  double side, RowType rowType) {
+  void forcingRow(HighsInt row,
+                  const HighsMatrixSlice<RowStorageFormat>& rowVec, double side,
+                  RowType rowType) {
     rowValues.clear();
     for (const HighsSliceNonzero& rowVal : rowVec)
       rowValues.emplace_back(origColIndex[rowVal.index()], rowVal.value());
@@ -407,7 +408,8 @@ class HighsPostsolveStack {
   }
 
   template <typename ColStorageFormat>
-  void forcingColumn(HighsInt col, const HighsMatrixSlice<ColStorageFormat>& colVec,
+  void forcingColumn(HighsInt col,
+                     const HighsMatrixSlice<ColStorageFormat>& colVec,
                      double cost, double boundVal, bool atInfiniteUpper) {
     colValues.clear();
     for (const HighsSliceNonzero& colVal : colVec)
@@ -433,8 +435,9 @@ class HighsPostsolveStack {
     reductions.push_back(ReductionType::kForcingColumnRemovedRow);
   }
 
-  void duplicateRow(HighsInt row, bool rowUpperTightened, bool rowLowerTightened,
-                    HighsInt duplicateRow, double duplicateRowScale) {
+  void duplicateRow(HighsInt row, bool rowUpperTightened,
+                    bool rowLowerTightened, HighsInt duplicateRow,
+                    double duplicateRowScale) {
     reductionValues.push(
         DuplicateRow{duplicateRowScale, origRowIndex[duplicateRow],
                      origRowIndex[row], rowLowerTightened, rowUpperTightened});
@@ -690,7 +693,8 @@ class HighsPostsolveStack {
     }
   }
 
-  void undoUntil(const HighsOptions& options, const std::vector<HighsInt>& flagRow,
+  void undoUntil(const HighsOptions& options,
+                 const std::vector<HighsInt>& flagRow,
                  const std::vector<HighsInt>& flagCol, HighsSolution& solution,
                  HighsBasis& basis, HighsInt numReductions) {
     reductionValues.resetPosition();

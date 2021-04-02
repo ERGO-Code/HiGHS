@@ -27,8 +27,8 @@ HighsStatus writeLpMatrixPicToFile(const HighsOptions& options,
 }
 
 HighsStatus writeMatrixPicToFile(const HighsOptions& options,
-                                 const std::string fileprefix, const HighsInt numRow,
-                                 const HighsInt numCol,
+                                 const std::string fileprefix,
+                                 const HighsInt numRow, const HighsInt numCol,
                                  const std::vector<HighsInt>& Astart,
                                  const std::vector<HighsInt>& Aindex) {
   std::vector<HighsInt> ARlength;
@@ -70,8 +70,10 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   const HighsInt border_width = 1;
   const HighsInt max_num_pixel_wide = 1600;
   const HighsInt max_num_pixel_deep = 900;
-  const HighsInt max_num_matrix_pixel_wide = max_num_pixel_wide - 2 * border_width;
-  const HighsInt max_num_matrix_pixel_deep = max_num_pixel_deep - 2 * border_width;
+  const HighsInt max_num_matrix_pixel_wide =
+      max_num_pixel_wide - 2 * border_width;
+  const HighsInt max_num_matrix_pixel_deep =
+      max_num_pixel_deep - 2 * border_width;
   HighsInt num_col_per_pixel = 1;
   HighsInt num_row_per_pixel = 1;
   if (numCol > max_num_matrix_pixel_wide) {
@@ -97,8 +99,11 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
 
   highsLogUser(
       options.log_options, HighsLogType::INFO,
-      "Representing LP constraint matrix sparsity pattern %dx%d .pbm file,"
-      " mapping entries in square of size %d onto one pixel\n",
+      "Representing LP constraint matrix sparsity pattern %" HIGHSINT_FORMAT
+      "x%" HIGHSINT_FORMAT
+      " .pbm file,"
+      " mapping entries in square of size %" HIGHSINT_FORMAT
+      " onto one pixel\n",
       num_pixel_wide, num_pixel_deep, dim_per_pixel);
 
   std::vector<HighsInt> value;
@@ -128,7 +133,8 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
     // LH border
     f << "1 " << std::endl;
     pic_num_row++;
-    for (HighsInt pixel = 0; pixel < num_pixel_wide - 2; pixel++) value[pixel] = 0;
+    for (HighsInt pixel = 0; pixel < num_pixel_wide - 2; pixel++)
+      value[pixel] = 0;
     if (to_row == numRow) break;
     from_row = to_row;
   }

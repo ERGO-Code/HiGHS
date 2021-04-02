@@ -27,8 +27,8 @@
 template <HighsInt k, typename FoundModKCut>
 static void separateModKCuts(const std::vector<int64_t>& intSystemValue,
                              const std::vector<HighsInt>& intSystemIndex,
-                             const std::vector<HighsInt>& intSystemStart, HighsInt numCol,
-                             FoundModKCut&& foundModKCut) {
+                             const std::vector<HighsInt>& intSystemStart,
+                             HighsInt numCol, FoundModKCut&& foundModKCut) {
   HighsGFkSolve GFkSolve;
 
   GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,

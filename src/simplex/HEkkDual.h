@@ -112,7 +112,7 @@ class HEkkDual {
    */
   void initSlice(
       const HighsInt init_sliced_num  //!< Ideal number of slices - true number
-                                 //!< is modified in light of limits
+                                      //!< is modified in light of limits
   );
 
   /**

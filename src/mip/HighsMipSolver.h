@@ -64,7 +64,9 @@ class HighsMipSolver {
     return model_->integrality_.data();
   }
 
-  HighsVarType variableType(HighsInt col) const { return model_->integrality_[col]; }
+  HighsVarType variableType(HighsInt col) const {
+    return model_->integrality_[col];
+  }
 
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                  bool submip = false);

@@ -721,8 +721,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //                 HighsLogType::WARNING,
       //                 "LP failed to reliably determine infeasibility\n");
 
-      // printf("error: unreliable infeasiblities, modelstatus = %d (scaled
-      // %d)\n",
+      // printf("error: unreliable infeasiblities, modelstatus = %"
+      // HIGHSINT_FORMAT " (scaled
+      // %" HIGHSINT_FORMAT ")\n",
       //        (HighsInt)lpsolver.getModelStatus(),
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::Error;
@@ -787,10 +788,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     case HighsModelStatus::REACHED_TIME_LIMIT:
       return Status::Error;
     default:
-      // printf("error: lpsolver stopped with unexpected status %d\n",
+      // printf("error: lpsolver stopped with unexpected status %"
+      // HIGHSINT_FORMAT "\n",
       //        (HighsInt)scaledmodelstatus);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::WARNING,
-                   "LP solved to unexpected status (%d)\n",
+                   "LP solved to unexpected status (%" HIGHSINT_FORMAT ")\n",
                    (HighsInt)scaledmodelstatus);
       return Status::Error;
   }

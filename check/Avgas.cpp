@@ -177,7 +177,7 @@ void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
     ARvalue[num_row_nz] = -2;
     num_row_nz++;
   } else {
-    if (dev_run) printf("Avgas: row %d out of range\n", row);
+    if (dev_run) printf("Avgas: row %" HIGHSINT_FORMAT " out of range\n", row);
   }
   num_row++;
 }
@@ -333,7 +333,7 @@ void Avgas::col(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
     Avalue[num_col_nz] = -2;
     num_col_nz++;
   } else {
-    if (dev_run) printf("Avgas: col %d out of range\n", col);
+    if (dev_run) printf("Avgas: col %" HIGHSINT_FORMAT " out of range\n", col);
   }
   num_col++;
 }

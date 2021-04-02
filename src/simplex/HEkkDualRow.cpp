@@ -428,7 +428,8 @@ void HEkkDualRow::chooseFinalLargeAlpha(
   for (HighsInt iGroup = countGroup - 1; iGroup >= 0; iGroup--) {
     double dMaxFinal = 0;
     HighsInt iMaxFinal = -1;
-    for (HighsInt i = pass_workGroup[iGroup]; i < pass_workGroup[iGroup + 1]; i++) {
+    for (HighsInt i = pass_workGroup[iGroup]; i < pass_workGroup[iGroup + 1];
+         i++) {
       if (dMaxFinal < pass_workData[i].second) {
         dMaxFinal = pass_workData[i].second;
         iMaxFinal = i;
@@ -490,7 +491,7 @@ void HEkkDualRow::updateDual(double theta) {
 void HEkkDualRow::createFreelist() {
   freeList.clear();
   for (HighsInt i = 0; i < ekk_instance_.simplex_lp_.numCol_ +
-                          ekk_instance_.simplex_lp_.numRow_;
+                               ekk_instance_.simplex_lp_.numRow_;
        i++) {
     if (ekk_instance_.simplex_basis_.nonbasicFlag_[i] &&
         highs_isInfinity(-ekk_instance_.simplex_info_.workLower_[i]) &&
@@ -545,7 +546,8 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
   for (HighsInt el_n = 0; el_n < packCount; el_n++) {
     HighsInt vr_n = packIndex[el_n];
     if (!ekk_instance_.simplex_basis_.nonbasicFlag_[vr_n]) {
-      //      printf("Basic variable %d in packIndex is skipped\n", vr_n);
+      //      printf("Basic variable %" HIGHSINT_FORMAT " in packIndex is
+      //      skipped\n", vr_n);
       continue;
     }
     double pv = work_devex_index[vr_n] * packValue[el_n];
@@ -555,9 +557,9 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
   }
   if (rp_computed_edge_weight) {
     if (slice >= 0)
-      printf(
-          "HEkkDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = "
-          "%11.4g\n",
-          slice, computed_edge_weight);
+      printf("HEkkDualRow::computeDevexWeight: Slice %1" HIGHSINT_FORMAT
+             "; computed_edge_weight = "
+             "%11.4g\n",
+             slice, computed_edge_weight);
   }
 }

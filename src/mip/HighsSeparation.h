@@ -24,7 +24,7 @@ class HighsCliqueTable;
 class HighsSeparation {
  public:
   HighsInt separationRound(HighsDomain& propdomain,
-                      HighsLpRelaxation::Status& status);
+                           HighsLpRelaxation::Status& status);
 
   void separate(HighsDomain& propdomain);
 

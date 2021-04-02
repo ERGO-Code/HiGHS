@@ -99,9 +99,13 @@ class HighsSearch {
     return true;
   }
 
-  void markBranchingVarUpReliableAtNode(HighsInt col) { reliableatnode[col] |= 1; }
+  void markBranchingVarUpReliableAtNode(HighsInt col) {
+    reliableatnode[col] |= 1;
+  }
 
-  void markBranchingVarDownReliableAtNode(HighsInt col) { reliableatnode[col] |= 2; }
+  void markBranchingVarDownReliableAtNode(HighsInt col) {
+    reliableatnode[col] |= 2;
+  }
 
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);

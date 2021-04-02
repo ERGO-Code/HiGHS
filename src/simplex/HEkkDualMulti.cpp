@@ -54,10 +54,12 @@ void HEkkDual::iterateMulti() {
     if (multi_nFinish) {
       majorUpdate();
     } else {
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::WARNING,
-                   "PAMI skipping majorUpdate() due to multi_nFinish = %d; "
-                   "rebuild_reason = %d\n",
-                   multi_nFinish, rebuild_reason);
+      highsLogUser(
+          ekk_instance_.options_.log_options, HighsLogType::WARNING,
+          "PAMI skipping majorUpdate() due to multi_nFinish = %" HIGHSINT_FORMAT
+          "; "
+          "rebuild_reason = %" HIGHSINT_FORMAT "\n",
+          multi_nFinish, rebuild_reason);
     }
     return;
   }
@@ -300,8 +302,8 @@ void HEkkDual::minorUpdate() {
   minorUpdateRows();
   if (minor_new_devex_framework) {
     /*
-    printf("Iter %7d (Major %7d): Minor new Devex framework\n",
-           ekk_instance_.iteration_counts_.simplex,
+    printf("Iter %7" HIGHSINT_FORMAT " (Major %7" HIGHSINT_FORMAT "): Minor new
+    Devex framework\n", ekk_instance_.iteration_counts_.simplex,
            multi_iteration);
     */
     minorInitialiseDevexFramework();
@@ -379,7 +381,8 @@ void HEkkDual::minorUpdatePrimal() {
       !new_devex_framework) {
     assert(row_out >= 0);
     if (row_out < 0)
-      printf("ERROR: row_out = %d in minorUpdatePrimal\n", row_out);
+      printf("ERROR: row_out = %" HIGHSINT_FORMAT " in minorUpdatePrimal\n",
+             row_out);
     const double updated_edge_weight = dualRHS.workEdWt[row_out];
     new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
@@ -551,7 +554,7 @@ void HEkkDual::majorUpdate() {
   majorUpdatePrimal();
   majorUpdateFactor();
   if (new_devex_framework) {
-    //    printf("Iter %7d: New Devex framework\n",
+    //    printf("Iter %7" HIGHSINT_FORMAT ": New Devex framework\n",
     //    ekk_instance_.iteration_counts_.simplex);
     const bool parallel = true;
     initialiseDevexFramework(parallel);

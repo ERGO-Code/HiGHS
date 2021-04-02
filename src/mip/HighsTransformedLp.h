@@ -34,8 +34,10 @@ class HighsTransformedLp {
   const HighsLpRelaxation& lprelaxation;
   HighsImplications& implications;
 
-  std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*> bestVub;
-  std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*> bestVlb;
+  std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*>
+      bestVub;
+  std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*>
+      bestVlb;
   std::vector<double> simpleLbDist;
   std::vector<double> simpleUbDist;
   std::vector<double> lbDist;

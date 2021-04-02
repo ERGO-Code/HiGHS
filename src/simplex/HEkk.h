@@ -101,8 +101,9 @@ class HEkk {
   bool getNonsingularInverse(const HighsInt solve_phase = 0);
   bool getBacktrackingBasis(double* scattered_edge_weights);
   void putBacktrackingBasis();
-  void putBacktrackingBasis(const vector<HighsInt>& basicIndex_before_compute_factor,
-                            double* scattered_edge_weights);
+  void putBacktrackingBasis(
+      const vector<HighsInt>& basicIndex_before_compute_factor,
+      double* scattered_edge_weights);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
   HighsInt computeFactor();
@@ -138,7 +139,8 @@ class HEkk {
                                   const double numerical_trouble_tolerance);
 
   void flipBound(const HighsInt iCol);
-  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow, HighsInt* hint);
+  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
+                    HighsInt* hint);
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
@@ -149,7 +151,8 @@ class HEkk {
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
-  bool sparseLoopStyle(const HighsInt count, const HighsInt dim, HighsInt& to_entry);
+  bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
+                       HighsInt& to_entry);
   void invalidatePrimalInfeasibilityRecord();
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();

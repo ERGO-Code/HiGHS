@@ -109,7 +109,8 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
 
 HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
-                                                  const HighsInt v0, const HighsInt v1);
+                                                  const HighsInt v0,
+                                                  const HighsInt v1);
 
 void debugReportHighsBasicSolution(const string message,
                                    const HighsOptions& options,

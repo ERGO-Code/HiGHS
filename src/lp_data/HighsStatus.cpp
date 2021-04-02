@@ -25,7 +25,8 @@ std::string HighsStatusToString(HighsStatus status) {
       break;
     default:
 #ifdef HiGHSDEV
-      printf("HiGHS status %d not recognised\n", (HighsInt)status);
+      printf("HiGHS status %" HIGHSINT_FORMAT " not recognised\n",
+             (HighsInt)status);
 #endif
       return "Unrecognised HiGHS status";
       break;

@@ -282,7 +282,8 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
     highsLogUser(log_options, HighsLogType::WARNING,
-                 "Rank deficiency of %d identified in basis matrix\n",
+                 "Rank deficiency of %" HIGHSINT_FORMAT
+                 " identified in basis matrix\n",
                  rank_deficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
@@ -383,7 +384,7 @@ void HFactor::buildSimple() {
       } else {
         highsLogUser(log_options, HighsLogType::ERROR,
                      "INVERT Error: Found a logical column with pivot "
-                     "already in row %d\n",
+                     "already in row %" HIGHSINT_FORMAT "\n",
                      lc_iRow);
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
@@ -401,10 +402,10 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         if (unit_col)
-          highsLogUser(
-              log_options, HighsLogType::ERROR,
-              "INVERT Error: Found a second unit column with pivot in row %d\n",
-              lc_iRow);
+          highsLogUser(log_options, HighsLogType::ERROR,
+                       "INVERT Error: Found a second unit column with pivot in "
+                       "row %" HIGHSINT_FORMAT "\n",
+                       lc_iRow);
         for (HighsInt k = start; k < start + count; k++) {
           MRcountb4[Aindex[k]]++;
           Bindex[BcountX] = Aindex[k];
@@ -600,13 +601,13 @@ HighsInt HFactor::buildKernel() {
       for (HighsInt k = 0; k < numRow; k++) {
         if (rlinkFirst[k] >= 0) {
           if (f_k) {
-            printf(" (%2d:", k);
+            printf(" (%2" HIGHSINT_FORMAT ":", k);
             f_k = false;
           } else {
-            printf("; (%2d:", k);
+            printf("; (%2" HIGHSINT_FORMAT ":", k);
           }
           for (HighsInt i = rlinkFirst[k]; i != -1; i = rlinkNext[i]) {
-            printf(" %2d", i);
+            printf(" %2" HIGHSINT_FORMAT "", i);
           }
           printf(")");
         }
@@ -617,11 +618,11 @@ HighsInt HFactor::buildKernel() {
     if (rp_permute) {
       printf("Permute:\n");
       for (HighsInt i = 0; i < numRow; i++) {
-        printf(" %2d", i);
+        printf(" %2" HIGHSINT_FORMAT "", i);
       }
       printf("\n");
       for (HighsInt i = 0; i < numRow; i++) {
-        printf(" %2d", permute[i]);
+        printf(" %2" HIGHSINT_FORMAT "", permute[i]);
       }
       printf("\n");
     }
@@ -719,7 +720,8 @@ HighsInt HFactor::buildKernel() {
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
       highsLogUser(log_options, HighsLogType::WARNING,
-                   "Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
+                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
+                   fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
     }

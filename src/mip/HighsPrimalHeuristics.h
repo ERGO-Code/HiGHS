@@ -39,8 +39,8 @@ class HighsPrimalHeuristics {
 
   bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
                    double fixingRate, std::vector<double> colLower,
-                   std::vector<double> colUpper, HighsInt maxleaves, HighsInt maxnodes,
-                   HighsInt stallnodes);
+                   std::vector<double> colUpper, HighsInt maxleaves,
+                   HighsInt maxnodes, HighsInt stallnodes);
 
   double determineTargetFixingRate();
 

@@ -20,7 +20,8 @@
 HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
                                     const double* XcolLower,
                                     const double* XcolUpper, HighsInt XnumNewNZ,
-                                    const HighsInt* XAstart, const HighsInt* XAindex,
+                                    const HighsInt* XAstart,
+                                    const HighsInt* XAindex,
                                     const double* XAvalue) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
@@ -109,7 +110,8 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   // Now consider scaling. First resize the scaling factors and
   // initialise the new components
   scale.col_.resize(newNumCol);
-  for (HighsInt col = 0; col < XnumNewCol; col++) scale.col_[lp.numCol_ + col] = 1.0;
+  for (HighsInt col = 0; col < XnumNewCol; col++)
+    scale.col_[lp.numCol_ + col] = 1.0;
 
   // Now consider any new matrix columns
   if (XnumNewNZ) {
@@ -202,9 +204,11 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   return return_status;
 }
 
-HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow, const double* XrowLower,
+HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
+                                    const double* XrowLower,
                                     const double* XrowUpper, HighsInt XnumNewNZ,
-                                    const HighsInt* XARstart, const HighsInt* XARindex,
+                                    const HighsInt* XARstart,
+                                    const HighsInt* XARindex,
                                     const double* XARvalue) {
   // addRows is fundamentally different from addCols, since the new
   // matrix data are held row-wise, so we have to insert data into the
@@ -286,7 +290,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow, const double* XrowLower
   // Now consider scaling. First resize the scaling factors and
   // initialise the new components
   scale.row_.resize(newNumRow);
-  for (HighsInt row = 0; row < XnumNewRow; row++) scale.row_[lp.numRow_ + row] = 1.0;
+  for (HighsInt row = 0; row < XnumNewRow; row++)
+    scale.row_[lp.numRow_ + row] = 1.0;
 
   // Now consider any new matrix rows
   if (XnumNewNZ) {
@@ -516,7 +521,8 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
 HighsStatus Highs::getColsInterface(
     const HighsIndexCollection& index_collection, HighsInt& num_col,
     double* col_cost, double* col_lower, double* col_upper, HighsInt& num_nz,
-    HighsInt* col_matrix_start, HighsInt* col_matrix_index, double* col_matrix_value) {
+    HighsInt* col_matrix_start, HighsInt* col_matrix_index,
+    double* col_matrix_value) {
   HighsModelObject& highs_model_object = hmos_[0];
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
@@ -568,8 +574,8 @@ HighsStatus Highs::getColsInterface(
             num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
       num_col++;
     }
-    for (HighsInt el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col + 1];
-         el++) {
+    for (HighsInt el = lp.Astart_[out_from_col];
+         el < lp.Astart_[out_to_col + 1]; el++) {
       if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
       if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
       num_nz++;
@@ -581,8 +587,9 @@ HighsStatus Highs::getColsInterface(
 
 HighsStatus Highs::getRowsInterface(
     const HighsIndexCollection& index_collection, HighsInt& num_row,
-    double* row_lower, double* row_upper, HighsInt& num_nz, HighsInt* row_matrix_start,
-    HighsInt* row_matrix_index, double* row_matrix_value) {
+    double* row_lower, double* row_upper, HighsInt& num_nz,
+    HighsInt* row_matrix_start, HighsInt* row_matrix_index,
+    double* row_matrix_value) {
   HighsModelObject& highs_model_object = hmos_[0];
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
@@ -730,8 +737,8 @@ HighsStatus Highs::getRowsInterface(
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
-                                           double& value) {
+HighsStatus Highs::getCoefficientInterface(const HighsInt Xrow,
+                                           const HighsInt Xcol, double& value) {
   if (Xrow < 0 || Xrow >= lp_.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol >= lp_.numCol_) return HighsStatus::Error;
   value = 0;
@@ -965,7 +972,8 @@ HighsStatus Highs::changeRowBoundsInterface(
 }
 
 // Change a single coefficient in the matrix
-HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
+HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
+                                              const HighsInt Xcol,
                                               const double XnewValue) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
@@ -1001,7 +1009,8 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow, const HighsIn
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::scaleColInterface(const HighsInt col, const double scaleval) {
+HighsStatus Highs::scaleColInterface(const HighsInt col,
+                                     const double scaleval) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsStatus return_status = HighsStatus::OK;
@@ -1054,7 +1063,8 @@ HighsStatus Highs::scaleColInterface(const HighsInt col, const double scaleval) 
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::scaleRowInterface(const HighsInt row, const double scaleval) {
+HighsStatus Highs::scaleRowInterface(const HighsInt row,
+                                     const double scaleval) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsStatus return_status = HighsStatus::OK;
@@ -1325,7 +1335,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
 HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
                                        double* solution_vector,
                                        HighsInt* solution_num_nz,
-                                       HighsInt* solution_indices, bool transpose) {
+                                       HighsInt* solution_indices,
+                                       bool transpose) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HVector solve_vector;

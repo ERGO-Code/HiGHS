@@ -22,8 +22,12 @@
 #define LOWERBOUND_WEIGHT .5
 
 void HighsNodeQueue::link_estim(HighsInt node) {
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftestimate; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightestimate; };
+  auto get_left = [&](HighsInt n) -> HighsInt& {
+    return nodes[n].leftestimate;
+  };
+  auto get_right = [&](HighsInt n) -> HighsInt& {
+    return nodes[n].rightestimate;
+  };
   auto get_key = [&](HighsInt n) {
     return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
@@ -36,8 +40,12 @@ void HighsNodeQueue::link_estim(HighsInt node) {
 }
 
 void HighsNodeQueue::unlink_estim(HighsInt node) {
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftestimate; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightestimate; };
+  auto get_left = [&](HighsInt n) -> HighsInt& {
+    return nodes[n].leftestimate;
+  };
+  auto get_right = [&](HighsInt n) -> HighsInt& {
+    return nodes[n].rightestimate;
+  };
   auto get_key = [&](HighsInt n) {
     return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
@@ -274,8 +282,12 @@ void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
 }
 
 HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
-  auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftestimate; };
-  auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightestimate; };
+  auto get_left = [&](HighsInt n) -> HighsInt& {
+    return nodes[n].leftestimate;
+  };
+  auto get_right = [&](HighsInt n) -> HighsInt& {
+    return nodes[n].rightestimate;
+  };
   auto get_key = [&](HighsInt n) {
     return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
@@ -355,10 +367,10 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
   assert(bestNode != -1);
 
   // printf(
-  //     "popping related node %d with lower bound %g and estimate %g which has
-  //     " "col %d with reduced cost %g flipped\n", bestNode,
-  //     nodes[bestNode].lower_bound, nodes[bestNode].estimate, bestCol,
-  //     bestRedCost);
+  //     "popping related node %" HIGHSINT_FORMAT " with lower bound %g and
+  //     estimate %g which has " "col %" HIGHSINT_FORMAT " with reduced cost %g
+  //     flipped\n", bestNode, nodes[bestNode].lower_bound,
+  //     nodes[bestNode].estimate, bestCol, bestRedCost);
 
   unlink(bestNode);
 

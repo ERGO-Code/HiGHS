@@ -54,7 +54,9 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
       delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
       delta_primal_phase1_iteration_count + delta_primal_phase2_iteration_count;
   if (check_delta_iteration_count != delta_iteration_count) {
-    printf("Iteration total error %d + %d + %d + %d = %d != %d\n",
+    printf("Iteration total error %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT
+           " + %" HIGHSINT_FORMAT " + %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
+           " != %" HIGHSINT_FORMAT "\n",
            delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
            delta_primal_phase1_iteration_count,
            delta_primal_phase2_iteration_count, check_delta_iteration_count,
@@ -78,6 +80,6 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
   }
 
   highsLogDev(log_options, HighsLogType::INFO,
-              "Simplex iterations: %sTotal %d\n",
+              "Simplex iterations: %sTotal %" HIGHSINT_FORMAT "\n",
               iteration_report.str().c_str(), delta_iteration_count);
 }

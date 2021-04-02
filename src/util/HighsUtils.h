@@ -25,7 +25,8 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
                           const std::vector<HighsInt>& Astart,
                           const std::vector<HighsInt>& Aindex,
                           const std::vector<double>& Avalue,
-                          std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
+                          std::vector<HighsInt>& ARstart,
+                          std::vector<HighsInt>& ARindex,
                           std::vector<double>& ARvalue);
 
 struct HighsIndexCollection {
@@ -90,9 +91,11 @@ bool limitsForIndexCollection(const HighsLogOptions& log_options,
 
 void updateIndexCollectionOutInIndex(
     const HighsIndexCollection& index_collection, HighsInt& out_from_ix,
-    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix, HighsInt& current_set_entry);
+    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix,
+    HighsInt& current_set_entry);
 
-HighsInt dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
+HighsInt dataSizeOfIndexCollection(
+    const HighsIndexCollection& index_collection);
 
 bool intUserDataNotNull(const HighsLogOptions& log_options,
                         const HighsInt* user_data, const std::string name);
@@ -119,7 +122,7 @@ double highsRelativeDifference(const double v0, const double v1);
 void analyseVectorValues(
     const HighsLogOptions& log_options,
     const char* message,             //!< Message to be printed
-    HighsInt vecDim,                      //!< Dimension of vector
+    HighsInt vecDim,                 //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
                                      //!< different values in the vector
@@ -130,7 +133,7 @@ void analyseVectorValues(
 
 void analyseMatrixSparsity(
     const HighsLogOptions& log_options,
-    const char* message,             //!< Message to be printed
+    const char* message,                  //!< Message to be printed
     HighsInt numCol,                      //!< Number of columns
     HighsInt numRow,                      //!< Number of rows
     const std::vector<HighsInt>& Astart,  //!< Matrix column starts

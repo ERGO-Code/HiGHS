@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include <vector>
+
 #include "util/HighsInt.h"
 typedef HighsInt ipxint;
 

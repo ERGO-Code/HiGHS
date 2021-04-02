@@ -137,9 +137,9 @@ HighsStatus getRangingData(HighsRanging& ranging,
 
   vector<double> txj_inc(numTotal, +THETA_INF);  // theta
   vector<double> axj_inc(numTotal, 0);           // alpha
-  vector<HighsInt> ixj_inc(numTotal, -1);             // i-out
-  vector<HighsInt> wxj_inc(numTotal, 0);              // which bound is limiting
-  vector<HighsInt> jxj_inc(numTotal, -1);             // j = n(i), (with bound flip)
+  vector<HighsInt> ixj_inc(numTotal, -1);        // i-out
+  vector<HighsInt> wxj_inc(numTotal, 0);         // which bound is limiting
+  vector<HighsInt> jxj_inc(numTotal, -1);        // j = n(i), (with bound flip)
 
   vector<double> txj_dec(numTotal, -THETA_INF);
   vector<double> axj_dec(numTotal, 0);
@@ -149,7 +149,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
 
   vector<double> tci_inc(numRow, +THETA_INF);  // theta
   vector<double> aci_inc(numRow, 0);           // alpha
-  vector<HighsInt> jci_inc(numRow, -1);             // column index
+  vector<HighsInt> jci_inc(numRow, -1);        // column index
 
   vector<double> tci_dec(numRow, -THETA_INF);
   vector<double> aci_dec(numRow, 0);

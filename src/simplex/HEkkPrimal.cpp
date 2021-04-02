@@ -24,10 +24,12 @@ HighsStatus HEkkPrimal::solve() {
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
-                 "HEkkPrimal::solve called for LP with non-positive (%d) "
-                 "number of constraints\n",
-                 ekk_instance_.simplex_lp_.numRow_);
+    highsLogUser(
+        options.log_options, HighsLogType::ERROR,
+        "HEkkPrimal::solve called for LP with non-positive (%" HIGHSINT_FORMAT
+        ") "
+        "number of constraints\n",
+        ekk_instance_.simplex_lp_.numRow_);
     assert(positive_num_row);
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
@@ -56,13 +58,14 @@ HighsStatus HEkkPrimal::solve() {
   const bool near_optimal = simplex_info.num_primal_infeasibility == 0 &&
                             simplex_info.sum_dual_infeasibility < 1;
   if (near_optimal)
-    highsLogDev(
-        options.log_options, HighsLogType::DETAILED,
-        "Primal feasible and num / max / sum dual infeasibilities are %d / %g "
-        "/ %g, so near-optimal\n",
-        simplex_info.num_dual_infeasibility,
-        simplex_info.max_dual_infeasibility,
-        simplex_info.sum_dual_infeasibility);
+    highsLogDev(options.log_options, HighsLogType::DETAILED,
+                "Primal feasible and num / max / sum dual infeasibilities are "
+                "%" HIGHSINT_FORMAT
+                " / %g "
+                "/ %g, so near-optimal\n",
+                simplex_info.num_dual_infeasibility,
+                simplex_info.max_dual_infeasibility,
+                simplex_info.sum_dual_infeasibility);
 
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
@@ -274,7 +277,8 @@ void HEkkPrimal::initialise() {
       ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
   if (num_free_col) {
     highsLogUser(ekk_instance_.options_.log_options, HighsLogType::INFO,
-                 "HEkkPrimal:: LP has %d free columns\n", num_free_col);
+                 "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
+                 num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot,
                                 ekk_instance_.options_.output_flag,
                                 ekk_instance_.options_.log_file_stream, debug);
@@ -632,7 +636,7 @@ void HEkkPrimal::rebuild() {
 void HEkkPrimal::iterate() {
   bool check = ekk_instance_.iteration_count_ >= check_iter;
   if (check) {
-    printf("Iter %d\n", ekk_instance_.iteration_count_);
+    printf("Iter %" HIGHSINT_FORMAT "\n", ekk_instance_.iteration_count_);
     ekk_instance_.options_.highs_debug_level = HIGHS_DEBUG_LEVEL_EXPENSIVE;
   }
   if (debugPrimalSimplex("Before iteration") ==
@@ -745,11 +749,12 @@ void HEkkPrimal::chuzc() {
       double abs_measure_error = fabs(hyper_sparse_measure - measure);
       bool measure_error = abs_measure_error > 1e-12;
       if (measure_error) {
-        printf(
-            "Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
-            "CHUZC measure (%d, %d): error %g\n",
-            ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
-            hyper_sparse_variable_in, variable_in, abs_measure_error);
+        printf("Iteration %" HIGHSINT_FORMAT
+               ": Hyper-sparse CHUZC measure %g != %g = Full "
+               "CHUZC measure (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
+               "): error %g\n",
+               ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
+               hyper_sparse_variable_in, variable_in, abs_measure_error);
         assert(!measure_error);
       }
       variable_in = hyper_sparse_variable_in;
@@ -761,7 +766,8 @@ void HEkkPrimal::chuzc() {
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
   assert(!hyper_sparse || !done_next_chuzc);
-  const vector<HighsInt>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  const vector<HighsInt>& nonbasicMove =
+      ekk_instance_.simplex_basis_.nonbasicMove_;
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   double best_measure = 0;
   variable_in = -1;
@@ -811,7 +817,9 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
             hyper_chuzc_measure[num_hyper_chuzc_candidates];
         if (report_hyper_chuzc)
           printf(
-              "Full CHUZC: Max         measure is %9.4g for column %4d, and "
+              "Full CHUZC: Max         measure is %9.4g for column "
+              "%4" HIGHSINT_FORMAT
+              ", and "
               "max non-candiate measure of  %9.4g\n",
               best_measure, variable_in, max_hyper_chuzc_non_candidate_measure);
       }
@@ -843,7 +851,8 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
     }
     analysis->simplexTimerStop(ChuzcPrimalClock);
   }
-  //  printf("ChooseColumn: Iteration %d, choose column %d with measure %g\n",
+  //  printf("ChooseColumn: Iteration %" HIGHSINT_FORMAT ", choose column %"
+  //  HIGHSINT_FORMAT " with measure %g\n",
   //	 ekk_instance_.iteration_count_, variable_in, best_measure);
 }
 
@@ -852,7 +861,8 @@ bool HEkkPrimal::useVariableIn() {
   // numerical trouble is detected
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   vector<double>& workDual = simplex_info.workDual_;
-  const vector<HighsInt>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  const vector<HighsInt>& nonbasicMove =
+      ekk_instance_.simplex_basis_.nonbasicMove_;
   const double updated_theta_dual = workDual[variable_in];
   // Determine the move direction - can't use nonbasicMove_[variable_in]
   // due to free columns
@@ -887,13 +897,15 @@ bool HEkkPrimal::useVariableIn() {
     if (theta_dual_small) theta_dual_size = "; too small";
     std::string theta_dual_sign = "";
     if (theta_dual_sign_error) theta_dual_sign = "; sign error";
-    highsLogDev(
-        ekk_instance_.options_.log_options, HighsLogType::INFO,
-        "Chosen entering variable %d (Iter = %d; Update = %d) has computed "
-        "(updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
-        variable_in, ekk_instance_.iteration_count_, simplex_info.update_count,
-        computed_theta_dual, updated_theta_dual, theta_dual_size.c_str(),
-        theta_dual_sign.c_str());
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::INFO,
+                "Chosen entering variable %" HIGHSINT_FORMAT
+                " (Iter = %" HIGHSINT_FORMAT "; Update = %" HIGHSINT_FORMAT
+                ") has computed "
+                "(updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
+                variable_in, ekk_instance_.iteration_count_,
+                simplex_info.update_count, computed_theta_dual,
+                updated_theta_dual, theta_dual_size.c_str(),
+                theta_dual_sign.c_str());
     // If a significant computed dual has sign error, consider reinverting
     if (!theta_dual_small && simplex_info.update_count > 0)
       rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
@@ -1292,12 +1304,16 @@ void HEkkPrimal::hyperChooseColumn() {
   if (!use_hyper_chuzc) return;
   if (initialise_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperClock);
-  const vector<HighsInt>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-  const vector<HighsInt>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  const vector<HighsInt>& nonbasicMove =
+      ekk_instance_.simplex_basis_.nonbasicMove_;
+  const vector<HighsInt>& nonbasicFlag =
+      ekk_instance_.simplex_basis_.nonbasicFlag_;
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   if (report_hyper_chuzc)
-    printf("H-S  CHUZC: Max changed measure is %9.4g for column %4d",
-           max_changed_measure_value, max_changed_measure_column);
+    printf(
+        "H-S  CHUZC: Max changed measure is %9.4g for column %4" HIGHSINT_FORMAT
+        "",
+        max_changed_measure_value, max_changed_measure_column);
   double best_measure = max_changed_measure_value;
   variable_in = max_changed_measure_column;
   const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
@@ -1324,8 +1340,10 @@ void HEkkPrimal::hyperChooseColumn() {
   }
   if (variable_in != max_changed_measure_column) {
     if (report_hyper_chuzc)
-      printf(", and after HS CHUZC set it is now %9.4g for column %4d",
-             best_measure, variable_in);
+      printf(
+          ", and after HS CHUZC set it is now %9.4g for column "
+          "%4" HIGHSINT_FORMAT "",
+          best_measure, variable_in);
     max_hyper_chuzc_non_candidate_measure =
         max(max_changed_measure_value, max_hyper_chuzc_non_candidate_measure);
   }
@@ -1377,7 +1395,8 @@ void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
   if (!use_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperBasicFeasibilityChangeClock);
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  const vector<HighsInt>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  const vector<HighsInt>& nonbasicMove =
+      ekk_instance_.simplex_basis_.nonbasicMove_;
   HighsInt to_entry;
   const bool use_row_indices = ekk_instance_.sparseLoopStyle(
       row_basic_feasibility_change.count, num_col, to_entry);
@@ -1427,7 +1446,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
   if (!use_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperDualClock);
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  const vector<HighsInt>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  const vector<HighsInt>& nonbasicMove =
+      ekk_instance_.simplex_basis_.nonbasicMove_;
   HighsInt to_entry;
   // Look at changes in the columns and assess any dual infeasibility
   const bool use_row_indices =
@@ -1443,7 +1463,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
       double measure = dual_infeasibility / devex_weight[iCol];
       if (report_hyper_chuzc) {
-        printf("Changing column %d: measure = %g \n", check_column, measure);
+        printf("Changing column %" HIGHSINT_FORMAT ": measure = %g \n",
+               check_column, measure);
       }
     }
     if (dual_infeasibility > dual_feasibility_tolerance)
@@ -1464,7 +1485,8 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
       double measure = dual_infeasibility / devex_weight[iCol];
       if (report_hyper_chuzc) {
-        printf("Changing column %d: measure = %g \n", check_column, measure);
+        printf("Changing column %" HIGHSINT_FORMAT ": measure = %g \n",
+               check_column, measure);
       }
     }
     if (dual_infeasibility > dual_feasibility_tolerance)
@@ -1525,7 +1547,8 @@ void HEkkPrimal::updateDual() {
 
 void HEkkPrimal::phase1ComputeDual() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<HighsInt>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  const vector<HighsInt>& nonbasicFlag =
+      ekk_instance_.simplex_basis_.nonbasicFlag_;
 
   HVector buffer;
   buffer.setup(num_row);
@@ -1841,7 +1864,9 @@ void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
   }
   if (max_primal_correction > 2 * max_max_primal_correction) {
     printf(
-        "phase2CorrectPrimal: num / max / sum primal corrections = %d / %g / "
+        "phase2CorrectPrimal: num / max / sum primal corrections = "
+        "%" HIGHSINT_FORMAT
+        " / %g / "
         "%g\n",
         num_primal_correction, max_primal_correction, sum_primal_correction);
     max_max_primal_correction = max_primal_correction;
@@ -1975,7 +2000,8 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
     // variables, nonbasicFlag[*]=0
-    const HighsInt* nonbasicFlag = &ekk_instance_.simplex_basis_.nonbasicFlag_[0];
+    const HighsInt* nonbasicFlag =
+        &ekk_instance_.simplex_basis_.nonbasicFlag_[0];
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       row_basic_feasibility_change.array[iCol] *= nonbasicFlag[iCol];
   }
@@ -1996,7 +2022,8 @@ void HEkkPrimal::resetDevex() {
   devex_weight.assign(num_tot, 1.0);
   devex_index.assign(num_tot, 0);
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
-    const HighsInt nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_[iCol];
+    const HighsInt nonbasicFlag =
+        ekk_instance_.simplex_basis_.nonbasicFlag_[iCol];
     devex_index[iCol] = nonbasicFlag * nonbasicFlag;
   }
   num_devex_iterations = 0;
@@ -2080,11 +2107,11 @@ void HEkkPrimal::updateVerify() {
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   if (numericalTrouble > numerical_trouble_tolerance)
-    printf(
-        "Numerical check: Iter %4d: alpha_col = %12g, (From %3s alpha_row = "
-        "%12g), aDiff = %12g: measure = %12g\n",
-        ekk_instance_.iteration_count_, alpha_col, alpha_row_source.c_str(),
-        alpha_row, abs_alpha_diff, numericalTrouble);
+    printf("Numerical check: Iter %4" HIGHSINT_FORMAT
+           ": alpha_col = %12g, (From %3s alpha_row = "
+           "%12g), aDiff = %12g: measure = %12g\n",
+           ekk_instance_.iteration_count_, alpha_col, alpha_row_source.c_str(),
+           alpha_row, abs_alpha_diff, numericalTrouble);
   assert(numericalTrouble < 1e-3);
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
@@ -2147,10 +2174,12 @@ void HEkkPrimal::localReportIter(const bool header) {
       last_header_iteration_count = iteration_count;
     }
     if (row_out >= 0) {
-      printf("%5d %5d  %5d  %5d", iteration_count, variable_in, row_out,
-             variable_out);
+      printf("%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT "  %5" HIGHSINT_FORMAT
+             "  %5" HIGHSINT_FORMAT "",
+             iteration_count, variable_in, row_out, variable_out);
     } else {
-      printf("%5d %5d Bound flip   ", iteration_count, variable_in);
+      printf("%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT " Bound flip   ",
+             iteration_count, variable_in);
     }
     if (check_column >= 0 && iteration_count >= check_iter) {
       HighsInt flag = ekk_instance_.simplex_basis_.nonbasicFlag_[check_column];
@@ -2169,8 +2198,9 @@ void HEkkPrimal::localReportIter(const bool header) {
         assert(iRow < num_row);
         value = simplex_info.baseValue_[iRow];
       }
-      printf(": Var %2d (%1d, %2d) [%9.4g, %9.4g, %9.4g]", check_column, flag,
-             move, lower, value, upper);
+      printf(": Var %2" HIGHSINT_FORMAT " (%1" HIGHSINT_FORMAT
+             ", %2" HIGHSINT_FORMAT ") [%9.4g, %9.4g, %9.4g]",
+             check_column, flag, move, lower, value, upper);
       if (flag == NONBASIC_FLAG_TRUE) {
         double dual = simplex_info.workDual_[check_column];
         double weight = devex_weight[check_column];
@@ -2217,10 +2247,10 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
     bool removed_nonbasic_free_column =
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
-      highsLogUser(
-          ekk_instance_.options_.log_options, HighsLogType::ERROR,
-          "HEkkPrimal::phase1update failed to remove nonbasic free column %d\n",
-          variable_in);
+      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::ERROR,
+                   "HEkkPrimal::phase1update failed to remove nonbasic free "
+                   "column %" HIGHSINT_FORMAT "\n",
+                   variable_in);
       assert(removed_nonbasic_free_column);
     }
   }
@@ -2247,10 +2277,10 @@ void HEkkPrimal::adjustPerturbedEquationOut() {
   theta_primal =
       (simplex_info.baseValue_[row_out] - true_fixed_value) / alpha_col;
   /*
-    printf("For equation %4d to be nonbasic at RHS %10.4g requires theta_primal
-    to change by %10.4g from %10.4g to %10.4g\n", variable_out,
-    true_fixed_value, theta_primal-save_theta_primal, save_theta_primal,
-    theta_primal);
+    printf("For equation %4" HIGHSINT_FORMAT " to be nonbasic at RHS %10.4g
+    requires theta_primal to change by %10.4g from %10.4g to %10.4g\n",
+    variable_out, true_fixed_value, theta_primal-save_theta_primal,
+    save_theta_primal, theta_primal);
   */
   simplex_info.workLower_[variable_out] = true_fixed_value;
   simplex_info.workUpper_[variable_out] = true_fixed_value;
@@ -2296,11 +2326,13 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
     bool num_primal_infeasibility_ok =
         num_primal_infeasibility == updated_num_primal_infeasibility;
     if (!num_primal_infeasibility_ok) {
-      printf(
-          "In iteration %d: num_primal_infeasibility = %d != %d = "
-          "updated_num_primal_infeasibility\n",
-          ekk_instance_.iteration_count_, num_primal_infeasibility,
-          updated_num_primal_infeasibility);
+      printf("In iteration %" HIGHSINT_FORMAT
+             ": num_primal_infeasibility = %" HIGHSINT_FORMAT
+             " != %" HIGHSINT_FORMAT
+             " = "
+             "updated_num_primal_infeasibility\n",
+             ekk_instance_.iteration_count_, num_primal_infeasibility,
+             updated_num_primal_infeasibility);
       assert(num_primal_infeasibility_ok);
     }
   }
@@ -2342,12 +2374,12 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
   }
   double error = fabs(-new_infeasibility - feasibility);
   if (report)
-    highsLogDev(
-        ekk_instance_.options_.log_options, HighsLogType::VERBOSE,
-        "Value(%4d) = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
-        "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
-        iVar, value, type.c_str(), old_bound, infeasibility, shift, bound,
-        new_infeasibility, error);
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::VERBOSE,
+                "Value(%4" HIGHSINT_FORMAT
+                ") = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
+                "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
+                iVar, value, type.c_str(), old_bound, infeasibility, shift,
+                bound, new_infeasibility, error);
 }
 
 void HEkkPrimal::savePrimalRay() {

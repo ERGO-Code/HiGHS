@@ -70,7 +70,8 @@ class HighsNodeQueue {
   std::vector<OpenNode> nodes;
   std::vector<std::multimap<double, int>> colLowerNodes;
   std::vector<std::multimap<double, int>> colUpperNodes;
-  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>> freeslots;
+  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
+      freeslots;
   HighsInt lowerroot = -1;
   HighsInt estimroot = -1;
 

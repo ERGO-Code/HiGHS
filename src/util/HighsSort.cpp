@@ -20,7 +20,8 @@
 using std::vector;
 
 void addToDecreasingHeap(HighsInt& n, HighsInt mx_n, vector<double>& heap_v,
-                         vector<HighsInt>& heap_ix, const double v, const HighsInt ix) {
+                         vector<HighsInt>& heap_ix, const double v,
+                         const HighsInt ix) {
   HighsInt cd_p, pa_p;
   if (n < mx_n) {
     // The heap is not full so put the new value at the bottom of the
@@ -263,8 +264,8 @@ void maxHeapify(double* heap_v, HighsInt* heap_i, HighsInt i, HighsInt n) {
 }
 
 bool increasingSetOk(const HighsInt* set, const HighsInt set_num_entries,
-                     const HighsInt set_entry_lower, const HighsInt set_entry_upper,
-                     bool strict) {
+                     const HighsInt set_entry_lower,
+                     const HighsInt set_entry_upper, bool strict) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;

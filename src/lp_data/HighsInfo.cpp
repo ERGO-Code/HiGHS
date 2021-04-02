@@ -58,10 +58,11 @@ InfoStatus checkInfo(const HighsOptions& options,
       if (check_index == index) continue;
       std::string check_name = info_records[check_index]->name;
       if (check_name == name) {
-        highsLogUser(
-            options.log_options, HighsLogType::ERROR,
-            "checkInfo: Info %d (\"%s\") has the same name as info %d \"%s\"\n",
-            index, name.c_str(), check_index, check_name.c_str());
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "checkInfo: Info %" HIGHSINT_FORMAT
+                     " (\"%s\") has the same name as info %" HIGHSINT_FORMAT
+                     " \"%s\"\n",
+                     index, name.c_str(), check_index, check_name.c_str());
         error_found = true;
       }
     }
@@ -77,8 +78,9 @@ InfoStatus checkInfo(const HighsOptions& options,
         if (check_info.type == HighsInfoType::INT) {
           if (check_info.value == value_pointer) {
             highsLogUser(options.log_options, HighsLogType::ERROR,
-                         "checkInfo: Info %d (\"%s\") has the same value "
-                         "pointer as info %d (\"%s\")\n",
+                         "checkInfo: Info %" HIGHSINT_FORMAT
+                         " (\"%s\") has the same value "
+                         "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
                          index, info.name.c_str(), check_index,
                          check_info.name.c_str());
             error_found = true;
@@ -97,8 +99,9 @@ InfoStatus checkInfo(const HighsOptions& options,
         if (check_info.type == HighsInfoType::DOUBLE) {
           if (check_info.value == value_pointer) {
             highsLogUser(options.log_options, HighsLogType::ERROR,
-                         "checkInfo: Info %d (\"%s\") has the same value "
-                         "pointer as info %d (\"%s\")\n",
+                         "checkInfo: Info %" HIGHSINT_FORMAT
+                         " (\"%s\") has the same value "
+                         "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
                          index, info.name.c_str(), check_index,
                          check_info.name.c_str());
             error_found = true;
@@ -204,7 +207,8 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
     fprintf(file, "\n# %s\n", info.description.c_str());
     fprintf(file, "# [type: HighsInt, advanced: %s]\n",
             highsBoolToString(info.advanced).c_str());
-    fprintf(file, "%s = %d\n", info.name.c_str(), *info.value);
+    fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", info.name.c_str(),
+            *info.value);
   }
 }
 

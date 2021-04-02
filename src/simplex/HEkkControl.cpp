@@ -107,14 +107,16 @@ bool HEkk::switchToDevex() {
          costly_DSE_fraction_num_total_iteration_before_switch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogUser(
-          options_.log_options, HighsLogType::INFO,
-          "Switch from DSE to Devex after %d costly DSE iterations of %d with "
-          "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
-          "%11.4g; DSE = %11.4g\n",
-          simplex_info_.num_costly_DSE_iteration, local_iteration_count,
-          simplex_info_.col_aq_density, simplex_info_.row_ep_density,
-          simplex_info_.row_ap_density, simplex_info_.row_DSE_density);
+      highsLogUser(options_.log_options, HighsLogType::INFO,
+                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
+                   " costly DSE iterations of %" HIGHSINT_FORMAT
+                   " with "
+                   "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
+                   "%11.4g; DSE = %11.4g\n",
+                   simplex_info_.num_costly_DSE_iteration,
+                   local_iteration_count, simplex_info_.col_aq_density,
+                   simplex_info_.row_ep_density, simplex_info_.row_ap_density,
+                   simplex_info_.row_DSE_density);
     }
   }
   if (!switch_to_devex) {

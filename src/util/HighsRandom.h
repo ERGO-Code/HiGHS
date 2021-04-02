@@ -20,6 +20,131 @@
  * @brief Class for HiGHS random number generators
  */
 class HighsRandom {
+ private:
+  // integer log2 algorithm without floating point arithmetic. It uses an
+  // unrolled loop and requires few instructions that can be well optimized.
+
+  int log2i(uint64_t n) {
+    int x = -(n == 0);
+
+    auto log2Iteration = [&](int p) {
+      if (n >= uint64_t{1} << p) {
+        x += p;
+        n >>= p;
+      }
+    };
+
+    log2Iteration(32);
+    log2Iteration(16);
+    log2Iteration(8);
+    log2Iteration(4);
+    log2Iteration(2);
+    log2Iteration(1);
+
+    return x;
+  }
+
+  int log2i(uint32_t n) {
+    int x = -(n == 0);
+
+    auto log2Iteration = [&](int p) {
+      if (n >= 1u << p) {
+        x += p;
+        n >>= p;
+      }
+    };
+
+    log2Iteration(16);
+    log2Iteration(8);
+    log2Iteration(4);
+    log2Iteration(2);
+    log2Iteration(1);
+
+    return x;
+  }
+
+  uint32_t drawUniform(uint32_t sup, int nbits) {
+    // draw uniformly in interval [0,sup) where nbits is the maximal number of
+    // bits the results can have we draw random numbers with nbits many bits
+    // until we get one that is in the desired range we first use all available
+    // output functions for the same state before we advance the state again. We
+    // expect nbits to be at most 32 for this 32 bit version.
+    while (true) {
+      advance();
+      uint32_t lo = state;
+      uint32_t hi = state >> 32;
+
+      uint64_t val = HighsHashHelpers::pair_hash<0>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<1>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<2>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<3>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<4>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<5>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<6>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<7>(lo, hi) >> (64 - nbits);
+      if (val < sup) return val;
+    }
+  }
+
+  uint64_t drawUniform(uint64_t sup, int nbits) {
+    // 64 bit version for drawUniform. If result fits in 32 bits use 32 bit
+    // version above so that it is only called when we actually need more than
+    // 32 bits
+    if (nbits <= 32) return drawUniform(uint32_t(sup), nbits);
+
+    while (true) {
+      advance();
+      uint32_t lo = state;
+      uint32_t hi = state >> 32;
+
+      uint64_t val = HighsHashHelpers::pair_hash<0>(lo, hi) >> (64 - nbits) ^
+                     HighsHashHelpers::pair_hash<1>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<1>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<2>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<2>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<3>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<3>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<4>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<4>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<5>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<5>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<6>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<6>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<7>(lo, hi) >> 32;
+      if (val < sup) return val;
+
+      val = HighsHashHelpers::pair_hash<7>(lo, hi) >> (64 - nbits) ^
+            HighsHashHelpers::pair_hash<0>(lo, hi) >> 32;
+      if (val < sup) return val;
+    }
+  }
+
  public:
   /**
    * @brief Initialisations
@@ -32,7 +157,7 @@ class HighsRandom {
   void initialise(HighsUInt seed = 0) {
     state = seed;
     do {
-      state = HighsHashHelpers::pair_hash<0>(state, 0);
+      state = HighsHashHelpers::pair_hash<0>(state, state >> 32);
       state ^= (HighsHashHelpers::pair_hash<1>(state >> 32, seed) >> 32);
     } while (state == 0);
   }
@@ -65,7 +190,13 @@ class HighsRandom {
   /**
    * @brief Return a random integer between [0,sup)
    */
-  HighsInt integer(HighsInt sup) { return fractionOrZero() * sup; }
+  HighsInt integer(HighsInt sup) {  // let overload resolution select the 32bit
+                                    // or the 64bit version
+    assert(sup > 1);
+    if (sup <= 1) return 0;
+    int nbits = log2i(HighsUInt(sup - 1)) + 1;
+    return drawUniform(HighsUInt(sup), nbits);
+  }
 
   /**
    * @brief Return a random integer between [min,sup)
@@ -88,22 +219,23 @@ class HighsRandom {
   }
 
   /**
-   * @brief Return a random fraction - real in [0, 1)
+   * @brief Return a random fraction - real in [0, 1]
    */
-  double fractionOrZero() {
+  double closedFraction() {
     advance();
-    // 52 bit result is in interval [0,2^52-1]
+    // 53 bit result is in interval [0,2^53-1]
     uint64_t output =
-        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 52)) ^
-        (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> (64 - 26));
-    // compute output / (2^52) which is in the half-open interval [0,1)
-    return output * 2.22044604925031308e-16;
+        (HighsHashHelpers::pair_hash<0>(state, state >> 32) >> (64 - 53)) ^
+        (HighsHashHelpers::pair_hash<1>(state, state >> 32) >> 32);
+    // compute output / (2^53-1) in double precision which is in the closed
+    // interval [0,1]
+    return output * 1.1102230246251566e-16;
   }
 
   /**
-   * @brief Return a random real value in the half-open interval [a,b)
+   * @brief Return a random real value in the interval [a,b]
    */
-  double real(double a, double b) { return a + (b - a) * fractionOrZero(); }
+  double real(double a, double b) { return a + (b - a) * closedFraction(); }
 
   /**
    * @brief Return a random bit

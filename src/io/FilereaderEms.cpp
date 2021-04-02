@@ -283,7 +283,8 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   // todo: integer variables.
 
   if (model.offset_ != 0)
-    f << "shift" << std::endl << (HighsInt)model.sense_ * model.offset_ << std::endl;
+    f << "shift" << std::endl
+      << (HighsInt)model.sense_ * model.offset_ << std::endl;
 
   f << std::endl;
   f.close();

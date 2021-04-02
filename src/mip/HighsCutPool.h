@@ -139,15 +139,17 @@ class HighsCutPool {
 
   double getMaxAbsCutCoef(HighsInt cut) const { return maxabscoef_[cut]; }
 
-  HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex, double* Rvalue,
-             HighsInt Rlen, double rhs, bool integral = false,
-             bool extractCliques = true);
+  HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
+                  double* Rvalue, HighsInt Rlen, double rhs,
+                  bool integral = false, bool extractCliques = true);
 
   HighsInt getRowLength(HighsInt row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);
   }
 
-  unsigned getModificationCount(HighsInt cut) const { return modification_[cut]; }
+  unsigned getModificationCount(HighsInt cut) const {
+    return modification_[cut];
+  }
 
   void getCut(HighsInt cut, HighsInt& cutlen, const HighsInt*& cutinds,
               const double*& cutvals) const {

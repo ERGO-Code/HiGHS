@@ -17,7 +17,7 @@ HighsInt Highs_call(HighsInt numcol, HighsInt numrow, HighsInt numnz,
                     HighsInt* aindex, double* avalue, double* colvalue,
                     double* coldual, double* rowvalue, double* rowdual,
                     HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
-                    HighsInt* modelstatus) {
+                    int* modelstatus) {
   Highs highs;
 
   HighsInt status =

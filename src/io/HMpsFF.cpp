@@ -156,7 +156,8 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
 
 // Assuming string is not empty.
 HMpsFF::parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
-                                        HighsInt& end, std::string& word) const {
+                                        HighsInt& end,
+                                        std::string& word) const {
   start = strline.find_first_not_of(" ");
   if ((start == (HighsInt)strline.size() - 1) || is_empty(strline[start + 1])) {
     end = start + 1;
@@ -717,20 +718,30 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     // start of new section?
     if (key != parsekey::NONE) {
       if (num_mi)
-        highsLogUser(log_options, HighsLogType::INFO,
-                     "Number of MI entries in BOUNDS section is %d\n", num_mi);
+        highsLogUser(
+            log_options, HighsLogType::INFO,
+            "Number of MI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_mi);
       if (num_pl)
-        highsLogUser(log_options, HighsLogType::INFO,
-                     "Number of PL entries in BOUNDS section is %d\n", num_pl);
+        highsLogUser(
+            log_options, HighsLogType::INFO,
+            "Number of PL entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_pl);
       if (num_bv)
-        highsLogUser(log_options, HighsLogType::INFO,
-                     "Number of BV entries in BOUNDS section is %d\n", num_bv);
+        highsLogUser(
+            log_options, HighsLogType::INFO,
+            "Number of BV entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_bv);
       if (num_li)
-        highsLogUser(log_options, HighsLogType::INFO,
-                     "Number of LI entries in BOUNDS section is %d\n", num_li);
+        highsLogUser(
+            log_options, HighsLogType::INFO,
+            "Number of LI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_li);
       if (num_ui)
-        highsLogUser(log_options, HighsLogType::INFO,
-                     "Number of UI entries in BOUNDS section is %d\n", num_ui);
+        highsLogUser(
+            log_options, HighsLogType::INFO,
+            "Number of UI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
+            num_ui);
       // Assign bounds to columns that remain binary by default
       for (HighsInt colidx = 0; colidx < numCol; colidx++) {
         if (col_binary[colidx]) {
@@ -839,7 +850,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       {
         if (!islb || !isub) {
           highsLogUser(log_options, HighsLogType::ERROR,
-                       "BV row %s but [islb, isub] = [%1d, %1d]\n",
+                       "BV row %s but [islb, isub] = [%1" HIGHSINT_FORMAT
+                       ", %1" HIGHSINT_FORMAT "]\n",
                        marker.c_str(), islb, isub);
           assert(islb && isub);
           return HMpsFF::parsekey::FAIL;

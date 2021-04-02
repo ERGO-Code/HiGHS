@@ -67,7 +67,8 @@ HighsLpPropagator::HighsLpPropagator(
 
 void HighsLpPropagator::computeMinActivity(HighsInt start, HighsInt end,
                                            const HighsInt* ARindex,
-                                           const double* ARvalue, HighsInt& ninfmin,
+                                           const double* ARvalue,
+                                           HighsInt& ninfmin,
                                            HighsCDouble& activitymin) {
   activitymin = 0.0;
   ninfmin = 0;
@@ -90,7 +91,8 @@ void HighsLpPropagator::computeMinActivity(HighsInt start, HighsInt end,
 
 void HighsLpPropagator::computeMaxActivity(HighsInt start, HighsInt end,
                                            const HighsInt* ARindex,
-                                           const double* ARvalue, HighsInt& ninfmax,
+                                           const double* ARvalue,
+                                           HighsInt& ninfmax,
                                            HighsCDouble& activitymax) {
   activitymax = 0.0;
   ninfmax = 0;
@@ -112,11 +114,11 @@ void HighsLpPropagator::computeMaxActivity(HighsInt start, HighsInt end,
 }
 
 HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
-                                         const double* Rvalue, HighsInt Rlen,
-                                         double Rupper,
-                                         const HighsCDouble& minactivity,
-                                         HighsInt ninfmin,
-                                         HighsDomainChange* boundchgs) {
+                                              const double* Rvalue,
+                                              HighsInt Rlen, double Rupper,
+                                              const HighsCDouble& minactivity,
+                                              HighsInt ninfmin,
+                                              HighsDomainChange* boundchgs) {
   if (ninfmin > 1) return 0;
   HighsInt numchgs = 0;
   for (HighsInt i = 0; i != Rlen; ++i) {
@@ -190,11 +192,11 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
 }
 
 HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
-                                         const double* Rvalue, HighsInt Rlen,
-                                         double Rlower,
-                                         const HighsCDouble& maxactivity,
-                                         HighsInt ninfmax,
-                                         HighsDomainChange* boundchgs) {
+                                              const double* Rvalue,
+                                              HighsInt Rlen, double Rlower,
+                                              const HighsCDouble& maxactivity,
+                                              HighsInt ninfmax,
+                                              HighsDomainChange* boundchgs) {
   if (ninfmax > 1) return 0;
   HighsInt numchgs = 0;
   for (HighsInt i = 0; i != Rlen; ++i) {
@@ -525,7 +527,7 @@ HighsInt HighsLpPropagator::propagate() {
         propRowNumChangedBounds_[k] = numchgs;
       };
 
-      // printf("numproprows (model): %d\n", numproprows);
+      // printf("numproprows (model): %" HIGHSINT_FORMAT "\n", numproprows);
 
       for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
@@ -602,7 +604,8 @@ HighsInt HighsLpPropagator::tightenCoefficients() {
         rowUpper_[i] = double(upper);
       else
         rowLower_[i] = -double(upper);
-      // printf("tightened %d coefficients, rhs changed from %g to %g\n",
+      // printf("tightened %" HIGHSINT_FORMAT " coefficients, rhs changed from
+      // %g to %g\n",
       //       tightened, rhs, double(upper));
       computeMinActivity(start, end, ARindex_.data(), ARvalue_.data(),
                          activitymininf_[i], activitymin_[i]);

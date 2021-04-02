@@ -396,7 +396,8 @@ DllExport void STDCALL hisXCreate(void** Cptr) {
   *Cptr = calloc(1, sizeof(gamshighs_t));
 }
 
-DllExport HighsInt STDCALL hiscreate(void** Cptr, char* msgBuf, HighsInt msgBufLen) {
+DllExport HighsInt STDCALL hiscreate(void** Cptr, char* msgBuf,
+                                     HighsInt msgBufLen) {
   assert(Cptr != NULL);
   assert(msgBufLen > 0);
   assert(msgBuf != NULL);
@@ -432,28 +433,30 @@ DllExport HighsInt STDCALL hisfree(void** Cptr) {
    compatibility 3: client is newer than DLL, forward compatibility
            FIXME: for now, we just claim full compatibility
  */
-DllExport HighsInt STDCALL C__hisXAPIVersion(HighsInt api, char* Msg, HighsInt* comp) {
+DllExport HighsInt STDCALL C__hisXAPIVersion(HighsInt api, char* Msg,
+                                             HighsInt* comp) {
   *comp = 1;
   return 1;
 }
 
-DllExport HighsInt STDCALL D__hisXAPIVersion(HighsInt api, char* Msg, HighsInt* comp) {
+DllExport HighsInt STDCALL D__hisXAPIVersion(HighsInt api, char* Msg,
+                                             HighsInt* comp) {
   *comp = 1;
   return 1;
 }
 
-DllExport HighsInt STDCALL C__hisXCheck(const char* funcn, HighsInt ClNrArg, HighsInt Clsign[],
-                                   char* Msg) {
+DllExport HighsInt STDCALL C__hisXCheck(const char* funcn, HighsInt ClNrArg,
+                                        HighsInt Clsign[], char* Msg) {
   return 1;
 }
 
-DllExport HighsInt STDCALL D__hisXCheck(const char* funcn, HighsInt ClNrArg, HighsInt Clsign[],
-                                   char* Msg) {
+DllExport HighsInt STDCALL D__hisXCheck(const char* funcn, HighsInt ClNrArg,
+                                        HighsInt Clsign[], char* Msg) {
   return 1;
 }
 
 DllExport HighsInt STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr,
-                                     optHandle_t Optr) {
+                                          optHandle_t Optr) {
   gamshighs_t* gh;
 
   assert(Cptr != NULL);

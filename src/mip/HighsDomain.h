@@ -35,7 +35,9 @@ class HighsDomain {
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
     static Reason modelRow(HighsInt row) { return Reason{kModelRow, row}; }
-    static Reason cut(HighsInt cutpool, HighsInt cut) { return Reason{cutpool, cut}; }
+    static Reason cut(HighsInt cutpool, HighsInt cut) {
+      return Reason{cutpool, cut};
+    }
   };
 
   struct CutpoolPropagation {
@@ -154,13 +156,15 @@ class HighsDomain {
                           const double* ARvalue, HighsInt& ninfmax,
                           HighsCDouble& activitymax);
 
-  HighsInt propagateRowUpper(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                        double Rupper, const HighsCDouble& minactivity,
-                        HighsInt ninfmin, HighsDomainChange* boundchgs);
+  HighsInt propagateRowUpper(const HighsInt* Rindex, const double* Rvalue,
+                             HighsInt Rlen, double Rupper,
+                             const HighsCDouble& minactivity, HighsInt ninfmin,
+                             HighsDomainChange* boundchgs);
 
-  HighsInt propagateRowLower(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                        double Rlower, const HighsCDouble& maxactivity,
-                        HighsInt ninfmax, HighsDomainChange* boundchgs);
+  HighsInt propagateRowLower(const HighsInt* Rindex, const double* Rvalue,
+                             HighsInt Rlen, double Rlower,
+                             const HighsCDouble& maxactivity, HighsInt ninfmax,
+                             HighsDomainChange* boundchgs);
 
   const std::vector<HighsInt>& getChangedCols() const { return changedcols_; }
 
@@ -173,7 +177,8 @@ class HighsDomain {
 
   void clearChangedCols(HighsInt start) {
     HighsInt end = changedcols_.size();
-    for (HighsInt i = start; i != end; ++i) changedcolsflags_[changedcols_[i]] = 0;
+    for (HighsInt i = start; i != end; ++i)
+      changedcolsflags_[changedcols_[i]] = 0;
 
     changedcols_.resize(start);
   }
@@ -230,7 +235,8 @@ class HighsDomain {
 
   bool propagate();
 
-  void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len, double& rhs) const;
+  void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
+                           double& rhs) const;
 
   double getMinActivity(HighsInt row) const {
     return activitymininf_[row] == 0 ? double(activitymin_[row])

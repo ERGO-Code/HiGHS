@@ -172,8 +172,8 @@ void printDevStats(const DevStats& stats) {
 void getRowsColsNnz(const std::vector<HighsInt>& flagRow,
                     const std::vector<HighsInt>& flagCol,
                     const std::vector<HighsInt>& nzRow,
-                    const std::vector<HighsInt>& nzCol, HighsInt& _rows, HighsInt& _cols,
-                    HighsInt& _nnz) {
+                    const std::vector<HighsInt>& nzCol, HighsInt& _rows,
+                    HighsInt& _cols, HighsInt& _nnz) {
   HighsInt numCol = flagCol.size();
   HighsInt numRow = flagRow.size();
   HighsInt rows = 0;
@@ -223,7 +223,8 @@ void Presolve::reportDevMainLoop() {
   if (iPrint == 0) {
     if (timer.getTime() > 10)
       highsLogDev(log_options, HighsLogType::VERBOSE,
-                  "Presolve finished main loop %d... ", stats.dev.n_loops + 1);
+                  "Presolve finished main loop %" HIGHSINT_FORMAT "... ",
+                  stats.dev.n_loops + 1);
   } else {
     HighsInt rows = 0;
     HighsInt cols = 0;
@@ -385,7 +386,8 @@ HighsInt Presolve::presolve(HighsInt print) {
   if (iPrint < 0) {
     stringstream ss;
     ss << "dev-presolve: model:      rows, colx, nnz , " << modelName << ":  "
-       << numRow << ",  " << numCol << ",  " << (HighsInt)Avalue.size() << std::endl;
+       << numRow << ",  " << numCol << ",  " << (HighsInt)Avalue.size()
+       << std::endl;
     reportDev(ss.str());
   }
 
@@ -420,7 +422,8 @@ HighsInt Presolve::presolve(HighsInt print) {
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
-    //    printf("presolve iteration %d (max=%d)\n", iter, max_iterations);
+    //    printf("presolve iteration %" HIGHSINT_FORMAT " (max=%"
+    //    HIGHSINT_FORMAT ")\n", iter, max_iterations);
     reportDevMainLoop();
     timer.recordStart(RUN_PRESOLVERS);
     HighsInt run_status = runPresolvers(order);
@@ -442,11 +445,14 @@ HighsInt Presolve::presolve(HighsInt print) {
     HighsInt diff = prev_cols_rows - current_cols_rows;
     double iteration_reduction_pct =
         100 * (1.0 * diff) / (1.0 * model_cols_rows);
-    highsLogDev(
-        log_options, HighsLogType::VERBOSE,
-        "Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: "
-        "Reduction this iteration (%9d) is %5.2f%%\n",
-        iter, current_num_row, current_num_col, diff, iteration_reduction_pct);
+    highsLogDev(log_options, HighsLogType::VERBOSE,
+                "Iteration %2" HIGHSINT_FORMAT
+                " (Presolve)   Current number rows = %9" HIGHSINT_FORMAT
+                "; cols = %9" HIGHSINT_FORMAT
+                ": "
+                "Reduction this iteration (%9" HIGHSINT_FORMAT ") is %5.2f%%\n",
+                iter, current_num_row, current_num_col, diff,
+                iteration_reduction_pct);
     if (current_cols_rows == 0) break;
     iter++;
 
@@ -473,12 +479,15 @@ HighsInt Presolve::presolve(HighsInt print) {
       HighsInt diff = prev_cols_rows - current_cols_rows;
       double iteration_reduction_pct =
           100 * (1.0 * diff) / (1.0 * model_cols_rows);
-      highsLogDev(
-          log_options, HighsLogType::VERBOSE,
-          "Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: "
-          "Reduction this iteration (%9d) is %5.2f%%\n",
-          iter, current_num_row, current_num_col, diff,
-          iteration_reduction_pct);
+      highsLogDev(log_options, HighsLogType::VERBOSE,
+                  "Iteration %2" HIGHSINT_FORMAT
+                  " (Aggregator) Current number rows = %9" HIGHSINT_FORMAT
+                  "; cols = %9" HIGHSINT_FORMAT
+                  ": "
+                  "Reduction this iteration (%9" HIGHSINT_FORMAT
+                  ") is %5.2f%%\n",
+                  iter, current_num_row, current_num_col, diff,
+                  iteration_reduction_pct);
       iter++;
     }
   }
@@ -611,12 +620,14 @@ pair<HighsInt, HighsInt> Presolve::getXYDoubletonEquations(const HighsInt row) {
       // only one of the columns is integral, select the non-integral column to
       // be substituted out
       if (integrality[col1] == HighsVarType::INTEGER) {
-        // printf("column %d integral, column %d is not\n", col1, col2);
+        // printf("column %" HIGHSINT_FORMAT " integral, column %"
+        // HIGHSINT_FORMAT " is not\n", col1, col2);
         assert(integrality[col2] != HighsVarType::INTEGER);
         y = col2;
         x = col1;
       } else {
-        // printf("column %d integral, column %d is not\n", col2, col1);
+        // printf("column %" HIGHSINT_FORMAT " integral, column %"
+        // HIGHSINT_FORMAT " is not\n", col2, col1);
         assert(integrality[col2] == HighsVarType::INTEGER);
         assert(integrality[col1] != HighsVarType::INTEGER);
         y = col1;
@@ -624,9 +635,9 @@ pair<HighsInt, HighsInt> Presolve::getXYDoubletonEquations(const HighsInt row) {
       }
     } else {
       // printf(
-      //     "column %d with coefficient %f is integral and column %d with "
-      //     "coefficient %f too\n",
-      //     col1, val1, col2, val2);
+      //     "column %" HIGHSINT_FORMAT " with coefficient %f is integral and
+      //     column %" HIGHSINT_FORMAT " with " "coefficient %f too\n", col1,
+      //     val1, col2, val2);
       // both columns are integral, need to choose column with smaller
       // coefficient value, if coefficients are the same choose the column with
       // fewer nonzeros
@@ -724,7 +735,8 @@ void Presolve::processRowDoubletonEquation(const HighsInt row, const HighsInt x,
   if (!hasChange) hasChange = true;
 }
 
-void Presolve::caseTwoSingletonsDoubletonInequality(const HighsInt row, const HighsInt x,
+void Presolve::caseTwoSingletonsDoubletonInequality(const HighsInt row,
+                                                    const HighsInt x,
                                                     const HighsInt y) {
   // std::cout << "Call caseTwoSing..." << std::endl;
 
@@ -806,8 +818,8 @@ void Presolve::removeDoubletonEquations() {
         }
 
         // singleton rows only in y column which is present in fewer constraints
-        // and eliminated. bool rs_only = true; for (HighsInt k = Astart.at(y); k <
-        // Aend.at(y); ++k)
+        // and eliminated. bool rs_only = true; for (HighsInt k = Astart.at(y);
+        // k < Aend.at(y); ++k)
         //   if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
         //     if (nzRow[row]  > 1) {
         //       rs_only = false;
@@ -873,11 +885,9 @@ void Presolve::removeDoubletonEquations() {
   timer.recordFinish(DOUBLETON_EQUATION);
 }
 
-void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const HighsInt i, const HighsInt x,
-                                                       const HighsInt y,
-                                                       const double aiy,
-                                                       const double akx,
-                                                       const double aky) {
+void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(
+    const HighsInt i, const HighsInt x, const HighsInt y, const double aiy,
+    const double akx, const double aky) {
   // case x is zero initially
   // row nonzero count doesn't change here
   // cout<<"case: x not present "<<i<<" "<<endl;
@@ -914,8 +924,8 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const HighsInt i, const H
 }
 
 void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
-    const HighsInt i, const HighsInt x, const HighsInt y, const double aiy, const double akx,
-    const double aky) {
+    const HighsInt i, const HighsInt x, const HighsInt y, const double aiy,
+    const double akx, const double aky) {
   HighsInt ind;
 
   // update nonzeros: for removal of
@@ -1348,7 +1358,8 @@ void Presolve::runPropagator() {
   propagator.computeRowActivities();
   HighsInt nboundchgs = propagator.propagate();
   highsLogDev(log_options, HighsLogType::VERBOSE,
-              "Propagation found %d bound changes\n", nboundchgs);
+              "Propagation found %" HIGHSINT_FORMAT " bound changes\n",
+              nboundchgs);
   // propagation found nothing, so we can stop here. Only for mip we also try
   // coefficient tightening
   if (!mip && nboundchgs == 0) return;
@@ -1358,7 +1369,7 @@ void Presolve::runPropagator() {
     while (true) {
       HighsInt ncoeffchgs = propagator.tightenCoefficients();
       highsLogDev(log_options, HighsLogType::VERBOSE,
-                  "tightened %d coefficients\n", ncoeffchgs);
+                  "tightened %" HIGHSINT_FORMAT " coefficients\n", ncoeffchgs);
       // if no coefficients where tightened we can stop
       if (ncoeffchgs == 0) break;
       ntotalcoeffchgs += ncoeffchgs;
@@ -1461,8 +1472,8 @@ void Presolve::runPropagator() {
   implColLower = colLower;
   implColUpper = colUpper;
 
-  highsLogDev(log_options, HighsLogType::VERBOSE, "Tightened %d bounds\n",
-              ntightened);
+  highsLogDev(log_options, HighsLogType::VERBOSE,
+              "Tightened %" HIGHSINT_FORMAT " bounds\n", ntightened);
   if (ntightened != 0) hasChange = true;
 }
 
@@ -1562,7 +1573,8 @@ void Presolve::detectImpliedIntegers() {
   }
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-              "found %d implied integers with primal detection method\n",
+              "found %" HIGHSINT_FORMAT
+              " implied integers with primal detection method\n",
               numimplint);
 
   primalimplint = numimplint;
@@ -1636,11 +1648,13 @@ void Presolve::detectImpliedIntegers() {
   }
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-              "found %d implied integers with dual detection method\n",
+              "found %" HIGHSINT_FORMAT
+              " implied integers with dual detection method\n",
               numimplint - primalimplint);
 
   highsLogDev(log_options, HighsLogType::VERBOSE,
-              "implint detection found %d implied integers\n", numimplint);
+              "implint detection found %" HIGHSINT_FORMAT " implied integers\n",
+              numimplint);
 }
 
 void Presolve::applyMipDualFixing() {
@@ -2277,7 +2291,8 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const HighsInt j,
   // singCol.remove(j);
 }
 
-void Presolve::removeZeroCostColumnSingleton(const HighsInt col, const HighsInt row,
+void Presolve::removeZeroCostColumnSingleton(const HighsInt col,
+                                             const HighsInt row,
                                              const HighsInt k) {
   assert(Aindex[k] == row);
   assert(fabs(colCost[col]) < tol);
@@ -2460,7 +2475,8 @@ bool Presolve::isKnapsack(const HighsInt col) const {
 
 pair<double, double> Presolve::getBoundsImpliedFree(double lowInit,
                                                     double uppInit,
-                                                    const HighsInt col, const HighsInt i,
+                                                    const HighsInt col,
+                                                    const HighsInt i,
                                                     const HighsInt k) {
   double low = lowInit;
   double upp = uppInit;
@@ -2886,8 +2902,8 @@ void Presolve::removeRowSingletons() {
       double aij = ARvalue.at(k);
       /*		//before update bounds of x take it out of rows with
       implied row bounds for (HighsInt r = Astart.at(j); r<Aend.at(j); r++) { if
-      (flagRow[Aindex[r]]) { HighsInt rr = Aindex[r]; if (implRowValueLower[rr] >
-      -HIGHS_CONST_INF) { if (aij > 0) implRowValueLower[rr] =
+      (flagRow[Aindex[r]]) { HighsInt rr = Aindex[r]; if (implRowValueLower[rr]
+      > -HIGHS_CONST_INF) { if (aij > 0) implRowValueLower[rr] =
       implRowValueLower[rr] - aij*colLower.at(j); else implRowValueLower[rr] =
       implRowValueLower[rr] - aij*colUpper.at(j);
                       }
@@ -2920,11 +2936,9 @@ void Presolve::removeRowSingletons() {
       }
 
       /*		//after update bounds of x add to rows with implied row
-      bounds for (HighsInt r = Astart.at(j); r<Aend.at(j); r++) { if (flagRow[r]) {
-                      HighsInt rr = Aindex[r];
-                      if (implRowValueLower[rr] > -HIGHS_CONST_INF) {
-                              if (aij > 0)
-                                      implRowValueLower[rr] =
+      bounds for (HighsInt r = Astart.at(j); r<Aend.at(j); r++) { if
+      (flagRow[r]) { HighsInt rr = Aindex[r]; if (implRowValueLower[rr] >
+      -HIGHS_CONST_INF) { if (aij > 0) implRowValueLower[rr] =
       implRowValueLower[rr] + aij*colLower.at(j); else implRowValueLower[rr] =
       implRowValueLower[rr] + aij*colUpper.at(j);
                       }
@@ -4418,10 +4432,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // number of rows in the original LP
   assert(num_basic_var == numRowOriginal);
   if (num_basic_var != numRowOriginal) {
-    printf(
-        "Error from postsolve: number of basic variables = %d != %d = number "
-        "of rows\n",
-        num_basic_var, numRowOriginal);
+    printf("Error from postsolve: number of basic variables = %" HIGHSINT_FORMAT
+           " != %" HIGHSINT_FORMAT
+           " = number "
+           "of rows\n",
+           num_basic_var, numRowOriginal);
     return HighsPostsolveStatus::BasisError;
   }
 
@@ -4505,16 +4520,18 @@ void Presolve::setBasisElement(change c) {
   switch (c.type) {
     case EMPTY_ROW: {
       if (report_postsolve) {
-        printf("2.1 : Recover row %3d as %3d (basic): empty row\n", c.row,
-               numColOriginal + c.row);
+        printf("2.1 : Recover row %3" HIGHSINT_FORMAT " as %3" HIGHSINT_FORMAT
+               " (basic): empty row\n",
+               c.row, numColOriginal + c.row);
       }
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
     }
     case REDUNDANT_ROW: {
       if (report_postsolve) {
-        printf("2.3 : Recover row %3d as %3d (basic): redundant\n", c.row,
-               numColOriginal + c.row);
+        printf("2.3 : Recover row %3" HIGHSINT_FORMAT " as %3" HIGHSINT_FORMAT
+               " (basic): redundant\n",
+               c.row, numColOriginal + c.row);
       }
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
@@ -4522,18 +4539,18 @@ void Presolve::setBasisElement(change c) {
     case FREE_SING_COL:
     case IMPLIED_FREE_SING_COL: {
       if (report_postsolve) {
-        printf(
-            "2.4a: Recover col %3d as %3d (basic): implied free singleton "
-            "column\n",
-            c.col, numColOriginal + c.row);
+        printf("2.4a: Recover col %3" HIGHSINT_FORMAT " as %3" HIGHSINT_FORMAT
+               " (basic): implied free singleton "
+               "column\n",
+               c.col, numColOriginal + c.row);
       }
       col_status.at(c.col) = HighsBasisStatus::BASIC;
 
       if (report_postsolve) {
-        printf(
-            "2.5b: Recover row %3d as %3d (nonbasic): implied free singleton "
-            "column\n",
-            c.row, numColOriginal + c.row);
+        printf("2.5b: Recover row %3" HIGHSINT_FORMAT " as %3" HIGHSINT_FORMAT
+               " (nonbasic): implied free singleton "
+               "column\n",
+               c.row, numColOriginal + c.row);
       }
       row_status.at(c.row) = HighsBasisStatus::NONBASIC;  // Was LOWER
       break;
@@ -4542,7 +4559,8 @@ void Presolve::setBasisElement(change c) {
     case DOMINATED_COLS:
     case WEAKLY_DOMINATED_COLS: {
       if (report_postsolve) {
-        printf("2.7 : Recover column %3d (nonbasic): weakly dominated column\n",
+        printf("2.7 : Recover column %3" HIGHSINT_FORMAT
+               " (nonbasic): weakly dominated column\n",
                c.col);
       }
       col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
@@ -4553,10 +4571,10 @@ void Presolve::setBasisElement(change c) {
       if (chng.size() > 0)
         if (chng.top().type != SING_ROW) {
           if (report_postsolve) {
-            printf(
-                "2.8 : Recover column %3d (nonbasic): weakly dominated "
-                "column\n",
-                c.col);
+            printf("2.8 : Recover column %3" HIGHSINT_FORMAT
+                   " (nonbasic): weakly dominated "
+                   "column\n",
+                   c.col);
           }
           col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
         }
@@ -4872,7 +4890,9 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
     if (fabs(valuePrimal.at(col) - l) > tol &&
         fabs(valuePrimal.at(col) - u) > tol) {
       if (report_postsolve) {
-        printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
+        printf("3.1 : Make column %3" HIGHSINT_FORMAT
+               " basic and row %3" HIGHSINT_FORMAT " nonbasic\n",
+               col, row);
       }
       col_status.at(col) = HighsBasisStatus::BASIC;
       row_status.at(row) = HighsBasisStatus::NONBASIC;  // Was LOWER
@@ -4905,7 +4925,7 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
   } else {
     // x is basic
     if (report_postsolve) {
-      printf("3.3 : Make row %3d basic\n", row);
+      printf("3.3 : Make row %3" HIGHSINT_FORMAT " basic\n", row);
     }
     row_status.at(row) = HighsBasisStatus::BASIC;
     valueRowDual[row] = 0;
@@ -4913,7 +4933,8 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
   }
 }
 
-void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col) {
+void Presolve::getDualsDoubletonEquation(const HighsInt row,
+                                         const HighsInt col) {
   // colDual already set. need valuePrimal from stack. maybe change rowDual
   // depending on bounds. old bounds kept in oldBounds. variables j,k : we
   // eliminated col(k)(c.col) and are left with changed bounds on j and no row.
@@ -4980,7 +5001,7 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
     // makeYBasic();
     valueColDual.at(y) = 0;
     valueRowDual.at(row) = getRowDualPost(row, y);
-    if (report) printf("4.2 : Make column %3d basic\n", y);
+    if (report) printf("4.2 : Make column %3" HIGHSINT_FORMAT " basic\n", y);
     return;
   }
 
@@ -5023,7 +5044,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
         valueColDual.at(y) = getColumnDualPost(y);
         col_status.at(x) = HighsBasisStatus::BASIC;
         row_status.at(row) = HighsBasisStatus::NONBASIC;
-        if (report) printf("4.77 : Make column %3d basic\n", x);
+        if (report)
+          printf("4.77 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
         return;
       }
     }
@@ -5050,7 +5072,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
         if (feasible) {
           col_status.at(x) = HighsBasisStatus::BASIC;
           row_status.at(row) = HighsBasisStatus::NONBASIC;
-          if (report) printf("4.1 : Make column %3d basic\n", x);
+          if (report)
+            printf("4.1 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
           return;
         }
         // Y not dual feasible
@@ -5072,7 +5095,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
       // valueColDual.at(y) = 0;
       // valueRowDual.at(row) = getRowDualPost(row, y);
 
-      // if (report) printf("4.2 : Make column %3d basic\n", y);
+      // if (report) printf("4.2 : Make column %3" HIGHSINT_FORMAT " basic\n",
+      // y);
     } else {
       // Column y is at a bound.
       assert(fabs(uby - valuePrimal[y]) < tol ||
@@ -5093,7 +5117,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
         valueColDual.at(y) = getColumnDualPost(y);
         col_status.at(x) = HighsBasisStatus::BASIC;
         row_status.at(row) = HighsBasisStatus::NONBASIC;
-        if (report) printf("4.778 : Make column %3d basic\n", x);
+        if (report)
+          printf("4.778 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
         return;
       }
     }
@@ -5135,10 +5160,12 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
         if (feasible) {
           col_status.at(x) = HighsBasisStatus::BASIC;
           row_status.at(row) = HighsBasisStatus::NONBASIC;
-          if (report) printf("4.122778 : Make column %3d basic\n", x);
+          if (report)
+            printf("4.122778 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
           return;
         } else {
-          if (report) printf("4.1227785 : Make column %3d basic\n", y);
+          if (report)
+            printf("4.1227785 : Make column %3" HIGHSINT_FORMAT " basic\n", y);
           // dual of y needs to change. make y basic by proceeding below.
         }
       }
@@ -5149,7 +5176,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
       valueColDual.at(x) = getColumnDualPost(x);
       col_status.at(y) = HighsBasisStatus::BASIC;
       row_status.at(row) = HighsBasisStatus::NONBASIC;
-      if (report) printf("4.122779 : Make column %3d basic\n", y);
+      if (report)
+        printf("4.122779 : Make column %3" HIGHSINT_FORMAT " basic\n", y);
       return;
     } else {
       // std::cout << "     4.002" << std::endl;
@@ -5168,7 +5196,7 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
     valueRowDual.at(row) = 0;
     valueColDual.at(y) = getColumnDualPost(y);
 
-    if (report) printf("4.1 : Make row    %3d basic\n", row);
+    if (report) printf("4.1 : Make row    %3" HIGHSINT_FORMAT " basic\n", row);
   } else {
     // Try Y Basic.
 
@@ -5178,7 +5206,7 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
     valueColDual.at(y) = 0;
     valueRowDual.at(row) = getRowDualPost(row, y);
 
-    if (report) printf("4.4 : Make column %3d basic\n", y);
+    if (report) printf("4.4 : Make column %3" HIGHSINT_FORMAT " basic\n", y);
 
     // Check complementary slackness on x.
     if ((valueColDual[x] < -tol && fabs(valuePrimal[x] - lbxOld) > tol) ||
@@ -5191,7 +5219,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
         col_status.at(x) = HighsBasisStatus::BASIC;
         col_status.at(y) = HighsBasisStatus::NONBASIC;
         row_status.at(row) = HighsBasisStatus::NONBASIC;
-        if (report) printf("4.779 : Make column %3d basic\n", x);
+        if (report)
+          printf("4.779 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
         return;
       }
       // If X already basic and y can not be feasibly made basic then the row
@@ -5203,8 +5232,10 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
       // valueRowDual.at(row) = 0;
       // valueColDual.at(y) = getColumnDualPost(y);
 
-      // if (report) printf("4.7791 : Make row    %3d basic\n", row);
-      if (report) printf("??? 4.7791 : Make row    %3d basic\n", row);
+      // if (report) printf("4.7791 : Make row    %3" HIGHSINT_FORMAT "
+      // basic\n", row);
+      if (report)
+        printf("??? 4.7791 : Make row    %3" HIGHSINT_FORMAT " basic\n", row);
     }
 
     // Check dual feasibility of y.
@@ -5222,7 +5253,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row, const HighsInt col)
       col_status.at(x) = HighsBasisStatus::BASIC;
       col_status.at(y) = HighsBasisStatus::NONBASIC;
       row_status.at(row) = HighsBasisStatus::NONBASIC;
-      if (report) printf("4.879 : Make column %3d basic\n", x);
+      if (report)
+        printf("4.879 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
     }
 
     // y is at a bound with infeasible dual

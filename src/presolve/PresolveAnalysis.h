@@ -262,17 +262,20 @@ class PresolveTimer {
 
   void reportNumericsRecord(const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
-    printf(
-        "%-26s: tolerance =%6.1g: Zero =%9d; Tol =%9d; 10Tol =%9d; Clear =%9d; "
-        "MinPositive =%7.2g; Tests =%9d\n",
-        numerics_record.name.c_str(), numerics_record.tolerance,
-        numerics_record.num_zero_true, numerics_record.num_tol_true,
-        numerics_record.num_10tol_true, numerics_record.num_clear_true,
-        numerics_record.min_positive_true, numerics_record.num_test);
+    printf("%-26s: tolerance =%6.1g: Zero =%9" HIGHSINT_FORMAT
+           "; Tol =%9" HIGHSINT_FORMAT "; 10Tol =%9" HIGHSINT_FORMAT
+           "; Clear =%9" HIGHSINT_FORMAT
+           "; "
+           "MinPositive =%7.2g; Tests =%9" HIGHSINT_FORMAT "\n",
+           numerics_record.name.c_str(), numerics_record.tolerance,
+           numerics_record.num_zero_true, numerics_record.num_tol_true,
+           numerics_record.num_10tol_true, numerics_record.num_clear_true,
+           numerics_record.min_positive_true, numerics_record.num_test);
   }
 
   void reportNumericsCsvRecord(const numericsRecord& numerics_record) {
-    printf(",%d,%d,%d", numerics_record.num_zero_true,
+    printf(",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT "",
+           numerics_record.num_zero_true,
            numerics_record.num_tol_true + numerics_record.num_10tol_true,
            numerics_record.num_clear_true);
   }

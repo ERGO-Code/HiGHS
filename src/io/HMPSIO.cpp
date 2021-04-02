@@ -193,7 +193,8 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
 
   if (num_alien_entries)
     highsLogUser(log_options, HighsLogType::WARNING,
-                 "COLUMNS section entries contain %8d with row not in ROWS  "
+                 "COLUMNS section entries contain %8" HIGHSINT_FORMAT
+                 " with row not in ROWS  "
                  "  section: ignored",
                  num_alien_entries);
 #ifdef HiGHSDEV
@@ -243,7 +244,8 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   }
   if (num_alien_entries)
     highsLogUser(log_options, HighsLogType::WARNING,
-                 "RHS     section entries contain %8d with row not in ROWS  "
+                 "RHS     section entries contain %8" HIGHSINT_FORMAT
+                 " with row not in ROWS  "
                  "  section: ignored",
                  num_alien_entries);
 #ifdef HiGHSDEV
@@ -316,7 +318,8 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   }
   if (num_alien_entries)
     highsLogUser(log_options, HighsLogType::WARNING,
-                 "RANGES  section entries contain %8d with row not in ROWS  "
+                 "RANGES  section entries contain %8" HIGHSINT_FORMAT
+                 " with row not in ROWS  "
                  "  section: ignored",
                  num_alien_entries);
 #ifdef HiGHSDEV
@@ -382,14 +385,16 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   }
   if (num_alien_entries)
     highsLogUser(log_options, HighsLogType::WARNING,
-                 "BOUNDS  section entries contain %8d with col not in "
+                 "BOUNDS  section entries contain %8" HIGHSINT_FORMAT
+                 " with col not in "
                  "COLUMNS section: ignored",
                  num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
-  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow,
-         numCol, num_int);
+  printf("readMPS: Model has %" HIGHSINT_FORMAT " rows and %" HIGHSINT_FORMAT
+         " columns with %" HIGHSINT_FORMAT " integer\n",
+         numRow, numCol, num_int);
 #endif
   // Load ENDATA and close file
   fclose(file);
@@ -503,7 +508,8 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   if (!free_format) {
     if (max_name_length > 8) {
       highsLogUser(options.log_options, HighsLogType::WARNING,
-                   "Maximum name length is %d so using free format rather "
+                   "Maximum name length is %" HIGHSINT_FORMAT
+                   " so using free format rather "
                    "than fixed format",
                    max_name_length);
       use_free_format = true;
@@ -550,9 +556,11 @@ HighsStatus writeMPS(
   HighsInt max_row_name_length = maxNameLength(numRow, row_names);
   HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
-    highsLogUser(log_options, HighsLogType::ERROR,
-                 "Cannot write fixed MPS with names of length (up to) %d",
-                 max_name_length);
+    highsLogUser(
+        log_options, HighsLogType::ERROR,
+        "Cannot write fixed MPS with names of length (up to) %" HIGHSINT_FORMAT
+        "",
+        max_name_length);
     return HighsStatus::Error;
   }
   vector<HighsInt> r_ty;
@@ -682,13 +690,17 @@ HighsStatus writeMPS(
     if (have_int) {
       if (integerColumn[c_n] == HighsVarType::INTEGER && !integerFg) {
         // Start an integer section
-        fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n",
+        fprintf(file,
+                "    MARK%04" HIGHSINT_FORMAT
+                "  'MARKER'                 'INTORG'\n",
                 nIntegerMk);
         nIntegerMk++;
         integerFg = true;
       } else if (integerColumn[c_n] != HighsVarType::INTEGER && integerFg) {
         // End an integer section
-        fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n",
+        fprintf(file,
+                "    MARK%04" HIGHSINT_FORMAT
+                "  'MARKER'                 'INTEND'\n",
                 nIntegerMk);
         nIntegerMk++;
         integerFg = false;
@@ -793,10 +805,12 @@ HighsStatus writeMPS(
   fprintf(file, "ENDATA\n");
   //#ifdef HiGHSDEV
   if (num_zero_no_cost_columns) {
-    printf(
-        "Model has %d zero columns with no costs: %d have finite upper bounds "
-        "or nonzero lower bounds",
-        num_zero_no_cost_columns, num_zero_no_cost_columns_in_bounds_section);
+    printf("Model has %" HIGHSINT_FORMAT
+           " zero columns with no costs: %" HIGHSINT_FORMAT
+           " have finite upper bounds "
+           "or nonzero lower bounds",
+           num_zero_no_cost_columns,
+           num_zero_no_cost_columns_in_bounds_section);
     if (write_zero_no_cost_columns) {
       printf(" and are written in MPS file\n");
     } else {

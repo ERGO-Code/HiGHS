@@ -35,9 +35,9 @@ namespace presolve {
 #ifndef NDEBUG
 void HPresolve::debugPrintRow(HighsPostsolveStack& postSolveStack,
                               HighsInt row) {
-  printf(
-      "(row %d) %.15g (impl: %.15g) <= ", postSolveStack.getOrigRowIndex(row),
-      model->rowLower_[row], impliedRowBounds.getSumLower(row));
+  printf("(row %" HIGHSINT_FORMAT ") %.15g (impl: %.15g) <= ",
+         postSolveStack.getOrigRowIndex(row), model->rowLower_[row],
+         impliedRowBounds.getSumLower(row));
 
   for (const HighsSliceNonzero& nonzero : getSortedRowVector(row)) {
     // for (HighsInt rowiter = rowhead[row]; rowiter != -1; rowiter =
@@ -46,8 +46,8 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postSolveStack,
                        ? 'y'
                        : 'x';
     char signchar = nonzero.value() < 0 ? '-' : '+';
-    printf("%c%g %c%d ", signchar, std::abs(nonzero.value()), colchar,
-           postSolveStack.getOrigColIndex(nonzero.index()));
+    printf("%c%g %c%" HIGHSINT_FORMAT " ", signchar, std::abs(nonzero.value()),
+           colchar, postSolveStack.getOrigColIndex(nonzero.index()));
   }
 
   printf("<= %.15g (impl: %.15g)\n", model->rowUpper_[row],
@@ -902,7 +902,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     HighsInt numCliquesStart = cliquetable.numCliques();
     HighsInt numDelStart = probingNumDelCol;
 
-    // printf("start probing wit %d cliques\n");
+    // printf("start probing wit %" HIGHSINT_FORMAT " cliques\n");
     for (std::tuple<HighsInt, HighsInt, HighsInt, HighsInt> binvar : binaries) {
       HighsInt i = std::get<3>(binvar);
 
@@ -935,7 +935,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         if (fixed) probingContingent += numDel;
 
         ++numProbed;
-        // printf("nprobed: %d, numCliques: %d\n", nprobed,
+        // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
+        // "\n", nprobed,
         //       cliquetable.numCliques());
         if (domain.infeasible()) {
           return Result::PrimalInfeasible;
@@ -998,8 +999,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postSolveStack));
 
     highsLogUser(options->log_options, HighsLogType::INFO,
-                 "%d probing evaluations: %d deleted rows, %d deleted "
-                 "columns, %d lifted nonzeros\n",
+                 "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
+                 " deleted rows, %" HIGHSINT_FORMAT
+                 " deleted "
+                 "columns, %" HIGHSINT_FORMAT " lifted nonzeros\n",
                  numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
                  addednnz);
   }
@@ -1128,7 +1131,8 @@ void HPresolve::changeColLower(HighsInt col, double newLower) {
 
   double oldLower = model->colLower_[col];
   model->colLower_[col] = newLower;
-  // printf("tightening lower bound of column %d from %.15g to %.15g\n", col,
+  // printf("tightening lower bound of column %" HIGHSINT_FORMAT " from %.15g to
+  // %.15g\n", col,
   //        oldLower, newLower);
 
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
@@ -1142,7 +1146,8 @@ void HPresolve::changeRowDualUpper(HighsInt row, double newUpper) {
   double oldUpper = rowDualUpper[row];
   rowDualUpper[row] = newUpper;
 
-  // printf("tightening upper bound of column %d from %.15g to %.15g\n", col,
+  // printf("tightening upper bound of column %" HIGHSINT_FORMAT " from %.15g to
+  // %.15g\n", col,
   //        oldUpper, newUpper);
   for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
     impliedDualRowBounds.updatedVarUpper(nonzero.index(), row, nonzero.value(),
@@ -1154,7 +1159,8 @@ void HPresolve::changeRowDualUpper(HighsInt row, double newUpper) {
 void HPresolve::changeRowDualLower(HighsInt row, double newLower) {
   double oldLower = rowDualLower[row];
   rowDualLower[row] = newLower;
-  // printf("tightening lower bound of column %d from %.15g to %.15g\n", col,
+  // printf("tightening lower bound of column %" HIGHSINT_FORMAT " from %.15g to
+  // %.15g\n", col,
   //        oldLower, newLower);
 
   for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
@@ -2042,7 +2048,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
       // one nonbasic row in postsolve, and make the other rows and the column
       // basic. The columns primal value is computed from the non-basic row
       // which is chosen such that the values of all rows are primal feasible
-      // printf("removing forcing column of size %d\n", colsize[col]);
+      // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
+      // colsize[col]);
       postSolveStack.forcingColumn(col, getColumnVector(col),
                                    model->colCost_[col], model->colLower_[col],
                                    true);
@@ -2067,7 +2074,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
     else if (impliedDualRowBounds.getSumLowerOrig(col) == 0.0) {
       // forcing column, since this implies colDual <= 0 and we already checked
       // that colDual >= 0
-      // printf("removing forcing column of size %d\n", colsize[col]);
+      // printf("removing forcing column of size %" HIGHSINT_FORMAT "\n",
+      // colsize[col]);
       postSolveStack.forcingColumn(col, getColumnVector(col),
                                    model->colCost_[col], model->colUpper_[col],
                                    false);
@@ -2221,7 +2229,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
 
         if (binCol != -1) {
           // found binary column for substituting all other columns
-          // printf("simple probing case on row of size %d\n", rowsize[row]);
+          // printf("simple probing case on row of size %" HIGHSINT_FORMAT "\n",
+          // rowsize[row]);
           for (const HighsSliceNonzero& nonz : getStoredRow()) {
             if (nonz.index() == binCol) continue;
 
@@ -2974,7 +2983,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
       HighsInt numRow = model->numRow_ - numDeletedRows;
       HighsInt numNonz = Avalue.size() - freeslots.size();
       highsLogUser(options->log_options, HighsLogType::INFO,
-                   "%d rows, %d cols, %d nonzeros\n", numRow, numCol, numNonz);
+                   "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+                   " cols, %" HIGHSINT_FORMAT " nonzeros\n",
+                   numRow, numCol, numNonz);
     };
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
@@ -3464,7 +3475,7 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postSolveStack,
                               HighsInt col) {
   double fixval = model->colLower_[col];
 
-  // printf("fixing column %d to %.15g\n", col, fixval);
+  // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
 
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its nonzeros
@@ -3507,7 +3518,7 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postSolveStack,
                               HighsInt col) {
   double fixval = model->colUpper_[col];
 
-  // printf("fixing column %d to %.15g\n", col, fixval);
+  // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
 
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its nonzeros
@@ -3727,7 +3738,8 @@ HighsInt HPresolve::strengthenInequalities() {
                  HighsInt(0.05 * (model->numCol_ - numDeletedCols))))
       continue;
 
-    // printf("strengthening knapsack of %d vars\n", rowsize[row]);
+    // printf("strengthening knapsack of %" HIGHSINT_FORMAT " vars\n",
+    // rowsize[row]);
 
     HighsCDouble maxviolation;
     HighsCDouble continuouscontribution = 0.0;
@@ -4670,9 +4682,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // row i is equation and parallel (except for singletons)
         // add to the row parallelRowCand
         // printf(
-        //    "nearly parallel case with %d singletons in eq row and %d "
-        //    "singletons in other row(eq=%d)\n",
-        //    numSingleton, numSingletonCandidate,
+        //    "nearly parallel case with %" HIGHSINT_FORMAT " singletons in eq
+        //    row and %" HIGHSINT_FORMAT " " "singletons in other row(eq=%"
+        //    HIGHSINT_FORMAT ")\n", numSingleton, numSingletonCandidate,
         //    model->rowLower_[parallelRowCand] ==
         //        model->rowUpper_[parallelRowCand]);
         postSolveStack.equalityRowAddition(parallelRowCand, i, -rowScale,
@@ -4704,9 +4716,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       } else if (model->rowLower_[parallelRowCand] ==
                  model->rowUpper_[parallelRowCand]) {
         // printf(
-        //    "nearly parallel case with %d singletons in eq row and %d "
-        //    "singletons in other inequality row\n",
-        //    numSingletonCandidate, numSingleton);
+        //    "nearly parallel case with %" HIGHSINT_FORMAT " singletons in eq
+        //    row and %" HIGHSINT_FORMAT " " "singletons in other inequality
+        //    row\n", numSingletonCandidate, numSingleton);
         // the row parallelRowCand is an equation; add it to the other row
         double scale = -rowMax[i].first / rowMax[parallelRowCand].first;
         postSolveStack.equalityRowAddition(i, parallelRowCand, scale,
@@ -4926,7 +4938,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     // highs.writeModel("model.mps");
     // highs.writeBasis("bad.bas");
     highs.run();
-    printf("simplex iterations with postsolved basis: %d\n",
+    printf("simplex iterations with postsolved basis: %" HIGHSINT_FORMAT "\n",
            highs.getSimplexIterationCount());
     checkResult = highs.getSimplexIterationCount() == 0;
 #else

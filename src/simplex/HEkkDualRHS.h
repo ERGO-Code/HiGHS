@@ -50,9 +50,10 @@ class HEkkDualRHS {
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void chooseMultiGlobal(HighsInt* chIndex,  //!< Set of indices of chosen rows
-                         HighsInt* chCount,  //!< Number of chosen rows
-                         HighsInt chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiGlobal(
+      HighsInt* chIndex,  //!< Set of indices of chosen rows
+      HighsInt* chCount,  //!< Number of chosen rows
+      HighsInt chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
@@ -103,8 +104,8 @@ class HEkkDualRHS {
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void updatePivots(HighsInt iRow,     //!< row where the basis change has occurred
-                    double value  //!< New primal value in this row
+  void updatePivots(HighsInt iRow,  //!< row where the basis change has occurred
+                    double value    //!< New primal value in this row
   );
 
   /**
@@ -128,10 +129,10 @@ class HEkkDualRHS {
   // References:
   HEkk& ekk_instance_;
 
-  double workCutoff;  //!< Limit for row to be in list with greatest primal
-                      //!< infeasibilities
-  HighsInt workCount;      //!< Number of rows in list with greatest primal
-                      //!< infeasibilities
+  double workCutoff;   //!< Limit for row to be in list with greatest primal
+                       //!< infeasibilities
+  HighsInt workCount;  //!< Number of rows in list with greatest primal
+                       //!< infeasibilities
   std::vector<char> workMark;  //!< Flag set if row is in list of those with
                                //!< greatest primal infeasibilities
   std::vector<HighsInt>

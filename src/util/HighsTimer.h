@@ -86,12 +86,9 @@ class HighsTimer {
    */
   /*
     void clockAdd(HighsClockRecord x_clock,  //!< Record for the external clock
-                  HighsInt i_clock                //!< Clock of record to be added
-    ) {
-      assert(i_clock >= 0);
-      assert(i_clock < num_clock);
-      x_clock.calls += clock_num_call[i_clock];
-      x_clock.start = initial_clock_start;
+                  HighsInt i_clock                //!< Clock of record to be
+    added ) { assert(i_clock >= 0); assert(i_clock < num_clock); x_clock.calls
+    += clock_num_call[i_clock]; x_clock.start = initial_clock_start;
       x_clock.time += clock_time[i_clock];
     }
     */
@@ -136,8 +133,9 @@ class HighsTimer {
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
 #ifdef HiGHSDEV
     if (clock_start[i_clock] <= 0) {
-      printf("recordStart [%2d] (%s) is %11.4g: _num_call = %d\n", i_clock,
-             clock_names[i_clock].c_str(), clock_start[i_clock],
+      printf("recordStart [%2" HIGHSINT_FORMAT
+             "] (%s) is %11.4g: _num_call = %" HIGHSINT_FORMAT "\n",
+             i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
              clock_num_call[i_clock]);
       fflush(stdout);
     }
@@ -159,8 +157,9 @@ class HighsTimer {
     // -getWallTime() <= 0
 #ifdef HiGHSDEV
     if (clock_start[i_clock] > 0) {
-      printf("recordFinish[%2d] (%s) is %11.4g: _num_call = %d\n", i_clock,
-             clock_names[i_clock].c_str(), clock_start[i_clock],
+      printf("recordFinish[%2" HIGHSINT_FORMAT
+             "] (%s) is %11.4g: _num_call = %" HIGHSINT_FORMAT "\n",
+             i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
              clock_num_call[i_clock]);
       fflush(stdout);
     }
@@ -230,7 +229,7 @@ class HighsTimer {
       const char*
           grep_stamp,  //!< Character string used to extract output using grep
       std::vector<HighsInt>& clock_list,  //!< List of indices to report
-      double ideal_sum_time = 0,     //!< Ideal value for times to sum to
+      double ideal_sum_time = 0,          //!< Ideal value for times to sum to
       double tl_per_cent_report =
           0  //!< Lower bound on percentage of total time
              //!< before an individual clock is reported
@@ -246,11 +245,11 @@ class HighsTimer {
 #ifdef HiGHSDEV
       HighsInt i_clock = clock_list[i];
       if (clock_start[i_clock] <= 0) {
-        printf(
-            "Clock %2d (%s) is still running: Start = %11.4g: "
-            "_num_call = %d\n",
-            i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-            clock_num_call[i_clock]);
+        printf("Clock %2" HIGHSINT_FORMAT
+               " (%s) is still running: Start = %11.4g: "
+               "_num_call = %" HIGHSINT_FORMAT "\n",
+               i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
+               clock_num_call[i_clock]);
         fflush(stdout);
       }
 #endif
@@ -298,7 +297,8 @@ class HighsTimer {
         }
         HighsInt int_PerMille = (perMille + 0.5);  // Forcing proper rounding
         if (int_PerMille > 0) {
-          printf("%4d", int_PerMille);  // Just in case one time is 1000!
+          printf("%4" HIGHSINT_FORMAT "",
+                 int_PerMille);  // Just in case one time is 1000!
         } else {
           printf("    ");  // Just in case one time is 1000!
         }
@@ -307,8 +307,9 @@ class HighsTimer {
           sum_clock_times += clock_time[i_clock];
         }
       }
-      HighsInt int_sum_permille = (suPerMille + 0.5);  // Forcing proper rounding
-      printf(" per mille: Sum = %4d", int_sum_permille);
+      HighsInt int_sum_permille =
+          (suPerMille + 0.5);  // Forcing proper rounding
+      printf(" per mille: Sum = %4" HIGHSINT_FORMAT "", int_sum_permille);
       printf("\n");
     }
 
@@ -333,8 +334,9 @@ class HighsTimer {
             double percent_ideal = 100.0 * time / ideal_sum_time;
             printf("; %5.1f%%", percent_ideal);
           }
-          printf("; %5.1f%%):%9d %11.4e\n", percent_sum_clock_times,
-                 clock_num_call[i_clock], time_per_call);
+          printf("; %5.1f%%):%9" HIGHSINT_FORMAT " %11.4e\n",
+                 percent_sum_clock_times, clock_num_call[i_clock],
+                 time_per_call);
         }
       }
       sum_time += time;

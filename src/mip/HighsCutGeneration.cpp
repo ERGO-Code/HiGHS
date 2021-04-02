@@ -39,10 +39,11 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   coverweight = 0.0;
   if (lpSol) {
     // take all variables that sit at their upper bound always into the cover
-    coversize =
-        std::partition(cover.begin(), cover.end(),
-                       [&](HighsInt j) { return solval[j] >= upper[j] - feastol; }) -
-        cover.begin();
+    coversize = std::partition(cover.begin(), cover.end(),
+                               [&](HighsInt j) {
+                                 return solval[j] >= upper[j] - feastol;
+                               }) -
+                cover.begin();
 
     for (HighsInt i = 0; i != coversize; ++i) {
       HighsInt j = cover[i];
@@ -904,9 +905,10 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
     if ((HighsInt)cancelNzs.size() < numCancel) return false;
     if ((HighsInt)cancelNzs.size() > numCancel)
-      std::partial_sort(
-          cancelNzs.begin(), cancelNzs.begin() + numCancel, cancelNzs.end(),
-          [&](HighsInt a, HighsInt b) { return std::abs(vals[a]) < std::abs(vals[b]); });
+      std::partial_sort(cancelNzs.begin(), cancelNzs.begin() + numCancel,
+                        cancelNzs.end(), [&](HighsInt a, HighsInt b) {
+                          return std::abs(vals[a]) < std::abs(vals[b]);
+                        });
 
     for (HighsInt i = 0; i < numCancel; ++i) {
       HighsInt j = cancelNzs[i];
@@ -1056,8 +1058,9 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(),
-                                vals_.data(), inds_.size(), rhs_, cutintegral);
+  HighsInt cutindex =
+      cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(), vals_.data(),
+                     inds_.size(), rhs_, cutintegral);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool

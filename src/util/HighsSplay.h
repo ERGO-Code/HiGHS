@@ -25,7 +25,7 @@
 /// to KeyT.
 template <typename KeyT, typename GetLeft, typename GetRight, typename GetKey>
 HighsInt highs_splay(const KeyT& key, HighsInt root, GetLeft&& get_left,
-                GetRight&& get_right, GetKey&& get_key) {
+                     GetRight&& get_right, GetKey&& get_key) {
   if (root == -1) return -1;
 
   HighsInt Nleft = -1;

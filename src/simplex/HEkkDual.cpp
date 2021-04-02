@@ -62,10 +62,12 @@ HighsStatus HEkkDual::solve() {
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
-                 "HEkkDual::solve called for LP with non-positive (%d) "
-                 "number of constraints\n",
-                 ekk_instance_.simplex_lp_.numRow_);
+    highsLogUser(
+        options.log_options, HighsLogType::ERROR,
+        "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
+        ") "
+        "number of constraints\n",
+        ekk_instance_.simplex_lp_.numRow_);
     assert(positive_num_row);
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
@@ -109,13 +111,14 @@ HighsStatus HEkkDual::solve() {
   const bool near_optimal = simplex_info.num_dual_infeasibility == 0 &&
                             simplex_info.sum_primal_infeasibility < 1;
   if (near_optimal)
-    highsLogDev(
-        options.log_options, HighsLogType::DETAILED,
-        "Dual feasible and num / max / sum primal infeasibilities are %d / %g "
-        "/ %g, so near-optimal\n",
-        simplex_info.num_primal_infeasibility,
-        simplex_info.max_primal_infeasibility,
-        simplex_info.sum_primal_infeasibility);
+    highsLogDev(options.log_options, HighsLogType::DETAILED,
+                "Dual feasible and num / max / sum primal infeasibilities are "
+                "%" HIGHSINT_FORMAT
+                " / %g "
+                "/ %g, so near-optimal\n",
+                simplex_info.num_primal_infeasibility,
+                simplex_info.max_primal_infeasibility,
+                simplex_info.sum_primal_infeasibility);
 
   // Perturb costs according to whether the solution is near-optimnal
   const bool perturb_costs = !near_optimal;
@@ -199,7 +202,8 @@ HighsStatus HEkkDual::solve() {
               double IzDseWtTT =
                   analysis->simplexTimerRead(SimplexIzDseWtClock);
               highsLogDev(options.log_options, HighsLogType::DETAILED,
-                          "Computed %d initial DSE weights in %gs\n",
+                          "Computed %" HIGHSINT_FORMAT
+                          " initial DSE weights in %gs\n",
                           solver_num_row, IzDseWtTT);
             }
           }
@@ -438,8 +442,10 @@ void HEkkDual::initParallel() {
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       highsLogUser(ekk_instance_.options_.log_options, HighsLogType::WARNING,
-                   "SIP trying to use using %d slices due to number of "
-                   "threads (%d) being too small: results unpredictable\n",
+                   "SIP trying to use using %" HIGHSINT_FORMAT
+                   " slices due to number of "
+                   "threads (%" HIGHSINT_FORMAT
+                   ") being too small: results unpredictable\n",
                    pass_num_slice, num_threads);
     }
     initSlice(pass_num_slice);
@@ -460,8 +466,10 @@ void HEkkDual::initParallel() {
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       highsLogUser(ekk_instance_.options_.log_options, HighsLogType::WARNING,
-                   "PAMI trying to use using %d slices due to number of "
-                   "threads (%d) being too small: results unpredictable\n",
+                   "PAMI trying to use using %" HIGHSINT_FORMAT
+                   " slices due to number of "
+                   "threads (%" HIGHSINT_FORMAT
+                   ") being too small: results unpredictable\n",
                    pass_num_slice, num_threads);
     }
     initSlice(pass_num_slice);
@@ -480,11 +488,12 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   if (slice_num < 1) slice_num = 1;
   assert(slice_num <= HIGHS_SLICED_LIMIT);
   if (slice_num > HIGHS_SLICED_LIMIT) {
-    highsLogUser(
-        ekk_instance_.options_.log_options, HighsLogType::WARNING,
-        "WARNING: %d = slice_num > HIGHS_SLICED_LIMIT = %d so truncating "
-        "slice_num\n",
-        slice_num, HIGHS_SLICED_LIMIT);
+    highsLogUser(ekk_instance_.options_.log_options, HighsLogType::WARNING,
+                 "WARNING: %" HIGHSINT_FORMAT
+                 " = slice_num > HIGHS_SLICED_LIMIT = %" HIGHSINT_FORMAT
+                 " so truncating "
+                 "slice_num\n",
+                 slice_num, HIGHS_SLICED_LIMIT);
     slice_num = HIGHS_SLICED_LIMIT;
   }
 
@@ -1340,8 +1349,8 @@ bool HEkkDual::newDevexFramework(const double updated_edge_weight) {
   return_new_devex_framework = !accept_ratio || !accept_it;
   /*
   if (return_new_devex_framework) {
-    printf("New Devex framework: (Iter %d) updated weight = %11.4g; computed
-  weight = %11.4g; Devex ratio = %11.4g\n",
+    printf("New Devex framework: (Iter %" HIGHSINT_FORMAT ") updated weight =
+  %11.4g; computed weight = %11.4g; Devex ratio = %11.4g\n",
            ekk_instance_.iteration_count_,
            updated_edge_weight, computed_edge_weight, devex_ratio);
     return true;
@@ -1481,8 +1490,8 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
     dualRow.choosePossible();
 #ifdef OPENMP
     //    HighsInt row_ep_thread_id = omp_get_thread_num();
-    //    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n",
-    //    row_ep_thread_id);
+    //    printf("Hello world from Row_ep:         PACK + CC1 thread %"
+    //    HIGHSINT_FORMAT "\n", row_ep_thread_id);
 #endif
   }
 
@@ -1492,8 +1501,9 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
     {
 #ifdef OPENMP
       //      HighsInt row_ap_thread_id = omp_get_thread_num();
-      //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d]
-      //      thread %d\n", i, row_ap_thread_id);
+      //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1"
+      //      HIGHSINT_FORMAT "] thread %" HIGHSINT_FORMAT "\n", i,
+      //      row_ap_thread_id);
 #endif
       slice_row_ap[i].clear();
 
@@ -1829,8 +1839,8 @@ void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   simplex_info.costs_perturbed = true;
   if (simplex_info.workShift_[iCol] != 0) {
-    printf("Column %d already has nonzero shift of %g\n", iCol,
-           simplex_info.workShift_[iCol]);
+    printf("Column %" HIGHSINT_FORMAT " already has nonzero shift of %g\n",
+           iCol, simplex_info.workShift_[iCol]);
   }
   assert(simplex_info.workShift_[iCol] == 0);
   simplex_info.workShift_[iCol] = amount;
@@ -1941,7 +1951,8 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
   } else {
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::INFO,
                 "HEkkDual::interpretDualEdgeWeightStrategy: "
-                "unrecognised dual_edge_weight_strategy = %d - using "
+                "unrecognised dual_edge_weight_strategy = %" HIGHSINT_FORMAT
+                " - using "
                 "dual steepest edge with possible switch to Devex\n",
                 dual_edge_weight_strategy);
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
@@ -1971,7 +1982,8 @@ void HEkkDual::assessPhase1Optimality() {
   if (fabs(simplex_info.dual_objective_value) <= primal_feasibility_tolerance)
     highsLogUser(ekk_instance_.options_.log_options, HighsLogType::INFO,
                  "Optimal in phase 1 but not jumping to phase 2 since "
-                 "dual objective is %10.4g: Costs perturbed = %d\n",
+                 "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
+                 "\n",
                  simplex_info.dual_objective_value,
                  ekk_instance_.simplex_info_.costs_perturbed);
   if (ekk_instance_.simplex_info_.costs_perturbed) {
@@ -2076,14 +2088,16 @@ void HEkkDual::exitPhase1ResetDuals() {
         num_shift++;
         sum_shift += fabs(shift);
         highsLogDev(ekk_instance_.options_.log_options, HighsLogType::VERBOSE,
-                    "Variable %d is free: shift cost to zero dual of %g\n",
+                    "Variable %" HIGHSINT_FORMAT
+                    " is free: shift cost to zero dual of %g\n",
                     iVar, shift);
       }
     }
   }
   if (num_shift)
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::DETAILED,
-                "Performed %d cost shift(s) for free variables to zero "
+                "Performed %" HIGHSINT_FORMAT
+                " cost shift(s) for free variables to zero "
                 "dual values: total = %g\n",
                 num_shift, sum_shift);
 }
@@ -2103,7 +2117,8 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   }
   highsLogUser(ekk_instance_.options_.log_options, HighsLogType::INFO,
                "LP is dual %s with dual phase 1 objective %10.4g and num / "
-               "max / sum dual infeasibilities = %d / %9.4g / %9.4g\n",
+               "max / sum dual infeasibilities = %" HIGHSINT_FORMAT
+               " / %9.4g / %9.4g\n",
                lp_dual_status.c_str(), simplex_info.dual_objective_value,
                analysis.num_dual_phase_1_lp_dual_infeasibility,
                analysis.max_dual_phase_1_lp_dual_infeasibility,
@@ -2117,14 +2132,18 @@ bool HEkkDual::dualInfoOk(const HighsLp& lp) {
   dimensions_ok = lp_numCol == solver_num_col && lp_numRow == solver_num_row;
   assert(dimensions_ok);
   if (!dimensions_ok) {
-    printf("LP-Solver dimension incompatibility (%d, %d) != (%d, %d)\n",
+    printf("LP-Solver dimension incompatibility (%" HIGHSINT_FORMAT
+           ", %" HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
+           ")\n",
            lp_numCol, solver_num_col, lp_numRow, solver_num_row);
     return false;
   }
   dimensions_ok = lp_numCol == factor->numCol && lp_numRow == factor->numRow;
   assert(dimensions_ok);
   if (!dimensions_ok) {
-    printf("LP-Factor dimension incompatibility (%d, %d) != (%d, %d)\n",
+    printf("LP-Factor dimension incompatibility (%" HIGHSINT_FORMAT
+           ", %" HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
+           ")\n",
            lp_numCol, factor->numCol, lp_numRow, factor->numRow);
     return false;
   }
@@ -2226,7 +2245,9 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
       action = "No   DualUB bailout";
     }
     highsLogUser(ekk_instance_.options_.log_options, HighsLogType::INFO,
-                 "%s on iteration %d: Density %11.4g; Frequency %d: "
+                 "%s on iteration %" HIGHSINT_FORMAT
+                 ": Density %11.4g; Frequency %" HIGHSINT_FORMAT
+                 ": "
                  "Residual(Perturbed = %g; Exact = %g)\n",
                  action.c_str(), ekk_instance_.iteration_count_,
                  use_row_ap_density, check_frequency, perturbed_value_residual,
@@ -2277,7 +2298,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
     if (residual > 1e10)
       highsLogUser(
           ekk_instance_.options_.log_options, HighsLogType::WARNING,
-          "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+          "Col %4" HIGHSINT_FORMAT
+          ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iCol, exact_dual, simplex_info.workDual_[iCol], residual);
     dual_objective += simplex_info.workValue_[iCol] * exact_dual;
   }
@@ -2291,7 +2313,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
     if (residual > 1e10)
       highsLogUser(
           ekk_instance_.options_.log_options, HighsLogType::WARNING,
-          "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+          "Row %4" HIGHSINT_FORMAT
+          ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iRow, exact_dual, simplex_info.workDual_[iVar], residual);
     dual_objective += simplex_info.workValue_[iVar] * exact_dual;
   }

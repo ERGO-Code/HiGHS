@@ -42,8 +42,8 @@ class HighsLpRelaxation {
     Origin origin;
     HighsInt index;
 
-    void get(const HighsMipSolver& mipsolver, HighsInt& len, const HighsInt*& inds,
-             const double*& vals) const;
+    void get(const HighsMipSolver& mipsolver, HighsInt& len,
+             const HighsInt*& inds, const double*& vals) const;
 
     HighsInt getRowLen(const HighsMipSolver& mipsolver) const;
 
@@ -89,7 +89,8 @@ class HighsLpRelaxation {
 
   void loadModel();
 
-  void getRow(HighsInt row, HighsInt& len, const HighsInt*& inds, const double*& vals) const {
+  void getRow(HighsInt row, HighsInt& len, const HighsInt*& inds,
+              const double*& vals) const {
     if (row < mipsolver.numRow())
       assert(lprows[row].origin == LpRow::Origin::kModel);
     else
@@ -104,7 +105,9 @@ class HighsLpRelaxation {
 
   double getAvgSolveIters() { return avgSolveIters; }
 
-  HighsInt getRowLen(HighsInt row) const { return lprows[row].getRowLen(mipsolver); }
+  HighsInt getRowLen(HighsInt row) const {
+    return lprows[row].getRowLen(mipsolver);
+  }
 
   double getMaxAbsRowVal(HighsInt row) const {
     return lprows[row].getMaxAbsVal(mipsolver);
@@ -118,9 +121,13 @@ class HighsLpRelaxation {
 
   double slackLower(HighsInt row) const;
 
-  double rowLower(HighsInt row) const { return lpsolver.getLp().rowLower_[row]; }
+  double rowLower(HighsInt row) const {
+    return lpsolver.getLp().rowLower_[row];
+  }
 
-  double rowUpper(HighsInt row) const { return lpsolver.getLp().rowUpper_[row]; }
+  double rowUpper(HighsInt row) const {
+    return lpsolver.getLp().rowUpper_[row];
+  }
 
   double colLower(HighsInt col) const {
     return col < lpsolver.getLp().numCol_
@@ -248,8 +255,8 @@ class HighsLpRelaxation {
                         double& rhs) const;
 
   bool computeDualInfProof(const HighsDomain& globaldomain,
-                           std::vector<HighsInt>& inds, std::vector<double>& vals,
-                           double& rhs);
+                           std::vector<HighsInt>& inds,
+                           std::vector<double>& vals, double& rhs);
 
   Status resolveLp(HighsDomain* domain = nullptr);
 
@@ -258,7 +265,8 @@ class HighsLpRelaxation {
   Highs& getLpSolver() { return lpsolver; }
   const Highs& getLpSolver() const { return lpsolver; }
 
-  const std::vector<std::pair<HighsInt, double>>& getFractionalIntegers() const {
+  const std::vector<std::pair<HighsInt, double>>& getFractionalIntegers()
+      const {
     return fractionalints;
   }
 

@@ -886,7 +886,7 @@ class AggregationHeuristic {
 #endif
 
 HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
-                                     HighsLpRelaxation::Status& status) {
+                                          HighsLpRelaxation::Status& status) {
   const HighsSolution& sol = lp->getLpSolver().getSolution();
 
   HighsMipSolverData& mipdata = *lp->getMipSolver().mipdata_;
@@ -975,13 +975,13 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       nlpiters += lp->getNumLpIterations();
       mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
       mipsolver.mipdata_->total_lp_iterations += nlpiters;
-      // printf("separated %d cuts\n", ncuts);
+      // printf("separated %" HIGHSINT_FORMAT " cuts\n", ncuts);
 
       // printf(
-      //     "separation round %d at node %d added %d cuts objective changed "
-      //     "from %g to %g, first obj is %g\n",
-      //     nrounds, (HighsInt)nnodes, ncuts, lastobj, lp->getObjective(),
-      //     firstobj);
+      //     "separation round %" HIGHSINT_FORMAT " at node %" HIGHSINT_FORMAT "
+      //     added %" HIGHSINT_FORMAT " cuts objective changed " "from %g to %g,
+      //     first obj is %g\n", nrounds, (HighsInt)nnodes, ncuts, lastobj,
+      //     lp->getObjective(), firstobj);
       if (ncuts == 0 || !lp->scaledOptimal(status) ||
           lp->getFractionalIntegers().empty())
         break;
@@ -994,7 +994,8 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
 
     // printf("done separating\n");
   } else {
-    // printf("no separation, just aging. status: %d\n", (HighsInt)status);
+    // printf("no separation, just aging. status: %" HIGHSINT_FORMAT "\n",
+    // (HighsInt)status);
     lp->performAging();
     mipsolver.mipdata_->cutpool.performAging();
   }

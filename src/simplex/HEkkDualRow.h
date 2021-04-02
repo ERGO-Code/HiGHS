@@ -58,8 +58,8 @@ class HEkkDualRow {
    *
    * Offset of numCol is used when packing row_ep
    */
-  void chooseMakepack(const HVector* row,  //!< Row to be packed
-                      const HighsInt offset     //!< Offset for indices
+  void chooseMakepack(const HVector* row,    //!< Row to be packed
+                      const HighsInt offset  //!< Offset for indices
   );
   /**
    * @brief Determine the possible variables - candidates for CHUZC
@@ -135,7 +135,8 @@ class HEkkDualRow {
   /**
    * @brief Delete the list of nonbasic free columns
    */
-  void deleteFreelist(HighsInt iColumn  //!< Index of column to remove from Freelist
+  void deleteFreelist(
+      HighsInt iColumn  //!< Index of column to remove from Freelist
   );
 
   /**
@@ -146,8 +147,8 @@ class HEkkDualRow {
   // References:
   HEkk& ekk_instance_;
 
-  HighsInt workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it here to
-                      //!< avoid compiler warning
+  HighsInt workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it
+                           //!< here to avoid compiler warning
   const HighsInt*
       workNumTotPermutation;  //!< Pointer to ekk_instance_.numTotPermutation();
   const HighsInt*
@@ -156,26 +157,27 @@ class HEkkDualRow {
       workDual;  //!< Pointer to ekk_instance_.simplex_info_.workDual_;
   const double*
       workRange;  //!< Pointer to ekk_instance_.simplex_info_.workRange_;
-  const HighsInt* work_devex_index;  //!< Pointer to
-                                //!< ekk_instance_.simplex_info_.devex_index_;
+  const HighsInt*
+      work_devex_index;  //!< Pointer to
+                         //!< ekk_instance_.simplex_info_.devex_index_;
 
   // Freelist:
   std::set<HighsInt> freeList;  //!< Freelist itself
 
   // packed data:
-  HighsInt packCount;                  //!< number of packed indices/values
-  std::vector<HighsInt> packIndex;     //!< Packed indices
-  std::vector<double> packValue;  //!< Packed values
+  HighsInt packCount;               //!< number of packed indices/values
+  std::vector<HighsInt> packIndex;  //!< Packed indices
+  std::vector<double> packValue;    //!< Packed values
 
   // (Local) value of computed weight
   double computed_edge_weight;
 
-  double workDelta;  //!< Local copy of dual.delta_primal
-  double workAlpha;  //!< Original copy of pivotal computed row-wise
-  double workTheta;  //!< Original copy of dual step workDual[workPivot] /
-                     //!< workAlpha;
-  HighsInt workPivot;     //!< Index of the column entering the basis
-  HighsInt workCount;     //!< Number of BFRT flips
+  double workDelta;    //!< Local copy of dual.delta_primal
+  double workAlpha;    //!< Original copy of pivotal computed row-wise
+  double workTheta;    //!< Original copy of dual step workDual[workPivot] /
+                       //!< workAlpha;
+  HighsInt workPivot;  //!< Index of the column entering the basis
+  HighsInt workCount;  //!< Number of BFRT flips
 
   std::vector<std::pair<HighsInt, double>>
       workData;  //!< Index-Value pairs for ratio test

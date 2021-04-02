@@ -185,7 +185,8 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numboundchgs) {
           substitutions.push_back(substitution);
           colsubstituted[implicsup[u].column] = true;
 
-        } else if ((HighsInt)implicsup[u].boundtype < (HighsInt)implicsdown[d].boundtype)
+        } else if ((HighsInt)implicsup[u].boundtype <
+                   (HighsInt)implicsdown[d].boundtype)
           ++u;
         else
           ++d;
@@ -310,7 +311,8 @@ void HighsImplications::separateImpliedBounds(
   HighsInt numboundchgs = 0;
 
   // first do probing on all candidates that have not been probed yet
-  for (std::pair<HighsInt, double> fracint : lpRelaxation.getFractionalIntegers()) {
+  for (std::pair<HighsInt, double> fracint :
+       lpRelaxation.getFractionalIntegers()) {
     HighsInt col = fracint.first;
     if (globaldomain.colLower_[col] != 0.0 ||
         globaldomain.colUpper_[col] != 1.0)
@@ -322,7 +324,8 @@ void HighsImplications::separateImpliedBounds(
     }
   }
 
-  for (std::pair<HighsInt, double> fracint : lpRelaxation.getFractionalIntegers()) {
+  for (std::pair<HighsInt, double> fracint :
+       lpRelaxation.getFractionalIntegers()) {
     HighsInt col = fracint.first;
     // skip non binary variables
     if (globaldomain.colLower_[col] != 0.0 ||

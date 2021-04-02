@@ -53,7 +53,8 @@ class HAggregator {
   std::vector<HighsInt> impliedUbRow;
   std::vector<double> col_numerics_threshold;
   // priority queue to reuse free slots
-  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>> freeslots;
+  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
+      freeslots;
 
   // vectors holding row activities
   std::vector<HighsCDouble> minact;
@@ -207,7 +208,8 @@ class HAggregator {
 
   void addNonzero(HighsInt row, HighsInt col, double val);
 
-  void fromCSC(const std::vector<double>& Aval, const std::vector<HighsInt>& Aindex,
+  void fromCSC(const std::vector<double>& Aval,
+               const std::vector<HighsInt>& Aindex,
                const std::vector<HighsInt>& Astart);
 
   void fromDynamicCSC(const std::vector<double>& Aval,
@@ -229,7 +231,8 @@ class HAggregator {
 
   PostsolveStack run();
 
-  void substitute(HighsInt substcol, HighsInt staycol, double offset, double scale);
+  void substitute(HighsInt substcol, HighsInt staycol, double offset,
+                  double scale);
 
   void removeFixedCol(HighsInt col);
 

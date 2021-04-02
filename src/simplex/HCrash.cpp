@@ -126,7 +126,8 @@ void HCrash::bixby() {
     }
 #ifdef HiGHSDEV
     if (reportBixbyPass)
-      printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
+      printf("Pass %3" HIGHSINT_FORMAT ": c_n = %3" HIGHSINT_FORMAT
+             "; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
              ps_n, c_n, c_mx_abs_v, aa, aa / c_mx_abs_v);
 #endif
     // Scale aa by the max |entry| in the column since CPLEX assumes
@@ -138,19 +139,22 @@ void HCrash::bixby() {
       // Column pv_c_n becomes basic in row pv_r_n
       HighsInt pv_c_n = c_n;
       HighsInt pv_r_n = r_o_mx_aa;
-      // printf(" ** Type a: c_n = %d; pv_c_n = %d ** c_n, pv_c_n);
+      // printf(" ** Type a: c_n = %" HIGHSINT_FORMAT "; pv_c_n = %"
+      // HIGHSINT_FORMAT " ** c_n, pv_c_n);
       bixby_pv_in_r[pv_r_n] = 1;
       bixby_vr_in_r[pv_r_n] = pv_c_n;
       bixby_pseudo_pv_v[pv_r_n] = aa;
       for (HighsInt el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
         // HighsInt r_n = Aindex[el_n];
-        // printf("\n Row %3d: value %g", r_n, Avalue[el_n]);
+        // printf("\n Row %3" HIGHSINT_FORMAT ": value %g", r_n, Avalue[el_n]);
         bixby_r_k[Aindex[el_n]] += 1;
       }
       bixby_n_cdd_r -= 1;
 #ifdef HiGHSDEV
       if (reportBixbyPass)
-        printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
+        printf(": pv_r = %3" HIGHSINT_FORMAT "; n_cdd_r = %3" HIGHSINT_FORMAT
+               "\n",
+               pv_r_n, bixby_n_cdd_r);
 #endif
       nx_ps = true;
     } else {
@@ -215,7 +219,9 @@ void HCrash::bixby() {
     bixby_n_cdd_r -= 1;
 #ifdef HiGHSDEV
     if (reportBixbyPass)
-      printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
+      printf(": pv_r = %3" HIGHSINT_FORMAT "; n_cdd_r = %3" HIGHSINT_FORMAT
+             "\n",
+             pv_r_n, bixby_n_cdd_r);
 #endif
     if (bixby_n_cdd_r == 0) break;
   }
@@ -368,7 +374,8 @@ bool HCrash::bixby_iz_da() {
     os += 1 + n_en;
   }
 #ifdef HiGHSDEV
-  printf("%5d Free    cols (%1d)\n", n_en, crsh_vr_ty_fr);
+  printf("%5" HIGHSINT_FORMAT " Free    cols (%1" HIGHSINT_FORMAT ")\n", n_en,
+         crsh_vr_ty_fr);
 #endif
 
   // 1-sided columns
@@ -395,7 +402,8 @@ bool HCrash::bixby_iz_da() {
     os += 1 + n_en;
   }
 #ifdef HiGHSDEV
-  printf("%5d 1-sided cols (%1d)\n", n_en, crsh_vr_ty_1_sd);
+  printf("%5" HIGHSINT_FORMAT " 1-sided cols (%1" HIGHSINT_FORMAT ")\n", n_en,
+         crsh_vr_ty_1_sd);
 #endif
 
   // 2-sided columns
@@ -419,7 +427,8 @@ bool HCrash::bixby_iz_da() {
     os += 1 + n_en;
   }
 #ifdef HiGHSDEV
-  printf("%5d 2-sided cols (%1d)\n", n_en, crsh_vr_ty_2_sd);
+  printf("%5" HIGHSINT_FORMAT " 2-sided cols (%1" HIGHSINT_FORMAT ")\n", n_en,
+         crsh_vr_ty_2_sd);
 #endif
 
   // Fixed columns - impossible after presolve
@@ -442,7 +451,8 @@ bool HCrash::bixby_iz_da() {
     os += 1 + n_en;
   }
 #ifdef HiGHSDEV
-  printf("%5d Fixed   cols (%1d)\n", n_en, crsh_vr_ty_fx);
+  printf("%5" HIGHSINT_FORMAT " Fixed   cols (%1" HIGHSINT_FORMAT ")\n", n_en,
+         crsh_vr_ty_fx);
 #endif
   return true;
 }
@@ -491,12 +501,13 @@ void HCrash::bixby_rp_mrt() {
       prev_mrt_v = mrt_v;
     }
     if (rp_c)
-      printf(
-          "%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; "
-          "[%10.4g,%10.4g]\n",
-          ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
+      printf("%5" HIGHSINT_FORMAT ": Col %5" HIGHSINT_FORMAT
+             ", Type = %1" HIGHSINT_FORMAT
+             "; MrtV = %10.4g; MrtV0 = %10.4g; "
+             "[%10.4g,%10.4g]\n",
+             ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
   }
-  printf("\n%6d different Bixby merits\n", n_mrt_v);
+  printf("\n%6" HIGHSINT_FORMAT " different Bixby merits\n", n_mrt_v);
 }
 
 void HCrash::ltssf() {
@@ -548,9 +559,11 @@ void HCrash::ltssf() {
   ltssf_iz_da();
 #ifdef HiGHSDEV
   printf("\nLTSSF Crash\n");
-  printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
-  printf(" crsh_fn_cf_k = %d\n", crsh_fn_cf_k);
-  printf(" Objective f = %2d*pri_v - %2d*k\n", crsh_fn_cf_pri_v, crsh_fn_cf_k);
+  printf(" crsh_fn_cf_pri_v = %" HIGHSINT_FORMAT "\n", crsh_fn_cf_pri_v);
+  printf(" crsh_fn_cf_k = %" HIGHSINT_FORMAT "\n", crsh_fn_cf_k);
+  printf(" Objective f = %2" HIGHSINT_FORMAT "*pri_v - %2" HIGHSINT_FORMAT
+         "*k\n",
+         crsh_fn_cf_pri_v, crsh_fn_cf_k);
   string lg;
   // if (mn_co_tie_bk) lg = "T"; else lg = "F";
   // printf(" Break priority function ties on smallest cost = %s\n", lg);
@@ -563,22 +576,25 @@ void HCrash::ltssf() {
   else
     printf(" Don't do numerical check on pivot = F\n");
 
-  printf("Max row priority is %d\n", mx_r_pri);
-  printf("Max col priority is %d\n", mx_c_pri);
+  printf("Max row priority is %" HIGHSINT_FORMAT "\n", mx_r_pri);
+  printf("Max col priority is %" HIGHSINT_FORMAT "\n", mx_c_pri);
 #endif
   if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) {
 #ifdef HiGHSDEV
-    printf(
-        "Max row priority of %d + Max col priority of %d = %d <= %d: no value "
-        "in performing LTSSF crash\n",
-        mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
+    printf("Max row priority of %" HIGHSINT_FORMAT
+           " + Max col priority of %" HIGHSINT_FORMAT " = %" HIGHSINT_FORMAT
+           " <= %" HIGHSINT_FORMAT
+           ": no value "
+           "in performing LTSSF crash\n",
+           mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
 #endif
     // Save the solved results
     return;
   }
 #ifdef HiGHSDEV
   if (ltssf_ck_fq > 0) {
-    printf("\nCHECKING LTSSF DATA NOW AND EVERY %d PASS(ES)!!\n\n",
+    printf("\nCHECKING LTSSF DATA NOW AND EVERY %" HIGHSINT_FORMAT
+           " PASS(ES)!!\n\n",
            ltssf_ck_fq);
     ltssf_ck_da();
   }
@@ -591,16 +607,17 @@ void HCrash::ltssf() {
   ltssf_iterate();
 
 #ifdef HiGHSDEV
-  printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
-         n_crsh_ps);
-  printf(
-      " Absolute tolerance (%6.4f): Rejected %7d pivots: min absolute pivot "
-      "value = %6.4e\n",
-      tl_crsh_abs_pv_v, n_abs_pv_no_ok, mn_abs_pv_v);
-  printf(
-      " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
-      "value = %6.4e\n",
-      tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
+  printf(" %" HIGHSINT_FORMAT "/%" HIGHSINT_FORMAT
+         " basis changes from %" HIGHSINT_FORMAT " passes\n",
+         n_crsh_bs_cg, numRow, n_crsh_ps);
+  printf(" Absolute tolerance (%6.4f): Rejected %7" HIGHSINT_FORMAT
+         " pivots: min absolute pivot "
+         "value = %6.4e\n",
+         tl_crsh_abs_pv_v, n_abs_pv_no_ok, mn_abs_pv_v);
+  printf(" Relative tolerance (%6.4f): Rejected %7" HIGHSINT_FORMAT
+         " pivots: min relative pivot "
+         "value = %6.4e\n",
+         tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
   // Analyse the row and column status after Crash
   // basicIndex is only required for this analysis, so set it here.
   ekk_instance.simplex_basis_.basicIndex_.resize(numRow);
@@ -630,7 +647,9 @@ void HCrash::ltssf_iterate() {
     if (bs_cg) {
 #ifdef HiGHSDEV
       if (reportCrashData)
-        printf("Pass %2d; cz_r = %2d; cz_c = %2d\n", n_crsh_ps, cz_r_n, cz_c_n);
+        printf("Pass %2" HIGHSINT_FORMAT "; cz_r = %2" HIGHSINT_FORMAT
+               "; cz_c = %2" HIGHSINT_FORMAT "\n",
+               n_crsh_ps, cz_r_n, cz_c_n);
 #endif
       // A basis change has occurred
       n_crsh_bs_cg += 1;
@@ -654,7 +673,9 @@ void HCrash::ltssf_iterate() {
     } else {
 #ifdef HiGHSDEV
       if (reportCrashData)
-        printf("Pass %2d; cz_r = %2d: No basis change\n", n_crsh_ps, cz_r_n);
+        printf("Pass %2" HIGHSINT_FORMAT "; cz_r = %2" HIGHSINT_FORMAT
+               ": No basis change\n",
+               n_crsh_ps, cz_r_n);
 #endif
     }
 #ifdef HiGHSDEV
@@ -676,10 +697,12 @@ void HCrash::ltssf_iterate() {
     }
     if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) {
 #ifdef HiGHSDEV
-      printf(
-          "Max active row priority of %d + Max original col priority of %d = "
-          "%d <= %d: no value in performing further LTSSF crash\n",
-          mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
+      printf("Max active row priority of %" HIGHSINT_FORMAT
+             " + Max original col priority of %" HIGHSINT_FORMAT
+             " = "
+             "%" HIGHSINT_FORMAT " <= %" HIGHSINT_FORMAT
+             ": no value in performing further LTSSF crash\n",
+             mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
 #endif
       ltssf_stop = true;
     }
@@ -723,7 +746,8 @@ void HCrash::ltssf_u_da_af_bs_cg() {
 #ifdef HiGHSDEV
       if (reportCrashData) {
         ltssf_rp_pri_k_da();
-        printf("1: Remove row %d of pri %d from linked list with %d entries\n",
+        printf("1: Remove row %" HIGHSINT_FORMAT " of pri %" HIGHSINT_FORMAT
+               " from linked list with %" HIGHSINT_FORMAT " entries\n",
                r_n, pri_v, r_k);
       }
 #endif
@@ -763,8 +787,9 @@ void HCrash::ltssf_u_da_af_bs_cg() {
 #ifdef HiGHSDEV
         if (reportCrashData) {
           ltssf_rp_pri_k_da();
-          printf("Add row %d of pri %d to linked list with %d entries\n", r_n,
-                 pri_v, r_k);
+          printf("Add row %" HIGHSINT_FORMAT " of pri %" HIGHSINT_FORMAT
+                 " to linked list with %" HIGHSINT_FORMAT " entries\n",
+                 r_n, pri_v, r_k);
         }
 #endif
         HighsInt hdr_ix = pri_v * (numCol + 1) + r_k;
@@ -780,9 +805,9 @@ void HCrash::ltssf_u_da_af_bs_cg() {
 #ifdef HiGHSDEV
         if (reportCrashData) {
           ltssf_rp_pri_k_da();
-          printf(
-              "2: Remove row %d of pri %d and count %d from active submatrix\n",
-              r_n, pri_v, r_k);
+          printf("2: Remove row %" HIGHSINT_FORMAT " of pri %" HIGHSINT_FORMAT
+                 " and count %" HIGHSINT_FORMAT " from active submatrix\n",
+                 r_n, pri_v, r_k);
         }
 #endif
         // ...or, if the count is zero, the row leaves the active submatrix...
@@ -1039,16 +1064,18 @@ void HCrash::ltssf_ck_da() {
     if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
     HighsInt k = crsh_r_k[r_n];
     HighsInt ck_k = 0;
-    for (HighsInt el_n = CrshARstart[r_n]; el_n < CrshARstart[r_n + 1]; el_n++) {
+    for (HighsInt el_n = CrshARstart[r_n]; el_n < CrshARstart[r_n + 1];
+         el_n++) {
       HighsInt c_n = CrshARindex[el_n];
       if (crsh_act_c[c_n] != crsh_vr_st_no_act) ck_k += 1;
     }
     if (ck_k != k) {
       er_fd = true;
-      printf(
-          "ERROR: Row %d has number of entries error: True = %d; Updated = "
-          "%d\n",
-          r_n, ck_k, k);
+      printf("ERROR: Row %" HIGHSINT_FORMAT
+             " has number of entries error: True = %" HIGHSINT_FORMAT
+             "; Updated = "
+             "%" HIGHSINT_FORMAT "\n",
+             r_n, ck_k, k);
     }
   }
   for (HighsInt pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
@@ -1061,23 +1088,28 @@ void HCrash::ltssf_ck_da() {
         HighsInt ck_pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
         if (ck_pri_v != pri_v) {
           er_fd = true;
-          printf("ERROR: Row %d has ck_pri_v = %d but pri_v = %d\n", r_n,
-                 ck_pri_v, pri_v);
+          printf("ERROR: Row %" HIGHSINT_FORMAT
+                 " has ck_pri_v = %" HIGHSINT_FORMAT
+                 " but pri_v = %" HIGHSINT_FORMAT "\n",
+                 r_n, ck_pri_v, pri_v);
         }
         HighsInt ck_k = crsh_r_k[r_n];
         if (ck_k != k) {
           er_fd = true;
-          printf("ERROR: Row %d has ck_k = %d but k = %d\n", r_n, ck_k, k);
+          printf("ERROR: Row %" HIGHSINT_FORMAT " has ck_k = %" HIGHSINT_FORMAT
+                 " but k = %" HIGHSINT_FORMAT "\n",
+                 r_n, ck_k, k);
         }
         HighsInt nx_r_n = crsh_r_pri_k_lkf[r_n];
         if (nx_r_n != no_lk) {
           HighsInt prev_nx_r_n = crsh_r_pri_k_lkb[nx_r_n];
           if (prev_nx_r_n != r_n) {
             er_fd = true;
-            printf(
-                "ERROR: Back link error for nx_r_n = %d: prev_nx_r_n = %d but "
-                "r_n = %d\n",
-                nx_r_n, prev_nx_r_n, r_n);
+            printf("ERROR: Back link error for nx_r_n = %" HIGHSINT_FORMAT
+                   ": prev_nx_r_n = %" HIGHSINT_FORMAT
+                   " but "
+                   "r_n = %" HIGHSINT_FORMAT "\n",
+                   nx_r_n, prev_nx_r_n, r_n);
           }
         }
         // Update the true minimum row count
@@ -1086,9 +1118,10 @@ void HCrash::ltssf_ck_da() {
       } while (r_n != no_lk);
     }
     if (crsh_r_pri_mn_r_k[pri_v] != mn_r_k)
-      printf(
-          "ERROR: Priority %d has crsh_r_pri_mn_r_k = %d < %d = true mn_r_k\n",
-          pri_v, crsh_r_pri_mn_r_k[pri_v], mn_r_k);
+      printf("ERROR: Priority %" HIGHSINT_FORMAT
+             " has crsh_r_pri_mn_r_k = %" HIGHSINT_FORMAT " < %" HIGHSINT_FORMAT
+             " = true mn_r_k\n",
+             pri_v, crsh_r_pri_mn_r_k[pri_v], mn_r_k);
     crsh_r_pri_mn_r_k[pri_v] = mn_r_k;
   }
   if (er_fd) {
@@ -1109,10 +1142,11 @@ void HCrash::ltssf_cz_r() {
       if (r_k > numCol) continue;
       cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
       if (cz_r_n == no_ix) {
-        printf(
-            "ERROR: header for pri_v = %d and count = %d is empty for "
-            "crsh_r_pri_mn_r_k[pri_v] = %d\n",
-            pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
+        printf("ERROR: header for pri_v = %" HIGHSINT_FORMAT
+               " and count = %" HIGHSINT_FORMAT
+               " is empty for "
+               "crsh_r_pri_mn_r_k[pri_v] = %" HIGHSINT_FORMAT "\n",
+               pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
       }
       break;
     }
@@ -1124,10 +1158,11 @@ void HCrash::ltssf_cz_r() {
       if (r_k < mn_r_k) {
         cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
         if (cz_r_n == no_ix) {
-          printf(
-              "ERROR: header for pri_v = %d and count = %d is empty for "
-              "crsh_r_pri_mn_r_k[pri_v] = %d\n",
-              pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
+          printf("ERROR: header for pri_v = %" HIGHSINT_FORMAT
+                 " and count = %" HIGHSINT_FORMAT
+                 " is empty for "
+                 "crsh_r_pri_mn_r_k[pri_v] = %" HIGHSINT_FORMAT "\n",
+                 pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
         }
         mn_r_k = r_k;
         if (mn_r_k == 1) break;
@@ -1165,7 +1200,8 @@ void HCrash::ltssf_cz_c() {
   pv_v = 0.0;
   double mn_co = HIGHS_CONST_INF;
   HighsInt mx_c_pri_fn_v = -HIGHS_CONST_I_INF;
-  for (HighsInt el_n = CrshARstart[cz_r_n]; el_n < CrshARstart[cz_r_n + 1]; el_n++) {
+  for (HighsInt el_n = CrshARstart[cz_r_n]; el_n < CrshARstart[cz_r_n + 1];
+       el_n++) {
     HighsInt c_n = CrshARindex[el_n];
     if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
     // Don't allow the row to be replaced by a column whose priority
@@ -1175,7 +1211,7 @@ void HCrash::ltssf_cz_c() {
       continue;
     // If column is worse than current best then break
     HighsInt c_pri_fn_v = crsh_fn_cf_pri_v * crsh_c_ty_pri_v[crsh_c_ty[c_n]] -
-                     crsh_fn_cf_k * crsh_c_k[c_n];
+                          crsh_fn_cf_k * crsh_c_k[c_n];
     if (c_pri_fn_v < mx_c_pri_fn_v) continue;
     // Pivot is OK if pivots are not being checked
     bool pv_ok = no_ck_pv;
@@ -1235,12 +1271,12 @@ void HCrash::tsSing() {
 void HCrash::ltssf_rp_r_k() {
   printf("\n        : ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", r_n);
+    printf(" %2" HIGHSINT_FORMAT "", r_n);
   }
   printf(" \n");
   printf("k: ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_r_k[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_r_k[r_n]);
   }
   printf(" \n");
 }
@@ -1248,74 +1284,79 @@ void HCrash::ltssf_rp_r_k() {
 void HCrash::ltssf_rp_r_pri() {
   printf("\nRow       : ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", r_n);
+    printf(" %2" HIGHSINT_FORMAT "", r_n);
   }
   printf(" \n");
   printf("crsh_r_ty:  ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_r_ty[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_r_ty[r_n]);
   }
   printf(" \n");
   printf("pri_v:      ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_r_ty_pri_v[crsh_r_ty[r_n]]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_r_ty_pri_v[crsh_r_ty[r_n]]);
   }
   printf(" \n");
   printf("act_r:      ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_act_r[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_act_r[r_n]);
   }
 }
 
 void HCrash::ltssf_rp_pri_k_da() {
   for (HighsInt pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
-    printf("Pri = %1d: ", pri_v);
+    printf("Pri = %1" HIGHSINT_FORMAT ": ", pri_v);
     for (HighsInt k = 1; k < numCol + 1; k++) {
       HighsInt hdr_ix = pri_v * (numCol + 1) + k;
-      printf(" %2d", crsh_r_pri_k_hdr[hdr_ix]);
+      printf(" %2" HIGHSINT_FORMAT "", crsh_r_pri_k_hdr[hdr_ix]);
     }
     printf("\n");
   }
   printf("r_n: ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", r_n);
+    printf(" %2" HIGHSINT_FORMAT "", r_n);
   }
   printf("\n");
   printf("Act: ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_act_r[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_act_r[r_n]);
   }
   printf("\n");
   printf("Cnt: ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_r_k[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_r_k[r_n]);
   }
   printf("\n");
   printf("Lkf: ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_r_pri_k_lkf[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_r_pri_k_lkf[r_n]);
   }
   printf("\n");
   printf("Lkb: ");
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    printf(" %2d", crsh_r_pri_k_lkb[r_n]);
+    printf(" %2" HIGHSINT_FORMAT "", crsh_r_pri_k_lkb[r_n]);
   }
   printf("\n");
   for (HighsInt pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
     for (HighsInt k = 1; k < numCol + 1; k++) {
       HighsInt hdr_ix = pri_v * (numCol + 1) + k;
       HighsInt r_n = crsh_r_pri_k_hdr[hdr_ix];
-      //   printf("Pri = %1d; k = %1d: hdr = %d\n", pri_v,
+      //   printf("Pri = %1" HIGHSINT_FORMAT "; k = %1" HIGHSINT_FORMAT ": hdr =
+      //   %" HIGHSINT_FORMAT "\n", pri_v,
       // k, r_n);
       if (r_n == no_lk) continue;
       HighsInt nx_r_n = crsh_r_pri_k_lkf[r_n];
-      printf("Pri = %1d; k = %1d: %3d %3d <-  ", pri_v, k, r_n, nx_r_n);
+      printf("Pri = %1" HIGHSINT_FORMAT "; k = %1" HIGHSINT_FORMAT
+             ": %3" HIGHSINT_FORMAT " %3" HIGHSINT_FORMAT " <-  ",
+             pri_v, k, r_n, nx_r_n);
       r_n = nx_r_n;
       if (r_n != no_lk) {
         do {
           HighsInt prev_r_n = crsh_r_pri_k_lkb[r_n];
           HighsInt nx_r_n = crsh_r_pri_k_lkf[r_n];
-          printf("  <-%3d %3d %3d ->  ", prev_r_n, r_n, nx_r_n);
+          printf("  <-%3" HIGHSINT_FORMAT " %3" HIGHSINT_FORMAT
+                 " %3" HIGHSINT_FORMAT " ->  ",
+                 prev_r_n, r_n, nx_r_n);
           r_n = nx_r_n;
         } while (r_n != no_lk);
       }
@@ -1410,8 +1451,10 @@ void HCrash::crsh_iz_vr_ty() {
     crsh_nonbc_vr_ty_n_r[vr_ty] = 0;
     crsh_nonbc_vr_ty_n_c[vr_ty] = 0;
   }
-  for (HighsInt r_n = 0; r_n < numRow; r_n++) crsh_vr_ty_og_n_r[crsh_r_ty[r_n]] += 1;
-  for (HighsInt c_n = 0; c_n < numCol; c_n++) crsh_vr_ty_og_n_c[crsh_c_ty[c_n]] += 1;
+  for (HighsInt r_n = 0; r_n < numRow; r_n++)
+    crsh_vr_ty_og_n_r[crsh_r_ty[r_n]] += 1;
+  for (HighsInt c_n = 0; c_n < numCol; c_n++)
+    crsh_vr_ty_og_n_c[crsh_c_ty[c_n]] += 1;
 #endif
 }
 
@@ -1451,10 +1494,12 @@ void HCrash::crsh_an_c_co() {
       }
     }
   }
-  printf(" Model has %7d Ze costs (%3d%%)\n", n_ze_c_co,
-         (100 * n_ze_c_co) / numCol);
-  printf(" Model has %7d Fs costs (%3d%%)\n", n_fs_c_co,
-         (100 * n_fs_c_co) / numCol);
+  printf(" Model has %7" HIGHSINT_FORMAT " Ze costs (%3" HIGHSINT_FORMAT
+         "%%)\n",
+         n_ze_c_co, (100 * n_ze_c_co) / numCol);
+  printf(" Model has %7" HIGHSINT_FORMAT " Fs costs (%3" HIGHSINT_FORMAT
+         "%%)\n",
+         n_fs_c_co, (100 * n_fs_c_co) / numCol);
 }
 
 void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
@@ -1484,11 +1529,11 @@ void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
       }
       printf("\n");
       if (mode == 0)
-        printf("grep_CharCrash,%d", numRow);
+        printf("grep_CharCrash,%" HIGHSINT_FORMAT "", numRow);
       else if (mode == 2)
-        printf("grep_CharCrash,%d", numRow);
+        printf("grep_CharCrash,%" HIGHSINT_FORMAT "", numRow);
       else if (mode == 3)
-        printf("grep_CharCrash,%d", numCol);
+        printf("grep_CharCrash,%" HIGHSINT_FORMAT "", numCol);
     }
     for (HighsInt vr_ty = crsh_f_vr_ty; vr_ty < crsh_num_vr_ty; vr_ty++) {
       TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
@@ -1497,14 +1542,16 @@ void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
         HighsInt lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
         if (ps_n == 0) {
           if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-            printf(" Model has %7d %3s rows (%3d%%)\n",
+            printf(" Model has %7" HIGHSINT_FORMAT
+                   " %3s rows (%3" HIGHSINT_FORMAT "%%)\n",
                    crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(), lc_pct);
         } else {
-          printf(",%7d", crsh_vr_ty_og_n_r[vr_ty]);
+          printf(",%7" HIGHSINT_FORMAT "", crsh_vr_ty_og_n_r[vr_ty]);
         }
       } else if (mode == 1) {
         if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-          printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
+          printf(" Removed %7" HIGHSINT_FORMAT " of %7" HIGHSINT_FORMAT
+                 " %3s rows (%3" HIGHSINT_FORMAT "%%)\n",
                  crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
                  TyNm.c_str(),
                  (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
@@ -1515,29 +1562,34 @@ void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
           ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
           ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
           if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
-            printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
+            printf(" Basic    variables contain %7" HIGHSINT_FORMAT
+                   " %3s rows (%3" HIGHSINT_FORMAT "%%)\n",
                    crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
                    (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
           if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
-            printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
+            printf(" Basic    variables contain %7" HIGHSINT_FORMAT
+                   " %3s cols (%3" HIGHSINT_FORMAT "%%)\n",
                    crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
                    (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
         } else {
-          printf(",%d,%d", crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
+          printf(",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT "",
+                 crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
         }
       } else {
         if (ps_n == 0) {
           if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
-            printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
+            printf(" Nonbasic variables contain %7" HIGHSINT_FORMAT
+                   " %3s cols (%3" HIGHSINT_FORMAT "%%)\n",
                    crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
                    (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
           if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
-            printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
+            printf(" Nonbasic variables contain %7" HIGHSINT_FORMAT
+                   " %3s rows (%3" HIGHSINT_FORMAT "%%)\n",
                    crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
                    (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
         } else {
-          printf(",%d,%d", crsh_nonbc_vr_ty_n_r[vr_ty],
-                 crsh_nonbc_vr_ty_n_c[vr_ty]);
+          printf(",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT "",
+                 crsh_nonbc_vr_ty_n_r[vr_ty], crsh_nonbc_vr_ty_n_c[vr_ty]);
         }
       }
     }
@@ -1551,12 +1603,15 @@ void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
       TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
       if (mode == 0) ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
       if (crsh_vr_ty_og_n_c[vr_ty] > 0)
-        printf(" Model has %7d %3s cols (%3d%%)\n", crsh_vr_ty_og_n_c[vr_ty],
-               TyNm.c_str(), (100 * crsh_vr_ty_og_n_c[vr_ty]) / numCol);
+        printf(" Model has %7" HIGHSINT_FORMAT " %3s cols (%3" HIGHSINT_FORMAT
+               "%%)\n",
+               crsh_vr_ty_og_n_c[vr_ty], TyNm.c_str(),
+               (100 * crsh_vr_ty_og_n_c[vr_ty]) / numCol);
 
       else if (mode == 1) {
         if (crsh_vr_ty_og_n_c[vr_ty] > 0)
-          printf(" Added   %7d of %7d %3s cols (%3d%%)\n",
+          printf(" Added   %7" HIGHSINT_FORMAT " of %7" HIGHSINT_FORMAT
+                 " %3s cols (%3" HIGHSINT_FORMAT "%%)\n",
                  crsh_vr_ty_add_n_c[vr_ty], crsh_vr_ty_og_n_c[vr_ty],
                  TyNm.c_str(),
                  (100 * crsh_vr_ty_add_n_c[vr_ty]) / crsh_vr_ty_og_n_c[vr_ty]);
@@ -1599,7 +1654,8 @@ void HCrash::crsh_an_r_c_st_af() {
 
   crsh_rp_r_c_st(1);
   crsh_rp_r_c_st(2);
-  printf(" Basis    matrix    contains%7d structural entries\n",
+  printf(" Basis    matrix    contains%7" HIGHSINT_FORMAT
+         " structural entries\n",
          bs_mtx_n_struc_el);
   crsh_rp_r_c_st(3);
 }
@@ -1612,7 +1668,7 @@ string HCrash::crsh_nm_o_crsh_vr_ty(const HighsInt vr_ty) {
     else if (vr_ty == crsh_vr_ty_bc)
       TyNm = " Bc";
     else
-      printf("Unrecognised type %d\n", vr_ty);
+      printf("Unrecognised type %" HIGHSINT_FORMAT "\n", vr_ty);
   } else {
     if (vr_ty == crsh_vr_ty_fx)
       TyNm = "Fx ";
@@ -1623,7 +1679,7 @@ string HCrash::crsh_nm_o_crsh_vr_ty(const HighsInt vr_ty) {
     else if (vr_ty == crsh_vr_ty_fr)
       TyNm = "Fr ";
     else
-      printf("Unrecognised type %d\n", vr_ty);
+      printf("Unrecognised type %" HIGHSINT_FORMAT "\n", vr_ty);
   }
   return TyNm;
 }

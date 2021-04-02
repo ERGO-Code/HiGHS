@@ -74,7 +74,8 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
         if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
-          //	  printf("Dense: Row %4d weight = %g\n", iRow, myWeight);
+          //	  printf("Dense: Row %4" HIGHSINT_FORMAT " weight = %g\n", iRow,
+          //myWeight);
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -106,8 +107,8 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
           const double myWeight = workEdWt[iRow];
           /*
           const double myMerit = myInfeas / myWeight;
-          printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit =
-          %11.4g\n", iRow, myInfeas, myWeight, myMerit);
+          printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
+          %11.4g; Merit = %11.4g\n", iRow, myInfeas, myWeight, myMerit);
           */
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
@@ -134,7 +135,8 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
   if (!keep_timer_running) analysis->simplexTimerStop(ChuzrDualClock);
 }
 
-void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount, HighsInt chLimit) {
+void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
+                                    HighsInt chLimit) {
   analysis->simplexTimerStart(ChuzrDualClock);
 
   for (HighsInt i = 0; i < chLimit; i++) chIndex[i] = -1;
@@ -196,8 +198,8 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount, HighsI
           const double myWeight = workEdWt[iRow];
           /*
           const double myMerit = myInfeas / myWeight;
-          printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit =
-          %11.4g\n", iRow, myInfeas, myWeight, myMerit);
+          printf("CHUZR: iRow = %6" HIGHSINT_FORMAT "; Infeas = %11.4g; Weight =
+          %11.4g; Merit = %11.4g\n", iRow, myInfeas, myWeight, myMerit);
           */
           if (cutoffMerit * myWeight < myInfeas) {
             // Save
@@ -222,7 +224,8 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount, HighsI
   analysis->simplexTimerStop(ChuzrDualClock);
 }
 
-void HEkkDualRHS::chooseMultiHyperGraphAuto(HighsInt* chIndex, HighsInt* chCount,
+void HEkkDualRHS::chooseMultiHyperGraphAuto(HighsInt* chIndex,
+                                            HighsInt* chCount,
                                             HighsInt chLimit) {
   // Automatically decide to use partition or not
   if (partSwitch)
@@ -231,7 +234,8 @@ void HEkkDualRHS::chooseMultiHyperGraphAuto(HighsInt* chIndex, HighsInt* chCount
     chooseMultiGlobal(chIndex, chCount, chLimit);
 }
 
-void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex, HighsInt* chCount,
+void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
+                                            HighsInt* chCount,
                                             HighsInt chLimit) {
   analysis->simplexTimerStart(ChuzrDualClock);
 

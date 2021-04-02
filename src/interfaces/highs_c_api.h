@@ -40,7 +40,7 @@ HighsInt Highs_call(
                                //!< basis stati
     HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
                                //!< basis stati
-    HighsInt* modelstatus      //!< status of the model will be saved here
+    int* modelstatus           //!< status of the model will be saved here
 );
 
 /*
@@ -229,9 +229,9 @@ HighsInt Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
 /*
  * @brief
  */
-HighsInt Highs_getHighsIntInfoValue(void* highs,       //!< HiGHS object reference
-                               const char* info,  //!< The info name
-                               HighsInt* value    //!< The info value
+HighsInt Highs_getHighsIntInfoValue(void* highs,  //!< HiGHS object reference
+                                    const char* info,  //!< The info name
+                                    HighsInt* value    //!< The info value
 );
 
 /*

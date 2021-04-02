@@ -70,8 +70,8 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   REQUIRE(entry[2] == 7);
   REQUIRE(entry[3] == 5);
   if (dev_run) {
-    printf("Set(%d, %d)\nEntries: ", entry_size, count);
-    for (HighsInt ix = 0; ix < count; ix++) printf(" %d", entry[ix]);
+    printf("Set(%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\nEntries: ", entry_size, count);
+    for (HighsInt ix = 0; ix < count; ix++) printf(" %" HIGHSINT_FORMAT "", entry[ix]);
     printf("\n");
   }
 }

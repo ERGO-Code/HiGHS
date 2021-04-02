@@ -72,18 +72,24 @@ class HighsLinearSumBounds {
                        double oldVarLower);
 
   void updatedImplVarUpper(HighsInt sum, HighsInt var, double coefficient,
-                           double oldImplVarUpper, HighsInt oldImplVarUpperSource);
+                           double oldImplVarUpper,
+                           HighsInt oldImplVarUpperSource);
 
   void updatedImplVarLower(HighsInt sum, HighsInt var, double coefficient,
-                           double oldImplVarLower, HighsInt oldImplVarLowerSource);
+                           double oldImplVarLower,
+                           HighsInt oldImplVarLowerSource);
 
-  double getResidualSumLower(HighsInt sum, HighsInt var, double coefficient) const;
+  double getResidualSumLower(HighsInt sum, HighsInt var,
+                             double coefficient) const;
 
-  double getResidualSumUpper(HighsInt sum, HighsInt var, double coefficient) const;
+  double getResidualSumUpper(HighsInt sum, HighsInt var,
+                             double coefficient) const;
 
-  double getResidualSumLowerOrig(HighsInt sum, HighsInt var, double coefficient) const;
+  double getResidualSumLowerOrig(HighsInt sum, HighsInt var,
+                                 double coefficient) const;
 
-  double getResidualSumUpperOrig(HighsInt sum, HighsInt var, double coefficient) const;
+  double getResidualSumUpperOrig(HighsInt sum, HighsInt var,
+                                 double coefficient) const;
 
   double getSumLowerOrig(HighsInt sum) const {
     return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
@@ -127,9 +133,13 @@ class HighsLinearSumBounds {
 
   HighsInt getNumInfSumUpper(HighsInt sum) const { return numInfSumUpper[sum]; }
 
-  HighsInt getNumInfSumLowerOrig(HighsInt sum) const { return numInfSumLowerOrig[sum]; }
+  HighsInt getNumInfSumLowerOrig(HighsInt sum) const {
+    return numInfSumLowerOrig[sum];
+  }
 
-  HighsInt getNumInfSumUpperOrig(HighsInt sum) const { return numInfSumUpperOrig[sum]; }
+  HighsInt getNumInfSumUpperOrig(HighsInt sum) const {
+    return numInfSumUpperOrig[sum];
+  }
 
   void shrink(const std::vector<HighsInt>& newIndices, HighsInt newSize);
 };

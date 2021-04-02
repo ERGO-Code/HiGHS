@@ -16,8 +16,8 @@
 #include <string>
 #include <vector>
 
-#include "ipm/IpxSolution.h"
 #include "io/HighsIO.h"
+#include "ipm/IpxSolution.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsOptions.h"
@@ -359,8 +359,10 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
       unrecognised = true;
 #ifdef HiGHSDEV
       printf(
-          "\nError in IPX conversion: Unrecognised value ipx_col_status[%2d] = "
-          "%d\n",
+          "\nError in IPX conversion: Unrecognised value "
+          "ipx_col_status[%2" HIGHSINT_FORMAT
+          "] = "
+          "%" HIGHSINT_FORMAT "\n",
           col, (HighsInt)ipx_col_status[col]);
 #endif
     }
@@ -368,11 +370,13 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     if (unrecognised)
       printf("Bounds [%11.4g, %11.4g]\n", lp.colLower_[col], lp.colUpper_[col]);
     if (unrecognised)
-      printf(
-          "Col %2d ipx_col_status[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = "
-          "%11.4g\n",
-          col, col, (HighsInt)ipx_col_status[col], col, ipx_col_value[col], col,
-          ipx_col_dual[col]);
+      printf("Col %2" HIGHSINT_FORMAT " ipx_col_status[%2" HIGHSINT_FORMAT
+             "] = %2" HIGHSINT_FORMAT "; x[%2" HIGHSINT_FORMAT
+             "] = %11.4g; z[%2" HIGHSINT_FORMAT
+             "] = "
+             "%11.4g\n",
+             col, col, (HighsInt)ipx_col_status[col], col, ipx_col_value[col],
+             col, ipx_col_dual[col]);
 #endif
     assert(!unrecognised);
     if (unrecognised) {
@@ -443,10 +447,12 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         } else {
           unrecognised = true;
 #ifdef HiGHSDEV
-          printf(
-              "\nError in IPX conversion: Row %2d (IPX row %2d) has "
-              "unrecognised value ipx_col_status[%2d] = %d\n",
-              row, ipx_row, ipx_slack, (HighsInt)ipx_col_status[ipx_slack]);
+          printf("\nError in IPX conversion: Row %2" HIGHSINT_FORMAT
+                 " (IPX row %2" HIGHSINT_FORMAT
+                 ") has "
+                 "unrecognised value ipx_col_status[%2" HIGHSINT_FORMAT
+                 "] = %" HIGHSINT_FORMAT "\n",
+                 row, ipx_row, ipx_slack, (HighsInt)ipx_col_status[ipx_slack]);
 #endif
         }
         // Update the slack to be used for boxed rows
@@ -480,10 +486,11 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         } else {
           unrecognised = true;
 #ifdef HiGHSDEV
-          printf(
-              "\nError in IPX conversion: Row %2d: cannot handle "
-              "constraint_type[%2d] = %d\n",
-              row, ipx_row, constraint_type[ipx_row]);
+          printf("\nError in IPX conversion: Row %2" HIGHSINT_FORMAT
+                 ": cannot handle "
+                 "constraint_type[%2" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
+                 "\n",
+                 row, ipx_row, constraint_type[ipx_row]);
 #endif
         }
       }
@@ -494,12 +501,14 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     if (unrecognised)
       printf("Bounds [%11.4g, %11.4g]\n", lp.rowLower_[row], lp.rowUpper_[row]);
     if (unrecognised)
-      printf(
-          "Row %2d ipx_row_status[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = "
-          "%11.4g\n",
-          row, this_ipx_row, (HighsInt)ipx_row_status[this_ipx_row],
-          this_ipx_row, ipx_row_value[this_ipx_row], this_ipx_row,
-          ipx_row_dual[this_ipx_row]);
+      printf("Row %2" HIGHSINT_FORMAT " ipx_row_status[%2" HIGHSINT_FORMAT
+             "] = %2" HIGHSINT_FORMAT "; s[%2" HIGHSINT_FORMAT
+             "] = %11.4g; y[%2" HIGHSINT_FORMAT
+             "] = "
+             "%11.4g\n",
+             row, this_ipx_row, (HighsInt)ipx_row_status[this_ipx_row],
+             this_ipx_row, ipx_row_value[this_ipx_row], this_ipx_row,
+             ipx_row_dual[this_ipx_row]);
 #endif
     assert(!unrecognised);
     if (unrecognised) {
@@ -525,7 +534,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 
 #ifdef HiGHSDEV
   if (num_boxed_rows)
-    printf("Of %d boxed rows: %d are basic and %d have basic slacks\n",
+    printf("Of %" HIGHSINT_FORMAT " boxed rows: %" HIGHSINT_FORMAT
+           " are basic and %" HIGHSINT_FORMAT " have basic slacks\n",
            num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
 #endif
   return HighsStatus::OK;

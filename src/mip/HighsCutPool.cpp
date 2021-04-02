@@ -28,9 +28,9 @@ static void printCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen
                      double rhs) {
   for (HighsInt i = 0; i != Rlen; ++i) {
     if (Rvalue[i] > 0)
-      printf("+%g<x%d> ", Rvalue[i], Rindex[i]);
+      printf("+%g<x%" HIGHSINT_FORMAT "> ", Rvalue[i], Rindex[i]);
     else
-      printf("-%g<x%d> ", -Rvalue[i], Rindex[i]);
+      printf("-%g<x%" HIGHSINT_FORMAT "> ", -Rvalue[i], Rindex[i]);
   }
 
   printf("<= %g\n", rhs);
@@ -51,7 +51,8 @@ bool HighsCutPool::isDuplicate(size_t hash, double norm, HighsInt* Rindex,
     if (std::equal(Rindex, Rindex + Rlen, &ARindex[start])) {
       HighsCDouble dotprod = 0.0;
 
-      for (HighsInt i = 0; i != Rlen; ++i) dotprod += Rvalue[i] * ARvalue[start + i];
+      for (HighsInt i = 0; i != Rlen; ++i)
+        dotprod += Rvalue[i] * ARvalue[start + i];
 
       double parallelism = double(dotprod) * rownormalization_[rowindex] * norm;
 
@@ -348,8 +349,8 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 }
 
 HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
-                         double* Rvalue, HighsInt Rlen, double rhs, bool integral,
-                         bool extractCliques) {
+                              double* Rvalue, HighsInt Rlen, double rhs,
+                              bool integral, bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   size_t sh = support_hash(Rindex, Rlen);

@@ -91,8 +91,9 @@ void HMatrix::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
   //  row_apDensity = 0;
 }
 
-void HMatrix::setup_lgBs(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
-                         const HighsInt* Aindex_, const double* Avalue_) {
+void HMatrix::setup_lgBs(HighsInt numCol_, HighsInt numRow_,
+                         const HighsInt* Astart_, const HighsInt* Aindex_,
+                         const double* Avalue_) {
   // Copy the A matrix and setup row-wise matrix with the nonbasic
   // columns before the basic columns for a logical basis
   //
@@ -167,7 +168,8 @@ double HMatrix::compute_dot(HVector& vector, HighsInt iCol) const {
   return result;
 }
 
-void HMatrix::collect_aj(HVector& vector, HighsInt iCol, double multiplier) const {
+void HMatrix::collect_aj(HVector& vector, HighsInt iCol,
+                         double multiplier) const {
   if (iCol < numCol) {
     for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
       HighsInt index = Aindex[k];
@@ -213,7 +215,7 @@ void HMatrix::priceByRowSparseResult(HVector& row_ap,
   // Set up parameters so that priceByRowSparseResultWithSwitch runs as vanilla
   // hyper-sparse PRICE
   const double historical_density =
-      -0.1;      // Historical density always forces hyper-sparse PRICE
+      -0.1;           // Historical density always forces hyper-sparse PRICE
   HighsInt fm_i = 0;  // Always start from first index of row_ep
   const double switch_density = 1.1;  // Never switch to standard row-wise PRICE
   priceByRowSparseResultWithSwitch(row_ap, row_ep, historical_density, fm_i,

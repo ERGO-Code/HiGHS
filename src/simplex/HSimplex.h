@@ -33,15 +33,19 @@ enum class LpAction {
 
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
 
-void choosePriceTechnique(const HighsInt price_strategy, const double row_ep_density,
-                          bool& use_col_price, bool& use_row_price_w_switch);
+void choosePriceTechnique(const HighsInt price_strategy,
+                          const double row_ep_density, bool& use_col_price,
+                          bool& use_row_price_w_switch);
 
-void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, HighsInt XnumNewCol);
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis,
+                               HighsInt XnumNewCol);
 void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
                                HighsInt XnumNewCol);
 
-void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, HighsInt XnumNewRow);
-void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, HighsInt XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis,
+                            HighsInt XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
+                            HighsInt XnumNewRow);
 
 void invalidateSimplexLpBasisArtifacts(
     HighsSimplexLpStatus&
@@ -96,8 +100,9 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
 /*
-void computeDualObjectiveValue(HighsModelObject& highs_model_object, HighsInt phase =
-2); void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
-double computeBasisCondition(const HighsModelObject& highs_model_object);
+void computeDualObjectiveValue(HighsModelObject& highs_model_object, HighsInt
+phase = 2); void computePrimalObjectiveValue(HighsModelObject&
+highs_model_object); double computeBasisCondition(const HighsModelObject&
+highs_model_object);
 */
 #endif  // SIMPLEX_HSIMPLEX_H_

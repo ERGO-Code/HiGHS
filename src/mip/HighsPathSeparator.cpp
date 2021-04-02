@@ -73,8 +73,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       ++numContinuous[lp.Aindex_[i]];
   }
 
-  std::vector<std::pair<HighsInt, double>> colSubstitutions(lp.numCol_,
-                                                       std::make_pair(-1, 0.0));
+  std::vector<std::pair<HighsInt, double>> colSubstitutions(
+      lp.numCol_, std::make_pair(-1, 0.0));
 
   // identify equality rows where only a single continuous variable with nonzero
   // transformed solution value is present. Mark those columns and remember the
@@ -247,7 +247,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           (bestOutArcCol != -1 &&
            outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
         HighsInt inArcRow = randgen.integer(colInArcs[bestOutArcCol].first,
-                                       colInArcs[bestOutArcCol].second);
+                                            colInArcs[bestOutArcCol].second);
 
         HighsInt row = inArcRows[inArcRow].first;
         double weight = -outArcColVal / inArcRows[inArcRow].second;
@@ -255,7 +255,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         lpAggregator.addRow(row, weight);
       } else {
         HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
-                                        colOutArcs[bestInArcCol].second);
+                                             colOutArcs[bestInArcCol].second);
 
         HighsInt row = outArcRows[outArcRow].first;
         double weight = -inArcColVal / outArcRows[outArcRow].second;

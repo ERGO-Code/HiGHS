@@ -45,7 +45,7 @@ void reportValuesIndices(const HighsInt num_values, const vector<double>& values
   if (!dev_run) return;
   printf("\n  Ix      Value Index\n");
   for (HighsInt ix = 1; ix <= num_values; ix++) {
-    printf("%4d %10.8f  %4d\n", ix, values[ix], indices[ix]);
+    printf("%4" HIGHSINT_FORMAT " %10.8f  %4" HIGHSINT_FORMAT "\n", ix, values[ix], indices[ix]);
   }
 }
 
@@ -59,13 +59,13 @@ void checkIncreasingSort(const HighsInt num_sorted, const vector<double>& values
   double previous = -HIGHS_CONST_INF;
   for (HighsInt ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] < previous) {
-      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
+      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
              previous);
       error0 = true;
     }
     previous = values[1 + ix];
     if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
-      printf("Values[%2d] = %f5.4 != %f5.4 = original_values[indices[%2d]]\n",
+      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 != %f5.4 = original_values[indices[%2" HIGHSINT_FORMAT "]]\n",
              1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
       error1 = true;
     }
@@ -85,13 +85,13 @@ void checkDecreasingSort(const HighsInt num_sorted, const vector<double>& values
   double previous = HIGHS_CONST_INF;
   for (HighsInt ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] > previous) {
-      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
+      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
              previous);
       error0 = true;
     }
     previous = values[1 + ix];
     if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
-      printf("Values[%2d] = %f5.4 != %f5.4 = original_values[indices[%2d]]\n",
+      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 != %f5.4 = original_values[indices[%2" HIGHSINT_FORMAT "]]\n",
              1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
       error1 = true;
     }

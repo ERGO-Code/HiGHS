@@ -20,7 +20,8 @@ HighsDynamicRowMatrix::HighsDynamicRowMatrix(HighsInt ncols) {
   Asize_.resize(ncols);
 }
 /// adds a row to the matrix with the given values and returns its index
-HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue, HighsInt Rlen) {
+HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
+                                       HighsInt Rlen) {
   HighsInt rowindex;
   HighsInt start;
   HighsInt end;
@@ -143,7 +144,8 @@ void HighsDynamicRowMatrix::removeRow(HighsInt rowindex) {
 }
 
 /// replaces a rows values but does not change the support
-void HighsDynamicRowMatrix::replaceRowValues(HighsInt rowindex, double* Rvalue) {
+void HighsDynamicRowMatrix::replaceRowValues(HighsInt rowindex,
+                                             double* Rvalue) {
   HighsInt start = ARrange_[rowindex].first;
   HighsInt end = ARrange_[rowindex].second;
 

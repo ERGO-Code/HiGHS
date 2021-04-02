@@ -62,8 +62,8 @@ void HighsPrimalHeuristics::setupIntCols() {
 
 bool HighsPrimalHeuristics::solveSubMip(
     const HighsLp& lp, const HighsBasis& basis, double fixingRate,
-    std::vector<double> colLower, std::vector<double> colUpper, HighsInt maxleaves,
-    HighsInt maxnodes, HighsInt stallnodes) {
+    std::vector<double> colLower, std::vector<double> colUpper,
+    HighsInt maxleaves, HighsInt maxnodes, HighsInt stallnodes) {
   HighsOptions submipoptions = *mipsolver.options_mip_;
   HighsLp submip = lp;
 
@@ -175,7 +175,7 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   double fixingrate = 0.0;
   bool stop = false;
   // heurlp.setIterationLimit(2 * mipsolver.mipdata_->maxrootlpiters);
-  // printf("iterlimit: %d\n",
+  // printf("iterlimit: %" HIGHSINT_FORMAT "\n",
   //       heurlp.getLpSolver().getHighsOptions().simplex_iteration_limit);
   HighsInt targetdepth = 1;
   HighsInt nbacktracks = -1;
@@ -204,7 +204,8 @@ retry:
     return fixedCols.size() / (double)ntotal;
   };
   ++nbacktracks;
-  // printf("current depth : %d   target depth : %d\n", heur.getCurrentDepth(),
+  // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
+  // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
   //        targetdepth);
   while (heur.getCurrentDepth() > targetdepth) {
     heur.cutoffNode();
@@ -225,7 +226,7 @@ retry:
       continue;
     }
 
-    // printf("num backtracks: %d\n", nbacktracks);
+    // printf("num backtracks: %" HIGHSINT_FORMAT "\n", nbacktracks);
     // if we estimate that there is no improving solution in this subtree, we
     // stop fixing variables but still backtrack to a node that has a good
     // estimate and is not pruned as the stop flag is checked after the
@@ -240,7 +241,8 @@ retry:
     }
 
     fixingrate = getFixingRate();
-    // printf("%d/%d fixed, fixingrate is %g\n", nfixed, ntotal, fixingrate);
+    // printf("%" HIGHSINT_FORMAT "/%" HIGHSINT_FORMAT " fixed, fixingrate is
+    // %g\n", nfixed, ntotal, fixingrate);
     if (fixingrate >= maxfixingrate) break;
     if (stop) break;
     if (nbacktracks >= 10) break;
@@ -438,7 +440,8 @@ retry:
     return fixedCols.size() / (double)ntotal;
   };
   ++nbacktracks;
-  // printf("current depth : %d   target depth : %d\n", heur.getCurrentDepth(),
+  // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
+  // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
   //       targetdepth);
   while (heur.getCurrentDepth() > targetdepth) {
     heur.cutoffNode();
@@ -556,9 +559,9 @@ retry:
 
       if (numBranched != 0) {
         // printf(
-        //    "fixed %d additional cols, old fixing rate: %.2f%%, new fixing "
-        //    "rate: %.2f%%\n",
-        //    numBranched, fixingrate, getFixingRate());
+        //    "fixed %" HIGHSINT_FORMAT " additional cols, old fixing rate:
+        //    %.2f%%, new fixing " "rate: %.2f%%\n", numBranched, fixingrate,
+        //    getFixingRate());
         heurlp.flushDomain(localdom);
         continue;
       }
@@ -574,20 +577,20 @@ retry:
 
     // now sort the variables by their distance towards the value they will be
     // fixed to
-    std::sort(
-        heurlp.getFractionalIntegers().begin(), fixcandend,
-        [&](const std::pair<HighsInt, double>& a, const std::pair<HighsInt, double>& b) {
-          return std::make_pair(
-                     std::abs(getFixVal(a.first, a.second) - a.second),
-                     HighsHashHelpers::hash(
-                         (uint64_t(a.first) << 32) +
-                         heurlp.getFractionalIntegers().size())) <
-                 std::make_pair(
-                     std::abs(getFixVal(b.first, b.second) - b.second),
-                     HighsHashHelpers::hash(
-                         (uint64_t(b.first) << 32) +
-                         heurlp.getFractionalIntegers().size()));
-        });
+    std::sort(heurlp.getFractionalIntegers().begin(), fixcandend,
+              [&](const std::pair<HighsInt, double>& a,
+                  const std::pair<HighsInt, double>& b) {
+                return std::make_pair(
+                           std::abs(getFixVal(a.first, a.second) - a.second),
+                           HighsHashHelpers::hash(
+                               (uint64_t(a.first) << 32) +
+                               heurlp.getFractionalIntegers().size())) <
+                       std::make_pair(
+                           std::abs(getFixVal(b.first, b.second) - b.second),
+                           HighsHashHelpers::hash(
+                               (uint64_t(b.first) << 32) +
+                               heurlp.getFractionalIntegers().size()));
+              });
 
     double change = 0.0;
     // select a set of fractional variables to fix
@@ -616,7 +619,8 @@ retry:
 
     heurlp.flushDomain(localdom);
 
-    // printf("%d/%d fixed, fixingrate is %g\n", nfixed, ntotal, fixingrate);
+    // printf("%" HIGHSINT_FORMAT "/%" HIGHSINT_FORMAT " fixed, fixingrate is
+    // %g\n", nfixed, ntotal, fixingrate);
   }
 
   // if there is no node left it means we backtracked to the global domain and
@@ -874,7 +878,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     while (havecycle) {
       for (HighsInt i = 0; i != 10; ++i) {
-        HighsInt flippos = randgen.integer(mipsolver.mipdata_->integer_cols.size());
+        HighsInt flippos =
+            randgen.integer(mipsolver.mipdata_->integer_cols.size());
         HighsInt col = mipsolver.mipdata_->integer_cols[flippos];
         if (roundedsol[col] > lpsol[col])
           roundedsol[col] = (HighsInt)std::floor(lpsol[col]);
@@ -972,7 +977,8 @@ void HighsPrimalHeuristics::centralRounding() {
     }
     if (nfixed > 0)
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-                   "Fixing %d columns (%d integers) sitting at bound at "
+                   "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
+                   " integers) sitting at bound at "
                    "analytic center\n",
                    nfixed, nintfixed);
     mipsolver.mipdata_->domain.propagate();

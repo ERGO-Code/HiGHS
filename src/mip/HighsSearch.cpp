@@ -110,7 +110,8 @@ void HighsSearch::setMinReliable(HighsInt minreliable) {
   pseudocost.setMinReliable(minreliable);
 }
 
-void HighsSearch::branchDownwards(HighsInt col, double newub, double branchpoint) {
+void HighsSearch::branchDownwards(HighsInt col, double newub,
+                                  double branchpoint) {
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
@@ -126,7 +127,8 @@ void HighsSearch::branchDownwards(HighsInt col, double newub, double branchpoint
   nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
 }
 
-void HighsSearch::branchUpwards(HighsInt col, double newlb, double branchpoint) {
+void HighsSearch::branchUpwards(HighsInt col, double newlb,
+                                double branchpoint) {
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
@@ -188,8 +190,8 @@ void HighsSearch::addInfeasibleConflict() {
     //      " activity %g, and rhs % g\n ",
     //      minactlocal, minactglobal, rhs);
     //}
-    // HighsInt cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(), rhs);
-    // localdom.cutAdded(cutind);
+    // HighsInt cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(),
+    // rhs); localdom.cutAdded(cutind);
   }
 }
 

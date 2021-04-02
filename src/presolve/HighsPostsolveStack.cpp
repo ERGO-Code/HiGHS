@@ -8,7 +8,8 @@
 
 namespace presolve {
 
-void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow, HighsInt numCol) {
+void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow,
+                                              HighsInt numCol) {
   origNumRow = numRow;
   origNumCol = numCol;
 
@@ -20,7 +21,8 @@ void HighsPostsolveStack::initializeIndexMaps(HighsInt numRow, HighsInt numCol) 
 }
 
 void HighsPostsolveStack::compressIndexMaps(
-    const std::vector<HighsInt>& newRowIndex, const std::vector<HighsInt>& newColIndex) {
+    const std::vector<HighsInt>& newRowIndex,
+    const std::vector<HighsInt>& newColIndex) {
   // loop over rows, decrease row counter for deleted rows (marked with -1),
   // store original index at new index position otherwise
   HighsInt numRow = origRowIndex.size();

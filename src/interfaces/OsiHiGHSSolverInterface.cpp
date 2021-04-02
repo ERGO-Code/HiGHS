@@ -189,8 +189,9 @@ bool OsiHiGHSSolverInterface::setStrParam(OsiStrParam key,
                                           const std::string& value) {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::INFO,
-              "Calling OsiHiGHSSolverInterface::setStrParam(%d, %s)\n", key,
-              value.c_str());
+              "Calling OsiHiGHSSolverInterface::setStrParam(%" HIGHSINT_FORMAT
+              ", %s)\n",
+              key, value.c_str());
   switch (key) {
     case OsiProbName:
       return OsiSolverInterface::setStrParam(key, value);
@@ -202,7 +203,8 @@ bool OsiHiGHSSolverInterface::setStrParam(OsiStrParam key,
   }
 }
 
-bool OsiHiGHSSolverInterface::getIntParam(OsiIntParam key, HighsInt& value) const {
+bool OsiHiGHSSolverInterface::getIntParam(OsiIntParam key,
+                                          HighsInt& value) const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::INFO,
               "Calling OsiHiGHSSolverInterface::getIntParam()\n");
@@ -250,8 +252,9 @@ bool OsiHiGHSSolverInterface::getStrParam(OsiStrParam key,
                                           std::string& value) const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::INFO,
-              "Calling OsiHiGHSSolverInterface::getStrParam(%d, %s)\n", key,
-              value.c_str());
+              "Calling OsiHiGHSSolverInterface::getStrParam(%" HIGHSINT_FORMAT
+              ", %s)\n",
+              key, value.c_str());
   switch (key) {
     case OsiProbName:
       return OsiSolverInterface::getStrParam(key, value);
@@ -582,14 +585,16 @@ void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase& vec,
   }
 }
 
-void OsiHiGHSSolverInterface::deleteCols(const HighsInt num, const HighsInt* colIndices) {
+void OsiHiGHSSolverInterface::deleteCols(const HighsInt num,
+                                         const HighsInt* colIndices) {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::INFO,
               "Calling OsiHiGHSSolverInterface::deleteCols()\n");
   this->highs->deleteCols(num, colIndices);
 }
 
-void OsiHiGHSSolverInterface::deleteRows(const HighsInt num, const HighsInt* rowIndices) {
+void OsiHiGHSSolverInterface::deleteRows(const HighsInt num,
+                                         const HighsInt* rowIndices) {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::INFO,
               "Calling OsiHiGHSSolverInterface::deleteRows()\n");
@@ -1298,7 +1303,8 @@ HighsInt OsiHiGHSSolverInterface::canDoSimplexInterface() const { return 0; }
 2: upper
 3: lower
 */
-void OsiHiGHSSolverInterface::getBasisStatus(HighsInt* cstat, HighsInt* rstat) const {
+void OsiHiGHSSolverInterface::getBasisStatus(HighsInt* cstat,
+                                             HighsInt* rstat) const {
   if (!highs) return;
 
   if (highs->basis_.col_status.size() == 0 ||
@@ -1344,11 +1350,13 @@ void OsiHiGHSSolverInterface::getBasisStatus(HighsInt* cstat, HighsInt* rstat) c
     }
 }
 
-void OsiHiGHSSolverInterface::setRowNames(OsiNameVec& srcNames, HighsInt srcStart,
-                                          HighsInt len, HighsInt tgtStart) {}
+void OsiHiGHSSolverInterface::setRowNames(OsiNameVec& srcNames,
+                                          HighsInt srcStart, HighsInt len,
+                                          HighsInt tgtStart) {}
 
-void OsiHiGHSSolverInterface::setColNames(OsiNameVec& srcNames, HighsInt srcStart,
-                                          HighsInt len, HighsInt tgtStart) {}
+void OsiHiGHSSolverInterface::setColNames(OsiNameVec& srcNames,
+                                          HighsInt srcStart, HighsInt len,
+                                          HighsInt tgtStart) {}
 
 void OsiSolverInterfaceMpsUnitTest(
     const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir) {

@@ -60,8 +60,9 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   }
 }
 
-void choosePriceTechnique(const HighsInt price_strategy, const double row_ep_density,
-                          bool& use_col_price, bool& use_row_price_w_switch) {
+void choosePriceTechnique(const HighsInt price_strategy,
+                          const double row_ep_density, bool& use_col_price,
+                          bool& use_row_price_w_switch) {
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
@@ -74,7 +75,8 @@ void choosePriceTechnique(const HighsInt price_strategy, const double row_ep_den
       price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
 }
 
-void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, HighsInt XnumNewCol) {
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis,
+                               HighsInt XnumNewCol) {
   assert(basis.valid_);
   if (!basis.valid_) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
@@ -151,7 +153,8 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, HighsInt XnumNewRow) {
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis,
+                            HighsInt XnumNewRow) {
   assert(basis.valid_);
   if (!basis.valid_) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
@@ -166,7 +169,8 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, HighsInt XnumNewRow)
   }
 }
 
-void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, HighsInt XnumNewRow) {
+void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
+                            HighsInt XnumNewRow) {
   // Add basic logicals
   if (XnumNewRow == 0) return;
 
@@ -306,7 +310,8 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
       break;
     default:
 #ifdef HIGHSDEV
-      printf(" Unrecognised LpAction::%d\n", (HighsInt)action);
+      printf(" Unrecognised LpAction::%" HIGHSINT_FORMAT "\n",
+             (HighsInt)action);
 #endif
       break;
   }
@@ -454,8 +459,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
           double multiplier = dual_feasibility_tolerance / scale_mu;
           //          double scaled_value = simplex_info.workValue_[iVar];
           //          highsLogUser(options.log_options, HighsLogType::INFO,
-          //                          "Var %6d (%6d, %6d): [%11.4g, %11.4g,
-          //                          %11.4g] %11.4g
+          //                          "Var %6" HIGHSINT_FORMAT " (%6"
+          //                          HIGHSINT_FORMAT ", %6" HIGHSINT_FORMAT "):
+          //                          [%11.4g, %11.4g, %11.4g] %11.4g
           //          s=%11.4g %11.4g: Mu = %g\n", iVar, iCol, iRow,
           //          scaled_lower, scaled_value, scaled_upper,
           //          scaled_dual_infeasibility, scale_mu, dual_infeasibility,
@@ -517,7 +523,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
         double multiplier = primal_feasibility_tolerance / scale_mu;
         if (report) {
           highsLogUser(options.log_options, HighsLogType::INFO,
-                       "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g "
+                       "Var %6" HIGHSINT_FORMAT " (%6" HIGHSINT_FORMAT
+                       ", %6" HIGHSINT_FORMAT
+                       "): [%11.4g, %11.4g, %11.4g] %11.4g "
                        "s=%11.4g %11.4g: Mu = %g\n",
                        iVar, iCol, iRow, scaled_lower, scaled_value,
                        scaled_upper, scaled_primal_infeasibility, scale_mu,
@@ -1084,9 +1092,11 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   bool right_size = true;
   right_size =
-      (HighsInt)basis.nonbasicFlag_.size() == lp.numCol_ + lp.numRow_ && right_size;
+      (HighsInt)basis.nonbasicFlag_.size() == lp.numCol_ + lp.numRow_ &&
+      right_size;
   right_size =
-      (HighsInt)basis.nonbasicMove_.size() == lp.numCol_ + lp.numRow_ && right_size;
+      (HighsInt)basis.nonbasicMove_.size() == lp.numCol_ + lp.numRow_ &&
+      right_size;
   right_size = (HighsInt)basis.basicIndex_.size() == lp.numRow_ && right_size;
   return right_size;
 }

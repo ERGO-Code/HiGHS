@@ -39,15 +39,15 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
         fraction_below > fractional_tolerance) {
       if (mip_report_level > 1) {
         if (fraction_above < 10 * fractional_tolerance)
-          printf(
-              "chooseBranchingVariable %d: %g = Fraction_above < "
-              "10*fractional_tolerance = %g\n",
-              col, fraction_above, 10 * fractional_tolerance);
+          printf("chooseBranchingVariable %" HIGHSINT_FORMAT
+                 ": %g = Fraction_above < "
+                 "10*fractional_tolerance = %g\n",
+                 col, fraction_above, 10 * fractional_tolerance);
         if (fraction_below < 10 * fractional_tolerance)
-          printf(
-              "chooseBranchingVariable %d: %g = Fraction_below < "
-              "10*fractional_tolerance = %g\n",
-              col, fraction_below, 10 * fractional_tolerance);
+          printf("chooseBranchingVariable %" HIGHSINT_FORMAT
+                 ": %g = Fraction_below < "
+                 "10*fractional_tolerance = %g\n",
+                 col, fraction_below, 10 * fractional_tolerance);
       }
       // This one is violated.
       return NodeIndex(col);
@@ -97,8 +97,11 @@ bool Tree::branch(Node& node) {
       << ") left child ub: " << value_floor
       << " right child lb: " << value_ceil << std::endl;
     */
-    printf("Branch on %2d (%9d, %9d) left UB: %4d; right LB: %4d\n", col,
-           num_nodes + 1, num_nodes + 2, (HighsInt)value_floor, (HighsInt)value_ceil);
+    printf("Branch on %2" HIGHSINT_FORMAT " (%9" HIGHSINT_FORMAT
+           ", %9" HIGHSINT_FORMAT ") left UB: %4" HIGHSINT_FORMAT
+           "; right LB: %4" HIGHSINT_FORMAT "\n",
+           col, num_nodes + 1, num_nodes + 2, (HighsInt)value_floor,
+           (HighsInt)value_ceil);
   }
   // Branch.
   // Create children and add to node.

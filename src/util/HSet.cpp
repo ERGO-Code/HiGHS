@@ -15,8 +15,9 @@
 
 #include <cassert>
 
-bool HSet::setup(const HighsInt size, const HighsInt max_entry, const bool output_flag,
-                 FILE* log_file, const bool debug, const bool allow_assert) {
+bool HSet::setup(const HighsInt size, const HighsInt max_entry,
+                 const bool output_flag, FILE* log_file, const bool debug,
+                 const bool allow_assert) {
   setup_ = false;
   if (size <= 0) return false;
   if (max_entry < min_entry) return false;
@@ -45,7 +46,8 @@ bool HSet::add(const HighsInt entry) {
   if (entry > max_entry_) {
     // Entry exceeds what's allowable so far so can't be in the list
     pointer_.resize(entry + 1);
-    for (HighsInt ix = max_entry_ + 1; ix < entry; ix++) pointer_[ix] = no_pointer;
+    for (HighsInt ix = max_entry_ + 1; ix < entry; ix++)
+      pointer_[ix] = no_pointer;
     max_entry_ = entry;
   } else if (pointer_[entry] > no_pointer) {
     // Duplicate
@@ -100,8 +102,10 @@ bool HSet::debug() const {
   bool max_entry_ok = max_entry_ >= min_entry;
   if (!max_entry_ok) {
     if (output_flag_) {
-      fprintf(log_file_, "HSet: ERROR max_entry_ = %d < %d\n", max_entry_,
-              min_entry);
+      fprintf(log_file_,
+              "HSet: ERROR max_entry_ = %" HIGHSINT_FORMAT
+              " < %" HIGHSINT_FORMAT "\n",
+              max_entry_, min_entry);
       print();
     }
     if (allow_assert_) assert(max_entry_ok);
@@ -112,8 +116,9 @@ bool HSet::debug() const {
   if (!size_count_ok) {
     if (output_flag_) {
       fprintf(log_file_,
-              "HSet: ERROR entry_.size() = %d is less than count_ = %d\n", size,
-              count_);
+              "HSet: ERROR entry_.size() = %" HIGHSINT_FORMAT
+              " is less than count_ = %" HIGHSINT_FORMAT "\n",
+              size, count_);
       print();
     }
     if (allow_assert_) assert(size_count_ok);
@@ -127,7 +132,9 @@ bool HSet::debug() const {
     bool pointer_ok = pointer >= 0 && pointer < count_;
     if (!pointer_ok) {
       if (output_flag_) {
-        fprintf(log_file_, "HSet: ERROR pointer_[%d] = %d is not in [0, %d]\n",
+        fprintf(log_file_,
+                "HSet: ERROR pointer_[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
+                " is not in [0, %" HIGHSINT_FORMAT "]\n",
                 ix, pointer, count_);
         print();
       }
@@ -139,8 +146,10 @@ bool HSet::debug() const {
     bool entry_ok = entry == ix;
     if (!entry_ok) {
       if (output_flag_) {
-        fprintf(log_file_, "HSet: ERROR entry_[%d] is %d, not %d\n", pointer,
-                entry, ix);
+        fprintf(log_file_,
+                "HSet: ERROR entry_[%" HIGHSINT_FORMAT "] is %" HIGHSINT_FORMAT
+                ", not %" HIGHSINT_FORMAT "\n",
+                pointer, entry, ix);
         print();
       }
       if (allow_assert_) assert(entry_ok);
@@ -150,7 +159,9 @@ bool HSet::debug() const {
   bool count_ok = count == count_;
   if (!count_ok) {
     if (output_flag_) {
-      fprintf(log_file_, "HSet: ERROR pointer_ has %d pointers, not %d\n",
+      fprintf(log_file_,
+              "HSet: ERROR pointer_ has %" HIGHSINT_FORMAT
+              " pointers, not %" HIGHSINT_FORMAT "\n",
               count, count_);
       print();
     }
@@ -164,21 +175,26 @@ void HSet::print() const {
   if (!setup_) return;
   if (log_file_ == NULL) return;
   HighsInt size = entry_.size();
-  fprintf(log_file_, "\nSet(%d, %d):\n", size, max_entry_);
+  fprintf(log_file_, "\nSet(%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT "):\n",
+          size, max_entry_);
   fprintf(log_file_, "Pointers: Pointers|");
   for (HighsInt ix = 0; ix <= max_entry_; ix++) {
-    if (pointer_[ix] != no_pointer) fprintf(log_file_, " %4d", pointer_[ix]);
+    if (pointer_[ix] != no_pointer)
+      fprintf(log_file_, " %4" HIGHSINT_FORMAT "", pointer_[ix]);
   }
   fprintf(log_file_, "\n");
   fprintf(log_file_, "          Entries |");
   for (HighsInt ix = 0; ix <= max_entry_; ix++) {
-    if (pointer_[ix] != no_pointer) fprintf(log_file_, " %4d", ix);
+    if (pointer_[ix] != no_pointer)
+      fprintf(log_file_, " %4" HIGHSINT_FORMAT "", ix);
   }
   fprintf(log_file_, "\n");
   fprintf(log_file_, "Entries:  Indices |");
-  for (HighsInt ix = 0; ix < count_; ix++) fprintf(log_file_, " %4d", ix);
+  for (HighsInt ix = 0; ix < count_; ix++)
+    fprintf(log_file_, " %4" HIGHSINT_FORMAT "", ix);
   fprintf(log_file_, "\n");
   fprintf(log_file_, "          Entries |");
-  for (HighsInt ix = 0; ix < count_; ix++) fprintf(log_file_, " %4d", entry_[ix]);
+  for (HighsInt ix = 0; ix < count_; ix++)
+    fprintf(log_file_, " %4" HIGHSINT_FORMAT "", entry_[ix]);
   fprintf(log_file_, "\n");
 }

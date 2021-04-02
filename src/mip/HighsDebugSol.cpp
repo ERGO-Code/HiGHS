@@ -130,8 +130,8 @@ void HighsDebugSol::boundChangeRemoved(const HighsDomain& domain,
   conflictingBounds[&domain].erase(domchg);
 }
 
-void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                             double rhs) {
+void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue,
+                             HighsInt Rlen, double rhs) {
   if (!debugSolActive) return;
 
   HighsCDouble violation = -rhs;
@@ -142,8 +142,8 @@ void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue, Highs
   assert(violation <= mipsolver->mipdata_->feastol);
 }
 
-void HighsDebugSol::checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                             double Rlower, double Rupper) {
+void HighsDebugSol::checkRow(const HighsInt* Rindex, const double* Rvalue,
+                             HighsInt Rlen, double Rlower, double Rupper) {
   if (!debugSolActive) return;
 
   HighsCDouble activity = 0;

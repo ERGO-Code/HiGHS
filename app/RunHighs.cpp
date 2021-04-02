@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 void printHighsVersionCopyright(const HighsLogOptions& log_options,
                                 const char* message) {
   highsLogUser(log_options, HighsLogType::INFO,
-               "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+               "Running HiGHS %" HIGHSINT_FORMAT ".%" HIGHSINT_FORMAT ".%" HIGHSINT_FORMAT " [date: %s, git hash: %s]\n",
                HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR, HIGHS_VERSION_PATCH,
                HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::INFO,
@@ -113,17 +113,17 @@ void reportLpStatsOrError(const HighsLogOptions& log_options,
   } else {
     highsLogUser(log_options, HighsLogType::INFO, "LP       : %s\n",
                  lp.model_name_.c_str());
-    highsLogUser(log_options, HighsLogType::INFO, "Rows     : %d\n",
+    highsLogUser(log_options, HighsLogType::INFO, "Rows     : %" HIGHSINT_FORMAT "\n",
                  lp.numRow_);
-    highsLogUser(log_options, HighsLogType::INFO, "Cols     : %d\n",
+    highsLogUser(log_options, HighsLogType::INFO, "Cols     : %" HIGHSINT_FORMAT "\n",
                  lp.numCol_);
-    highsLogUser(log_options, HighsLogType::INFO, "Nonzeros : %d\n",
+    highsLogUser(log_options, HighsLogType::INFO, "Nonzeros : %" HIGHSINT_FORMAT "\n",
                  lp.Avalue_.size());
     HighsInt num_int = 0;
     for (HighsUInt i = 0; i < lp.integrality_.size(); i++)
       if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
     if (num_int)
-      highsLogUser(log_options, HighsLogType::INFO, "Integer  : %d\n", num_int);
+      highsLogUser(log_options, HighsLogType::INFO, "Integer  : %" HIGHSINT_FORMAT "\n", num_int);
   }
 }
 
@@ -144,11 +144,11 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
         // unscaled model, flag this up, but report the scaled model
         // status
         highsLogUser(log_options, HighsLogType::INFO,
-                     "Primal infeasibility: %10.3e (%d)\n",
+                     "Primal infeasibility: %10.3e (%" HIGHSINT_FORMAT ")\n",
                      highs_info.max_primal_infeasibility,
                      highs_info.num_primal_infeasibilities);
         highsLogUser(log_options, HighsLogType::INFO,
-                     "Dual   infeasibility: %10.3e (%d)\n",
+                     "Dual   infeasibility: %10.3e (%" HIGHSINT_FORMAT ")\n",
                      highs_info.max_dual_infeasibility,
                      highs_info.num_dual_infeasibilities);
         model_status = scaled_model_status;
@@ -162,15 +162,15 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     highsLogUser(
         log_options, HighsLogType::INFO, "Dual    status      : %s\n",
         highs.primalDualStatusToString(highs_info.dual_status).c_str());
-    highsLogUser(log_options, HighsLogType::INFO, "Simplex   iterations: %d\n",
+    highsLogUser(log_options, HighsLogType::INFO, "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
                  highs_info.simplex_iteration_count);
     if (highs_info.ipm_iteration_count)
       highsLogUser(log_options, HighsLogType::INFO,
-                   "IPM       iterations: %d\n",
+                   "IPM       iterations: %" HIGHSINT_FORMAT "\n",
                    highs_info.ipm_iteration_count);
     if (highs_info.crossover_iteration_count)
       highsLogUser(log_options, HighsLogType::INFO,
-                   "Crossover iterations: %d\n",
+                   "Crossover iterations: %" HIGHSINT_FORMAT "\n",
                    highs_info.crossover_iteration_count);
     if (model_status == HighsModelStatus::OPTIMAL) {
       double objective_function_value;

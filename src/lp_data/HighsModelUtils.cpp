@@ -58,28 +58,35 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::INFO, "Analysing %d %s bounds\n",
-              numBd, message);
+  highsLogDev(log_options, HighsLogType::INFO,
+              "Analysing %" HIGHSINT_FORMAT " %s bounds\n", numBd, message);
   if (numFr > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   Free:  %7d (%3d%%)\n",
+    highsLogDev(log_options, HighsLogType::INFO,
+                "   Free:  %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numFr, (100 * numFr) / numBd);
   if (numLb > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   LB:    %7d (%3d%%)\n",
+    highsLogDev(log_options, HighsLogType::INFO,
+                "   LB:    %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numLb, (100 * numLb) / numBd);
   if (numUb > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   UB:    %7d (%3d%%)\n",
+    highsLogDev(log_options, HighsLogType::INFO,
+                "   UB:    %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numUb, (100 * numUb) / numBd);
   if (numBx > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   Boxed: %7d (%3d%%)\n",
+    highsLogDev(log_options, HighsLogType::INFO,
+                "   Boxed: %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numBx, (100 * numBx) / numBd);
   if (numFx > 0)
-    highsLogDev(log_options, HighsLogType::INFO, "   Fixed: %7d (%3d%%)\n",
+    highsLogDev(log_options, HighsLogType::INFO,
+                "   Fixed: %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numFx, (100 * numFx) / numBd);
   highsLogDev(log_options, HighsLogType::INFO,
               "grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
   highsLogDev(log_options, HighsLogType::INFO,
-              "grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb,
-              numBx, numFx);
+              "grep_CharMl,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
+              ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
+              ",%" HIGHSINT_FORMAT "\n",
+              numBd, numFr, numLb, numUb, numBx, numFx);
 }
 
 std::string statusToString(const HighsBasisStatus status, const double lower,
@@ -139,8 +146,8 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
     } else {
       var_status_string = "";
     }
-    fprintf(file, "%9d   %4s %12g %12g", ix, var_status_string.c_str(),
-            lower[ix], upper[ix]);
+    fprintf(file, "%9" HIGHSINT_FORMAT "   %4s %12g %12g", ix,
+            var_status_string.c_str(), lower[ix], upper[ix]);
     if (have_primal) {
       fprintf(file, " %12g", primal[ix]);
     } else {
@@ -159,22 +166,25 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
   }
 }
 
-bool namesWithSpaces(const HighsInt num_name, const std::vector<std::string>& names,
-                     const bool report) {
+bool namesWithSpaces(const HighsInt num_name,
+                     const std::vector<std::string>& names, const bool report) {
   bool names_with_spaces = false;
   for (HighsInt ix = 0; ix < num_name; ix++) {
     HighsInt space_pos = names[ix].find(" ");
     if (space_pos >= 0) {
       if (report)
-        printf("Name |%s| contains a space character in position %d\n",
-               names[ix].c_str(), space_pos);
+        printf(
+            "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
+            "\n",
+            names[ix].c_str(), space_pos);
       names_with_spaces = true;
     }
   }
   return names_with_spaces;
 }
 
-HighsInt maxNameLength(const HighsInt num_name, const std::vector<std::string>& names) {
+HighsInt maxNameLength(const HighsInt num_name,
+                       const std::vector<std::string>& names) {
   HighsInt max_name_length = 0;
   for (HighsInt ix = 0; ix < num_name; ix++)
     max_name_length = std::max((HighsInt)names[ix].length(), max_name_length);
@@ -278,7 +288,8 @@ std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
       break;
     default:
 #ifdef HiGHSDEV
-      printf("Primal/dual status %d not recognised\n", primal_dual_status);
+      printf("Primal/dual status %" HIGHSINT_FORMAT " not recognised\n",
+             primal_dual_status);
 #endif
       return "Unrecognised primal/dual status";
       break;
@@ -339,7 +350,8 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
       break;
     default:
 #ifdef HiGHSDEV
-      printf("HiGHS model status %d not recognised\n", (HighsInt)model_status);
+      printf("HiGHS model status %" HIGHSINT_FORMAT " not recognised\n",
+             (HighsInt)model_status);
 #endif
       return "Unrecognised HiGHS model status";
       break;

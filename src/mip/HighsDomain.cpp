@@ -224,7 +224,8 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
   });
 }
 
-void HighsDomain::computeMinActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
+void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
+                                     const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
                                      HighsCDouble& activitymin) {
   activitymin = 0.0;
@@ -247,7 +248,8 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end, const HighsIn
   activitymin.renormalize();
 }
 
-void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end, const HighsInt* ARindex,
+void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
+                                     const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmax,
                                      HighsCDouble& activitymax) {
   activitymax = 0.0;
@@ -270,10 +272,12 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end, const HighsIn
   activitymax.renormalize();
 }
 
-HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex, const double* Rvalue,
-                                   HighsInt Rlen, double Rupper,
-                                   const HighsCDouble& minactivity, HighsInt ninfmin,
-                                   HighsDomainChange* boundchgs) {
+HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
+                                        const double* Rvalue, HighsInt Rlen,
+                                        double Rupper,
+                                        const HighsCDouble& minactivity,
+                                        HighsInt ninfmin,
+                                        HighsDomainChange* boundchgs) {
   assert(std::isfinite(double(minactivity)));
   if (ninfmin > 1) return 0;
   HighsInt numchgs = 0;
@@ -352,10 +356,12 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex, const double* Rv
   return numchgs;
 }
 
-HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex, const double* Rvalue,
-                                   HighsInt Rlen, double Rlower,
-                                   const HighsCDouble& maxactivity, HighsInt ninfmax,
-                                   HighsDomainChange* boundchgs) {
+HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
+                                        const double* Rvalue, HighsInt Rlen,
+                                        double Rlower,
+                                        const HighsCDouble& maxactivity,
+                                        HighsInt ninfmax,
+                                        HighsDomainChange* boundchgs) {
   assert(std::isfinite(double(maxactivity)));
   if (ninfmax > 1) return 0;
   HighsInt numchgs = 0;
@@ -765,7 +771,8 @@ HighsDomainChange HighsDomain::backtrack() {
   }
 
   HighsInt numreason = domchgreason_.size();
-  for (HighsInt i = k + 1; i < numreason; ++i) markPropagateCut(domchgreason_[i]);
+  for (HighsInt i = k + 1; i < numreason; ++i)
+    markPropagateCut(domchgreason_[i]);
 
   if (k < 0) {
     domchgstack_.clear();
@@ -859,7 +866,7 @@ bool HighsDomain::propagate() {
           propRowNumChangedBounds_[k] = numchgs;
         };
 
-        // printf("numproprows (model): %d\n", numproprows);
+        // printf("numproprows (model): %" HIGHSINT_FORMAT "\n", numproprows);
 
         for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
@@ -933,7 +940,7 @@ bool HighsDomain::propagate() {
                     i)]);
           };
 
-          // printf("numproprows (cuts): %d\n", numproprows);
+          // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n", numproprows);
 
           for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
@@ -958,8 +965,8 @@ bool HighsDomain::propagate() {
   return true;
 }
 
-void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
-                                      double& rhs) const {
+void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
+                                      HighsInt len, double& rhs) const {
   HighsCDouble maxactivity = 0;
 
   for (HighsInt i = 0; i != len; ++i) {
@@ -995,14 +1002,16 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals, HighsInt len
     }
 
     if (tightened != 0) {
-      // printf("tightened %d coefficients, rhs changed from %g to %g\n",
+      // printf("tightened %" HIGHSINT_FORMAT " coefficients, rhs changed from
+      // %g to %g\n",
       //       tightened, rhs, double(upper));
       rhs = double(upper);
     }
   }
 }
 
-double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) {
+double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
+                                      HighsInt cut) {
   for (auto& cutpoolprop : cutpoolpropagation) {
     if (cutpoolprop.cutpool == &cutpool) {
       if (cutpool.getModificationCount(cut) !=

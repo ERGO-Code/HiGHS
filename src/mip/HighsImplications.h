@@ -75,8 +75,8 @@ class HighsImplications {
   }
 
   HighsInt getImplications(HighsInt col, bool val,
-                      const HighsDomainChange*& implicationsstart,
-                      bool& infeasible) {
+                           const HighsDomainChange*& implicationsstart,
+                           bool& infeasible) {
     HighsInt loc = 2 * col + val;
     if (implicationmap[loc].start == -1) {
       infeasible = computeImplications(col, val);
@@ -97,13 +97,19 @@ class HighsImplications {
     return implicationmap[loc].start != -1;
   }
 
-  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef, double vubconstant);
+  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
+              double vubconstant);
 
-  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef, double vlbconstant);
+  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
+              double vlbconstant);
 
-  const std::map<HighsInt, VarBound>& getVUBs(HighsInt col) const { return vubs[col]; }
+  const std::map<HighsInt, VarBound>& getVUBs(HighsInt col) const {
+    return vubs[col];
+  }
 
-  const std::map<HighsInt, VarBound>& getVLBs(HighsInt col) const { return vlbs[col]; }
+  const std::map<HighsInt, VarBound>& getVLBs(HighsInt col) const {
+    return vlbs[col];
+  }
 
   bool runProbing(HighsInt col, HighsInt& numboundchgs);
 

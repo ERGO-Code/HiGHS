@@ -28,25 +28,28 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp& simplex_lp,
                                       const SimplexBasis& simplex_basis);
 void debugDualChuzcFailNorms(
-    const HighsInt workCount, const std::vector<std::pair<HighsInt, double>>& workData,
+    const HighsInt workCount,
+    const std::vector<std::pair<HighsInt, double>>& workData,
     double& workDataNorm, const HighsInt numVar, const double* workDual,
     double& workDualNorm);
 
 HighsDebugStatus debugDualChuzcFailQuad0(
     const HighsOptions& options, const HighsInt workCount,
-    const std::vector<std::pair<HighsInt, double>>& workData, const HighsInt numVar,
-    const double* workDual, const double selectTheta, const double remainTheta,
-    const bool force = false);
+    const std::vector<std::pair<HighsInt, double>>& workData,
+    const HighsInt numVar, const double* workDual, const double selectTheta,
+    const double remainTheta, const bool force = false);
 
 HighsDebugStatus debugDualChuzcFailQuad1(
     const HighsOptions& options, const HighsInt workCount,
-    const std::vector<std::pair<HighsInt, double>>& workData, const HighsInt numVar,
-    const double* workDual, const double selectTheta, const bool force = false);
+    const std::vector<std::pair<HighsInt, double>>& workData,
+    const HighsInt numVar, const double* workDual, const double selectTheta,
+    const bool force = false);
 
 HighsDebugStatus debugDualChuzcFailHeap(
     const HighsOptions& options, const HighsInt workCount,
-    const std::vector<std::pair<HighsInt, double>>& workData, const HighsInt numVar,
-    const double* workDual, const double selectTheta, const bool force = false);
+    const std::vector<std::pair<HighsInt, double>>& workData,
+    const HighsInt numVar, const double* workDual, const double selectTheta,
+    const bool force = false);
 
 HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
                                              const HighsLp& simplex_lp,
@@ -99,7 +102,8 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
                               const std::vector<double>& original_dual);
 HighsDebugStatus debugFreeListNumEntries(
-    const HighsModelObject& highs_model_object, const std::set<HighsInt>& freeList);
+    const HighsModelObject& highs_model_object, const std::set<HighsInt>&
+freeList);
 
 void debugDualChuzcWorkDataAndGroupReport(
     const HighsModelObject& highs_model_object, const double workDelta,
@@ -109,11 +113,11 @@ void debugDualChuzcWorkDataAndGroupReport(
     const std::vector<HighsInt>& report_workGroup);
 HighsDebugStatus debugDualChuzcWorkDataAndGroup(
     const HighsModelObject& highs_model_object, const double workDelta,
-    const double workTheta, const HighsInt workCount, const HighsInt alt_workCount,
-    const HighsInt breakIndex, const HighsInt alt_breakIndex,
-    const std::vector<std::pair<HighsInt, double>>& workData,
-    const std::vector<std::pair<HighsInt, double>>& sorted_workData,
-    const std::vector<HighsInt>& workGroup, const std::vector<HighsInt>& alt_workGroup);
+    const double workTheta, const HighsInt workCount, const HighsInt
+alt_workCount, const HighsInt breakIndex, const HighsInt alt_breakIndex, const
+std::vector<std::pair<HighsInt, double>>& workData, const
+std::vector<std::pair<HighsInt, double>>& sorted_workData, const
+std::vector<HighsInt>& workGroup, const std::vector<HighsInt>& alt_workGroup);
 
 HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object);

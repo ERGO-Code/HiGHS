@@ -147,7 +147,8 @@ class FactorTimer {
   };
 
   void reportFactorLevel0Clock(HighsTimerClock& factor_timer_clock) {
-    std::vector<HighsInt> factor_clock_list{FactorInvert, FactorFtran, FactorBtran};
+    std::vector<HighsInt> factor_clock_list{FactorInvert, FactorFtran,
+                                            FactorBtran};
     reportFactorClockList("FactorLevel0", factor_timer_clock,
                           factor_clock_list);
   };

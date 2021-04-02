@@ -81,9 +81,9 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
   if (dev_run) {
     printf(
-        "After modifying lower bound of column %d from %g to %g, solving the "
+        "After modifying lower bound of column %" HIGHSINT_FORMAT " from %g to %g, solving the "
         "LP "
-        "requires %d iterations and objective is %g\n",
+        "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
         changeCol, old_lower_bound, new_lower_bound,
         highs.getSimplexIterationCount(), highs.getObjectiveValue());
     //  highs.writeSolution("", true);
@@ -107,9 +107,9 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
   if (dev_run) {
     printf(
-        "After restoring lower bound of column %d from %g to %g, solving the "
+        "After restoring lower bound of column %" HIGHSINT_FORMAT " from %g to %g, solving the "
         "LP "
-        "requires %d iterations and objective is %g\n",
+        "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
         changeCol, new_lower_bound, old_lower_bound,
         highs.getSimplexIterationCount(), highs.getObjectiveValue());
   }

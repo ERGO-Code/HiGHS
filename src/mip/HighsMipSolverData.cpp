@@ -255,7 +255,8 @@ void HighsMipSolverData::runSetup() {
   if (checkLimits()) return;
   // extract cliques if they have not been extracted before
 
-  for (HighsInt col : domain.getChangedCols()) implications.cleanupVarbounds(col);
+  for (HighsInt col : domain.getChangedCols())
+    implications.cleanupVarbounds(col);
   domain.clearChangedCols();
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
@@ -498,12 +499,13 @@ void HighsMipSolverData::basisTransfer() {
         if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
           nonbasiccols.push_back(i);
       }
-      std::sort(
-          nonbasiccols.begin(), nonbasiccols.end(), [&](HighsInt col1, HighsInt col2) {
-            HighsInt len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
-            HighsInt len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
-            return std::make_pair(len1, col1) < std::make_pair(len2, col2);
-          });
+      std::sort(nonbasiccols.begin(), nonbasiccols.end(),
+                [&](HighsInt col1, HighsInt col2) {
+                  HighsInt len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
+                  HighsInt len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
+                  return std::make_pair(len1, col1) <
+                         std::make_pair(len2, col2);
+                });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
       for (HighsInt i : nonbasiccols) {
         const HighsInt start = model.Astart_[i];
@@ -623,7 +625,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
   double lb = mipsolver.mipdata_->lower_bound + offset;
   double ub = HIGHS_CONST_INF;
   double gap = HIGHS_CONST_INF;
-  HighsInt lpcuts = mipsolver.mipdata_->lp.numRows() - mipsolver.model_->numRow_;
+  HighsInt lpcuts =
+      mipsolver.mipdata_->lp.numRows() - mipsolver.model_->numRow_;
 
   if (upper_bound != HIGHS_CONST_INF) {
     ub = upper_bound + offset;
@@ -633,7 +636,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
-        "%7d | %7d | %7.2f%% | %7.2f%%\n",
+        "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %7.2f%% | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
         nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
         ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
@@ -642,7 +645,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
-        "%7d | %7d | %8.2f | %7.2f%%\n",
+        "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %8.2f | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
         nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
         ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
@@ -735,7 +738,8 @@ restart:
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
-                 "Adding %d cuts to LP after restart\n", cutpool.getNumCuts());
+                 "Adding %" HIGHSINT_FORMAT " cuts to LP after restart\n",
+                 cutpool.getNumCuts());
     assert(numRestarts != 0);
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);

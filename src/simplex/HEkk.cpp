@@ -101,12 +101,14 @@ HighsStatus HEkk::solve() {
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
       highsLogUser(
           options_.log_options, HighsLogType::INFO,
-          "Using EKK parallel dual simplex solver - SIP with %d threads\n",
+          "Using EKK parallel dual simplex solver - SIP with %" HIGHSINT_FORMAT
+          " threads\n",
           simplex_info_.num_threads);
     } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
       highsLogUser(
           options_.log_options, HighsLogType::INFO,
-          "Using EKK parallel dual simplex solver - PAMI with %d threads\n",
+          "Using EKK parallel dual simplex solver - PAMI with %" HIGHSINT_FORMAT
+          " threads\n",
           simplex_info_.num_threads);
     } else {
       highsLogUser(options_.log_options, HighsLogType::INFO,
@@ -121,13 +123,14 @@ HighsStatus HEkk::solve() {
   reportSimplexPhaseIterations(options_.log_options, iteration_count_,
                                simplex_info_);
   if (return_status == HighsStatus::Error) return return_status;
-  highsLogDev(
-      options_.log_options, HighsLogType::INFO,
-      "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
-      "Status %s\n",
-      algorithm.c_str(), simplex_info_.num_primal_infeasibility,
-      simplex_info_.num_dual_infeasibility,
-      utilHighsModelStatusToString(scaled_model_status_).c_str());
+  highsLogDev(options_.log_options, HighsLogType::INFO,
+              "EKK %s simplex solver returns %" HIGHSINT_FORMAT
+              " primal and %" HIGHSINT_FORMAT
+              " dual infeasibilities: "
+              "Status %s\n",
+              algorithm.c_str(), simplex_info_.num_primal_infeasibility,
+              simplex_info_.num_dual_infeasibility,
+              utilHighsModelStatusToString(scaled_model_status_).c_str());
   if (scaled_model_status_ == HighsModelStatus::NOTSET) {
     call_status = cleanup();
     return_status =
@@ -651,16 +654,18 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // the minimum number of HiGHS threads allowed
   if (simplex_info.num_threads < highs_min_threads) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                 "Using %d HiGHS threads for parallel strategy rather than "
-                 "minimum number (%d) specified in options\n",
+                 "Using %" HIGHSINT_FORMAT
+                 " HiGHS threads for parallel strategy rather than "
+                 "minimum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  simplex_info.num_threads, highs_min_threads);
   }
   // Give a warning if the number of threads to be used is more than
   // the maximum number of HiGHS threads allowed
   if (simplex_info.num_threads > highs_max_threads) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                 "Using %d HiGHS threads for parallel strategy rather than "
-                 "maximum number (%d) specified in options\n",
+                 "Using %" HIGHSINT_FORMAT
+                 " HiGHS threads for parallel strategy rather than "
+                 "maximum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  simplex_info.num_threads, highs_max_threads);
   }
   // Give a warning if the number of threads to be used is fewer than
@@ -668,7 +673,9 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   if (simplex_info.num_threads > omp_max_threads) {
     highsLogUser(
         options.log_options, HighsLogType::WARNING,
-        "Number of OMP threads available = %d < %d = Number of HiGHS threads "
+        "Number of OMP threads available = %" HIGHSINT_FORMAT
+        " < %" HIGHSINT_FORMAT
+        " = Number of HiGHS threads "
         "to be used: Parallel performance will be less than anticipated\n",
         omp_max_threads, simplex_info.num_threads);
   }
@@ -704,14 +711,16 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     if (!simplex_info_.phase1_backtracking_test_done &&
         solve_phase == SOLVE_PHASE_1) {
       // Claim rank deficiency to test backtracking
-      printf("Phase1 (Iter %d) Claiming rank deficiency to test backtracking\n",
+      printf("Phase1 (Iter %" HIGHSINT_FORMAT
+             ") Claiming rank deficiency to test backtracking\n",
              iteration_count_);
       rank_deficiency = 1;
       simplex_info_.phase1_backtracking_test_done = true;
     } else if (!simplex_info_.phase2_backtracking_test_done &&
                solve_phase == SOLVE_PHASE_2) {
       // Claim rank deficiency to test backtracking
-      printf("Phase2 (Iter %d) Claiming rank deficiency to test backtracking\n",
+      printf("Phase2 (Iter %" HIGHSINT_FORMAT
+             ") Claiming rank deficiency to test backtracking\n",
              iteration_count_);
       rank_deficiency = 1;
       simplex_info_.phase2_backtracking_test_done = true;
@@ -736,8 +745,11 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     HighsInt new_simplex_update_limit = simplex_update_count / 2;
     simplex_info_.update_limit = new_simplex_update_limit;
     highsLogUser(options_.log_options, HighsLogType::WARNING,
-                 "Rank deficiency of %d after %d simplex updates, so "
-                 "backtracking: max updates reduced from %d to %d\n",
+                 "Rank deficiency of %" HIGHSINT_FORMAT
+                 " after %" HIGHSINT_FORMAT
+                 " simplex updates, so "
+                 "backtracking: max updates reduced from %" HIGHSINT_FORMAT
+                 " to %" HIGHSINT_FORMAT "\n",
                  rank_deficiency, simplex_update_count,
                  use_simplex_update_limit, new_simplex_update_limit);
   } else {
@@ -1067,11 +1079,12 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
     }
-    printf(
-        "grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = "
-        "%g "
-        "and average = %g\n",
-        num_original_nonzero_cost, pct0, bigc, average_cost);
+    printf("grep_DuPtrb:    Initially have %" HIGHSINT_FORMAT
+           " nonzero costs (%3" HIGHSINT_FORMAT
+           "%%) with bigc = "
+           "%g "
+           "and average = %g\n",
+           num_original_nonzero_cost, pct0, bigc, average_cost);
   }
   if (bigc > 100) {
     bigc = sqrt(sqrt(bigc));
@@ -1724,13 +1737,14 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   }
   if (num_flip)
     highsLogDev(options_.log_options, HighsLogType::VERBOSE,
-                "Performed %d flip(s): total = %g; objective change = %g\n",
+                "Performed %" HIGHSINT_FORMAT
+                " flip(s): total = %g; objective change = %g\n",
                 num_flip, sum_flip, flip_dual_objective_value_change);
   if (num_shift)
-    highsLogDev(
-        options_.log_options, HighsLogType::DETAILED,
-        "Performed %d cost shift(s): total = %g; objective change = %g\n",
-        num_shift, sum_shift, shift_dual_objective_value_change);
+    highsLogDev(options_.log_options, HighsLogType::DETAILED,
+                "Performed %" HIGHSINT_FORMAT
+                " cost shift(s): total = %g; objective change = %g\n",
+                num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }
 

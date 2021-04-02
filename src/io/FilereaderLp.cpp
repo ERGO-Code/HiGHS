@@ -122,7 +122,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (HighsInt i = 0; i < model.numCol_; i++) {
-    this->writeToFile(file, "%+g x%d ", model.colCost_[i], (i + 1));
+    this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", model.colCost_[i],
+                      (i + 1));
   }
   this->writeToFileLineend(file);
 
@@ -133,12 +134,13 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   for (HighsInt row = 0; row < model.numRow_; row++) {
     if (model.rowLower_[row] == model.rowUpper_[row]) {
       // equality constraint
-      this->writeToFile(file, " con%d: ", row + 1);
+      this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
       for (HighsInt var = 0; var < model.numCol_; var++) {
         for (HighsInt idx = model.Astart_[var]; idx < model.Astart_[var + 1];
              idx++) {
           if (model.Aindex_[idx] == row) {
-            this->writeToFile(file, "%+g x%d ", model.Avalue_[idx], var + 1);
+            this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
+                              model.Avalue_[idx], var + 1);
           }
         }
       }
@@ -147,12 +149,13 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     } else {
       if (model.rowLower_[row] > -HIGHS_CONST_INF) {
         // has a lower bounds
-        this->writeToFile(file, " con%dlo: ", row + 1);
+        this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < model.numCol_; var++) {
           for (HighsInt idx = model.Astart_[var]; idx < model.Astart_[var + 1];
                idx++) {
             if (model.Aindex_[idx] == row) {
-              this->writeToFile(file, "%+g x%d ", model.Avalue_[idx], var + 1);
+              this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
+                                model.Avalue_[idx], var + 1);
             }
           }
         }
@@ -160,12 +163,13 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         this->writeToFileLineend(file);
       } else if (model.rowUpper_[row] < HIGHS_CONST_INF) {
         // has an upper bounds
-        this->writeToFile(file, " con%dup: ", row + 1);
+        this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < model.numCol_; var++) {
           for (HighsInt idx = model.Astart_[var]; idx < model.Astart_[var + 1];
                idx++) {
             if (model.Aindex_[idx] == row) {
-              this->writeToFile(file, "%+g x%d ", model.Avalue_[idx], var + 1);
+              this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
+                                model.Avalue_[idx], var + 1);
             }
           }
         }
@@ -185,20 +189,22 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     // if both lower/upper bound are +/-infinite: [name] free
     if (model.colLower_[i] > -HIGHS_CONST_INF &&
         model.colUpper_[i] < HIGHS_CONST_INF) {
-      this->writeToFile(file, " %+g <= x%d <= %+g", model.colLower_[i], i + 1,
-                        model.colUpper_[i]);
+      this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= %+g",
+                        model.colLower_[i], i + 1, model.colUpper_[i]);
       this->writeToFileLineend(file);
     } else if (model.colLower_[i] <= -HIGHS_CONST_INF &&
                model.colUpper_[i] < HIGHS_CONST_INF) {
-      this->writeToFile(file, " -inf <= x%d <= %+g", i + 1, model.colUpper_[i]);
+      this->writeToFile(file, " -inf <= x%" HIGHSINT_FORMAT " <= %+g", i + 1,
+                        model.colUpper_[i]);
       this->writeToFileLineend(file);
 
     } else if (model.colLower_[i] > -HIGHS_CONST_INF &&
                model.colUpper_[i] >= HIGHS_CONST_INF) {
-      this->writeToFile(file, " %+g <= x%d <= +inf", model.colLower_[i], i + 1);
+      this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= +inf",
+                        model.colLower_[i], i + 1);
       this->writeToFileLineend(file);
     } else {
-      this->writeToFile(file, " x%d free", i + 1);
+      this->writeToFile(file, " x%" HIGHSINT_FORMAT " free", i + 1);
       this->writeToFileLineend(file);
     }
   }

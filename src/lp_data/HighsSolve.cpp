@@ -135,7 +135,9 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   if (lp.numRow_ != 0) return HighsStatus::Error;
 
   highsLogUser(options.log_options, HighsLogType::INFO,
-               "Solving an unconstrained LP with %d columns\n", lp.numCol_);
+               "Solving an unconstrained LP with %" HIGHSINT_FORMAT
+               " columns\n",
+               lp.numCol_);
 
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);
