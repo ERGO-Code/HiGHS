@@ -304,6 +304,8 @@ restart:
           break;
         }
       }
+      else
+        numStallNodes = 0;
 
       assert(search.hasNode());
 
