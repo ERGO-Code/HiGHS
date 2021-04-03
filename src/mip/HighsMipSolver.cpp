@@ -303,8 +303,7 @@ restart:
           modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
           break;
         }
-      }
-      else
+      } else
         numStallNodes = 0;
 
       assert(search.hasNode());
