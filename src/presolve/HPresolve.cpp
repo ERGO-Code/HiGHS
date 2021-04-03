@@ -898,31 +898,32 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     std::sort(binaries.begin(), binaries.end());
 
     size_t numChangedCols = 0;
+    while (domain.getChangedCols().size() != numChangedCols) {
+      if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
+        ++probingNumDelCol;
+    }
 
     HighsInt numCliquesStart = cliquetable.numCliques();
     HighsInt numDelStart = probingNumDelCol;
 
+    HighsInt numDel = probingNumDelCol - numDelStart +
+                      implications.substitutions.size() +
+                      cliquetable.getSubstitutions().size();
+
     // printf("start probing wit %" HIGHSINT_FORMAT " cliques\n");
-    for (std::tuple<HighsInt, HighsInt, HighsInt, HighsInt> binvar : binaries) {
+    for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
+         binaries) {
       HighsInt i = std::get<3>(binvar);
 
       if (cliquetable.getSubstitution(i) != nullptr) continue;
 
       if (domain.isBinary(i)) {
-        while (domain.getChangedCols().size() != numChangedCols) {
-          if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
-            ++probingNumDelCol;
-        }
-
         // break in case of too many new implications to not spent ages in
         // probing
         if (cliquetable.numCliques() - numCliquesStart >
             std::max(HighsInt{1000000}, numNonzeros()))
           break;
 
-        HighsInt numDel = probingNumDelCol - numDelStart +
-                          implications.substitutions.size() +
-                          cliquetable.getSubstitutions().size();
         // when a large percentage of columns have been deleted, stop this round
         // of probing
         // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
@@ -930,11 +931,25 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         if (probingContingent - numProbed < 0) break;
 
         HighsInt numBoundChgs = 0;
-        bool fixed = implications.runProbing(i, numBoundChgs);
+
+        implications.runProbing(i, numBoundChgs);
         probingContingent += numBoundChgs;
-        if (fixed) probingContingent += numDel;
+
+        while (domain.getChangedCols().size() != numChangedCols) {
+          if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
+            ++probingNumDelCol;
+        }
+        HighsInt newNumDel = probingNumDelCol - numDelStart +
+                             implications.substitutions.size() +
+                             cliquetable.getSubstitutions().size();
+
+        if (newNumDel > numDel) {
+          probingContingent += numDel;
+          numDel = newNumDel;
+        }
 
         ++numProbed;
+
         // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
         // "\n", nprobed,
         //       cliquetable.numCliques());
