@@ -17,13 +17,13 @@
 #ifndef MIP_HIGHS_TRANSFORMED_LP_H_
 #define MIP_HIGHS_TRANSFORMED_LP_H_
 
-#include <cstdint>
 #include <vector>
 
 #include "lp_data/HConst.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsSparseVectorSum.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsInt.h"
 
 class HighsLpRelaxation;
 

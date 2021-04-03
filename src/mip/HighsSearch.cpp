@@ -813,9 +813,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
     if (minrel > 0) {
       int64_t sbiters = getStrongBranchingLpIterations();
       sbmaxiters =
-          100000 + (getTotalLpIterations() - getHeuristicLpIterations() -
-                    getStrongBranchingLpIterations()) /
-                       2;
+          100000 + ((getTotalLpIterations() - getHeuristicLpIterations() -
+                     getStrongBranchingLpIterations()) >>
+                    1);
       if (sbiters > sbmaxiters) {
         pseudocost.setMinReliable(0);
       } else if (sbiters > sbmaxiters / 2) {

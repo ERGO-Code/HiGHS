@@ -67,7 +67,9 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
         total_lp_iterations * heuristic_effort + 10000)
       return true;
   } else if (heuristic_lp_iterations <
-             total_lp_iterations - heuristic_lp_iterations - sb_lp_iterations) {
+             100000 + ((total_lp_iterations - heuristic_lp_iterations -
+                        sb_lp_iterations) >>
+                       1)) {
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
         (heuristic_lp_iterations + sb_lp_iterations +
