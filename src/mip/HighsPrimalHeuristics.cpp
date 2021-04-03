@@ -374,7 +374,7 @@ retry:
                    getFixingRate(), localdom.colLower_, localdom.colUpper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
-                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 5)) {
+                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
     targetdepth = heur.getCurrentDepth() / 2;
     if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
     // printf("infeasible in in root node, trying with lower fixing rate\n");
@@ -649,7 +649,7 @@ retry:
                    getFixingRate(), localdom.colLower_, localdom.colUpper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
-                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 5)) {
+                   200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
     targetdepth = heur.getCurrentDepth() / 2;
     if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
     // printf("infeasible in in root node, trying with lower fixing rate\n");
