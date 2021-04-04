@@ -307,6 +307,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
     HighsCDouble mu = mju - lambda;
 
     if (mu <= 10 * feastol) continue;
+    if (std::abs(vals[j]) < 1000 * feastol) continue;
 
     double mudival = double(mu / vals[j]);
     if (std::abs(std::round(mudival) - mudival) <= feastol) continue;
