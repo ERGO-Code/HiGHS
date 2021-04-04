@@ -299,6 +299,28 @@ void HighsImplications::rebuild(HighsInt ncols,
   }
 }
 
+void HighsImplications::buildFrom(const HighsImplications& init) {
+  return;
+  HighsInt numcol = mipsolver.numCol();
+
+  for (HighsInt i = 0; i != numcol; ++i) {
+    for (const auto& vub : init.vubs[i]) {
+      if (!mipsolver.mipdata_->domain.isBinary(vub.first)) continue;
+      addVUB(i, vub.first, vub.second.coef, vub.second.constant);
+    }
+
+    for (const auto& vlb : init.vlbs[i]) {
+      if (!mipsolver.mipdata_->domain.isBinary(vlb.first)) continue;
+      addVLB(i, vlb.first, vlb.second.coef, vlb.second.constant);
+    }
+
+    // todo also add old implications once implications can be added
+    // incrementally for now we discard the old implications as they might be
+    // weaker then newly computed ones and adding them would block computation
+    // of new implications
+  }
+}
+
 void HighsImplications::separateImpliedBounds(
     const HighsLpRelaxation& lpRelaxation, const std::vector<double>& sol,
     HighsCutPool& cutpool, double feastol) {

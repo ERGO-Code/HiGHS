@@ -122,6 +122,8 @@ void HighsMipSolverData::init() {
   postSolveStack.initializeIndexMaps(mipsolver.model_->numRow_,
                                      mipsolver.model_->numCol_);
   mipsolver.orig_model_ = mipsolver.model_;
+  if (mipsolver.clqtableinit) cliquetable.buildFrom(*mipsolver.clqtableinit);
+  if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->mip_epsilon;
   heuristic_effort = mipsolver.options_mip_->mip_heuristic_effort;

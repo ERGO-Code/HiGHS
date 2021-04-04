@@ -1978,3 +1978,23 @@ void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
 
   *this = std::move(newCliqueTable);
 }
+
+void HighsCliqueTable::buildFrom(const HighsCliqueTable& init) {
+  assert(init.colsubstituted.size() == colsubstituted.size());
+  HighsInt ncols = init.colsubstituted.size();
+  HighsCliqueTable newCliqueTable(ncols);
+  HighsInt ncliques = init.cliques.size();
+  for (HighsInt i = 0; i != ncliques; ++i) {
+    if (init.cliques[i].start == -1) continue;
+
+    HighsInt numvars = init.cliques[i].end - init.cliques[i].start;
+
+    newCliqueTable.doAddClique(&init.cliqueentries[init.cliques[i].start],
+                               numvars, init.cliques[i].equality,
+                               HIGHS_CONST_I_INF);
+  }
+
+  newCliqueTable.colsubstituted = init.colsubstituted;
+  newCliqueTable.substitutions = init.substitutions;
+  *this = std::move(newCliqueTable);
+}

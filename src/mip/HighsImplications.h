@@ -116,6 +116,8 @@ class HighsImplications {
   void rebuild(HighsInt ncols, const std::vector<HighsInt>& cIndex,
                const std::vector<HighsInt>& rIndex);
 
+  void buildFrom(const HighsImplications& init);
+
   void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
                              const std::vector<double>& sol,
                              HighsCutPool& cutpool, double feastol);

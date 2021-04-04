@@ -32,7 +32,9 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
       solution_objective_(HIGHS_CONST_INF),
       submip(submip),
       rootbasis(nullptr),
-      pscostinit(nullptr) {}
+      pscostinit(nullptr),
+      clqtableinit(nullptr),
+      implicinit(nullptr) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
 

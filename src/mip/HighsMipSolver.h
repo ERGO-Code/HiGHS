@@ -16,6 +16,8 @@
 struct HighsMipSolverData;
 class HighsCutPool;
 class HighsPseudocostInitialization;
+class HighsCliqueTable;
+class HighsImplications;
 
 class HighsMipSolver {
  public:
@@ -35,6 +37,8 @@ class HighsMipSolver {
   bool submip;
   const HighsBasis* rootbasis;
   const HighsPseudocostInitialization* pscostinit;
+  const HighsCliqueTable* clqtableinit;
+  const HighsImplications* implicinit;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
 

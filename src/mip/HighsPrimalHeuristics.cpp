@@ -90,6 +90,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;
+  submipsolver.clqtableinit = &mipsolver.mipdata_->cliquetable;
+  submipsolver.implicinit = &mipsolver.mipdata_->implications;
   submipsolver.run();
   if (submipsolver.mipdata_) {
     double adjustmentfactor =
