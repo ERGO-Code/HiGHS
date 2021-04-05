@@ -38,8 +38,8 @@ class HMatrix {
       const HighsInt* Astart,  //!< Pointer to the starts of the source matrix
       const HighsInt* Aindex,  //!< Pointer to the indices of the source matrix
       const double* Avalue,    //!< Pointer to the values of the source matrix
-      const HighsInt* nonbasicFlag  //!< Pointer to the flags indicating which
-                                    //!< columns are basic and nonbasic
+      const int8_t* nonbasicFlag  //!< Pointer to the flags indicating which
+                                  //!< columns are basic and nonbasic
   );
   /**
    * @brief For a logical basis, sets up the column-wise and

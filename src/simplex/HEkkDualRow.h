@@ -151,7 +151,7 @@ class HEkkDualRow {
                            //!< here to avoid compiler warning
   const HighsInt*
       workNumTotPermutation;  //!< Pointer to ekk_instance_.numTotPermutation();
-  const HighsInt*
+  const int8_t*
       workMove;  //!< Pointer to ekk_instance_.simplex_basis_.nonbasicMove_;
   const double*
       workDual;  //!< Pointer to ekk_instance_.simplex_info_.workDual_;

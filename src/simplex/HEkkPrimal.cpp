@@ -766,7 +766,7 @@ void HEkkPrimal::chuzc() {
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
   assert(!hyper_sparse || !done_next_chuzc);
-  const vector<HighsInt>& nonbasicMove =
+  const vector<int8_t>& nonbasicMove =
       ekk_instance_.simplex_basis_.nonbasicMove_;
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   double best_measure = 0;
@@ -861,7 +861,7 @@ bool HEkkPrimal::useVariableIn() {
   // numerical trouble is detected
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   vector<double>& workDual = simplex_info.workDual_;
-  const vector<HighsInt>& nonbasicMove =
+  const vector<int8_t>& nonbasicMove =
       ekk_instance_.simplex_basis_.nonbasicMove_;
   const double updated_theta_dual = workDual[variable_in];
   // Determine the move direction - can't use nonbasicMove_[variable_in]
@@ -1304,9 +1304,9 @@ void HEkkPrimal::hyperChooseColumn() {
   if (!use_hyper_chuzc) return;
   if (initialise_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperClock);
-  const vector<HighsInt>& nonbasicMove =
+  const vector<int8_t>& nonbasicMove =
       ekk_instance_.simplex_basis_.nonbasicMove_;
-  const vector<HighsInt>& nonbasicFlag =
+  const vector<int8_t>& nonbasicFlag =
       ekk_instance_.simplex_basis_.nonbasicFlag_;
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   if (report_hyper_chuzc)
@@ -1395,7 +1395,7 @@ void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
   if (!use_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperBasicFeasibilityChangeClock);
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  const vector<HighsInt>& nonbasicMove =
+  const vector<int8_t>& nonbasicMove =
       ekk_instance_.simplex_basis_.nonbasicMove_;
   HighsInt to_entry;
   const bool use_row_indices = ekk_instance_.sparseLoopStyle(
@@ -1446,7 +1446,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
   if (!use_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperDualClock);
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  const vector<HighsInt>& nonbasicMove =
+  const vector<int8_t>& nonbasicMove =
       ekk_instance_.simplex_basis_.nonbasicMove_;
   HighsInt to_entry;
   // Look at changes in the columns and assess any dual infeasibility
@@ -1547,7 +1547,7 @@ void HEkkPrimal::updateDual() {
 
 void HEkkPrimal::phase1ComputeDual() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<HighsInt>& nonbasicFlag =
+  const vector<int8_t>& nonbasicFlag =
       ekk_instance_.simplex_basis_.nonbasicFlag_;
 
   HVector buffer;
@@ -2000,8 +2000,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
     // variables, nonbasicFlag[*]=0
-    const HighsInt* nonbasicFlag =
-        &ekk_instance_.simplex_basis_.nonbasicFlag_[0];
+    const int8_t* nonbasicFlag = &ekk_instance_.simplex_basis_.nonbasicFlag_[0];
     for (HighsInt iCol = 0; iCol < num_col; iCol++)
       row_basic_feasibility_change.array[iCol] *= nonbasicFlag[iCol];
   }

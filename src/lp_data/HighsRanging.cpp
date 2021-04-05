@@ -65,8 +65,8 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const vector<double>& Bvalue_ = simplex_info.baseValue_;
   const vector<double>& Blower_ = simplex_info.baseLower_;
   const vector<double>& Bupper_ = simplex_info.baseUpper_;
-  const vector<HighsInt>& Nflag_ = simplex_basis.nonbasicFlag_;
-  const vector<HighsInt>& Nmove_ = simplex_basis.nonbasicMove_;
+  const vector<int8_t>& Nflag_ = simplex_basis.nonbasicFlag_;
+  const vector<int8_t>& Nmove_ = simplex_basis.nonbasicMove_;
   const vector<HighsInt>& Bindex_ = simplex_basis.basicIndex_;
   const HMatrix& matrix = ekk_instance.matrix_;
   const HFactor& factor = ekk_instance.factor_;

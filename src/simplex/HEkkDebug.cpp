@@ -665,7 +665,7 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
   }
   // Use localNonbasicFlag so that duplicate entries in basicIndex can
   // be spotted
-  vector<HighsInt> localNonbasicFlag = simplex_basis.nonbasicFlag_;
+  vector<int8_t> localNonbasicFlag = simplex_basis.nonbasicFlag_;
   for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     HighsInt iCol = simplex_basis.basicIndex_[iRow];
     HighsInt flag = localNonbasicFlag[iCol];

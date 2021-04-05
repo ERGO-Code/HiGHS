@@ -1900,7 +1900,7 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
   // Initialise the Devex framework: reference set is all basic
   // variables
   analysis->simplexTimerStart(DevexIzClock);
-  const vector<HighsInt>& nonbasicFlag =
+  const vector<int8_t>& nonbasicFlag =
       ekk_instance_.simplex_basis_.nonbasicFlag_;
   // Initialise the devex framework. The devex reference set is
   // initialise to be the current set of basic variables - and never

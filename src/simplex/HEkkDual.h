@@ -418,7 +418,7 @@ class HEkkDual {
   const HFactor* factor;
   HighsSimplexAnalysis* analysis;
 
-  const HighsInt* jMove;
+  const int8_t* jMove;
   const double* workRange;
   const double* baseLower;
   const double* baseUpper;
@@ -429,7 +429,7 @@ class HEkkDual {
   double* colUpper;
   double* rowLower;
   double* rowUpper;
-  HighsInt* nonbasicFlag;
+  int8_t* nonbasicFlag;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
