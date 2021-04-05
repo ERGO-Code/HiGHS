@@ -454,7 +454,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
 
       // initialize with default bounds
       colLower.push_back(0.0);
-      colUpper.push_back(HIGHS_CONST_INF);
+      if (integral_cols) {
+        colUpper.push_back(1.0);
+      } else {
+        colUpper.push_back(HIGHS_CONST_INF);
+      }
     }
 
     assert(ncols > 0);
@@ -731,8 +735,10 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       // Assign bounds to columns that remain binary by default
       for (int colidx = 0; colidx < numCol; colidx++) {
         if (col_binary[colidx]) {
-          colLower[colidx] = 0.0;
-          colUpper[colidx] = 1.0;
+          assert(colLower[colidx] == 0.0);
+          assert(colUpper[colidx] == 1.0);
+          //          colLower[colidx] = 0.0;
+          //          colUpper[colidx] = 1.0;
         }
       }
       return key;
@@ -844,8 +850,11 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
         // Mark the column as integer and binary
         col_integrality[colidx] = HighsVarType::INTEGER;
         col_binary[colidx] = true;
+	assert(colLower[colidx] == 0.0);
+	colUpper[colidx] = 1.0;
       } else {
         // continuous: MI, PL or FR
+        col_binary[colidx] = false;
         if (islb) colLower[colidx] = -HIGHS_CONST_INF;
         if (isub) colUpper[colidx] = HIGHS_CONST_INF;
       }
