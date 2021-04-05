@@ -27,7 +27,7 @@ using std::swap;
 
 void HMatrix::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
                     const HighsInt* Aindex_, const double* Avalue_,
-                    const HighsInt* nonbasicFlag_) {
+                    const int8_t* nonbasicFlag_) {
   // Copy the A matrix and setup row-wise matrix with the nonbasic
   // columns before the basic columns for a general set of nonbasic
   // variables

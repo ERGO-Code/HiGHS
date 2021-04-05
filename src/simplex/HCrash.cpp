@@ -1373,7 +1373,7 @@ void HCrash::crsh_iz_vr_ty() {
   const double* colUpper = &simplex_lp.colUpper_[0];
   const double* rowLower = &simplex_lp.rowLower_[0];
   const double* rowUpper = &simplex_lp.rowUpper_[0];
-  const HighsInt* nonbasicFlag = &ekk_instance.simplex_basis_.nonbasicFlag_[0];
+  const int8_t* nonbasicFlag = &ekk_instance.simplex_basis_.nonbasicFlag_[0];
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);

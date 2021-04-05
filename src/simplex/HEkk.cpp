@@ -1478,7 +1478,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
     // variables, nonbasicFlag[*]=0
-    const HighsInt* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
+    const int8_t* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
     for (HighsInt iCol = 0; iCol < solver_num_col; iCol++)
       row_ap.array[iCol] *= nonbasicFlag[iCol];
   }
@@ -1749,8 +1749,8 @@ void HEkk::correctDual(HighsInt* free_infeasibility_count) {
 }
 
 void HEkk::flipBound(const HighsInt iCol) {
-  HighsInt* nonbasicMove = &simplex_basis_.nonbasicMove_[0];
-  const HighsInt move = nonbasicMove[iCol] = -nonbasicMove[iCol];
+  int8_t* nonbasicMove = &simplex_basis_.nonbasicMove_[0];
+  const int8_t move = nonbasicMove[iCol] = -nonbasicMove[iCol];
   simplex_info_.workValue_[iCol] = move == 1 ? simplex_info_.workLower_[iCol]
                                              : simplex_info_.workUpper_[iCol];
 }

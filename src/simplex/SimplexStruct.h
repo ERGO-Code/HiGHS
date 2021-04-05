@@ -24,8 +24,8 @@ struct SimplexBasis {
   // self-consistent and correpond to the dimensions of an associated
   // HighsLp, but the basis matrix B is not necessarily nonsingular.
   std::vector<HighsInt> basicIndex_;
-  std::vector<HighsInt> nonbasicFlag_;
-  std::vector<HighsInt> nonbasicMove_;
+  std::vector<int8_t> nonbasicFlag_;
+  std::vector<int8_t> nonbasicMove_;
 };
 
 struct HighsSimplexLpStatus {
