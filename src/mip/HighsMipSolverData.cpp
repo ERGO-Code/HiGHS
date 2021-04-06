@@ -130,7 +130,7 @@ void HighsMipSolverData::init() {
 
   firstlpsolobj = -HIGHS_CONST_INF;
   rootlpsolobj = -HIGHS_CONST_INF;
-
+  analyticCenterComputed = false;
   numRestarts = 0;
   numImprovingSols = 0;
   pruned_treeweight = 0;
@@ -607,7 +607,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       pruned_treeweight += nodequeue.performBounding(upper_limit);
       printDisplayLine(source);
     }
-  }
+  } else if (incumbent.empty())
+    incumbent = sol;
 
   return true;
 }
@@ -917,8 +918,8 @@ restart:
     rootlpsolobj = lp.getObjective();
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-    if ((!mipsolver.submip && numRestarts == 0) ||
-        upper_limit == HIGHS_CONST_INF) {
+    if (!analyticCenterComputed || upper_limit == HIGHS_CONST_INF) {
+      analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
     }

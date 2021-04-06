@@ -726,19 +726,24 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
     resolveSubstitution(cliquevars[i]);
 
   if (numcliquevars <= 100) {
-    if (numcliquevars == 2 && haveCommonClique(cliquevars[0], cliquevars[1]))
-      return;
+    bool hasNewEdge = false;
 
     for (HighsInt i = 0; i < numcliquevars - 1; ++i) {
       if (globaldom.isFixed(cliquevars[i].col)) continue;
       if (cliquesetroot[cliquevars[i].index()] == -1 &&
           sizeTwoCliquesetRoot[cliquevars[i].index()] == -1 &&
           cliquesetroot[cliquevars[i].complement().index()] == -1 &&
-          sizeTwoCliquesetRoot[cliquevars[i].complement().index()] == -1)
+          sizeTwoCliquesetRoot[cliquevars[i].complement().index()] == -1) {
+        hasNewEdge = true;
         continue;
+      }
 
       for (HighsInt j = i + 1; j < numcliquevars; ++j) {
         if (globaldom.isFixed(cliquevars[j].col)) continue;
+
+        if (haveCommonClique(cliquevars[i], cliquevars[j])) continue;
+
+        hasNewEdge = true;
 
         bool iscover = processNewEdge(globaldom, cliquevars[i], cliquevars[j]);
         if (globaldom.infeasible()) return;
@@ -761,6 +766,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
         }
       }
     }
+    if (!hasNewEdge) return;
     CliqueVar* unfixedend =
         std::remove_if(cliquevars, cliquevars + numcliquevars,
                        [&](CliqueVar v) { return globaldom.isFixed(v.col); });
@@ -915,7 +921,7 @@ void HighsCliqueTable::extractCliques(
     // printClique(clique);
 
     if (clique.size() >= 2) {
-      if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
+      // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
     }
@@ -1090,7 +1096,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     // printClique(clique);
     if (clique.size() >= 2) {
       // printf("extracted clique from cut\n");
-      if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
+      // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
 
       addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
@@ -1500,9 +1506,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   }
 
   if (runcliquesubsumption) {
-    std::vector<uint16_t> cliquehits(cliques.size());
-    std::vector<HighsInt> cliquehitinds;
-    std::vector<HighsInt> stack;
+    cliquehits.resize(cliques.size());
+    assert(stack.empty());
 
     for (std::vector<CliqueVar>& clique : data.cliques) {
       if (clique.size() == 2) continue;

@@ -132,6 +132,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
+  mask.resize(mipsolver.numCol());
   numlpiters = 0;
   avgSolveIters = 0;
   numSolved = 0;
@@ -152,6 +153,7 @@ void HighsLpRelaxation::loadModel() {
   lpsolver.clearSolver();
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
+  mask.resize(lpmodel.numCol_);
   mipsolver.mipdata_->domain.clearChangedCols();
 }
 
@@ -307,9 +309,13 @@ void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
       if (!continuous &&
           mipsolver.variableType(col) == HighsVarType::CONTINUOUS)
         continue;
-      lpsolver.changeColBounds(col, domain.colLower_[col],
-                               domain.colUpper_[col]);
+      mask[col] = 1;
     }
+
+    lpsolver.changeColsBounds(mask.data(), domain.colLower_.data(),
+                              domain.colUpper_.data());
+
+    for (HighsInt col : domain.getChangedCols()) mask[col] = 0;
 
     domain.clearChangedCols();
   }

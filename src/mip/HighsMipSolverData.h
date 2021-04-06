@@ -42,6 +42,7 @@ struct HighsMipSolverData {
   HighsLp presolvedModel;
   bool cliquesExtracted;
   bool rowMatrixSet;
+  bool analyticCenterComputed;
   HighsInt numRestarts;
 
   std::vector<HighsInt> ARstart_;

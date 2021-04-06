@@ -19,8 +19,17 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-static size_t support_hash(const HighsInt* Rindex, const HighsInt Rlen) {
-  return HighsHashHelpers::vector_hash(Rindex, Rlen);
+static uint32_t support_hash(const HighsInt* Rindex, const double* Rvalue,
+                             double maxabscoef, const HighsInt Rlen) {
+  std::vector<uint32_t> valueHashCodes(Rlen);
+
+  double scale = 1.0 / maxabscoef;
+  for (HighsInt i = 0; i < Rlen; ++i)
+    valueHashCodes[i] = HighsHashHelpers::double_hash_code(scale * Rvalue[i]);
+
+  return HighsHashHelpers::hash(std::make_pair(
+      HighsHashHelpers::vector_hash(Rindex, Rlen),
+      HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen)));
 }
 
 #if 0
@@ -49,7 +58,7 @@ bool HighsCutPool::isDuplicate(size_t hash, double norm, HighsInt* Rindex,
 
     if (end - start != Rlen) continue;
     if (std::equal(Rindex, Rindex + Rlen, &ARindex[start])) {
-      HighsCDouble dotprod = 0.0;
+      double dotprod = 0.0;
 
       for (HighsInt i = 0; i != Rlen; ++i)
         dotprod += Rvalue[i] * ARvalue[start + i];
@@ -163,7 +172,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     HighsInt start = matrix_.getRowStart(i);
     HighsInt end = matrix_.getRowEnd(i);
 
-    HighsCDouble viol(-rhs_[i]);
+    double viol(-rhs_[i]);
 
     for (HighsInt j = start; j != end; ++j) {
       HighsInt col = ARindex[j];
@@ -178,7 +187,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
-        size_t sh = support_hash(&ARindex[start], end - start);
+        size_t sh = support_hash(&ARindex[start], &ARvalue[start],
+                                 maxabscoef_[i], end - start);
 
         ++modification_[i];
 
@@ -353,17 +363,15 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               bool integral, bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
-  size_t sh = support_hash(Rindex, Rlen);
   // compute 1/||a|| for the cut
   // as it is only computed once
-  // we use HighsCDouble to compute it as accurately as possible
-  HighsCDouble norm = 0.0;
+  double norm = 0.0;
   double maxabscoef = 0.0;
   for (HighsInt i = 0; i != Rlen; ++i) {
     norm += Rvalue[i] * Rvalue[i];
     maxabscoef = std::max(maxabscoef, std::abs(Rvalue[i]));
   }
-  norm.renormalize();
+  size_t sh = support_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
   // try to replace another cut with equal support that has an age > 0
 

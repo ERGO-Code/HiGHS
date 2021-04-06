@@ -64,6 +64,7 @@ class HighsLpRelaxation {
   std::vector<double> dualproofvals;
   std::vector<HighsInt> dualproofinds;
   std::vector<double> dualproofbuffer;
+  std::vector<HighsInt> mask;
   double dualproofrhs;
   bool hasdualproof;
   double objective;
