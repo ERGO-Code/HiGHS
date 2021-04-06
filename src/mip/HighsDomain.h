@@ -31,9 +31,11 @@ class HighsDomain {
       kBranching = -1,
       kUnknown = -2,
       kModelRow = -3,
+      kCliqueTable = -4,
     };
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
+    static Reason cliqueTable() { return Reason{kCliqueTable, 0}; }
     static Reason modelRow(HighsInt row) { return Reason{kModelRow, row}; }
     static Reason cut(HighsInt cutpool, HighsInt cut) {
       return Reason{cutpool, cut};
@@ -212,6 +214,10 @@ class HighsDomain {
 
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {
     return domchgstack_;
+  }
+
+  const std::vector<Reason>& getDomainChangeReason() const {
+    return domchgreason_;
   }
 
   std::vector<HighsDomainChange> getReducedDomainChangeStack() const {

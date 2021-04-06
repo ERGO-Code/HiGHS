@@ -72,21 +72,23 @@ class HighsSearch {
     double lower_bound;
     double estimate;
     double branching_point;
-    HighsDomainChange branchingdecision;
-    uint8_t opensubtrees;
     // we store the lp objective separately to the lower bound since the lower
     // bound could be above the LP objective when cuts age out or below when the
     // LP is unscaled dual infeasible and it is not set. We still want to use
     // the objective for pseudocost updates and tiebreaking of best bound node
     // selection
     double lp_objective;
+    HighsDomainChange branchingdecision;
+    HighsInt domgchgStackPos;
+    uint8_t opensubtrees;
 
     NodeData(double parentlb = -HIGHS_CONST_INF,
              double parentestimate = -HIGHS_CONST_INF)
         : lower_bound(parentlb),
           estimate(parentestimate),
-          opensubtrees(2),
-          lp_objective(-HIGHS_CONST_INF) {}
+          lp_objective(-HIGHS_CONST_INF),
+          domgchgStackPos(-1),
+          opensubtrees(2) {}
   };
 
   std::vector<NodeData> nodestack;

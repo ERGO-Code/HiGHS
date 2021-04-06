@@ -1622,6 +1622,25 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
                                        HighsInt val) {
   CliqueVar v(col, val);
 
+  while (colsubstituted[v.col]) {
+    assert((HighsInt)substitutions.size() > colsubstituted[v.col] - 1);
+    Substitution subst = substitutions[colsubstituted[v.col] - 1];
+    v = v.val == 1 ? subst.replace : subst.replace.complement();
+    if (v.val == 1) {
+      if (domain.colLower_[v.col] == 1.0) continue;
+
+      domain.changeBound(HighsBoundType::Lower, v.col, 1.0,
+                         HighsDomain::Reason::cliqueTable());
+      if (domain.infeasible()) return;
+    } else {
+      if (domain.colUpper_[v.col] == 0.0) continue;
+
+      domain.changeBound(HighsBoundType::Upper, v.col, 0.0,
+                         HighsDomain::Reason::cliqueTable());
+      if (domain.infeasible()) return;
+    }
+  }
+
   std::vector<HighsInt> stack;
   stack.reserve(cliquesets.size());
 
@@ -1643,58 +1662,19 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
     HighsInt end = cliques[cliqueid].end;
 
     for (HighsInt i = start; i != end; ++i) {
-      if (HighsInt(cliqueentries[i].col) == col) continue;
+      if (cliqueentries[i].col == v.col) continue;
 
       if (cliqueentries[i].val == 1) {
         if (domain.colUpper_[cliqueentries[i].col] == 0.0) continue;
 
         domain.changeBound(HighsBoundType::Upper, cliqueentries[i].col, 0.0,
-                           HighsDomain::Reason::unspecified());
+                           HighsDomain::Reason::cliqueTable());
         if (domain.infeasible()) return;
       } else {
         if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
 
         domain.changeBound(HighsBoundType::Lower, cliqueentries[i].col, 1.0,
-                           HighsDomain::Reason::unspecified());
-        if (domain.infeasible()) return;
-      }
-    }
-  }
-
-  if (cliquesetroot[v.complement().index()] != -1)
-    stack.push_back(cliquesetroot[v.complement().index()]);
-  if (sizeTwoCliquesetRoot[v.complement().index()] != -1)
-    stack.push_back(sizeTwoCliquesetRoot[v.complement().index()]);
-
-  while (!stack.empty()) {
-    HighsInt node = stack.back();
-    stack.pop_back();
-
-    HighsInt cliqueid = cliquesets[node].cliqueid;
-
-    if (cliquesets[node].left != -1) stack.push_back(cliquesets[node].left);
-
-    if (cliquesets[node].right != -1) stack.push_back(cliquesets[node].right);
-
-    HighsInt start = cliques[cliqueid].start;
-    HighsInt end = cliques[cliqueid].end;
-
-    if (!cliques[cliqueid].equality || end - start != 2) continue;
-
-    for (HighsInt i = start; i != end; ++i) {
-      if (HighsInt(cliqueentries[i].col) == col) continue;
-
-      if (cliqueentries[i].val == 0) {
-        if (domain.colUpper_[cliqueentries[i].col] == 0.0) continue;
-
-        domain.changeBound(HighsBoundType::Upper, cliqueentries[i].col, 0.0,
-                           HighsDomain::Reason::unspecified());
-        if (domain.infeasible()) return;
-      } else {
-        if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
-
-        domain.changeBound(HighsBoundType::Lower, cliqueentries[i].col, 1.0,
-                           HighsDomain::Reason::unspecified());
+                           HighsDomain::Reason::cliqueTable());
         if (domain.infeasible()) return;
       }
     }

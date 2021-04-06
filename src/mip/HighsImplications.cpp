@@ -18,9 +18,10 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   globaldomain.propagate();
   if (globaldomain.infeasible()) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
-
+  const auto& domchgreason = globaldomain.getDomainChangeReason();
   HighsInt changedend = globaldomain.getChangedCols().size();
 
+  HighsInt numImplications = -(HighsInt)domchgstack.size() - 1;
   if (val)
     globaldomain.changeBound(HighsBoundType::Lower, col, 1);
   else
@@ -34,11 +35,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     return true;
   }
 
-  size_t numImplications = -domchgstack.size();
-
-  cliquetable.addImplications(globaldomain, col, val);
-
-  size_t stackimplicstart = domchgstack.size();
+  HighsInt stackimplicstart = domchgstack.size();
 
   globaldomain.propagate();
 
@@ -54,13 +51,17 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   numImplications += domchgstack.size();
   mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,
                                                          val);
-  size_t stackimplicend = domchgstack.size();
+  HighsInt stackimplicend = domchgstack.size();
 
   HighsInt loc = 2 * col + val;
   HighsInt implstart = implications.size();
 
-  implications.insert(implications.end(), domchgstack.data() + stackimplicstart,
-                      domchgstack.data() + stackimplicend);
+  implications.reserve(implstart + (stackimplicend - stackimplicstart));
+
+  for (HighsInt i = stackimplicstart; i != stackimplicend; ++i) {
+    if (domchgreason[i].type != HighsDomain::Reason::kCliqueTable)
+      implications.push_back(domchgstack[i]);
+  }
 
   globaldomain.backtrack();
   globaldomain.clearChangedCols(changedend);
@@ -134,10 +135,14 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numboundchgs) {
     infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
+    if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
+      return true;
 
     infeasible = computeImplications(col, 0);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
+    if (mipsolver.mipdata_->cliquetable.getSubstitution(col) != nullptr)
+      return true;
 
     // analyze implications
     const HighsDomainChange* implicsup;
@@ -192,6 +197,8 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numboundchgs) {
           ++d;
       }
     }
+
+    return true;
   }
 
   return false;
@@ -341,7 +348,6 @@ void HighsImplications::separateImpliedBounds(
       continue;
 
     if (runProbing(col, numboundchgs)) {
-      ++numboundchgs;
       if (globaldomain.infeasible()) return;
     }
   }

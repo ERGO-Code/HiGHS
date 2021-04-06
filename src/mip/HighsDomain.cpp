@@ -585,10 +585,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 void HighsDomain::markPropagateCut(Reason reason) {
   switch (reason.type) {
     case Reason::kUnknown:
+    case Reason::kCliqueTable:
     case Reason::kBranching:
-      break;
     case Reason::kModelRow:
-      // markPropagate(reason.index);
       break;
     default:
       assert(reason.type >= 0 && reason.type < int(cutpoolpropagation.size()));
@@ -713,11 +712,17 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     }
   }
 
+  bool binary = isBinary(boundchg.column);
+
   double oldbound = doChangeBound(boundchg);
 
   prevboundval_.push_back(oldbound);
   domchgstack_.push_back(boundchg);
   domchgreason_.push_back(reason);
+
+  if (binary && !infeasible_)
+    mipsolver->mipdata_->cliquetable.addImplications(*this, boundchg.column,
+                                                     boundchg.boundval > 0.5);
 }
 
 void HighsDomain::setDomainChangeStack(

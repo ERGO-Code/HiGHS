@@ -932,7 +932,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
 
         HighsInt numBoundChgs = 0;
 
-        implications.runProbing(i, numBoundChgs);
+        if (!implications.runProbing(i, numBoundChgs)) continue;
         probingContingent += numBoundChgs;
 
         while (domain.getChangedCols().size() != numChangedCols) {
@@ -3067,7 +3067,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
       if (tryProbing) {
         detectImpliedIntegers();
         storeCurrentProblemSize();
-        runProbing(postSolveStack);
+        HPRESOLVE_CHECKED_CALL(runProbing(postSolveStack));
         tryProbing =
             probingContingent > numProbed && problemSizeReduction() > 1.0;
         trySparsify = true;

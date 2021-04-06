@@ -102,7 +102,10 @@ void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
   }
 }
 
-void HighsSearch::createNewNode() { nodestack.emplace_back(); }
+void HighsSearch::createNewNode() {
+  nodestack.emplace_back();
+  nodestack.back().domgchgStackPos = localdom.getDomainChangeStack().size();
+}
 
 void HighsSearch::cutoffNode() { nodestack.back().opensubtrees = 0; }
 
@@ -123,8 +126,10 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   currnode.branchingdecision.boundval = newub;
   currnode.branchingdecision.boundtype = HighsBoundType::Upper;
 
+  HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
   nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+  nodestack.back().domgchgStackPos = domchgPos;
 }
 
 void HighsSearch::branchUpwards(HighsInt col, double newlb,
@@ -140,8 +145,10 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
   currnode.branchingdecision.boundval = newlb;
   currnode.branchingdecision.boundtype = HighsBoundType::Lower;
 
+  HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
   nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+  nodestack.back().domgchgStackPos = domchgPos;
 }
 
 void HighsSearch::addBoundExceedingConflict() {
@@ -315,8 +322,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
     if (!downscorereliable[candidate]) {
       // evaluate down branch
+      int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
       localdom.changeBound(HighsBoundType::Upper, col, downval);
-      int64_t inferences = -localdom.getDomainChangeStack().size();
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
@@ -441,8 +448,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       if (numiters > basisstart_threshold) lp->recoverBasis();
     } else {
       // evaluate up branch
+      int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
       localdom.changeBound(HighsBoundType::Lower, col, upval);
-      int64_t inferences = -localdom.getDomainChangeStack().size();
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
@@ -671,19 +678,14 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   const NodeData* parent = getParentNodeData();
 
   const auto& domchgstack = localdom.getDomainChangeStack();
-  int64_t inferences = -domchgstack.size();
-  bool addInferenceObservation =
-      parent != nullptr && parent->branchingdecision == domchgstack.back() &&
-      parent->lp_objective != HIGHS_CONST_INF;
 
-  bool propagatedRows = localdom.propagate();
+  localdom.propagate();
 
-  if (propagatedRows) {
-    inferences += domchgstack.size();
-    if (addInferenceObservation)
-      pseudocost.addInferenceObservation(
-          parent->branchingdecision.column, inferences,
-          parent->branchingdecision.boundtype == HighsBoundType::Lower);
+  if (parent != nullptr) {
+    int64_t inferences = domchgstack.size() - (currnode.domgchgStackPos + 1);
+    pseudocost.addInferenceObservation(
+        parent->branchingdecision.column, inferences,
+        parent->branchingdecision.boundtype == HighsBoundType::Lower);
   }
 
   NodeResult result = NodeResult::Open;
@@ -1038,9 +1040,11 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
   // finally open a new node with the branching decision added
   // and remember that we have one open subtree left
+  HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
   currnode.opensubtrees = 1;
   nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+  nodestack.back().domgchgStackPos = domchgPos;
 
   return NodeResult::Branched;
 }
@@ -1086,9 +1090,11 @@ bool HighsSearch::backtrack() {
   if (fallbackbranch)
     currnode.branching_point = currnode.branchingdecision.boundval;
 
+  HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
   nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
   lp->flushDomain(localdom);
+  nodestack.back().domgchgStackPos = domchgPos;
 
   return true;
 }

@@ -219,6 +219,7 @@ class HighsCliqueTable {
 
     c.first = &cliqueentries[cliques[clq].start];
     c.second = cliques[clq].end - cliques[clq].start;
+    return c;
   }
 
   void separateCliques(const HighsMipSolver& mipsolver,
