@@ -766,7 +766,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
         }
       }
     }
-    if (!hasNewEdge) return;
+    if (!hasNewEdge && origin == HIGHS_CONST_I_INF) return;
     CliqueVar* unfixedend =
         std::remove_if(cliquevars, cliquevars + numcliquevars,
                        [&](CliqueVar v) { return globaldom.isFixed(v.col); });
