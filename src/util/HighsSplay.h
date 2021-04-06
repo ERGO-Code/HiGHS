@@ -11,6 +11,7 @@
 #define HIGHS_SPLAY_H_
 
 #include <cassert>
+#include "util/HighsInt.h"
 
 /// top down splay operation to maintain a binary search tree. The search tree
 /// is assumed to be stored in an array/vector and therefore uses integers

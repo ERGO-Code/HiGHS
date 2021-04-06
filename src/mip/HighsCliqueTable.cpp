@@ -54,7 +54,8 @@ void HighsCliqueTable::unlink(HighsInt node) {
                        ? sizeTwoCliquesetRoot[cliqueentries[node].index()]
                        : cliquesetroot[cliqueentries[node].index()];
   --numcliquesvar[cliqueentries[node].index()];
-
+  assert(node >= 0);
+  assert(root != -1);
   highs_splay_unlink(node, root, get_left, get_right, get_key);
   cliquesets[node].cliqueid = -1;
 }
@@ -688,10 +689,22 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     while (sizeTwoCliquesetRoot[origindex] != -1) {
       HighsInt node = sizeTwoCliquesetRoot[origindex];
       HighsInt cliqueid = cliquesets[node].cliqueid;
+      int othernode;
+      if (node > 0 && cliquesets[node - 1].cliqueid == cliqueid)
+        othernode = node - 1;
+      else
+        othernode = node + 1;
+
+      assert(cliquesets[othernode].cliqueid == cliqueid && othernode != node);
+
+      sizeTwoCliques.erase(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]));
       unlink(node);
       cliquesets[node].cliqueid = cliqueid;
       cliqueentries[node] = substitution.replace;
       link(node);
+      sizeTwoCliques.insert(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]), cliqueid);
     }
 
     HighsInt complindex = CliqueVar(substitution.substcol, 0).index();
@@ -707,10 +720,22 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     while (sizeTwoCliquesetRoot[complindex] != -1) {
       HighsInt node = sizeTwoCliquesetRoot[complindex];
       HighsInt cliqueid = cliquesets[node].cliqueid;
+      int othernode;
+      if (node > 0 && cliquesets[node - 1].cliqueid == cliqueid)
+        othernode = node - 1;
+      else
+        othernode = node + 1;
+
+      assert(cliquesets[othernode].cliqueid == cliqueid && othernode != node);
+
+      sizeTwoCliques.erase(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]));
       unlink(node);
       cliquesets[node].cliqueid = cliqueid;
       cliqueentries[node] = substitution.replace.complement();
       link(node);
+      sizeTwoCliques.insert(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]), cliqueid);
     }
 
     return true;
