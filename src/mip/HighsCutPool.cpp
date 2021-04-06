@@ -187,8 +187,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
-        size_t sh = support_hash(&ARindex[start], &ARvalue[start],
-                                 maxabscoef_[i], end - start);
+        uint32_t sh = support_hash(&ARindex[start], &ARvalue[start],
+                                   maxabscoef_[i], end - start);
 
         ++modification_[i];
 
@@ -371,7 +371,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     norm += Rvalue[i] * Rvalue[i];
     maxabscoef = std::max(maxabscoef, std::abs(Rvalue[i]));
   }
-  size_t sh = support_hash(Rindex, Rvalue, maxabscoef, Rlen);
+  uint32_t sh = support_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
   // try to replace another cut with equal support that has an age > 0
 

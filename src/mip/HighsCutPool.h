@@ -59,7 +59,7 @@ class HighsCutPool {
   std::vector<double> rownormalization_;
   std::vector<double> maxabscoef_;
   std::vector<uint8_t> rowintegral;
-  std::unordered_multimap<size_t, int> supportmap;
+  std::unordered_multimap<uint32_t, int> supportmap;
   std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
 
   double bestObservedScore;
