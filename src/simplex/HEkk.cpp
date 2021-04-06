@@ -874,6 +874,7 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 
 HighsInt HEkk::computeFactor() {
   if (!simplex_lp_status_.has_factor_arrays) {
+    // todo @ Julian: this fails on glass4
     assert(simplex_info_.factor_pivot_threshold >=
            options_.factor_pivot_threshold);
     factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
