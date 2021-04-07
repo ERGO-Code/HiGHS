@@ -108,9 +108,9 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut) {
 void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
   if (!propagatecutflags_[cut] &&
       (activitycutsinf_[cut] == 1 ||
-       (cutpool->getRhs()[cut] - activitycuts_[cut]) /
-               cutpool->getMaxAbsCutCoef(cut) <
-           1.0 - domain->mipsolver->mipdata_->feastol)) {
+       (cutpool->getRhs()[cut] - double(activitycuts_[cut]) <
+        (1.0 - domain->mipsolver->mipdata_->feastol) *
+            cutpool->getMaxAbsCutCoef(cut)))) {
     propagatecutinds_.push_back(cut);
     propagatecutflags_[cut] = 1;
   }
