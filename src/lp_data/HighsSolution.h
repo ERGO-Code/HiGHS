@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "io/HighsIO.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
@@ -39,7 +40,7 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
 HighsStatus ipxSolutionToHighsSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
-    const int ipx_num_col, const int ipx_num_row,
+    const HighsInt ipx_num_col, const HighsInt ipx_num_row,
     const std::vector<double>& ipx_x, const std::vector<double>& ipx_slack_vars,
     // const std::vector<double>& ipx_y,
     HighsSolution& highs_solution);

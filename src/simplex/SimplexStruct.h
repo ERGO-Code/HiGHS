@@ -23,9 +23,9 @@ struct SimplexBasis {
   // is true then it is assumed that basicIndex_ and nonbasicFlag_ are
   // self-consistent and correpond to the dimensions of an associated
   // HighsLp, but the basis matrix B is not necessarily nonsingular.
-  std::vector<int> basicIndex_;
-  std::vector<int> nonbasicFlag_;
-  std::vector<int> nonbasicMove_;
+  std::vector<HighsInt> basicIndex_;
+  std::vector<int8_t> nonbasicFlag_;
+  std::vector<int8_t> nonbasicMove_;
 };
 
 struct HighsSimplexLpStatus {
@@ -108,44 +108,44 @@ struct HighsSimplexInfo {
   // permutation of all indices for CHUZR and a random permutation of
   // column indices for permuting the columns
   std::vector<double> numTotRandomValue_;
-  std::vector<int> numTotPermutation_;
-  std::vector<int> numColPermutation_;
+  std::vector<HighsInt> numTotPermutation_;
+  std::vector<HighsInt> numColPermutation_;
 
-  std::vector<int> devex_index_;
+  std::vector<HighsInt> devex_index_;
 
   // Data for backtracking in the event of a singular basis
-  int phase1_backtracking_test_done = false;
-  int phase2_backtracking_test_done = false;
+  HighsInt phase1_backtracking_test_done = false;
+  HighsInt phase2_backtracking_test_done = false;
   bool backtracking_ = false;
   bool valid_backtracking_basis_ = false;
   SimplexBasis backtracking_basis_;
-  int backtracking_basis_costs_perturbed_;
-  int backtracking_basis_bounds_perturbed_;
+  HighsInt backtracking_basis_costs_perturbed_;
+  HighsInt backtracking_basis_bounds_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
   std::vector<double> backtracking_basis_workLowerShift_;
   std::vector<double> backtracking_basis_workUpperShift_;
   std::vector<double> backtracking_basis_edge_weights_;
 
   // Dual and primal ray vectors
-  int dual_ray_row_;
-  int dual_ray_sign_;
-  int primal_ray_col_;
-  int primal_ray_sign_;
+  HighsInt dual_ray_row_;
+  HighsInt dual_ray_sign_;
+  HighsInt primal_ray_col_;
+  HighsInt primal_ray_sign_;
 
   // Options from HighsOptions for the simplex solver
-  int simplex_strategy;
-  int dual_edge_weight_strategy;
-  int primal_edge_weight_strategy;
-  int price_strategy;
+  HighsInt simplex_strategy;
+  HighsInt dual_edge_weight_strategy;
+  HighsInt primal_edge_weight_strategy;
+  HighsInt price_strategy;
 
   double dual_simplex_cost_perturbation_multiplier;
   double primal_simplex_phase1_cost_perturbation_multiplier = 1;
   double primal_simplex_bound_perturbation_multiplier;
   double factor_pivot_threshold;
-  int update_limit;
+  HighsInt update_limit;
 
   // Simplex control parameters from HSA
-  int control_iteration_count0;
+  HighsInt control_iteration_count0;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
@@ -159,7 +159,7 @@ struct HighsSimplexInfo {
   bool allow_dual_steepest_edge_to_devex_switch;
   double dual_steepest_edge_weight_log_error_threshold;
   double costly_DSE_frequency;
-  int num_costly_DSE_iteration;
+  HighsInt num_costly_DSE_iteration;
   double average_log_low_DSE_weight_error;
   double average_log_high_DSE_weight_error;
   // Needed globally??
@@ -188,33 +188,33 @@ struct HighsSimplexInfo {
   bool costs_perturbed = false;
   bool bounds_perturbed = false;
 
-  int num_primal_infeasibility = -1;
+  HighsInt num_primal_infeasibility = -1;
   double max_primal_infeasibility;
   double sum_primal_infeasibility;
-  int num_dual_infeasibility = -1;
+  HighsInt num_dual_infeasibility = -1;
   double max_dual_infeasibility;
   double sum_dual_infeasibility;
 
   // Records of cumulative iteration counts - updated at the end of a phase
-  int dual_phase1_iteration_count = 0;
-  int dual_phase2_iteration_count = 0;
-  int primal_phase1_iteration_count = 0;
-  int primal_phase2_iteration_count = 0;
-  int primal_bound_swap = 0;
+  HighsInt dual_phase1_iteration_count = 0;
+  HighsInt dual_phase2_iteration_count = 0;
+  HighsInt primal_phase1_iteration_count = 0;
+  HighsInt primal_phase2_iteration_count = 0;
+  HighsInt primal_bound_swap = 0;
 
-  int min_threads = 1;
-  int num_threads = 1;
-  int max_threads = HIGHS_THREAD_LIMIT;
+  HighsInt min_threads = 1;
+  HighsInt num_threads = 1;
+  HighsInt max_threads = HIGHS_THREAD_LIMIT;
 
   // Cutoff for PAMI
   double pami_cutoff = 0.95;
 
   // Info on PAMI iterations
-  int multi_iteration = 0;
+  HighsInt multi_iteration = 0;
 
   // Number of UPDATE operations performed - should be zeroed when INVERT is
   // performed
-  int update_count;
+  HighsInt update_count;
   // Value of dual objective - only set when computed from scratch in dual
   // rebuild()
   double dual_objective_value;
@@ -227,7 +227,7 @@ struct HighsSimplexInfo {
   // Value of primal objective that is updated in primal simplex solver
   double updated_primal_objective_value;
   // Number of logical variables in the basis
-  int num_basic_logicals;
+  HighsInt num_basic_logicals;
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

@@ -29,44 +29,59 @@ sortedEdge(HighsCliqueTable::CliqueVar v1, HighsCliqueTable::CliqueVar v2) {
   return std::make_pair(v1, v2);
 }
 
-int HighsCliqueTable::splay(int cliqueid, int root) {
-  auto get_left = [&](int node) -> int& { return cliquesets[node].left; };
-  auto get_right = [&](int node) -> int& { return cliquesets[node].right; };
-  auto get_key = [&](int node) { return cliquesets[node].cliqueid; };
+HighsInt HighsCliqueTable::splay(HighsInt cliqueid, HighsInt root) {
+  auto get_left = [&](HighsInt node) -> HighsInt& {
+    return cliquesets[node].left;
+  };
+  auto get_right = [&](HighsInt node) -> HighsInt& {
+    return cliquesets[node].right;
+  };
+  auto get_key = [&](HighsInt node) { return cliquesets[node].cliqueid; };
   return highs_splay(cliqueid, root, get_left, get_right, get_key);
 }
 
-void HighsCliqueTable::unlink(int node) {
-  auto get_left = [&](int node) -> int& { return cliquesets[node].left; };
-  auto get_right = [&](int node) -> int& { return cliquesets[node].right; };
-  auto get_key = [&](int node) { return cliquesets[node].cliqueid; };
-  int cliquelen = cliques[cliquesets[node].cliqueid].end -
-                  cliques[cliquesets[node].cliqueid].start;
-  int& root = cliquelen == 2 ? sizeTwoCliquesetRoot[cliqueentries[node].index()]
-                             : cliquesetroot[cliqueentries[node].index()];
+void HighsCliqueTable::unlink(HighsInt node) {
+  auto get_left = [&](HighsInt node) -> HighsInt& {
+    return cliquesets[node].left;
+  };
+  auto get_right = [&](HighsInt node) -> HighsInt& {
+    return cliquesets[node].right;
+  };
+  auto get_key = [&](HighsInt node) { return cliquesets[node].cliqueid; };
+  HighsInt cliquelen = cliques[cliquesets[node].cliqueid].end -
+                       cliques[cliquesets[node].cliqueid].start;
+  HighsInt& root = cliquelen == 2
+                       ? sizeTwoCliquesetRoot[cliqueentries[node].index()]
+                       : cliquesetroot[cliqueentries[node].index()];
   --numcliquesvar[cliqueentries[node].index()];
-
+  assert(node >= 0);
+  assert(root != -1);
   highs_splay_unlink(node, root, get_left, get_right, get_key);
   cliquesets[node].cliqueid = -1;
 }
 
-void HighsCliqueTable::link(int node) {
-  auto get_left = [&](int node) -> int& { return cliquesets[node].left; };
-  auto get_right = [&](int node) -> int& { return cliquesets[node].right; };
-  auto get_key = [&](int node) { return cliquesets[node].cliqueid; };
-  int cliquelen = cliques[cliquesets[node].cliqueid].end -
-                  cliques[cliquesets[node].cliqueid].start;
-  int& root = cliquelen == 2 ? sizeTwoCliquesetRoot[cliqueentries[node].index()]
-                             : cliquesetroot[cliqueentries[node].index()];
+void HighsCliqueTable::link(HighsInt node) {
+  auto get_left = [&](HighsInt node) -> HighsInt& {
+    return cliquesets[node].left;
+  };
+  auto get_right = [&](HighsInt node) -> HighsInt& {
+    return cliquesets[node].right;
+  };
+  auto get_key = [&](HighsInt node) { return cliquesets[node].cliqueid; };
+  HighsInt cliquelen = cliques[cliquesets[node].cliqueid].end -
+                       cliques[cliquesets[node].cliqueid].start;
+  HighsInt& root = cliquelen == 2
+                       ? sizeTwoCliquesetRoot[cliqueentries[node].index()]
+                       : cliquesetroot[cliqueentries[node].index()];
   ++numcliquesvar[cliqueentries[node].index()];
 
   return highs_splay_link(node, root, get_left, get_right, get_key);
 }
 
-int HighsCliqueTable::findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
+HighsInt HighsCliqueTable::findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
   if (sizeTwoCliquesetRoot[v1.index()] != -1 &&
       sizeTwoCliquesetRoot[v2.index()] != -1) {
-    int* sizeTwoCliqueId = sizeTwoCliques.find(sortedEdge(v1, v2));
+    HighsInt* sizeTwoCliqueId = sizeTwoCliques.find(sortedEdge(v1, v2));
     if (sizeTwoCliqueId != nullptr) return *sizeTwoCliqueId;
   }
 
@@ -75,21 +90,21 @@ int HighsCliqueTable::findCommonCliqueId(CliqueVar v1, CliqueVar v2) {
 
   // if (invertedEdgeCache.find(edge) != nullptr) return -1;
 
-  int commonclique = -1;
+  HighsInt commonclique = -1;
   assert(commoncliquestack.empty());
   commoncliquestack.emplace_back(&cliquesetroot[v1.index()],
                                  &cliquesetroot[v2.index()]);
-  int numIters = 0;
+  HighsInt numIters = 0;
 
   while (!commoncliquestack.empty()) {
     ++numIters;
-    int& r1 = *commoncliquestack.back().first;
-    int& r2 = *commoncliquestack.back().second;
+    HighsInt& r1 = *commoncliquestack.back().first;
+    HighsInt& r2 = *commoncliquestack.back().second;
 
     commoncliquestack.pop_back();
 
-    int cliqueid1 = cliquesets[r1].cliqueid;
-    int cliqueid2 = cliquesets[r2].cliqueid;
+    HighsInt cliqueid1 = cliquesets[r1].cliqueid;
+    HighsInt cliqueid2 = cliquesets[r2].cliqueid;
 
     if (cliqueid1 == cliqueid2) {
       commonclique = cliqueid1;
@@ -153,7 +168,7 @@ void HighsCliqueTable::resolveSubstitution(CliqueVar& v) const {
   }
 }
 
-void HighsCliqueTable::resolveSubstitution(int& col, double& val,
+void HighsCliqueTable::resolveSubstitution(HighsInt& col, double& val,
                                            double& offset) const {
   while (colsubstituted[col]) {
     Substitution subst = substitutions[colsubstituted[col] - 1];
@@ -165,10 +180,10 @@ void HighsCliqueTable::resolveSubstitution(int& col, double& val,
   }
 }
 
-int HighsCliqueTable::runCliqueSubsumption(HighsDomain& globaldom,
-                                           std::vector<CliqueVar>& clique) {
+HighsInt HighsCliqueTable::runCliqueSubsumption(
+    HighsDomain& globaldom, std::vector<CliqueVar>& clique) {
   if (clique.size() == 2) return 0;
-  int nremoved = 0;
+  HighsInt nremoved = 0;
   bool redundant = false;
   cliquehits.resize(cliques.size());
   for (CliqueVar v : clique) {
@@ -177,7 +192,7 @@ int HighsCliqueTable::runCliqueSubsumption(HighsDomain& globaldom,
     if (sizeTwoCliquesetRoot[v.index()] != -1)
       stack.emplace_back(sizeTwoCliquesetRoot[v.index()]);
     while (!stack.empty()) {
-      int node = stack.back();
+      HighsInt node = stack.back();
       stack.pop_back();
 
       if (cliquesets[node].left != -1)
@@ -185,7 +200,7 @@ int HighsCliqueTable::runCliqueSubsumption(HighsDomain& globaldom,
       if (cliquesets[node].right != -1)
         stack.emplace_back(cliquesets[node].right);
 
-      int cliqueid = cliquesets[node].cliqueid;
+      HighsInt cliqueid = cliquesets[node].cliqueid;
       if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
       ++cliquehits[cliqueid];
@@ -193,20 +208,20 @@ int HighsCliqueTable::runCliqueSubsumption(HighsDomain& globaldom,
   }
 
   if (cliquehitinds.size() == 1) {
-    int hits = cliquehits[cliquehitinds[0]];
+    HighsInt hits = cliquehits[cliquehitinds[0]];
     cliquehits[cliquehitinds[0]] = 0;
-    if (hits == (int)clique.size()) redundant = true;
+    if (hits == (HighsInt)clique.size()) redundant = true;
   } else {
-    int firstremovable = -1;
-    for (int cliqueid : cliquehitinds) {
-      int hits = cliquehits[cliqueid];
+    HighsInt firstremovable = -1;
+    for (HighsInt cliqueid : cliquehitinds) {
+      HighsInt hits = cliquehits[cliqueid];
       cliquehits[cliqueid] = 0;
 
-      int len = cliques[cliqueid].end - cliques[cliqueid].start;
+      HighsInt len = cliques[cliqueid].end - cliques[cliqueid].start;
       if (len == hits) {
         if (cliques[cliqueid].equality) {
           for (CliqueVar v : clique) {
-            int node;
+            HighsInt node;
             if (len == 2) {
               sizeTwoCliquesetRoot[v.index()] =
                   splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
@@ -225,7 +240,7 @@ int HighsCliqueTable::runCliqueSubsumption(HighsDomain& globaldom,
           ++nremoved;
           removeClique(cliqueid);
         }
-      } else if (hits == (int)clique.size())
+      } else if (hits == (HighsInt)clique.size())
         redundant = true;
     }
 
@@ -244,11 +259,12 @@ int HighsCliqueTable::runCliqueSubsumption(HighsDomain& globaldom,
   return nremoved;
 }
 
-void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
-                                           const CliqueVar* X, int Xlen) {
+void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
+                                           HighsInt Plen, const CliqueVar* X,
+                                           HighsInt Xlen) {
   double w = data.wR;
 
-  for (int i = 0; i != Plen; ++i) w += data.P[i].weight(data.sol);
+  for (HighsInt i = 0; i != Plen; ++i) w += data.P[i].weight(data.sol);
 
   if (w < data.minW - data.feastol) return;
 
@@ -265,7 +281,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
     }
 
     if (data.Z.begin() != extensionend) {
-      std::shuffle(data.Z.begin(), extensionend, randgen);
+      randgen.shuffle(data.Z.data(), extensionend - data.Z.begin());
 
       for (auto it = data.Z.begin(); it != extensionend; ++it) {
         extensionend = std::partition(it + 1, extensionend, [&](CliqueVar z) {
@@ -294,7 +310,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
   double pivweight = -1.0;
   CliqueVar pivot;
 
-  for (int i = 0; i != Xlen; ++i) {
+  for (HighsInt i = 0; i != Xlen; ++i) {
     if (X[i].weight(data.sol) > pivweight) {
       pivweight = X[i].weight(data.sol);
       pivot = X[i];
@@ -303,7 +319,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
   }
 
   if (pivweight < 1.0 - data.feastol) {
-    for (int i = 0; i != Plen; ++i) {
+    for (HighsInt i = 0; i != Plen; ++i) {
       if (data.P[i].weight(data.sol) > pivweight) {
         pivweight = data.P[i].weight(data.sol);
         pivot = data.P[i];
@@ -315,26 +331,27 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
   std::vector<CliqueVar> PminusNu;
   PminusNu.reserve(Plen);
 
-  for (int i = 0; i != Plen; ++i) {
+  for (HighsInt i = 0; i != Plen; ++i) {
     if (haveCommonClique(pivot, data.P[i])) continue;
 
     PminusNu.push_back(data.P[i]);
   }
 
   std::sort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
-    return a.weight(data.sol) > b.weight(data.sol);
+    return std::make_pair(a.weight(data.sol), a.index()) >
+           std::make_pair(b.weight(data.sol), b.index());
   });
 
   std::vector<CliqueVar> localX;
   localX.insert(localX.end(), X, X + Xlen);
 
   for (CliqueVar v : PminusNu) {
-    int newPlen =
+    HighsInt newPlen =
         std::partition(data.P.begin(), data.P.begin() + Plen,
                        [&](CliqueVar p) { return haveCommonClique(v, p); }) -
         data.P.begin();
 
-    int newXlen =
+    HighsInt newXlen =
         std::partition(localX.begin(), localX.end(),
                        [&](CliqueVar x) { return haveCommonClique(v, x); }) -
         localX.begin();
@@ -355,8 +372,8 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
     // find the position of v in the vertices removed from P for the recursive
     // call
     // and also remove it from the set P for this call
-    int vpos = -1;
-    for (int i = newPlen; i != Plen; ++i) {
+    HighsInt vpos = -1;
+    for (HighsInt i = newPlen; i != Plen; ++i) {
       if (data.P[i] == v) {
         vpos = i;
         break;
@@ -375,14 +392,14 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
 }
 
 #if 0
-static void printRow(const HighsDomain& domain, const int* inds,
-                     const double* vals, int len, double lhs, double rhs) {
+static void printRow(const HighsDomain& domain, const HighsInt* inds,
+                     const double* vals, HighsInt len, double lhs, double rhs) {
   printf("%g <= ", lhs);
 
-  for (int i = 0; i != len; ++i) {
+  for (HighsInt i = 0; i != len; ++i) {
     char sign = vals[i] > 0 ? '+' : '-';
     char var = domain.isBinary(inds[i]) ? 'x' : 'y';
-    printf("%c%g %c%d ", sign, std::abs(vals[i]), var, inds[i]);
+    printf("%c%g %c%" HIGHSINT_FORMAT " ", sign, std::abs(vals[i]), var, inds[i]);
   }
 
   printf("<= %g\n", rhs);
@@ -394,7 +411,7 @@ static void printClique(
   for (HighsCliqueTable::CliqueVar v : clique) {
     if (!first) printf("+ ");
     char complemented = v.val == 0 ? '~' : ' ';
-    printf("%cx%d ", complemented, v.col);
+    printf("%cx%" HIGHSINT_FORMAT " ", complemented, v.col);
     first = false;
   }
 
@@ -403,9 +420,9 @@ static void printClique(
 #endif
 
 void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
-                                   int numcliquevars, bool equality,
-                                   int origin) {
-  int cliqueid;
+                                   HighsInt numcliquevars, bool equality,
+                                   HighsInt origin) {
+  HighsInt cliqueid;
 
   if (freeslots.empty()) {
     cliqueid = cliques.size();
@@ -418,24 +435,27 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
   cliques[cliqueid].equality = equality;
   cliques[cliqueid].origin = origin;
 
-  std::set<std::pair<int, int>>::iterator it;
+  std::set<std::pair<HighsInt, int>>::iterator it;
+  HighsInt maxEnd;
   if (freespaces.empty() || (it = freespaces.lower_bound(std::make_pair(
                                  numcliquevars, -1))) == freespaces.end()) {
     cliques[cliqueid].start = cliqueentries.size();
     cliques[cliqueid].end = cliques[cliqueid].start + numcliquevars;
+    maxEnd = cliques[cliqueid].end;
     cliqueentries.resize(cliques[cliqueid].end);
     cliquesets.resize(cliques[cliqueid].end);
   } else {
-    std::pair<int, int> freespace = *it;
+    std::pair<HighsInt, int> freespace = *it;
     freespaces.erase(it);
 
     cliques[cliqueid].start = freespace.second;
-    cliques[cliqueid].end = cliques[cliqueid].start + freespace.first;
+    cliques[cliqueid].end = cliques[cliqueid].start + numcliquevars;
+    maxEnd = cliques[cliqueid].start + freespace.first;
   }
 
   bool fixtozero = false;
-  int k = cliques[cliqueid].start;
-  for (int i = 0; i != numcliquevars; ++i) {
+  HighsInt k = cliques[cliqueid].start;
+  for (HighsInt i = 0; i != numcliquevars; ++i) {
     CliqueVar v = cliquevars[i];
 
     resolveSubstitution(v);
@@ -448,7 +468,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     // due to substitutions the variable may occur twice in this clique and
     // we can fix it to zero:  x + x + ... <= 1  <=>  2x <= 1 <=> x <= 0.5 <=>
     // x = 0
-    int node;
+    HighsInt node;
     if (numcliquevars == 2) {
       sizeTwoCliquesetRoot[v.index()] =
           splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
@@ -479,7 +499,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
 
     if (node != -1 && cliquesets[node].cliqueid == cliqueid) {
       fixtozero = true;
-      for (int j = cliques[cliqueid].start; j != k; ++j) {
+      for (HighsInt j = cliques[cliqueid].start; j != k; ++j) {
         if (cliqueentries[j].col != v.col)
           infeasvertexstack.push_back(cliqueentries[j]);
         unlink(j);
@@ -494,42 +514,47 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
     ++k;
   }
 
-  if (cliques[cliqueid].end > k) {
-    if (int(cliqueentries.size()) == cliques[cliqueid].end) {
+  if (maxEnd > k) {
+    if (int(cliqueentries.size()) == maxEnd) {
       cliqueentries.resize(k);
       cliquesets.resize(k);
     } else
-      freespaces.emplace(cliques[cliqueid].end - k, k);
+      freespaces.emplace(maxEnd - k, k);
 
-    switch (k - cliques[cliqueid].start) {
-      case 0:
-        // clique empty, so just mark it as deleted
-        cliques[cliqueid].start = -1;
-        freeslots.push_back(cliqueid);
-        break;
-      case 1:
-        // size 1 clique is redundant, so unlink the single linked entry
-        // and mark it as deleted
-        unlink(cliques[cliqueid].start);
-        cliques[cliqueid].start = -1;
-        freeslots.push_back(cliqueid);
-        break;
-      case 2:
-        // due to subsitutions the clique became smaller and is now of size two
-        // as a result we need to link it to the size two cliqueset instead of
-        // the normal cliqueset
-        unlink(cliques[cliqueid].start);
-        unlink(cliques[cliqueid].start + 1);
+    if (cliques[cliqueid].end > k) {
+      switch (k - cliques[cliqueid].start) {
+        case 0:
+          // clique empty, so just mark it as deleted
+          cliques[cliqueid].start = -1;
+          freeslots.push_back(cliqueid);
+          break;
+        case 1:
+          // size 1 clique is redundant, so unlink the single linked entry
+          // and mark it as deleted
+          unlink(cliques[cliqueid].start);
+          cliques[cliqueid].start = -1;
+          freeslots.push_back(cliqueid);
+          break;
+        case 2:
+          // due to subsitutions the clique became smaller and is now of size
+          // two as a result we need to link it to the size two cliqueset
+          // instead of the normal cliqueset
+          assert(cliqueid >= 0 && cliqueid < (HighsInt)cliques.size());
+          assert(cliques[cliqueid].start >= 0 &&
+                 cliques[cliqueid].start < (HighsInt)cliqueentries.size());
+          unlink(cliques[cliqueid].start);
+          unlink(cliques[cliqueid].start + 1);
 
-        cliques[cliqueid].end = k;
+          cliques[cliqueid].end = k;
 
-        cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
-        link(cliques[cliqueid].start);
-        cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
-        link(cliques[cliqueid].start + 1);
-        break;
-      default:
-        cliques[cliqueid].end = k;
+          cliquesets[cliques[cliqueid].start].cliqueid = cliqueid;
+          link(cliques[cliqueid].start);
+          cliquesets[cliques[cliqueid].start + 1].cliqueid = cliqueid;
+          link(cliques[cliqueid].start + 1);
+          break;
+        default:
+          cliques[cliqueid].end = k;
+      }
     }
   }
 
@@ -578,14 +603,15 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     }
     return false;
   } else {
-    int commonclique = findCommonCliqueId(v1.complement(), v2.complement());
+    HighsInt commonclique =
+        findCommonCliqueId(v1.complement(), v2.complement());
     if (commonclique == -1) return false;
 
     while (commonclique != -1) {
-      int start = cliques[commonclique].start;
-      int end = cliques[commonclique].end;
+      HighsInt start = cliques[commonclique].start;
+      HighsInt end = cliques[commonclique].end;
 
-      for (int i = start; i != end; ++i) {
+      for (HighsInt i = start; i != end; ++i) {
         if (cliqueentries[i] == v1.complement() ||
             cliqueentries[i] == v2.complement())
           continue;
@@ -609,10 +635,10 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     commonclique = findCommonCliqueId(v1, v2);
 
     while (commonclique != -1) {
-      int start = cliques[commonclique].start;
-      int end = cliques[commonclique].end;
+      HighsInt start = cliques[commonclique].start;
+      HighsInt end = cliques[commonclique].end;
 
-      for (int i = start; i != end; ++i) {
+      for (HighsInt i = start; i != end; ++i) {
         if (cliqueentries[i] == v1 || cliqueentries[i] == v2) continue;
 
         bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
@@ -650,10 +676,10 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     substitutions.push_back(substitution);
     colsubstituted[substitution.substcol] = substitutions.size();
 
-    int origindex = CliqueVar(substitution.substcol, 1).index();
+    HighsInt origindex = CliqueVar(substitution.substcol, 1).index();
     while (cliquesetroot[origindex] != -1) {
-      int node = cliquesetroot[origindex];
-      int cliqueid = cliquesets[node].cliqueid;
+      HighsInt node = cliquesetroot[origindex];
+      HighsInt cliqueid = cliquesets[node].cliqueid;
       unlink(node);
       cliquesets[node].cliqueid = cliqueid;
       cliqueentries[node] = substitution.replace;
@@ -661,18 +687,30 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     }
 
     while (sizeTwoCliquesetRoot[origindex] != -1) {
-      int node = sizeTwoCliquesetRoot[origindex];
-      int cliqueid = cliquesets[node].cliqueid;
+      HighsInt node = sizeTwoCliquesetRoot[origindex];
+      HighsInt cliqueid = cliquesets[node].cliqueid;
+      int othernode;
+      if (node > 0 && cliquesets[node - 1].cliqueid == cliqueid)
+        othernode = node - 1;
+      else
+        othernode = node + 1;
+
+      assert(cliquesets[othernode].cliqueid == cliqueid && othernode != node);
+
+      sizeTwoCliques.erase(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]));
       unlink(node);
       cliquesets[node].cliqueid = cliqueid;
       cliqueentries[node] = substitution.replace;
       link(node);
+      sizeTwoCliques.insert(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]), cliqueid);
     }
 
-    int complindex = CliqueVar(substitution.substcol, 0).index();
+    HighsInt complindex = CliqueVar(substitution.substcol, 0).index();
     while (cliquesetroot[complindex] != -1) {
-      int node = cliquesetroot[complindex];
-      int cliqueid = cliquesets[node].cliqueid;
+      HighsInt node = cliquesetroot[complindex];
+      HighsInt cliqueid = cliquesets[node].cliqueid;
       unlink(node);
       cliquesets[node].cliqueid = cliqueid;
       cliqueentries[node] = substitution.replace.complement();
@@ -680,12 +718,24 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     }
 
     while (sizeTwoCliquesetRoot[complindex] != -1) {
-      int node = sizeTwoCliquesetRoot[complindex];
-      int cliqueid = cliquesets[node].cliqueid;
+      HighsInt node = sizeTwoCliquesetRoot[complindex];
+      HighsInt cliqueid = cliquesets[node].cliqueid;
+      int othernode;
+      if (node > 0 && cliquesets[node - 1].cliqueid == cliqueid)
+        othernode = node - 1;
+      else
+        othernode = node + 1;
+
+      assert(cliquesets[othernode].cliqueid == cliqueid && othernode != node);
+
+      sizeTwoCliques.erase(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]));
       unlink(node);
       cliquesets[node].cliqueid = cliqueid;
       cliqueentries[node] = substitution.replace.complement();
       link(node);
+      sizeTwoCliques.insert(
+          sortedEdge(cliqueentries[node], cliqueentries[othernode]), cliqueid);
     }
 
     return true;
@@ -693,32 +743,38 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
 }
 
 void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
-                                 CliqueVar* cliquevars, int numcliquevars,
-                                 bool equality, int origin) {
+                                 CliqueVar* cliquevars, HighsInt numcliquevars,
+                                 bool equality, HighsInt origin) {
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
   mipsolver.mipdata_->debugSolution.checkClique(cliquevars, numcliquevars);
-  for (int i = 0; i != numcliquevars; ++i) resolveSubstitution(cliquevars[i]);
+  for (HighsInt i = 0; i != numcliquevars; ++i)
+    resolveSubstitution(cliquevars[i]);
 
   if (numcliquevars <= 100) {
-    if (numcliquevars == 2 && haveCommonClique(cliquevars[0], cliquevars[1]))
-      return;
+    bool hasNewEdge = false;
 
-    for (int i = 0; i < numcliquevars - 1; ++i) {
+    for (HighsInt i = 0; i < numcliquevars - 1; ++i) {
       if (globaldom.isFixed(cliquevars[i].col)) continue;
       if (cliquesetroot[cliquevars[i].index()] == -1 &&
           sizeTwoCliquesetRoot[cliquevars[i].index()] == -1 &&
           cliquesetroot[cliquevars[i].complement().index()] == -1 &&
-          sizeTwoCliquesetRoot[cliquevars[i].complement().index()] == -1)
+          sizeTwoCliquesetRoot[cliquevars[i].complement().index()] == -1) {
+        hasNewEdge = true;
         continue;
+      }
 
-      for (int j = i + 1; j < numcliquevars; ++j) {
+      for (HighsInt j = i + 1; j < numcliquevars; ++j) {
         if (globaldom.isFixed(cliquevars[j].col)) continue;
+
+        if (haveCommonClique(cliquevars[i], cliquevars[j])) continue;
+
+        hasNewEdge = true;
 
         bool iscover = processNewEdge(globaldom, cliquevars[i], cliquevars[j]);
         if (globaldom.infeasible()) return;
 
         if (iscover) {
-          for (int k = 0; k != numcliquevars; ++k) {
+          for (HighsInt k = 0; k != numcliquevars; ++k) {
             if (k == i || k == j) continue;
 
             bool wasfixed = globaldom.isFixed(cliquevars[k].col);
@@ -735,6 +791,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
         }
       }
     }
+    if (!hasNewEdge && origin == HIGHS_CONST_I_INF) return;
     CliqueVar* unfixedend =
         std::remove_if(cliquevars, cliquevars + numcliquevars,
                        [&](CliqueVar v) { return globaldom.isFixed(v.col); });
@@ -746,20 +803,20 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
   processInfeasibleVertices(globaldom);
 }
 
-void HighsCliqueTable::removeClique(int cliqueid) {
+void HighsCliqueTable::removeClique(HighsInt cliqueid) {
   if (cliques[cliqueid].origin != HIGHS_CONST_I_INF)
     deletedrows.push_back(cliques[cliqueid].origin);
 
-  int start = cliques[cliqueid].start;
+  HighsInt start = cliques[cliqueid].start;
   assert(start != -1);
-  int end = cliques[cliqueid].end;
-  int len = end - start;
+  HighsInt end = cliques[cliqueid].end;
+  HighsInt len = end - start;
   if (len == 2) {
     sizeTwoCliques.erase(
         sortedEdge(cliqueentries[start], cliqueentries[start + 1]));
   }
 
-  for (int i = start; i != end; ++i) {
+  for (HighsInt i = start; i != end; ++i) {
     unlink(i);
   }
 
@@ -771,9 +828,9 @@ void HighsCliqueTable::removeClique(int cliqueid) {
 }
 
 void HighsCliqueTable::extractCliques(
-    const HighsMipSolver& mipsolver, std::vector<int>& inds,
+    const HighsMipSolver& mipsolver, std::vector<HighsInt>& inds,
     std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
-    int nbin, std::vector<int>& perm, std::vector<CliqueVar>& clique,
+    HighsInt nbin, std::vector<HighsInt>& perm, std::vector<CliqueVar>& clique,
     double feastol) {
   HighsImplications& implics = mipsolver.mipdata_->implications;
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
@@ -781,21 +838,21 @@ void HighsCliqueTable::extractCliques(
   perm.resize(inds.size());
   std::iota(perm.begin(), perm.end(), 0);
 
-  auto binaryend = std::partition(perm.begin(), perm.end(), [&](int pos) {
+  auto binaryend = std::partition(perm.begin(), perm.end(), [&](HighsInt pos) {
     return globaldom.isBinary(inds[pos]);
   });
   nbin = binaryend - perm.begin();
-  int ntotal = (int)perm.size();
+  HighsInt ntotal = (HighsInt)perm.size();
 
   // if not all variables are binary, we extract variable upper and lower bounds
   // constraints on the non-binary variable for each binary variable in the
   // constraint
   if (nbin < ntotal) {
-    for (int i = 0; i != nbin; ++i) {
-      int bincol = inds[perm[i]];
+    for (HighsInt i = 0; i != nbin; ++i) {
+      HighsInt bincol = inds[perm[i]];
       HighsCDouble impliedub = HighsCDouble(rhs) - vals[perm[i]];
-      for (int j = nbin; j != ntotal; ++j) {
-        int col = inds[perm[j]];
+      for (HighsInt j = nbin; j != ntotal; ++j) {
+        HighsInt col = inds[perm[j]];
         if (globaldom.isFixed(col)) continue;
 
         HighsCDouble colub =
@@ -828,8 +885,9 @@ void HighsCliqueTable::extractCliques(
   // only one binary means we do have no cliques
   if (nbin <= 1) return;
 
-  std::sort(perm.begin(), binaryend,
-            [&](int p1, int p2) { return vals[p1] > vals[p2]; });
+  std::sort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
+    return std::make_pair(vals[p1], p1) > std::make_pair(vals[p2], p2);
+  });
   // check if any cliques exists
   if (vals[perm[0]] + vals[perm[1]] <= rhs + feastol) return;
 
@@ -846,7 +904,7 @@ void HighsCliqueTable::extractCliques(
     clique.clear();
 
     for (auto j = 0; j != nbin; ++j) {
-      int pos = perm[j];
+      HighsInt pos = perm[j];
       if (complementation[pos] == -1)
         clique.emplace_back(inds[pos], 0);
       else
@@ -860,11 +918,11 @@ void HighsCliqueTable::extractCliques(
     return;
   }
 
-  for (int k = nbin - 1; k != 0; --k) {
+  for (HighsInt k = nbin - 1; k != 0; --k) {
     double mincliqueval = rhs - vals[perm[k]] + feastol;
-    auto cliqueend =
-        std::partition_point(perm.begin(), perm.begin() + k,
-                             [&](int p) { return vals[p] > mincliqueval; });
+    auto cliqueend = std::partition_point(
+        perm.begin(), perm.begin() + k,
+        [&](HighsInt p) { return vals[p] > mincliqueval; });
 
     // no clique for this variable
     if (cliqueend == perm.begin()) continue;
@@ -872,7 +930,7 @@ void HighsCliqueTable::extractCliques(
     clique.clear();
 
     for (auto j = perm.begin(); j != cliqueend; ++j) {
-      int pos = *j;
+      HighsInt pos = *j;
       if (complementation[pos] == -1)
         clique.emplace_back(inds[pos], 0);
       else
@@ -886,9 +944,9 @@ void HighsCliqueTable::extractCliques(
 
     // printf("extracted this clique:\n");
     // printClique(clique);
-    runCliqueSubsumption(globaldom, clique);
 
     if (clique.size() >= 2) {
+      // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
       addClique(mipsolver, clique.data(), clique.size());
       if (globaldom.infeasible()) return;
     }
@@ -901,14 +959,14 @@ void HighsCliqueTable::extractCliques(
 bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
                                   CliqueVar v2) {
   bool equality = false;
-  int commonclique = findCommonCliqueId(v1, v2);
+  HighsInt commonclique = findCommonCliqueId(v1, v2);
   if (commonclique != -1) equality = true;
 
   while (commonclique != -1) {
-    int start = cliques[commonclique].start;
-    int end = cliques[commonclique].end;
+    HighsInt start = cliques[commonclique].start;
+    HighsInt end = cliques[commonclique].end;
 
-    for (int i = start; i != end; ++i) {
+    for (HighsInt i = start; i != end; ++i) {
       if (cliqueentries[i] == v1 || cliqueentries[i] == v2) continue;
 
       bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
@@ -929,23 +987,172 @@ bool HighsCliqueTable::foundCover(HighsDomain& globaldom, CliqueVar v1,
   return equality;
 }
 
+void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
+                                             const HighsInt* inds,
+                                             const double* vals, HighsInt len,
+                                             double rhs) {
+  HighsImplications& implics = mipsolver.mipdata_->implications;
+  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+
+  const double feastol = mipsolver.mipdata_->feastol;
+
+  HighsCDouble minact = 0.0;
+  HighsInt nbin = 0;
+  for (HighsInt i = 0; i != len; ++i) {
+    if (globaldom.isBinary(inds[i])) ++nbin;
+
+    if (vals[i] > 0) {
+      if (globaldom.colLower_[inds[i]] == -HIGHS_CONST_INF) return;
+      minact += vals[i] * globaldom.colLower_[inds[i]];
+    } else {
+      if (globaldom.colUpper_[inds[i]] == HIGHS_CONST_INF) return;
+      minact += vals[i] * globaldom.colUpper_[inds[i]];
+    }
+  }
+  if (nbin == 0) return;
+
+  std::vector<HighsInt> perm;
+  perm.resize(len);
+  std::iota(perm.begin(), perm.end(), 0);
+
+  auto binaryend = std::partition(perm.begin(), perm.end(), [&](HighsInt pos) {
+    return globaldom.isBinary(inds[pos]);
+  });
+  assert(nbin == binaryend - perm.begin());
+
+  // if not all variables are binary, we extract variable upper and lower bounds
+  // constraints on the non-binary variable for each binary variable in the
+  // constraint
+  if (nbin < len) {
+    for (HighsInt i = 0; i != nbin; ++i) {
+      HighsInt bincol = inds[perm[i]];
+      HighsCDouble impliedActivity = rhs - minact - std::abs(vals[perm[i]]);
+      for (HighsInt j = nbin; j != len; ++j) {
+        HighsInt col = inds[perm[j]];
+        if (globaldom.isFixed(col)) continue;
+
+        if (vals[perm[j]] > 0) {
+          double implcolub = double(impliedActivity +
+                                    vals[perm[j]] * globaldom.colLower_[col]) /
+                             vals[perm[j]];
+
+          if (implcolub < globaldom.colUpper_[col] - feastol) {
+            double coef;
+            double constant;
+            if (vals[perm[i]] < 0) {
+              coef = globaldom.colUpper_[col] - implcolub;
+              constant = implcolub;
+            } else {
+              coef = implcolub - globaldom.colUpper_[col];
+              constant = globaldom.colUpper_[col];
+            }
+            // printf("extracted VUB from cut: x%" HIGHSINT_FORMAT " <= %g*y%"
+            // HIGHSINT_FORMAT " + %g\n", col, coef,
+            //        bincol, constant);
+            implics.addVUB(col, bincol, coef, constant);
+          }
+        } else {
+          double implcollb = double(impliedActivity +
+                                    vals[perm[j]] * globaldom.colUpper_[col]) /
+                             vals[perm[j]];
+          if (implcollb > globaldom.colLower_[col] + feastol) {
+            double coef;
+            double constant;
+            if (vals[perm[i]] < 0) {
+              coef = globaldom.colLower_[col] - implcollb;
+              constant = implcollb;
+            } else {
+              coef = implcollb - globaldom.colLower_[col];
+              constant = globaldom.colLower_[col];
+            }
+
+            // printf("extracted VLB from cut: x%" HIGHSINT_FORMAT " >= %g*y%"
+            // HIGHSINT_FORMAT " + %g\n", col, coef,
+            //        bincol, constant);
+            implics.addVLB(col, bincol, coef, constant);
+            // printf("extracted VLB from cut\n");
+          }
+        }
+      }
+    }
+  }
+
+  // only one binary means we do have no cliques
+  if (nbin <= 1) return;
+
+  std::vector<CliqueVar> clique;
+  clique.reserve(nbin);
+
+  std::sort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
+    return std::make_pair(std::abs(vals[p1]), p1) >
+           std::make_pair(std::abs(vals[p2]), p2);
+  });
+  // check if any cliques exists
+  if (std::abs(vals[perm[0]]) + std::abs(vals[perm[1]]) <=
+      double(rhs - minact + feastol))
+    return;
+
+  for (HighsInt k = nbin - 1; k != 0; --k) {
+    double mincliqueval =
+        double(rhs - minact - std::abs(vals[perm[k]]) + feastol);
+    auto cliqueend = std::partition_point(
+        perm.begin(), perm.begin() + k,
+        [&](HighsInt p) { return std::abs(vals[p]) > mincliqueval; });
+
+    // no clique for this variable
+    if (cliqueend == perm.begin()) continue;
+
+    clique.clear();
+
+    for (auto j = perm.begin(); j != cliqueend; ++j) {
+      HighsInt pos = *j;
+      if (vals[pos] < 0)
+        clique.emplace_back(inds[pos], 0);
+      else
+        clique.emplace_back(inds[pos], 1);
+    }
+
+    if (vals[perm[k]] < 0)
+      clique.emplace_back(inds[perm[k]], 0);
+    else
+      clique.emplace_back(inds[perm[k]], 1);
+
+    // printf("extracted this clique:\n");
+    // printClique(clique);
+    if (clique.size() >= 2) {
+      // printf("extracted clique from cut\n");
+      // if (clique.size() > 2) runCliqueSubsumption(globaldom, clique);
+
+      addClique(mipsolver, clique.data(), clique.size());
+      if (globaldom.infeasible()) return;
+    }
+
+    // further cliques are just subsets of this clique
+    if (cliqueend == perm.begin() + k) return;
+  }
+}
+
 void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
                                       bool transformRows) {
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
-  std::vector<int> perm;
+  std::vector<HighsInt> perm;
   std::vector<int8_t> complementation;
   std::vector<CliqueVar> clique;
-  HighsHashTable<int, double> entries;
+  HighsHashTable<HighsInt, double> entries;
   double offset;
 
   double rhs;
 
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
-  for (int i = 0; i != mipsolver.numRow(); ++i) {
-    int start = mipsolver.mipdata_->ARstart_[i];
-    int end = mipsolver.mipdata_->ARstart_[i + 1];
+  for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
+    HighsInt start = mipsolver.mipdata_->ARstart_[i];
+    HighsInt end = mipsolver.mipdata_->ARstart_[i + 1];
+
+    if (mipsolver.mipdata_->postSolveStack.getOrigRowIndex(i) >=
+        mipsolver.orig_model_->numRow_)
+      break;
 
     // catch set packing and partitioning constraints that already have the form
     // of a clique without transformations and add those cliques with the rows
@@ -955,8 +1162,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
       clique.clear();
 
-      for (int j = start; j != end; ++j) {
-        int col = mipsolver.mipdata_->ARindex_[j];
+      for (HighsInt j = start; j != end; ++j) {
+        HighsInt col = mipsolver.mipdata_->ARindex_[j];
         if (globaldom.colUpper_[col] == 0.0 && globaldom.colLower_[col] == 0.0)
           continue;
         if (!globaldom.isBinary(col)) {
@@ -982,8 +1189,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
     if (!transformRows) continue;
 
     offset = 0;
-    for (int j = start; j != end; ++j) {
-      int col = mipsolver.mipdata_->ARindex_[j];
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = mipsolver.mipdata_->ARindex_[j];
       double val = mipsolver.mipdata_->ARvalue_[j];
 
       resolveSubstitution(col, val, offset);
@@ -996,10 +1203,10 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       vals.clear();
       complementation.clear();
       bool freevar = false;
-      int nbin = 0;
+      HighsInt nbin = 0;
 
       for (const auto& entry : entries) {
-        int col = entry.key();
+        HighsInt col = entry.key();
         double val = entry.value();
 
         if (std::abs(val) < mipsolver.mipdata_->epsilon) continue;
@@ -1045,10 +1252,10 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       vals.clear();
       complementation.clear();
       bool freevar = false;
-      int nbin = 0;
+      HighsInt nbin = 0;
 
       for (const auto& entry : entries) {
-        int col = entry.key();
+        HighsInt col = entry.key();
         double val = -entry.value();
         if (std::abs(val) < mipsolver.mipdata_->epsilon) continue;
 
@@ -1092,17 +1299,17 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 }
 
 void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
-  std::vector<int> perm;
+  std::vector<HighsInt> perm;
   std::vector<int8_t> complementation;
   std::vector<CliqueVar> clique;
-  HighsHashTable<int, double> entries;
+  HighsHashTable<HighsInt, double> entries;
   double offset = 0.0;
 
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
-  for (int j = 0; j != mipsolver.numCol(); ++j) {
-    int col = j;
+  for (HighsInt j = 0; j != mipsolver.numCol(); ++j) {
+    HighsInt col = j;
     double val = mipsolver.colCost(col);
     if (val == 0.0) continue;
 
@@ -1118,10 +1325,10 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
   double rhs = mipsolver.mipdata_->upper_limit - offset;
 
   bool freevar = false;
-  int nbin = 0;
+  HighsInt nbin = 0;
 
   for (const auto& entry : entries) {
-    int col = entry.key();
+    HighsInt col = entry.key();
     double val = entry.value();
 
     if (std::abs(val) <= mipsolver.mipdata_->epsilon) continue;
@@ -1152,10 +1359,10 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
   }
 
   if (!freevar) {
-    int len = (int)inds.size();
+    HighsInt len = (HighsInt)inds.size();
 
-    int nfixed = 0;
-    for (int i = 0; i != len; ++i) {
+    HighsInt nfixed = 0;
+    for (HighsInt i = 0; i != len; ++i) {
       if (mipsolver.variableType(inds[i]) != HighsVarType::INTEGER) continue;
       if (vals[i] <= rhs + mipsolver.mipdata_->feastol) continue;
       if (globaldom.isFixed(inds[i])) continue;
@@ -1190,14 +1397,15 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
     if (globaldom.infeasible()) return;
     if (!wasfixed) ++nfixings;
 
-    int node = cliquesetroot[v.index()] != -1 ? cliquesetroot[v.index()]
-                                              : sizeTwoCliquesetRoot[v.index()];
+    HighsInt node = cliquesetroot[v.index()] != -1
+                        ? cliquesetroot[v.index()]
+                        : sizeTwoCliquesetRoot[v.index()];
     while (node != -1) {
-      int cliqueid = cliquesets[node].cliqueid;
-      int start = cliques[cliqueid].start;
-      int end = cliques[cliqueid].end;
+      HighsInt cliqueid = cliquesets[node].cliqueid;
+      HighsInt start = cliques[cliqueid].start;
+      HighsInt end = cliques[cliqueid].end;
 
-      for (int i = start; i != end; ++i) {
+      for (HighsInt i = start; i != end; ++i) {
         if (cliqueentries[i].col == v.col) continue;
 
         bool wasfixed = globaldom.isFixed(cliqueentries[i].col);
@@ -1221,18 +1429,18 @@ void HighsCliqueTable::processInfeasibleVertices(HighsDomain& globaldom) {
 
 void HighsCliqueTable::propagateAndCleanup(HighsDomain& globaldom) {
   const auto& domchgstack = globaldom.getDomainChangeStack();
-  int start = domchgstack.size();
+  HighsInt start = domchgstack.size();
   globaldom.propagate();
-  int end = domchgstack.size();
+  HighsInt end = domchgstack.size();
 
   while (!globaldom.infeasible() && start != end) {
-    for (int k = start; k != end; ++k) {
-      int col = domchgstack[k].column;
+    for (HighsInt k = start; k != end; ++k) {
+      HighsInt col = domchgstack[k].column;
       if (globaldom.colLower_[col] != globaldom.colUpper_[col]) continue;
       if (globaldom.colLower_[col] != 1.0 && globaldom.colLower_[col] != 0.0)
         continue;
 
-      int fixval = (int)globaldom.colLower_[col];
+      HighsInt fixval = (HighsInt)globaldom.colLower_[col];
       CliqueVar v(col, 1 - fixval);
       if (numcliquesvar[v.index()] != 0) {
         vertexInfeasible(globaldom, col, 1 - fixval);
@@ -1245,8 +1453,8 @@ void HighsCliqueTable::propagateAndCleanup(HighsDomain& globaldom) {
   }
 }
 
-void HighsCliqueTable::vertexInfeasible(HighsDomain& globaldom, int col,
-                                        int val) {
+void HighsCliqueTable::vertexInfeasible(HighsDomain& globaldom, HighsInt col,
+                                        HighsInt val) {
   bool wasfixed = globaldom.isFixed(col);
   globaldom.fixCol(col, double(1 - val));
   if (globaldom.infeasible()) return;
@@ -1263,7 +1471,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
   assert(numcliquesvar.size() == 2 * globaldom.colLower_.size());
-  for (int i : mipsolver.mipdata_->integral_cols) {
+  for (HighsInt i : mipsolver.mipdata_->integral_cols) {
     if (colsubstituted[i]) continue;
 #ifdef ADD_ZERO_WEIGHT_VARS
     if (numcliquesvar[CliqueVar(i, 0).index()] != 0) {
@@ -1293,13 +1501,13 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   // auto t2 = std::chrono::high_resolution_clock::now();
 
   // printf(
-  //     "bron kerbosch: %d calls, %d cliques, %ldms\n", data.ncalls,
-  //     int(data.cliques.size()),
+  //     "bron kerbosch: %" HIGHSINT_FORMAT " calls, %" HIGHSINT_FORMAT "
+  //     cliques, %ldms\n", data.ncalls, int(data.cliques.size()),
   //     std::chrono::duration_cast<std::chrono::milliseconds>(t2 -
   //     t1).count());
 
   bool runcliquesubsumption = false;
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
   for (const std::vector<CliqueVar>& clique : data.cliques) {
     double rhs = 1;
@@ -1318,13 +1526,13 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
 
     rhs = std::floor(rhs + 0.5);
 
-    cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs);
+    cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs, true,
+                   false);
   }
 
   if (runcliquesubsumption) {
-    std::vector<uint16_t> cliquehits(cliques.size());
-    std::vector<int> cliquehitinds;
-    std::vector<int> stack;
+    cliquehits.resize(cliques.size());
+    assert(stack.empty());
 
     for (std::vector<CliqueVar>& clique : data.cliques) {
       if (clique.size() == 2) continue;
@@ -1337,7 +1545,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
           stack.emplace_back(sizeTwoCliquesetRoot[v.index()]);
 
         while (!stack.empty()) {
-          int node = stack.back();
+          HighsInt node = stack.back();
           stack.pop_back();
 
           if (cliquesets[node].left != -1)
@@ -1345,7 +1553,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
           if (cliquesets[node].right != -1)
             stack.emplace_back(cliquesets[node].right);
 
-          int cliqueid = cliquesets[node].cliqueid;
+          HighsInt cliqueid = cliquesets[node].cliqueid;
           if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
           ++cliquehits[cliqueid];
@@ -1355,17 +1563,17 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
       if (cliquehitinds.size() == 1) {
         cliquehits[cliquehitinds[0]] = 0;
       } else {
-        int nremoved = 0;
-        int firstremovable = -1;
-        int origin = HIGHS_CONST_I_INF;
-        for (int cliqueid : cliquehitinds) {
-          int hits = cliquehits[cliqueid];
+        HighsInt nremoved = 0;
+        HighsInt firstremovable = -1;
+        HighsInt origin = HIGHS_CONST_I_INF;
+        for (HighsInt cliqueid : cliquehitinds) {
+          HighsInt hits = cliquehits[cliqueid];
           cliquehits[cliqueid] = 0;
 
           if (cliques[cliqueid].end - cliques[cliqueid].start == hits) {
             if (cliques[cliqueid].equality) {
               for (CliqueVar v : clique) {
-                int node;
+                HighsInt node;
                 if (hits == 2) {
                   sizeTwoCliquesetRoot[v.index()] =
                       splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
@@ -1417,9 +1625,9 @@ HighsCliqueTable::separateCliques(const std::vector<double>& sol,
   BronKerboschData data(sol);
   data.feastol = feastol;
 
-  int numcols = globaldom.colLower_.size();
+  HighsInt numcols = globaldom.colLower_.size();
   assert(int(numcliquesvar.size()) == 2 * numcols);
-  for (int i = 0; i != numcols; ++i) {
+  for (HighsInt i = 0; i != numcols; ++i) {
     if (colsubstituted[i]) continue;
 
     if (numcliquesvar[CliqueVar(i, 0).index()] != 0 &&
@@ -1435,10 +1643,30 @@ HighsCliqueTable::separateCliques(const std::vector<double>& sol,
   return std::move(data.cliques);
 }
 
-void HighsCliqueTable::addImplications(HighsDomain& domain, int col, int val) {
+void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
+                                       HighsInt val) {
   CliqueVar v(col, val);
 
-  std::vector<int> stack;
+  while (colsubstituted[v.col]) {
+    assert((HighsInt)substitutions.size() > colsubstituted[v.col] - 1);
+    Substitution subst = substitutions[colsubstituted[v.col] - 1];
+    v = v.val == 1 ? subst.replace : subst.replace.complement();
+    if (v.val == 1) {
+      if (domain.colLower_[v.col] == 1.0) continue;
+
+      domain.changeBound(HighsBoundType::Lower, v.col, 1.0,
+                         HighsDomain::Reason::cliqueTable());
+      if (domain.infeasible()) return;
+    } else {
+      if (domain.colUpper_[v.col] == 0.0) continue;
+
+      domain.changeBound(HighsBoundType::Upper, v.col, 0.0,
+                         HighsDomain::Reason::cliqueTable());
+      if (domain.infeasible()) return;
+    }
+  }
+
+  std::vector<HighsInt> stack;
   stack.reserve(cliquesets.size());
 
   if (cliquesetroot[v.index()] != -1) stack.push_back(cliquesetroot[v.index()]);
@@ -1446,71 +1674,32 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, int col, int val) {
     stack.push_back(sizeTwoCliquesetRoot[v.index()]);
 
   while (!stack.empty()) {
-    int node = stack.back();
+    HighsInt node = stack.back();
     stack.pop_back();
 
-    int cliqueid = cliquesets[node].cliqueid;
+    HighsInt cliqueid = cliquesets[node].cliqueid;
 
     if (cliquesets[node].left != -1) stack.push_back(cliquesets[node].left);
 
     if (cliquesets[node].right != -1) stack.push_back(cliquesets[node].right);
 
-    int start = cliques[cliqueid].start;
-    int end = cliques[cliqueid].end;
+    HighsInt start = cliques[cliqueid].start;
+    HighsInt end = cliques[cliqueid].end;
 
-    for (int i = start; i != end; ++i) {
-      if (cliqueentries[i].col == col) continue;
+    for (HighsInt i = start; i != end; ++i) {
+      if (cliqueentries[i].col == v.col) continue;
 
       if (cliqueentries[i].val == 1) {
         if (domain.colUpper_[cliqueentries[i].col] == 0.0) continue;
 
         domain.changeBound(HighsBoundType::Upper, cliqueentries[i].col, 0.0,
-                           HighsDomain::Reason::unspecified());
+                           HighsDomain::Reason::cliqueTable());
         if (domain.infeasible()) return;
       } else {
         if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
 
         domain.changeBound(HighsBoundType::Lower, cliqueentries[i].col, 1.0,
-                           HighsDomain::Reason::unspecified());
-        if (domain.infeasible()) return;
-      }
-    }
-  }
-
-  if (cliquesetroot[v.complement().index()] != -1)
-    stack.push_back(cliquesetroot[v.complement().index()]);
-  if (sizeTwoCliquesetRoot[v.complement().index()] != -1)
-    stack.push_back(sizeTwoCliquesetRoot[v.complement().index()]);
-
-  while (!stack.empty()) {
-    int node = stack.back();
-    stack.pop_back();
-
-    int cliqueid = cliquesets[node].cliqueid;
-
-    if (cliquesets[node].left != -1) stack.push_back(cliquesets[node].left);
-
-    if (cliquesets[node].right != -1) stack.push_back(cliquesets[node].right);
-
-    int start = cliques[cliqueid].start;
-    int end = cliques[cliqueid].end;
-
-    if (!cliques[cliqueid].equality || end - start != 2) continue;
-
-    for (int i = start; i != end; ++i) {
-      if (cliqueentries[i].col == col) continue;
-
-      if (cliqueentries[i].val == 0) {
-        if (domain.colUpper_[cliqueentries[i].col] == 0.0) continue;
-
-        domain.changeBound(HighsBoundType::Upper, cliqueentries[i].col, 0.0,
-                           HighsDomain::Reason::unspecified());
-        if (domain.infeasible()) return;
-      } else {
-        if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
-
-        domain.changeBound(HighsBoundType::Lower, cliqueentries[i].col, 1.0,
-                           HighsDomain::Reason::unspecified());
+                           HighsDomain::Reason::cliqueTable());
         if (domain.infeasible()) return;
       }
     }
@@ -1518,14 +1707,14 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, int col, int val) {
 }
 
 void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
-  int numcol = globaldom.colUpper_.size();
-  int oldnfixings = nfixings;
-  for (int i = 0; i != numcol; ++i) {
+  HighsInt numcol = globaldom.colUpper_.size();
+  HighsInt oldnfixings = nfixings;
+  for (HighsInt i = 0; i != numcol; ++i) {
     if (globaldom.colLower_[i] != globaldom.colUpper_[i]) continue;
     if (globaldom.colLower_[i] != 1.0 && globaldom.colLower_[i] != 0.0)
       continue;
 
-    int fixval = (int)globaldom.colLower_[i];
+    HighsInt fixval = (HighsInt)globaldom.colLower_[i];
     CliqueVar v(i, 1 - fixval);
     if (numcliquesvar[v.index()] != 0) {
       vertexInfeasible(globaldom, v.col, v.val);
@@ -1537,9 +1726,9 @@ void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
   if (nfixings != oldnfixings) propagateAndCleanup(globaldom);
 }
 
-int HighsCliqueTable::getNumImplications(int col) const {
-  std::vector<int> stack;
-  int numimplics = 0;
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col) const {
+  std::vector<HighsInt> stack;
+  HighsInt numimplics = 0;
 
   if (cliquesetroot[CliqueVar(col, 1).index()] != -1)
     stack.emplace_back(cliquesetroot[CliqueVar(col, 1).index()]);
@@ -1551,15 +1740,42 @@ int HighsCliqueTable::getNumImplications(int col) const {
     stack.emplace_back(sizeTwoCliquesetRoot[CliqueVar(col, 0).index()]);
 
   while (!stack.empty()) {
-    int node = stack.back();
+    HighsInt node = stack.back();
     stack.pop_back();
 
     if (cliquesets[node].left != -1) stack.emplace_back(cliquesets[node].left);
     if (cliquesets[node].right != -1)
       stack.emplace_back(cliquesets[node].right);
 
-    int nimplics = cliques[cliquesets[node].cliqueid].end -
-                   cliques[cliquesets[node].cliqueid].start - 1;
+    HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
+                        cliques[cliquesets[node].cliqueid].start - 1;
+    nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
+
+    numimplics += nimplics;
+  }
+
+  return numimplics;
+}
+
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
+  std::vector<HighsInt> stack;
+  HighsInt numimplics = 0;
+
+  if (cliquesetroot[CliqueVar(col, val).index()] != -1)
+    stack.emplace_back(cliquesetroot[CliqueVar(col, val).index()]);
+  if (sizeTwoCliquesetRoot[CliqueVar(col, val).index()] != -1)
+    stack.emplace_back(sizeTwoCliquesetRoot[CliqueVar(col, val).index()]);
+
+  while (!stack.empty()) {
+    HighsInt node = stack.back();
+    stack.pop_back();
+
+    if (cliquesets[node].left != -1) stack.emplace_back(cliquesets[node].left);
+    if (cliquesets[node].right != -1)
+      stack.emplace_back(cliquesets[node].right);
+
+    HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
+                        cliques[cliquesets[node].cliqueid].start - 1;
     nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
 
     numimplics += nimplics;
@@ -1570,34 +1786,34 @@ int HighsCliqueTable::getNumImplications(int col) const {
 
 void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   std::vector<CliqueVar> extensionvars;
-  std::vector<int> stack;
+  std::vector<HighsInt> stack;
   std::vector<uint8_t> iscandidate(numcliquesvar.size());
   std::vector<uint16_t> cliquehits(cliques.size());
-  std::vector<int> cliquehitinds;
+  std::vector<HighsInt> cliquehitinds;
 
-  int numcliqueslots = cliques.size();
+  HighsInt numcliqueslots = cliques.size();
 
-  for (int k = 0; k != numcliqueslots; ++k) {
+  for (HighsInt k = 0; k != numcliqueslots; ++k) {
     if (cliques[k].start == -1) continue;
     if (!cliques[k].equality && cliques[k].origin == HIGHS_CONST_I_INF)
       continue;
 
-    int numclqvars = cliques[k].end - cliques[k].start;
+    HighsInt numclqvars = cliques[k].end - cliques[k].start;
     assert(numclqvars != 0);
     if (numclqvars == 0) continue;
 
     CliqueVar* clqvars = &cliqueentries[cliques[k].start];
 
     CliqueVar extensionstart = clqvars[0];
-    int numcliques = numcliquesvar[clqvars[0].index()];
-    for (int i = 1; i != numclqvars; ++i) {
+    HighsInt numcliques = numcliquesvar[clqvars[0].index()];
+    for (HighsInt i = 1; i != numclqvars; ++i) {
       if (numcliquesvar[clqvars[i].index()] < numcliques) {
         numcliques = numcliquesvar[clqvars[i].index()];
         extensionstart = clqvars[i];
       }
     }
 
-    for (int i = 0; i != numclqvars; ++i)
+    for (HighsInt i = 0; i != numclqvars; ++i)
       iscandidate[clqvars[i].index()] = true;
 
     if (cliquesetroot[extensionstart.index()] != -1)
@@ -1606,7 +1822,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       stack.emplace_back(sizeTwoCliquesetRoot[extensionstart.index()]);
 
     while (!stack.empty()) {
-      int node = stack.back();
+      HighsInt node = stack.back();
       stack.pop_back();
 
       if (cliquesets[node].left != -1)
@@ -1614,10 +1830,10 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       if (cliquesets[node].right != -1)
         stack.emplace_back(cliquesets[node].right);
 
-      int start = cliques[cliquesets[node].cliqueid].start;
-      int end = cliques[cliquesets[node].cliqueid].end;
+      HighsInt start = cliques[cliquesets[node].cliqueid].start;
+      HighsInt end = cliques[cliquesets[node].cliqueid].end;
 
-      for (int i = start; i != end; ++i) {
+      for (HighsInt i = start; i != end; ++i) {
         if (iscandidate[cliqueentries[i].index()] ||
             globaldomain.isFixed(cliqueentries[i].col))
           continue;
@@ -1627,11 +1843,11 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       }
     }
 
-    for (int i = 0; i != numclqvars; ++i)
+    for (HighsInt i = 0; i != numclqvars; ++i)
       iscandidate[clqvars[i].index()] = false;
     for (CliqueVar v : extensionvars) iscandidate[v.index()] = false;
 
-    for (int i = 0; i != numclqvars && !extensionvars.empty(); ++i) {
+    for (HighsInt i = 0; i != numclqvars && !extensionvars.empty(); ++i) {
       if (clqvars[i] == extensionstart) continue;
 
       extensionvars.erase(
@@ -1643,7 +1859,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
     if (!extensionvars.empty()) {
       // todo, shuffle extension vars?
-      std::shuffle(extensionvars.begin(), extensionvars.end(), randgen);
+      randgen.shuffle(extensionvars.data(), extensionvars.size());
       size_t i = 0;
       while (i < extensionvars.size()) {
         CliqueVar extvar = extensionvars[i];
@@ -1661,15 +1877,15 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
       for (CliqueVar v : extensionvars)
         vertexInfeasible(globaldomain, v.col, v.val);
     } else {
-      int originrow = cliques[k].origin;
+      HighsInt originrow = cliques[k].origin;
       cliques[k].origin = HIGHS_CONST_I_INF;
 
       for (CliqueVar v : extensionvars)
         cliqueextensions.emplace_back(originrow, v);
 
       extensionvars.insert(extensionvars.end(),
-                           &cliqueentries[cliques[k].start],
-                           &cliqueentries[cliques[k].end]);
+                           cliqueentries.begin() + cliques[k].start,
+                           cliqueentries.begin() + cliques[k].end);
       removeClique(k);
 
       for (CliqueVar v : extensionvars) {
@@ -1679,7 +1895,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
           stack.emplace_back(sizeTwoCliquesetRoot[v.index()]);
 
         while (!stack.empty()) {
-          int node = stack.back();
+          HighsInt node = stack.back();
           stack.pop_back();
 
           if (cliquesets[node].left != -1)
@@ -1687,21 +1903,21 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
           if (cliquesets[node].right != -1)
             stack.emplace_back(cliquesets[node].right);
 
-          int cliqueid = cliquesets[node].cliqueid;
+          HighsInt cliqueid = cliquesets[node].cliqueid;
           if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
 
           ++cliquehits[cliqueid];
         }
       }
 
-      for (int cliqueid : cliquehitinds) {
-        int hits = cliquehits[cliqueid];
+      for (HighsInt cliqueid : cliquehitinds) {
+        HighsInt hits = cliquehits[cliqueid];
         cliquehits[cliqueid] = 0;
 
         if (cliques[cliqueid].end - cliques[cliqueid].start == hits) {
           if (cliques[cliqueid].equality) {
             for (CliqueVar v : extensionvars) {
-              int node;
+              HighsInt node;
               if (hits == 2) {
                 sizeTwoCliquesetRoot[v.index()] =
                     splay(cliqueid, sizeTwoCliquesetRoot[v.index()]);
@@ -1740,27 +1956,28 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   }
 }
 
-void HighsCliqueTable::rebuild(int ncols,
-                               const std::vector<int>& orig2reducedcol,
-                               const std::vector<int>& orig2reducedrow) {
+void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
+                               const std::vector<HighsInt>& orig2reducedcol,
+                               const std::vector<HighsInt>& orig2reducedrow) {
   HighsCliqueTable newCliqueTable(ncols);
-  int ncliques = cliques.size();
-  for (int i = 0; i != ncliques; ++i) {
+  HighsInt ncliques = cliques.size();
+  for (HighsInt i = 0; i != ncliques; ++i) {
     if (cliques[i].start == -1) continue;
 
-    for (int k = cliques[i].start; k != cliques[i].end; ++k) {
-      int col = orig2reducedcol[cliqueentries[k].col];
+    for (HighsInt k = cliques[i].start; k != cliques[i].end; ++k) {
+      HighsInt col = orig2reducedcol[cliqueentries[k].col];
 
-      if (col == -1)
+      if (col == -1 || !globaldomain.isBinary(col))
         cliqueentries[k].col = HIGHS_CONST_I_INF;
       else
         cliqueentries[k].col = col;
     }
 
-    CliqueVar* newend = std::remove_if(
-        &cliqueentries[cliques[i].start], &cliqueentries[cliques[i].end],
-        [](CliqueVar v) { return v.col == HIGHS_CONST_I_INF; });
-    int numvars = newend - (&cliqueentries[cliques[i].start]);
+    auto newend =
+        std::remove_if(cliqueentries.begin() + cliques[i].start,
+                       cliqueentries.begin() + cliques[i].end,
+                       [](CliqueVar v) { return v.col == HIGHS_CONST_I_INF; });
+    HighsInt numvars = newend - (cliqueentries.begin() + cliques[i].start);
     // since we do not know how variables in the clique that have been deleted
     // are replaced (i.e. are they fixed to 0 or 1, or substituted) we relax
     // them out which means the equality status needs to be set to false
@@ -1769,5 +1986,25 @@ void HighsCliqueTable::rebuild(int ncols,
                                  false, HIGHS_CONST_I_INF);
   }
 
+  *this = std::move(newCliqueTable);
+}
+
+void HighsCliqueTable::buildFrom(const HighsCliqueTable& init) {
+  assert(init.colsubstituted.size() == colsubstituted.size());
+  HighsInt ncols = init.colsubstituted.size();
+  HighsCliqueTable newCliqueTable(ncols);
+  HighsInt ncliques = init.cliques.size();
+  for (HighsInt i = 0; i != ncliques; ++i) {
+    if (init.cliques[i].start == -1) continue;
+
+    HighsInt numvars = init.cliques[i].end - init.cliques[i].start;
+
+    newCliqueTable.doAddClique(&init.cliqueentries[init.cliques[i].start],
+                               numvars, init.cliques[i].equality,
+                               HIGHS_CONST_I_INF);
+  }
+
+  newCliqueTable.colsubstituted = init.colsubstituted;
+  newCliqueTable.substitutions = init.substitutions;
   *this = std::move(newCliqueTable);
 }

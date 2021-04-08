@@ -23,6 +23,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/HighsInt.h"
+
 template <typename T>
 struct HighsHashable : public std::is_trivially_copyable<T> {};
 
@@ -105,12 +107,12 @@ struct HighsHashHelpers {
     return result;
   }
 
-  template <int k>
+  template <HighsInt k>
   static u64 pair_hash(u32 a, u32 b) {
     return (a + c[2 * k]) * (b + c[2 * k + 1]);
   }
 
-  static void sparse_combine(u64& hash, int index, u64 value) {
+  static void sparse_combine(u64& hash, HighsInt index, u64 value) {
     // we take each value of the sparse hash as coefficient for a polynomial
     // of the finite field modulo the mersenne prime 2^61-1 where the monomial
     // for a sparse entry has the degree of its index. We evaluate the
@@ -130,14 +132,14 @@ struct HighsHashHelpers {
     // algorithm for multiplication mod M61 might not work properly due to
     // overflow
     u64 a = c[index & 15] & M61();
-    int degree = (index / 16) + 1;
+    HighsInt degree = (index / 16) + 1;
 
     hash += multiply_modM61(value, modexp_M61(a, degree));
     hash = (hash >> 61) + (hash & M61());
     if (hash >= M61()) hash -= M61();
   }
 
-  static void sparse_inverse_combine(u64& hash, int index, u64 value) {
+  static void sparse_inverse_combine(u64& hash, HighsInt index, u64 value) {
     // same hash algorithm as sparse_combine(), but for updating a hash value to
     // the state before it was changed with a call to sparse_combine(). This is
     // easily possible as the hash value just uses finite field arithmetic. We
@@ -147,7 +149,7 @@ struct HighsHashHelpers {
     // procedure.
 
     u64 a = c[index & 15] & M61();
-    int degree = (index / 16) + 1;
+    HighsInt degree = (index / 16) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M61() - multiply_modM61(value, modexp_M61(a, degree));
@@ -157,7 +159,7 @@ struct HighsHashHelpers {
 
   static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
 
-  static constexpr size_t rotate_left(size_t x, int n) {
+  static constexpr size_t rotate_left(size_t x, HighsInt n) {
     return (x << n) | (x >> (sizeof(size_t) * 8 - n));
   }
 
@@ -171,7 +173,7 @@ struct HighsHashHelpers {
   static u64 vector_hash(const T* vals, size_t numvals) {
     std::array<u32, 2> pair{};
     u64 hash = 0;
-    int k = 0;
+    HighsInt k = 0;
 
     const char* dataptr = (const char*)vals;
     const char* dataend = (const char*)(vals + numvals);
@@ -248,8 +250,8 @@ struct HighsHashHelpers {
                                     int>::type = 0>
   static size_t hash(const T& val) {
     std::array<u32, 4> bytes;
-    if (sizeof(T) < 12) bytes[4] = 0;
-    if (sizeof(T) < 16) bytes[5] = 0;
+    if (sizeof(T) < 12) bytes[2] = 0;
+    if (sizeof(T) < 16) bytes[3] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
     return (pair_hash<0>(bytes[0], bytes[1]) +
             pair_hash<1>(bytes[2], bytes[3])) >>

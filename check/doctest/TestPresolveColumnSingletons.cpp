@@ -1,7 +1,7 @@
 #include <doctest.h>
 #include "Highs.h"
 
-int factorial(int number) { return number <= 1 ? number : factorial(number - 1) * number; }
+HighsInt factorial(HighsInt number) { return number <= 1 ? number : factorial(number - 1) * number; }
 
 TEST_CASE("testing the factorial function") {
     CHECK(factorial(1) == 1);

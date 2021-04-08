@@ -42,19 +42,19 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
 
-HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
+HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
-                         const int ml_ix_os,
+                         const HighsInt ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound);
 
-HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
-                         const int num_vec, vector<int>& Astart,
-                         vector<int>& Aindex, vector<double>& Avalue,
+HighsStatus assessMatrix(const HighsOptions& options, const HighsInt vec_dim,
+                         const HighsInt num_vec, vector<HighsInt>& Astart,
+                         vector<HighsInt>& Aindex, vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value);
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
@@ -77,52 +77,58 @@ HighsStatus applyScalingToLpRowBounds(
     const vector<double>& rowScale,
     const HighsIndexCollection& index_collection);
 
-HighsStatus applyScalingToLpMatrix(const HighsLogOptions& log_options,
-                                   HighsLp& lp, const double* colScale,
-                                   const double* rowScale, const int from_col,
-                                   const int to_col, const int from_row,
-                                   const int to_row);
+HighsStatus applyScalingToLpMatrix(
+    const HighsLogOptions& log_options, HighsLp& lp, const double* colScale,
+    const double* rowScale, const HighsInt from_col, const HighsInt to_col,
+    const HighsInt from_row, const HighsInt to_row);
 
-void applyRowScalingToMatrix(const vector<double>& rowScale, const int numCol,
-                             const vector<int>& Astart,
-                             const vector<int>& Aindex, vector<double>& Avalue);
+void applyRowScalingToMatrix(const vector<double>& rowScale,
+                             const HighsInt numCol,
+                             const vector<HighsInt>& Astart,
+                             const vector<HighsInt>& Aindex,
+                             vector<double>& Avalue);
 
-void colScaleMatrix(const int max_scale_factor_exponent, double* colScale,
-                    const int numCol, const vector<int>& Astart,
-                    const vector<int>& Aindex, vector<double>& Avalue);
+void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
+                    const HighsInt numCol, const vector<HighsInt>& Astart,
+                    const vector<HighsInt>& Aindex, vector<double>& Avalue);
 
 HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
-                                const int col, const double colScale);
+                                const HighsInt col, const double colScale);
 
 HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
-                                const int row, const double rowScale);
+                                const HighsInt row, const double rowScale);
 
-void appendToMatrix(HighsLp& lp, const int num_vec, const int num_new_vec,
-                    const int num_new_nz, const int* XAstart,
-                    const int* XAindex, const double* XAvalue);
+void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
+                    const HighsInt num_new_vec, const HighsInt num_new_nz,
+                    const HighsInt* XAstart, const HighsInt* XAindex,
+                    const double* XAvalue);
 
-HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
+HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
                                   const vector<double>& colCost,
                                   const vector<double>& colLower,
                                   const vector<double>& colUpper);
 
-HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
-                                 const int num_new_nz, const int* XAstart,
-                                 const int* XAindex, const double* XAvalue);
+HighsStatus appendColsToLpMatrix(HighsLp& lp, const HighsInt num_new_col,
+                                 const HighsInt num_new_nz,
+                                 const HighsInt* XAstart,
+                                 const HighsInt* XAindex,
+                                 const double* XAvalue);
 
-HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
+HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
                                   const vector<double>& rowLower,
                                   const vector<double>& rowUpper);
 
-HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
-                                 const int num_new_nz, const int* XARstart,
-                                 const int* XARindex, const double* XARvalue);
+HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
+                                 const HighsInt num_new_nz,
+                                 const HighsInt* XARstart,
+                                 const HighsInt* XARindex,
+                                 const double* XARvalue);
 
 HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
 HighsStatus deleteColsFromLpVectors(
-    const HighsLogOptions& log_options, HighsLp& lp, int& new_num_col,
+    const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_col,
     const HighsIndexCollection& index_collection);
 
 HighsStatus deleteColsFromLpMatrix(
@@ -133,14 +139,15 @@ HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
 HighsStatus deleteRowsFromLpVectors(
-    const HighsLogOptions& log_options, HighsLp& lp, int& new_num_row,
+    const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_row,
     const HighsIndexCollection& index_collection);
 
 HighsStatus deleteRowsFromLpMatrix(
     const HighsLogOptions& log_options, HighsLp& lp,
     const HighsIndexCollection& index_collection);
 
-HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
+HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
+                                      const HighsInt col,
                                       const double new_value);
 
 HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
@@ -211,28 +218,29 @@ void reportLpColMatrix(const HighsLogOptions& log_options,
 );
 
 void reportMatrix(const HighsLogOptions& log_options, const std::string message,
-                  const int num_col, const int num_nz, const int* start,
-                  const int* index, const double* value);
+                  const HighsInt num_col, const HighsInt num_nz,
+                  const HighsInt* start, const HighsInt* index,
+                  const double* value);
 
 // Get the number of integer-valued columns in the LP
-int getNumInt(const HighsLp& lp);
+HighsInt getNumInt(const HighsLp& lp);
 
 // Get the costs for a contiguous set of columns
-HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
-                       double* XcolCost);
+HighsStatus getLpCosts(const HighsLp& lp, const HighsInt from_col,
+                       const HighsInt to_col, double* XcolCost);
 
 // Get the bounds for a contiguous set of columns
-HighsStatus getLpColBounds(const HighsLp& lp, const int from_col,
-                           const int to_col, double* XcolLower,
+HighsStatus getLpColBounds(const HighsLp& lp, const HighsInt from_col,
+                           const HighsInt to_col, double* XcolLower,
                            double* XcolUpper);
 
 // Get the bounds for a contiguous set of rows
-HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row,
-                           const int to_row, double* XrowLower,
+HighsStatus getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
+                           const HighsInt to_row, double* XrowLower,
                            double* XrowUpper);
 
-HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
-                                   const int col, double* val);
+HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
+                                   const HighsInt col, double* val);
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
                const std::string message);
@@ -254,7 +262,8 @@ bool isColDataNull(const HighsLogOptions& log_options,
 bool isRowDataNull(const HighsLogOptions& log_options,
                    const double* usr_row_lower, const double* usr_row_upper);
 bool isMatrixDataNull(const HighsLogOptions& log_options,
-                      const int* usr_matrix_start, const int* usr_matrix_index,
+                      const HighsInt* usr_matrix_start,
+                      const HighsInt* usr_matrix_index,
                       const double* usr_matrix_value);
 
 void reportPresolveReductions(const HighsLogOptions& log_options,

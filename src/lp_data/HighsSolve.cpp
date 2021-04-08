@@ -135,7 +135,9 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   if (lp.numRow_ != 0) return HighsStatus::Error;
 
   highsLogUser(options.log_options, HighsLogType::INFO,
-               "Solving an unconstrained LP with %d columns\n", lp.numCol_);
+               "Solving an unconstrained LP with %" HIGHSINT_FORMAT
+               " columns\n",
+               lp.numCol_);
 
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);
@@ -159,9 +161,9 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution_params.max_dual_infeasibility = 0;
   solution_params.sum_dual_infeasibility = 0;
 
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     double cost = lp.colCost_[iCol];
-    double dual = (int)lp.sense_ * cost;
+    double dual = (HighsInt)lp.sense_ * cost;
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
     double value;
@@ -219,7 +221,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     }
     assert(status != HighsBasisStatus::NONBASIC);
     solution.col_value[iCol] = value;
-    solution.col_dual[iCol] = (int)lp.sense_ * dual;
+    solution.col_dual[iCol] = (HighsInt)lp.sense_ * dual;
     basis.col_status[iCol] = status;
     objective += value * cost;
     solution_params.sum_primal_infeasibility += primal_infeasibility;

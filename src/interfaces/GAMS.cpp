@@ -46,7 +46,7 @@ typedef struct optRec* optHandle_t;
 struct gamshighs_s {
   gmoHandle_t gmo;
   gevHandle_t gev;
-  int debug;
+  HighsInt debug;
 
   Highs* highs;
   HighsLp* lp;
@@ -54,7 +54,7 @@ struct gamshighs_s {
 };
 typedef struct gamshighs_s gamshighs_t;
 
-static void gevprint(int level, const char* msg, void* msgcb_data) {
+static void gevprint(HighsInt level, const char* msg, void* msgcb_data) {
   gevHandle_t gev = (gevHandle_t)msgcb_data;
   gevLogPChar(gev, msg);
 }
@@ -99,7 +99,7 @@ static HighsBasisStatus translateBasisStatus(enum gmoVarEquBasisStatus status) {
   return HighsBasisStatus::SUPER;
 }
 
-static int setupOptions(gamshighs_t* gh) {
+static HighsInt setupOptions(gamshighs_t* gh) {
   assert(gh != NULL);
   assert(gh->options == NULL);
 
@@ -128,12 +128,12 @@ static int setupOptions(gamshighs_t* gh) {
   return 0;
 }
 
-static int setupProblem(gamshighs_t* gh) {
-  int numCol;
-  int numRow;
-  int numNz;
-  int i;
-  int rc = 1;
+static HighsInt setupProblem(gamshighs_t* gh) {
+  HighsInt numCol;
+  HighsInt numRow;
+  HighsInt numNz;
+  HighsInt i;
+  HighsInt rc = 1;
   HighsSolution sol;
 
   assert(gh != NULL);
@@ -224,15 +224,15 @@ static int setupProblem(gamshighs_t* gh) {
     HighsBasis basis;
     basis.col_status.resize(numCol);
     basis.row_status.resize(numRow);
-    int nbasic = 0;
+    HighsInt nbasic = 0;
 
-    for (int i = 0; i < numCol; ++i) {
+    for (HighsInt i = 0; i < numCol; ++i) {
       basis.col_status[i] = translateBasisStatus(
           (enum gmoVarEquBasisStatus)gmoGetVarStatOne(gh->gmo, i));
       if (basis.col_status[i] == HighsBasisStatus::BASIC) ++nbasic;
     }
 
-    for (int i = 0; i < numRow; ++i) {
+    for (HighsInt i = 0; i < numRow; ++i) {
       basis.row_status[i] = translateBasisStatus(
           (enum gmoVarEquBasisStatus)gmoGetEquStatOne(gh->gmo, i));
       if (basis.row_status[i] == HighsBasisStatus::BASIC) ++nbasic;
@@ -250,7 +250,7 @@ TERMINATE:
   return rc;
 }
 
-static int processSolve(gamshighs_t* gh) {
+static HighsInt processSolve(gamshighs_t* gh) {
   assert(gh != NULL);
   assert(gh->highs != NULL);
   assert(gh->lp != NULL);
@@ -330,16 +330,16 @@ static int processSolve(gamshighs_t* gh) {
 
   if (writesol) {
     const HighsSolution& sol = highs->getSolution();
-    assert((int)sol.col_value.size() == gmoN(gmo));
-    assert((int)sol.col_dual.size() == gmoN(gmo));
-    assert((int)sol.row_value.size() == gmoM(gmo));
-    assert((int)sol.row_dual.size() == gmoM(gmo));
+    assert((HighsInt)sol.col_value.size() == gmoN(gmo));
+    assert((HighsInt)sol.col_dual.size() == gmoN(gmo));
+    assert((HighsInt)sol.row_value.size() == gmoM(gmo));
+    assert((HighsInt)sol.row_dual.size() == gmoM(gmo));
 
     const HighsBasis& basis = highs->getBasis();
-    assert(!basis.valid_ || (int)basis.col_status.size() == gmoN(gmo));
-    assert(!basis.valid_ || (int)basis.row_status.size() == gmoM(gmo));
+    assert(!basis.valid_ || (HighsInt)basis.col_status.size() == gmoN(gmo));
+    assert(!basis.valid_ || (HighsInt)basis.row_status.size() == gmoM(gmo));
 
-    for (int i = 0; i < gmoN(gmo); ++i) {
+    for (HighsInt i = 0; i < gmoN(gmo); ++i) {
       gmoVarEquBasisStatus basisstat;
       if (basis.valid_)
         basisstat = translateBasisStatus(basis.col_status[i]);
@@ -353,7 +353,7 @@ static int processSolve(gamshighs_t* gh) {
                            stat);
     }
 
-    for (int i = 0; i < gmoM(gmo); ++i) {
+    for (HighsInt i = 0; i < gmoM(gmo); ++i) {
       gmoVarEquBasisStatus basisstat;
       if (basis.valid_)
         basisstat = translateBasisStatus(basis.row_status[i]);
@@ -396,7 +396,8 @@ DllExport void STDCALL hisXCreate(void** Cptr) {
   *Cptr = calloc(1, sizeof(gamshighs_t));
 }
 
-DllExport int STDCALL hiscreate(void** Cptr, char* msgBuf, int msgBufLen) {
+DllExport HighsInt STDCALL hiscreate(void** Cptr, char* msgBuf,
+                                     HighsInt msgBufLen) {
   assert(Cptr != NULL);
   assert(msgBufLen > 0);
   assert(msgBuf != NULL);
@@ -419,7 +420,7 @@ DllExport void STDCALL hisXFree(void** Cptr) {
   gevLibraryUnload();
 }
 
-DllExport int STDCALL hisfree(void** Cptr) {
+DllExport HighsInt STDCALL hisfree(void** Cptr) {
   hisXFree(Cptr);
 
   return 1;
@@ -432,28 +433,30 @@ DllExport int STDCALL hisfree(void** Cptr) {
    compatibility 3: client is newer than DLL, forward compatibility
            FIXME: for now, we just claim full compatibility
  */
-DllExport int STDCALL C__hisXAPIVersion(int api, char* Msg, int* comp) {
+DllExport HighsInt STDCALL C__hisXAPIVersion(HighsInt api, char* Msg,
+                                             HighsInt* comp) {
   *comp = 1;
   return 1;
 }
 
-DllExport int STDCALL D__hisXAPIVersion(int api, char* Msg, int* comp) {
+DllExport HighsInt STDCALL D__hisXAPIVersion(HighsInt api, char* Msg,
+                                             HighsInt* comp) {
   *comp = 1;
   return 1;
 }
 
-DllExport int STDCALL C__hisXCheck(const char* funcn, int ClNrArg, int Clsign[],
-                                   char* Msg) {
+DllExport HighsInt STDCALL C__hisXCheck(const char* funcn, HighsInt ClNrArg,
+                                        HighsInt Clsign[], char* Msg) {
   return 1;
 }
 
-DllExport int STDCALL D__hisXCheck(const char* funcn, int ClNrArg, int Clsign[],
-                                   char* Msg) {
+DllExport HighsInt STDCALL D__hisXCheck(const char* funcn, HighsInt ClNrArg,
+                                        HighsInt Clsign[], char* Msg) {
   return 1;
 }
 
-DllExport int STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr,
-                                     optHandle_t Optr) {
+DllExport HighsInt STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr,
+                                          optHandle_t Optr) {
   gamshighs_t* gh;
 
   assert(Cptr != NULL);
@@ -474,8 +477,8 @@ DllExport int STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr,
 #define XQUOTE(x) QUOTE(x)
 #define QUOTE(x) #x
 
-DllExport int STDCALL C__hisCallSolver(void* Cptr) {
-  int rc = 1;
+DllExport HighsInt STDCALL C__hisCallSolver(void* Cptr) {
+  HighsInt rc = 1;
   gamshighs_t* gh;
   HighsStatus status;
 
@@ -526,9 +529,9 @@ TERMINATE:
   return rc;
 }
 
-DllExport int STDCALL C__hisHaveModifyProblem(void* Cptr) { return 1; }
+DllExport HighsInt STDCALL C__hisHaveModifyProblem(void* Cptr) { return 1; }
 
-DllExport int STDCALL C__hisModifyProblem(void* Cptr) {
+DllExport HighsInt STDCALL C__hisModifyProblem(void* Cptr) {
   gamshighs_t* gh = (gamshighs_t*)Cptr;
   assert(gh != NULL);
 
@@ -540,14 +543,14 @@ DllExport int STDCALL C__hisModifyProblem(void* Cptr) {
   gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
   gmoPinfSet(gh->gmo, HIGHS_CONST_INF);
 
-  int maxsize = std::max(gmoN(gh->gmo), gmoM(gh->gmo));
+  HighsInt maxsize = std::max(gmoN(gh->gmo), gmoM(gh->gmo));
 
-  int jacnz;
+  HighsInt jacnz;
   gmoGetJacUpdate(gh->gmo, NULL, NULL, NULL, &jacnz);
   if (jacnz + 1 > maxsize) maxsize = jacnz + 1;
 
-  int* colidx = new int[maxsize];
-  int* rowidx = new int[maxsize];
+  HighsInt* colidx = new int[maxsize];
+  HighsInt* rowidx = new int[maxsize];
   double* array1 = new double[maxsize];
   double* array2 = new double[maxsize];
 
@@ -555,8 +558,8 @@ DllExport int STDCALL C__hisModifyProblem(void* Cptr) {
   assert(highs != NULL);
 
   // update objective coefficients
-  int nz;
-  int nlnz;
+  HighsInt nz;
+  HighsInt nlnz;
   gmoGetObjSparse(gh->gmo, colidx, array1, NULL, &nz, &nlnz);
   assert(nlnz == gmoObjNZ(gh->gmo));
   highs->changeColsCost(nz, colidx, array1);
@@ -569,7 +572,7 @@ DllExport int STDCALL C__hisModifyProblem(void* Cptr) {
   highs->changeColsBounds(0, gmoN(gh->gmo), array1, array2);
 
   // update constraint sides
-  for (int i = 0; i < gmoM(gh->gmo); ++i) {
+  for (HighsInt i = 0; i < gmoM(gh->gmo); ++i) {
     double rhs = gmoGetRhsOne(gh->gmo, i);
     rowidx[i] = 1;
     switch (gmoGetEquTypeOne(gh->gmo, i)) {
@@ -601,7 +604,7 @@ DllExport int STDCALL C__hisModifyProblem(void* Cptr) {
 
   // update constraint matrix
   gmoGetJacUpdate(gh->gmo, rowidx, colidx, array1, &jacnz);
-  for (int i = 0; i < nz; ++i)
+  for (HighsInt i = 0; i < nz; ++i)
     highs->changeCoeff(rowidx[i], colidx[i], array1[i]);
 
   delete[] array2;

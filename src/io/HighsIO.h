@@ -16,6 +16,8 @@
 
 #include <iostream>
 
+#include "util/HighsInt.h"
+
 class HighsOptions;
 
 /**
@@ -37,7 +39,7 @@ struct HighsLogOptions {
   FILE* log_file_stream;
   bool* output_flag;
   bool* log_to_console;
-  int* log_dev_level;
+  HighsInt* log_dev_level;
 };
 
 /**

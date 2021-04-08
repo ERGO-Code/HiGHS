@@ -93,9 +93,9 @@ bool HEkk::switchToDevex() {
     simplex_info_.num_costly_DSE_iteration++;
     simplex_info_.costly_DSE_frequency += running_average_multiplier * 1.0;
     // What if non-dual iterations have been performed: need to think about this
-    int local_iteration_count =
+    HighsInt local_iteration_count =
         iteration_count_ - simplex_info_.control_iteration_count0;
-    int local_num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+    HighsInt local_num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
     // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations
     // have been costly
     switch_to_devex =
@@ -107,14 +107,16 @@ bool HEkk::switchToDevex() {
          costly_DSE_fraction_num_total_iteration_before_switch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogUser(
-          options_.log_options, HighsLogType::INFO,
-          "Switch from DSE to Devex after %d costly DSE iterations of %d with "
-          "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
-          "%11.4g; DSE = %11.4g\n",
-          simplex_info_.num_costly_DSE_iteration, local_iteration_count,
-          simplex_info_.col_aq_density, simplex_info_.row_ep_density,
-          simplex_info_.row_ap_density, simplex_info_.row_DSE_density);
+      highsLogUser(options_.log_options, HighsLogType::INFO,
+                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
+                   " costly DSE iterations of %" HIGHSINT_FORMAT
+                   " with "
+                   "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
+                   "%11.4g; DSE = %11.4g\n",
+                   simplex_info_.num_costly_DSE_iteration,
+                   local_iteration_count, simplex_info_.col_aq_density,
+                   simplex_info_.row_ep_density, simplex_info_.row_ap_density,
+                   simplex_info_.row_DSE_density);
     }
   }
   if (!switch_to_devex) {

@@ -14,18 +14,19 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
-#include <cstdint>
 #include <limits>
 #include <string>
 
-const int HIGHS_CONST_I_INF = std::numeric_limits<int>::max();
+#include "util/HighsInt.h"
+
+const HighsInt HIGHS_CONST_I_INF = std::numeric_limits<HighsInt>::max();
 const double HIGHS_CONST_INF = std::numeric_limits<double>::infinity();
 const double HIGHS_CONST_TINY = 1e-14;
 const double HIGHS_CONST_ZERO = 1e-50;
 const std::string off_string = "off";
 const std::string choose_string = "choose";
 const std::string on_string = "on";
-const int HIGHS_THREAD_LIMIT = 8;  // 32;
+const HighsInt HIGHS_THREAD_LIMIT = 8;  // 32;
 
 enum HighsDebugLevel {
   HIGHS_DEBUG_LEVEL_MIN = 0,
@@ -138,9 +139,10 @@ enum class HighsModelStatus {
   SOLVE_ERROR,
   POSTSOLVE_ERROR,
   MODEL_EMPTY,
-  PRIMAL_INFEASIBLE,
-  PRIMAL_UNBOUNDED,
   OPTIMAL,
+  PRIMAL_INFEASIBLE,
+  PRIMAL_INFEASIBLE_OR_UNBOUNDED,
+  PRIMAL_UNBOUNDED,
   REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
   REACHED_TIME_LIMIT,
   REACHED_ITERATION_LIMIT,
@@ -162,7 +164,7 @@ enum class HighsBasisStatus {
 
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
-const int illegal_infeasibility_count = -1;
+const HighsInt illegal_infeasibility_count = -1;
 const double illegal_infeasibility_measure = -1;
 
 #endif /* LP_DATA_HCONST_H_ */

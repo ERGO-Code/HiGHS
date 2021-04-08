@@ -40,13 +40,13 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   // For each row with bounds on both sides introduce explicit slack and
   // transfer bounds.
-  assert(lp.rowLower_.size() == (unsigned int)num_row);
-  assert(lp.rowUpper_.size() == (unsigned int)num_row);
+  assert((HighsInt)lp.rowLower_.size() == num_row);
+  assert((HighsInt)lp.rowUpper_.size() == num_row);
 
-  std::vector<int> general_bounded_rows;
-  std::vector<int> free_rows;
+  std::vector<HighsInt> general_bounded_rows;
+  std::vector<HighsInt> free_rows;
 
-  for (int row = 0; row < num_row; row++)
+  for (HighsInt row = 0; row < num_row; row++)
     if (lp.rowLower_[row] < lp.rowUpper_[row] &&
         lp.rowLower_[row] > -HIGHS_CONST_INF &&
         lp.rowUpper_[row] < HIGHS_CONST_INF)
@@ -55,7 +55,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
              lp.rowUpper_[row] >= HIGHS_CONST_INF)
       free_rows.push_back(row);
 
-  const int num_slack = general_bounded_rows.size();
+  const HighsInt num_slack = general_bounded_rows.size();
 
   // For each row except free rows add entry to char array and set up rhs
   // vector
@@ -82,11 +82,11 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     }
   }
 
-  std::vector<int> reduced_rowmap(lp.numRow_, -1);
+  std::vector<HighsInt> reduced_rowmap(lp.numRow_, -1);
   if (free_rows.size() > 0) {
-    int counter = 0;
-    int findex = 0;
-    for (int row = 0; row < lp.numRow_; row++) {
+    HighsInt counter = 0;
+    HighsInt findex = 0;
+    for (HighsInt row = 0; row < lp.numRow_; row++) {
       if (free_rows[findex] == row) {
         findex++;
         continue;
@@ -96,40 +96,43 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
       }
     }
   } else {
-    for (int k = 0; k < lp.numRow_; k++) reduced_rowmap[k] = k;
+    for (HighsInt k = 0; k < lp.numRow_; k++) reduced_rowmap[k] = k;
   }
   num_row -= free_rows.size();
   num_col += num_slack;
 
-  std::vector<int> sizes(num_col, 0);
+  std::vector<HighsInt> sizes(num_col, 0);
 
-  for (int col = 0; col < lp.numCol_; col++)
-    for (int k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
-      int row = lp.Aindex_[k];
+  for (HighsInt col = 0; col < lp.numCol_; col++)
+    for (HighsInt k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
+      HighsInt row = lp.Aindex_[k];
       if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
           lp.rowUpper_[row] < HIGHS_CONST_INF)
         sizes[col]++;
     }
   // Copy Astart and Aindex to ipx::Int array.
-  int nnz = lp.Aindex_.size();
+  HighsInt nnz = lp.Aindex_.size();
   Ap.resize(num_col + 1);
   Ai.reserve(nnz + num_slack);
   Ax.reserve(nnz + num_slack);
 
   // Set starting points of original and newly introduced columns.
   Ap[0] = 0;
-  for (int col = 0; col < lp.numCol_; col++) {
+  for (HighsInt col = 0; col < lp.numCol_; col++) {
     Ap[col + 1] = Ap[col] + sizes[col];
-    //    printf("Struc Ap[%2d] = %2d; Al[%2d] = %2d\n", col, (int)Ap[col], col,
-    //    (int)sizes[col]);
+    //    printf("Struc Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT ";
+    //    Al[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n", col,
+    //    (int)Ap[col], col, (int)sizes[col]);
   }
-  for (int col = lp.numCol_; col < (int)num_col; col++) {
+  for (HighsInt col = lp.numCol_; col < (HighsInt)num_col; col++) {
     Ap[col + 1] = Ap[col] + 1;
-    //    printf("Slack Ap[%2d] = %2d\n", col, (int)Ap[col]);
+    //    printf("Slack Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
+    //    col, (int)Ap[col]);
   }
-  //  printf("Fictn Ap[%2d] = %2d\n", (int)num_col, (int)Ap[num_col]);
-  for (int k = 0; k < nnz; k++) {
-    int row = lp.Aindex_[k];
+  //  printf("Fictn Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
+  //  (int)num_col, (int)Ap[num_col]);
+  for (HighsInt k = 0; k < nnz; k++) {
+    HighsInt row = lp.Aindex_[k];
     if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
         lp.rowUpper_[row] < HIGHS_CONST_INF) {
       Ai.push_back(reduced_rowmap[lp.Aindex_[k]]);
@@ -137,7 +140,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     }
   }
 
-  for (int k = 0; k < num_slack; k++) {
+  for (HighsInt k = 0; k < num_slack; k++) {
     Ai.push_back((ipx::Int)general_bounded_rows[k]);
     Ax.push_back(-1);
   }
@@ -145,7 +148,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   // Column bound vectors.
   col_lb.resize(num_col);
   col_ub.resize(num_col);
-  for (int col = 0; col < lp.numCol_; col++) {
+  for (HighsInt col = 0; col < lp.numCol_; col++) {
     if (lp.colLower_[col] <= -HIGHS_CONST_INF)
       col_lb[col] = -INFINITY;
     else
@@ -156,25 +159,26 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     else
       col_ub[col] = lp.colUpper_[col];
   }
-  for (int slack = 0; slack < num_slack; slack++) {
+  for (HighsInt slack = 0; slack < num_slack; slack++) {
     const int row = general_bounded_rows[slack];
     col_lb[lp.numCol_ + slack] = lp.rowLower_[row];
     col_ub[lp.numCol_ + slack] = lp.rowUpper_[row];
   }
 
   obj.resize(num_col);
-  for (int col = 0; col < lp.numCol_; col++) {
-    obj[col] = (int)lp.sense_ * lp.colCost_[col];
+  for (HighsInt col = 0; col < lp.numCol_; col++) {
+    obj[col] = (HighsInt)lp.sense_ * lp.colCost_[col];
   }
   obj.insert(obj.end(), num_slack, 0);
   /*
   for (int col = 0; col < num_col; col++)
-    printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col,
-  col_lb[col], col_ub[col], obj[col], (int)Ap[col]); for (int row = 0; row <
-  num_row; row++) printf("Row %2d: RHS = %11.4g; Type = %d\n", row, rhs[row],
-  constraint_type[row]); for (int col = 0; col < num_col; col++) { for (int el =
-  Ap[col]; el < Ap[col+1]; el++) { printf("El %2d: [%2d, %11.4g]\n", el,
-  (int)Ai[el], Ax[el]);
+    printf("Col %2" HIGHSINT_FORMAT ": [%11.4g, %11.4g] Cost = %11.4g; Start =
+  %" HIGHSINT_FORMAT "\n", col, col_lb[col], col_ub[col], obj[col],
+  (int)Ap[col]); for (int row = 0; row < num_row; row++) printf("Row %2"
+  HIGHSINT_FORMAT ": RHS = %11.4g; Type = %" HIGHSINT_FORMAT "\n", row,
+  rhs[row], constraint_type[row]); for (int col = 0; col < num_col; col++) { for
+  (int el = Ap[col]; el < Ap[col+1]; el++) { printf("El %2" HIGHSINT_FORMAT ":
+  [%2" HIGHSINT_FORMAT ", %11.4g]\n", el, (int)Ai[el], Ax[el]);
     }
   }
   */
@@ -223,11 +227,12 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
     return HighsStatus::Error;
   } else if (solve_status == IPX_STATUS_internal_error) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                 "Ipx: Internal error %d\n", (int)error_flag);
+                 "Ipx: Internal error %" HIGHSINT_FORMAT "\n", (int)error_flag);
     return HighsStatus::Error;
   } else {
     highsLogUser(options.log_options, HighsLogType::ERROR,
-                 "Ipx: unrecognised solve status = %d\n", (int)solve_status);
+                 "Ipx: unrecognised solve status = %" HIGHSINT_FORMAT "\n",
+                 (int)solve_status);
     return HighsStatus::Error;
   }
   return HighsStatus::Error;
@@ -580,8 +585,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
   if (result != IpxStatus::OK) return HighsStatus::Error;
   highsLogUser(options.log_options, HighsLogType::INFO,
-               "IPX model has %d rows, %d columns and %d nonzeros\n",
-               (int)num_row, (int)num_col, (int)Ap[num_col]);
+               "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+               " columns and %" HIGHSINT_FORMAT " nonzeros\n",
+               num_row, num_col, Ap[num_col]);
 
   ipx::Int load_status =
       lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
@@ -593,9 +599,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   ipx::Info ipx_info = lps.GetInfo();
-  iteration_counts.ipm += (int)ipx_info.iter;
+  iteration_counts.ipm += (HighsInt)ipx_info.iter;
 
-  iteration_counts.crossover += (int)ipx_info.updates_crossover;
+  iteration_counts.crossover += (HighsInt)ipx_info.updates_crossover;
   // iteration_counts.crossover += (int)ipx_info.pushes_crossover;
 
   // If not solved...
@@ -764,7 +770,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     return_status = HighsStatus::OK;
   }
   double objective_function_value = lp.offset_;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++)
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
     objective_function_value +=
         highs_solution.col_value[iCol] * lp.colCost_[iCol];
   solution_params.objective_function_value = objective_function_value;

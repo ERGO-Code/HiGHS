@@ -21,7 +21,7 @@
 
 class HighsDataStack {
   std::vector<char> data;
-  int position;
+  HighsInt position;
 
  public:
   void resetPosition() { position = data.size(); }
@@ -30,9 +30,9 @@ class HighsDataStack {
             typename std::enable_if<std::is_trivially_copyable<T>::value,
                                     int>::type = 0>
   void push(const T& r) {
-    int dataSize = data.size();
+    HighsInt dataSize = data.size();
     data.resize(dataSize + sizeof(T));
-    std::memcpy(&data[dataSize], &r, sizeof(T));
+    std::memcpy(data.data() + dataSize, &r, sizeof(T));
   }
 
   template <typename T,
@@ -40,31 +40,31 @@ class HighsDataStack {
                                     int>::type = 0>
   void pop(T& r) {
     position -= sizeof(T);
-    std::memcpy(&r, &data[position], sizeof(T));
+    std::memcpy(&r, data.data() + position, sizeof(T));
   }
 
   template <typename T>
   void push(const std::vector<T>& r) {
-    int offset = data.size();
-    int numData = r.size();
+    HighsInt offset = data.size();
+    HighsInt numData = r.size();
     // store the data
-    data.resize(offset + numData * sizeof(T) + sizeof(int));
-    std::memcpy(&data[offset], &r[0], numData * sizeof(T));
+    data.resize(offset + numData * sizeof(T) + sizeof(HighsInt));
+    std::memcpy(data.data() + offset, r.data(), numData * sizeof(T));
     // store the vector size
     offset += numData * sizeof(T);
-    std::memcpy(&data[offset], &numData, sizeof(int));
+    std::memcpy(data.data() + offset, &numData, sizeof(HighsInt));
   }
 
   template <typename T>
   void pop(std::vector<T>& r) {
     // pop the vector size
-    position -= sizeof(int);
-    int numData;
-    std::memcpy(&numData, &data[position], sizeof(int));
+    position -= sizeof(HighsInt);
+    HighsInt numData;
+    std::memcpy(&numData, &data[position], sizeof(HighsInt));
     // pop the data
     position -= numData * sizeof(T);
     r.resize(numData);
-    std::memcpy(&r[0], &data[position], numData * sizeof(T));
+    std::memcpy(r.data(), data.data() + position, numData * sizeof(T));
   }
 };
 

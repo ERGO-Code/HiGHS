@@ -61,10 +61,12 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
-                 "solveLpEkkSimplex called for LP with non-positive (%d) "
-                 "number of constraints\n",
-                 highs_model_object.lp_.numRow_);
+    highsLogUser(
+        options.log_options, HighsLogType::ERROR,
+        "solveLpEkkSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
+        ") "
+        "number of constraints\n",
+        highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
   }
 
@@ -115,9 +117,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // LP is solved to optimailty
   assert(ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL);
 
-  int num_unscaled_primal_infeasibility =
+  HighsInt num_unscaled_primal_infeasibility =
       solution_params.num_primal_infeasibility;
-  int num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
+  HighsInt num_unscaled_dual_infeasibility =
+      solution_params.num_dual_infeasibility;
   // Set the model and solution status according to the unscaled solution
   // parameters
   if (num_unscaled_primal_infeasibility == 0 &&
@@ -132,7 +135,9 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     assert(num_unscaled_primal_infeasibility > 0 ||
            num_unscaled_dual_infeasibility > 0);
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::INFO,
-                 "Have num/max/sum primal (%d/%g/%g) and dual (%d/%g/%g) "
+                 "Have num/max/sum primal (%" HIGHSINT_FORMAT
+                 "/%g/%g) and dual (%" HIGHSINT_FORMAT
+                 "/%g/%g) "
                  "unscaled infeasibilities\n",
                  num_unscaled_primal_infeasibility,
                  solution_params.max_primal_infeasibility,

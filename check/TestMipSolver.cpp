@@ -21,6 +21,7 @@ void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
+  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
   REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
 

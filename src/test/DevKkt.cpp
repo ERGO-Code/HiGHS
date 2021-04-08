@@ -165,9 +165,9 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
                state.colLower[i] < state.colUpper[i]) {
         if (state.colDual[i] > tol) {
           if (dev_print == 1)
-            std::cout << "Dual feasibility fail: x[" << i << "]=" << state.colValue[i] << "=u["
-                      << i << "], z[" << i << "]=" << state.colDual[i]
-                      << std::endl;
+            std::cout << "Dual feasibility fail: x[" << i
+                      << "]=" << state.colValue[i] << "=u[" << i << "], z[" << i
+                      << "]=" << state.colDual[i] << std::endl;
           infeas = fabs(state.colDual[i]);
         }
       }

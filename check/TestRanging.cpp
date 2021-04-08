@@ -77,25 +77,25 @@ void testRanging(Highs& highs) {
   vector<double>& row_dual = solution.row_dual;
 
   lp = highs.getLp();
-  int numRow = lp.numRow_;
-  int numCol = lp.numCol_;
+  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.numCol_;
 
   const double relative_error_tolerance = 1e-10;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));
   const double initial_error_report_threshold = relative_error_tolerance / 1e6;
   double error_report_threshold;
-  int num_relative_error = 0;
+  HighsInt num_relative_error = 0;
   double sum_relative_error = 0;
   double max_relative_error = 0;
-  int num_lines_printed;
+  HighsInt num_lines_printed;
 
   double max_col_cost_relative_error = 0;
-  int max_col_cost_relative_error_col = -1;
+  HighsInt max_col_cost_relative_error_col = -1;
   double max_col_bound_relative_error = 0;
-  int max_col_bound_relative_error_col = -1;
+  HighsInt max_col_bound_relative_error_col = -1;
   double max_row_bound_relative_error = 0;
-  int max_row_bound_relative_error_row = -1;
-  const int small_dim = 10;
+  HighsInt max_row_bound_relative_error_row = -1;
+  const HighsInt small_dim = 10;
 
   if (dev_run) printf(" --- Testing cost ranging ---\n");
   bool small_numCol = numCol < small_dim;
@@ -105,11 +105,11 @@ void testRanging(Highs& highs) {
   const bool test_all_col_cost = test_all;
   const bool test_all_col_bound = test_all;
   const bool test_all_row_bound = test_all;
-  int test_col_cost = min(0, numCol - 1);
-  int test_col_bound = min(0, numCol - 1);
-  int test_row_bound = min(0, numRow - 1);
-  int from_i;
-  int to_i;
+  HighsInt test_col_cost = min(HighsInt{0}, numCol - 1);
+  HighsInt test_col_bound = min(HighsInt{0}, numCol - 1);
+  HighsInt test_row_bound = min(HighsInt{0}, numRow - 1);
+  HighsInt from_i;
+  HighsInt to_i;
   if (test_all_col_cost) {
     from_i = 0;
     to_i = numCol;
@@ -117,7 +117,7 @@ void testRanging(Highs& highs) {
     from_i = test_col_cost;
     to_i = from_i + 1;
   }
-  for (int i = from_i; i < to_i; i++) {
+  for (HighsInt i = from_i; i < to_i; i++) {
     double col_cost_up_value = ranging.col_cost_up.value_[i];
     double col_cost_up_objective = ranging.col_cost_up.objective_[i];
     double col_cost_dn_value = ranging.col_cost_dn.value_[i];
@@ -147,7 +147,7 @@ void testRanging(Highs& highs) {
     if (relative_up_error >= relative_error_tolerance) {
       if (dev_run)
         printf(
-            "Col %d: %g = relative_up_error >= relative_error_tolerance = %g | "
+            "Col %" HIGHSINT_FORMAT ": %g = relative_up_error >= relative_error_tolerance = %g | "
             "%g %g %g\n",
             i, relative_up_error, relative_error_tolerance, solved_up,
             col_cost_up_objective, error);
@@ -177,7 +177,7 @@ void testRanging(Highs& highs) {
     if (relative_dn_error >= relative_error_tolerance) {
       if (dev_run)
         printf(
-            "Col %d: %g = relative_dn_error >= relative_error_tolerance = %g | "
+            "Col %" HIGHSINT_FORMAT ": %g = relative_dn_error >= relative_error_tolerance = %g | "
             "%g %g %g\n",
             i, relative_dn_error, relative_error_tolerance, solved_dn,
             col_cost_dn_objective, error);
@@ -194,7 +194,7 @@ void testRanging(Highs& highs) {
     if (small_numCol || relative_error > error_report_threshold) {
       if (num_lines_printed % 50 == 0) colCostColumnHeader();
       if (dev_run)
-        printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n", i,
+        printf("%3" HIGHSINT_FORMAT " %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n", i,
                cost, col_dual[i], col_cost_up_value, col_cost_up_objective,
                solved_up, relative_up_error, col_cost_dn_value,
                col_cost_dn_objective, solved_dn, relative_dn_error);
@@ -213,7 +213,7 @@ void testRanging(Highs& highs) {
     from_i = test_col_bound;
     to_i = from_i + 1;
   }
-  for (int i = from_i; i < to_i; i++) {
+  for (HighsInt i = from_i; i < to_i; i++) {
     double col_bound_up_value = ranging.col_bound_up.value_[i];
     double col_bound_up_objective = ranging.col_bound_up.objective_[i];
     double col_bound_dn_value = ranging.col_bound_dn.value_[i];
@@ -264,7 +264,7 @@ void testRanging(Highs& highs) {
     if (relative_up_error >= relative_error_tolerance) {
       if (dev_run)
         printf(
-            "Col %d: %g = relative_up_error >= relative_error_tolerance = %g | "
+            "Col %" HIGHSINT_FORMAT ": %g = relative_up_error >= relative_error_tolerance = %g | "
             "%g %g %g\n",
             i, relative_up_error, relative_error_tolerance, solved_up,
             col_bound_up_objective, error);
@@ -312,7 +312,7 @@ void testRanging(Highs& highs) {
     if (relative_dn_error >= relative_error_tolerance) {
       if (dev_run)
         printf(
-            "Col %d: %g = relative_dn_error >= relative_error_tolerance = %g | "
+            "Col %" HIGHSINT_FORMAT ": %g = relative_dn_error >= relative_error_tolerance = %g | "
             "%g %g %g\n",
             i, relative_dn_error, relative_error_tolerance, solved_dn,
             col_bound_dn_objective, error);
@@ -330,7 +330,7 @@ void testRanging(Highs& highs) {
       if (num_lines_printed % 50 == 0) colBoundcolumnHeader();
       if (dev_run)
         printf(
-            "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+            "%3" HIGHSINT_FORMAT " %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
             i, lower, upper, col_value[i], col_dual[i], col_bound_up_value,
             col_bound_up_objective, solved_up, relative_up_error,
             col_bound_dn_value, col_bound_dn_objective, solved_dn,
@@ -350,7 +350,7 @@ void testRanging(Highs& highs) {
     from_i = test_row_bound;
     to_i = from_i + 1;
   }
-  for (int i = from_i; i < to_i; i++) {
+  for (HighsInt i = from_i; i < to_i; i++) {
     double row_bound_up_value = ranging.row_bound_up.value_[i];
     double row_bound_up_objective = ranging.row_bound_up.objective_[i];
     double row_bound_dn_value = ranging.row_bound_dn.value_[i];
@@ -401,7 +401,7 @@ void testRanging(Highs& highs) {
     if (relative_up_error >= relative_error_tolerance) {
       if (dev_run)
         printf(
-            "Row %d: %g = relative_up_error >= relative_error_tolerance = %g | "
+            "Row %" HIGHSINT_FORMAT ": %g = relative_up_error >= relative_error_tolerance = %g | "
             "%g %g %g\n",
             i, relative_up_error, relative_error_tolerance, solved_up,
             row_bound_up_objective, error);
@@ -449,7 +449,7 @@ void testRanging(Highs& highs) {
     if (relative_dn_error >= relative_error_tolerance) {
       if (dev_run)
         printf(
-            "Row %d: %g = relative_dn_error >= relative_error_tolerance = %g | "
+            "Row %" HIGHSINT_FORMAT ": %g = relative_dn_error >= relative_error_tolerance = %g | "
             "%g %g %g\n",
             i, relative_dn_error, relative_error_tolerance, solved_dn,
             row_bound_dn_objective, error);
@@ -467,7 +467,7 @@ void testRanging(Highs& highs) {
       if (num_lines_printed % 50 == 0) rowBoundColumnHeader();
       if (dev_run)
         printf(
-            "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+            "%3" HIGHSINT_FORMAT " %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
             i, lower, upper, row_value[i], row_dual[i], row_bound_up_value,
             row_bound_up_objective, solved_up, relative_up_error,
             row_bound_dn_value, row_bound_dn_objective, solved_dn,
@@ -478,15 +478,15 @@ void testRanging(Highs& highs) {
   }
   if (dev_run) {
     if (max_col_cost_relative_error_col >= 0)
-      printf("Max col cost  relative objective error = %g in col %d\n",
+      printf("Max col cost  relative objective error = %g in col %" HIGHSINT_FORMAT "\n",
              max_col_cost_relative_error, max_col_cost_relative_error_col);
     if (max_col_bound_relative_error_col >= 0)
-      printf("Max col bound relative objective error = %g in col %d\n",
+      printf("Max col bound relative objective error = %g in col %" HIGHSINT_FORMAT "\n",
              max_col_bound_relative_error, max_col_bound_relative_error_col);
     if (max_row_bound_relative_error_row >= 0)
-      printf("Max row bound relative objective error = %g in row %d\n",
+      printf("Max row bound relative objective error = %g in row %" HIGHSINT_FORMAT "\n",
              max_row_bound_relative_error, max_row_bound_relative_error_row);
-    printf("Num / max / sum relative objective error = %d / %g / %g\n",
+    printf("Num / max / sum relative objective error = %" HIGHSINT_FORMAT " / %g / %g\n",
            num_relative_error, max_relative_error, sum_relative_error);
   }
   REQUIRE(num_relative_error < 10);

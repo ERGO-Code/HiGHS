@@ -52,7 +52,7 @@ TEST_CASE("highs-info", "[highs_info]") {
     printf("From getHighsInfoValue: objective_function_value = %g\n",
            objective_function_value);
 
-  int simplex_iteration_count;
+  HighsInt simplex_iteration_count;
   return_status =
       highs.getHighsInfoValue("iteration_count", simplex_iteration_count);
   REQUIRE(return_status == HighsStatus::Error);
@@ -68,10 +68,10 @@ TEST_CASE("highs-info", "[highs_info]") {
     printf("From getHighsInfo: objective_function_value = %g\n",
            highs_info.objective_function_value);
 #ifdef IPX_ON
-    printf("From getHighsInfo: ipm_iteration_count = %d\n",
+    printf("From getHighsInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
            highs_info.ipm_iteration_count);
 #else
-    printf("From getHighsInfo: simplex_iteration_count = %d\n",
+    printf("From getHighsInfo: simplex_iteration_count = %" HIGHSINT_FORMAT "\n",
            highs_info.simplex_iteration_count);
 #endif
   }

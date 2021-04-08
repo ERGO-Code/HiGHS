@@ -14,6 +14,7 @@
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
+#include "HighsPostsolveStack.h"
 #include "presolve/HAggregator.h"
 #include "presolve/Presolve.h"
 #include "util/HighsComponent.h"
@@ -25,24 +26,18 @@
 // specific.
 
 struct PresolveComponentData : public HighsComponentData {
-  std::vector<presolve::Presolve> presolve_;
   HighsLp reduced_lp_;
-
-  // todo: make reduced one const.
-  HighsSolution reduced_solution_;
+  presolve::HighsPostsolveStack postSolveStack;
   HighsSolution recovered_solution_;
-
-  HighsBasis reduced_basis_;
   HighsBasis recovered_basis_;
 
   void clear() {
     is_valid = false;
 
-    presolve_.clear();
+    postSolveStack = presolve::HighsPostsolveStack();
+
     reduced_lp_.clear();
-    clearSolutionUtil(reduced_solution_);
     clearSolutionUtil(recovered_solution_);
-    clearBasisUtil(reduced_basis_);
     clearBasisUtil(recovered_basis_);
   }
 
@@ -53,9 +48,9 @@ struct PresolveComponentData : public HighsComponentData {
 // of HiGHS like execution information. Times are recorded at the end of
 // Highs::run()
 struct PresolveComponentInfo : public HighsComponentInfo {
-  int n_rows_removed = 0;
-  int n_cols_removed = 0;
-  int n_nnz_removed = 0;
+  HighsInt n_rows_removed = 0;
+  HighsInt n_cols_removed = 0;
+  HighsInt n_nnz_removed = 0;
 
   double init_time = 0;
   double presolve_time = 0;
@@ -74,7 +69,7 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   std::vector<presolve::Presolver> order;
 
   std::string iteration_strategy = "smart";
-  int max_iterations = 0;
+  HighsInt max_iterations = 0;
 
   double time_limit = -1;
   bool dev = false;
@@ -101,7 +96,7 @@ class PresolveComponent : public HighsComponent {
 
   PresolveComponentInfo info_;
   PresolveComponentData data_;
-  PresolveComponentOptions options_;
+  const HighsOptions* options_;
 
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;

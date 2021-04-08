@@ -20,12 +20,14 @@
 #include <cstdio>
 #include <vector>
 
+#include "util/HighsInt.h"
+
 //#include <iostream>
 
 using std::vector;
 
-const int min_entry = 0;
-const int no_pointer = min_entry - 1;
+const HighsInt min_entry = 0;
+const HighsInt no_pointer = min_entry - 1;
 /**
  * @brief Class for the set structure for HiGHS
  */
@@ -35,8 +37,8 @@ class HSet {
    * @brief Initialise a set. Neither limit is binding, but more
    * efficient memory-wise if known in advance
    */
-  bool setup(const int size,       //!< Dimension of the set to be initialised
-             const int max_entry,  //!< Maximum entry to be in the set.
+  bool setup(const HighsInt size,  //!< Dimension of the set to be initialised
+             const HighsInt max_entry,  //!< Maximum entry to be in the set.
              const bool output_flag = false,  //!< Option for output
              FILE* log_file_stream = NULL,    //!< File stream for output
              const bool debug = false,        //!< Debug mode
@@ -50,23 +52,23 @@ class HSet {
   /**
    * @brief Add entry to the set
    */
-  bool add(const int entry);
+  bool add(const HighsInt entry);
   /**
    * @brief Remove entry from the set
    */
-  bool remove(const int entry);
+  bool remove(const HighsInt entry);
   /**
    * @brief Returns whether entry is in the set
    */
-  bool in(const int entry) const;
+  bool in(const HighsInt entry) const;
   /**
    * @brief Returns the number of entries in the set
    */
-  const int& count() const { return count_; }
+  const HighsInt& count() const { return count_; }
   /**
    * @brief Returns the entries in the set
    */
-  const vector<int>& entry() const { return entry_; }
+  const vector<HighsInt>& entry() const { return entry_; }
   /**
    * @brief Print out the set and pointer entries not set to no_pointer
    */
@@ -77,14 +79,14 @@ class HSet {
   bool debug() const;
 
  private:
-  int count_ = 0;      //!< Number of entries
-  vector<int> entry_;  //!< Entries
+  HighsInt count_ = 0;      //!< Number of entries
+  vector<HighsInt> entry_;  //!< Entries
   bool setup_ = false;
   bool debug_ = false;
   bool allow_assert_ = true;
   bool output_flag_ = false;
   FILE* log_file_;
-  int max_entry_;        //!< Maximum entry to be in the set.
-  vector<int> pointer_;  //!< Set of pointers into the set
+  HighsInt max_entry_;        //!< Maximum entry to be in the set.
+  vector<HighsInt> pointer_;  //!< Set of pointers into the set
 };
 #endif /* UTIL_HSET_H_ */

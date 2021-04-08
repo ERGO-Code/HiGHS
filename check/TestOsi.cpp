@@ -24,7 +24,7 @@ const bool dev_run = false;
 
 using namespace OsiUnitTest;
 
-int main(int argc, const char* argv[]) {
+HighsInt main(HighsInt argc, const char* argv[]) {
 #ifndef COINSAMPLEFOUND
   std::cerr << "Path to Data/Sample not known. Cannot run tests without sample "
                "MPS files."
@@ -43,8 +43,8 @@ int main(int argc, const char* argv[]) {
   OsiUnitTest::verbosity = 10;
   // OsiUnitTest::haltonerror = 2;
 
-  int nerrors;
-  int nerrors_expected;
+  HighsInt nerrors;
+  HighsInt nerrors_expected;
 
   std::string mpsDir = COINSAMPLEDIR;
   mpsDir.push_back(CoinFindDirSeparator());

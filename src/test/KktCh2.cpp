@@ -41,7 +41,7 @@ void KktChStep::setBoundsCostRHS(const vector<double>& colUpper_,
   RcolCost = cost;
 }
 
-void KktChStep::addCost(int col, double value) { RcolCost[col] = value; }
+void KktChStep::addCost(HighsInt col, double value) { RcolCost[col] = value; }
 
 /*
 1  SING_ROW
@@ -67,24 +67,24 @@ void KktChStep::addCost(int col, double value) { RcolCost[col] = value; }
 16 REDUNDANT_ROW
 
 */
-void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
-                          double dualR) {
+void KktChStep::addChange(int type, HighsInt row, HighsInt col, double valC,
+                          double dualC, double dualR) {
   // when updating fill new values for b, c, bounds in Rb RcolCost RcolUpper,
   // RcolLower
-  vector<pair<int, double>> upd;
+  vector<pair<HighsInt, double>> upd;
 
   switch (type) {
     case 171:  // new bounds from doubleton equation, retrieve old ones
       upd = rLowers.top();
       rLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RrowLower[ind] = get<1>(upd[i]);
       }
       upd = rUppers.top();
       rUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RrowUpper[ind] = get<1>(upd[i]);
       }
       break;
@@ -92,19 +92,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = cLowers.top();
       cLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolLower[ind] = get<1>(upd[i]);
       }
       upd = cUppers.top();
       cUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolUpper[ind] = get<1>(upd[i]);
       }
       upd = costs.top();
       costs.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolCost[ind] = get<1>(upd[i]);
       }
       break;
@@ -115,13 +115,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = rLowers.top();
       rLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RrowLower[ind] = get<1>(upd[i]);
       }
       upd = rUppers.top();
       rUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RrowUpper[ind] = get<1>(upd[i]);
       }
       break;
@@ -130,13 +130,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
         upd = rLowers.top();
         rLowers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
+          HighsInt ind = get<0>(upd[i]);
           RrowLower[ind] = get<1>(upd[i]);
         }
         upd = rUppers.top();
         rUppers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
+          HighsInt ind = get<0>(upd[i]);
           RrowUpper[ind] = get<1>(upd[i]);
         }
       }
@@ -145,7 +145,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = costs.top();
       costs.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolCost[ind] = get<1>(upd[i]);
       }
       break;
@@ -153,19 +153,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = cLowers.top();
       cLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolLower[ind] = get<1>(upd[i]);
       }
       upd = cUppers.top();
       cUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolUpper[ind] = get<1>(upd[i]);
       }
       upd = costs.top();
       costs.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolCost[ind] = get<1>(upd[i]);
       }
       break;
@@ -173,19 +173,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = cLowers.top();
       cLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolLower[ind] = get<1>(upd[i]);
       }
       upd = cUppers.top();
       cUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolUpper[ind] = get<1>(upd[i]);
       }
       upd = costs.top();
       costs.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolCost[ind] = get<1>(upd[i]);
       }
       break;
@@ -195,13 +195,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
         upd = rLowers.top();
         rLowers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
+          HighsInt ind = get<0>(upd[i]);
           RrowLower[ind] = get<1>(upd[i]);
         }
         upd = rUppers.top();
         rUppers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
+          HighsInt ind = get<0>(upd[i]);
           RrowUpper[ind] = get<1>(upd[i]);
         }
       }
@@ -211,13 +211,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
         upd = rLowers.top();
         rLowers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
+          HighsInt ind = get<0>(upd[i]);
           RrowLower[ind] = get<1>(upd[i]);
         }
         upd = rUppers.top();
         rUppers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
+          HighsInt ind = get<0>(upd[i]);
           RrowUpper[ind] = get<1>(upd[i]);
         }
       }
@@ -226,13 +226,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = rLowers.top();
       rLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RrowLower[ind] = get<1>(upd[i]);
       }
       upd = rUppers.top();
       rUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RrowUpper[ind] = get<1>(upd[i]);
       }
       break;
@@ -240,19 +240,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       upd = cLowers.top();
       cLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolLower[ind] = get<1>(upd[i]);
       }
       upd = cUppers.top();
       cUppers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolUpper[ind] = get<1>(upd[i]);
       }
       upd = costs.top();
       costs.pop();
       for (size_t i = 0; i < upd.size(); i++) {
-        int ind = get<0>(upd[i]);
+        HighsInt ind = get<0>(upd[i]);
         RcolCost[ind] = get<1>(upd[i]);
       }
       break;
@@ -272,13 +272,15 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 }
 
 dev_kkt_check::State KktChStep::initState(
-    const int numCol_, const int numRow_, const std::vector<int>& Astart_,
-    const std::vector<int>& Aend_, const std::vector<int>& Aindex_,
-    const std::vector<double>& Avalue_, const std::vector<int>& ARstart_,
-    const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_,
-    const std::vector<int>& flagCol_, const std::vector<int>& flagRow_,
-    const std::vector<double>& colValue_, const std::vector<double>& colDual_,
-    const std::vector<double>& rowValue_, const std::vector<double>& rowDual_,
+    const HighsInt numCol_, const HighsInt numRow_,
+    const std::vector<HighsInt>& Astart_, const std::vector<HighsInt>& Aend_,
+    const std::vector<HighsInt>& Aindex_, const std::vector<double>& Avalue_,
+    const std::vector<HighsInt>& ARstart_,
+    const std::vector<HighsInt>& ARindex_, const std::vector<double>& ARvalue_,
+    const std::vector<HighsInt>& flagCol_,
+    const std::vector<HighsInt>& flagRow_, const std::vector<double>& colValue_,
+    const std::vector<double>& colDual_, const std::vector<double>& rowValue_,
+    const std::vector<double>& rowDual_,
     const std::vector<HighsBasisStatus>& col_status_,
     const std::vector<HighsBasisStatus>& row_status_) {
   // check row value

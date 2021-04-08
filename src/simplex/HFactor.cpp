@@ -31,21 +31,23 @@ using std::make_pair;
 using std::pair;
 using std::vector;
 
-void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
-                  const int Yend, const int* Tindex, const double* Tvalue,
-                  const double Tpivot, int* RHScount, int* RHSindex,
+void solveMatrixT(const HighsInt Xstart, const HighsInt Xend,
+                  const HighsInt Ystart, const HighsInt Yend,
+                  const HighsInt* Tindex, const double* Tvalue,
+                  const double Tpivot, HighsInt* RHScount, HighsInt* RHSindex,
                   double* RHSarray) {
   // Collect by X
   double pivotX = 0;
-  for (int k = Xstart; k < Xend; k++) pivotX += Tvalue[k] * RHSarray[Tindex[k]];
+  for (HighsInt k = Xstart; k < Xend; k++)
+    pivotX += Tvalue[k] * RHSarray[Tindex[k]];
 
   // Scatter by Y
   if (fabs(pivotX) > HIGHS_CONST_TINY) {
-    int workCount = *RHScount;
+    HighsInt workCount = *RHScount;
 
     pivotX /= Tpivot;
-    for (int k = Ystart; k < Yend; k++) {
-      const int index = Tindex[k];
+    for (HighsInt k = Ystart; k < Yend; k++) {
+      const HighsInt index = Tindex[k];
       const double value0 = RHSarray[index];
       const double value1 = value0 - pivotX * Tvalue[k];
       if (value0 == 0) RHSindex[workCount++] = index;
@@ -57,39 +59,40 @@ void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
   }
 }
 
-void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
-                const double* HpivotValue, const int* Hstart, const int* Hend,
-                const int* Hindex, const double* Hvalue, HVector* rhs) {
-  int RHScount = rhs->count;
-  int* RHSindex = &rhs->index[0];
+void solveHyper(const HighsInt Hsize, const HighsInt* Hlookup,
+                const HighsInt* HpivotIndex, const double* HpivotValue,
+                const HighsInt* Hstart, const HighsInt* Hend,
+                const HighsInt* Hindex, const double* Hvalue, HVector* rhs) {
+  HighsInt RHScount = rhs->count;
+  HighsInt* RHSindex = &rhs->index[0];
   double* RHSarray = &rhs->array[0];
 
   // Take count
 
   // Build list
   char* listMark = &rhs->cwork[0];
-  int* listIndex = &rhs->iwork[0];
-  int* listStack = &rhs->iwork[Hsize];
-  int listCount = 0;
+  HighsInt* listIndex = &rhs->iwork[0];
+  HighsInt* listStack = &rhs->iwork[Hsize];
+  HighsInt listCount = 0;
 
-  int countPivot = 0;
-  int countEntry = 0;
+  HighsInt countPivot = 0;
+  HighsInt countEntry = 0;
 
-  for (int i = 0; i < RHScount; i++) {
+  for (HighsInt i = 0; i < RHScount; i++) {
     // Skip touched index
-    int iTrans = Hlookup[RHSindex[i]];  // XXX: this contains a bug iTran
-    if (listMark[iTrans])               // XXX bug here
+    HighsInt iTrans = Hlookup[RHSindex[i]];  // XXX: this contains a bug iTran
+    if (listMark[iTrans])                    // XXX bug here
       continue;
 
-    int Hi = iTrans;      // H matrix pivot index
-    int Hk = Hstart[Hi];  // H matrix non zero position
-    int nStack = -1;      // Usage of the stack (-1 not used)
+    HighsInt Hi = iTrans;      // H matrix pivot index
+    HighsInt Hk = Hstart[Hi];  // H matrix non zero position
+    HighsInt nStack = -1;      // Usage of the stack (-1 not used)
 
     listMark[Hi] = 1;  // Mark this as touched
 
     for (;;) {
       if (Hk < Hend[Hi]) {
-        int Hi_sub = Hlookup[Hindex[Hk++]];
+        HighsInt Hi_sub = Hlookup[Hindex[Hk++]];
         if (listMark[Hi_sub] == 0) {  // Go to a child
           listMark[Hi_sub] = 1;       // Mark as touched
           listStack[++nStack] = Hi;   // Store current into stack
@@ -116,16 +119,16 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
   // Solve with list
   if (HpivotValue == 0) {
     RHScount = 0;
-    for (int iList = listCount - 1; iList >= 0; iList--) {
-      int i = listIndex[iList];
+    for (HighsInt iList = listCount - 1; iList >= 0; iList--) {
+      HighsInt i = listIndex[iList];
       listMark[i] = 0;
-      int pivotRow = HpivotIndex[i];
+      HighsInt pivotRow = HpivotIndex[i];
       double pivotX = RHSarray[pivotRow];
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         RHSindex[RHScount++] = pivotRow;
-        const int start = Hstart[i];
-        const int end = Hend[i];
-        for (int k = start; k < end; k++)
+        const HighsInt start = Hstart[i];
+        const HighsInt end = Hend[i];
+        for (HighsInt k = start; k < end; k++)
           RHSarray[Hindex[k]] -= pivotX * Hvalue[k];
       } else
         RHSarray[pivotRow] = 0;
@@ -133,18 +136,18 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
     rhs->count = RHScount;
   } else {
     RHScount = 0;
-    for (int iList = listCount - 1; iList >= 0; iList--) {
-      int i = listIndex[iList];
+    for (HighsInt iList = listCount - 1; iList >= 0; iList--) {
+      HighsInt i = listIndex[iList];
       listMark[i] = 0;
-      int pivotRow = HpivotIndex[i];
+      HighsInt pivotRow = HpivotIndex[i];
       double pivotX = RHSarray[pivotRow];
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= HpivotValue[i];
         RHSarray[pivotRow] = pivotX;
         RHSindex[RHScount++] = pivotRow;
-        const int start = Hstart[i];
-        const int end = Hend[i];
-        for (int k = start; k < end; k++)
+        const HighsInt start = Hstart[i];
+        const HighsInt end = Hend[i];
+        for (HighsInt k = start; k < end; k++)
           RHSarray[Hindex[k]] -= pivotX * Hvalue[k];
       } else
         RHSarray[pivotRow] = 0;
@@ -153,13 +156,14 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
   }
 }
 
-void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
-                    const int* Aindex_, const double* Avalue_, int* baseIndex_,
-                    double pivot_threshold_, double pivot_tolerance_,
-                    int highs_debug_level_, bool output_flag_,
-                    FILE* log_file_stream_, bool log_to_console_,
-                    int log_dev_level_, const bool use_original_HFactor_logic_,
-                    const int updateMethod_) {
+void HFactor::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
+                    const HighsInt* Aindex_, const double* Avalue_,
+                    HighsInt* baseIndex_, double pivot_threshold_,
+                    double pivot_tolerance_, HighsInt highs_debug_level_,
+                    bool output_flag_, FILE* log_file_stream_,
+                    bool log_to_console_, int log_dev_level_,
+                    const bool use_original_HFactor_logic_,
+                    const HighsInt updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -173,12 +177,11 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
       max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
   highs_debug_level = highs_debug_level_;
   log_options.log_file_stream = log_file_stream_;
-  output_flag = output_flag_;
-  log_to_console = log_to_console_;
-  log_dev_level = log_dev_level_;
-  log_options.output_flag = &output_flag;
-  log_options.log_to_console = &log_to_console;
-  log_options.log_dev_level = &log_dev_level;
+  log_data = decltype(log_data)(new std::tuple<bool, bool, HighsInt>(
+      output_flag_, log_to_console_, log_dev_level_));
+  log_options.output_flag = &std::get<0>(*log_data);
+  log_options.log_to_console = &std::get<1>(*log_data);
+  log_options.log_dev_level = &std::get<2>(*log_data);
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
 
@@ -187,10 +190,10 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   dwork.assign(numRow, 0);
 
   // Find Basis matrix limit size
-  int BlimitX = 0;
+  HighsInt BlimitX = 0;
   iwork.assign(numRow + 1, 0);
-  for (int i = 0; i < numCol; i++) iwork[Astart[i + 1] - Astart[i]]++;
-  for (int i = numRow, counted = 0; i >= 0 && counted < numRow; i--)
+  for (HighsInt i = 0; i < numCol; i++) iwork[Astart[i + 1] - Astart[i]]++;
+  for (HighsInt i = numRow, counted = 0; i >= 0 && counted < numRow; i--)
     BlimitX += i * iwork[i], counted += iwork[i];
   BlimitX += numRow;
 
@@ -265,7 +268,7 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   PFvalue.reserve(BlimitX * 4);
 }
 
-int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
+HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   FactorTimer factor_timer;
   factor_timer.start(FactorInvert, factor_timer_clock_pointer);
   build_syntheticTick = 0;
@@ -279,7 +282,8 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
     highsLogUser(log_options, HighsLogType::WARNING,
-                 "Rank deficiency of %d identified in basis matrix\n",
+                 "Rank deficiency of %" HIGHSINT_FORMAT
+                 " identified in basis matrix\n",
                  rank_deficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
@@ -321,7 +325,7 @@ void HFactor::btran(HVector& vector, double historical_density,
   factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
-void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
+void HFactor::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
   // Special case
   if (aq->next) {
     updateCFT(aq, ep, iRow);
@@ -365,22 +369,22 @@ void HFactor::buildSimple() {
    * 1. Prepare basis matrix and deal with unit columns
    */
 
-  int BcountX = 0;
+  HighsInt BcountX = 0;
   fill_n(&MRcountb4[0], numRow, 0);
   nwork = 0;
-  for (int iCol = 0; iCol < numRow; iCol++) {
-    int iMat = baseIndex[iCol];
-    int iRow = -1;
+  for (HighsInt iCol = 0; iCol < numRow; iCol++) {
+    HighsInt iMat = baseIndex[iCol];
+    HighsInt iRow = -1;
     if (iMat >= numCol) {
       // 1.1 Logical column
       // Check for double pivot
-      int lc_iRow = iMat - numCol;
+      HighsInt lc_iRow = iMat - numCol;
       if (MRcountb4[lc_iRow] >= 0) {
         iRow = lc_iRow;
       } else {
         highsLogUser(log_options, HighsLogType::ERROR,
                      "INVERT Error: Found a logical column with pivot "
-                     "already in row %d\n",
+                     "already in row %" HIGHSINT_FORMAT "\n",
                      lc_iRow);
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
@@ -389,20 +393,20 @@ void HFactor::buildSimple() {
       }
     } else {
       // 1.2 Structural column
-      int start = Astart[iMat];
-      int count = Astart[iMat + 1] - start;
-      int lc_iRow = Aindex[start];
+      HighsInt start = Astart[iMat];
+      HighsInt count = Astart[iMat + 1] - start;
+      HighsInt lc_iRow = Aindex[start];
       // Check for unit column with double pivot
       bool unit_col = count == 1 && Avalue[start] == 1;
       if (unit_col && MRcountb4[lc_iRow] >= 0) {
         iRow = lc_iRow;
       } else {
         if (unit_col)
-          highsLogUser(
-              log_options, HighsLogType::ERROR,
-              "INVERT Error: Found a second unit column with pivot in row %d\n",
-              lc_iRow);
-        for (int k = start; k < start + count; k++) {
+          highsLogUser(log_options, HighsLogType::ERROR,
+                       "INVERT Error: Found a second unit column with pivot in "
+                       "row %" HIGHSINT_FORMAT "\n",
+                       lc_iRow);
+        for (HighsInt k = start; k < start + count; k++) {
           MRcountb4[Aindex[k]]++;
           Bindex[BcountX] = Aindex[k];
           Bvalue[BcountX++] = Avalue[k];
@@ -440,20 +444,20 @@ void HFactor::buildSimple() {
   double t2_storeU = Uindex.size();
   double t2_storep = nwork;
   while (nwork > 0) {
-    int nworkLast = nwork;
+    HighsInt nworkLast = nwork;
     nwork = 0;
-    for (int i = 0; i < nworkLast; i++) {
-      const int iCol = iwork[i];
-      const int start = Bstart[iCol];
-      const int end = Bstart[iCol + 1];
-      int pivot_k = -1;
-      int found_row_singleton = 0;
-      int count = 0;
+    for (HighsInt i = 0; i < nworkLast; i++) {
+      const HighsInt iCol = iwork[i];
+      const HighsInt start = Bstart[iCol];
+      const HighsInt end = Bstart[iCol + 1];
+      HighsInt pivot_k = -1;
+      HighsInt found_row_singleton = 0;
+      HighsInt count = 0;
 
       // 2.1 Search for singleton
       t2_search += end - start;
-      for (int k = start; k < end; k++) {
-        const int iRow = Bindex[k];
+      for (HighsInt k = start; k < end; k++) {
+        const HighsInt iRow = Bindex[k];
         if (MRcountb4[iRow] == 1) {
           pivot_k = k;
           found_row_singleton = 1;
@@ -468,11 +472,11 @@ void HFactor::buildSimple() {
       if (found_row_singleton) {
         // 2.2 Deal with row singleton
         const double pivotX = 1 / Bvalue[pivot_k];
-        for (int section = 0; section < 2; section++) {
-          int p0 = section == 0 ? start : pivot_k + 1;
-          int p1 = section == 0 ? pivot_k : end;
-          for (int k = p0; k < p1; k++) {
-            int iRow = Bindex[k];
+        for (HighsInt section = 0; section < 2; section++) {
+          HighsInt p0 = section == 0 ? start : pivot_k + 1;
+          HighsInt p1 = section == 0 ? pivot_k : end;
+          for (HighsInt k = p0; k < p1; k++) {
+            HighsInt iRow = Bindex[k];
             if (MRcountb4[iRow] > 0) {
               Lindex.push_back(iRow);
               Lvalue.push_back(Bvalue[k] * pivotX);
@@ -483,7 +487,7 @@ void HFactor::buildSimple() {
             MRcountb4[iRow]--;
           }
         }
-        int iRow = Bindex[pivot_k];
+        HighsInt iRow = Bindex[pivot_k];
         MRcountb4[iRow] = 0;
         permute[iCol] = iRow;
         Lstart.push_back(Lindex.size());
@@ -493,16 +497,16 @@ void HFactor::buildSimple() {
         Ustart.push_back(Uindex.size());
       } else if (count == 1) {
         // 2.3 Deal with column singleton
-        for (int k = start; k < pivot_k; k++) {
+        for (HighsInt k = start; k < pivot_k; k++) {
           Uindex.push_back(Bindex[k]);
           Uvalue.push_back(Bvalue[k]);
         }
-        for (int k = pivot_k + 1; k < end; k++) {
+        for (HighsInt k = pivot_k + 1; k < end; k++) {
           Uindex.push_back(Bindex[k]);
           Uvalue.push_back(Bvalue[k]);
         }
 
-        int iRow = Bindex[pivot_k];
+        HighsInt iRow = Bindex[pivot_k];
         MRcountb4[iRow] = 0;
         permute[iCol] = iRow;
         Lstart.push_back(Lindex.size());
@@ -531,11 +535,11 @@ void HFactor::buildSimple() {
   // 3.1 Prepare row links, row matrix spaces
   rlinkFirst.assign(numRow + 1, -1);
   MRcount.assign(numRow, 0);
-  int MRcountX = 0;
+  HighsInt MRcountX = 0;
   // Determine the number of entries in the kernel
   kernel_num_el = 0;
-  for (int iRow = 0; iRow < numRow; iRow++) {
-    int count = MRcountb4[iRow];
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    HighsInt count = MRcountb4[iRow];
     if (count > 0) {
       MRstart[iRow] = MRcountX;
       MRspace[iRow] = count * 2;
@@ -552,16 +556,16 @@ void HFactor::buildSimple() {
   MCvalue.clear();
   MCcountA.assign(numRow, 0);
   MCcountN.assign(numRow, 0);
-  int MCcountX = 0;
-  for (int i = 0; i < nwork; i++) {
-    int iCol = iwork[i];
+  HighsInt MCcountX = 0;
+  for (HighsInt i = 0; i < nwork; i++) {
+    HighsInt iCol = iwork[i];
     MCstart[iCol] = MCcountX;
     MCspace[iCol] = (Bstart[iCol + 1] - Bstart[iCol]) * 2;
     MCcountX += MCspace[iCol];
     MCindex.resize(MCcountX);
     MCvalue.resize(MCcountX);
-    for (int k = Bstart[iCol]; k < Bstart[iCol + 1]; k++) {
-      const int iRow = Bindex[k];
+    for (HighsInt k = Bstart[iCol]; k < Bstart[iCol + 1]; k++) {
+      const HighsInt iRow = Bindex[k];
       const double value = Bvalue[k];
       if (MRcountb4[iRow] > 0) {
         colInsert(iCol, iRow, value);
@@ -578,7 +582,7 @@ void HFactor::buildSimple() {
   kernel_dim = nwork;
 }
 
-int HFactor::buildKernel() {
+HighsInt HFactor::buildKernel() {
   // Deal with the kernel part by 'n-work' pivoting
 
   double fake_search = 0;
@@ -594,16 +598,16 @@ int HFactor::buildKernel() {
     if (rp_r_k) {
       printf("Row counts:");
       bool f_k = true;
-      for (int k = 0; k < numRow; k++) {
+      for (HighsInt k = 0; k < numRow; k++) {
         if (rlinkFirst[k] >= 0) {
           if (f_k) {
-            printf(" (%2d:", k);
+            printf(" (%2" HIGHSINT_FORMAT ":", k);
             f_k = false;
           } else {
-            printf("; (%2d:", k);
+            printf("; (%2" HIGHSINT_FORMAT ":", k);
           }
-          for (int i = rlinkFirst[k]; i != -1; i = rlinkNext[i]) {
-            printf(" %2d", i);
+          for (HighsInt i = rlinkFirst[k]; i != -1; i = rlinkNext[i]) {
+            printf(" %2" HIGHSINT_FORMAT "", i);
           }
           printf(")");
         }
@@ -613,21 +617,21 @@ int HFactor::buildKernel() {
     bool rp_permute = false;
     if (rp_permute) {
       printf("Permute:\n");
-      for (int i = 0; i < numRow; i++) {
-        printf(" %2d", i);
+      for (HighsInt i = 0; i < numRow; i++) {
+        printf(" %2" HIGHSINT_FORMAT "", i);
       }
       printf("\n");
-      for (int i = 0; i < numRow; i++) {
-        printf(" %2d", permute[i]);
+      for (HighsInt i = 0; i < numRow; i++) {
+        printf(" %2" HIGHSINT_FORMAT "", permute[i]);
       }
       printf("\n");
     }
     */
-    int jColPivot = -1;
-    int iRowPivot = -1;
+    HighsInt jColPivot = -1;
+    HighsInt iRowPivot = -1;
     // 1.1. Setup search merits
-    int searchLimit = min(nwork, 8);
-    int searchCount = 0;
+    HighsInt searchLimit = min(nwork, HighsInt{8});
+    HighsInt searchCount = 0;
     double meritLimit = 1.0 * numRow * numRow;
     double meritPivot = meritLimit;
 
@@ -646,16 +650,16 @@ int HFactor::buildKernel() {
     const bool singleton_pivot = foundPivot;
     // 1.3. Major search loop
     double candidate_pivot_value = 0;
-    for (int count = 2; !foundPivot && count <= numRow; count++) {
+    for (HighsInt count = 2; !foundPivot && count <= numRow; count++) {
       // 1.3.1 Search for columns
-      for (int j = clinkFirst[count]; j != -1; j = clinkNext[j]) {
+      for (HighsInt j = clinkFirst[count]; j != -1; j = clinkNext[j]) {
         double minpivot = MCminpivot[j];
-        int start = MCstart[j];
-        int end = start + MCcountA[j];
-        for (int k = start; k < end; k++) {
+        HighsInt start = MCstart[j];
+        HighsInt end = start + MCcountA[j];
+        for (HighsInt k = start; k < end; k++) {
           if (fabs(MCvalue[k]) >= minpivot) {
-            int i = MCindex[k];
-            int rowCount = MRcount[i];
+            HighsInt i = MCindex[k];
+            HighsInt rowCount = MRcount[i];
             double meritLocal = 1.0 * (count - 1) * (rowCount - 1);
             if (meritPivot > meritLocal) {
               candidate_pivot_value = fabs(MCvalue[k]);
@@ -675,15 +679,15 @@ int HFactor::buildKernel() {
       }
 
       // 1.3.2 Search for rows
-      for (int i = rlinkFirst[count]; i != -1; i = rlinkNext[i]) {
-        int start = MRstart[i];
-        int end = start + MRcount[i];
-        for (int k = start; k < end; k++) {
-          int j = MRindex[k];
-          int columnCount = MCcountA[j];
+      for (HighsInt i = rlinkFirst[count]; i != -1; i = rlinkNext[i]) {
+        HighsInt start = MRstart[i];
+        HighsInt end = start + MRcount[i];
+        for (HighsInt k = start; k < end; k++) {
+          HighsInt j = MRindex[k];
+          HighsInt columnCount = MCcountA[j];
           double meritLocal = 1.0 * (count - 1) * (columnCount - 1);
           if (meritLocal < meritPivot) {
-            int ifind = MCstart[j];
+            HighsInt ifind = MCstart[j];
             while (MCindex[ifind] != i) ifind++;
             if (fabs(MCvalue[ifind]) >= MCminpivot[j]) {
               candidate_pivot_value = fabs(MCvalue[ifind]);
@@ -716,7 +720,8 @@ int HFactor::buildKernel() {
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
       highsLogUser(log_options, HighsLogType::WARNING,
-                   "Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
+                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
+                   fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
     }
@@ -726,11 +731,11 @@ int HFactor::buildKernel() {
     permute[jColPivot] = iRowPivot;
 
     // 2.2. Store active pivot column to L
-    int start_A = MCstart[jColPivot];
-    int end_A = start_A + MCcountA[jColPivot];
-    int mwz_column_count = 0;
-    for (int k = start_A; k < end_A; k++) {
-      const int iRow = MCindex[k];
+    HighsInt start_A = MCstart[jColPivot];
+    HighsInt end_A = start_A + MCcountA[jColPivot];
+    HighsInt mwz_column_count = 0;
+    for (HighsInt k = start_A; k < end_A; k++) {
+      const HighsInt iRow = MCindex[k];
       const double value = MCvalue[k] / pivotX;
       mwz_column_index[mwz_column_count++] = iRow;
       mwz_column_array[iRow] = value;
@@ -744,9 +749,9 @@ int HFactor::buildKernel() {
     fake_fill += 2 * MCcountA[jColPivot];
 
     // 2.3. Store non active pivot column to U
-    int end_N = start_A + MCspace[jColPivot];
-    int start_N = end_N - MCcountN[jColPivot];
-    for (int i = start_N; i < end_N; i++) {
+    HighsInt end_N = start_A + MCspace[jColPivot];
+    HighsInt start_N = end_N - MCcountN[jColPivot];
+    for (HighsInt i = start_N; i < end_N; i++) {
       Uindex.push_back(MCindex[i]);
       Uvalue.push_back(MCvalue[i]);
     }
@@ -756,22 +761,22 @@ int HFactor::buildKernel() {
     fake_fill += end_N - start_N;
 
     // 2.4. Loop over pivot row to eliminate other column
-    const int row_start = MRstart[iRowPivot];
-    const int row_end = row_start + MRcount[iRowPivot];
-    for (int row_k = row_start; row_k < row_end; row_k++) {
+    const HighsInt row_start = MRstart[iRowPivot];
+    const HighsInt row_end = row_start + MRcount[iRowPivot];
+    for (HighsInt row_k = row_start; row_k < row_end; row_k++) {
       // 2.4.1. My pointer
-      int iCol = MRindex[row_k];
-      const int my_count = MCcountA[iCol];
-      const int my_start = MCstart[iCol];
-      const int my_end = my_start + my_count - 1;
+      HighsInt iCol = MRindex[row_k];
+      const HighsInt my_count = MCcountA[iCol];
+      const HighsInt my_start = MCstart[iCol];
+      const HighsInt my_end = my_start + my_count - 1;
       double my_pivot = colDelete(iCol, iRowPivot);
       colStoreN(iCol, iRowPivot, my_pivot);
 
       // 2.4.2. Elimination on the overlapping part
-      int nFillin = mwz_column_count;
-      int nCancel = 0;
-      for (int my_k = my_start; my_k < my_end; my_k++) {
-        int iRow = MCindex[my_k];
+      HighsInt nFillin = mwz_column_count;
+      HighsInt nCancel = 0;
+      for (HighsInt my_k = my_start; my_k < my_end; my_k++) {
+        HighsInt iRow = MCindex[my_k];
         double value = MCvalue[my_k];
         if (mwz_column_mark[iRow]) {
           mwz_column_mark[iRow] = 0;
@@ -789,8 +794,8 @@ int HFactor::buildKernel() {
 
       // 2.4.3. Remove cancellation gaps
       if (nCancel > 0) {
-        int new_end = my_start;
-        for (int my_k = my_start; my_k < my_end; my_k++) {
+        HighsInt new_end = my_start;
+        for (HighsInt my_k = my_start; my_k < my_end; my_k++) {
           if (MCvalue[my_k] != 0) {
             MCindex[new_end] = MCindex[my_k];
             MCvalue[new_end++] = MCvalue[my_k];
@@ -806,13 +811,13 @@ int HFactor::buildKernel() {
         // 2.4.4.1 Check column size
         if (MCcountA[iCol] + MCcountN[iCol] + nFillin > MCspace[iCol]) {
           // p1&2=active, p3&4=non active, p5=new p1, p7=new p3
-          int p1 = MCstart[iCol];
-          int p2 = p1 + MCcountA[iCol];
-          int p3 = p1 + MCspace[iCol] - MCcountN[iCol];
-          int p4 = p1 + MCspace[iCol];
+          HighsInt p1 = MCstart[iCol];
+          HighsInt p2 = p1 + MCcountA[iCol];
+          HighsInt p3 = p1 + MCspace[iCol] - MCcountN[iCol];
+          HighsInt p4 = p1 + MCspace[iCol];
           MCspace[iCol] += max(MCspace[iCol], nFillin);
-          int p5 = MCstart[iCol] = MCindex.size();
-          int p7 = p5 + MCspace[iCol] - MCcountN[iCol];
+          HighsInt p5 = MCstart[iCol] = MCindex.size();
+          HighsInt p7 = p5 + MCspace[iCol] - MCcountN[iCol];
           MCindex.resize(p5 + MCspace[iCol]);
           MCvalue.resize(p5 + MCspace[iCol]);
           copy(&MCindex[p1], &MCindex[p2], &MCindex[p5]);
@@ -822,21 +827,21 @@ int HFactor::buildKernel() {
         }
 
         // 2.4.4.2 Fill into column copy
-        for (int i = 0; i < mwz_column_count; i++) {
-          int iRow = mwz_column_index[i];
+        for (HighsInt i = 0; i < mwz_column_count; i++) {
+          HighsInt iRow = mwz_column_index[i];
           if (mwz_column_mark[iRow])
             colInsert(iCol, iRow, -my_pivot * mwz_column_array[iRow]);
         }
 
         // 2.4.4.3 Fill into the row copy
-        for (int i = 0; i < mwz_column_count; i++) {
-          int iRow = mwz_column_index[i];
+        for (HighsInt i = 0; i < mwz_column_count; i++) {
+          HighsInt iRow = mwz_column_index[i];
           if (mwz_column_mark[iRow]) {
             // Expand row space
             if (MRcount[iRow] == MRspace[iRow]) {
-              int p1 = MRstart[iRow];
-              int p2 = p1 + MRcount[iRow];
-              int p3 = MRstart[iRow] = MRindex.size();
+              HighsInt p1 = MRstart[iRow];
+              HighsInt p2 = p1 + MRcount[iRow];
+              HighsInt p3 = MRstart[iRow] = MRindex.size();
               MRspace[iRow] *= 2;
               MRindex.resize(p3 + MRspace[iRow]);
               copy(&MRindex[p1], &MRindex[p2], &MRindex[p3]);
@@ -847,7 +852,7 @@ int HFactor::buildKernel() {
       }
 
       // 2.4.5. Reset pivot column mark
-      for (int i = 0; i < mwz_column_count; i++)
+      for (HighsInt i = 0; i < mwz_column_count; i++)
         mwz_column_mark[mwz_column_index[i]] = 1;
 
       // 2.4.6. Fix max value and link list
@@ -859,12 +864,12 @@ int HFactor::buildKernel() {
     }
 
     // 2.5. Clear pivot column buffer
-    for (int i = 0; i < mwz_column_count; i++)
+    for (HighsInt i = 0; i < mwz_column_count; i++)
       mwz_column_mark[mwz_column_index[i]] = 0;
 
     // 2.6. Correct row links for the remain active part
-    for (int i = start_A; i < end_A; i++) {
-      int iRow = MCindex[i];
+    for (HighsInt i = start_A; i < end_A; i++) {
+      HighsInt iRow = MCindex[i];
       if (MRcountb4[iRow] != MRcount[iRow]) {
         rlinkDel(iRow);
         rlinkAdd(iRow, MRcount[iRow]);
@@ -889,10 +894,10 @@ void HFactor::buildHandleRankDeficiency() {
   // permuted anywhere - and so will be singular columns.
   noPvR.resize(rank_deficiency);
   noPvC.resize(rank_deficiency);
-  int lc_rank_deficiency = 0;
-  for (int i = 0; i < numRow; i++) iwork[i] = -1;
-  for (int i = 0; i < numRow; i++) {
-    int perm_i = permute[i];
+  HighsInt lc_rank_deficiency = 0;
+  for (HighsInt i = 0; i < numRow; i++) iwork[i] = -1;
+  for (HighsInt i = 0; i < numRow; i++) {
+    HighsInt perm_i = permute[i];
     if (perm_i >= 0) {
       iwork[perm_i] = baseIndex[i];
     } else {
@@ -901,7 +906,7 @@ void HFactor::buildHandleRankDeficiency() {
   }
   assert(lc_rank_deficiency == rank_deficiency);
   lc_rank_deficiency = 0;
-  for (int i = 0; i < numRow; i++) {
+  for (HighsInt i = 0; i < numRow; i++) {
     if (iwork[i] < 0) {
       // Record the rows with no pivots in noPvR and indicate them
       // within iwork by storing the negation of one more than their
@@ -914,9 +919,9 @@ void HFactor::buildHandleRankDeficiency() {
   assert(lc_rank_deficiency == rank_deficiency);
   debugReportRankDeficiency(1, highs_debug_level, log_options, numRow, permute,
                             iwork, baseIndex, rank_deficiency, noPvR, noPvC);
-  for (int k = 0; k < rank_deficiency; k++) {
-    int iRow = noPvR[k];
-    int iCol = noPvC[k];
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    HighsInt iRow = noPvR[k];
+    HighsInt iCol = noPvC[k];
     assert(permute[iCol] == -1);
     permute[iCol] = iRow;
     Lstart.push_back(Lindex.size());
@@ -938,9 +943,9 @@ void HFactor::buildMarkSingC() {
   debugReportMarkSingC(0, highs_debug_level, log_options, numRow, iwork,
                        baseIndex);
 
-  for (int k = 0; k < rank_deficiency; k++) {
-    int ASMrow = noPvR[k];
-    int ASMcol = noPvC[k];
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    HighsInt ASMrow = noPvR[k];
+    HighsInt ASMcol = noPvC[k];
     assert(-iwork[ASMrow] - 1 >= 0 && -iwork[ASMrow] - 1 < rank_deficiency);
     // Store negation of 1+ASMcol so that removing column 0 can be
     // identified!
@@ -956,29 +961,30 @@ void HFactor::buildFinish() {
   //  debugPivotValueAnalysis(highs_debug_level, log_options, numRow,
   //  UpivotValue);
   // The look up table
-  for (int i = 0; i < numRow; i++) UpivotLookup[UpivotIndex[i]] = i;
+  for (HighsInt i = 0; i < numRow; i++) UpivotLookup[UpivotIndex[i]] = i;
   LpivotIndex = UpivotIndex;
   LpivotLookup = UpivotLookup;
 
   // LR space
-  int LcountX = Lindex.size();
+  HighsInt LcountX = Lindex.size();
   LRindex.resize(LcountX);
   LRvalue.resize(LcountX);
 
   // LR pointer
   iwork.assign(numRow, 0);
-  for (int k = 0; k < LcountX; k++) iwork[LpivotLookup[Lindex[k]]]++;
+  for (HighsInt k = 0; k < LcountX; k++) iwork[LpivotLookup[Lindex[k]]]++;
 
   LRstart.assign(numRow + 1, 0);
-  for (int i = 1; i <= numRow; i++) LRstart[i] = LRstart[i - 1] + iwork[i - 1];
+  for (HighsInt i = 1; i <= numRow; i++)
+    LRstart[i] = LRstart[i - 1] + iwork[i - 1];
 
   // LR elements
   iwork.assign(&LRstart[0], &LRstart[numRow]);
-  for (int i = 0; i < numRow; i++) {
-    const int index = LpivotIndex[i];
-    for (int k = Lstart[i]; k < Lstart[i + 1]; k++) {
-      int iRow = LpivotLookup[Lindex[k]];
-      int iPut = iwork[iRow]++;
+  for (HighsInt i = 0; i < numRow; i++) {
+    const HighsInt index = LpivotIndex[i];
+    for (HighsInt k = Lstart[i]; k < Lstart[i + 1]; k++) {
+      HighsInt iRow = LpivotLookup[Lindex[k]];
+      HighsInt iPut = iwork[iRow]++;
       LRindex[iPut] = index;
       LRvalue[iPut] = Lvalue[k];
     }
@@ -990,9 +996,9 @@ void HFactor::buildFinish() {
   Ustart.resize(numRow);
 
   // UR space
-  int UcountX = Uindex.size();
-  int URstuffX = updateMethod == UPDATE_METHOD_FT ? 5 : 0;
-  int URcountX = UcountX + URstuffX * numRow;
+  HighsInt UcountX = Uindex.size();
+  HighsInt URstuffX = updateMethod == UPDATE_METHOD_FT ? 5 : 0;
+  HighsInt URcountX = UcountX + URstuffX * numRow;
   URindex.resize(URcountX);
   URvalue.resize(URcountX);
 
@@ -1000,18 +1006,18 @@ void HFactor::buildFinish() {
   URstart.assign(numRow + 1, 0);
   URlastp.assign(numRow, 0);
   URspace.assign(numRow, URstuffX);
-  for (int k = 0; k < UcountX; k++) URlastp[UpivotLookup[Uindex[k]]]++;
-  for (int i = 1; i <= numRow; i++)
+  for (HighsInt k = 0; k < UcountX; k++) URlastp[UpivotLookup[Uindex[k]]]++;
+  for (HighsInt i = 1; i <= numRow; i++)
     URstart[i] = URstart[i - 1] + URlastp[i - 1] + URstuffX;
   URstart.resize(numRow);
 
   // UR element
   URlastp = URstart;
-  for (int i = 0; i < numRow; i++) {
-    const int index = UpivotIndex[i];
-    for (int k = Ustart[i]; k < Ulastp[i]; k++) {
-      int iRow = UpivotLookup[Uindex[k]];
-      int iPut = URlastp[iRow]++;
+  for (HighsInt i = 0; i < numRow; i++) {
+    const HighsInt index = UpivotIndex[i];
+    for (HighsInt k = Ustart[i]; k < Ulastp[i]; k++) {
+      HighsInt iRow = UpivotLookup[Uindex[k]];
+      HighsInt iPut = URlastp[iRow]++;
       URindex[iPut] = index;
       URvalue[iPut] = Uvalue[k];
     }
@@ -1033,7 +1039,7 @@ void HFactor::buildFinish() {
 
   // Finally, permute the base index
   iwork.assign(baseIndex, baseIndex + numRow);
-  for (int i = 0; i < numRow; i++) baseIndex[permute[i]] = iwork[i];
+  for (HighsInt i = 0; i < numRow; i++) baseIndex[permute[i]] = iwork[i];
 
   build_syntheticTick += numRow * 80 + (LcountX + UcountX) * 60;
 }
@@ -1055,24 +1061,24 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
   if (current_density > hyperCANCEL || historical_density > hyperFTRANL) {
     factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
     // Alias to RHS
-    int RHScount = 0;
-    int* RHSindex = &rhs.index[0];
+    HighsInt RHScount = 0;
+    HighsInt* RHSindex = &rhs.index[0];
     double* RHSarray = &rhs.array[0];
 
     // Alias to factor L
-    const int* Lstart = &this->Lstart[0];
-    const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
+    const HighsInt* Lstart = &this->Lstart[0];
+    const HighsInt* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
     const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
 
     // Transform
-    for (int i = 0; i < numRow; i++) {
-      int pivotRow = LpivotIndex[i];
+    for (HighsInt i = 0; i < numRow; i++) {
+      HighsInt pivotRow = LpivotIndex[i];
       const double pivotX = RHSarray[pivotRow];
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         RHSindex[RHScount++] = pivotRow;
-        const int start = Lstart[i];
-        const int end = Lstart[i + 1];
-        for (int k = start; k < end; k++)
+        const HighsInt start = Lstart[i];
+        const HighsInt end = Lstart[i + 1];
+        for (HighsInt k = start; k < end; k++)
           RHSarray[Lindex[k]] -= pivotX * Lvalue[k];
       } else
         RHSarray[pivotRow] = 0;
@@ -1083,7 +1089,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
     factor_timer.stop(FactorFtranLowerSps, factor_timer_clock_pointer);
   } else {
     factor_timer.start(FactorFtranLowerHyper, factor_timer_clock_pointer);
-    const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
+    const HighsInt* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
     const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
@@ -1100,25 +1106,26 @@ void HFactor::btranL(HVector& rhs, double historical_density,
   if (current_density > hyperCANCEL || historical_density > hyperBTRANL) {
     // Alias to RHS
     factor_timer.start(FactorBtranLowerSps, factor_timer_clock_pointer);
-    int RHScount = 0;
-    int* RHSindex = &rhs.index[0];
+    HighsInt RHScount = 0;
+    HighsInt* RHSindex = &rhs.index[0];
     double* RHSarray = &rhs.array[0];
 
     // Alias to factor L
-    const int* LRstart = &this->LRstart[0];
-    const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
+    const HighsInt* LRstart = &this->LRstart[0];
+    const HighsInt* LRindex =
+        this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
     const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
 
     // Transform
-    for (int i = numRow - 1; i >= 0; i--) {
-      int pivotRow = LpivotIndex[i];
+    for (HighsInt i = numRow - 1; i >= 0; i--) {
+      HighsInt pivotRow = LpivotIndex[i];
       const double pivotX = RHSarray[pivotRow];
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
-        const int start = LRstart[i];
-        const int end = LRstart[i + 1];
-        for (int k = start; k < end; k++)
+        const HighsInt start = LRstart[i];
+        const HighsInt end = LRstart[i + 1];
+        for (HighsInt k = start; k < end; k++)
           RHSarray[LRindex[k]] -= pivotX * LRvalue[k];
       } else
         RHSarray[pivotRow] = 0;
@@ -1129,7 +1136,8 @@ void HFactor::btranL(HVector& rhs, double historical_density,
     factor_timer.stop(FactorBtranLowerSps, factor_timer_clock_pointer);
   } else {
     factor_timer.start(FactorBtranLowerHyper, factor_timer_clock_pointer);
-    const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
+    const HighsInt* LRindex =
+        this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
     const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
@@ -1172,7 +1180,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
   if (current_density > hyperCANCEL || historical_density > hyperFTRANU) {
     const bool report_ftran_upper_sparse =
         false;  // current_density < hyperCANCEL;
-    int use_clock;
+    HighsInt use_clock;
     if (current_density < 0.1)
       use_clock = FactorFtranUpperSps2;
     else if (current_density < 0.5)
@@ -1182,35 +1190,35 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
     factor_timer.start(use_clock, factor_timer_clock_pointer);
     // Alias to non constant
     double RHS_syntheticTick = 0;
-    int RHScount = 0;
-    int* RHSindex = &rhs.index[0];
+    HighsInt RHScount = 0;
+    HighsInt* RHSindex = &rhs.index[0];
     double* RHSarray = &rhs.array[0];
 
     // Alias to the factor
-    const int* Ustart = &this->Ustart[0];
-    const int* Uend = &this->Ulastp[0];
-    const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
+    const HighsInt* Ustart = &this->Ustart[0];
+    const HighsInt* Uend = &this->Ulastp[0];
+    const HighsInt* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
 
     // Transform
-    int UpivotCount = UpivotIndex.size();
-    for (int iLogic = UpivotCount - 1; iLogic >= 0; iLogic--) {
+    HighsInt UpivotCount = UpivotIndex.size();
+    for (HighsInt iLogic = UpivotCount - 1; iLogic >= 0; iLogic--) {
       // Skip void
       if (UpivotIndex[iLogic] == -1) continue;
 
       // Normal part
-      const int pivotRow = UpivotIndex[iLogic];
+      const HighsInt pivotRow = UpivotIndex[iLogic];
       double pivotX = RHSarray[pivotRow];
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= UpivotValue[iLogic];
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
-        const int start = Ustart[iLogic];
-        const int end = Uend[iLogic];
+        const HighsInt start = Ustart[iLogic];
+        const HighsInt end = Uend[iLogic];
         if (iLogic >= numRow) {
           RHS_syntheticTick += (end - start);
         }
-        for (int k = start; k < end; k++)
+        for (HighsInt k = start; k < end; k++)
           RHSarray[Uindex[k]] -= pivotX * Uvalue[k];
       } else
         RHSarray[pivotRow] = 0;
@@ -1228,7 +1236,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
           historical_density, current_density, final_density);
     }
   } else {
-    int use_clock = -1;
+    HighsInt use_clock = -1;
     if (current_density < 5e-6)
       use_clock = FactorFtranUpperHyper5;
     else if (current_density < 1e-5)
@@ -1242,7 +1250,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
     else
       use_clock = FactorFtranUpperHyper0;
     factor_timer.start(use_clock, factor_timer_clock_pointer);
-    const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
+    const HighsInt* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
@@ -1274,35 +1282,35 @@ void HFactor::btranU(HVector& rhs, double historical_density,
     factor_timer.start(FactorBtranUpperSps, factor_timer_clock_pointer);
     // Alias to non constant
     double RHS_syntheticTick = 0;
-    int RHScount = 0;
-    int* RHSindex = &rhs.index[0];
+    HighsInt RHScount = 0;
+    HighsInt* RHSindex = &rhs.index[0];
     double* RHSarray = &rhs.array[0];
 
     // Alias to the factor
-    const int* URstart = &this->URstart[0];
-    const int* URend = &this->URlastp[0];
-    const int* URindex = &this->URindex[0];
+    const HighsInt* URstart = &this->URstart[0];
+    const HighsInt* URend = &this->URlastp[0];
+    const HighsInt* URindex = &this->URindex[0];
     const double* URvalue = &this->URvalue[0];
 
     // Transform
-    int UpivotCount = UpivotIndex.size();
-    for (int iLogic = 0; iLogic < UpivotCount; iLogic++) {
+    HighsInt UpivotCount = UpivotIndex.size();
+    for (HighsInt iLogic = 0; iLogic < UpivotCount; iLogic++) {
       // Skip void
       if (UpivotIndex[iLogic] == -1) continue;
 
       // Normal part
-      const int pivotRow = UpivotIndex[iLogic];
+      const HighsInt pivotRow = UpivotIndex[iLogic];
       double pivotX = RHSarray[pivotRow];
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= UpivotValue[iLogic];
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
-        const int start = URstart[iLogic];
-        const int end = URend[iLogic];
+        const HighsInt start = URstart[iLogic];
+        const HighsInt end = URend[iLogic];
         if (iLogic >= numRow) {
           RHS_syntheticTick += (end - start);
         }
-        for (int k = start; k < end; k++)
+        for (HighsInt k = start; k < end; k++)
           RHSarray[URindex[k]] -= pivotX * URvalue[k];
       } else
         RHSarray[pivotRow] = 0;
@@ -1342,28 +1350,28 @@ void HFactor::btranU(HVector& rhs, double historical_density,
 
 void HFactor::ftranFT(HVector& vector) const {
   // Alias to PF buffer
-  const int PFpivotCount = PFpivotIndex.size();
-  int* PFpivotIndex = NULL;
+  const HighsInt PFpivotCount = PFpivotIndex.size();
+  HighsInt* PFpivotIndex = NULL;
   if (this->PFpivotIndex.size() > 0)
-    PFpivotIndex = (int*)&this->PFpivotIndex[0];
+    PFpivotIndex = (HighsInt*)&this->PFpivotIndex[0];
 
-  const int* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
-  const int* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
+  const HighsInt* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
+  const HighsInt* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
   const double* PFvalue = this->PFvalue.size() > 0 ? &this->PFvalue[0] : NULL;
 
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Forwardly apply row ETA
-  for (int i = 0; i < PFpivotCount; i++) {
-    int iRow = PFpivotIndex[i];
+  for (HighsInt i = 0; i < PFpivotCount; i++) {
+    HighsInt iRow = PFpivotIndex[i];
     double value0 = RHSarray[iRow];
     double value1 = value0;
-    const int start = PFstart[i];
-    const int end = PFstart[i + 1];
-    for (int k = start; k < end; k++)
+    const HighsInt start = PFstart[i];
+    const HighsInt end = PFstart[i + 1];
+    for (HighsInt k = start; k < end; k++)
       value1 -= RHSarray[PFindex[k]] * PFvalue[k];
     // This would skip the situation where they are both zeros
     if (value0 || value1) {
@@ -1383,29 +1391,29 @@ void HFactor::ftranFT(HVector& vector) const {
 
 void HFactor::btranFT(HVector& vector) const {
   // Alias to PF buffer
-  const int PFpivotCount = PFpivotIndex.size();
-  const int* PFpivotIndex =
+  const HighsInt PFpivotCount = PFpivotIndex.size();
+  const HighsInt* PFpivotIndex =
       this->PFpivotIndex.size() > 0 ? &this->PFpivotIndex[0] : NULL;
-  const int* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
-  const int* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
+  const HighsInt* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
+  const HighsInt* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
   const double* PFvalue = this->PFvalue.size() > 0 ? &this->PFvalue[0] : NULL;
 
   // Alias to non constant
   double RHS_syntheticTick = 0;
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Backwardly apply row ETA
-  for (int i = PFpivotCount - 1; i >= 0; i--) {
-    int pivotRow = PFpivotIndex[i];
+  for (HighsInt i = PFpivotCount - 1; i >= 0; i--) {
+    HighsInt pivotRow = PFpivotIndex[i];
     double pivotX = RHSarray[pivotRow];
     if (pivotX) {
-      const int start = PFstart[i];
-      const int end = PFstart[i + 1];
+      const HighsInt start = PFstart[i];
+      const HighsInt end = PFstart[i + 1];
       RHS_syntheticTick += (end - start);
-      for (int k = start; k < end; k++) {
-        int iRow = PFindex[k];
+      for (HighsInt k = start; k < end; k++) {
+        HighsInt iRow = PFindex[k];
         double value0 = RHSarray[iRow];
         double value1 = value0 - pivotX * PFvalue[k];
         if (value0 == 0) RHSindex[RHScount++] = iRow;
@@ -1423,27 +1431,27 @@ void HFactor::btranFT(HVector& vector) const {
 
 void HFactor::ftranPF(HVector& vector) const {
   // Alias to PF buffer
-  const int PFpivotCount = PFpivotIndex.size();
-  const int* PFpivotIndex = &this->PFpivotIndex[0];
+  const HighsInt PFpivotCount = PFpivotIndex.size();
+  const HighsInt* PFpivotIndex = &this->PFpivotIndex[0];
   const double* PFpivotValue = &this->PFpivotValue[0];
-  const int* PFstart = &this->PFstart[0];
-  const int* PFindex = &this->PFindex[0];
+  const HighsInt* PFstart = &this->PFstart[0];
+  const HighsInt* PFindex = &this->PFindex[0];
   const double* PFvalue = &this->PFvalue[0];
 
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Forwardly
-  for (int i = 0; i < PFpivotCount; i++) {
-    int pivotRow = PFpivotIndex[i];
+  for (HighsInt i = 0; i < PFpivotCount; i++) {
+    HighsInt pivotRow = PFpivotIndex[i];
     double pivotX = RHSarray[pivotRow];
     if (fabs(pivotX) > HIGHS_CONST_TINY) {
       pivotX /= PFpivotValue[i];
       RHSarray[pivotRow] = pivotX;
-      for (int k = PFstart[i]; k < PFstart[i + 1]; k++) {
-        const int index = PFindex[k];
+      for (HighsInt k = PFstart[i]; k < PFstart[i + 1]; k++) {
+        const HighsInt index = PFindex[k];
         const double value0 = RHSarray[index];
         const double value1 = value0 - pivotX * PFvalue[k];
         if (value0 == 0) RHSindex[RHScount++] = index;
@@ -1459,23 +1467,23 @@ void HFactor::ftranPF(HVector& vector) const {
 
 void HFactor::btranPF(HVector& vector) const {
   // Alias to PF buffer
-  const int PFpivotCount = PFpivotIndex.size();
-  const int* PFpivotIndex = &this->PFpivotIndex[0];
+  const HighsInt PFpivotCount = PFpivotIndex.size();
+  const HighsInt* PFpivotIndex = &this->PFpivotIndex[0];
   const double* PFpivotValue = &this->PFpivotValue[0];
-  const int* PFstart = &this->PFstart[0];
-  const int* PFindex = &this->PFindex[0];
+  const HighsInt* PFstart = &this->PFstart[0];
+  const HighsInt* PFindex = &this->PFindex[0];
   const double* PFvalue = &this->PFvalue[0];
 
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Backwardly
-  for (int i = PFpivotCount - 1; i >= 0; i--) {
-    int pivotRow = PFpivotIndex[i];
+  for (HighsInt i = PFpivotCount - 1; i >= 0; i--) {
+    HighsInt pivotRow = PFpivotIndex[i];
     double pivotX = RHSarray[pivotRow];
-    for (int k = PFstart[i]; k < PFstart[i + 1]; k++)
+    for (HighsInt k = PFstart[i]; k < PFstart[i + 1]; k++)
       pivotX -= PFvalue[k] * RHSarray[PFindex[k]];
     pivotX /= PFpivotValue[i];
 
@@ -1489,13 +1497,13 @@ void HFactor::btranPF(HVector& vector) const {
 
 void HFactor::ftranMPF(HVector& vector) const {
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Forwardly
-  int PFpivotCount = PFpivotValue.size();
-  for (int i = 0; i < PFpivotCount; i++) {
+  HighsInt PFpivotCount = PFpivotValue.size();
+  for (HighsInt i = 0; i < PFpivotCount; i++) {
     solveMatrixT(PFstart[i * 2 + 1], PFstart[i * 2 + 2], PFstart[i * 2],
                  PFstart[i * 2 + 1], &PFindex[0], &PFvalue[0], PFpivotValue[i],
                  &RHScount, RHSindex, RHSarray);
@@ -1507,12 +1515,12 @@ void HFactor::ftranMPF(HVector& vector) const {
 
 void HFactor::btranMPF(HVector& vector) const {
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Backwardly
-  for (int i = PFpivotValue.size() - 1; i >= 0; i--) {
+  for (HighsInt i = PFpivotValue.size() - 1; i >= 0; i--) {
     solveMatrixT(PFstart[i * 2], PFstart[i * 2 + 1], PFstart[i * 2 + 1],
                  PFstart[i * 2 + 2], &PFindex[0], &PFvalue[0], PFpivotValue[i],
                  &RHScount, RHSindex, RHSarray);
@@ -1524,13 +1532,13 @@ void HFactor::btranMPF(HVector& vector) const {
 
 void HFactor::ftranAPF(HVector& vector) const {
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Backwardly
-  int PFpivotCount = PFpivotValue.size();
-  for (int i = PFpivotCount - 1; i >= 0; i--) {
+  HighsInt PFpivotCount = PFpivotValue.size();
+  for (HighsInt i = PFpivotCount - 1; i >= 0; i--) {
     solveMatrixT(PFstart[i * 2 + 1], PFstart[i * 2 + 2], PFstart[i * 2],
                  PFstart[i * 2 + 1], &PFindex[0], &PFvalue[0], PFpivotValue[i],
                  &RHScount, RHSindex, RHSarray);
@@ -1542,13 +1550,13 @@ void HFactor::ftranAPF(HVector& vector) const {
 
 void HFactor::btranAPF(HVector& vector) const {
   // Alias to non constant
-  int RHScount = vector.count;
-  int* RHSindex = &vector.index[0];
+  HighsInt RHScount = vector.count;
+  HighsInt* RHSindex = &vector.index[0];
   double* RHSarray = &vector.array[0];
 
   // Forwardly
-  int PFpivotCount = PFpivotValue.size();
-  for (int i = 0; i < PFpivotCount; i++) {
+  HighsInt PFpivotCount = PFpivotValue.size();
+  for (HighsInt i = 0; i < PFpivotCount; i++) {
     solveMatrixT(PFstart[i * 2], PFstart[i * 2 + 1], PFstart[i * 2 + 1],
                  PFstart[i * 2 + 2], &PFindex[0], &PFvalue[0], PFpivotValue[i],
                  &RHScount, RHSindex, RHSarray);
@@ -1556,8 +1564,8 @@ void HFactor::btranAPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
-                        //, int* hint
+void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
+                        //, HighsInt* hint
 ) {
   /*
    * In the major update loop, the prefix
@@ -1566,13 +1574,13 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
    * p(p) = previous pivot  (0 =< pp < cp)
    */
 
-  int numUpdate = 0;
+  HighsInt numUpdate = 0;
   for (HVector* vec = aq; vec != 0; vec = vec->next) numUpdate++;
 
   HVector** aqWork = new HVector*[numUpdate];
   HVector** epWork = new HVector*[numUpdate];
 
-  for (int i = 0; i < numUpdate; i++) {
+  for (HighsInt i = 0; i < numUpdate; i++) {
     aqWork[i] = aq;
     epWork[i] = ep;
     aq = aq->next;
@@ -1580,43 +1588,43 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
   }
 
   // Pivot related buffers
-  int PFnp0 = PFpivotIndex.size();
-  int* pLogic = new int[numUpdate];
+  HighsInt PFnp0 = PFpivotIndex.size();
+  HighsInt* pLogic = new HighsInt[numUpdate];
   double* pValue = new double[numUpdate];
   double* pAlpha = new double[numUpdate];
-  for (int cp = 0; cp < numUpdate; cp++) {
-    int cRow = iRow[cp];
-    int iLogic = UpivotLookup[cRow];
+  for (HighsInt cp = 0; cp < numUpdate; cp++) {
+    HighsInt cRow = iRow[cp];
+    HighsInt iLogic = UpivotLookup[cRow];
     pLogic[cp] = iLogic;
     pValue[cp] = UpivotValue[iLogic];
     pAlpha[cp] = aqWork[cp]->array[cRow];
   }
 
   // Temporary U pointers
-  int* Tstart = new int[numUpdate + 1];
+  HighsInt* Tstart = new HighsInt[numUpdate + 1];
   double* Tpivot = new double[numUpdate];
   Tstart[0] = Uindex.size();
 
   // Logically sorted previous row_ep
-  vector<pair<int, int> > sorted_pp;
+  vector<pair<HighsInt, int> > sorted_pp;
 
   // Major update loop
-  for (int cp = 0; cp < numUpdate; cp++) {
+  for (HighsInt cp = 0; cp < numUpdate; cp++) {
     // 1. Expand partial FTRAN result to buffer
     iwork.clear();
-    for (int i = 0; i < aqWork[cp]->packCount; i++) {
-      int index = aqWork[cp]->packIndex[i];
+    for (HighsInt i = 0; i < aqWork[cp]->packCount; i++) {
+      HighsInt index = aqWork[cp]->packIndex[i];
       double value = aqWork[cp]->packValue[i];
       iwork.push_back(index);
       dwork[index] = value;
     }
 
     // 2. Update partial FTRAN result by recent FT matrix
-    for (int pp = 0; pp < cp; pp++) {
-      int pRow = iRow[pp];
+    for (HighsInt pp = 0; pp < cp; pp++) {
+      HighsInt pRow = iRow[pp];
       double value = dwork[pRow];
-      int PFpp = pp + PFnp0;
-      for (int i = PFstart[PFpp]; i < PFstart[PFpp + 1]; i++)
+      HighsInt PFpp = pp + PFnp0;
+      for (HighsInt i = PFstart[PFpp]; i < PFstart[PFpp + 1]; i++)
         value -= dwork[PFindex[i]] * PFvalue[i];
       iwork.push_back(pRow);  // OK to duplicate
       dwork[pRow] = value;
@@ -1625,10 +1633,10 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
     // 3. Store the partial FTRAN result to matirx U
     double ppaq = dwork[iRow[cp]];  // pivot of the partial aq
     dwork[iRow[cp]] = 0;
-    int UcountX = Tstart[cp];
-    int UstartX = UcountX;
+    HighsInt UcountX = Tstart[cp];
+    HighsInt UstartX = UcountX;
     for (unsigned i = 0; i < iwork.size(); i++) {
-      int index = iwork[i];
+      HighsInt index = iwork[i];
       double value = dwork[index];
       dwork[index] = 0;  // This effectively removes all duplication
       if (fabs(value) > HIGHS_CONST_TINY) {
@@ -1642,21 +1650,21 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
 
     // 4. Expand partial BTRAN result to buffer
     iwork.clear();
-    for (int i = 0; i < epWork[cp]->packCount; i++) {
-      int index = epWork[cp]->packIndex[i];
+    for (HighsInt i = 0; i < epWork[cp]->packCount; i++) {
+      HighsInt index = epWork[cp]->packIndex[i];
       double value = epWork[cp]->packValue[i];
       iwork.push_back(index);
       dwork[index] = value;
     }
 
     // 5. Delete logical later rows (in logical order)
-    for (int isort = 0; isort < cp; isort++) {
-      int pp = sorted_pp[isort].second;
-      int pRow = iRow[pp];
+    for (HighsInt isort = 0; isort < cp; isort++) {
+      HighsInt pp = sorted_pp[isort].second;
+      HighsInt pRow = iRow[pp];
       double multiplier = -pValue[pp] * dwork[pRow];
       if (fabs(dwork[pRow]) > HIGHS_CONST_TINY) {
-        for (int i = 0; i < epWork[pp]->packCount; i++) {
-          int index = epWork[pp]->packIndex[i];
+        for (HighsInt i = 0; i < epWork[pp]->packCount; i++) {
+          HighsInt index = epWork[pp]->packIndex[i];
           double value = epWork[pp]->packValue[i];
           iwork.push_back(index);
           dwork[index] += value * multiplier;
@@ -1666,10 +1674,10 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
     }
 
     // 6. Update partial BTRAN result by recent U columns
-    for (int pp = 0; pp < cp; pp++) {
-      int kpivot = iRow[pp];
+    for (HighsInt pp = 0; pp < cp; pp++) {
+      HighsInt kpivot = iRow[pp];
       double value = dwork[kpivot];
-      for (int k = Tstart[pp]; k < Tstart[pp + 1]; k++)
+      for (HighsInt k = Tstart[pp]; k < Tstart[pp + 1]; k++)
         value -= dwork[Uindex[k]] * Uvalue[k];
       value /= Tpivot[pp];
       iwork.push_back(kpivot);
@@ -1678,8 +1686,8 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
 
     // 6.x compute current alpha
     double thex = 0;
-    for (int k = UstartX; k < UcountX; k++) {
-      int index = Uindex[k];
+    for (HighsInt k = UstartX; k < UcountX; k++) {
+      HighsInt index = Uindex[k];
       double value = Uvalue[k];
       thex += dwork[index] * value;
     }
@@ -1689,7 +1697,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
     dwork[iRow[cp]] = 0;
     double pivotX = -pValue[cp];
     for (unsigned i = 0; i < iwork.size(); i++) {
-      int index = iwork[i];
+      HighsInt index = iwork[i];
       double value = dwork[index];
       dwork[index] = 0;
       if (fabs(value) > HIGHS_CONST_TINY) {
@@ -1707,16 +1715,16 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
   }
 
   // Now modify the U matrix
-  for (int cp = 0; cp < numUpdate; cp++) {
+  for (HighsInt cp = 0; cp < numUpdate; cp++) {
     // 1. Delete pivotal row from U
-    int cIndex = iRow[cp];
-    int cLogic = pLogic[cp];
+    HighsInt cIndex = iRow[cp];
+    HighsInt cLogic = pLogic[cp];
     UtotalX -= URlastp[cLogic] - URstart[cLogic];
-    for (int k = URstart[cLogic]; k < URlastp[cLogic]; k++) {
+    for (HighsInt k = URstart[cLogic]; k < URlastp[cLogic]; k++) {
       // Find the pivotal position
-      int iLogic = UpivotLookup[URindex[k]];
-      int iFind = Ustart[iLogic];
-      int iLast = --Ulastp[iLogic];
+      HighsInt iLogic = UpivotLookup[URindex[k]];
+      HighsInt iFind = Ustart[iLogic];
+      HighsInt iLast = --Ulastp[iLogic];
       for (; iFind <= iLast; iFind++)
         if (Uindex[iFind] == cIndex) break;
       // Put last to find, and delete last
@@ -1726,11 +1734,11 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
 
     // 2. Delete pivotal column from UR
     UtotalX -= Ulastp[cLogic] - Ustart[cLogic];
-    for (int k = Ustart[cLogic]; k < Ulastp[cLogic]; k++) {
+    for (HighsInt k = Ustart[cLogic]; k < Ulastp[cLogic]; k++) {
       // Find the pivotal position
-      int iLogic = UpivotLookup[Uindex[k]];
-      int iFind = URstart[iLogic];
-      int iLast = --URlastp[iLogic];
+      HighsInt iLogic = UpivotLookup[Uindex[k]];
+      HighsInt iFind = URstart[iLogic];
+      HighsInt iLast = --URlastp[iLogic];
       for (; iFind <= iLast; iFind++)
         if (URindex[iFind] == cIndex) break;
       // Put last to find, and delete last
@@ -1740,30 +1748,30 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
     }
 
     // 3. Insert the (stored) partial FTRAN to the row matrix
-    int UstartX = Tstart[cp];
-    int UendX = Tstart[cp + 1];
+    HighsInt UstartX = Tstart[cp];
+    HighsInt UendX = Tstart[cp + 1];
     UtotalX += UendX - UstartX;
     // Store column as UR elements
-    for (int k = UstartX; k < UendX; k++) {
+    for (HighsInt k = UstartX; k < UendX; k++) {
       // Which ETA file
-      int iLogic = UpivotLookup[Uindex[k]];
+      HighsInt iLogic = UpivotLookup[Uindex[k]];
 
       // Move row to the end if necessary
       if (URspace[iLogic] == 0) {
         // Make pointers
-        int row_start = URstart[iLogic];
-        int row_count = URlastp[iLogic] - row_start;
-        int new_start = URindex.size();
-        int new_space = row_count * 1.1 + 5;
+        HighsInt row_start = URstart[iLogic];
+        HighsInt row_count = URlastp[iLogic] - row_start;
+        HighsInt new_start = URindex.size();
+        HighsInt new_space = row_count * 1.1 + 5;
 
         // Check matrix UR
         URindex.resize(new_start + new_space);
         URvalue.resize(new_start + new_space);
 
         // Move elements
-        int iFrom = row_start;
-        int iEnd = row_start + row_count;
-        int iTo = new_start;
+        HighsInt iFrom = row_start;
+        HighsInt iEnd = row_start + row_count;
+        HighsInt iTo = new_start;
         copy(&URindex[iFrom], &URindex[iEnd], &URindex[iTo]);
         copy(&URvalue[iFrom], &URvalue[iEnd], &URvalue[iTo]);
 
@@ -1775,7 +1783,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
 
       // Put into the next available space
       URspace[iLogic]--;
-      int iPut = URlastp[iLogic]++;
+      HighsInt iPut = URlastp[iLogic]++;
       URindex[iPut] = cIndex;
       URvalue[iPut] = Uvalue[k];
     }
@@ -1806,21 +1814,21 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
   delete[] Tpivot;
 }
 
-void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
-                       //, int* hint
+void HFactor::updateFT(HVector* aq, HVector* ep, HighsInt iRow
+                       //, HighsInt* hint
 ) {
   // Store pivot
-  int pLogic = UpivotLookup[iRow];
+  HighsInt pLogic = UpivotLookup[iRow];
   double pivot = UpivotValue[pLogic];
   double alpha = aq->array[iRow];
   UpivotIndex[pLogic] = -1;
 
   // Delete pivotal row from U
-  for (int k = URstart[pLogic]; k < URlastp[pLogic]; k++) {
+  for (HighsInt k = URstart[pLogic]; k < URlastp[pLogic]; k++) {
     // Find the pivotal position
-    int iLogic = UpivotLookup[URindex[k]];
-    int iFind = Ustart[iLogic];
-    int iLast = --Ulastp[iLogic];
+    HighsInt iLogic = UpivotLookup[URindex[k]];
+    HighsInt iFind = Ustart[iLogic];
+    HighsInt iLast = --Ulastp[iLogic];
     for (; iFind <= iLast; iFind++)
       if (Uindex[iFind] == iRow) break;
     // Put last to find, and delete last
@@ -1829,11 +1837,11 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
   }
 
   // Delete pivotal column from UR
-  for (int k = Ustart[pLogic]; k < Ulastp[pLogic]; k++) {
+  for (HighsInt k = Ustart[pLogic]; k < Ulastp[pLogic]; k++) {
     // Find the pivotal position
-    int iLogic = UpivotLookup[Uindex[k]];
-    int iFind = URstart[iLogic];
-    int iLast = --URlastp[iLogic];
+    HighsInt iLogic = UpivotLookup[Uindex[k]];
+    HighsInt iFind = URstart[iLogic];
+    HighsInt iLast = --URlastp[iLogic];
     for (; iFind <= iLast; iFind++)
       if (URindex[iFind] == iRow) break;
     // Put last to find, and delete last
@@ -1844,37 +1852,37 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
 
   // Store column to U
   Ustart.push_back(Uindex.size());
-  for (int i = 0; i < aq->packCount; i++)
+  for (HighsInt i = 0; i < aq->packCount; i++)
     if (aq->packIndex[i] != iRow) {
       Uindex.push_back(aq->packIndex[i]);
       Uvalue.push_back(aq->packValue[i]);
     }
   Ulastp.push_back(Uindex.size());
-  int UstartX = Ustart.back();
-  int UendX = Ulastp.back();
+  HighsInt UstartX = Ustart.back();
+  HighsInt UendX = Ulastp.back();
   UtotalX += UendX - UstartX + 1;
 
   // Store column as UR elements
-  for (int k = UstartX; k < UendX; k++) {
+  for (HighsInt k = UstartX; k < UendX; k++) {
     // Which ETA file
-    int iLogic = UpivotLookup[Uindex[k]];
+    HighsInt iLogic = UpivotLookup[Uindex[k]];
 
     // Move row to the end if necessary
     if (URspace[iLogic] == 0) {
       // Make pointers
-      int row_start = URstart[iLogic];
-      int row_count = URlastp[iLogic] - row_start;
-      int new_start = URindex.size();
-      int new_space = row_count * 1.1 + 5;
+      HighsInt row_start = URstart[iLogic];
+      HighsInt row_count = URlastp[iLogic] - row_start;
+      HighsInt new_start = URindex.size();
+      HighsInt new_space = row_count * 1.1 + 5;
 
       // Check matrix UR
       URindex.resize(new_start + new_space);
       URvalue.resize(new_start + new_space);
 
       // Move elements
-      int iFrom = row_start;
-      int iEnd = row_start + row_count;
-      int iTo = new_start;
+      HighsInt iFrom = row_start;
+      HighsInt iEnd = row_start + row_count;
+      HighsInt iTo = new_start;
       copy(&URindex[iFrom], &URindex[iEnd], &URindex[iTo]);
       copy(&URvalue[iFrom], &URvalue[iEnd], &URvalue[iTo]);
 
@@ -1886,7 +1894,7 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
 
     // Put into the next available space
     URspace[iLogic]--;
-    int iPut = URlastp[iLogic]++;
+    HighsInt iPut = URlastp[iLogic]++;
     URindex[iPut] = iRow;
     URvalue[iPut] = Uvalue[k];
   }
@@ -1902,7 +1910,7 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
   UpivotValue.push_back(pivot * alpha);
 
   // Store row_ep as R matrix
-  for (int i = 0; i < ep->packCount; i++) {
+  for (HighsInt i = 0; i < ep->packCount; i++) {
     if (ep->packIndex[i] != iRow) {
       PFindex.push_back(ep->packIndex[i]);
       PFvalue.push_back(-ep->packValue[i] * pivot);
@@ -1923,15 +1931,15 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
   //        *hint = 1;
 }
 
-void HFactor::updatePF(HVector* aq, int iRow, int* hint) {
+void HFactor::updatePF(HVector* aq, HighsInt iRow, HighsInt* hint) {
   // Check space
-  const int columnCount = aq->packCount;
-  const int* variable_index = &aq->packIndex[0];
+  const HighsInt columnCount = aq->packCount;
+  const HighsInt* variable_index = &aq->packIndex[0];
   const double* columnArray = &aq->packValue[0];
 
   // Copy the pivotal column
-  for (int i = 0; i < columnCount; i++) {
-    int index = variable_index[i];
+  for (HighsInt i = 0; i < columnCount; i++) {
+    HighsInt index = variable_index[i];
     double value = columnArray[i];
     if (index != iRow) {
       PFindex.push_back(index);
@@ -1949,16 +1957,17 @@ void HFactor::updatePF(HVector* aq, int iRow, int* hint) {
   if (UtotalX > UmeritX) *hint = 1;
 }
 
-void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
+void HFactor::updateMPF(HVector* aq, HVector* ep, HighsInt iRow,
+                        HighsInt* hint) {
   // Store elements
-  for (int i = 0; i < aq->packCount; i++) {
+  for (HighsInt i = 0; i < aq->packCount; i++) {
     PFindex.push_back(aq->packIndex[i]);
     PFvalue.push_back(aq->packValue[i]);
   }
-  int pLogic = UpivotLookup[iRow];
-  int UstartX = Ustart[pLogic];
-  int UendX = Ustart[pLogic + 1];
-  for (int k = UstartX; k < UendX; k++) {
+  HighsInt pLogic = UpivotLookup[iRow];
+  HighsInt UstartX = Ustart[pLogic];
+  HighsInt UendX = Ustart[pLogic + 1];
+  for (HighsInt k = UstartX; k < UendX; k++) {
     PFindex.push_back(Uindex[k]);
     PFvalue.push_back(-Uvalue[k]);
   }
@@ -1966,7 +1975,7 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
   PFvalue.push_back(-UpivotValue[pLogic]);
   PFstart.push_back(PFindex.size());
 
-  for (int i = 0; i < ep->packCount; i++) {
+  for (HighsInt i = 0; i < ep->packCount; i++) {
     PFindex.push_back(ep->packIndex[i]);
     PFvalue.push_back(ep->packValue[i]);
   }
@@ -1980,28 +1989,28 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
   if (UtotalX > UmeritX) *hint = 1;
 }
 
-void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow
-                        //, int* hint
+void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
+                        //, HighsInt* hint
 ) {
   // Store elements
-  for (int i = 0; i < aq->packCount; i++) {
+  for (HighsInt i = 0; i < aq->packCount; i++) {
     PFindex.push_back(aq->packIndex[i]);
     PFvalue.push_back(aq->packValue[i]);
   }
 
-  int variable_out = baseIndex[iRow];
+  HighsInt variable_out = baseIndex[iRow];
   if (variable_out >= numCol) {
     PFindex.push_back(variable_out - numCol);
     PFvalue.push_back(-1);
   } else {
-    for (int k = Astart[variable_out]; k < Astart[variable_out + 1]; k++) {
+    for (HighsInt k = Astart[variable_out]; k < Astart[variable_out + 1]; k++) {
       PFindex.push_back(Aindex[k]);
       PFvalue.push_back(-Avalue[k]);
     }
   }
   PFstart.push_back(PFindex.size());
 
-  for (int i = 0; i < ep->packCount; i++) {
+  for (HighsInt i = 0; i < ep->packCount; i++) {
     PFindex.push_back(ep->packIndex[i]);
     PFvalue.push_back(ep->packValue[i]);
   }

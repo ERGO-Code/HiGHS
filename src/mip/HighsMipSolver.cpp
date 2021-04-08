@@ -31,97 +31,12 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
       model_(&lp),
       solution_objective_(HIGHS_CONST_INF),
       submip(submip),
-      rootbasis(nullptr) {}
+      rootbasis(nullptr),
+      pscostinit(nullptr),
+      clqtableinit(nullptr),
+      implicinit(nullptr) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
-
-HighsPresolveStatus HighsMipSolver::runPresolve() {
-  // todo: commented out parts or change Highs::runPresolve to operate on a
-  // parameter LP rather than Highs::lp_. Not sure which approach is preferable.
-  highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-              "\nrunning MIP presolve\n");
-  const HighsLp& lp_ = *(model_);
-
-  // Exit if the problem is empty or if presolve is set to off.
-  if (options_mip_->presolve == off_string)
-    return HighsPresolveStatus::NotPresolved;
-  if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
-    return HighsPresolveStatus::NullError;
-
-  // Clear info from previous runs if lp_ has been modified.
-  if (presolve_.has_run_) presolve_.clear();
-  double start_presolve = timer_.readRunHighsClock();
-
-  // Set time limit.
-  if (options_mip_->time_limit > 0 &&
-      options_mip_->time_limit < HIGHS_CONST_INF) {
-    double left = options_mip_->time_limit - start_presolve;
-    if (left <= 0) {
-      highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
-                  "Time limit reached while reading in matrix\n");
-      return HighsPresolveStatus::Timeout;
-    }
-
-    highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
-                "Time limit set: reading matrix took %.2g, presolve "
-                "time left: %.2g\n",
-                start_presolve, left);
-    presolve_.options_.time_limit = left;
-  }
-
-  // Presolve.
-  presolve_.init(lp_, timer_, true);
-
-  if (options_mip_->time_limit > 0 &&
-      options_mip_->time_limit < HIGHS_CONST_INF) {
-    double current = timer_.readRunHighsClock();
-    double time_init = current - start_presolve;
-    double left = presolve_.options_.time_limit - time_init;
-    if (left <= 0) {
-      highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
-                  "Time limit reached while copying matrix into presolve.\n");
-      return HighsPresolveStatus::Timeout;
-    }
-
-    highsLogDev(options_mip_->log_options, HighsLogType::VERBOSE,
-                "Time limit set: copying matrix took %.2g, presolve "
-                "time left: %.2g\n",
-                time_init, left);
-    presolve_.options_.time_limit = options_mip_->time_limit;
-  }
-
-  presolve_.data_.presolve_[0].log_options = options_mip_->log_options;
-
-  HighsPresolveStatus presolve_return_status = presolve_.run();
-
-  // Handle max case.
-  if (presolve_return_status == HighsPresolveStatus::Reduced &&
-      lp_.sense_ == ObjSense::MAXIMIZE) {
-    presolve_.negateReducedLpCost();
-    presolve_.data_.reduced_lp_.sense_ = ObjSense::MAXIMIZE;
-  }
-
-  // Update reduction counts.
-  switch (presolve_.presolve_status_) {
-    case HighsPresolveStatus::Reduced: {
-      HighsLp& reduced_lp = presolve_.getReducedProblem();
-      presolve_.info_.n_cols_removed = lp_.numCol_ - reduced_lp.numCol_;
-      presolve_.info_.n_rows_removed = lp_.numRow_ - reduced_lp.numRow_;
-      presolve_.info_.n_nnz_removed =
-          (int)lp_.Avalue_.size() - (int)reduced_lp.Avalue_.size();
-      break;
-    }
-    case HighsPresolveStatus::ReducedToEmpty: {
-      presolve_.info_.n_cols_removed = lp_.numCol_;
-      presolve_.info_.n_rows_removed = lp_.numRow_;
-      presolve_.info_.n_nnz_removed = (int)lp_.Avalue_.size();
-      break;
-    }
-    default:
-      break;
-  }
-  return presolve_return_status;
-}
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::NOTSET;
@@ -196,6 +111,7 @@ void HighsMipSolver::run() {
 
   mipdata_->runSetup();
   timer_.stop(timer_.presolve_clock);
+restart:
   if (modelstatus_ == HighsModelStatus::NOTSET) {
     mipdata_->evaluateRootNode();
   }
@@ -218,33 +134,35 @@ void HighsMipSolver::run() {
                "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
-
+  int64_t numStallNodes = 0;
+  int64_t lastLbLeave = 0;
+  int64_t numQueueLeaves = 0;
+  HighsInt numHugeTreeEstim = 0;
+  int64_t numNodesLastCheck = mipdata_->num_nodes;
+  double treeweightLastCheck = 0.0;
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit =
-        10 *
-        int(mipdata_->total_lp_iterations - mipdata_->sb_lp_iterations -
-            mipdata_->sepa_lp_iterations) /
-        (double)std::max(size_t{1}, mipdata_->num_nodes);
-    iterlimit = std::max(10000, iterlimit);
+    HighsInt iterlimit = 10 * mipdata_->lp.getAvgSolveIters();
+    iterlimit = std::max(HighsInt{10000}, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
-    size_t lastLbLeave = mipdata_->num_leaves;
     bool limit_reached = false;
+    bool heuristicsCalled = false;
     while (true) {
-      if (mipdata_->heuristic_lp_iterations <
-          mipdata_->total_lp_iterations * mipdata_->heuristic_effort) {
+      if (!heuristicsCalled && mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
           break;
         }
+
+        heuristicsCalled = true;
 
         if (mipdata_->incumbent.empty())
           mipdata_->heuristics.randomizedRounding(
@@ -273,18 +191,16 @@ void HighsMipSolver::run() {
 
       if (!search.backtrack()) break;
 
-      if (mipdata_->upper_limit == HIGHS_CONST_INF ||
-          search.getCurrentEstimate() >= mipdata_->upper_limit)
-        break;
+      if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
       if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{100}, mipdata_->num_nodes / 10))
+          std::min(100., mipdata_->num_nodes * 0.1))
         break;
 
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=
-            std::min(size_t{mipdata_->dispfreq},
-                     1 + size_t(0.01 * mipdata_->num_leaves)))
+            std::min(mipdata_->dispfreq,
+                     1 + int64_t(0.01 * mipdata_->num_leaves)))
           mipdata_->printDisplayLine();
       }
 
@@ -298,8 +214,8 @@ void HighsMipSolver::run() {
 
     if (mipdata_->dispfreq != 0) {
       if (mipdata_->num_leaves - mipdata_->last_displeave >=
-          std::min(size_t{mipdata_->dispfreq},
-                   1 + size_t(0.01 * mipdata_->num_leaves)))
+          std::min(mipdata_->dispfreq,
+                   1 + int64_t(0.01 * mipdata_->num_leaves)))
         mipdata_->printDisplayLine();
     }
 
@@ -312,7 +228,7 @@ void HighsMipSolver::run() {
         mipdata_->domain, mipdata_->feastol);
 
     // if global propagation detected infeasibility, stop here
-    if (mipdata_->domain.infeasible()) {
+    if (mipdata_->domain.infeasible() || mipdata_->nodequeue.empty()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
       mipdata_->lower_bound = std::min(HIGHS_CONST_INF, mipdata_->upper_bound);
@@ -322,10 +238,10 @@ void HighsMipSolver::run() {
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
       highsLogDev(options_mip_->log_options, HighsLogType::INFO,
-                  "added %d global bound changes\n",
-                  (int)mipdata_->domain.getChangedCols().size());
+                  "added %" HIGHSINT_FORMAT " global bound changes\n",
+                  (HighsInt)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
-      for (int col : mipdata_->domain.getChangedCols())
+      for (HighsInt col : mipdata_->domain.getChangedCols())
         mipdata_->implications.cleanupVarbounds(col);
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -335,23 +251,62 @@ void HighsMipSolver::run() {
       mipdata_->removeFixedIndices();
     }
 
+    if (!submip) {
+      double currNodeEstim =
+          numNodesLastCheck + (mipdata_->num_nodes - numNodesLastCheck) *
+                                  double(1.0 - mipdata_->pruned_treeweight) /
+                                  std::max(double(mipdata_->pruned_treeweight -
+                                                  treeweightLastCheck),
+                                           mipdata_->feastol);
+
+      if (currNodeEstim >=
+          1000 * (mipdata_->numRestarts + 1) * mipdata_->num_nodes) {
+        ++numHugeTreeEstim;
+        // if (!submip)
+        //   printf("%" HIGHSINT_FORMAT " (nodeestim: %.1f)\n",
+        //   numHugeTreeEstim, currNodeEstim);
+      } else {
+        numHugeTreeEstim = 0;
+        treeweightLastCheck = double(mipdata_->pruned_treeweight);
+        numNodesLastCheck = mipdata_->num_nodes;
+      }
+
+      if (numHugeTreeEstim >= 50) {
+        mipdata_->performRestart();
+        goto restart;
+      }
+    }
+
     // remove the iteration limit when installing a new node
     // mipdata_->lp.setIterationLimit();
 
     // loop to install the next node for the search
     while (!mipdata_->nodequeue.empty()) {
-      // printf("popping node from nodequeue (length = %d)\n",
-      // (int)nodequeue.size());
+      // printf("popping node from nodequeue (length = %" HIGHSINT_FORMAT ")\n",
+      // (HighsInt)nodequeue.size());
       assert(!search.hasNode());
 
-      if (mipdata_->num_leaves - lastLbLeave >= 10) {
+      if (numQueueLeaves - lastLbLeave >= 10) {
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
-        lastLbLeave = mipdata_->num_leaves;
+        lastLbLeave = numQueueLeaves;
       } else {
         search.installNode(mipdata_->nodequeue.popBestNode());
         if (search.getCurrentLowerBound() == mipdata_->lower_bound)
-          lastLbLeave = mipdata_->num_leaves;
+          lastLbLeave = numQueueLeaves;
       }
+
+      ++numQueueLeaves;
+
+      if (search.getCurrentEstimate() >= mipdata_->upper_limit) {
+        ++numStallNodes;
+        if (options_mip_->mip_max_stall_nodes != HIGHS_CONST_I_INF &&
+            numStallNodes >= options_mip_->mip_max_stall_nodes) {
+          limit_reached = true;
+          modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+          break;
+        }
+      } else
+        numStallNodes = 0;
 
       assert(search.hasNode());
 
@@ -392,8 +347,8 @@ void HighsMipSolver::run() {
 
         if (mipdata_->dispfreq != 0) {
           if (mipdata_->num_leaves - mipdata_->last_displeave >=
-              std::min(size_t{mipdata_->dispfreq},
-                       1 + size_t(0.01 * mipdata_->num_leaves)))
+              std::min(mipdata_->dispfreq,
+                       1 + int64_t(0.01 * mipdata_->num_leaves)))
             mipdata_->printDisplayLine();
         }
         continue;
@@ -409,6 +364,12 @@ void HighsMipSolver::run() {
         mipdata_->lp.storeBasis();
 
       basis = mipdata_->lp.getStoredBasis();
+      if (!basis || !isBasisConsistent(mipdata_->lp.getLp(), *basis)) {
+        HighsBasis b = mipdata_->firstrootbasis;
+        b.row_status.resize(mipdata_->lp.numRows(), HighsBasisStatus::BASIC);
+        basis = std::make_shared<const HighsBasis>(std::move(b));
+        mipdata_->lp.setStoredBasis(basis);
+      }
 
       break;
     }

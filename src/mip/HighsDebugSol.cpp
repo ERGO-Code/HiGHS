@@ -19,7 +19,7 @@
 HighsDebugSol::HighsDebugSol(HighsMipSolver& mipsolver)
     : debugSolActive(false) {
   this->mipsolver = &mipsolver;
-  debugSolObjective = HIGHS_CONST_INF;
+  debugSolObjective = -HIGHS_CONST_INF;
   debugSolActive = false;
 }
 
@@ -36,13 +36,8 @@ void HighsDebugSol::activate() {
       double varval;
       std::map<std::string, int> nametoidx;
 
-      if (mipsolver->model_->col_names_.empty()) {
-        for (int i = 0; i != mipsolver->model_->numCol_; ++i)
-          nametoidx["C" + std::to_string(i)] = i;
-      } else {
-        for (int i = 0; i != mipsolver->model_->numCol_; ++i)
-          nametoidx[mipsolver->model_->col_names_[i]] = i;
-      }
+      for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
+        nametoidx["C" + std::to_string(i)] = i;
 
       debugSolution.resize(mipsolver->model_->numCol_, 0.0);
       while (!file.eof()) {
@@ -59,7 +54,7 @@ void HighsDebugSol::activate() {
       }
 
       HighsCDouble debugsolobj = 0.0;
-      for (int i = 0; i != mipsolver->model_->numCol_; ++i)
+      for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
         debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
 
       debugSolObjective = double(debugsolobj);
@@ -71,6 +66,8 @@ void HighsDebugSol::activate() {
                    "debug solution: could not open file '%s'\n",
                    mipsolver->options_mip_->mip_debug_solution_file.c_str());
       HighsLp model = *mipsolver->model_;
+      model.col_names_.clear();
+      model.row_names_.clear();
       model.colLower_ = mipsolver->mipdata_->domain.colLower_;
       model.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
@@ -84,7 +81,7 @@ void HighsDebugSol::registerDomain(const HighsDomain& domain) {
 
   if (!debugSolActive) return;
 
-  for (int i = 0; i != mipsolver->numCol(); ++i) {
+  for (HighsInt i = 0; i != mipsolver->numCol(); ++i) {
     assert(domain.colLower_[i] <=
            debugSolution[i] + mipsolver->mipdata_->feastol);
     assert(domain.colUpper_[i] >=
@@ -133,16 +130,29 @@ void HighsDebugSol::boundChangeRemoved(const HighsDomain& domain,
   conflictingBounds[&domain].erase(domchg);
 }
 
-void HighsDebugSol::checkCut(const int* Rindex, const double* Rvalue, int Rlen,
-                             double rhs) {
+void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue,
+                             HighsInt Rlen, double rhs) {
   if (!debugSolActive) return;
 
   HighsCDouble violation = -rhs;
 
-  for (int i = 0; i != Rlen; ++i)
+  for (HighsInt i = 0; i != Rlen; ++i)
     violation += debugSolution[Rindex[i]] * Rvalue[i];
 
   assert(violation <= mipsolver->mipdata_->feastol);
+}
+
+void HighsDebugSol::checkRow(const HighsInt* Rindex, const double* Rvalue,
+                             HighsInt Rlen, double Rlower, double Rupper) {
+  if (!debugSolActive) return;
+
+  HighsCDouble activity = 0;
+
+  for (HighsInt i = 0; i != Rlen; ++i)
+    activity += debugSolution[Rindex[i]] * Rvalue[i];
+
+  assert(activity - mipsolver->mipdata_->feastol <= Rupper);
+  assert(activity + mipsolver->mipdata_->feastol >= Rlower);
 }
 
 void HighsDebugSol::resetDomain(const HighsDomain& domain) {
@@ -160,18 +170,18 @@ void HighsDebugSol::nodePruned(const HighsDomain& localdomain) {
 }
 
 void HighsDebugSol::checkClique(const HighsCliqueTable::CliqueVar* clq,
-                                int clqlen) {
+                                HighsInt clqlen) {
   if (!debugSolActive) return;
 
-  int violation = -1;
+  HighsInt violation = -1;
 
-  for (int i = 0; i != clqlen; ++i)
-    violation += (int)(clq[i].weight(debugSolution) + 0.5);
+  for (HighsInt i = 0; i != clqlen; ++i)
+    violation += (HighsInt)(clq[i].weight(debugSolution) + 0.5);
 
   assert(violation <= 0);
 }
 
-void HighsDebugSol::checkVub(int col, int vubcol, double vubcoef,
+void HighsDebugSol::checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
                              double vubconstant) const {
   if (!debugSolActive) return;
 
@@ -179,7 +189,7 @@ void HighsDebugSol::checkVub(int col, int vubcol, double vubcoef,
                                    mipsolver->mipdata_->feastol);
 }
 
-void HighsDebugSol::checkVlb(int col, int vlbcol, double vlbcoef,
+void HighsDebugSol::checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
                              double vlbconstant) const {
   if (!debugSolActive) return;
 

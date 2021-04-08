@@ -66,12 +66,12 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   const HighsBasis& basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
   // Find the first basic variable
-  int iCol;
+  HighsInt iCol;
   for (iCol = 0; iCol < lp.numCol_; iCol++) {
     if (basis.col_status[iCol] == HighsBasisStatus::BASIC) break;
   }
   assert(iCol < lp.numCol_);
-  const int changeCol = iCol;
+  const HighsInt changeCol = iCol;
   const double old_lower_bound = lp.colLower_[changeCol];
   const double old_upper_bound = lp.colUpper_[changeCol];
   const double new_lower_bound = solution.col_value[changeCol] + 0.1;
@@ -81,9 +81,9 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
   if (dev_run) {
     printf(
-        "After modifying lower bound of column %d from %g to %g, solving the "
+        "After modifying lower bound of column %" HIGHSINT_FORMAT " from %g to %g, solving the "
         "LP "
-        "requires %d iterations and objective is %g\n",
+        "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
         changeCol, old_lower_bound, new_lower_bound,
         highs.getSimplexIterationCount(), highs.getObjectiveValue());
     //  highs.writeSolution("", true);
@@ -107,9 +107,9 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
   if (dev_run) {
     printf(
-        "After restoring lower bound of column %d from %g to %g, solving the "
+        "After restoring lower bound of column %" HIGHSINT_FORMAT " from %g to %g, solving the "
         "LP "
-        "requires %d iterations and objective is %g\n",
+        "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
         changeCol, new_lower_bound, old_lower_bound,
         highs.getSimplexIterationCount(), highs.getObjectiveValue());
   }
@@ -119,14 +119,14 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
-  HighsOptions options;
+  //  HighsOptions options;
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }
@@ -188,14 +188,13 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 
 // No commas in test case name.
 TEST_CASE("Basis-data", "[highs_basis_data]") {
-  HighsOptions options;
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
   }

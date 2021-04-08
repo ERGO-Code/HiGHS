@@ -20,6 +20,7 @@
 #include "util/HighsCDouble.h"
 
 class HighsDomain;
+class HighsLpRelaxation;
 
 class HighsNodeQueue {
  public:
@@ -27,13 +28,12 @@ class HighsNodeQueue {
     std::vector<HighsDomainChange> domchgstack;
     std::vector<std::multimap<double, int>::iterator> domchglinks;
     double lower_bound;
-    double lp_objective;
     double estimate;
-    int depth;
-    int leftlower;
-    int rightlower;
-    int leftestimate;
-    int rightestimate;
+    HighsInt depth;
+    HighsInt leftlower;
+    HighsInt rightlower;
+    HighsInt leftestimate;
+    HighsInt rightestimate;
 
     OpenNode()
         : domchgstack(),
@@ -46,10 +46,9 @@ class HighsNodeQueue {
           rightestimate(-1) {}
 
     OpenNode(std::vector<HighsDomainChange>&& domchgstack, double lower_bound,
-             double lp_objective, double estimate, int depth)
+             double estimate, HighsInt depth)
         : domchgstack(domchgstack),
           lower_bound(lower_bound),
-          lp_objective(lp_objective),
           estimate(estimate),
           depth(depth),
           leftlower(-1),
@@ -64,57 +63,60 @@ class HighsNodeQueue {
     OpenNode(const OpenNode&) = delete;
   };
 
-  void checkGlobalBounds(int col, double lb, double ub, double feastol,
+  void checkGlobalBounds(HighsInt col, double lb, double ub, double feastol,
                          HighsCDouble& treeweight);
 
  private:
   std::vector<OpenNode> nodes;
   std::vector<std::multimap<double, int>> colLowerNodes;
   std::vector<std::multimap<double, int>> colUpperNodes;
-  std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
-  int lowerroot = -1;
-  int estimroot = -1;
+  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
+      freeslots;
+  HighsInt lowerroot = -1;
+  HighsInt estimroot = -1;
 
-  void link_estim(int node);
+  void link_estim(HighsInt node);
 
-  void unlink_estim(int node);
+  void unlink_estim(HighsInt node);
 
-  void link_lower(int node);
+  void link_lower(HighsInt node);
 
-  void unlink_lower(int node);
+  void unlink_lower(HighsInt node);
 
-  void link_domchgs(int node);
+  void link_domchgs(HighsInt node);
 
-  void unlink_domchgs(int node);
+  void unlink_domchgs(HighsInt node);
 
-  void link(int node);
+  void link(HighsInt node);
 
-  void unlink(int node);
+  void unlink(HighsInt node);
 
  public:
   double performBounding(double upper_limit);
 
-  void setNumCol(int numcol);
+  void setNumCol(HighsInt numcol);
 
   void emplaceNode(std::vector<HighsDomainChange>&& domchgs, double lower_bound,
-                   double lp_objective, double estimate, int depth);
+                   double estimate, HighsInt depth);
 
   OpenNode popBestNode();
 
   OpenNode popBestBoundNode();
 
-  size_t numNodesUp(int col) const { return colLowerNodes[col].size(); }
+  OpenNode popRelatedNode(const HighsLpRelaxation& lprelax);
 
-  size_t numNodesDown(int col) const { return colUpperNodes[col].size(); }
+  int64_t numNodesUp(HighsInt col) const { return colLowerNodes[col].size(); }
 
-  size_t numNodesUp(int col, double val) const {
+  int64_t numNodesDown(HighsInt col) const { return colUpperNodes[col].size(); }
+
+  int64_t numNodesUp(HighsInt col, double val) const {
     auto it = colLowerNodes[col].upper_bound(val);
     if (it == colLowerNodes[col].begin()) return colLowerNodes[col].size();
     return std::distance(colLowerNodes[col].upper_bound(val),
                          colLowerNodes[col].end());
   }
 
-  size_t numNodesDown(int col, double val) const {
+  int64_t numNodesDown(HighsInt col, double val) const {
     auto it = colUpperNodes[col].lower_bound(val);
     if (it == colUpperNodes[col].end()) return colUpperNodes[col].size();
     return std::distance(colUpperNodes[col].begin(), it);
@@ -125,13 +127,14 @@ class HighsNodeQueue {
   double getBestLowerBound();
 
   void clear() {
-    nodes.clear();
-    decltype(freeslots)().swap(freeslots);
+    HighsNodeQueue nodequeue;
+    nodequeue.setNumCol(colUpperNodes.size());
+    std::swap(*this, nodequeue);
   }
 
   bool empty() const { return nodes.size() == freeslots.size(); }
 
-  size_t numNodes() const { return nodes.size() - freeslots.size(); }
+  int64_t numNodes() const { return nodes.size() - freeslots.size(); }
 };
 
 #endif

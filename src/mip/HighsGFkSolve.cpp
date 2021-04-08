@@ -11,7 +11,7 @@
 
 #include "util/HighsSplay.h"
 
-void HighsGFkSolve::link(int pos) {
+void HighsGFkSolve::link(HighsInt pos) {
   Anext[pos] = colhead[Acol[pos]];
   Aprev[pos] = -1;
   colhead[Acol[pos]] = pos;
@@ -19,17 +19,17 @@ void HighsGFkSolve::link(int pos) {
 
   ++colsize[Acol[pos]];
 
-  auto get_row_left = [&](int pos) -> int& { return ARleft[pos]; };
-  auto get_row_right = [&](int pos) -> int& { return ARright[pos]; };
-  auto get_row_key = [&](int pos) { return Acol[pos]; };
+  auto get_row_left = [&](HighsInt pos) -> HighsInt& { return ARleft[pos]; };
+  auto get_row_right = [&](HighsInt pos) -> HighsInt& { return ARright[pos]; };
+  auto get_row_key = [&](HighsInt pos) { return Acol[pos]; };
   highs_splay_link(pos, rowroot[Arow[pos]], get_row_left, get_row_right,
                    get_row_key);
   ++rowsize[Arow[pos]];
 }
 
-void HighsGFkSolve::unlink(int pos) {
-  int next = Anext[pos];
-  int prev = Aprev[pos];
+void HighsGFkSolve::unlink(HighsInt pos) {
+  HighsInt next = Anext[pos];
+  HighsInt prev = Aprev[pos];
 
   if (next != -1) Aprev[next] = prev;
 
@@ -39,9 +39,9 @@ void HighsGFkSolve::unlink(int pos) {
     colhead[Acol[pos]] = next;
   --colsize[Acol[pos]];
 
-  auto get_row_left = [&](int pos) -> int& { return ARleft[pos]; };
-  auto get_row_right = [&](int pos) -> int& { return ARright[pos]; };
-  auto get_row_key = [&](int pos) { return Acol[pos]; };
+  auto get_row_left = [&](HighsInt pos) -> HighsInt& { return ARleft[pos]; };
+  auto get_row_right = [&](HighsInt pos) -> HighsInt& { return ARright[pos]; };
+  auto get_row_key = [&](HighsInt pos) { return Acol[pos]; };
   highs_splay_unlink(pos, rowroot[Arow[pos]], get_row_left, get_row_right,
                      get_row_key);
   --rowsize[Arow[pos]];
@@ -50,7 +50,7 @@ void HighsGFkSolve::unlink(int pos) {
   freeslots.push(pos);
 }
 
-void HighsGFkSolve::storeRowPositions(int pos) {
+void HighsGFkSolve::storeRowPositions(HighsInt pos) {
   if (pos == -1) return;
 
   storeRowPositions(ARleft[pos]);
@@ -59,12 +59,12 @@ void HighsGFkSolve::storeRowPositions(int pos) {
   storeRowPositions(ARright[pos]);
 }
 
-int HighsGFkSolve::findNonzero(int row, int col) {
+HighsInt HighsGFkSolve::findNonzero(HighsInt row, HighsInt col) {
   if (rowroot[row] == -1) return -1;
 
-  auto get_row_left = [&](int pos) -> int& { return ARleft[pos]; };
-  auto get_row_right = [&](int pos) -> int& { return ARright[pos]; };
-  auto get_row_key = [&](int pos) { return Acol[pos]; };
+  auto get_row_left = [&](HighsInt pos) -> HighsInt& { return ARleft[pos]; };
+  auto get_row_right = [&](HighsInt pos) -> HighsInt& { return ARright[pos]; };
+  auto get_row_key = [&](HighsInt pos) { return Acol[pos]; };
   rowroot[row] =
       highs_splay(col, rowroot[row], get_row_left, get_row_right, get_row_key);
 
@@ -73,9 +73,9 @@ int HighsGFkSolve::findNonzero(int row, int col) {
   return -1;
 }
 
-void HighsGFkSolve::addNonzero(int row, int col, unsigned int val) {
+void HighsGFkSolve::addNonzero(HighsInt row, HighsInt col, unsigned int val) {
   assert(findNonzero(row, col) == -1);
-  int pos;
+  HighsInt pos;
   if (freeslots.empty()) {
     pos = Avalue.size();
     Avalue.push_back(val);

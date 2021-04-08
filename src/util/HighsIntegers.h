@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "util/HighsCDouble.h"
+#include "util/HighsInt.h"
 
 class HighsIntegers {
  public:
@@ -84,7 +85,7 @@ class HighsIntegers {
     double minval = *std::min_element(
         vals.begin(), vals.end(),
         [](double a, double b) { return std::abs(a) < std::abs(b); });
-    int numVals = vals.size();
+    HighsInt numVals = vals.size();
 
     int expshift;
 
@@ -115,7 +116,7 @@ class HighsIntegers {
 
     uint64_t currgcd = (uint64_t)std::abs(double(downval));
 
-    for (int i = 1; i != numVals; ++i) {
+    for (HighsInt i = 1; i != numVals; ++i) {
       val = denom * HighsCDouble(vals[i]);
       downval = floor(val + deltaup);
       fraction = val - downval;

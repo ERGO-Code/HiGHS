@@ -45,10 +45,10 @@ static double activityContributionMax(double coef, const double& lb,
 HighsLpPropagator::HighsLpPropagator(
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
     const std::vector<HighsVarType>& integrality_, std::vector<double>& Avalue_,
-    std::vector<int>& Aindex_, std::vector<int>& Astart_,
-    std::vector<int>& Aend_, std::vector<double>& ARvalue_,
-    std::vector<int>& ARindex_, std::vector<int>& ARstart_,
-    const std::vector<int>& flagRow, const std::vector<int>& flagCol,
+    std::vector<HighsInt>& Aindex_, std::vector<HighsInt>& Astart_,
+    std::vector<HighsInt>& Aend_, std::vector<double>& ARvalue_,
+    std::vector<HighsInt>& ARindex_, std::vector<HighsInt>& ARstart_,
+    const std::vector<HighsInt>& flagRow, const std::vector<HighsInt>& flagCol,
     std::vector<double>& rowLower_, std::vector<double>& rowUpper_)
     : Avalue_(Avalue_),
       Aindex_(Aindex_),
@@ -65,14 +65,15 @@ HighsLpPropagator::HighsLpPropagator(
       colLower_(colLower),
       colUpper_(colUpper) {}
 
-void HighsLpPropagator::computeMinActivity(int start, int end,
-                                           const int* ARindex,
-                                           const double* ARvalue, int& ninfmin,
+void HighsLpPropagator::computeMinActivity(HighsInt start, HighsInt end,
+                                           const HighsInt* ARindex,
+                                           const double* ARvalue,
+                                           HighsInt& ninfmin,
                                            HighsCDouble& activitymin) {
   activitymin = 0.0;
   ninfmin = 0;
-  for (int j = start; j != end; ++j) {
-    int col = ARindex[j];
+  for (HighsInt j = start; j != end; ++j) {
+    HighsInt col = ARindex[j];
     if (!flagCol[col]) continue;
     double val = ARvalue[j];
 
@@ -88,14 +89,15 @@ void HighsLpPropagator::computeMinActivity(int start, int end,
   activitymin.renormalize();
 }
 
-void HighsLpPropagator::computeMaxActivity(int start, int end,
-                                           const int* ARindex,
-                                           const double* ARvalue, int& ninfmax,
+void HighsLpPropagator::computeMaxActivity(HighsInt start, HighsInt end,
+                                           const HighsInt* ARindex,
+                                           const double* ARvalue,
+                                           HighsInt& ninfmax,
                                            HighsCDouble& activitymax) {
   activitymax = 0.0;
   ninfmax = 0;
-  for (int j = start; j != end; ++j) {
-    int col = ARindex[j];
+  for (HighsInt j = start; j != end; ++j) {
+    HighsInt col = ARindex[j];
     if (!flagCol[col]) continue;
     double val = ARvalue[j];
 
@@ -111,15 +113,15 @@ void HighsLpPropagator::computeMaxActivity(int start, int end,
   activitymax.renormalize();
 }
 
-int HighsLpPropagator::propagateRowUpper(const int* Rindex,
-                                         const double* Rvalue, int Rlen,
-                                         double Rupper,
-                                         const HighsCDouble& minactivity,
-                                         int ninfmin,
-                                         HighsDomainChange* boundchgs) {
+HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
+                                              const double* Rvalue,
+                                              HighsInt Rlen, double Rupper,
+                                              const HighsCDouble& minactivity,
+                                              HighsInt ninfmin,
+                                              HighsDomainChange* boundchgs) {
   if (ninfmin > 1) return 0;
-  int numchgs = 0;
-  for (int i = 0; i != Rlen; ++i) {
+  HighsInt numchgs = 0;
+  for (HighsInt i = 0; i != Rlen; ++i) {
     if (!flagCol[Rindex[i]]) continue;
     HighsCDouble minresact;
     double actcontribution = activityContributionMin(
@@ -189,15 +191,15 @@ int HighsLpPropagator::propagateRowUpper(const int* Rindex,
   return numchgs;
 }
 
-int HighsLpPropagator::propagateRowLower(const int* Rindex,
-                                         const double* Rvalue, int Rlen,
-                                         double Rlower,
-                                         const HighsCDouble& maxactivity,
-                                         int ninfmax,
-                                         HighsDomainChange* boundchgs) {
+HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
+                                              const double* Rvalue,
+                                              HighsInt Rlen, double Rlower,
+                                              const HighsCDouble& maxactivity,
+                                              HighsInt ninfmax,
+                                              HighsDomainChange* boundchgs) {
   if (ninfmax > 1) return 0;
-  int numchgs = 0;
-  for (int i = 0; i != Rlen; ++i) {
+  HighsInt numchgs = 0;
+  for (HighsInt i = 0; i != Rlen; ++i) {
     if (!flagCol[Rindex[i]]) continue;
     HighsCDouble maxresact;
     double actcontribution = activityContributionMax(
@@ -265,12 +267,12 @@ int HighsLpPropagator::propagateRowLower(const int* Rindex,
   return numchgs;
 }
 
-void HighsLpPropagator::updateActivityLbChange(int col, double oldbound,
+void HighsLpPropagator::updateActivityLbChange(HighsInt col, double oldbound,
                                                double newbound) {
-  int start = Astart_[col];
-  int end = Aend_[col];
+  HighsInt start = Astart_[col];
+  HighsInt end = Aend_[col];
 
-  for (int i = start; i != end; ++i) {
+  for (HighsInt i = start; i != end; ++i) {
     if (!flagRow[Aindex_[i]]) continue;
     if (Avalue_[i] > 0) {
       double deltamin;
@@ -322,12 +324,12 @@ void HighsLpPropagator::updateActivityLbChange(int col, double oldbound,
   }
 }
 
-void HighsLpPropagator::updateActivityUbChange(int col, double oldbound,
+void HighsLpPropagator::updateActivityUbChange(HighsInt col, double oldbound,
                                                double newbound) {
-  int start = Astart_[col];
-  int end = Aend_[col];
+  HighsInt start = Astart_[col];
+  HighsInt end = Aend_[col];
 
-  for (int i = start; i != end; ++i) {
+  for (HighsInt i = start; i != end; ++i) {
     if (!flagRow[Aindex_[i]]) continue;
     if (Avalue_[i] > 0) {
       double deltamax;
@@ -380,7 +382,7 @@ void HighsLpPropagator::updateActivityUbChange(int col, double oldbound,
   }
 }
 
-void HighsLpPropagator::markPropagate(int row) {
+void HighsLpPropagator::markPropagate(HighsInt row) {
   // todo, check if std::min(maxactivity - lhs, rhs - minactivity) <  amax -
   // feastol and only mark in that case
 
@@ -404,11 +406,11 @@ void HighsLpPropagator::computeRowActivities() {
   propagateinds_.reserve(rowLower_.size());
 
   assert(ARstart_.size() == rowLower_.size() + 1);
-  const int numrow = rowLower_.size();
-  for (int i = 0; i != numrow; ++i) {
+  const HighsInt numrow = rowLower_.size();
+  for (HighsInt i = 0; i != numrow; ++i) {
     if (!flagRow[i]) continue;
-    int start = ARstart_[i];
-    int end = ARstart_[i + 1];
+    HighsInt start = ARstart_[i];
+    HighsInt end = ARstart_[i + 1];
 
     computeMinActivity(start, end, ARindex_.data(), ARvalue_.data(),
                        activitymininf_[i], activitymin_[i]);
@@ -468,12 +470,12 @@ void HighsLpPropagator::changeBound(HighsDomainChange boundchg) {
   doChangeBound(boundchg);
 }
 
-int HighsLpPropagator::propagate() {
-  std::vector<int> propagateinds;
+HighsInt HighsLpPropagator::propagate() {
+  std::vector<HighsInt> propagateinds;
 
   if (propagateinds_.empty()) return 0;
 
-  int numchgs = -numBoundChgs_;
+  HighsInt numchgs = -numBoundChgs_;
   size_t changedboundsize = 2 * ARvalue_.size();
   std::unique_ptr<HighsDomainChange[]> changedbounds(
       new HighsDomainChange[changedboundsize]);
@@ -481,26 +483,26 @@ int HighsLpPropagator::propagate() {
   while (!propagateinds_.empty()) {
     propagateinds.swap(propagateinds_);
 
-    int propnnz = 0;
-    int numproprows = propagateinds.size();
-    for (int i = 0; i != numproprows; ++i) {
-      int row = propagateinds[i];
+    HighsInt propnnz = 0;
+    HighsInt numproprows = propagateinds.size();
+    for (HighsInt i = 0; i != numproprows; ++i) {
+      HighsInt row = propagateinds[i];
       propagateflags_[row] = 0;
       propnnz += ARstart_[i + 1] - ARstart_[i];
     }
 
     if (!infeasible_) {
-      std::vector<int> propRowNumChangedBounds_(numproprows);
+      std::vector<HighsInt> propRowNumChangedBounds_(numproprows);
 
-      auto propagateIndex = [&](int k) {
-        // for (int k = 0; k != numproprows; ++k) {
-        int i = propagateinds[k];
-        int start = ARstart_[i];
-        int end = ARstart_[i + 1];
-        int Rlen = end - start;
-        const int* Rindex = &ARindex_[start];
+      auto propagateIndex = [&](HighsInt k) {
+        // for (HighsInt k = 0; k != numproprows; ++k) {
+        HighsInt i = propagateinds[k];
+        HighsInt start = ARstart_[i];
+        HighsInt end = ARstart_[i + 1];
+        HighsInt Rlen = end - start;
+        const HighsInt* Rindex = &ARindex_[start];
         const double* Rvalue = &ARvalue_[start];
-        int numchgs = 0;
+        HighsInt numchgs = 0;
 
         if (rowUpper_[i] != HIGHS_CONST_INF) {
           // computeMinActivity(start, end, mipsolver->ARstart_.data(),
@@ -525,16 +527,16 @@ int HighsLpPropagator::propagate() {
         propRowNumChangedBounds_[k] = numchgs;
       };
 
-      // printf("numproprows (model): %d\n", numproprows);
+      // printf("numproprows (model): %" HIGHSINT_FORMAT "\n", numproprows);
 
-      for (int k = 0; k != numproprows; ++k) propagateIndex(k);
+      for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
-      for (int k = 0; k != numproprows; ++k) {
+      for (HighsInt k = 0; k != numproprows; ++k) {
         if (propRowNumChangedBounds_[k] == 0) continue;
-        int i = propagateinds[k];
-        int start = 2 * ARstart_[i];
-        int end = start + propRowNumChangedBounds_[k];
-        for (int j = start; j != end; ++j) changeBound(changedbounds[j]);
+        HighsInt i = propagateinds[k];
+        HighsInt start = 2 * ARstart_[i];
+        HighsInt end = start + propRowNumChangedBounds_[k];
+        for (HighsInt j = start; j != end; ++j) changeBound(changedbounds[j]);
 
         if (infeasible_) break;
       }
@@ -547,15 +549,15 @@ int HighsLpPropagator::propagate() {
   return numchgs;
 }
 
-int HighsLpPropagator::tightenCoefficients() {
-  int numrow = rowUpper_.size();
-  int ntightenedtotal = 0;
-  for (int i = 0; i != numrow; ++i) {
+HighsInt HighsLpPropagator::tightenCoefficients() {
+  HighsInt numrow = rowUpper_.size();
+  HighsInt ntightenedtotal = 0;
+  for (HighsInt i = 0; i != numrow; ++i) {
     if (!flagRow[i] ||
         (rowUpper_[i] != HIGHS_CONST_INF && rowLower_[i] != -HIGHS_CONST_INF))
       continue;
 
-    int scale;
+    HighsInt scale;
 
     if (rowUpper_[i] != HIGHS_CONST_INF) {
       if (activitymaxinf_[i] != 0) continue;
@@ -574,12 +576,12 @@ int HighsLpPropagator::tightenCoefficients() {
     HighsCDouble maxactivity = scale == 1 ? activitymax_[i] : -activitymin_[i];
     HighsCDouble upper = scale == 1 ? rowUpper_[i] : -rowLower_[i];
     HighsCDouble maxabscoef = double(maxactivity - upper);
-    int tightened = 0;
-    const int start = ARstart_[i];
-    const int end = ARstart_[i + 1];
+    HighsInt tightened = 0;
+    const HighsInt start = ARstart_[i];
+    const HighsInt end = ARstart_[i + 1];
 
-    for (int j = start; j != end; ++j) {
-      int col = ARindex_[j];
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex_[j];
       if (!flagCol[col] || integrality_[col] == HighsVarType::CONTINUOUS)
         continue;
 
@@ -602,7 +604,8 @@ int HighsLpPropagator::tightenCoefficients() {
         rowUpper_[i] = double(upper);
       else
         rowLower_[i] = -double(upper);
-      // printf("tightened %d coefficients, rhs changed from %g to %g\n",
+      // printf("tightened %" HIGHSINT_FORMAT " coefficients, rhs changed from
+      // %g to %g\n",
       //       tightened, rhs, double(upper));
       computeMinActivity(start, end, ARindex_.data(), ARvalue_.data(),
                          activitymininf_[i], activitymin_[i]);
@@ -621,8 +624,8 @@ int HighsLpPropagator::tightenCoefficients() {
   }
 
   if (ntightenedtotal != 0) {
-    int transNcol = numrow;
-    int transNrow = colLower_.size();
+    HighsInt transNcol = numrow;
+    HighsInt transNrow = colLower_.size();
 
     highsSparseTranspose(transNrow, transNcol, ARstart_, ARindex_, ARvalue_,
                          Astart_, Aindex_, Avalue_);

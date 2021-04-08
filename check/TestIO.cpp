@@ -24,7 +24,7 @@ TEST_CASE("msgcb", "[highs_io]") {
   int dummydata = 42;
   bool output_flag = true;
   bool log_to_console = false;
-  int log_dev_level = LOG_DEV_LEVEL_INFO;
+  HighsInt log_dev_level = LOG_DEV_LEVEL_INFO;
   HighsLogOptions log_options;
   log_options.log_file_stream = stdout;
   log_options.output_flag = &output_flag;

@@ -36,12 +36,12 @@ class HighsLpAggregator {
   HighsLpAggregator(const HighsLpRelaxation& lprelaxation);
 
   /// add an LP row to the aggregation using the given weight
-  void addRow(int row, double weight);
+  void addRow(HighsInt row, double weight);
 
   /// returns the current aggregation of LP rows. The aggregation includes slack
   /// variables so that it is always an equation with right hand side 0.
-  void getCurrentAggregation(std::vector<int>& inds, std::vector<double>& vals,
-                             bool negate);
+  void getCurrentAggregation(std::vector<HighsInt>& inds,
+                             std::vector<double>& vals, bool negate);
 
   /// clear the current aggregation
   void clear();

@@ -10,8 +10,11 @@
 #ifndef HIGHS_PRIMAL_HEURISTICS_H_
 #define HIGHS_PRIMAL_HEURISTICS_H_
 
-#include <random>
 #include <vector>
+
+#include "lp_data/HStruct.h"
+#include "lp_data/HighsLp.h"
+#include "util/HighsRandom.h"
 
 class HighsMipSolver;
 
@@ -19,13 +22,27 @@ class HighsPrimalHeuristics {
  private:
   HighsMipSolver& mipsolver;
   size_t lp_iterations;
-  std::mt19937 randgen;
+
+  double successObservations;
+  HighsInt numSuccessObservations;
+  double infeasObservations;
+  HighsInt numInfeasObservations;
+
+  HighsRandom randgen;
+
+  std::vector<HighsInt> intcols;
 
  public:
   HighsPrimalHeuristics(HighsMipSolver& mipsolver);
 
-  void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper,
-                   int maxleaves, int maxnodes);
+  void setupIntCols();
+
+  bool solveSubMip(const HighsLp& lp, const HighsBasis& basis,
+                   double fixingRate, std::vector<double> colLower,
+                   std::vector<double> colUpper, HighsInt maxleaves,
+                   HighsInt maxnodes, HighsInt stallnodes);
+
+  double determineTargetFixingRate();
 
   void RENS(const std::vector<double>& relaxationsol);
 
@@ -36,8 +53,6 @@ class HighsPrimalHeuristics {
   void centralRounding();
 
   void flushStatistics();
-
-  void clique();
 
   bool tryRoundedPoint(const std::vector<double>& point, char source);
 

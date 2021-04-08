@@ -21,35 +21,38 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor,
                                   const bool force = false);
 
-void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
-                               const HighsLogOptions& log_options,
-                               const int numRow, const vector<int>& permute,
-                               const vector<int>& iwork, const int* baseIndex,
-                               const int rank_deficiency,
-                               const vector<int>& noPvR,
-                               const vector<int>& noPvC);
+void debugReportRankDeficiency(
+    const HighsInt call_id, const HighsInt highs_debug_level,
+    const HighsLogOptions& log_options, const HighsInt numRow,
+    const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
+    const HighsInt* baseIndex, const HighsInt rank_deficiency,
+    const vector<HighsInt>& noPvR, const vector<HighsInt>& noPvC);
 
 void debugReportRankDeficientASM(
-    const int highs_debug_level, const HighsLogOptions& log_options,
-    const int numRow, const vector<int>& MCstart, const vector<int>& MCcountA,
-    const vector<int>& MCindex, const vector<double>& MCvalue,
-    const vector<int>& iwork, const int rank_deficiency,
-    const vector<int>& noPvC, const vector<int>& noPvR);
+    const HighsInt highs_debug_level, const HighsLogOptions& log_options,
+    const HighsInt numRow, const vector<HighsInt>& MCstart,
+    const vector<HighsInt>& MCcountA, const vector<HighsInt>& MCindex,
+    const vector<double>& MCvalue, const vector<HighsInt>& iwork,
+    const HighsInt rank_deficiency, const vector<HighsInt>& noPvC,
+    const vector<HighsInt>& noPvR);
 
-void debugReportMarkSingC(const int call_id, const int highs_debug_level,
-                          const HighsLogOptions& log_options, const int numRow,
-                          const vector<int>& iwork, const int* baseIndex);
+void debugReportMarkSingC(const HighsInt call_id,
+                          const HighsInt highs_debug_level,
+                          const HighsLogOptions& log_options,
+                          const HighsInt numRow, const vector<HighsInt>& iwork,
+                          const HighsInt* baseIndex);
 
-void debugLogRankDeficiency(const int highs_debug_level,
+void debugLogRankDeficiency(const HighsInt highs_debug_level,
                             const HighsLogOptions& log_options,
-                            const int rank_deficiency,
-                            const int basis_matrix_num_el,
-                            const int invert_num_el, const int& kernel_dim,
-                            const int kernel_num_el, const int nwork);
+                            const HighsInt rank_deficiency,
+                            const HighsInt basis_matrix_num_el,
+                            const HighsInt invert_num_el,
+                            const HighsInt& kernel_dim,
+                            const HighsInt kernel_num_el, const HighsInt nwork);
 
-void debugPivotValueAnalysis(const int highs_debug_level,
+void debugPivotValueAnalysis(const HighsInt highs_debug_level,
                              const HighsLogOptions& log_options,
-                             const int numRow,
+                             const HighsInt numRow,
                              const vector<double>& UpivotValue);
 
 #endif  // SIMPLEX_HFACTORDEBUG_H_

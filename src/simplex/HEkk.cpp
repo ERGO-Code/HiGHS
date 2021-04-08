@@ -75,7 +75,7 @@ HighsStatus HEkk::solve() {
   simplex_lp_status_.has_primal_ray = false;
 
   chooseSimplexStrategyThreads(options_, simplex_info_);
-  int simplex_strategy = simplex_info_.simplex_strategy;
+  HighsInt& simplex_strategy = simplex_info_.simplex_strategy;
 
   // Initial solve according to strategy
   if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
@@ -101,12 +101,14 @@ HighsStatus HEkk::solve() {
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
       highsLogUser(
           options_.log_options, HighsLogType::INFO,
-          "Using EKK parallel dual simplex solver - SIP with %d threads\n",
+          "Using EKK parallel dual simplex solver - SIP with %" HIGHSINT_FORMAT
+          " threads\n",
           simplex_info_.num_threads);
     } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
       highsLogUser(
           options_.log_options, HighsLogType::INFO,
-          "Using EKK parallel dual simplex solver - PAMI with %d threads\n",
+          "Using EKK parallel dual simplex solver - PAMI with %" HIGHSINT_FORMAT
+          " threads\n",
           simplex_info_.num_threads);
     } else {
       highsLogUser(options_.log_options, HighsLogType::INFO,
@@ -121,13 +123,14 @@ HighsStatus HEkk::solve() {
   reportSimplexPhaseIterations(options_.log_options, iteration_count_,
                                simplex_info_);
   if (return_status == HighsStatus::Error) return return_status;
-  highsLogDev(
-      options_.log_options, HighsLogType::INFO,
-      "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
-      "Status %s\n",
-      algorithm.c_str(), simplex_info_.num_primal_infeasibility,
-      simplex_info_.num_dual_infeasibility,
-      utilHighsModelStatusToString(scaled_model_status_).c_str());
+  highsLogDev(options_.log_options, HighsLogType::INFO,
+              "EKK %s simplex solver returns %" HIGHSINT_FORMAT
+              " primal and %" HIGHSINT_FORMAT
+              " dual infeasibilities: "
+              "Status %s\n",
+              algorithm.c_str(), simplex_info_.num_primal_infeasibility,
+              simplex_info_.num_dual_infeasibility,
+              utilHighsModelStatusToString(scaled_model_status_).c_str());
   if (scaled_model_status_ == HighsModelStatus::NOTSET) {
     call_status = cleanup();
     return_status =
@@ -184,17 +187,17 @@ HighsStatus HEkk::cleanup() {
 
 HighsStatus HEkk::setBasis() {
   // Set up nonbasicFlag and basicIndex for a logical basis
-  const int num_col = simplex_lp_.numCol_;
-  const int num_row = simplex_lp_.numRow_;
-  const int num_tot = num_col + num_row;
+  const HighsInt num_col = simplex_lp_.numCol_;
+  const HighsInt num_row = simplex_lp_.numRow_;
+  const HighsInt num_tot = num_col + num_row;
   simplex_basis_.nonbasicFlag_.resize(num_tot);
   simplex_basis_.nonbasicMove_.resize(num_tot);
   simplex_basis_.basicIndex_.resize(num_row);
-  for (int iCol = 0; iCol < num_col; iCol++) {
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     simplex_basis_.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
     double lower = simplex_lp_.colLower_[iCol];
     double upper = simplex_lp_.colUpper_[iCol];
-    int move = illegal_move_value;
+    HighsInt move = illegal_move_value;
     if (lower == upper) {
       // Fixed
       move = NONBASIC_MOVE_ZE;
@@ -224,8 +227,8 @@ HighsStatus HEkk::setBasis() {
     assert(move != illegal_move_value);
     simplex_basis_.nonbasicMove_[iCol] = move;
   }
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    int iVar = num_col + iRow;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = num_col + iRow;
     simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
     simplex_basis_.basicIndex_[iRow] = iVar;
   }
@@ -244,16 +247,18 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
                  "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::Error;
   }
-  int num_col = simplex_lp_.numCol_;
-  int num_row = simplex_lp_.numRow_;
-  int num_tot = num_col + num_row;
+  HighsInt num_col = simplex_lp_.numCol_;
+  HighsInt num_row = simplex_lp_.numRow_;
+  HighsInt num_tot = num_col + num_row;
   // Resize the basis in case none has yet been defined for this LP
   simplex_basis_.nonbasicFlag_.resize(num_tot);
   simplex_basis_.nonbasicMove_.resize(num_tot);
   simplex_basis_.basicIndex_.resize(num_row);
-  int num_basic_variables = 0;
-  for (int iCol = 0; iCol < num_col; iCol++) {
-    int iVar = iCol;
+
+  HighsInt num_basic_variables = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    HighsInt iVar = iCol;
+
     const double lower = simplex_lp_.colLower_[iCol];
     const double upper = simplex_lp_.colUpper_[iCol];
     if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
@@ -276,8 +281,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
       }
     }
   }
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    int iVar = num_col + iRow;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = num_col + iRow;
     const double lower = simplex_lp_.rowLower_[iRow];
     const double upper = simplex_lp_.rowUpper_[iRow];
     if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
@@ -324,11 +329,11 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
     simplex_info_.workValue_[simplex_basis_.basicIndex_[iRow]] =
         simplex_info_.baseValue_[iRow];
   // Zero the basic dual values
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
     simplex_info_.workDual_[simplex_basis_.basicIndex_[iRow]] = 0;
 
   // Now we can get the solution
@@ -337,31 +342,31 @@ HighsSolution HEkk::getSolution() {
   solution.row_value.resize(simplex_lp_.numRow_);
   solution.row_dual.resize(simplex_lp_.numRow_);
 
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     solution.col_value[iCol] = simplex_info_.workValue_[iCol];
     solution.col_dual[iCol] =
-        (int)simplex_lp_.sense_ * simplex_info_.workDual_[iCol];
+        (HighsInt)simplex_lp_.sense_ * simplex_info_.workDual_[iCol];
   }
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
     solution.row_value[iRow] =
         -simplex_info_.workValue_[simplex_lp_.numCol_ + iRow];
     solution.row_dual[iRow] =
-        (int)simplex_lp_.sense_ *
+        (HighsInt)simplex_lp_.sense_ *
         simplex_info_.workDual_[simplex_lp_.numCol_ + iRow];
   }
   return solution;
 }
 
 HighsBasis HEkk::getHighsBasis() {
-  int num_col = simplex_lp_.numCol_;
-  int num_row = simplex_lp_.numRow_;
+  HighsInt num_col = simplex_lp_.numCol_;
+  HighsInt num_row = simplex_lp_.numRow_;
   HighsBasis basis;
   basis.col_status.resize(num_col);
   basis.row_status.resize(num_row);
   assert(simplex_lp_status_.has_basis);
   basis.valid_ = false;
-  for (int iCol = 0; iCol < num_col; iCol++) {
-    int iVar = iCol;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    HighsInt iVar = iCol;
     const double lower = simplex_lp_.colLower_[iCol];
     const double upper = simplex_lp_.colUpper_[iCol];
     HighsBasisStatus basis_status = HighsBasisStatus::NONBASIC;
@@ -380,8 +385,8 @@ HighsBasis HEkk::getHighsBasis() {
     }
     basis.col_status[iCol] = basis_status;
   }
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    int iVar = num_col + iRow;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    HighsInt iVar = num_col + iRow;
     const double lower = simplex_lp_.rowLower_[iRow];
     const double upper = simplex_lp_.rowUpper_[iRow];
     HighsBasisStatus basis_status = HighsBasisStatus::NONBASIC;
@@ -404,18 +409,19 @@ HighsBasis HEkk::getHighsBasis() {
   return basis;
 }
 
-int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
+HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
+    const bool only_from_known_basis) {
   // If there's no basis, return error if the basis has to be known,
   // otherwise set a logical basis
   if (!simplex_lp_status_.has_basis) {
     if (only_from_known_basis) {
       highsLogUser(options_.log_options, HighsLogType::ERROR,
                    "Simplex basis should be known but isn't\n");
-      return -(int)HighsStatus::Error;
+      return -(HighsInt)HighsStatus::Error;
     }
     setBasis();
   }
-  const int rank_deficiency = computeFactor();
+  const HighsInt rank_deficiency = computeFactor();
   if (rank_deficiency) {
     // Basis is rank deficient
     if (only_from_known_basis) {
@@ -437,12 +443,12 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
 }
 
 void HEkk::handleRankDeficiency() {
-  int rank_deficiency = factor_.rank_deficiency;
-  vector<int>& noPvC = factor_.noPvC;
-  vector<int>& noPvR = factor_.noPvR;
-  for (int k = 0; k < rank_deficiency; k++) {
-    int variable_in = simplex_lp_.numCol_ + noPvR[k];
-    int variable_out = noPvC[k];
+  HighsInt rank_deficiency = factor_.rank_deficiency;
+  vector<HighsInt>& noPvC = factor_.noPvC;
+  vector<HighsInt>& noPvR = factor_.noPvR;
+  for (HighsInt k = 0; k < rank_deficiency; k++) {
+    HighsInt variable_in = simplex_lp_.numCol_ + noPvR[k];
+    HighsInt variable_out = noPvC[k];
     simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
     simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
   }
@@ -487,11 +493,12 @@ void HEkk::initialiseForNewLp() {
 }
 
 HighsStatus HEkk::initialiseForSolve() {
-  const int error_return = initialiseSimplexLpBasisAndFactor();
+  const HighsInt error_return = initialiseSimplexLpBasisAndFactor();
   assert(!error_return);
   if (error_return) return HighsStatus::Error;
   assert(simplex_lp_status_.has_basis);
 
+  updateSimplexOptions();
   initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
@@ -518,7 +525,8 @@ void HEkk::setSimplexOptions() {
   // will become valuable when "choose" becomes a HiGHS strategy value
   // that will need converting into a specific simplex strategy value.
   //
-  simplex_info_.simplex_strategy = options_.simplex_strategy;
+  // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
+  //
   simplex_info_.dual_edge_weight_strategy =
       options_.simplex_dual_edge_weight_strategy;
   simplex_info_.price_strategy = options_.simplex_price_strategy;
@@ -528,84 +536,92 @@ void HEkk::setSimplexOptions() {
       options_.primal_simplex_bound_perturbation_multiplier;
   simplex_info_.factor_pivot_threshold = options_.factor_pivot_threshold;
   simplex_info_.update_limit = options_.simplex_update_limit;
+  random_.initialise(options_.highs_random_seed);
 
   // Set values of internal options
   simplex_info_.store_squared_primal_infeasibility = true;
 }
 
+void HEkk::updateSimplexOptions() {
+  // Update some simplex option values from HighsOptions when
+  // (re-)solving an LP. Others aren't changed because better values
+  // may have been learned due to solving this LP (possibly with some
+  // modification) before.
+  //
+  // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
+  //
+  simplex_info_.dual_simplex_cost_perturbation_multiplier =
+      options_.dual_simplex_cost_perturbation_multiplier;
+  simplex_info_.primal_simplex_bound_perturbation_multiplier =
+      options_.primal_simplex_bound_perturbation_multiplier;
+}
+
 void HEkk::initialiseSimplexLpRandomVectors() {
-  const int num_col = simplex_lp_.numCol_;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const HighsInt num_col = simplex_lp_.numCol_;
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   if (!num_tot) return;
   // Instantiate and (re-)initialise the random number generator
   //  HighsRandom random;
   HighsRandom& random = random_;
-  random.initialise();
+  //  random.initialise();
 
   if (num_col) {
     // Generate a random permutation of the column indices
-    simplex_info_.numColPermutation_.resize(num_col);
-    vector<int>& numColPermutation = simplex_info_.numColPermutation_;
-    for (int i = 0; i < num_col; i++) numColPermutation[i] = i;
-    for (int i = num_col - 1; i >= 1; i--) {
-      int j = random.integer() % (i + 1);
-      std::swap(numColPermutation[i], numColPermutation[j]);
-    }
+    vector<HighsInt>& numColPermutation = simplex_info_.numColPermutation_;
+    numColPermutation.resize(num_col);
+    for (HighsInt i = 0; i < num_col; i++) numColPermutation[i] = i;
+    random.shuffle(numColPermutation.data(), num_col);
   }
 
   // Re-initialise the random number generator and generate the
   // random vectors in the same order as hsol to maintain repeatable
   // performance
-  random.initialise();
-  //
+  // random.initialise();
+
   // Generate a random permutation of all the indices
-  simplex_info_.numTotPermutation_.resize(num_tot);
-  vector<int>& numTotPermutation = simplex_info_.numTotPermutation_;
-  for (int i = 0; i < num_tot; i++) numTotPermutation[i] = i;
-  for (int i = num_tot - 1; i >= 1; i--) {
-    int j = random.integer() % (i + 1);
-    std::swap(numTotPermutation[i], numTotPermutation[j]);
-  }
+  vector<HighsInt>& numTotPermutation = simplex_info_.numTotPermutation_;
+  numTotPermutation.resize(num_tot);
+  for (HighsInt i = 0; i < num_tot; i++) numTotPermutation[i] = i;
+  random.shuffle(numTotPermutation.data(), num_tot);
 
   // Generate a vector of random reals
   simplex_info_.numTotRandomValue_.resize(num_tot);
   vector<double>& numTotRandomValue = simplex_info_.numTotRandomValue_;
-  for (int i = 0; i < num_tot; i++) {
+  for (HighsInt i = 0; i < num_tot; i++) {
     numTotRandomValue[i] = random.fraction();
   }
 }
 
 void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
                                         HighsSimplexInfo& simplex_info) {
-  // Given a simplex basis and solution, use the number of primal and
-  // dual infeasibilities to determine which simplex variant to use.
-  //
-  // 1. If it is "CHOOSE", in which case an approapriate stratgy is
-  // used
-  //
-  // 2. If re-solving choose the strategy appropriate to primal or
-  // dual feasibility
-  //
-  int simplex_strategy = options.simplex_strategy;
-  if (simplex_info.num_primal_infeasibility > 0) {
-    // Not primal feasible, so use dual simplex if choice is permitted
-    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+  // Ensure that this is not called with an optimal basis
+  assert(simplex_info.num_dual_infeasibility > 0 ||
+         simplex_info.num_primal_infeasibility > 0);
+  // Set the internal simplex strategy and number of threads for dual
+  // simplex
+  HighsInt& simplex_strategy = simplex_info.simplex_strategy;
+  // By default, use the HighsOptions strategy. If this is
+  // SIMPLEX_STRATEGY_CHOOSE, then the strategy used will depend on
+  // whether the current basis is primal feasible.
+  simplex_strategy = options.simplex_strategy;
+  if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
+    // HiGHS is left to choose the simplex strategy
+    if (simplex_info.num_primal_infeasibility > 0) {
+      // Not primal feasible, so use dual simplex
       simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-  } else {
-    // Primal feasible - so must be dual infeasible
-    assert(simplex_info.num_dual_infeasibility > 0);
-    // Use primal simplex if choice is permitted
-    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+    } else {
+      // Primal feasible. so use primal simplex
       simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+    }
   }
   // Set min/max_threads to correspond to serial code. They will be
   // set to other values if parallel options are used.
   simplex_info.min_threads = 1;
   simplex_info.max_threads = 1;
   // Record the min/max minimum number of HiGHS threads in the options
-  const int highs_min_threads = options.highs_min_threads;
-  const int highs_max_threads = options.highs_max_threads;
-  int omp_max_threads = 0;
+  const HighsInt highs_min_threads = options.highs_min_threads;
+  const HighsInt highs_max_threads = options.highs_max_threads;
+  HighsInt omp_max_threads = 0;
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
@@ -638,16 +654,18 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // the minimum number of HiGHS threads allowed
   if (simplex_info.num_threads < highs_min_threads) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                 "Using %d HiGHS threads for parallel strategy rather than "
-                 "minimum number (%d) specified in options\n",
+                 "Using %" HIGHSINT_FORMAT
+                 " HiGHS threads for parallel strategy rather than "
+                 "minimum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  simplex_info.num_threads, highs_min_threads);
   }
   // Give a warning if the number of threads to be used is more than
   // the maximum number of HiGHS threads allowed
   if (simplex_info.num_threads > highs_max_threads) {
     highsLogUser(options.log_options, HighsLogType::WARNING,
-                 "Using %d HiGHS threads for parallel strategy rather than "
-                 "maximum number (%d) specified in options\n",
+                 "Using %" HIGHSINT_FORMAT
+                 " HiGHS threads for parallel strategy rather than "
+                 "maximum number (%" HIGHSINT_FORMAT ") specified in options\n",
                  simplex_info.num_threads, highs_max_threads);
   }
   // Give a warning if the number of threads to be used is fewer than
@@ -655,33 +673,24 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   if (simplex_info.num_threads > omp_max_threads) {
     highsLogUser(
         options.log_options, HighsLogType::WARNING,
-        "Number of OMP threads available = %d < %d = Number of HiGHS threads "
+        "Number of OMP threads available = %" HIGHSINT_FORMAT
+        " < %" HIGHSINT_FORMAT
+        " = Number of HiGHS threads "
         "to be used: Parallel performance will be less than anticipated\n",
         omp_max_threads, simplex_info.num_threads);
   }
-  // Simplex strategy is now fixed - so set the value to be referred
-  // to in the simplex solver
-  simplex_info.simplex_strategy = simplex_strategy;
-  // Official start of solver Start the solve clock - because
-  // setupForSimplexSolve has simplex computations
-
-  if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
-                 "Primal simplex solver unavailable\n");
-    simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-  }
 }
 
-bool HEkk::getNonsingularInverse(const int solve_phase) {
+bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   assert(simplex_lp_status_.has_basis);
-  const vector<int>& basicIndex = simplex_basis_.basicIndex_;
+  const vector<HighsInt>& basicIndex = simplex_basis_.basicIndex_;
   // Take a copy of basicIndex from before INVERT to be used as the
   // saved ordering of basic variables - so reinvert will run
   // identically.
-  const vector<int> basicIndex_before_compute_factor = basicIndex;
+  const vector<HighsInt> basicIndex_before_compute_factor = basicIndex;
   // Save the number of updates performed in case it has to be used to determine
   // a limit
-  const int simplex_update_count = simplex_info_.update_count;
+  const HighsInt simplex_update_count = simplex_info_.update_count;
   // Dual simplex edge weights are identified with rows, so must be
   // permuted according to INVERT. This must be done if workEdWt_ is
   // not NULL.
@@ -690,26 +699,28 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
   // gathered according to the new permutation of basicIndex
   if (handle_edge_weights) {
     analysis_.simplexTimerStart(PermWtClock);
-    for (int i = 0; i < simplex_lp_.numRow_; i++)
+    for (HighsInt i = 0; i < simplex_lp_.numRow_; i++)
       workEdWtFull_[basicIndex[i]] = workEdWt_[i];
     analysis_.simplexTimerStop(PermWtClock);
   }
 
   // Call computeFactor to perform INVERT
-  int rank_deficiency = computeFactor();
+  HighsInt rank_deficiency = computeFactor();
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!simplex_info_.phase1_backtracking_test_done &&
         solve_phase == SOLVE_PHASE_1) {
       // Claim rank deficiency to test backtracking
-      printf("Phase1 (Iter %d) Claiming rank deficiency to test backtracking\n",
+      printf("Phase1 (Iter %" HIGHSINT_FORMAT
+             ") Claiming rank deficiency to test backtracking\n",
              iteration_count_);
       rank_deficiency = 1;
       simplex_info_.phase1_backtracking_test_done = true;
     } else if (!simplex_info_.phase2_backtracking_test_done &&
                solve_phase == SOLVE_PHASE_2) {
       // Claim rank deficiency to test backtracking
-      printf("Phase2 (Iter %d) Claiming rank deficiency to test backtracking\n",
+      printf("Phase2 (Iter %" HIGHSINT_FORMAT
+             ") Claiming rank deficiency to test backtracking\n",
              iteration_count_);
       rank_deficiency = 1;
       simplex_info_.phase2_backtracking_test_done = true;
@@ -723,19 +734,22 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
     // Record that backtracking is taking place
     simplex_info_.backtracking_ = true;
     updateSimplexLpStatus(simplex_lp_status_, LpAction::BACKTRACKING);
-    int backtrack_rank_deficiency = computeFactor();
+    HighsInt backtrack_rank_deficiency = computeFactor();
     // This basis has previously been inverted successfully, so it shouldn't be
     // singular
     if (backtrack_rank_deficiency) return false;
     // simplex update limit will be half of the number of updates
     // performed, so make sure that at least one update was performed
     if (simplex_update_count <= 1) return false;
-    int use_simplex_update_limit = simplex_info_.update_limit;
-    int new_simplex_update_limit = simplex_update_count / 2;
+    HighsInt use_simplex_update_limit = simplex_info_.update_limit;
+    HighsInt new_simplex_update_limit = simplex_update_count / 2;
     simplex_info_.update_limit = new_simplex_update_limit;
     highsLogUser(options_.log_options, HighsLogType::WARNING,
-                 "Rank deficiency of %d after %d simplex updates, so "
-                 "backtracking: max updates reduced from %d to %d\n",
+                 "Rank deficiency of %" HIGHSINT_FORMAT
+                 " after %" HIGHSINT_FORMAT
+                 " simplex updates, so "
+                 "backtracking: max updates reduced from %" HIGHSINT_FORMAT
+                 " to %" HIGHSINT_FORMAT "\n",
                  rank_deficiency, simplex_update_count,
                  use_simplex_update_limit, new_simplex_update_limit);
   } else {
@@ -751,7 +765,7 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
     // Gather the edge weights according to the permutation of
     // basicIndex after INVERT
     analysis_.simplexTimerStart(PermWtClock);
-    for (int i = 0; i < simplex_lp_.numRow_; i++)
+    for (HighsInt i = 0; i < simplex_lp_.numRow_; i++)
       workEdWt_[i] = workEdWtFull_[basicIndex[i]];
     analysis_.simplexTimerStop(PermWtClock);
   }
@@ -764,10 +778,10 @@ bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
   simplex_info_.costs_perturbed =
       simplex_info_.backtracking_basis_costs_perturbed_;
   simplex_info_.workShift_ = simplex_info_.backtracking_basis_workShift_;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
   if (handle_edge_weights) {
-    for (int iVar = 0; iVar < num_tot; iVar++)
+    for (HighsInt iVar = 0; iVar < num_tot; iVar++)
       scattered_edge_weights[iVar] =
           simplex_info_.backtracking_basis_edge_weights_[iVar];
   }
@@ -775,11 +789,11 @@ bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
 }
 
 void HEkk::putBacktrackingBasis() {
-  const vector<int>& basicIndex = simplex_basis_.basicIndex_;
+  const vector<HighsInt>& basicIndex = simplex_basis_.basicIndex_;
   const bool handle_edge_weights = workEdWt_ != NULL;
   if (handle_edge_weights) {
     analysis_.simplexTimerStart(PermWtClock);
-    for (int i = 0; i < simplex_lp_.numRow_; i++)
+    for (HighsInt i = 0; i < simplex_lp_.numRow_; i++)
       workEdWtFull_[basicIndex[i]] = workEdWt_[i];
     analysis_.simplexTimerStop(PermWtClock);
   }
@@ -787,7 +801,7 @@ void HEkk::putBacktrackingBasis() {
 }
 
 void HEkk::putBacktrackingBasis(
-    const vector<int>& basicIndex_before_compute_factor,
+    const vector<HighsInt>& basicIndex_before_compute_factor,
     double* scattered_edge_weights) {
   simplex_info_.valid_backtracking_basis_ = true;
   simplex_info_.backtracking_basis_ = simplex_basis_;
@@ -796,10 +810,10 @@ void HEkk::putBacktrackingBasis(
   simplex_info_.backtracking_basis_costs_perturbed_ =
       simplex_info_.costs_perturbed;
   simplex_info_.backtracking_basis_workShift_ = simplex_info_.workShift_;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
   if (handle_edge_weights) {
-    for (int iVar = 0; iVar < num_tot; iVar++)
+    for (HighsInt iVar = 0; iVar < num_tot; iVar++)
       simplex_info_.backtracking_basis_edge_weights_[iVar] =
           scattered_edge_weights[iVar];
   }
@@ -808,14 +822,14 @@ void HEkk::putBacktrackingBasis(
 void HEkk::computePrimalObjectiveValue() {
   analysis_.simplexTimerStart(ComputePrObjClock);
   simplex_info_.primal_objective_value = 0;
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    int iVar = simplex_basis_.basicIndex_[iRow];
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+    HighsInt iVar = simplex_basis_.basicIndex_[iRow];
     if (iVar < simplex_lp_.numCol_) {
       simplex_info_.primal_objective_value +=
           simplex_info_.baseValue_[iRow] * simplex_lp_.colCost_[iVar];
     }
   }
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     if (simplex_basis_.nonbasicFlag_[iCol])
       simplex_info_.primal_objective_value +=
           simplex_info_.workValue_[iCol] * simplex_lp_.colCost_[iCol];
@@ -829,11 +843,11 @@ void HEkk::computePrimalObjectiveValue() {
   analysis_.simplexTimerStop(ComputePrObjClock);
 }
 
-void HEkk::computeDualObjectiveValue(const int phase) {
+void HEkk::computeDualObjectiveValue(const HighsInt phase) {
   analysis_.simplexTimerStart(ComputeDuObjClock);
   simplex_info_.dual_objective_value = 0;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iCol = 0; iCol < num_tot; iCol++) {
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     if (simplex_basis_.nonbasicFlag_[iCol]) {
       const double term =
           simplex_info_.workValue_[iCol] * simplex_info_.workDual_[iCol];
@@ -851,15 +865,16 @@ void HEkk::computeDualObjectiveValue(const int phase) {
     // shift is subtracted. Hence the shift is added according to the
     // sign implied by sense_
     simplex_info_.dual_objective_value +=
-        ((int)simplex_lp_.sense_) * simplex_lp_.offset_;
+        ((HighsInt)simplex_lp_.sense_) * simplex_lp_.offset_;
   }
   // Now have dual objective value
   simplex_lp_status_.has_dual_objective_value = true;
   analysis_.simplexTimerStop(ComputeDuObjClock);
 }
 
-int HEkk::computeFactor() {
+HighsInt HEkk::computeFactor() {
   if (!simplex_lp_status_.has_factor_arrays) {
+    // todo @ Julian: this fails on glass4
     assert(simplex_info_.factor_pivot_threshold >=
            options_.factor_pivot_threshold);
     factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
@@ -874,14 +889,14 @@ int HEkk::computeFactor() {
   analysis_.simplexTimerStart(InvertClock);
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analysis_.analyse_factor_time) {
-    int thread_id = 0;
+    HighsInt thread_id = 0;
 #ifdef OPENMP
     thread_id = omp_get_thread_num();
 #endif
     factor_timer_clock_pointer =
         analysis_.getThreadFactorTimerClockPtr(thread_id);
   }
-  const int rank_deficiency = factor_.build(factor_timer_clock_pointer);
+  const HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
   if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
@@ -925,10 +940,10 @@ void HEkk::setNonbasicMove() {
   // Assign nonbasicMove using as much information as is available
   double lower;
   double upper;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   simplex_basis_.nonbasicMove_.resize(num_tot);
 
-  for (int iVar = 0; iVar < num_tot; iVar++) {
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
     if (!simplex_basis_.nonbasicFlag_[iVar]) {
       // Basic variable
       simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
@@ -939,11 +954,11 @@ void HEkk::setNonbasicMove() {
       lower = simplex_lp_.colLower_[iVar];
       upper = simplex_lp_.colUpper_[iVar];
     } else {
-      int iRow = iVar - simplex_lp_.numCol_;
+      HighsInt iRow = iVar - simplex_lp_.numCol_;
       lower = -simplex_lp_.rowUpper_[iRow];
       upper = -simplex_lp_.rowLower_[iRow];
     }
-    int move = illegal_move_value;
+    HighsInt move = illegal_move_value;
     if (lower == upper) {
       // Fixed
       move = NONBASIC_MOVE_ZE;
@@ -990,7 +1005,7 @@ void HEkk::setNonbasicMove() {
 }
 
 void HEkk::allocateWorkAndBaseArrays() {
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   simplex_info_.workCost_.resize(num_tot);
   simplex_info_.workDual_.resize(num_tot);
   simplex_info_.workShift_.resize(num_tot);
@@ -1013,7 +1028,7 @@ void HEkk::allocateWorkAndBaseArrays() {
 }
 
 void HEkk::initialiseLpColBound() {
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     simplex_info_.workLower_[iCol] = simplex_lp_.colLower_[iCol];
     simplex_info_.workUpper_[iCol] = simplex_lp_.colUpper_[iCol];
     simplex_info_.workRange_[iCol] =
@@ -1024,8 +1039,8 @@ void HEkk::initialiseLpColBound() {
 }
 
 void HEkk::initialiseLpRowBound() {
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    int iCol = simplex_lp_.numCol_ + iRow;
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+    HighsInt iCol = simplex_lp_.numCol_ + iRow;
     simplex_info_.workLower_[iCol] = -simplex_lp_.rowUpper_[iRow];
     simplex_info_.workUpper_[iCol] = -simplex_lp_.rowLower_[iRow];
     simplex_info_.workRange_[iCol] =
@@ -1036,7 +1051,7 @@ void HEkk::initialiseLpRowBound() {
 }
 
 void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
-                          const int solvePhase, const bool perturb) {
+                          const HighsInt solvePhase, const bool perturb) {
   // Copy the cost
   initialiseLpColCost();
   initialiseLpRowCost();
@@ -1047,17 +1062,17 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   if (!perturb || simplex_info_.dual_simplex_cost_perturbation_multiplier == 0)
     return;
   // Perturb the original costs, scale down if is too big
-  int num_original_nonzero_cost = 0;
+  HighsInt num_original_nonzero_cost = 0;
   if (analysis_.analyse_simplex_data)
     printf("grep_DuPtrb: Cost perturbation for %s\n",
            simplex_lp_.model_name_.c_str());
   double bigc = 0;
-  for (int i = 0; i < simplex_lp_.numCol_; i++) {
+  for (HighsInt i = 0; i < simplex_lp_.numCol_; i++) {
     const double abs_cost = fabs(simplex_info_.workCost_[i]);
     bigc = max(bigc, abs_cost);
     if (analysis_.analyse_simplex_data && abs_cost) num_original_nonzero_cost++;
   }
-  const int pct0 = (100 * num_original_nonzero_cost) / simplex_lp_.numCol_;
+  const HighsInt pct0 = (100 * num_original_nonzero_cost) / simplex_lp_.numCol_;
   double average_cost = 0;
   if (analysis_.analyse_simplex_data) {
     if (num_original_nonzero_cost) {
@@ -1065,11 +1080,12 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
     }
-    printf(
-        "grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = "
-        "%g "
-        "and average = %g\n",
-        num_original_nonzero_cost, pct0, bigc, average_cost);
+    printf("grep_DuPtrb:    Initially have %" HIGHSINT_FORMAT
+           " nonzero costs (%3" HIGHSINT_FORMAT
+           "%%) with bigc = "
+           "%g "
+           "and average = %g\n",
+           num_original_nonzero_cost, pct0, bigc, average_cost);
   }
   if (bigc > 100) {
     bigc = sqrt(sqrt(bigc));
@@ -1079,8 +1095,8 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
 
   // If there are few boxed variables, we will just use simple perturbation
   double boxedRate = 0;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int i = 0; i < num_tot; i++)
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (HighsInt i = 0; i < num_tot; i++)
     boxedRate += (simplex_info_.workRange_[i] < 1e30);
   boxedRate /= num_tot;
   if (boxedRate < 0.01) {
@@ -1097,7 +1113,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     printf("grep_DuPtrb:    Perturbation base = %g\n", base);
 
   // Now do the perturbation
-  for (int i = 0; i < simplex_lp_.numCol_; i++) {
+  for (HighsInt i = 0; i < simplex_lp_.numCol_; i++) {
     double lower = simplex_lp_.colLower_[i];
     double upper = simplex_lp_.colUpper_[i];
     double xpert = (fabs(simplex_info_.workCost_[i]) + 1) * base *
@@ -1124,7 +1140,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
                                 analysis_.cost_perturbation1_distribution);
     }
   }
-  for (int i = simplex_lp_.numCol_; i < num_tot; i++) {
+  for (HighsInt i = simplex_lp_.numCol_; i < num_tot; i++) {
     double perturbation2 =
         (0.5 - simplex_info_.numTotRandomValue_[i]) *
         simplex_info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
@@ -1139,7 +1155,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
 }
 
 void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
-                           const int solve_phase, const bool perturb) {
+                           const HighsInt solve_phase, const bool perturb) {
   initialiseLpColBound();
   initialiseLpRowBound();
   simplex_info_.bounds_perturbed = 0;
@@ -1150,14 +1166,14 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
       return;
     // Perturb the bounds
     // Determine the smallest and largest finite lower/upper bounds
-    int num_col = simplex_lp_.numCol_;
-    int num_row = simplex_lp_.numRow_;
-    int num_tot = num_col + num_row;
+    HighsInt num_col = simplex_lp_.numCol_;
+    HighsInt num_row = simplex_lp_.numRow_;
+    HighsInt num_tot = num_col + num_row;
     double min_abs_lower = HIGHS_CONST_INF;
     double max_abs_lower = -1;
     double min_abs_upper = HIGHS_CONST_INF;
     double max_abs_upper = -1;
-    for (int iVar = 0; iVar < num_tot; iVar++) {
+    for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
       double abs_lower = fabs(simplex_info_.workLower_[iVar]);
       double abs_upper = fabs(simplex_info_.workUpper_[iVar]);
       if (abs_lower && abs_lower < HIGHS_CONST_INF) {
@@ -1176,7 +1192,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
 
     const double base =
         simplex_info_.primal_simplex_bound_perturbation_multiplier * 5e-7;
-    for (int iVar = 0; iVar < num_tot; iVar++) {
+    for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
       double lower = simplex_info_.workLower_[iVar];
       double upper = simplex_info_.workUpper_[iVar];
       const bool fixed = lower == upper;
@@ -1214,8 +1230,8 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
         simplex_info_.workValue_[iVar] = upper;
       }
     }
-    for (int iRow = 0; iRow < num_row; iRow++) {
-      int iVar = simplex_basis_.basicIndex_[iRow];
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+      HighsInt iVar = simplex_basis_.basicIndex_[iRow];
       simplex_info_.baseLower_[iRow] = simplex_info_.workLower_[iVar];
       simplex_info_.baseUpper_[iRow] = simplex_info_.workUpper_[iVar];
     }
@@ -1236,8 +1252,8 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   // objective is the negation of the sum of infeasibilities, unless there are
   // free In Phase 1: change to dual phase 1 bound.
   const double inf = HIGHS_CONST_INF;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iCol = 0; iCol < num_tot; iCol++) {
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     if (simplex_info_.workLower_[iCol] == -inf &&
         simplex_info_.workUpper_[iCol] == inf) {
       // Don't change for row variables: they should never become
@@ -1264,15 +1280,15 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
 }
 
 void HEkk::initialiseLpColCost() {
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     simplex_info_.workCost_[iCol] =
-        (int)simplex_lp_.sense_ * simplex_lp_.colCost_[iCol];
+        (HighsInt)simplex_lp_.sense_ * simplex_lp_.colCost_[iCol];
     simplex_info_.workShift_[iCol] = 0;
   }
 }
 
 void HEkk::initialiseLpRowCost() {
-  for (int iCol = simplex_lp_.numCol_;
+  for (HighsInt iCol = simplex_lp_.numCol_;
        iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
     simplex_info_.workCost_[iCol] = 0;
     simplex_info_.workShift_[iCol] = 0;
@@ -1283,8 +1299,8 @@ void HEkk::initialiseNonbasicValueAndMove() {
   // Initialise workValue and nonbasicMove from nonbasicFlag and
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iVar = 0; iVar < num_tot; iVar++) {
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
     if (!simplex_basis_.nonbasicFlag_[iVar]) {
       // Basic variable
       simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
@@ -1293,9 +1309,9 @@ void HEkk::initialiseNonbasicValueAndMove() {
     // Nonbasic variable
     const double lower = simplex_info_.workLower_[iVar];
     const double upper = simplex_info_.workUpper_[iVar];
-    const int original_move = simplex_basis_.nonbasicMove_[iVar];
+    const HighsInt original_move = simplex_basis_.nonbasicMove_[iVar];
     double value;
-    int move = illegal_move_value;
+    HighsInt move = illegal_move_value;
     if (lower == upper) {
       // Fixed
       value = lower;
@@ -1337,7 +1353,7 @@ void HEkk::initialiseNonbasicValueAndMove() {
   }
 }
 
-void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
+void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   analysis_.simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
@@ -1349,7 +1365,7 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
                 analysis_.pointer_serial_factor_clocks);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
-  int num_row = simplex_lp_.numRow_;
+  HighsInt num_row = simplex_lp_.numRow_;
   const double local_col_aq_density = (double)col_aq.count / num_row;
   analysis_.updateOperationResultDensity(local_col_aq_density,
                                          analysis_.col_aq_density);
@@ -1358,7 +1374,7 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
   analysis_.simplexTimerStop(FtranClock);
 }
 
-void HEkk::unitBtran(const int iRow, HVector& row_ep) {
+void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   analysis_.simplexTimerStart(BtranClock);
   row_ep.clear();
   row_ep.count = 1;
@@ -1372,7 +1388,7 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
                 analysis_.pointer_serial_factor_clocks);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
-  int num_row = simplex_lp_.numRow_;
+  HighsInt num_row = simplex_lp_.numRow_;
   const double local_row_ep_density = (double)row_ep.count / num_row;
   analysis_.updateOperationResultDensity(local_row_ep_density,
                                          analysis_.row_ep_density);
@@ -1403,7 +1419,7 @@ void HEkk::fullBtran(HVector& buffer) {
   analysis_.simplexTimerStop(BtranFullClock);
 }
 
-void HEkk::choosePriceTechnique(const int price_strategy,
+void HEkk::choosePriceTechnique(const HighsInt price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,
                                 bool& use_row_price_w_switch) {
@@ -1421,8 +1437,8 @@ void HEkk::choosePriceTechnique(const int price_strategy,
 
 void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   analysis_.simplexTimerStart(PriceClock);
-  const int solver_num_row = simplex_lp_.numRow_;
-  const int solver_num_col = simplex_lp_.numCol_;
+  const HighsInt solver_num_row = simplex_lp_.numRow_;
+  const HighsInt solver_num_col = simplex_lp_.numCol_;
   const double local_density = 1.0 * row_ep.count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
@@ -1463,8 +1479,8 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
     // variables, nonbasicFlag[*]=0
-    const int* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
-    for (int iCol = 0; iCol < solver_num_col; iCol++)
+    const int8_t* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
+    for (HighsInt iCol = 0; iCol < solver_num_col; iCol++)
       row_ap.array[iCol] *= nonbasicFlag[iCol];
   }
   // Update the record of average row_ap density
@@ -1496,13 +1512,13 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
 
 void HEkk::computePrimal() {
   analysis_.simplexTimerStart(ComputePrimalClock);
-  const int num_row = simplex_lp_.numRow_;
-  const int num_col = simplex_lp_.numCol_;
+  const HighsInt num_row = simplex_lp_.numRow_;
+  const HighsInt num_col = simplex_lp_.numCol_;
   // Setup a local buffer for the values of basic variables
   HVector primal_col;
   primal_col.setup(num_row);
   primal_col.clear();
-  for (int i = 0; i < num_col + num_row; i++) {
+  for (HighsInt i = 0; i < num_col + num_row; i++) {
     if (simplex_basis_.nonbasicFlag_[i] && simplex_info_.workValue_[i] != 0) {
       matrix_.collect_aj(primal_col, i, simplex_info_.workValue_[i]);
     }
@@ -1519,8 +1535,8 @@ void HEkk::computePrimal() {
     updateOperationResultDensity(local_primal_col_density,
                                  simplex_info_.primal_col_density);
   }
-  for (int i = 0; i < num_row; i++) {
-    int iCol = simplex_basis_.basicIndex_[i];
+  for (HighsInt i = 0; i < num_row; i++) {
+    HighsInt iCol = simplex_basis_.basicIndex_[i];
     simplex_info_.baseValue_[i] = -primal_col.array[i];
     simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
     simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
@@ -1541,7 +1557,7 @@ void HEkk::computeDual() {
   HVector dual_col;
   dual_col.setup(simplex_lp_.numRow_);
   dual_col.clear();
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
     const double value =
         simplex_info_.workCost_[simplex_basis_.basicIndex_[iRow]] +
         simplex_info_.workShift_[simplex_basis_.basicIndex_[iRow]];
@@ -1551,8 +1567,8 @@ void HEkk::computeDual() {
     }
   }
   // Copy the costs in case the basic costs are all zero
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int i = 0; i < num_tot; i++)
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (HighsInt i = 0; i < num_tot; i++)
     simplex_info_.workDual_[i] = simplex_info_.workCost_[i];
 
   if (dual_col.count) {
@@ -1561,9 +1577,9 @@ void HEkk::computeDual() {
     HVector dual_row;
     dual_row.setup(simplex_lp_.numCol_);
     fullPrice(dual_col, dual_row);
-    for (int i = 0; i < simplex_lp_.numCol_; i++)
+    for (HighsInt i = 0; i < simplex_lp_.numCol_; i++)
       simplex_info_.workDual_[i] -= dual_row.array[i];
-    for (int i = simplex_lp_.numCol_; i < num_tot; i++)
+    for (HighsInt i = simplex_lp_.numCol_; i < num_tot; i++)
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
   }
   // Indicate that the dual infeasiblility information isn't known
@@ -1589,12 +1605,12 @@ void HEkk::computeDualInfeasibleWithFlips() {
   // Possibly verify that nonbasicMove is correct for fixed variables
   //  debugFixedNonbasicMove(ekk_instance_);
 
-  int num_dual_infeasibility = 0;
+  HighsInt num_dual_infeasibility = 0;
   double max_dual_infeasibility = 0;
   double sum_dual_infeasibility = 0;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
 
-  for (int iVar = 0; iVar < num_tot; iVar++) {
+  for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
     if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
     const double lower = simplex_info_.workLower_[iVar];
@@ -1626,31 +1642,31 @@ void HEkk::computeDualInfeasibleWithFlips() {
   simplex_info_.sum_dual_infeasibility = sum_dual_infeasibility;
 }
 
-double HEkk::computeDualForTableauColumn(const int iVar,
+double HEkk::computeDualForTableauColumn(const HighsInt iVar,
                                          const HVector& tableau_column) {
   const vector<double>& workCost = simplex_info_.workCost_;
-  const vector<int>& basicIndex = simplex_basis_.basicIndex_;
+  const vector<HighsInt>& basicIndex = simplex_basis_.basicIndex_;
 
   double dual = simplex_info_.workCost_[iVar];
-  for (int i = 0; i < tableau_column.count; i++) {
-    int iRow = tableau_column.index[i];
+  for (HighsInt i = 0; i < tableau_column.count; i++) {
+    HighsInt iRow = tableau_column.index[i];
     dual -= tableau_column.array[iRow] * workCost[basicIndex[iRow]];
   }
   return dual;
 }
 
-void HEkk::correctDual(int* free_infeasibility_count) {
+void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   const double tau_d = options_.dual_feasibility_tolerance;
   const double inf = HIGHS_CONST_INF;
-  int workCount = 0;
+  HighsInt workCount = 0;
   double flip_dual_objective_value_change = 0;
   double shift_dual_objective_value_change = 0;
-  int num_flip = 0;
-  int num_shift = 0;
+  HighsInt num_flip = 0;
+  HighsInt num_shift = 0;
   double sum_flip = 0;
   double sum_shift = 0;
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int i = 0; i < num_tot; i++) {
+  const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (HighsInt i = 0; i < num_tot; i++) {
     if (simplex_basis_.nonbasicFlag_[i]) {
       if (simplex_info_.workLower_[i] == -inf &&
           simplex_info_.workUpper_[i] == inf) {
@@ -1661,7 +1677,7 @@ void HEkk::correctDual(int* free_infeasibility_count) {
         if (simplex_info_.workLower_[i] != -inf &&
             simplex_info_.workUpper_[i] != inf) {
           // Boxed variable = flip
-          const int move = simplex_basis_.nonbasicMove_[i];
+          const HighsInt move = simplex_basis_.nonbasicMove_[i];
           flipBound(i);
           double flip =
               simplex_info_.workUpper_[i] - simplex_info_.workLower_[i];
@@ -1722,19 +1738,20 @@ void HEkk::correctDual(int* free_infeasibility_count) {
   }
   if (num_flip)
     highsLogDev(options_.log_options, HighsLogType::VERBOSE,
-                "Performed %d flip(s): total = %g; objective change = %g\n",
+                "Performed %" HIGHSINT_FORMAT
+                " flip(s): total = %g; objective change = %g\n",
                 num_flip, sum_flip, flip_dual_objective_value_change);
   if (num_shift)
-    highsLogDev(
-        options_.log_options, HighsLogType::DETAILED,
-        "Performed %d cost shift(s): total = %g; objective change = %g\n",
-        num_shift, sum_shift, shift_dual_objective_value_change);
+    highsLogDev(options_.log_options, HighsLogType::DETAILED,
+                "Performed %" HIGHSINT_FORMAT
+                " cost shift(s): total = %g; objective change = %g\n",
+                num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }
 
-void HEkk::flipBound(const int iCol) {
-  int* nonbasicMove = &simplex_basis_.nonbasicMove_[0];
-  const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
+void HEkk::flipBound(const HighsInt iCol) {
+  int8_t* nonbasicMove = &simplex_basis_.nonbasicMove_[0];
+  const int8_t move = nonbasicMove[iCol] = -nonbasicMove[iCol];
   simplex_info_.workValue_[iCol] = move == 1 ? simplex_info_.workLower_[iCol]
                                              : simplex_info_.workUpper_[iCol];
 }
@@ -1748,7 +1765,7 @@ bool HEkk::reinvertOnNumericalTrouble(
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
   numerical_trouble_measure = abs_alpha_diff / min_abs_alpha;
-  const int update_count = simplex_info_.update_count;
+  const HighsInt update_count = simplex_info_.update_count;
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
   const bool numerical_trouble =
@@ -1788,8 +1805,8 @@ bool HEkk::reinvertOnNumericalTrouble(
 // The major model updates. Factor calls factor_.update; Matrix
 // calls matrix_.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
-void HEkk::updateFactor(HVector* column, HVector* row_ep, int* iRow,
-                        int* hint) {
+void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
+                        HighsInt* hint) {
   analysis_.simplexTimerStart(UpdateFactorClock);
   factor_.update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
@@ -1807,10 +1824,10 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, int* iRow,
   analysis_.simplexTimerStop(UpdateFactorClock);
 }
 
-void HEkk::updatePivots(const int variable_in, const int row_out,
-                        const int move_out) {
+void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
+                        const HighsInt move_out) {
   analysis_.simplexTimerStart(UpdatePivotsClock);
-  int variable_out = simplex_basis_.basicIndex_[row_out];
+  HighsInt variable_out = simplex_basis_.basicIndex_[row_out];
 
   // Incoming variable
   simplex_basis_.basicIndex_[row_out] = variable_in;
@@ -1853,7 +1870,8 @@ void HEkk::updatePivots(const int variable_in, const int row_out,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-void HEkk::updateMatrix(const int variable_in, const int variable_out) {
+void HEkk::updateMatrix(const HighsInt variable_in,
+                        const HighsInt variable_out) {
   analysis_.simplexTimerStart(UpdateMatrixClock);
   matrix_.update(variable_in, variable_out);
   analysis_.simplexTimerStop(UpdateMatrixClock);
@@ -1872,14 +1890,14 @@ void HEkk::computeSimplexPrimalInfeasible() {
   analysis_.simplexTimerStart(ComputePrIfsClock);
   const double scaled_primal_feasibility_tolerance =
       options_.primal_feasibility_tolerance;
-  int& num_primal_infeasibility = simplex_info_.num_primal_infeasibility;
+  HighsInt& num_primal_infeasibility = simplex_info_.num_primal_infeasibility;
   double& max_primal_infeasibility = simplex_info_.max_primal_infeasibility;
   double& sum_primal_infeasibility = simplex_info_.sum_primal_infeasibility;
   num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
   sum_primal_infeasibility = 0;
 
-  for (int i = 0; i < simplex_lp_.numCol_ + simplex_lp_.numRow_; i++) {
+  for (HighsInt i = 0; i < simplex_lp_.numCol_ + simplex_lp_.numRow_; i++) {
     if (simplex_basis_.nonbasicFlag_[i]) {
       // Nonbasic column
       double value = simplex_info_.workValue_[i];
@@ -1901,7 +1919,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
       }
     }
   }
-  for (int i = 0; i < simplex_lp_.numRow_; i++) {
+  for (HighsInt i = 0; i < simplex_lp_.numRow_; i++) {
     // Basic variable
     double value = simplex_info_.baseValue_[i];
     double lower = simplex_info_.baseLower_[i];
@@ -1932,14 +1950,15 @@ void HEkk::computeSimplexDualInfeasible() {
   // nonbasicMove=0 so that no dual infeasibility is counted for them.
   const double scaled_dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
-  int& num_dual_infeasibility = simplex_info_.num_dual_infeasibility;
+  HighsInt& num_dual_infeasibility = simplex_info_.num_dual_infeasibility;
   double& max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
   double& sum_dual_infeasibility = simplex_info_.sum_dual_infeasibility;
   num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
   sum_dual_infeasibility = 0;
 
-  for (int iCol = 0; iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
+  for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_;
+       iCol++) {
     if (!simplex_basis_.nonbasicFlag_[iCol]) continue;
     // Nonbasic column
     const double dual = simplex_info_.workDual_[iCol];
@@ -1973,7 +1992,7 @@ void HEkk::computeSimplexLpDualInfeasible() {
   // used for reporting after rebuilds.
   const double scaled_dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
-  int& num_dual_infeasibility =
+  HighsInt& num_dual_infeasibility =
       analysis_.num_dual_phase_1_lp_dual_infeasibility;
   double& max_dual_infeasibility =
       analysis_.max_dual_phase_1_lp_dual_infeasibility;
@@ -1983,8 +2002,8 @@ void HEkk::computeSimplexLpDualInfeasible() {
   max_dual_infeasibility = 0;
   sum_dual_infeasibility = 0;
 
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
-    int iVar = iCol;
+  for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+    HighsInt iVar = iCol;
     if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
     const double dual = simplex_info_.workDual_[iVar];
@@ -2016,8 +2035,8 @@ void HEkk::computeSimplexLpDualInfeasible() {
       sum_dual_infeasibility += dual_infeasibility;
     }
   }
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    int iVar = simplex_lp_.numCol_ + iRow;
+  for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+    HighsInt iVar = simplex_lp_.numCol_ + iRow;
     if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
     // Nonbasic row
     const double dual = -simplex_info_.workDual_[iVar];
@@ -2051,7 +2070,8 @@ void HEkk::computeSimplexLpDualInfeasible() {
   }
 }
 
-bool HEkk::sparseLoopStyle(const int count, const int dim, int& to_entry) {
+bool HEkk::sparseLoopStyle(const HighsInt count, const HighsInt dim,
+                           HighsInt& to_entry) {
   // Parameter to decide whether to use just the values in a HVector, or
   // use the indices of their nonzeros
   const double density_for_indexing = 0.4;
@@ -2120,8 +2140,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
 }
 
 double HEkk::computeBasisCondition() {
-  int solver_num_row = simplex_lp_.numRow_;
-  int solver_num_col = simplex_lp_.numCol_;
+  HighsInt solver_num_row = simplex_lp_.numRow_;
+  HighsInt solver_num_col = simplex_lp_.numCol_;
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
   vector<double> bs_cond_z;
@@ -2129,7 +2149,7 @@ double HEkk::computeBasisCondition() {
   HVector row_ep;
   row_ep.setup(solver_num_row);
 
-  const int* Astart = &simplex_lp_.Astart_[0];
+  const HighsInt* Astart = &simplex_lp_.Astart_[0];
   const double* Avalue = &simplex_lp_.Avalue_[0];
   // Compute the Hager condition number estimate for the basis matrix
   const double NoDensity = 1;
@@ -2141,9 +2161,9 @@ double HEkk::computeBasisCondition() {
   // y = A\x;
   double mu = 1.0 / solver_num_row;
   double norm_Binv;
-  for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
+  for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
   row_ep.clear();
-  for (int r_n = 0; r_n < solver_num_row; r_n++) {
+  for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
     double value = bs_cond_x[r_n];
     if (value) {
       row_ep.index[row_ep.count] = r_n;
@@ -2151,11 +2171,11 @@ double HEkk::computeBasisCondition() {
       row_ep.count++;
     }
   }
-  for (int ps_n = 1; ps_n <= 5; ps_n++) {
+  for (HighsInt ps_n = 1; ps_n <= 5; ps_n++) {
     row_ep.packFlag = false;
     factor_.ftran(row_ep, NoDensity);
     // zeta = sign(y);
-    for (int r_n = 0; r_n < solver_num_row; r_n++) {
+    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
       bs_cond_y[r_n] = row_ep.array[r_n];
       if (bs_cond_y[r_n] > 0)
         bs_cond_w[r_n] = 1.0;
@@ -2166,7 +2186,7 @@ double HEkk::computeBasisCondition() {
     }
     // z=A'\zeta;
     row_ep.clear();
-    for (int r_n = 0; r_n < solver_num_row; r_n++) {
+    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
       double value = bs_cond_w[r_n];
       if (value) {
         row_ep.index[row_ep.count] = r_n;
@@ -2179,8 +2199,8 @@ double HEkk::computeBasisCondition() {
     double norm_z = 0.0;
     double ztx = 0.0;
     norm_Binv = 0.0;
-    int argmax_z = -1;
-    for (int r_n = 0; r_n < solver_num_row; r_n++) {
+    HighsInt argmax_z = -1;
+    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
       bs_cond_z[r_n] = row_ep.array[r_n];
       double abs_z_v = fabs(bs_cond_z[r_n]);
       if (abs_z_v > norm_z) {
@@ -2193,7 +2213,7 @@ double HEkk::computeBasisCondition() {
     if (norm_z <= ztx) break;
     // x = zeros(n,1);
     // x(fd_i) = 1;
-    for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
+    for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
     row_ep.clear();
     row_ep.count = 1;
     row_ep.index[0] = argmax_z;
@@ -2201,11 +2221,11 @@ double HEkk::computeBasisCondition() {
     bs_cond_x[argmax_z] = 1.0;
   }
   double norm_B = 0.0;
-  for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = simplex_basis_.basicIndex_[r_n];
+  for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
+    HighsInt vr_n = simplex_basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < solver_num_col)
-      for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
+      for (HighsInt el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
         c_norm += fabs(Avalue[el_n]);
     else
       c_norm += 1.0;

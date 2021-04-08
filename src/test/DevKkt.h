@@ -23,21 +23,23 @@ namespace presolve {
 namespace dev_kkt_check {
 
 struct State {
-  State(const int numCol_, const int numRow_, const std::vector<int>& Astart_,
-        const std::vector<int>& Aend_, const std::vector<int>& Aindex_,
-        const std::vector<double>& Avalue_, const std::vector<int>& ARstart_,
-        const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_,
-        const std::vector<double>& colCost_,
-        const std::vector<double>& colLower_,
-        const std::vector<double>& colUpper_,
-        const std::vector<double>& rowLower_,
-        const std::vector<double>& rowUpper_, const std::vector<int>& flagCol_,
-        const std::vector<int>& flagRow_, const std::vector<double>& colValue_,
-        const std::vector<double>& colDual_,
-        const std::vector<double>& rowValue_,
-        const std::vector<double>& rowDual_,
-        const std::vector<HighsBasisStatus>& col_status_,
-        const std::vector<HighsBasisStatus>& row_status_)
+  State(
+      const HighsInt numCol_, const HighsInt numRow_,
+      const std::vector<HighsInt>& Astart_, const std::vector<HighsInt>& Aend_,
+      const std::vector<HighsInt>& Aindex_, const std::vector<double>& Avalue_,
+      const std::vector<HighsInt>& ARstart_,
+      const std::vector<HighsInt>& ARindex_,
+      const std::vector<double>& ARvalue_, const std::vector<double>& colCost_,
+      const std::vector<double>& colLower_,
+      const std::vector<double>& colUpper_,
+      const std::vector<double>& rowLower_,
+      const std::vector<double>& rowUpper_,
+      const std::vector<HighsInt>& flagCol_,
+      const std::vector<HighsInt>& flagRow_,
+      const std::vector<double>& colValue_, const std::vector<double>& colDual_,
+      const std::vector<double>& rowValue_, const std::vector<double>& rowDual_,
+      const std::vector<HighsBasisStatus>& col_status_,
+      const std::vector<HighsBasisStatus>& row_status_)
       : numCol(numCol_),
         numRow(numRow_),
         Astart(Astart_),
@@ -61,16 +63,16 @@ struct State {
         col_status(col_status_),
         row_status(row_status_) {}
 
-  const int numCol;
-  const int numRow;
+  const HighsInt numCol;
+  const HighsInt numRow;
 
-  const std::vector<int>& Astart;
-  const std::vector<int>& Aend;
-  const std::vector<int>& Aindex;
+  const std::vector<HighsInt>& Astart;
+  const std::vector<HighsInt>& Aend;
+  const std::vector<HighsInt>& Aindex;
   const std::vector<double>& Avalue;
 
-  const std::vector<int>& ARstart;
-  const std::vector<int>& ARindex;
+  const std::vector<HighsInt>& ARstart;
+  const std::vector<HighsInt>& ARindex;
   const std::vector<double>& ARvalue;
 
   const std::vector<double>& colCost;
@@ -79,8 +81,8 @@ struct State {
   const std::vector<double>& rowLower;
   const std::vector<double>& rowUpper;
 
-  const std::vector<int>& flagCol;
-  const std::vector<int>& flagRow;
+  const std::vector<HighsInt>& flagCol;
+  const std::vector<HighsInt>& flagRow;
 
   // solution
   const std::vector<double>& colValue;
@@ -110,8 +112,8 @@ struct KktConditionDetails {
   KktCondition type = KktCondition::kUnset;
   double max_violation = 0.0;
   double sum_violation_2 = 0.0;
-  int checked = 0;
-  int violated = 0;
+  HighsInt checked = 0;
+  HighsInt violated = 0;
 };
 
 struct KktInfo {
