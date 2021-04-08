@@ -630,6 +630,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   last_displeave = num_leaves;
 
   double lb = mipsolver.mipdata_->lower_bound + offset;
+  if (std::abs(lb) <= epsilon) lb = 0;
   double ub = HIGHS_CONST_INF;
   double gap = HIGHS_CONST_INF;
   HighsInt lpcuts =
@@ -637,6 +638,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
   if (upper_bound != HIGHS_CONST_INF) {
     ub = upper_bound + offset;
+    if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 

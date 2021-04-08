@@ -179,6 +179,9 @@ class HighsSearch {
 
   bool backtrack();
 
+  /// for heuristics. Will discard nodes above targetDepth regardless of their status
+  bool backtrackUntilDepth(HighsInt targetDepth);
+
   void printDisplayLine(char first, bool header = false);
 
   NodeResult dive();

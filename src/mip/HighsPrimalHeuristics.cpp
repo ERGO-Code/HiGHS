@@ -181,7 +181,15 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   //       heurlp.getLpSolver().getHighsOptions().simplex_iteration_limit);
   HighsInt targetdepth = 1;
   HighsInt nbacktracks = -1;
+  std::shared_ptr<const HighsBasis> basis;
 retry:
+  ++nbacktracks;
+  // printf("current depth : %" HIGHSINT_FORMAT
+  //        "   target depth : %" HIGHSINT_FORMAT "\n",
+  //        heur.getCurrentDepth(), targetdepth);
+  if (heur.getCurrentDepth() > targetdepth) {
+    if (!heur.backtrackUntilDepth(targetdepth)) return;
+  }
   HighsHashTable<HighsInt> fixedCols;
   HighsInt numGlobalFixed = 0;
   for (HighsInt i : mipsolver.mipdata_->integral_cols) {
@@ -205,18 +213,20 @@ retry:
 
     return fixedCols.size() / (double)ntotal;
   };
-  ++nbacktracks;
-  // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
-  // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
-  //        targetdepth);
-  while (heur.getCurrentDepth() > targetdepth) {
-    heur.cutoffNode();
-    if (!heur.backtrack()) break;
+  // printf("fixingrate before loop is %g\n", fixingrate);
+  assert(heur.hasNode());
+  if (basis) {
+    heurlp.setStoredBasis(basis);
+    heurlp.recoverBasis();
   }
-  if (!heur.hasNode()) return;
-
   while (true) {
+    // printf("evaluating node\n");
     heur.evaluateNode();
+    if (!basis) {
+      heurlp.storeBasis();
+      basis = heurlp.getStoredBasis();
+    }
+    // printf("done evaluating node\n");
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       if (mipsolver.mipdata_->domain.infeasible()) {
@@ -236,15 +246,14 @@ retry:
     if (heur.getCurrentEstimate() > mipsolver.mipdata_->upper_limit) {
       heur.cutoffNode();
       ++nbacktracks;
-      // printf("backtrack2\n");
+      // printf("node cutoff due to bad estimate\n");
       if (!heur.backtrack()) break;
       stop = true;
       continue;
     }
 
     fixingrate = getFixingRate();
-    // printf("%" HIGHSINT_FORMAT "/%" HIGHSINT_FORMAT " fixed, fixingrate is
-    // %g\n", nfixed, ntotal, fixingrate);
+    // printf("after evaluating node current fixingrate is %g\n", fixingrate);
     if (fixingrate >= maxfixingrate) break;
     if (stop) break;
     if (nbacktracks >= 10) break;
@@ -358,8 +367,8 @@ retry:
   // determine the fixing rate to decide if the problem is restricted enough to
   // be considered for solving a submip
 
-  // printf("fixing rate is %g\n", fixingrate);
   fixingrate = getFixingRate();
+  // printf("fixing rate is %g\n", fixingrate);
   if (fixingrate < 0.1 ||
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::BestCost;
@@ -379,8 +388,9 @@ retry:
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
     targetdepth = heur.getCurrentDepth() / 2;
     if (targetdepth <= 1 || mipsolver.mipdata_->checkLimits()) return;
-    // printf("infeasible in in root node, trying with lower fixing rate\n");
     maxfixingrate = fixingrate * 0.5;
+    // printf("infeasible in in root node, trying with lower fixing rate %g\n",
+    //        maxfixingrate);
     goto retry;
   }
 }
@@ -417,7 +427,15 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   bool stop = false;
   HighsInt nbacktracks = -1;
   HighsInt targetdepth = 1;
+  std::shared_ptr<const HighsBasis> basis;
 retry:
+  ++nbacktracks;
+  // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
+  // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
+  //       targetdepth);
+  if (heur.getCurrentDepth() > targetdepth) {
+    if (!heur.backtrackUntilDepth(targetdepth)) return;
+  }
   HighsHashTable<HighsInt> fixedCols;
   HighsInt numGlobalFixed = 0;
   for (HighsInt i : mipsolver.mipdata_->integral_cols) {
@@ -441,18 +459,18 @@ retry:
 
     return fixedCols.size() / (double)ntotal;
   };
-  ++nbacktracks;
-  // printf("current depth : %" HIGHSINT_FORMAT "   target depth : %"
-  // HIGHSINT_FORMAT "\n", heur.getCurrentDepth(),
-  //       targetdepth);
-  while (heur.getCurrentDepth() > targetdepth) {
-    heur.cutoffNode();
-    if (!heur.backtrack()) break;
+  assert(heur.hasNode());
+  if (basis) {
+    heurlp.setStoredBasis(basis);
+    heurlp.recoverBasis();
   }
-  if (!heur.hasNode()) return;
 
   while (true) {
     heur.evaluateNode();
+    if (!basis) {
+      heurlp.storeBasis();
+      basis = heurlp.getStoredBasis();
+    }
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");

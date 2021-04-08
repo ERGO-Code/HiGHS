@@ -1099,6 +1099,57 @@ bool HighsSearch::backtrack() {
   return true;
 }
 
+bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
+  if (nodestack.empty()) return false;
+  assert(!nodestack.empty());
+  if (getCurrentDepth() >= targetDepth) nodestack.back().opensubtrees = 0;
+
+  while (nodestack.back().opensubtrees == 0) {
+    nodestack.pop_back();
+
+#ifndef NDEBUG
+    HighsDomainChange branchchg =
+#endif
+        localdom.backtrack();
+    if (nodestack.empty()) {
+      lp->flushDomain(localdom);
+      return false;
+    }
+    assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+    assert(branchchg.boundtype == nodestack.back().branchingdecision.boundtype);
+    assert(branchchg.column == nodestack.back().branchingdecision.column);
+
+    if (getCurrentDepth() >= targetDepth) nodestack.back().opensubtrees = 0;
+  }
+
+  NodeData& currnode = nodestack.back();
+  assert(currnode.opensubtrees == 1);
+  currnode.opensubtrees = 0;
+  bool fallbackbranch =
+      currnode.branchingdecision.boundval == currnode.branching_point;
+
+  if (currnode.branchingdecision.boundtype == HighsBoundType::Lower) {
+    currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+    currnode.branchingdecision.boundval =
+        std::floor(currnode.branchingdecision.boundval - 0.5);
+  } else {
+    currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+    currnode.branchingdecision.boundval =
+        std::ceil(currnode.branchingdecision.boundval + 0.5);
+  }
+
+  if (fallbackbranch)
+    currnode.branching_point = currnode.branchingdecision.boundval;
+
+  HighsInt domchgPos = localdom.getDomainChangeStack().size();
+  localdom.changeBound(currnode.branchingdecision);
+  nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+  lp->flushDomain(localdom);
+  nodestack.back().domgchgStackPos = domchgPos;
+
+  return true;
+}
+
 HighsSearch::NodeResult HighsSearch::dive() {
   reliableatnode.clear();
 
