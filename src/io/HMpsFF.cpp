@@ -132,7 +132,7 @@ FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
     }
 
     // Assign bounds to columns that remain binary by default
-    for (HighsInt colidx = 0; colidx < numCol; colidx++) {
+    for (int colidx = 0; colidx < numCol; colidx++) {
       if (col_binary[colidx]) {
         colLower[colidx] = 0.0;
         colUpper[colidx] = 1.0;
