@@ -590,8 +590,8 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     }
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
-      debugSolution.newIncumbentFound();
       upper_limit = new_upper_limit;
+      debugSolution.newIncumbentFound();
       redcostfixing.propagateRootRedcost(mipsolver);
       if (domain.infeasible()) {
         pruned_treeweight = 1.0;
