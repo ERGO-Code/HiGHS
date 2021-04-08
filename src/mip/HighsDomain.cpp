@@ -1027,16 +1027,6 @@ bool HighsDomain::propagate() {
 
   if (!havePropagationRows()) return false;
 
-  if (infeasible_) {
-    propagateinds_.clear();
-    const HighsInt numpools = cutpoolpropagation.size();
-    for (HighsInt cutpool = 0; cutpool != numpools; ++cutpool) {
-      auto& cutpoolprop = cutpoolpropagation[cutpool];
-      cutpoolprop.propagatecutinds_.clear();
-    }
-    return false;
-  }
-
   size_t changedboundsize = 2 * mipsolver->mipdata_->ARvalue_.size();
 
   for (const auto& cutpoolprop : cutpoolpropagation)
@@ -1059,61 +1049,55 @@ bool HighsDomain::propagate() {
                    mipsolver->mipdata_->ARstart_[i];
       }
 
-      propRowNumChangedBounds_.assign(numproprows, 0);
+      if (!infeasible_) {
+        propRowNumChangedBounds_.assign(numproprows, 0);
 
-      auto propagateIndex = [&](HighsInt k) {
-        // for (HighsInt k = 0; k != numproprows; ++k) {
-        HighsInt i = propagateinds[k];
-        HighsInt start = mipsolver->mipdata_->ARstart_[i];
-        HighsInt end = mipsolver->mipdata_->ARstart_[i + 1];
-        HighsInt Rlen = end - start;
-        const HighsInt* Rindex = mipsolver->mipdata_->ARindex_.data() + start;
-        const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
-        HighsInt numchgs = 0;
+        auto propagateIndex = [&](HighsInt k) {
+          // for (HighsInt k = 0; k != numproprows; ++k) {
+          HighsInt i = propagateinds[k];
+          HighsInt start = mipsolver->mipdata_->ARstart_[i];
+          HighsInt end = mipsolver->mipdata_->ARstart_[i + 1];
+          HighsInt Rlen = end - start;
+          const HighsInt* Rindex = mipsolver->mipdata_->ARindex_.data() + start;
+          const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
+          HighsInt numchgs = 0;
 
-        if (mipsolver->rowUpper(i) != HIGHS_CONST_INF) {
-          // computeMinActivity(start, end, mipsolver->ARstart_.data(),
-          // mipsolver->ARvalue_.data(), activitymininf_[i],
-          //           activitymin_[i]);
-          activitymin_[i].renormalize();
-          numchgs = propagateRowUpper(
-              Rindex, Rvalue, Rlen, mipsolver->rowUpper(i), activitymin_[i],
-              activitymininf_[i], &changedbounds[2 * start]);
-        }
-
-        if (mipsolver->rowLower(i) != -HIGHS_CONST_INF) {
-          // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
-          // mipsolver->ARvalue_.data(), activitymaxinf_[i],
-          //           activitymax_[i]);
-          activitymax_[i].renormalize();
-          numchgs += propagateRowLower(
-              Rindex, Rvalue, Rlen, mipsolver->rowLower(i), activitymax_[i],
-              activitymaxinf_[i], &changedbounds[2 * start + numchgs]);
-        }
-
-        propRowNumChangedBounds_[k] = numchgs;
-      };
-
-      // printf("numproprows (model): %" HIGHSINT_FORMAT "\n", numproprows);
-
-      for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
-
-      for (HighsInt k = 0; k != numproprows; ++k) {
-        if (propRowNumChangedBounds_[k] == 0) continue;
-        HighsInt i = propagateinds[k];
-        HighsInt start = 2 * mipsolver->mipdata_->ARstart_[i];
-        HighsInt end = start + propRowNumChangedBounds_[k];
-        for (HighsInt j = start; j != end && !infeasible_; ++j)
-          changeBound(changedbounds[j], Reason::modelRow(i));
-
-        if (infeasible_) {
-          propagateinds_.clear();
-          const HighsInt numpools = cutpoolpropagation.size();
-          for (HighsInt cutpool = 0; cutpool != numpools; ++cutpool) {
-            auto& cutpoolprop = cutpoolpropagation[cutpool];
-            cutpoolprop.propagatecutinds_.clear();
+          if (mipsolver->rowUpper(i) != HIGHS_CONST_INF) {
+            // computeMinActivity(start, end, mipsolver->ARstart_.data(),
+            // mipsolver->ARvalue_.data(), activitymininf_[i],
+            //           activitymin_[i]);
+            activitymin_[i].renormalize();
+            numchgs = propagateRowUpper(
+                Rindex, Rvalue, Rlen, mipsolver->rowUpper(i), activitymin_[i],
+                activitymininf_[i], &changedbounds[2 * start]);
           }
-          return true;
+
+          if (mipsolver->rowLower(i) != -HIGHS_CONST_INF) {
+            // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
+            // mipsolver->ARvalue_.data(), activitymaxinf_[i],
+            //           activitymax_[i]);
+            activitymax_[i].renormalize();
+            numchgs += propagateRowLower(
+                Rindex, Rvalue, Rlen, mipsolver->rowLower(i), activitymax_[i],
+                activitymaxinf_[i], &changedbounds[2 * start + numchgs]);
+          }
+
+          propRowNumChangedBounds_[k] = numchgs;
+        };
+
+        // printf("numproprows (model): %" HIGHSINT_FORMAT "\n", numproprows);
+
+        for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
+
+        for (HighsInt k = 0; k != numproprows; ++k) {
+          if (propRowNumChangedBounds_[k] == 0) continue;
+          HighsInt i = propagateinds[k];
+          HighsInt start = 2 * mipsolver->mipdata_->ARstart_[i];
+          HighsInt end = start + propRowNumChangedBounds_[k];
+          for (HighsInt j = start; j != end && !infeasible_; ++j)
+            changeBound(changedbounds[j], Reason::modelRow(i));
+
+          if (infeasible_) break;
         }
       }
 
@@ -1136,64 +1120,59 @@ bool HighsDomain::propagate() {
                      cutpoolprop.cutpool->getMatrix().getRowStart(cut);
         }
 
-        propRowNumChangedBounds_.assign(numproprows, 0);
+        if (!infeasible_) {
+          propRowNumChangedBounds_.assign(numproprows, 0);
 
-        auto propagateIndex = [&](HighsInt k) {
-          HighsInt i = propagateinds[k];
+          auto propagateIndex = [&](HighsInt k) {
+            HighsInt i = propagateinds[k];
 
-          HighsInt Rlen;
-          const HighsInt* Rindex;
-          const double* Rvalue;
-          cutpoolprop.cutpool->getCut(i, Rlen, Rindex, Rvalue);
+            HighsInt Rlen;
+            const HighsInt* Rindex;
+            const double* Rvalue;
+            cutpoolprop.cutpool->getCut(i, Rlen, Rindex, Rvalue);
 
-          if (cutpoolprop.activitycutversion_[i] !=
-              cutpoolprop.cutpool->getModificationCount(i)) {
-            cutpoolprop.activitycutversion_[i] =
-                cutpoolprop.cutpool->getModificationCount(i);
+            if (cutpoolprop.activitycutversion_[i] !=
+                cutpoolprop.cutpool->getModificationCount(i)) {
+              cutpoolprop.activitycutversion_[i] =
+                  cutpoolprop.cutpool->getModificationCount(i);
+              HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
+              if (start == -1) {
+                cutpoolprop.activitycuts_[i] = 0;
+                return;
+              }
+              HighsInt end = cutpoolprop.cutpool->getMatrix().getRowEnd(i);
+              const HighsInt* arindex =
+                  cutpoolprop.cutpool->getMatrix().getARindex();
+              const double* arvalue =
+                  cutpoolprop.cutpool->getMatrix().getARvalue();
+
+              computeMinActivity(start, end, arindex, arvalue,
+                                 cutpoolprop.activitycutsinf_[i],
+                                 cutpoolprop.activitycuts_[i]);
+            } else
+              cutpoolprop.activitycuts_[i].renormalize();
+
+            propRowNumChangedBounds_[k] = propagateRowUpper(
+                Rindex, Rvalue, Rlen, cutpoolprop.cutpool->getRhs()[i],
+                cutpoolprop.activitycuts_[i], cutpoolprop.activitycutsinf_[i],
+                &changedbounds[cutpoolprop.cutpool->getMatrix().getRowStart(
+                    i)]);
+          };
+
+          // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n", numproprows);
+
+          for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
+
+          for (HighsInt k = 0; k != numproprows; ++k) {
+            if (propRowNumChangedBounds_[k] == 0) continue;
+            HighsInt i = propagateinds[k];
+            cutpoolprop.cutpool->resetAge(i);
             HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
-            if (start == -1) {
-              cutpoolprop.activitycuts_[i] = 0;
-              return;
-            }
-            HighsInt end = cutpoolprop.cutpool->getMatrix().getRowEnd(i);
-            const HighsInt* arindex =
-                cutpoolprop.cutpool->getMatrix().getARindex();
-            const double* arvalue =
-                cutpoolprop.cutpool->getMatrix().getARvalue();
+            HighsInt end = start + propRowNumChangedBounds_[k];
+            for (HighsInt j = start; j != end && !infeasible_; ++j)
+              changeBound(changedbounds[j], Reason::cut(cutpool, i));
 
-            computeMinActivity(start, end, arindex, arvalue,
-                               cutpoolprop.activitycutsinf_[i],
-                               cutpoolprop.activitycuts_[i]);
-          } else
-            cutpoolprop.activitycuts_[i].renormalize();
-
-          propRowNumChangedBounds_[k] = propagateRowUpper(
-              Rindex, Rvalue, Rlen, cutpoolprop.cutpool->getRhs()[i],
-              cutpoolprop.activitycuts_[i], cutpoolprop.activitycutsinf_[i],
-              &changedbounds[cutpoolprop.cutpool->getMatrix().getRowStart(i)]);
-        };
-
-        // printf("numproprows (cuts): %" HIGHSINT_FORMAT "\n", numproprows);
-
-        for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
-
-        for (HighsInt k = 0; k != numproprows; ++k) {
-          if (propRowNumChangedBounds_[k] == 0) continue;
-          HighsInt i = propagateinds[k];
-          cutpoolprop.cutpool->resetAge(i);
-          HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
-          HighsInt end = start + propRowNumChangedBounds_[k];
-          for (HighsInt j = start; j != end && !infeasible_; ++j)
-            changeBound(changedbounds[j], Reason::cut(cutpool, i));
-
-          if (infeasible_) {
-            propagateinds_.clear();
-            const HighsInt numpools = cutpoolpropagation.size();
-            for (HighsInt cutpool = 0; cutpool != numpools; ++cutpool) {
-              auto& cutpoolprop = cutpoolpropagation[cutpool];
-              cutpoolprop.propagatecutinds_.clear();
-            }
-            return true;
+            if (infeasible_) break;
           }
         }
 
