@@ -311,7 +311,11 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
         else
           accept = false;
       } else {
-        bound = double(boundVal + mipsolver->mipdata_->epsilon);
+        if (std::abs(double(boundVal) - colLower_[Rindex[i]]) <=
+            mipsolver->mipdata_->epsilon)
+          bound = colLower_[Rindex[i]];
+        else
+          bound = double(boundVal + mipsolver->mipdata_->epsilon);
         if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
           accept = true;
         else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
@@ -343,7 +347,11 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
         else
           accept = false;
       } else {
-        bound = double(boundVal - mipsolver->mipdata_->epsilon);
+        if (std::abs(colUpper_[Rindex[i]] - double(boundVal)) <=
+            mipsolver->mipdata_->epsilon)
+          bound = colUpper_[Rindex[i]];
+        else
+          bound = double(boundVal - mipsolver->mipdata_->epsilon);
         if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
           accept = true;
         else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
@@ -406,7 +414,11 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
         else
           accept = false;
       } else {
-        bound = double(boundVal + mipsolver->mipdata_->epsilon);
+        if (std::abs(double(boundVal) - colLower_[Rindex[i]]) <=
+            mipsolver->mipdata_->epsilon)
+          bound = colLower_[Rindex[i]];
+        else
+          bound = double(boundVal + mipsolver->mipdata_->epsilon);
         if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
           accept = true;
         else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
@@ -437,7 +449,11 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
         else
           accept = false;
       } else {
-        bound = double(boundVal - mipsolver->mipdata_->epsilon);
+        if (std::abs(colUpper_[Rindex[i]] - double(boundVal)) <=
+            mipsolver->mipdata_->epsilon)
+          bound = colUpper_[Rindex[i]];
+        else
+          bound = double(boundVal - mipsolver->mipdata_->epsilon);
         if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
           accept = true;
         else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
