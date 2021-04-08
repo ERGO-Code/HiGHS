@@ -131,6 +131,14 @@ FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
       }
     }
 
+    // Assign bounds to columns that remain binary by default
+    for (HighsInt colidx = 0; colidx < numCol; colidx++) {
+      if (col_binary[colidx]) {
+        colLower[colidx] = 0.0;
+        colUpper[colidx] = 1.0;
+      }
+    }
+
     if (keyword == HMpsFF::parsekey::FAIL) {
       f.close();
       return FreeFormatParserReturnCode::PARSERERROR;
@@ -728,13 +736,6 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       if (num_ui)
         HighsLogMessage(logfile, HighsMessageType::INFO,
                         "Number of UI entries in BOUNDS section is %d", num_ui);
-      // Assign bounds to columns that remain binary by default
-      for (int colidx = 0; colidx < numCol; colidx++) {
-        if (col_binary[colidx]) {
-          colLower[colidx] = 0.0;
-          colUpper[colidx] = 1.0;
-        }
-      }
       return key;
     }
     bool islb = false;
