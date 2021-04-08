@@ -931,9 +931,11 @@ void HighsPrimalHeuristics::feasibilityPump() {
     }
 
     lprelax.getLpSolver().changeColsCost(mask.data(), cost.data());
-    size_t oldnumiters = lprelax.getNumLpIterations();
+    int64_t niters = -lprelax.getNumLpIterations();
     status = lprelax.resolveLp();
-    lp_iterations += lprelax.getNumLpIterations() - oldnumiters;
+    niters += lprelax.getNumLpIterations();
+    if (niters == 0) break;
+    lp_iterations += niters;
   }
 
   if (lprelax.getFractionalIntegers().empty() &&
