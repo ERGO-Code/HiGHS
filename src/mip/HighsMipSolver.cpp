@@ -364,6 +364,12 @@ restart:
         mipdata_->lp.storeBasis();
 
       basis = mipdata_->lp.getStoredBasis();
+      if (!basis || !isBasisConsistent(mipdata_->lp.getLp(), *basis)) {
+        HighsBasis b = mipdata_->firstrootbasis;
+        b.row_status.resize(mipdata_->lp.numRows(), HighsBasisStatus::BASIC);
+        basis = std::make_shared<const HighsBasis>(std::move(b));
+        mipdata_->lp.setStoredBasis(basis);
+      }
 
       break;
     }

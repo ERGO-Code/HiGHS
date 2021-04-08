@@ -269,7 +269,7 @@ void HighsLpRelaxation::removeCuts() {
          (HighsInt)lpsolver.getLp().rowLower_.size());
 }
 
-void HighsLpRelaxation::performAging() {
+void HighsLpRelaxation::performAging(bool useBasis) {
   assert(lpsolver.getLp().numRow_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
 
@@ -285,10 +285,18 @@ void HighsLpRelaxation::performAging() {
   HighsInt nummodelrows = getNumModelRows();
   std::vector<HighsInt> deletemask;
 
+  if (!useBasis && agelimit != HIGHS_CONST_I_INF) {
+    HighsBasis b = mipsolver.mipdata_->firstrootbasis;
+    b.row_status.resize(nlprows, HighsBasisStatus::BASIC);
+    HighsStatus st = lpsolver.setBasis(b);
+    assert(st != HighsStatus::Error);
+  }
+
   HighsInt ndelcuts = 0;
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
-    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::BASIC) {
+    if (!useBasis ||
+        lpsolver.getBasis().row_status[i] == HighsBasisStatus::BASIC) {
       if (mipsolver.mipdata_->cutpool.ageLpCut(lprows[i].index, agelimit)) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
@@ -304,6 +312,7 @@ void HighsLpRelaxation::performAging() {
 
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
   if (!domain.getChangedCols().empty()) {
+    if (&domain == &mipsolver.mipdata_->domain) continuous = true;
     currentbasisstored = false;
     for (HighsInt col : domain.getChangedCols()) {
       if (!continuous &&
@@ -364,9 +373,21 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS ||
-        std::abs(val) <= mipsolver.mipdata_->feastol ||
-        globaldomain.colLower_[i] == globaldomain.colUpper_[i]) {
+    bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
+                       globaldomain.colLower_[i] == globaldomain.colUpper_[i];
+
+    if (!removeValue && mipsolver.variableType(i) == HighsVarType::CONTINUOUS) {
+      if (val > 0)
+        removeValue =
+            lpsolver.getSolution().col_value[i] - globaldomain.colLower_[i] <=
+            mipsolver.mipdata_->feastol;
+      else
+        removeValue =
+            globaldomain.colUpper_[i] - lpsolver.getSolution().col_value[i] <=
+            mipsolver.mipdata_->feastol;
+    }
+
+    if (removeValue) {
       if (val < 0) {
         if (globaldomain.colUpper_[i] == HIGHS_CONST_INF) return false;
         upper -= val * globaldomain.colUpper_[i];

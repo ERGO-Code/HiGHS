@@ -778,7 +778,18 @@ restart:
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;
   firstlpsolobj = lp.getObjective();
-  firstrootbasis = lp.getLpSolver().getBasis();
+  if (lp.getLpSolver().getBasis().valid_ && lp.numRows() == mipsolver.numRow())
+    firstrootbasis = lp.getLpSolver().getBasis();
+  else {
+    // the root basis is later expected to be consistent for the model without
+    // cuts so set it to the slack basis if the current basis already includes
+    // cuts, e.g. due to a restart
+    firstrootbasis.col_status.assign(mipsolver.numCol(),
+                                     HighsBasisStatus::NONBASIC);
+    firstrootbasis.row_status.assign(mipsolver.numRow(),
+                                     HighsBasisStatus::BASIC);
+    firstrootbasis.valid_ = true;
+  }
   rootlpsolobj = firstlpsolobj;
 
   if (lp.unscaledDualFeasible(lp.getStatus())) {

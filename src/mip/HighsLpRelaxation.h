@@ -233,7 +233,7 @@ class HighsLpRelaxation {
 
   void addCuts(HighsCutSet& cutset);
 
-  void performAging();
+  void performAging(bool useBasis = true);
 
   void removeObsoleteRows(bool notifyPool = true);
 

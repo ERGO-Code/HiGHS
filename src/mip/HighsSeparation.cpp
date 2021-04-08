@@ -996,7 +996,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
   } else {
     // printf("no separation, just aging. status: %" HIGHSINT_FORMAT "\n",
     // (HighsInt)status);
-    lp->performAging();
+    lp->performAging(false);
     mipsolver.mipdata_->cutpool.performAging();
   }
 }
