@@ -71,7 +71,8 @@ TEST_CASE("highs-info", "[highs_info]") {
     printf("From getHighsInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
            highs_info.ipm_iteration_count);
 #else
-    printf("From getHighsInfo: simplex_iteration_count = %" HIGHSINT_FORMAT "\n",
+    printf("From getHighsInfo: simplex_iteration_count = %" HIGHSINT_FORMAT
+           "\n",
            highs_info.simplex_iteration_count);
 #endif
   }

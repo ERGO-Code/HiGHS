@@ -68,20 +68,20 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       if (tableau_row[iCol] > 0) {
         ray_error_norm += fabs(tableau_row[iCol]);
         if (tableau_row[iCol] > zero_ray_value_tolerance && dev_run)
-          printf(
-              "Col %3" HIGHSINT_FORMAT " is at lower bound so dual step should be "
-              "non-positive, and is %g\n",
-              iCol, tableau_row[iCol]);
+          printf("Col %3" HIGHSINT_FORMAT
+                 " is at lower bound so dual step should be "
+                 "non-positive, and is %g\n",
+                 iCol, tableau_row[iCol]);
       }
     } else if (col_status[iCol] == HighsBasisStatus::UPPER) {
       // At upper bound so value should be non-negative
       if (tableau_row[iCol] < 0) {
         ray_error_norm += fabs(tableau_row[iCol]);
         if (tableau_row[iCol] < -zero_ray_value_tolerance && dev_run)
-          printf(
-              "Col %3" HIGHSINT_FORMAT " is at upper bound so dual step should be "
-              "non-negative, and is %g\n",
-              iCol, tableau_row[iCol]);
+          printf("Col %3" HIGHSINT_FORMAT
+                 " is at upper bound so dual step should be "
+                 "non-negative, and is %g\n",
+                 iCol, tableau_row[iCol]);
       }
     } else {
       // Free so value should be zero
@@ -89,7 +89,8 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       if (fabs(tableau_row[iCol]) > 0) {
         ray_error_norm += fabs(tableau_row[iCol]);
         if (fabs(tableau_row[iCol]) > zero_ray_value_tolerance && dev_run)
-          printf("Col %3" HIGHSINT_FORMAT " is free so dual step should be zero, and is %g\n",
+          printf("Col %3" HIGHSINT_FORMAT
+                 " is free so dual step should be zero, and is %g\n",
                  iCol, tableau_row[iCol]);
       }
     }
@@ -103,20 +104,20 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       if (dual_ray_value[iRow] < 0) {
         ray_error_norm += fabs(dual_ray_value[iRow]);
         if (dual_ray_value[iRow] < -zero_ray_value_tolerance && dev_run)
-          printf(
-              "Row %3" HIGHSINT_FORMAT " is at lower bound so dual step should be "
-              "non-negative, and is %g\n",
-              iRow, dual_ray_value[iRow]);
+          printf("Row %3" HIGHSINT_FORMAT
+                 " is at lower bound so dual step should be "
+                 "non-negative, and is %g\n",
+                 iRow, dual_ray_value[iRow]);
       }
     } else if (row_status[iRow] == HighsBasisStatus::UPPER) {
       // At upper bound so value should be non-positive
       if (dual_ray_value[iRow] > 0) {
         ray_error_norm += fabs(dual_ray_value[iRow]);
         if (dual_ray_value[iRow] > zero_ray_value_tolerance && dev_run)
-          printf(
-              "Row %3" HIGHSINT_FORMAT " is at upper bound so dual step should be "
-              "non-positive, and is %g\n",
-              iRow, dual_ray_value[iRow]);
+          printf("Row %3" HIGHSINT_FORMAT
+                 " is at upper bound so dual step should be "
+                 "non-positive, and is %g\n",
+                 iRow, dual_ray_value[iRow]);
       }
     } else {
       // Free so value should be zero
@@ -124,7 +125,8 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       if (fabs(dual_ray_value[iRow]) > 0) {
         ray_error_norm += fabs(dual_ray_value[iRow]);
         if (fabs(dual_ray_value[iRow]) > zero_ray_value_tolerance && dev_run)
-          printf("Row %3" HIGHSINT_FORMAT " is free so dual step should be zero, and is %g\n",
+          printf("Row %3" HIGHSINT_FORMAT
+                 " is free so dual step should be zero, and is %g\n",
                  iRow, dual_ray_value[iRow]);
       }
     }
@@ -159,20 +161,20 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       if (colUpper[iCol] < HIGHS_CONST_INF) {
         ray_error_norm += fabs(primal_ray_value[iCol]);
         if (primal_ray_value[iCol] > zero_ray_value_tolerance && dev_run)
-          printf(
-              "Column %" HIGHSINT_FORMAT " has primal ray value %g and finite upper bound of "
-              "%g\n",
-              iCol, primal_ray_value[iCol], colUpper[iCol]);
+          printf("Column %" HIGHSINT_FORMAT
+                 " has primal ray value %g and finite upper bound of "
+                 "%g\n",
+                 iCol, primal_ray_value[iCol], colUpper[iCol]);
       }
     } else if (primal_ray_value[iCol] < 0) {
       // Lower bound must be infinite
       if (colLower[iCol] > -HIGHS_CONST_INF) {
         ray_error_norm += fabs(primal_ray_value[iCol]);
         if (primal_ray_value[iCol] < -zero_ray_value_tolerance && dev_run)
-          printf(
-              "Column %" HIGHSINT_FORMAT " has primal ray value %g and finite lower bound of "
-              "%g\n",
-              iCol, primal_ray_value[iCol], colLower[iCol]);
+          printf("Column %" HIGHSINT_FORMAT
+                 " has primal ray value %g and finite lower bound of "
+                 "%g\n",
+                 iCol, primal_ray_value[iCol], colLower[iCol]);
       }
     }
   }
@@ -182,18 +184,18 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       if (rowUpper[iRow] > HIGHS_CONST_INF) {
         ray_error_norm += fabs(row_ray_value[iRow]);
         if (row_ray_value[iRow] > zero_ray_value_tolerance && dev_run)
-          printf(
-              "Row %" HIGHSINT_FORMAT " has primal ray value %g and finite upper bound of %g\n",
-              iRow, row_ray_value[iRow], rowUpper[iRow]);
+          printf("Row %" HIGHSINT_FORMAT
+                 " has primal ray value %g and finite upper bound of %g\n",
+                 iRow, row_ray_value[iRow], rowUpper[iRow]);
       }
     } else if (row_ray_value[iRow] < -0) {
       // Lower bound must be infinite
       if (rowLower[iRow] > -HIGHS_CONST_INF) {
         ray_error_norm += fabs(row_ray_value[iRow]);
         if (row_ray_value[iRow] < -zero_ray_value_tolerance && dev_run)
-          printf(
-              "Row %" HIGHSINT_FORMAT " has primal ray value %g and finite lower bound of %g\n",
-              iRow, row_ray_value[iRow], rowLower[iRow]);
+          printf("Row %" HIGHSINT_FORMAT
+                 " has primal ray value %g and finite lower bound of %g\n",
+                 iRow, row_ray_value[iRow], rowLower[iRow]);
       }
     }
   }
@@ -311,8 +313,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   if (dev_run) {
     printf("Dual ray:\nRow    computed    expected\n");
     for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
-      printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow, dual_ray_value[iRow],
-             expected_dual_ray[iRow]);
+      printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
+             dual_ray_value[iRow], expected_dual_ray[iRow]);
   }
   checkDualRayValue(highs, dual_ray_value);
   // Check that there is no primal ray
@@ -353,8 +355,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   if (dev_run) {
     printf("Primal ray:\nRow    computed    expected\n");
     for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
-      printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow, primal_ray_value[iRow],
-             expected_primal_ray[iRow]);
+      printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
+             primal_ray_value[iRow], expected_primal_ray[iRow]);
   }
   checkRayDirection(lp.numRow_, dual_ray_value, expected_dual_ray);
   checkPrimalRayValue(highs, primal_ray_value);

@@ -31,8 +31,7 @@ HighsInt Highs_call(
     HighsInt* astart,  //!< array of length [numcol+1] with column start indices
     HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
-    const double*
-        avalue,        //!< array of length [numnz] with value of matrix entries
+    double* avalue,    //!< array of length [numnz] with value of matrix entries
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
@@ -112,8 +111,8 @@ HighsInt Highs_writeSolution(void* highs,          //!< HiGHS object reference
 /*
  * @brief Reports the solution and basis status in a human-readable fashion
  */
-int Highs_writeSolutionPretty(void* highs,          //!< HiGHS object reference
-                              const char* filename  //!< filename
+HighsInt Highs_writeSolutionPretty(void* highs,  //!< HiGHS object reference
+                                   const char* filename  //!< filename
 );
 
 /*

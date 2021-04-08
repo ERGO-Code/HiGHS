@@ -31,7 +31,8 @@ void testSolver(Highs& highs, const std::string solver,
         static_cast<SimplexStrategy>(int_simplex_strategy);
     if (simplex_strategy == SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS)
       return;
-    if (dev_run) printf("Simplex strategy %" HIGHSINT_FORMAT "\n", int_simplex_strategy);
+    if (dev_run)
+      printf("Simplex strategy %" HIGHSINT_FORMAT "\n", int_simplex_strategy);
     return_status =
         highs.setHighsOptionValue("simplex_strategy", simplex_strategy);
     REQUIRE(return_status == HighsStatus::OK);
@@ -64,8 +65,8 @@ void testSolver(Highs& highs, const std::string solver,
     REQUIRE(info.simplex_iteration_count == default_iteration_count.simplex);
   } else {
     if (dev_run)
-      printf("IPM: %" HIGHSINT_FORMAT "; Crossover: %" HIGHSINT_FORMAT "\n", info.ipm_iteration_count,
-             info.crossover_iteration_count);
+      printf("IPM: %" HIGHSINT_FORMAT "; Crossover: %" HIGHSINT_FORMAT "\n",
+             info.ipm_iteration_count, info.crossover_iteration_count);
     REQUIRE(info.ipm_iteration_count == default_iteration_count.ipm);
     REQUIRE(info.crossover_iteration_count ==
             default_iteration_count.crossover);
@@ -99,8 +100,9 @@ void testSolver(Highs& highs, const std::string solver,
              run_time, use_time_limit, run_time - use_time_limit);
 
     if (dev_run)
-      printf("Required %" HIGHSINT_FORMAT " solves (ideally %" HIGHSINT_FORMAT " - max %" HIGHSINT_FORMAT ")\n", num_solve,
-             ideal_num_solve, max_num_solve);
+      printf("Required %" HIGHSINT_FORMAT " solves (ideally %" HIGHSINT_FORMAT
+             " - max %" HIGHSINT_FORMAT ")\n",
+             num_solve, ideal_num_solve, max_num_solve);
   } else {
     if (dev_run)
       printf(
@@ -112,8 +114,8 @@ void testSolver(Highs& highs, const std::string solver,
   REQUIRE(return_status == HighsStatus::OK);
   if (!use_simplex) {
     if (dev_run)
-      printf("IPM: %" HIGHSINT_FORMAT "; Crossover: %" HIGHSINT_FORMAT "\n", info.ipm_iteration_count,
-             info.crossover_iteration_count);
+      printf("IPM: %" HIGHSINT_FORMAT "; Crossover: %" HIGHSINT_FORMAT "\n",
+             info.ipm_iteration_count, info.crossover_iteration_count);
   }
   // Solve with iteration limit
   // First of all check that no iterations are performed if the
@@ -132,7 +134,8 @@ void testSolver(Highs& highs, const std::string solver,
   return_status = highs.run();
   model_status = highs.getModelStatus();
   if (dev_run)
-    printf("Returns status = %" HIGHSINT_FORMAT "; model status = %s\n", (HighsInt)return_status,
+    printf("Returns status = %" HIGHSINT_FORMAT "; model status = %s\n",
+           (HighsInt)return_status,
            highs.highsModelStatusToString(model_status).c_str());
   REQUIRE(return_status == HighsStatus::Warning);
   REQUIRE(model_status == HighsModelStatus::REACHED_ITERATION_LIMIT);
@@ -157,7 +160,8 @@ void testSolver(Highs& highs, const std::string solver,
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     if (dev_run)
-      printf("Setting ipm_iteration_limit = %" HIGHSINT_FORMAT "\n", further_ipm_iterations);
+      printf("Setting ipm_iteration_limit = %" HIGHSINT_FORMAT "\n",
+             further_ipm_iterations);
     return_status = highs.setHighsOptionValue("ipm_iteration_limit",
                                               further_ipm_iterations);
     REQUIRE(return_status == HighsStatus::OK);
@@ -212,8 +216,8 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
   */
 
   HighsInt from_i = (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
-  HighsInt to_i =
-      (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI;  // PRIMAL;  // NUM;
+  HighsInt to_i = (HighsInt)
+      SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI;  // PRIMAL;  // NUM;
   for (HighsInt i = from_i; i < to_i; i++) {
     if (!have_omp) {
       if (i == (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS) continue;

@@ -273,7 +273,9 @@ class SpecialLps {
 
   void reportIssue(const HighsInt issue, const bool dev_run = false) {
     if (dev_run)
-      printf("\n *************\n * Issue %3" HIGHSINT_FORMAT " *\n *************\n", issue);
+      printf("\n *************\n * Issue %3" HIGHSINT_FORMAT
+             " *\n *************\n",
+             issue);
   }
 
   void reportLpName(const std::string lp_name, const bool dev_run = false) {
@@ -307,12 +309,12 @@ class SpecialLps {
       printf("Solution\n");
       printf("Col       Value        Dual\n");
       for (HighsInt iCol = 0; iCol < highs.getLp().numCol_; iCol++)
-        printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iCol, solution.col_value[iCol],
-               solution.col_dual[iCol]);
+        printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iCol,
+               solution.col_value[iCol], solution.col_dual[iCol]);
       printf("Row       Value        Dual\n");
       for (HighsInt iRow = 0; iRow < highs.getLp().numRow_; iRow++)
-        printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow, solution.row_value[iRow],
-               solution.row_dual[iRow]);
+        printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
+               solution.row_value[iRow], solution.row_dual[iRow]);
     } else {
       printf("info.primal_status = %" HIGHSINT_FORMAT "\n", info.primal_status);
     }

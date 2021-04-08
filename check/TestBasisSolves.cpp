@@ -22,7 +22,8 @@ bool GetBasisSolvesSolutionNzOk(HighsInt numRow,
     HighsInt row = solution_indices[ix];
     if (!solution_vector[row]) {
       if (dev_run)
-        printf("SolutionNzOk: Indexed entry solution_vector[%2" HIGHSINT_FORMAT "] = %11.4g\n",
+        printf("SolutionNzOk: Indexed entry solution_vector[%2" HIGHSINT_FORMAT
+               "] = %11.4g\n",
                row, solution_vector[row]);
       solution_nz_ok = false;
     } else {
@@ -34,7 +35,8 @@ bool GetBasisSolvesSolutionNzOk(HighsInt numRow,
     if (solution_vector[row]) {
       if (dev_run)
         printf(
-            "SolutionNzOk: Non-indexed entry solution_vector[%2" HIGHSINT_FORMAT "] = %11.4g\n",
+            "SolutionNzOk: Non-indexed entry solution_vector[%2" HIGHSINT_FORMAT
+            "] = %11.4g\n",
             row, solution_vector[row]);
       solution_nz_ok = false;
     }
@@ -57,7 +59,9 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         HighsInt row = -(1 + var);
         residual = fabs(rhs[k] - solution[row]);
         if (residual > residual_tolerance) {
-          if (dev_run) printf("Row |[B^Tx-b]_{%2" HIGHSINT_FORMAT "}| = %11.4g\n", k, residual);
+          if (dev_run)
+            printf("Row |[B^Tx-b]_{%2" HIGHSINT_FORMAT "}| = %11.4g\n", k,
+                   residual);
         }
       } else {
         HighsInt col = var;
@@ -67,7 +71,9 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         }
         residual = fabs(rhs[k] - residual);
         if (residual > residual_tolerance) {
-          if (dev_run) printf("Col |[B^Tx-b]_{%2" HIGHSINT_FORMAT "}| = %11.4g\n", k, residual);
+          if (dev_run)
+            printf("Col |[B^Tx-b]_{%2" HIGHSINT_FORMAT "}| = %11.4g\n", k,
+                   residual);
         }
       }
       residual_norm += residual;
@@ -91,7 +97,8 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
     for (HighsInt k = 0; k < lp.numRow_; k++) {
       double residual = fabs(rhs[k] - basis_matrix_times_solution[k]);
       if (residual > residual_tolerance) {
-        if (dev_run) printf("|[B^Tx-b]_{%2" HIGHSINT_FORMAT "}| = %11.4g\n", k, residual);
+        if (dev_run)
+          printf("|[B^Tx-b]_{%2" HIGHSINT_FORMAT "}| = %11.4g\n", k, residual);
       }
       residual_norm += residual;
     }
@@ -201,7 +208,9 @@ void testBasisSolve(Highs& highs) {
   for (HighsInt ix = 0; ix < numRow; ix++) {
     double solution_error = fabs(known_solution[ix] - solution_col[ix]);
     if (solution_error > solution_error_tolerance) {
-      if (dev_run) printf("Row %2" HIGHSINT_FORMAT ": |x-x^|_i = %11.4g\n", ix, solution_error);
+      if (dev_run)
+        printf("Row %2" HIGHSINT_FORMAT ": |x-x^|_i = %11.4g\n", ix,
+               solution_error);
       solution_error_norm += solution_error;
     }
   }
@@ -238,7 +247,8 @@ void testBasisSolve(Highs& highs) {
                                                   solution_col, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
       if (residual_norm > residual_norm_tolerance && dev_run)
-        printf("getBasisSolve(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k, residual_norm);
+        printf("getBasisSolve(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k,
+               residual_norm);
       REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
       if (k < max_k)
         k++;
@@ -271,7 +281,8 @@ void testBasisSolve(Highs& highs) {
                                                 solution_col, true);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance && dev_run)
-      printf("getBasisInverseRow(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k, residual_norm);
+      printf("getBasisInverseRow(%" HIGHSINT_FORMAT "): residual_norm = %g\n",
+             k, residual_norm);
     REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k < max_k)
       k++;
@@ -303,7 +314,8 @@ void testBasisSolve(Highs& highs) {
                                                 solution_col, false);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance && dev_run)
-      printf("getBasisInverseCol(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k, residual_norm);
+      printf("getBasisInverseCol(%" HIGHSINT_FORMAT "): residual_norm = %g\n",
+             k, residual_norm);
     REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k < max_k)
       k++;
@@ -326,7 +338,8 @@ void testBasisSolve(Highs& highs) {
                                                 solution_col, false);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance && dev_run)
-      printf("getBasisSolve(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k, residual_norm);
+      printf("getBasisSolve(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k,
+             residual_norm);
     REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k < max_k)
       k++;
@@ -349,8 +362,9 @@ void testBasisSolve(Highs& highs) {
                                                 solution_col, true);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance && dev_run)
-      printf("getBasisTransposeSolve(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k,
-             residual_norm);
+      printf("getBasisTransposeSolve(%" HIGHSINT_FORMAT
+             "): residual_norm = %g\n",
+             k, residual_norm);
     REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k < max_k)
       k++;
@@ -402,8 +416,9 @@ void testBasisSolve(Highs& highs) {
                                                 solution_col, false);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance && dev_run)
-      printf("getBasisTransposeSolve(%" HIGHSINT_FORMAT "): residual_norm = %g\n", k,
-             residual_norm);
+      printf("getBasisTransposeSolve(%" HIGHSINT_FORMAT
+             "): residual_norm = %g\n",
+             k, residual_norm);
     REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k < max_k)
       k++;

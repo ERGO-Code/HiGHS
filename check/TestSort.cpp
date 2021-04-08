@@ -27,10 +27,11 @@ void doFullSort(const HighsInt num_values, vector<double>& values,
   maxheapsort(&values[0], &indices[0], num_values);
 }
 
-void doAddSort(HighsInt& num_values_sorted, const HighsInt& max_num_values_sorted,
-               vector<double>& best_double_values, vector<HighsInt>& best_indices,
-               const HighsInt num_values, const vector<double>& values,
-               const vector<HighsInt>& indices) {
+void doAddSort(HighsInt& num_values_sorted,
+               const HighsInt& max_num_values_sorted,
+               vector<double>& best_double_values,
+               vector<HighsInt>& best_indices, const HighsInt num_values,
+               const vector<double>& values, const vector<HighsInt>& indices) {
   num_values_sorted = 0;
   for (HighsInt ix = 1; ix <= num_values; ix++) {
     addToDecreasingHeap(num_values_sorted, max_num_values_sorted,
@@ -40,16 +41,19 @@ void doAddSort(HighsInt& num_values_sorted, const HighsInt& max_num_values_sorte
   sortDecreasingHeap(num_values_sorted, best_double_values, best_indices);
 }
 
-void reportValuesIndices(const HighsInt num_values, const vector<double>& values,
+void reportValuesIndices(const HighsInt num_values,
+                         const vector<double>& values,
                          const vector<HighsInt>& indices) {
   if (!dev_run) return;
   printf("\n  Ix      Value Index\n");
   for (HighsInt ix = 1; ix <= num_values; ix++) {
-    printf("%4" HIGHSINT_FORMAT " %10.8f  %4" HIGHSINT_FORMAT "\n", ix, values[ix], indices[ix]);
+    printf("%4" HIGHSINT_FORMAT " %10.8f  %4" HIGHSINT_FORMAT "\n", ix,
+           values[ix], indices[ix]);
   }
 }
 
-void checkIncreasingSort(const HighsInt num_sorted, const vector<double>& values,
+void checkIncreasingSort(const HighsInt num_sorted,
+                         const vector<double>& values,
                          const vector<HighsInt>& indices,
                          const vector<double>& original_values) {
   // Check that the random numbers are ascending and that the indices
@@ -59,13 +63,15 @@ void checkIncreasingSort(const HighsInt num_sorted, const vector<double>& values
   double previous = -HIGHS_CONST_INF;
   for (HighsInt ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] < previous) {
-      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
-             previous);
+      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n",
+             1 + ix, values[1 + ix], previous);
       error0 = true;
     }
     previous = values[1 + ix];
     if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
-      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 != %f5.4 = original_values[indices[%2" HIGHSINT_FORMAT "]]\n",
+      printf("Values[%2" HIGHSINT_FORMAT
+             "] = %f5.4 != %f5.4 = original_values[indices[%2" HIGHSINT_FORMAT
+             "]]\n",
              1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
       error1 = true;
     }
@@ -75,7 +81,8 @@ void checkIncreasingSort(const HighsInt num_sorted, const vector<double>& values
   REQUIRE(error1 == false);
 }
 
-void checkDecreasingSort(const HighsInt num_sorted, const vector<double>& values,
+void checkDecreasingSort(const HighsInt num_sorted,
+                         const vector<double>& values,
                          const vector<HighsInt>& indices,
                          const vector<double>& original_values) {
   // Check that the random numbers are ascending and that the indices
@@ -85,13 +92,15 @@ void checkDecreasingSort(const HighsInt num_sorted, const vector<double>& values
   double previous = HIGHS_CONST_INF;
   for (HighsInt ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] > previous) {
-      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
-             previous);
+      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n",
+             1 + ix, values[1 + ix], previous);
       error0 = true;
     }
     previous = values[1 + ix];
     if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
-      printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 != %f5.4 = original_values[indices[%2" HIGHSINT_FORMAT "]]\n",
+      printf("Values[%2" HIGHSINT_FORMAT
+             "] = %f5.4 != %f5.4 = original_values[indices[%2" HIGHSINT_FORMAT
+             "]]\n",
              1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
       error1 = true;
     }
