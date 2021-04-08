@@ -14,18 +14,19 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
-#include <cstdint>
 #include <limits>
 #include <string>
 
-const int HIGHS_CONST_I_INF = std::numeric_limits<int>::max();
+#include "util/HighsInt.h"
+
+const HighsInt HIGHS_CONST_I_INF = std::numeric_limits<HighsInt>::max();
 const double HIGHS_CONST_INF = std::numeric_limits<double>::infinity();
 const double HIGHS_CONST_TINY = 1e-14;
 const double HIGHS_CONST_ZERO = 1e-50;
 const std::string off_string = "off";
 const std::string choose_string = "choose";
 const std::string on_string = "on";
-const int HIGHS_THREAD_LIMIT = 8;  // 32;
+const HighsInt HIGHS_THREAD_LIMIT = 8;  // 32;
 
 enum HighsDebugLevel {
   HIGHS_DEBUG_LEVEL_MIN = 0,
@@ -47,6 +48,20 @@ enum class HighsDebugStatus {
   LOGICAL_ERROR,
 };
 
+enum HighsAnalysisLevel {
+  HIGHS_ANALYSIS_LEVEL_MIN = 0,
+  HIGHS_ANALYSIS_LEVEL_NONE = HIGHS_ANALYSIS_LEVEL_MIN,
+  HIGHS_ANALYSIS_LEVEL_MODEL_DATA = 1,
+  HIGHS_ANALYSIS_LEVEL_SOLVER_DATA = 2,
+  HIGHS_ANALYSIS_LEVEL_SOLVER_TIME = 4,
+  HIGHS_ANALYSIS_LEVEL_NLA_DATA = 8,
+  HIGHS_ANALYSIS_LEVEL_NLA_TIME = 16,
+  HIGHS_ANALYSIS_LEVEL_MAX =
+      HIGHS_ANALYSIS_LEVEL_MODEL_DATA + HIGHS_ANALYSIS_LEVEL_SOLVER_DATA +
+      HIGHS_ANALYSIS_LEVEL_SOLVER_TIME + HIGHS_ANALYSIS_LEVEL_NLA_DATA +
+      HIGHS_ANALYSIS_LEVEL_NLA_TIME
+};
+
 enum class HighsVarType : uint8_t {
   CONTINUOUS = 0,
   IMPLICIT_INTEGER = 1,
@@ -61,6 +76,7 @@ enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
+enum class MatrixOrientation { NONE = 0, COLWISE, ROWWISE };
 
 enum SolverOption {
   SOLVER_OPTION_SIMPLEX = -1,
@@ -123,9 +139,10 @@ enum class HighsModelStatus {
   SOLVE_ERROR,
   POSTSOLVE_ERROR,
   MODEL_EMPTY,
-  PRIMAL_INFEASIBLE,
-  PRIMAL_UNBOUNDED,
   OPTIMAL,
+  PRIMAL_INFEASIBLE,
+  PRIMAL_INFEASIBLE_OR_UNBOUNDED,
+  PRIMAL_UNBOUNDED,
   REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
   REACHED_TIME_LIMIT,
   REACHED_ITERATION_LIMIT,
@@ -141,10 +158,13 @@ enum class HighsBasisStatus {
   BASIC,  // (slack) variable is basic
   UPPER,  // (slack) variable is at its upper bound
   ZERO,   // free variable is non-basic and set to zero
-  NONBASIC,  // nonbasic with no specific bound information - useful for users
-             // and postsolve
-  SUPER      // Super-basic variable: non-basic and either free and
-             // nonzero or not at a bound. No SCIP equivalent
+  NONBASIC  // nonbasic with no specific bound information - useful for users
+            // and postsolve
 };
+
+// Illegal values of num/max/sum infeasibility - used to indicate that true
+// values aren't known
+const HighsInt illegal_infeasibility_count = -1;
+const double illegal_infeasibility_measure = -1;
 
 #endif /* LP_DATA_HCONST_H_ */

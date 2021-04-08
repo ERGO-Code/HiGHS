@@ -16,18 +16,16 @@
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
-  primal_status = (int)PrimalDualStatus::STATUS_NOTSET;
-  dual_status = (int)PrimalDualStatus::STATUS_NOTSET;
+  primal_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
+  dual_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
   objective_function_value = 0;
-  num_primal_infeasibilities = -1;
-  max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
-  num_dual_infeasibilities = -1;
-  max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  num_primal_infeasibilities = illegal_infeasibility_count;
+  max_primal_infeasibility = illegal_infeasibility_measure;
+  sum_primal_infeasibilities = illegal_infeasibility_measure;
+  num_dual_infeasibilities = illegal_infeasibility_count;
+  max_dual_infeasibility = illegal_infeasibility_measure;
+  sum_dual_infeasibilities = illegal_infeasibility_measure;
 }
-
-inline const char* bool2string(bool b) { return b ? "true" : "false"; }
 
 std::string infoEntryType2string(const HighsInfoType type) {
   if (type == HighsInfoType::INT) {
@@ -39,50 +37,52 @@ std::string infoEntryType2string(const HighsInfoType type) {
 
 InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
-                        int& index) {
-  int num_info = info_records.size();
+                        HighsInt& index) {
+  HighsInt num_info = info_records.size();
   for (index = 0; index < num_info; index++)
     if (info_records[index]->name == name) return InfoStatus::OK;
-  HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                  "getInfoIndex: Info \"%s\" is unknown", name.c_str());
+  highsLogUser(options.log_options, HighsLogType::ERROR,
+               "getInfoIndex: Info \"%s\" is unknown\n", name.c_str());
   return InfoStatus::UNKNOWN_INFO;
 }
 
 InfoStatus checkInfo(const HighsOptions& options,
                      const std::vector<InfoRecord*>& info_records) {
   bool error_found = false;
-  int num_info = info_records.size();
-  for (int index = 0; index < num_info; index++) {
+  HighsInt num_info = info_records.size();
+  for (HighsInt index = 0; index < num_info; index++) {
     std::string name = info_records[index]->name;
     HighsInfoType type = info_records[index]->type;
     // Check that there are no other info with the same name
-    for (int check_index = 0; check_index < num_info; check_index++) {
+    for (HighsInt check_index = 0; check_index < num_info; check_index++) {
       if (check_index == index) continue;
       std::string check_name = info_records[check_index]->name;
       if (check_name == name) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "checkInfo: Info %d (\"%s\") has the same name as info %d \"%s\"",
-            index, name.c_str(), check_index, check_name.c_str());
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "checkInfo: Info %" HIGHSINT_FORMAT
+                     " (\"%s\") has the same name as info %" HIGHSINT_FORMAT
+                     " \"%s\"\n",
+                     index, name.c_str(), check_index, check_name.c_str());
         error_found = true;
       }
     }
     if (type == HighsInfoType::INT) {
-      // Check int info
+      // Check HighsInt info
       InfoRecordInt& info = ((InfoRecordInt*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
-      int* value_pointer = info.value;
-      for (int check_index = 0; check_index < num_info; check_index++) {
+      HighsInt* value_pointer = info.value;
+      for (HighsInt check_index = 0; check_index < num_info; check_index++) {
         if (check_index == index) continue;
         InfoRecordInt& check_info =
             ((InfoRecordInt*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::INT) {
           if (check_info.value == value_pointer) {
-            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                            "checkInfo: Info %d (\"%s\") has the same value "
-                            "pointer as info %d (\"%s\")",
-                            index, info.name.c_str(), check_index,
-                            check_info.name.c_str());
+            highsLogUser(options.log_options, HighsLogType::ERROR,
+                         "checkInfo: Info %" HIGHSINT_FORMAT
+                         " (\"%s\") has the same value "
+                         "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
+                         index, info.name.c_str(), check_index,
+                         check_info.name.c_str());
             error_found = true;
           }
         }
@@ -92,17 +92,18 @@ InfoStatus checkInfo(const HighsOptions& options,
       InfoRecordDouble& info = ((InfoRecordDouble*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
       double* value_pointer = info.value;
-      for (int check_index = 0; check_index < num_info; check_index++) {
+      for (HighsInt check_index = 0; check_index < num_info; check_index++) {
         if (check_index == index) continue;
         InfoRecordDouble& check_info =
             ((InfoRecordDouble*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::DOUBLE) {
           if (check_info.value == value_pointer) {
-            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                            "checkInfo: Info %d (\"%s\") has the same value "
-                            "pointer as info %d (\"%s\")",
-                            index, info.name.c_str(), check_index,
-                            check_info.name.c_str());
+            highsLogUser(options.log_options, HighsLogType::ERROR,
+                         "checkInfo: Info %" HIGHSINT_FORMAT
+                         " (\"%s\") has the same value "
+                         "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
+                         index, info.name.c_str(), check_index,
+                         check_info.name.c_str());
             error_found = true;
           }
         }
@@ -110,22 +111,22 @@ InfoStatus checkInfo(const HighsOptions& options,
     }
   }
   if (error_found) return InfoStatus::ILLEGAL_VALUE;
-  HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                  "checkInfo: Info are OK");
+  highsLogUser(options.log_options, HighsLogType::INFO,
+               "checkInfo: Info are OK\n");
   return InfoStatus::OK;
 }
 
 InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
-                        int& value) {
-  int index;
+                        HighsInt& value) {
+  HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::INT) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "getInfoValue: Info \"%s\" requires value of type %s, not int",
+    highsLogUser(
+        options.log_options, HighsLogType::ERROR,
+        "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
         name.c_str(), infoEntryType2string(type).c_str());
     return InfoStatus::ILLEGAL_VALUE;
   }
@@ -137,14 +138,14 @@ InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
 InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
                         double& value) {
-  int index;
+  HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::DOUBLE) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "getInfoValue: Info \"%s\" requires value of type %s, not double",
+    highsLogUser(
+        options.log_options, HighsLogType::ERROR,
+        "getInfoValue: Info \"%s\" requires value of type %s, not double\n",
         name.c_str(), infoEntryType2string(type).c_str());
     return InfoStatus::ILLEGAL_VALUE;
   }
@@ -180,8 +181,8 @@ HighsStatus writeInfoToFile(FILE* file,
 
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
                 const bool html) {
-  int num_info = info_records.size();
-  for (int index = 0; index < num_info; index++) {
+  HighsInt num_info = info_records.size();
+  for (HighsInt index = 0; index < num_info; index++) {
     HighsInfoType type = info_records[index]->type;
     // Skip the advanced info when creating HTML
     if (html && info_records[index]->advanced) continue;
@@ -199,12 +200,15 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: int, advanced: %s\n", bool2string(info.advanced));
+    fprintf(file, "type: HighsInt, advanced: %s\n",
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());
-    fprintf(file, "# [type: int, advanced: %s]\n", bool2string(info.advanced));
-    fprintf(file, "%s = %d\n", info.name.c_str(), *info.value);
+    fprintf(file, "# [type: HighsInt, advanced: %s]\n",
+            highsBoolToString(info.advanced).c_str());
+    fprintf(file, "%s = %" HIGHSINT_FORMAT "\n", info.name.c_str(),
+            *info.value);
   }
 }
 
@@ -214,12 +218,13 @@ void reportInfo(FILE* file, const InfoRecordDouble& info, const bool html) {
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
             info.name.c_str());
     fprintf(file, "%s<br>\n", info.description.c_str());
-    fprintf(file, "type: double, advanced: %s\n", bool2string(info.advanced));
+    fprintf(file, "type: double, advanced: %s\n",
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "</li>\n");
   } else {
     fprintf(file, "\n# %s\n", info.description.c_str());
     fprintf(file, "# [type: double, advanced: %s]\n",
-            bool2string(info.advanced));
+            highsBoolToString(info.advanced).c_str());
     fprintf(file, "%s = %g\n", info.name.c_str(), *info.value);
   }
 }

@@ -16,80 +16,66 @@
 
 #include <iostream>
 
+#include "util/HighsInt.h"
+
 class HighsOptions;
 
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsMessageType { INFO, WARNING, ERROR };
-const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
+enum class HighsLogType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
+const char* const HighsLogTypeTag[] = {"", "",          "",
+                                       "", "WARNING: ", "ERROR:   "};
+enum LogDevLevel {
+  LOG_DEV_LEVEL_MIN = 0,
+  LOG_DEV_LEVEL_NONE = LOG_DEV_LEVEL_MIN,  // 0
+  LOG_DEV_LEVEL_INFO,                      // 1
+  LOG_DEV_LEVEL_DETAILED,                  // 2
+  LOG_DEV_LEVEL_VERBOSE,                   // 3
+  LOG_DEV_LEVEL_MAX = LOG_DEV_LEVEL_VERBOSE
+};
 
-enum HighsPrintMessageLevel {
-  ML_MIN = 0,
-  ML_NONE = ML_MIN,
-  ML_VERBOSE = 1,
-  ML_DETAILED = 2,
-  ML_MINIMAL = 4,
-  ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL,
-  ML_MAX = ML_ALWAYS
+struct HighsLogOptions {
+  FILE* log_file_stream;
+  bool* output_flag;
+  bool* log_to_console;
+  HighsInt* log_dev_level;
 };
 
 /**
- * @brief Used to direct printed output to FILE* output, according
- * to whether the level bit is set in messageLevel
+ * @brief For _single-line_ user logging with message type notification
  */
-void HighsPrintMessage(
-    FILE* pass_output, const int message_level,
-    const int level,  //!< The message level: Use | operator to display at
-    //!< level NONE, VERBOSE, DETAILED, MINIMAL
-    const char* format,  //!< Printing format: must contain exactly one "\n" at
-    //!< end of format
-    ...);
+// Printing format: must contain exactly one "\n" at end of format
+void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
+                  const char* format, ...);
 
 /**
- * @brief Used to direct _single-line_ logging output to FILE* logfile,
- * with timestamp and message type notification
+ * @brief For development logging
  */
-void HighsLogMessage(FILE* pass_logfile,
-                     const HighsMessageType type,  //!< The message type
-                     const char* format,  //!< Printing format: must not contain
-                                          //!< "\n", even at the end of format
-                     ...);
-
-/*
- * @brief sets the file used for HighsLogMessage
- */
-void HighsSetLogfile(FILE* logfile  //!< The output file: default stdout
-);
-
-/*
- * @brief sets the file used for HighsPrintMessage
- */
-void HighsSetOutput(FILE* output  //!< The output file: default stdout
-);
-
-/*
- * @brief sets the level used for HighsPrintMessage
- */
-void HighsSetMessagelevel(
-    int level  //!< The message level: Use | operator to display at level NONE,
-               //!< VERBOSE, DETAILED, MINIMAL. default NONE
-);
+void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
+                 const char* format, ...);
 
 /*
  * @brief sets the callbacks used to print output and and log
  *
  * Set to NULL to reset to default, which is to print to logfile and output file
  */
-void HighsSetMessageCallback(
-    void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
-    void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
-    void* msgcb_data_);
+void highsSetLogCallback(void (*printmsgcb_)(int level, const char* msg,
+                                             void* msgcb_data),
+                         void (*logmsgcb_)(HighsLogType type, const char* msg,
+                                           void* msgcb_data),
+                         void* msgcb_data_);
 
 /*
- * @brief sets output options
+ * @brief sets callbacks from options
  */
-void HighsSetIO(HighsOptions& options  //!< the options
+void highsSetLogCallback(HighsOptions& options  //!< the options
 );
+
+void highsReportLogOptions(const HighsLogOptions& log_options_);
+
+std::string highsFormatToString(const char* format, ...);
+
+const std::string highsBoolToString(const bool b);
 
 #endif

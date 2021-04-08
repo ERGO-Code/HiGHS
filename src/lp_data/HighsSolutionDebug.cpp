@@ -39,8 +39,8 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   if (!basis.valid_) return return_status;
   bool consistent = isBasisConsistent(lp, basis);
   if (!consistent) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS basis inconsistency");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "HiGHS basis inconsistency\n");
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -55,8 +55,8 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(lp, basis);
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS basis size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "HiGHS basis size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -71,8 +71,8 @@ HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isSolutionRightSize(lp, solution);
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS solution size error");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "HiGHS solution size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -86,7 +86,7 @@ HighsDebugStatus debugHighsBasicSolution(
   return debugHighsBasicSolution(
       message, highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.basis_, highs_model_object.solution_,
-      highs_model_object.unscaled_solution_params_,
+      highs_model_object.solution_params_,
       highs_model_object.unscaled_model_status_);
 }
 
@@ -106,12 +106,12 @@ HighsDebugStatus debugHighsBasicSolution(
   solution_params.primal_status = info.primal_status;
   solution_params.dual_status = info.dual_status;
   solution_params.objective_function_value = info.objective_function_value;
-  solution_params.num_primal_infeasibilities = info.num_primal_infeasibilities;
+  solution_params.num_primal_infeasibility = info.num_primal_infeasibilities;
   solution_params.max_primal_infeasibility = info.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities = info.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities = info.num_dual_infeasibilities;
+  solution_params.sum_primal_infeasibility = info.sum_primal_infeasibilities;
+  solution_params.num_dual_infeasibility = info.num_dual_infeasibilities;
   solution_params.max_dual_infeasibility = info.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities = info.sum_dual_infeasibilities;
+  solution_params.sum_dual_infeasibility = info.sum_dual_infeasibilities;
 
   return debugHighsBasicSolution(message, options, lp, basis, solution,
                                  solution_params, model_status);
@@ -149,8 +149,8 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
       check_dual_objective_value, solution_params, primal_dual_errors);
 
   HighsModelStatus model_status = HighsModelStatus::NOTSET;
-  if (solution_params.num_primal_infeasibilities == 0 &&
-      solution_params.num_dual_infeasibilities == 0)
+  if (solution_params.num_primal_infeasibility == 0 &&
+      solution_params.num_dual_infeasibility == 0)
     model_status = HighsModelStatus::OPTIMAL;
 
   debugReportHighsBasicSolution(message, options, solution_params,
@@ -232,43 +232,43 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       solution_params.dual_feasibility_tolerance;
 
   // solution_params are the values computed in this method.
-  int& num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibility;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
-  int& num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
+  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibility;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
-  num_primal_infeasibilities = 0;
+  num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
-  num_dual_infeasibilities = 0;
+  sum_primal_infeasibility = 0;
+  num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  sum_dual_infeasibility = 0;
 
   std::vector<double> primal_activities;
   std::vector<double> dual_activities;
   primal_activities.assign(lp.numRow_, 0);
   dual_activities.resize(lp.numCol_);
-  int num_non_basic_var = 0;
-  int num_basic_var = 0;
+  HighsInt num_non_basic_var = 0;
+  HighsInt num_basic_var = 0;
 
-  int& num_nonzero_basic_duals = primal_dual_errors.num_nonzero_basic_duals;
-  int& num_large_nonzero_basic_duals =
+  HighsInt& num_nonzero_basic_duals =
+      primal_dual_errors.num_nonzero_basic_duals;
+  HighsInt& num_large_nonzero_basic_duals =
       primal_dual_errors.num_large_nonzero_basic_duals;
   double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
   double& sum_nonzero_basic_duals = primal_dual_errors.sum_nonzero_basic_duals;
 
-  int& num_off_bound_nonbasic = primal_dual_errors.num_off_bound_nonbasic;
+  HighsInt& num_off_bound_nonbasic = primal_dual_errors.num_off_bound_nonbasic;
   double& max_off_bound_nonbasic = primal_dual_errors.max_off_bound_nonbasic;
   double& sum_off_bound_nonbasic = primal_dual_errors.sum_off_bound_nonbasic;
 
-  int& num_primal_residual = primal_dual_errors.num_primal_residual;
+  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
   double& max_primal_residual = primal_dual_errors.max_primal_residual;
   double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
 
-  int& num_dual_residual = primal_dual_errors.num_dual_residual;
+  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
   double& max_dual_residual = primal_dual_errors.max_dual_residual;
   double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
 
@@ -296,7 +296,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
   double off_bound_nonbasic;
   double primal_infeasibility;
   double dual_infeasibility;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
     double value = solution.col_value[iCol];
@@ -305,7 +305,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     primal_objective_value += lp.colCost_[iCol] * value;
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
-    dual *= (int)lp.sense_;
+    dual *= (HighsInt)lp.sense_;
     bool report = false;
     bool query = debugBasicSolutionVariable(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -316,10 +316,10 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
         std::max(off_bound_nonbasic, max_off_bound_nonbasic);
     sum_off_bound_nonbasic += off_bound_nonbasic;
     if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
+      num_primal_infeasibility++;
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
+    sum_primal_infeasibility += primal_infeasibility;
     if (status == HighsBasisStatus::BASIC) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
@@ -332,10 +332,10 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       }
     } else {
       if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
     report =
         options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
@@ -347,8 +347,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
             "Primal         Dual    PrimalIfs      DualIfs\n");
         header_written = true;
       }
-      printf("%5d %5d [%12g, %12g] %12g %12g", iCol, (int)status, lower, upper,
-             value, dual);
+      printf("%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT
+             " [%12g, %12g] %12g %12g",
+             iCol, (HighsInt)status, lower, upper, value, dual);
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
       debugBasicSolutionVariable(
           report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -357,8 +358,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       printf("\n");
     }
     dual_activities[iCol] = lp.colCost_[iCol];
-    for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
-      int iRow = lp.Aindex_[el];
+    for (HighsInt el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
+      HighsInt iRow = lp.Aindex_[el];
       double Avalue = lp.Avalue_[el];
       primal_activities[iRow] += value * Avalue;
       dual_activities[iCol] += solution.row_dual[iRow] * Avalue;
@@ -366,7 +367,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
   }
   bool report = options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE;
   header_written = false;
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     double primal_residual_error =
         std::fabs(primal_activities[iRow] - solution.row_value[iRow]);
     if (primal_residual_error > large_residual_error) {
@@ -377,8 +378,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
               "Residual\n");
           header_written = true;
         }
-        printf("%5d %12g %12g %12g\n", iRow, primal_activities[iRow],
-               solution.row_value[iRow], primal_residual_error);
+        printf("%5" HIGHSINT_FORMAT " %12g %12g %12g\n", iRow,
+               primal_activities[iRow], solution.row_value[iRow],
+               primal_residual_error);
       }
       num_primal_residual++;
     }
@@ -386,7 +388,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     sum_primal_residual += primal_residual_error;
   }
   header_written = false;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     double dual_residual_error =
         std::fabs(dual_activities[iCol] - solution.col_dual[iCol]);
     if (dual_residual_error > large_residual_error) {
@@ -397,8 +399,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
               "Residual\n");
           header_written = true;
         }
-        printf("%5d %12g %12g %12g\n", iCol, dual_activities[iCol],
-               solution.col_dual[iCol], dual_residual_error);
+        printf("%5" HIGHSINT_FORMAT " %12g %12g %12g\n", iCol,
+               dual_activities[iCol], solution.col_dual[iCol],
+               dual_residual_error);
       }
       num_dual_residual++;
     }
@@ -406,7 +409,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     sum_dual_residual += dual_residual_error;
   }
   header_written = false;
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     double lower = lp.rowLower_[iRow];
     double upper = lp.rowUpper_[iRow];
     double value = solution.row_value[iRow];
@@ -414,7 +417,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     HighsBasisStatus status = basis.row_status[iRow];
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
-    dual *= (int)lp.sense_;
+    dual *= (HighsInt)lp.sense_;
     bool report = false;
     bool query = debugBasicSolutionVariable(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -425,10 +428,10 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
         std::max(off_bound_nonbasic, max_off_bound_nonbasic);
     sum_off_bound_nonbasic += off_bound_nonbasic;
     if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
+      num_primal_infeasibility++;
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
+    sum_primal_infeasibility += primal_infeasibility;
     if (status == HighsBasisStatus::BASIC) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
@@ -441,10 +444,10 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       }
     } else {
       if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
     report =
         options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
@@ -456,8 +459,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
             "     Dual    PrimalIfs      DualIfs\n");
         header_written = true;
       }
-      printf("%5d %5d [%12g, %12g] %12g %12g", iRow, (int)status, lower, upper,
-             value, dual);
+      printf("%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT
+             " [%12g, %12g] %12g %12g",
+             iRow, (HighsInt)status, lower, upper, value, dual);
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
       debugBasicSolutionVariable(
           report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -472,7 +476,7 @@ bool debugBasicSolutionVariable(
     bool report, const double primal_feasibility_tolerance,
     const double dual_feasibility_tolerance, const HighsBasisStatus status,
     const double lower, const double upper, const double value,
-    const double dual, int& num_non_basic_var, int& num_basic_var,
+    const double dual, HighsInt& num_non_basic_var, HighsInt& num_basic_var,
     double& off_bound_nonbasic, double& primal_infeasibility,
     double& dual_infeasibility) {
   double middle = (lower + upper) * 0.5;
@@ -481,7 +485,14 @@ bool debugBasicSolutionVariable(
   bool count = !report;
   off_bound_nonbasic = 0;
   double primal_residual = std::max(lower - value, value - upper);
-  primal_infeasibility = std::max(primal_residual, 0.);
+  // @primal_infeasibility calculation
+  primal_infeasibility = 0;
+  if (value < lower - primal_feasibility_tolerance) {
+    primal_infeasibility = lower - value;
+  } else if (value > upper + primal_feasibility_tolerance) {
+    primal_infeasibility = value - upper;
+  }
+  //  primal_infeasibility = std::max(primal_residual, 0.);
   // ToDo Strange: nonbasic_flag seems to be inverted???
   if (status == HighsBasisStatus::BASIC) {
     // Basic variable: look for primal infeasibility
@@ -572,89 +583,93 @@ bool debugBasicSolutionVariable(
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors) {
   std::string value_adjective;
-  int report_level;
+  HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const bool force_report =
       options.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY;
   if (primal_dual_errors.num_nonzero_basic_duals) {
     value_adjective = "Error";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   } else {
     value_adjective = "";
-    report_level = ML_NONE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = ML_ALWAYS;
-  HighsPrintMessage(options.output, options.message_level, report_level,
-                    "PrDuErrors : %-9s Nonzero basic duals:       num = %2d; "
-                    "max = %9.4g; sum = %9.4g\n",
-                    value_adjective.c_str(),
-                    primal_dual_errors.num_nonzero_basic_duals,
-                    primal_dual_errors.max_nonzero_basic_dual,
-                    primal_dual_errors.sum_nonzero_basic_duals);
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(
+      options.log_options, report_level,
+      "PrDuErrors : %-9s Nonzero basic duals:       num = %2" HIGHSINT_FORMAT
+      "; "
+      "max = %9.4g; sum = %9.4g\n",
+      value_adjective.c_str(), primal_dual_errors.num_nonzero_basic_duals,
+      primal_dual_errors.max_nonzero_basic_dual,
+      primal_dual_errors.sum_nonzero_basic_duals);
 
   if (primal_dual_errors.num_off_bound_nonbasic) {
     value_adjective = "Error";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   } else {
     value_adjective = "";
-    report_level = ML_NONE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = ML_ALWAYS;
-  HighsPrintMessage(options.output, options.message_level, report_level,
-                    "PrDuErrors : %-9s Off-bound nonbasic values: num = %2d; "
-                    "max = %9.4g; sum = %9.4g\n",
-                    value_adjective.c_str(),
-                    primal_dual_errors.num_off_bound_nonbasic,
-                    primal_dual_errors.max_off_bound_nonbasic,
-                    primal_dual_errors.sum_off_bound_nonbasic);
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(
+      options.log_options, report_level,
+      "PrDuErrors : %-9s Off-bound nonbasic values: num = %2" HIGHSINT_FORMAT
+      "; "
+      "max = %9.4g; sum = %9.4g\n",
+      value_adjective.c_str(), primal_dual_errors.num_off_bound_nonbasic,
+      primal_dual_errors.max_off_bound_nonbasic,
+      primal_dual_errors.sum_off_bound_nonbasic);
 
   if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::DETAILED;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = ML_ALWAYS;
-  HighsPrintMessage(options.output, options.message_level, report_level,
-                    "PrDuErrors : %-9s Primal residual:           num = %2d; "
-                    "max = %9.4g; sum = %9.4g\n",
-                    value_adjective.c_str(),
-                    primal_dual_errors.num_primal_residual,
-                    primal_dual_errors.max_primal_residual,
-                    primal_dual_errors.sum_primal_residual);
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(
+      options.log_options, report_level,
+      "PrDuErrors : %-9s Primal residual:           num = %2" HIGHSINT_FORMAT
+      "; "
+      "max = %9.4g; sum = %9.4g\n",
+      value_adjective.c_str(), primal_dual_errors.num_primal_residual,
+      primal_dual_errors.max_primal_residual,
+      primal_dual_errors.sum_primal_residual);
 
   if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::DETAILED;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = ML_ALWAYS;
-  HighsPrintMessage(options.output, options.message_level, report_level,
-                    "PrDuErrors : %-9s Dual residual:             num = %2d; "
-                    "max = %9.4g; sum = %9.4g\n",
-                    value_adjective.c_str(),
-                    primal_dual_errors.num_dual_residual,
-                    primal_dual_errors.max_dual_residual,
-                    primal_dual_errors.sum_dual_residual);
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(
+      options.log_options, report_level,
+      "PrDuErrors : %-9s Dual residual:             num = %2" HIGHSINT_FORMAT
+      "; "
+      "max = %9.4g; sum = %9.4g\n",
+      value_adjective.c_str(), primal_dual_errors.num_dual_residual,
+      primal_dual_errors.max_dual_residual,
+      primal_dual_errors.sum_dual_residual);
 
   return return_status;
 }
@@ -710,32 +725,30 @@ HighsDebugStatus debugCompareSolutionInfeasibilityParams(
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   return_status =
       debugWorseStatus(debugCompareSolutionParamInteger(
-                           "num_primal_infeasibilities", options,
-                           solution_params0.num_primal_infeasibilities,
-                           solution_params1.num_primal_infeasibilities),
+                           "num_primal_infeasibility", options,
+                           solution_params0.num_primal_infeasibility,
+                           solution_params1.num_primal_infeasibility),
                        return_status);
-  return_status =
-      debugWorseStatus(debugCompareSolutionParamValue(
-                           "sum_primal_infeasibilities", options,
-                           solution_params0.sum_primal_infeasibilities,
-                           solution_params1.sum_primal_infeasibilities),
-                       return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamValue("sum_primal_infeasibility", options,
+                                     solution_params0.sum_primal_infeasibility,
+                                     solution_params1.sum_primal_infeasibility),
+      return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("max_primal_infeasibility", options,
                                      solution_params0.max_primal_infeasibility,
                                      solution_params1.max_primal_infeasibility),
       return_status);
 
-  return_status =
-      debugWorseStatus(debugCompareSolutionParamInteger(
-                           "num_dual_infeasibilities", options,
-                           solution_params0.num_dual_infeasibilities,
-                           solution_params1.num_dual_infeasibilities),
-                       return_status);
   return_status = debugWorseStatus(
-      debugCompareSolutionParamValue("sum_dual_infeasibilities", options,
-                                     solution_params0.sum_dual_infeasibilities,
-                                     solution_params1.sum_dual_infeasibilities),
+      debugCompareSolutionParamInteger("num_dual_infeasibility", options,
+                                       solution_params0.num_dual_infeasibility,
+                                       solution_params1.num_dual_infeasibility),
+      return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamValue("sum_dual_infeasibility", options,
+                                     solution_params0.sum_dual_infeasibility,
+                                     solution_params1.sum_dual_infeasibility),
       return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("max_dual_infeasibility", options,
@@ -752,33 +765,34 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
   if (v0 == v1) return HighsDebugStatus::OK;
   double delta = highsRelativeDifference(v0, v1);
   std::string value_adjective;
-  int report_level;
+  HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (delta > excessive_relative_solution_param_error) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (delta > large_relative_solution_param_error) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsLogType::DETAILED;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   }
-  HighsPrintMessage(options.output, options.message_level, report_level,
-                    "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
-                    value_adjective.c_str(), delta, name.c_str());
+  highsLogDev(options.log_options, report_level,
+              "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
+              value_adjective.c_str(), delta, name.c_str());
   return return_status;
 }
 
 HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
-                                                  const int v0, const int v1) {
+                                                  const HighsInt v0,
+                                                  const HighsInt v1) {
   if (v0 == v1) return HighsDebugStatus::OK;
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "SolutionPar:  difference of %d for %s\n", v1 - v0,
-                    name.c_str());
+  highsLogDev(options.log_options, HighsLogType::ERROR,
+              "SolutionPar:  difference of %" HIGHSINT_FORMAT " for %s\n",
+              v1 - v0, name.c_str());
   return HighsDebugStatus::LOGICAL_ERROR;
 }
 
@@ -786,17 +800,18 @@ void debugReportHighsBasicSolution(const string message,
                                    const HighsOptions& options,
                                    const HighsSolutionParams& solution_params,
                                    const HighsModelStatus model_status) {
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "\nHiGHS basic solution: %s\n", message.c_str());
-  HighsPrintMessage(
-      options.output, options.message_level, ML_ALWAYS,
-      "Infeas:                Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, "
-      "Sum %.4g); Status: %s\n",
-      solution_params.num_primal_infeasibilities,
-      solution_params.max_primal_infeasibility,
-      solution_params.sum_primal_infeasibilities,
-      solution_params.num_dual_infeasibilities,
-      solution_params.max_dual_infeasibility,
-      solution_params.sum_dual_infeasibilities,
-      utilHighsModelStatusToString(model_status).c_str());
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "\nHiGHS basic solution: %s\n", message.c_str());
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "Infeas:                Pr %" HIGHSINT_FORMAT
+              "(Max %.4g, Sum %.4g); Du %" HIGHSINT_FORMAT
+              "(Max %.4g, "
+              "Sum %.4g); Status: %s\n",
+              solution_params.num_primal_infeasibility,
+              solution_params.max_primal_infeasibility,
+              solution_params.sum_primal_infeasibility,
+              solution_params.num_dual_infeasibility,
+              solution_params.max_dual_infeasibility,
+              solution_params.sum_dual_infeasibility,
+              utilHighsModelStatusToString(model_status).c_str());
 }

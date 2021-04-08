@@ -89,6 +89,7 @@ set(sources
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
@@ -104,39 +105,58 @@ set(sources
     mip/HighsDynamicRowMatrix.cpp
     mip/HighsLpRelaxation.cpp
     mip/HighsSeparation.cpp
+    mip/HighsSeparator.cpp
+    mip/HighsTableauSeparator.cpp
+    mip/HighsModkSeparator.cpp
+    mip/HighsPathSeparator.cpp
+    mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
+    mip/HighsGFkSolve.cpp
+    mip/HighsTransformedLp.cpp
+    mip/HighsLpAggregator.cpp
+    mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
+    mip/HighsPrimalHeuristics.cpp
+    mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
-    presolve/Presolve.cpp
-    presolve/PresolveComponent.cpp
-    presolve/PresolveAnalysis.cpp
-    presolve/PresolveUtils.cpp
-    presolve/HPreData.cpp
+    mip/HighsRedcostFixing.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
+    presolve/HighsPostsolveStack.cpp
+    presolve/HPreData.cpp
+    presolve/HPresolve.cpp
+    presolve/PresolveAnalysis.cpp
+    presolve/PresolveComponent.cpp
+    presolve/Presolve.cpp
+    presolve/PresolveUtils.cpp
     simplex/HCrash.cpp
-    simplex/HDual.cpp
-    simplex/HDualRHS.cpp
-    simplex/HDualRow.cpp
-    simplex/HDualMulti.cpp
+    simplex/HEkk.cpp
+    simplex/HEkkControl.cpp
+    simplex/HEkkDebug.cpp
+    simplex/HEkkPrimal.cpp
+    simplex/HEkkDual.cpp
+    simplex/HEkkDualRHS.cpp
+    simplex/HEkkDualRow.cpp
+    simplex/HEkkDualMulti.cpp
+    simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
-    simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
-    simplex/HPrimal.cpp
-    simplex/HQPrimal.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/DevKkt.cpp
     test/KktCh2.cpp
+    util/HighsHash.cpp
+    util/HighsLinearSumBounds.cpp
+    util/HighsMatrixPic.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
-    util/HighsMatrixPic.cpp
+    util/HSet.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -165,58 +185,83 @@ set(headers
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
+    lp_data/HighsRuntimeOptions.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
+    mip/HighsCutGeneration.h
     mip/HighsCutPool.h
-    mip/HighsDomain.h
+    mip/HighsDebugSol.h
     mip/HighsDomainChange.h
+    mip/HighsDomain.h
     mip/HighsDynamicRowMatrix.h
+    mip/HighsGFkSolve.h
     mip/HighsImplications.h
+    mip/HighsLpAggregator.h
     mip/HighsLpRelaxation.h
-    mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
+    mip/HighsMipSolver.h
+    mip/HighsModkSeparator.h
     mip/HighsNodeQueue.h
+    mip/HighsPathSeparator.h
+    mip/HighsPrimalHeuristics.h
     mip/HighsPseudocost.h
+    mip/HighsRedcostFixing.h
     mip/HighsSearch.h
     mip/HighsSeparation.h
+    mip/HighsSeparator.h
     mip/HighsSparseVectorSum.h
-    mip/SolveMip.h
+    mip/HighsTableauSeparator.h
+    mip/HighsTransformedLp.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
-    simplex/HDual.h
-    simplex/HDualRow.h
-    simplex/HDualRHS.h
+    simplex/HEkk.h
+    simplex/HEkkDebug.h
+    simplex/HEkkPrimal.h
+    simplex/HEkkDual.h
+    simplex/HEkkDualRow.h
+    simplex/HEkkDualRHS.h
     simplex/HFactor.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
-    simplex/HPrimal.h
-    simplex/HQPrimal.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
-    presolve/Presolve.h
-    presolve/PresolveComponent.h
-    presolve/PresolveAnalysis.h
-    presolve/PresolveUtils.h
-    presolve/HPreData.h
+    simplex/SimplexTimer.h
     simplex/HVector.h
+    presolve/HAggregator.h
+    presolve/HighsLpPropagator.h
+    presolve/HighsPostsolveStack.h
+    presolve/HPreData.h
+    presolve/HPresolve.h
+    presolve/PresolveAnalysis.h
+    presolve/PresolveComponent.h
+    presolve/Presolve.h
+    presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
-    util/stringutil.h
+    util/HighsCDouble.h
     util/HighsComponent.h
+    util/HighsDataStack.h
+    util/HighsHash.h
+    util/HighsInt.h
+    util/HighsIntegers.h
+    util/HighsLinearSumBounds.h
+    util/HighsMatrixPic.h
+    util/HighsMatrixSlice.h
     util/HighsRandom.h
     util/HighsSort.h
+    util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
-    util/HighsMatrixPic.h
+    util/HSet.h
+    util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
 )
@@ -233,6 +278,9 @@ if (IPX_ON)
         ${ipx_headers})
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
+    if(HIGHSINT64)
+    target_compile_definitions(libbasiclu PRIVATE -DHIGHSINT64)
+    endif()
     target_link_libraries(libipx libbasiclu)
 else ()
     set(headers ${headers} ipm/IpxWrapperEmpty.h)
@@ -438,6 +486,7 @@ target_sources(libhighs PRIVATE
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
@@ -447,34 +496,64 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
-    presolve/Presolve.cpp
-    presolve/PresolveComponent.cpp
-    presolve/PresolveAnalysis.cpp
-    presolve/PresolveUtils.cpp
-    presolve/HPreData.cpp
+    mip/HighsMipSolver.cpp
+    mip/HighsMipSolverData.cpp
+    mip/HighsDomain.cpp
+    mip/HighsDynamicRowMatrix.cpp
+    mip/HighsLpRelaxation.cpp
+    mip/HighsSeparation.cpp
+    mip/HighsSeparator.cpp
+    mip/HighsTableauSeparator.cpp
+    mip/HighsModkSeparator.cpp
+    mip/HighsPathSeparator.cpp
+    mip/HighsCutGeneration.cpp
+    mip/HighsSearch.cpp
+    mip/HighsCutPool.cpp
+    mip/HighsCliqueTable.cpp
+    mip/HighsGFkSolve.cpp
+    mip/HighsTransformedLp.cpp
+    mip/HighsLpAggregator.cpp
+    mip/HighsDebugSol.cpp
+    mip/HighsImplications.cpp
+    mip/HighsPrimalHeuristics.cpp
+    mip/HighsPseudocost.cpp
+    mip/HighsNodeQueue.cpp
+    mip/HighsRedcostFixing.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
+    presolve/HighsPostsolveStack.cpp
+    presolve/HPreData.cpp
+    presolve/HPresolve.cpp
+    presolve/PresolveAnalysis.cpp
+    presolve/PresolveComponent.cpp
+    presolve/Presolve.cpp
+    presolve/PresolveUtils.cpp
     simplex/HCrash.cpp
-    simplex/HDual.cpp
-    simplex/HDualRHS.cpp
-    simplex/HDualRow.cpp
-    simplex/HDualMulti.cpp
+    simplex/HEkk.cpp
+    simplex/HEkkControl.cpp
+    simplex/HEkkDebug.cpp
+    simplex/HEkkPrimal.cpp
+    simplex/HEkkDual.cpp
+    simplex/HEkkDualRHS.cpp
+    simplex/HEkkDualRow.cpp
+    simplex/HEkkDualMulti.cpp
+    simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
-    simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
-    simplex/HPrimal.cpp
-    simplex/HQPrimal.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCh2.cpp
     test/DevKkt.cpp
+    util/HighsHash.cpp
+    util/HighsLinearSumBounds.cpp
+    util/HighsMatrixPic.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
-    util/HighsMatrixPic.cpp
+    util/HSet.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -517,50 +596,86 @@ set(headers_fast_build_
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
+    lp_data/HighsRuntimeOptions.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    mip/HighsCliqueTable.h
+    mip/HighsCutGeneration.h
+    mip/HighsCutPool.h
+    mip/HighsDebugSol.h
+    mip/HighsDomainChange.h
+    mip/HighsDomain.h
+    mip/HighsDynamicRowMatrix.h
+    mip/HighsGFkSolve.h
+    mip/HighsImplications.h
+    mip/HighsLpAggregator.h
+    mip/HighsLpRelaxation.h
+    mip/HighsMipSolverData.h
+    mip/HighsMipSolver.h
+    mip/HighsModkSeparator.h
+    mip/HighsNodeQueue.h
+    mip/HighsPathSeparator.h
+    mip/HighsPrimalHeuristics.h
+    mip/HighsPseudocost.h
+    mip/HighsRedcostFixing.h
+    mip/HighsSearch.h
+    mip/HighsSeparation.h
+    mip/HighsSeparator.h
+    mip/HighsSparseVectorSum.h
+    mip/HighsTableauSeparator.h
+    mip/HighsTransformedLp.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
-    simplex/HDual.h
-    simplex/HDualRow.h
-    simplex/HDualRHS.h
+    simplex/HEkk.h
+    simplex/HEkkDebug.h
+    simplex/HEkkDual.h
+    simplex/HEkkDualRHS.h
+    simplex/HEkkDualRow.h
+    simplex/HEkkPrimal.h
     simplex/HFactor.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
-    simplex/HPrimal.h
-    simplex/HQPrimal.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
-    presolve/Presolve.h
-    presolve/PresolveComponent.h
-    presolve/PresolveAnalysis.h
-    presolve/PresolveUtils.h
-    presolve/HAggregator.h
-    presolve/HPreData.h
+    simplex/SimplexTimer.h
     simplex/HVector.h
+    presolve/HAggregator.h
+    presolve/HighsLpPropagator.h
+    presolve/HighsPostsolveStack.h
+    presolve/HPreData.h
+    presolve/HPresolve.h
+    presolve/PresolveAnalysis.h
+    presolve/PresolveComponent.h
+    presolve/Presolve.h
+    presolve/PresolveUtils.h
     test/DevKkt.h
     test/KktCh2.h
-    util/stringutil.h
     util/HighsCDouble.h
     util/HighsComponent.h
+    util/HighsDataStack.h
     util/HighsHash.h
+    util/HighsInt.h
+    util/HighsIntegers.h
+    util/HighsLinearSumBounds.h
+    util/HighsMatrixPic.h
+    util/HighsMatrixSlice.h
     util/HighsRandom.h
     util/HighsSort.h
+    util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
-    util/HighsMatrixPic.h
+    util/HSet.h
+    util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
 )
-
 
 if(IPX_ON)
     set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}

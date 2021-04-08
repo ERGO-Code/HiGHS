@@ -19,7 +19,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
   if (options.options_file.size() == 0) return false;
 
   string line, option, value;
-  int line_count = 0;
+  HighsInt line_count = 0;
   std::ifstream file(options.options_file);
   if (file.is_open()) {
     while (file.good()) {
@@ -27,23 +27,24 @@ bool loadOptionsFromFile(HighsOptions& options) {
       line_count++;
       if (line.size() == 0 || line[0] == '#') continue;
 
-      int equals = line.find_first_of("=");
-      if (equals < 0 || equals >= (int)line.size() - 1) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Error on line %d of options file.", line_count);
+      HighsInt equals = line.find_first_of("=");
+      if (equals < 0 || equals >= (HighsInt)line.size() - 1) {
+        highsLogUser(options.log_options, HighsLogType::ERROR,
+                     "Error on line %" HIGHSINT_FORMAT " of options file.\n",
+                     line_count);
         return false;
       }
       option = line.substr(0, equals);
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      if (setOptionValue(options.logfile, option, options.records, value) !=
+      if (setOptionValue(options.log_options, option, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Options file not found.");
+    highsLogUser(options.log_options, HighsLogType::ERROR,
+                 "Options file not found.\n");
     return false;
   }
 

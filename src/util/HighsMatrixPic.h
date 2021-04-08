@@ -26,15 +26,15 @@ HighsStatus writeLpMatrixPicToFile(const HighsOptions& options,
                                    const HighsLp& lp);
 
 HighsStatus writeMatrixPicToFile(const HighsOptions& options,
-                                 const std::string fileprefix, const int numRow,
-                                 const int numCol,
-                                 const std::vector<int>& Astart,
-                                 const std::vector<int>& Aindex);
+                                 const std::string fileprefix,
+                                 const HighsInt numRow, const HighsInt numCol,
+                                 const std::vector<HighsInt>& Astart,
+                                 const std::vector<HighsInt>& Aindex);
 
 HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
                                   const std::string fileprefix,
-                                  const int numRow, const int numCol,
-                                  const std::vector<int>& ARstart,
-                                  const std::vector<int>& ARindex);
+                                  const HighsInt numRow, const HighsInt numCol,
+                                  const std::vector<HighsInt>& ARstart,
+                                  const std::vector<HighsInt>& ARindex);
 
 #endif  // UTIL_HIGHSMATRIXPIC_H_

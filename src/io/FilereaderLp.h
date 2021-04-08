@@ -32,11 +32,12 @@ class FilereaderLp : public Filereader {
                                       HighsLp& model);
 
   HighsStatus writeModelToFile(const HighsOptions& options,
-                               const std::string filename, HighsLp& model);
+                               const std::string filename,
+                               const HighsLp& model);
 
  private:
   // functions to write files
-  int linelength;
+  HighsInt linelength;
   void writeToFile(FILE* file, const char* format, ...);
   void writeToFileLineend(FILE* file);
 };

@@ -24,11 +24,11 @@ class HighsLp;
 class HighsLp {
  public:
   // Model data
-  int numCol_ = 0;
-  int numRow_ = 0;
+  HighsInt numCol_ = 0;
+  HighsInt numRow_ = 0;
 
-  std::vector<int> Astart_;
-  std::vector<int> Aindex_;
+  std::vector<HighsInt> Astart_;
+  std::vector<HighsInt> Aindex_;
   std::vector<double> Avalue_;
   std::vector<double> colCost_;
   std::vector<double> colLower_;
@@ -36,6 +36,7 @@ class HighsLp {
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
 
+  MatrixOrientation orientation_ = MatrixOrientation::NONE;
   ObjSense sense_ = ObjSense::MINIMIZE;
   double offset_ = 0;
 

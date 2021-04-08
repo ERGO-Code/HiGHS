@@ -21,8 +21,8 @@
 struct HighsRangingRecord {
   std::vector<double> value_;
   std::vector<double> objective_;
-  std::vector<int> in_var_;
-  std::vector<int> ou_var_;
+  std::vector<HighsInt> in_var_;
+  std::vector<HighsInt> ou_var_;
 };
 
 struct HighsRanging {
@@ -34,6 +34,8 @@ struct HighsRanging {
   HighsRangingRecord row_bound_dn;
 };
 
-HighsStatus getHighsRanging(HighsRanging& ranging,
-                            const HighsModelObject& highs_model_object);
+HighsStatus getRangingData(HighsRanging& ranging,
+                           const HighsModelObject& highs_model_object);
+void writeRanging(const HighsRanging& ranging,
+                  const HighsModelObject& highs_model_object);
 #endif

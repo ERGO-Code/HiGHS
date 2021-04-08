@@ -20,17 +20,17 @@
 #include "lp_data/HighsSolution.h"
 
 struct HighsPrimalDualErrors {
-  int num_nonzero_basic_duals;
-  int num_large_nonzero_basic_duals;
+  HighsInt num_nonzero_basic_duals;
+  HighsInt num_large_nonzero_basic_duals;
   double max_nonzero_basic_dual;
   double sum_nonzero_basic_duals;
-  int num_off_bound_nonbasic;
+  HighsInt num_off_bound_nonbasic;
   double max_off_bound_nonbasic;
   double sum_off_bound_nonbasic;
-  int num_primal_residual;
+  HighsInt num_primal_residual;
   double max_primal_residual;
   double sum_primal_residual;
-  int num_dual_residual;
+  HighsInt num_dual_residual;
   double max_dual_residual;
   double sum_dual_residual;
 };
@@ -82,7 +82,7 @@ bool debugBasicSolutionVariable(
     bool report, const double primal_feasibility_tolerance,
     const double dual_feasibility_tolerance, const HighsBasisStatus status,
     const double lower, const double upper, const double value,
-    const double dual, int& num_non_basic_var, int& num_basic_var,
+    const double dual, HighsInt& num_non_basic_var, HighsInt& num_basic_var,
     double& off_bound_nonbasic, double& primal_infeasibility,
     double& dual_infeasibility);
 
@@ -109,7 +109,8 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
 
 HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
-                                                  const int v0, const int v1);
+                                                  const HighsInt v0,
+                                                  const HighsInt v1);
 
 void debugReportHighsBasicSolution(const string message,
                                    const HighsOptions& options,

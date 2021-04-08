@@ -24,7 +24,7 @@ struct HighsTimerClock {
   HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
 
   HighsTimer& timer_;
-  std::vector<int> clock_;
+  std::vector<HighsInt> clock_;
 };
 //#endif
 

@@ -98,22 +98,22 @@ struct PresolveRuleInfo {
   std::string rule_name;
   std::string rule_name_ch3;
 
-  int count_applied = 0;
-  int rows_removed = 0;
-  int cols_removed = 0;
+  HighsInt count_applied = 0;
+  HighsInt rows_removed = 0;
+  HighsInt cols_removed = 0;
 
-  int clock_id = 0;
+  HighsInt clock_id = 0;
   double total_time = 0;
 };
 
 struct numericsRecord {
   std::string name;
   double tolerance;
-  int num_test;
-  int num_zero_true;
-  int num_tol_true;
-  int num_10tol_true;
-  int num_clear_true;
+  HighsInt num_test;
+  HighsInt num_zero_true;
+  HighsInt num_tol_true;
+  HighsInt num_10tol_true;
+  HighsInt num_clear_true;
   double min_positive_true;
 };
 
@@ -124,7 +124,7 @@ class PresolveTimer {
   PresolveTimer(HighsTimer& timer) : timer_(timer) {
     initializePresolveRuleInfo(rules_);
     for (PresolveRuleInfo& rule : rules_) {
-      int clock_id =
+      HighsInt clock_id =
           timer_.clock_def(rule.rule_name.c_str(), rule.rule_name_ch3.c_str());
       rule.clock_id = clock_id;
     }
@@ -134,13 +134,13 @@ class PresolveTimer {
 
   void recordStart(PresolveRule rule) {
     assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
     timer_.start(rules_[rule].clock_id);
   }
 
   void recordFinish(PresolveRule rule) {
     assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
     timer_.stop(rules_[rule].clock_id);
 
     if (rule == TOTAL_PRESOLVE_TIME)
@@ -149,13 +149,13 @@ class PresolveTimer {
 
   void addChange(PresolveRule rule) {
     assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
     rules_[rule].count_applied++;
   }
 
   void increaseCount(bool row_count, PresolveRule rule) {
     assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
     if (row_count)
       rules_[rule].rows_removed++;
     else
@@ -163,8 +163,8 @@ class PresolveTimer {
   }
 
   void reportClocks() {
-    std::vector<int> clocks;
-    for (int id = 0; id < PRESOLVE_RULES_COUNT - 1; id++) {
+    std::vector<HighsInt> clocks;
+    for (HighsInt id = 0; id < PRESOLVE_RULES_COUNT - 1; id++) {
       assert(rules_[id].rule_id == id);
       if (id == RUN_PRESOLVERS) continue;
       if (id == REMOVE_ROW_SINGLETONS) continue;
@@ -172,7 +172,7 @@ class PresolveTimer {
       if (id == REMOVE_EMPTY_ROW) continue;
       clocks.push_back(rules_[id].clock_id);
     }
-    int ideal_time_rule;
+    HighsInt ideal_time_rule;
     double ideal_time;
     ideal_time_rule = TOTAL_PRESOLVE_TIME;
     ideal_time = getRuleTime(ideal_time_rule);
@@ -226,7 +226,7 @@ class PresolveTimer {
     std::cout << std::endl;
   }
 
-  void initialiseNumericsRecord(int record, std::string name,
+  void initialiseNumericsRecord(HighsInt record, std::string name,
                                 const double tolerance) {
     // Make sure that the tolerance has been set to a positive value
     assert(tolerance > 0);
@@ -241,7 +241,7 @@ class PresolveTimer {
     numerics_record.min_positive_true = HIGHS_CONST_INF;
   }
 
-  void updateNumericsRecord(int record, const double value) {
+  void updateNumericsRecord(HighsInt record, const double value) {
     numericsRecord& numerics_record = presolve_numerics[record];
     double tolerance = numerics_record.tolerance;
     numerics_record.num_test++;
@@ -262,29 +262,32 @@ class PresolveTimer {
 
   void reportNumericsRecord(const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
-    printf(
-        "%-26s: tolerance =%6.1g: Zero =%9d; Tol =%9d; 10Tol =%9d; Clear =%9d; "
-        "MinPositive =%7.2g; Tests =%9d\n",
-        numerics_record.name.c_str(), numerics_record.tolerance,
-        numerics_record.num_zero_true, numerics_record.num_tol_true,
-        numerics_record.num_10tol_true, numerics_record.num_clear_true,
-        numerics_record.min_positive_true, numerics_record.num_test);
+    printf("%-26s: tolerance =%6.1g: Zero =%9" HIGHSINT_FORMAT
+           "; Tol =%9" HIGHSINT_FORMAT "; 10Tol =%9" HIGHSINT_FORMAT
+           "; Clear =%9" HIGHSINT_FORMAT
+           "; "
+           "MinPositive =%7.2g; Tests =%9" HIGHSINT_FORMAT "\n",
+           numerics_record.name.c_str(), numerics_record.tolerance,
+           numerics_record.num_zero_true, numerics_record.num_tol_true,
+           numerics_record.num_10tol_true, numerics_record.num_clear_true,
+           numerics_record.min_positive_true, numerics_record.num_test);
   }
 
   void reportNumericsCsvRecord(const numericsRecord& numerics_record) {
-    printf(",%d,%d,%d", numerics_record.num_zero_true,
+    printf(",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT "",
+           numerics_record.num_zero_true,
            numerics_record.num_tol_true + numerics_record.num_10tol_true,
            numerics_record.num_clear_true);
   }
 
   void reportNumericsRecords() {
-    assert((int)presolve_numerics.size() == PRESOLVE_NUMERICS_COUNT);
+    assert((HighsInt)presolve_numerics.size() == PRESOLVE_NUMERICS_COUNT);
     if (presolve_numerics.size() < PRESOLVE_NUMERICS_COUNT) return;
     printf("Presolve numerics analysis for %s:\n\n", model_name.c_str());
-    for (int record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
+    for (HighsInt record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
       reportNumericsRecord(presolve_numerics[record]);
     printf("grep_presolveNumerics:,%s", model_name.c_str());
-    for (int record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
+    for (HighsInt record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
       reportNumericsCsvRecord(presolve_numerics[record]);
     printf("\n\n");
   }
@@ -294,7 +297,7 @@ class PresolveTimer {
 
   HighsTimer& timer_;
 
-  double getRuleTime(const int rule_id) {
+  double getRuleTime(const HighsInt rule_id) {
     return timer_.read(rules_[rule_id].clock_id);
   }
 

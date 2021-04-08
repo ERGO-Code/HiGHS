@@ -30,9 +30,9 @@ using std::vector;
 
 namespace presolve {
 struct change {
-  int type;
-  int row;
-  int col;
+  HighsInt type;
+  HighsInt row;
+  HighsInt col;
 };
 
 class HPreData {
@@ -41,14 +41,14 @@ class HPreData {
   virtual ~HPreData() = default;
 
   // Model data
-  int numCol;
-  int numRow;
-  int numRowOriginal;
-  int numColOriginal;
-  int numTot;
+  HighsInt numCol;
+  HighsInt numRow;
+  HighsInt numRowOriginal;
+  HighsInt numColOriginal;
+  HighsInt numTot;
 
-  vector<int> Astart;
-  vector<int> Aindex;
+  vector<HighsInt> Astart;
+  vector<HighsInt> Aindex;
   vector<double> Avalue;
   vector<double> colCost;
   vector<double> colLower;
@@ -65,11 +65,11 @@ class HPreData {
   vector<double> rowDual;
 
   // Row wise copy of matrix.
-  vector<int> ARstart;
-  vector<int> ARindex;
+  vector<HighsInt> ARstart;
+  vector<HighsInt> ARindex;
   vector<double> ARvalue;
 
-  vector<int> Aend;
+  vector<HighsInt> Aend;
 
   // Solution
   // The first numColOriginal elements are the primal variables, slacks after
@@ -77,13 +77,13 @@ class HPreData {
   vector<double> valueColDual;
   vector<double> valueRowDual;
 
-  vector<int> nzCol;  // nonzeros in columns and rows
-  vector<int> nzRow;
-  vector<int> flagCol;
-  vector<int> flagRow;
+  vector<HighsInt> nzCol;  // nonzeros in columns and rows
+  vector<HighsInt> nzRow;
+  vector<HighsInt> flagCol;
+  vector<HighsInt> flagRow;
 
   const bool use_simplex_basis_logic = false;  // true;//
-  vector<int> nonbasicFlag;
+  vector<HighsInt> nonbasicFlag;
 
   // Record of whether a column or row is basic or nonbasic
   vector<HighsBasisStatus> col_status;
@@ -93,39 +93,39 @@ class HPreData {
 
   void makeARCopy();
   void makeACopy();
-  double getaij(int i, int j);
-  bool isZeroA(int i, int j);
-  double getRowValue(int i);
+  double getaij(HighsInt i, HighsInt j);
+  bool isZeroA(HighsInt i, HighsInt j);
+  double getRowValue(HighsInt i);
 
   stack<double> postValue;
 
   // to match reduced solution to original
-  vector<int> rIndex;
-  vector<int> cIndex;
+  vector<HighsInt> rIndex;
+  vector<HighsInt> cIndex;
 
   dev_kkt_check::KktChStep chk2;
 
   stack<change> chng;
-  stack<pair<int, vector<double>>> oldBounds;  //(j, l, u)
+  stack<pair<HighsInt, vector<double>>> oldBounds;  //(j, l, u)
 };
 
 struct MainLoop {
-  int rows;
-  int cols;
-  int nnz;
+  HighsInt rows;
+  HighsInt cols;
+  HighsInt nnz;
 };
 
 struct DevStats {
-  int n_loops = 0;
+  HighsInt n_loops = 0;
   std::vector<MainLoop> loops;
 };
 
 struct PresolveStats {
   DevStats dev;
 
-  int n_rows_removed = 0;
-  int n_cols_removed = 0;
-  int n_nnz_removed = 0;
+  HighsInt n_rows_removed = 0;
+  HighsInt n_cols_removed = 0;
+  HighsInt n_nnz_removed = 0;
 };
 
 void initPresolve(PresolveStats& stats);

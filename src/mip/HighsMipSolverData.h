@@ -15,18 +15,18 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
+#include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsNodeQueue.h"
+#include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HighsPostsolveStack.h"
 #include "util/HighsTimer.h"
-
-#ifdef HIGHS_DEBUGSOL
-extern std::vector<double> highsDebugSolution;
-#endif
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -36,62 +36,55 @@ struct HighsMipSolverData {
   HighsPseudocost pseudocost;
   HighsCliqueTable cliquetable;
   HighsImplications implications;
-  struct Substitution {
-    int substcol;
-    int staycol;
-    double scale;
-    double offset;
-  };
-  std::vector<Substitution> substitutions;
-
-  struct ModelCleanup {
-    ModelCleanup(HighsMipSolver& mipsolver);
-
-    std::vector<double> origsol;
-    std::vector<HighsSubstitution> substitutionStack;
-
-    HighsLp cleanedUpModel;
-
-    void recoverSolution(const std::vector<double>& reducedSol);
-
-    const HighsLp* origmodel;
-    std::vector<int> rIndex;
-    std::vector<int> cIndex;
-  };
-
+  HighsPrimalHeuristics heuristics;
+  HighsRedcostFixing redcostfixing;
+  presolve::HighsPostsolveStack postSolveStack;
+  HighsLp presolvedModel;
   bool cliquesExtracted;
   bool rowMatrixSet;
-  bool tryProbing;
-  std::unique_ptr<ModelCleanup> modelcleanup;
+  bool analyticCenterComputed;
+  HighsInt numRestarts;
 
-  std::vector<int> ARstart_;
-  std::vector<int> ARindex_;
+  std::vector<HighsInt> ARstart_;
+  std::vector<HighsInt> ARindex_;
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
   std::vector<uint8_t> rowintegral;
+  std::vector<HighsInt> uplocks;
+  std::vector<HighsInt> downlocks;
+  std::vector<HighsInt> integer_cols;
+  std::vector<HighsInt> implint_cols;
+  std::vector<HighsInt> integral_cols;
+  std::vector<HighsInt> continuous_cols;
+
   double objintscale;
 
   double feastol;
   double epsilon;
   double heuristic_effort;
-  size_t dispfreq;
+  int64_t dispfreq;
   std::vector<double> firstlpsol;
   std::vector<double> rootlpsol;
   double firstlpsolobj;
   HighsBasis firstrootbasis;
   double rootlpsolobj;
+  HighsInt numintegercols;
 
   HighsCDouble pruned_treeweight;
-  size_t maxrootlpiters;
-  size_t num_nodes;
-  size_t last_displeave;
-  size_t num_leaves;
-  size_t total_lp_iterations;
-  size_t heuristic_lp_iterations;
-  size_t sepa_lp_iterations;
-  size_t sb_lp_iterations;
-  size_t num_disp_lines;
+  double avgrootlpiters;
+  int64_t firstrootlpiters;
+  int64_t num_nodes;
+  int64_t last_displeave;
+  int64_t num_leaves;
+  int64_t num_leaves_before_run;
+  int64_t num_nodes_before_run;
+  int64_t total_lp_iterations;
+  int64_t heuristic_lp_iterations;
+  int64_t sepa_lp_iterations;
+  int64_t sb_lp_iterations;
+  int64_t num_disp_lines;
 
+  HighsInt numImprovingSols;
   double lower_bound;
   double upper_bound;
   double upper_limit;
@@ -99,31 +92,45 @@ struct HighsMipSolverData {
 
   HighsNodeQueue nodequeue;
 
+  HighsDebugSol debugSolution;
+
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
-        cutpool(mipsolver.numCol(), 10),
-        domain(mipsolver, cutpool),
+        cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
+                mipsolver.options_mip_->mip_pool_soft_limit),
+        domain(mipsolver),
         lp(mipsolver),
-        pseudocost(mipsolver.numCol()),
+        pseudocost(),
         cliquetable(mipsolver.numCol()),
-        implications(domain, cliquetable) {}
+        implications(mipsolver),
+        heuristics(mipsolver),
+        debugSolution(mipsolver) {
+    domain.addCutpool(cutpool);
+  }
 
+  bool moreHeuristicsAllowed();
+  void removeFixedIndices();
   void init();
   void basisTransfer();
   void checkObjIntegrality();
-  void cliqueExtraction();
+  void runPresolve();
+  void setupDomainPropagation();
   void runSetup();
-  void runProbing();
+  double transformNewIncumbent(const std::vector<double>& sol);
+  void performRestart();
+  bool trySolution(const std::vector<double>& solution, char source = ' ');
+  bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
+                           HighsLpRelaxation::Status& status);
   void evaluateRootNode();
-  void addIncumbent(const std::vector<double>& sol, double solobj, char source);
+  bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
 
   const std::vector<double>& getSolution() const;
 
   void printDisplayLine(char first = ' ');
 
-  void getRow(int row, int& rowlen, const int*& rowinds,
+  void getRow(HighsInt row, HighsInt& rowlen, const HighsInt*& rowinds,
               const double*& rowvals) const {
-    int start = ARstart_[row];
+    HighsInt start = ARstart_[row];
     rowlen = ARstart_[row + 1] - start;
     rowinds = ARindex_.data() + start;
     rowvals = ARvalue_.data() + start;

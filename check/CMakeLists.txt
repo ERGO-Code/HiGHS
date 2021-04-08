@@ -13,17 +13,22 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 
 # Make test executable
 set(TEST_SOURCES
+    TestEkk.cpp
     TestMain.cpp
     TestOptions.cpp
     TestIO.cpp
     TestSort.cpp
     TestSetup.cpp
     TestFilereader.cpp
+    TestHighsGFkSolve.cpp
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
+    TestHighsIntegers.cpp
+    TestHSet.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
+    TestLpOrientation.cpp
     TestRays.cpp
     TestRanging.cpp
     Avgas.cpp)
@@ -33,7 +38,7 @@ if (NOT APPLE)
     # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
     # may be an interface related issue which will pop up soon. 
     # works OK on linux. The test was added to doctest for macOS but still hanging.
-    set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp)
+    set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp TestMipSolver.cpp)
 endif()
 
 if (IPX_ON)
@@ -140,17 +145,17 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;2888\; 5.5018458883\;"
-    "80bau3b\;3760\; 9.8722419241\;"
-    "adlittle\;81\; 2.2549496316\;"
-    "afiro\;21\;-4.6475314286\;"
-    "etamacro\;507\;-7.5571523130\;"
-    "greenbea\;5249\;-7.2555248130\;"
-    "shell\;624\; 1.2088253460\;"
-    "stair\;555\;-2.5126695119\;"
-    "standata\;74\; 1.2576995000\;"
-    "standgub\;67\; 1.2576995000\;"
-    "standmps\;215\; 1.4060175000\;"
+    "25fv47\;2962\; 5.5018458883\;"
+    "80bau3b\;3839\; 9.8722419241\;"
+    "adlittle\;83\; 2.2549496316\;"
+    "afiro\;22\;-4.6475314286\;"
+#    "etamacro\;507\;-7.5571523130\;"
+    "greenbea\;6077\;-7.2555248130\;"
+    "shell\;630\; 1.2088253460\;"
+    "stair\;563\;-2.5126695119\;"
+    "standata\;67\; 1.2576995000\;"
+    "standgub\;68\; 1.2576995000\;"
+    "standmps\;216\; 1.4060175000\;"
     )
 
 set(infeasibleInstances
@@ -241,7 +246,7 @@ endmacro(add_instancetests)
 add_instancetests(successInstances "Optimal")
 add_instancetests(failInstances "Fail")
 add_instancetests(infeasibleInstances "Infeasible")
-add_instancetests(unboundedInstances "Unbounded")
+#add_instancetests(unboundedInstances "Unbounded")
 
 foreach(instance ${mipInstances})
     list(GET instance 0 name)
@@ -258,9 +263,9 @@ foreach(instance ${mipInstances})
 
         set_tests_properties (${name}${setting} PROPERTIES
                 PASS_REGULAR_EXPRESSION
-                "objective function value: ${optval}"
+                "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
                 FAIL_REGULAR_EXPRESSION
-                "solution is infeasible")
+                "Solution status   infeasible")
 
     endforeach(setting)
 endforeach()

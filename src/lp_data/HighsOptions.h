@@ -65,13 +65,13 @@ class OptionRecordBool : public OptionRecord {
 
 class OptionRecordInt : public OptionRecord {
  public:
-  int* value;
-  int lower_bound;
-  int default_value;
-  int upper_bound;
+  HighsInt* value;
+  HighsInt lower_bound;
+  HighsInt default_value;
+  HighsInt upper_bound;
   OptionRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  int* Xvalue_pointer, int Xlower_bound, int Xdefault_value,
-                  int Xupper_bound)
+                  HighsInt* Xvalue_pointer, HighsInt Xlower_bound,
+                  HighsInt Xdefault_value, HighsInt Xupper_bound)
       : OptionRecord(HighsOptionType::INT, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
@@ -80,7 +80,7 @@ class OptionRecordInt : public OptionRecord {
     *value = default_value;
   }
 
-  void assignvalue(int Xvalue) { *value = Xvalue; }
+  void assignvalue(HighsInt Xvalue) { *value = Xvalue; }
 
   virtual ~OptionRecordInt() {}
 };
@@ -126,73 +126,96 @@ class OptionRecordString : public OptionRecord {
   virtual ~OptionRecordString() {}
 };
 
-inline const char* bool2string(bool b);
-
-bool commandLineOffChooseOnOk(FILE* logfile, const string& value);
-bool commandLineSolverOk(FILE* logfile, const string& value);
+bool commandLineOffChooseOnOk(const HighsLogOptions& log_options,
+                              const string& value);
+bool commandLineSolverOk(const HighsLogOptions& log_options,
+                         const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(FILE* logfile, const std::string& name,
+OptionStatus getOptionIndex(const HighsLogOptions& log_options,
+                            const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
-                            int& index);
+                            HighsInt& index);
 
-OptionStatus checkOptions(FILE* logfile,
+OptionStatus checkOptions(const HighsLogOptions& log_options,
                           const std::vector<OptionRecord*>& option_records);
-OptionStatus checkOption(FILE* logfile, const OptionRecordInt& option);
-OptionStatus checkOption(FILE* logfile, const OptionRecordDouble& option);
+OptionStatus checkOption(const HighsLogOptions& log_options,
+                         const OptionRecordInt& option);
+OptionStatus checkOption(const HighsLogOptions& log_options,
+                         const OptionRecordDouble& option);
 
-OptionStatus checkOptionValue(FILE* logfile,
+OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
-                              const int value);
-OptionStatus checkOptionValue(FILE* logfile,
+                              const HighsInt value);
+OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
                               const double value);
-OptionStatus checkOptionValue(FILE* logfile,
+OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
                               const std::string value);
 
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const bool value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             std::vector<OptionRecord*>& option_records,
-                            const int value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+                            const HighsInt value);
+#ifdef HIGHSINT64
+inline OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                                   const std::string& name,
+                                   std::vector<OptionRecord*>& option_records,
+                                   const int value) {
+  return setOptionValue(log_options, name, option_records, HighsInt{value});
+}
+#endif
+OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const double value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(HighsLogOptions& log_options,
+                            const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const std::string value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(HighsLogOptions& log_options,
+                            const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option,
-                            const int value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option,
-                            const double value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option,
+OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                            OptionRecordInt& option, const HighsInt value);
+OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                            OptionRecordDouble& option, const double value);
+OptionStatus setOptionValue(const HighsLogOptions& log_options,
+                            OptionRecordString& option,
                             std::string const value);
 
-OptionStatus passOptions(FILE* logfile, const HighsOptions& from_options,
+OptionStatus passOptions(const HighsLogOptions& log_options,
+                         const HighsOptions& from_options,
                          HighsOptions& to_options);
 
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             bool& value);
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
-                            int& value);
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+                            HighsInt& value);
+OptionStatus getOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             double& value);
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options,
+                            const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
-OptionStatus getOptionType(FILE* logfile, const std::string& name,
+OptionStatus getOptionType(const HighsLogOptions& log_options,
+                           const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type);
 
@@ -218,9 +241,9 @@ const string simplex_string = "simplex";
 const string ipm_string = "ipm";
 const string mip_string = "mip";
 
-const int KEEP_N_ROWS_DELETE_ROWS = -1;
-const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
-const int KEEP_N_ROWS_KEEP_ROWS = 1;
+const HighsInt KEEP_N_ROWS_DELETE_ROWS = -1;
+const HighsInt KEEP_N_ROWS_DELETE_ENTRIES = 0;
+const HighsInt KEEP_N_ROWS_KEEP_ROWS = 1;
 
 // Strings for command line options
 const string model_file_string = "model_file";
@@ -230,7 +253,8 @@ const string parallel_string = "parallel";
 const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
 
-// enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
+// String for HiGHS log file option
+const string log_file_string = "log_file";
 
 struct HighsOptionsStruct {
   // Options read from the command line
@@ -250,37 +274,46 @@ struct HighsOptionsStruct {
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
   double dual_objective_value_upper_bound;
-  int highs_debug_level;
-  int simplex_strategy;
-  int simplex_scale_strategy;
-  int simplex_crash_strategy;
-  int simplex_dual_edge_weight_strategy;
-  int simplex_primal_edge_weight_strategy;
-  int simplex_iteration_limit;
-  int simplex_update_limit;
-  int ipm_iteration_limit;
-  int highs_min_threads;
-  int highs_max_threads;
-  int message_level;
+  HighsInt highs_random_seed;
+  HighsInt highs_debug_level;
+  HighsInt highs_analysis_level;
+  HighsInt simplex_strategy;
+  HighsInt simplex_scale_strategy;
+  HighsInt simplex_crash_strategy;
+  HighsInt simplex_dual_edge_weight_strategy;
+  HighsInt simplex_primal_edge_weight_strategy;
+  HighsInt simplex_iteration_limit;
+  HighsInt simplex_update_limit;
+  HighsInt ipm_iteration_limit;
+  HighsInt highs_min_threads;
+  HighsInt highs_max_threads;
   std::string solution_file;
+  std::string log_file;
   bool write_solution_to_file;
   bool write_solution_pretty;
+  // Control of HiGHS log
+  bool output_flag;
+  bool log_to_console;
 
   // Advanced options
+  HighsInt log_dev_level;
   bool run_crossover;
   bool mps_parser_type_free;
-  int keep_n_rows;
-  int allowed_simplex_matrix_scale_factor;
-  int allowed_simplex_cost_scale_factor;
-  int simplex_dualise_strategy;
-  int simplex_permute_strategy;
-  int dual_simplex_cleanup_strategy;
-  int simplex_price_strategy;
-  int dual_chuzc_sort_strategy;
+  HighsInt keep_n_rows;
+  HighsInt allowed_simplex_matrix_scale_factor;
+  HighsInt allowed_simplex_cost_scale_factor;
+  HighsInt simplex_dualise_strategy;
+  HighsInt simplex_permute_strategy;
+  HighsInt dual_simplex_cleanup_strategy;
+  HighsInt simplex_price_strategy;
+  HighsInt dual_chuzc_sort_strategy;
+  HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
+  double primal_simplex_bound_perturbation_multiplier;
+  double presolve_pivot_threshold;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
   double start_crossover_tolerance;
@@ -289,24 +322,28 @@ struct HighsOptionsStruct {
   bool use_original_HFactor_logic;
 
   // Options for MIP solver
-  int mip_max_nodes;
-  int mip_max_leaves;
-  int mip_report_level;
+  HighsInt mip_max_nodes;
+  HighsInt mip_max_stall_nodes;
+  HighsInt mip_max_leaves;
+  HighsInt mip_lp_age_limit;
+  HighsInt mip_pool_age_limit;
+  HighsInt mip_pool_soft_limit;
+  HighsInt mip_pscost_minreliable;
+  HighsInt mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
   double mip_heuristic_effort;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
-  // Options for HighsPrintMessage and HighsLogMessage
-  FILE* logfile = stdout;
-  FILE* output = stdout;
+  // HiGHS log FILE*
+  FILE* log_file_stream = NULL;
 
+  // Logging callback identifiers
   void (*printmsgcb)(int level, const char* msg, void* msgcb_data) = NULL;
-  void (*logmsgcb)(HighsMessageType type, const char* msg,
-                   void* msgcb_data) = NULL;
+  void (*logmsgcb)(HighsLogType type, const char* msg, void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-
+  HighsLogOptions log_options;
   virtual ~HighsOptionsStruct() {}
 };
 
@@ -317,30 +354,37 @@ struct HighsOptionsStruct {
 // variables but no underscores for struct
 class HighsOptions : public HighsOptionsStruct {
  public:
-  HighsOptions() { initRecords(); }
+  HighsOptions() {
+    initRecords();
+    setLogOptions();
+  }
 
   HighsOptions(const HighsOptions& options) {
     initRecords();
     HighsOptionsStruct::operator=(options);
+    setLogOptions();
   }
 
   HighsOptions(HighsOptions&& options) {
     records = std::move(options.records);
     HighsOptionsStruct::operator=(std::move(options));
+    setLogOptions();
   }
 
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
-      if ((int)records.size() == 0) initRecords();
+      if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
+      setLogOptions();
     }
     return *this;
   }
 
   const HighsOptions& operator=(HighsOptions&& other) {
     if (&other != this) {
-      if ((int)records.size() == 0) initRecords();
+      if ((HighsInt)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
+      setLogOptions();
     }
     return *this;
   }
@@ -434,10 +478,21 @@ class HighsOptions : public HighsOptionsStruct {
         HIGHS_CONST_INF, HIGHS_CONST_INF);
     records.push_back(record_double);
 
+    record_int = new OptionRecordInt(
+        "highs_random_seed", "random seed used in HiGHS", advanced,
+        &highs_random_seed, 0, 0, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
     record_int =
         new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
                             advanced, &highs_debug_level, HIGHS_DEBUG_LEVEL_MIN,
                             HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "highs_analysis_level", "Analysis level in HiGHS", advanced,
+        &highs_analysis_level, HIGHS_ANALYSIS_LEVEL_MIN,
+        HIGHS_ANALYSIS_LEVEL_MIN, HIGHS_ANALYSIS_LEVEL_MAX);
     records.push_back(record_int);
 
     record_int =
@@ -509,16 +564,23 @@ class HighsOptions : public HighsOptionsStruct {
         HIGHS_THREAD_LIMIT);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("message_level",
-                                     "HiGHS message level: bit-mask 1 => "
-                                     "VERBOSE; 2 => DETAILED 4 => MINIMAL",
-                                     advanced, &message_level, ML_MIN,
-                                     ML_MINIMAL, ML_MAX);
-    records.push_back(record_int);
+    record_bool =
+        new OptionRecordBool("output_flag", "Enables or disables solver output",
+                             advanced, &output_flag, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("log_to_console",
+                                       "Enables or disables console logging",
+                                       advanced, &log_to_console, true);
+    records.push_back(record_bool);
 
     record_string =
         new OptionRecordString("solution_file", "Solution file", advanced,
                                &solution_file, FILENAME_DEFAULT);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(log_file_string, "Log file",
+                                           advanced, &log_file, "Highs.log");
     records.push_back(record_string);
 
     record_bool =
@@ -537,6 +599,13 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_max_nodes", "MIP solver max number of nodes", advanced,
         &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_stall_nodes",
+        "MIP solver max number of nodes where estimate is above cutoff bound",
+        advanced, &mip_max_stall_nodes, 0, HIGHS_CONST_I_INF,
+        HIGHS_CONST_I_INF);
+    records.push_back(record_int);
 #ifdef HIGHS_DEBUGSOL
     record_string = new OptionRecordString(
         "mip_debug_solution_file",
@@ -548,6 +617,33 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
         &mip_max_leaves, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_lp_age_limit",
+                                     "maximal age of dynamic LP rows before "
+                                     "they are removed from the LP relaxation",
+                                     advanced, &mip_lp_age_limit, 0, 10,
+                                     std::numeric_limits<int16_t>::max());
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_pool_age_limit",
+        "maximal age of rows in the cutpool before they are deleted", advanced,
+        &mip_pool_age_limit, 0, 30, 1000);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_pool_soft_limit",
+                                     "soft limit on the number of rows in the "
+                                     "cutpool for dynamic age adjustment",
+                                     advanced, &mip_pool_soft_limit, 1, 10000,
+                                     HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_pscost_minreliable",
+                                     "minimal number of observations before "
+                                     "pseudo costs are considered reliable",
+                                     advanced, &mip_pscost_minreliable, 0, 8,
+                                     HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_int =
@@ -572,6 +668,13 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
+    record_int = new OptionRecordInt(
+        "log_dev_level",
+        "Output development messages: 0 => none; 1 => info; 2 => verbose",
+        advanced, &log_dev_level, LOG_DEV_LEVEL_MIN, LOG_DEV_LEVEL_NONE,
+        LOG_DEV_LEVEL_MAX);
+    records.push_back(record_int);
+
     record_bool = new OptionRecordBool("run_crossover",
                                        "Run the crossover routine for IPX",
                                        advanced, &run_crossover, true);
@@ -590,7 +693,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
     record_int = new OptionRecordInt(
         "allowed_simplex_matrix_scale_factor",
-        "Largest power-of-two factor permitted when scaling the constraint "
+        "Largest power-of-two factor permitted when scaling the "
+        "constraint "
         "matrix for the simplex solver",
         advanced, &allowed_simplex_matrix_scale_factor, 0, 10, 20);
     records.push_back(record_int);
@@ -615,7 +719,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt("dual_simplex_cleanup_strategy",
                             "Strategy for cleanup in dual simplex solver: none "
-                            "/ HPrimal / HQPrimal (0/1/2)",
+                            "/ HPrimal / HEkk (0/1/2)",
                             advanced, &dual_simplex_cleanup_strategy,
                             DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
                             DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
@@ -662,6 +766,26 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
+        "primal_simplex_bound_perturbation_multiplier",
+        "Primal simplex bound perturbation multiplier: 0 => no perturbation",
+        advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
+        HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "presolve_pivot_threshold",
+        "Matrix factorization pivot threshold for substitutions in presolve",
+        advanced, &presolve_pivot_threshold, min_pivot_threshold, 0.01,
+        max_pivot_threshold);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt("presolve_substitution_maxfillin",
+                                     "Strategy for CHUZC sort in dual simplex",
+                                     advanced, &presolve_substitution_maxfillin,
+                                     0, 10, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
         "factor_pivot_threshold", "Matrix factorization pivot threshold",
         advanced, &factor_pivot_threshold, min_pivot_threshold,
         default_pivot_threshold, max_pivot_threshold);
@@ -695,14 +819,21 @@ class HighsOptions : public HighsOptionsStruct {
                              "Use LiDSE if LP has right properties", advanced,
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
+
+    log_file_stream = fopen(log_file.c_str(), "w");
+    log_options.log_file_stream = log_file_stream;
+    log_options.output_flag = &output_flag;
+    log_options.log_to_console = &log_to_console;
+    log_options.log_dev_level = &log_dev_level;
   }
 
   void deleteRecords() {
-    for (unsigned int i = 0; i < records.size(); i++) delete records[i];
+    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
   }
 
  public:
   std::vector<OptionRecord*> records;
+  void setLogOptions();
 };
 
 #endif

@@ -12,6 +12,8 @@
 
 #include <cassert>
 
+#include "util/HighsInt.h"
+
 /// top down splay operation to maintain a binary search tree. The search tree
 /// is assumed to be stored in an array/vector and therefore uses integers
 /// instead of pointers to link nodes. The splay operation on a given key will
@@ -24,21 +26,21 @@
 /// indices. The GetKey lambda must return a type that is comparable
 /// to KeyT.
 template <typename KeyT, typename GetLeft, typename GetRight, typename GetKey>
-int highs_splay(const KeyT& key, int root, GetLeft&& get_left,
-                GetRight&& get_right, GetKey&& get_key) {
+HighsInt highs_splay(const KeyT& key, HighsInt root, GetLeft&& get_left,
+                     GetRight&& get_right, GetKey&& get_key) {
   if (root == -1) return -1;
 
-  int Nleft = -1;
-  int Nright = -1;
-  int* lright = &Nright;
-  int* rleft = &Nleft;
+  HighsInt Nleft = -1;
+  HighsInt Nright = -1;
+  HighsInt* lright = &Nright;
+  HighsInt* rleft = &Nleft;
 
   while (true) {
     if (key < get_key(root)) {
-      int left = get_left(root);
+      HighsInt left = get_left(root);
       if (left == -1) break;
       if (key < get_key(left)) {
-        int y = left;
+        HighsInt y = left;
         get_left(root) = get_right(y);
         get_right(y) = root;
         root = y;
@@ -49,10 +51,10 @@ int highs_splay(const KeyT& key, int root, GetLeft&& get_left,
       rleft = &get_left(root);
       root = get_left(root);
     } else if (key > get_key(root)) {
-      int right = get_right(root);
+      HighsInt right = get_right(root);
       if (right == -1) break;
       if (key > get_key(right)) {
-        int y = right;
+        HighsInt y = right;
         get_right(root) = get_left(y);
         get_left(y) = root;
         root = y;
@@ -78,7 +80,7 @@ int highs_splay(const KeyT& key, int root, GetLeft&& get_left,
 /// root node. Lambdas must behave as described in highs_splay above.
 /// Equal keys are put to the right subtree.
 template <typename GetLeft, typename GetRight, typename GetKey>
-void highs_splay_link(int linknode, int& root, GetLeft&& get_left,
+void highs_splay_link(HighsInt linknode, HighsInt& root, GetLeft&& get_left,
                       GetRight&& get_right, GetKey&& get_key) {
   if (root == -1) {
     get_left(linknode) = -1;
@@ -106,7 +108,7 @@ void highs_splay_link(int linknode, int& root, GetLeft&& get_left,
 /// unlinks a new node into the binary tree rooted at the given reference to the
 /// root node. Lambdas must behave as described in highs_splay above.
 template <typename GetLeft, typename GetRight, typename GetKey>
-void highs_splay_unlink(int unlinknode, int& root, GetLeft&& get_left,
+void highs_splay_unlink(HighsInt unlinknode, HighsInt& root, GetLeft&& get_left,
                         GetRight&& get_right, GetKey&& get_key) {
   assert(root != -1);
   root = highs_splay(get_key(unlinknode), root, get_left, get_right, get_key);
