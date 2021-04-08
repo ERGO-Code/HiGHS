@@ -159,11 +159,13 @@ void HighsMipSolverData::init() {
 }
 
 void HighsMipSolverData::runPresolve() {
+  mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
 
   presolve.setInput(mipsolver);
 
   mipsolver.modelstatus_ = presolve.run(postSolveStack);
+  mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 }
 
 void HighsMipSolverData::runSetup() {

@@ -42,7 +42,6 @@ void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::NOTSET;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
-  timer_.start(timer_.presolve_clock);
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
@@ -56,61 +55,11 @@ void HighsMipSolver::run() {
       mipdata_->upper_bound = 0;
       mipdata_->transformNewIncumbent(std::vector<double>());
     }
-    timer_.stop(timer_.presolve_clock);
     cleanupSolve();
     return;
   }
-#if 0
-  if (options_mip_->presolve != "off") {
-    HighsPresolveStatus presolve_status = runPresolve();
-    switch (presolve_status) {
-      case HighsPresolveStatus::Reduced:
-        reportPresolveReductions(options_mip_->log_options, *model_,
-                                 presolve_.getReducedProblem());
-        model_ = &presolve_.getReducedProblem();
-        break;
-      case HighsPresolveStatus::Unbounded:
-        modelstatus_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
-                     "Presolve: Model detected to be unbounded\n");
-        timer_.stop(timer_.presolve_clock);
-        timer_.stop(timer_.solve_clock);
-        return;
-      case HighsPresolveStatus::Infeasible:
-        modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
-                     "Presolve: Model detected to be infeasible\n");
-        timer_.stop(timer_.presolve_clock);
-        timer_.stop(timer_.solve_clock);
-        return;
-      case HighsPresolveStatus::Timeout:
-        modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
-        highsLogUser(options_mip_->log_options, HighsLogType::INFO,
-                     "Time limit reached during presolve\n");
-        timer_.stop(timer_.presolve_clock);
-        timer_.stop(timer_.solve_clock);
-        return;
-      case HighsPresolveStatus::ReducedToEmpty:
-        modelstatus_ = HighsModelStatus::OPTIMAL;
-        reportPresolveReductions(options_mip_->log_options, *model_, true);
-        mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-        mipdata_->init();
-        mipdata_->upper_bound = presolve_.data_.presolve_[0].objShift;
-        mipdata_->lower_bound = presolve_.data_.presolve_[0].objShift;
-        timer_.stop(timer_.presolve_clock);
-        cleanupSolve();
-        return;
-      case HighsPresolveStatus::NotReduced:
-        reportPresolveReductions(options_mip_->log_options, *model_, false);
-        break;
-      default:
-        assert(false);
-    }
-  }
-#endif
 
   mipdata_->runSetup();
-  timer_.stop(timer_.presolve_clock);
 restart:
   if (modelstatus_ == HighsModelStatus::NOTSET) {
     mipdata_->evaluateRootNode();
