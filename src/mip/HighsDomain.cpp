@@ -326,7 +326,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
           else
             relativeImprove /=
                 std::max(std::abs(colUpper_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.15;
+          accept = relativeImprove >= 0.3;
         } else
           accept = false;
       }
@@ -362,7 +362,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
           else
             relativeImprove /=
                 std::max(std::abs(colLower_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.15;
+          accept = relativeImprove >= 0.3;
         } else
           accept = false;
       }
@@ -429,7 +429,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
           else
             relativeImprove /=
                 std::max(std::abs(colUpper_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.15;
+          accept = relativeImprove >= 0.3;
         } else
           accept = false;
       }
@@ -464,7 +464,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
           else
             relativeImprove /=
                 std::max(std::abs(colLower_[Rindex[i]]), std::abs(bound));
-          accept = relativeImprove >= 0.15;
+          accept = relativeImprove >= 0.3;
         } else
           accept = false;
       }
