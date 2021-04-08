@@ -92,6 +92,7 @@ class HighsDomain {
 
   bool infeasible_ = 0;
   Reason infeasible_reason;
+  HighsInt infeasible_pos;
 
   void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
 

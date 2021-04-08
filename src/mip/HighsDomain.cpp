@@ -158,6 +158,7 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
         // encoded differently
         domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
         domain->infeasible_ = true;
+        domain->infeasible_pos = domain->domchgstack_.size();
         domain->infeasible_reason = Reason::cut(cutpoolindex, row);
         return false;
       }
@@ -242,6 +243,7 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
               domain->mipsolver->mipdata_->feastol) {
         domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
         domain->infeasible_ = true;
+        domain->infeasible_pos = domain->domchgstack_.size();
         domain->infeasible_reason = Reason::cut(cutpoolindex, row);
         return false;
       }
@@ -567,6 +569,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
+        infeasible_pos = domchgstack_.size();
         infeasible_reason = Reason::modelRow(mip->Aindex_[i]);
         end = i + 1;
         break;
@@ -600,6 +603,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
+        infeasible_pos = domchgstack_.size();
         infeasible_reason = Reason::modelRow(mip->Aindex_[i]);
         end = i + 1;
         break;
@@ -687,6 +691,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
+        infeasible_pos = domchgstack_.size();
         infeasible_reason = Reason::modelRow(mip->Aindex_[i]);
         end = i + 1;
         break;
@@ -721,6 +726,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
+        infeasible_pos = domchgstack_.size();
         infeasible_reason = Reason::modelRow(mip->Aindex_[i]);
         end = i + 1;
         break;
@@ -887,6 +893,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
       if (boundchg.boundval - colUpper_[boundchg.column] >
           mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
+        if (!infeasible_) infeasible_pos = domchgstack_.size();
         infeasible_ = true;
         infeasible_reason = reason;
       } else {
@@ -900,6 +907,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
       if (colLower_[boundchg.column] - boundchg.boundval >
           mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
+        if (!infeasible_) infeasible_pos = domchgstack_.size();
         infeasible_ = true;
         infeasible_reason = reason;
       } else {
@@ -963,7 +971,7 @@ HighsDomainChange HighsDomain::backtrack() {
     doChangeBound(
         {domchgstack_[k].boundtype, domchgstack_[k].column, prevbound});
 
-    if (infeasible_) {
+    if (infeasible_ && infeasible_pos == k) {
       assert(old_infeasible);
       assert(k == HighsInt(domchgstack_.size()) - 1);
       infeasible_ = false;
