@@ -685,6 +685,7 @@ bool HighsMipSolverData::rootSeparationRound(
     heuristics.randomizedRounding(solvals);
     heuristics.flushStatistics();
 
+    domain.propagate();
     if (domain.infeasible()) {
       pruned_treeweight = 1.0;
       lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
@@ -808,6 +809,8 @@ restart:
     heuristics.randomizedRounding(firstlpsol);
     heuristics.flushStatistics();
   }
+
+  domain.propagate();
 
   if (status == HighsLpRelaxation::Status::Infeasible ||
       mipsolver.mipdata_->domain.infeasible() ||
