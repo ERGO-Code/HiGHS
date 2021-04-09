@@ -16,7 +16,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   globaldomain.propagate();
-  if (globaldomain.infeasible() || !globaldomain.isBinary(col)) return true;
+  if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   HighsInt changedend = globaldomain.getChangedCols().size();
 
