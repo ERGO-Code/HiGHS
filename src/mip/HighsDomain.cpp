@@ -135,6 +135,8 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
         domain->computeMinActivity(start, end, arindex, arvalue,
                                    activitycutsinf_[row], activitycuts_[row]);
 
+        activitycutversion_[row] = cutpool->getModificationCount(row);
+
         deltamin = HIGHS_CONST_INF;
       } else {
         if (oldbound == -HIGHS_CONST_INF) {
