@@ -601,6 +601,14 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
   if (recomputeCol) {
     solution.col_value[col] =
         mergeVal - colScale * solution.col_value[duplicateCol];
+    if (!duplicateColIntegral && colIntegral) {
+      // if column is integral and duplicateCol is not we need to make sure
+      // we split the values into an integral one for col
+      solution.col_value[col] = std::ceil(solution.col_value[col] -
+                                          options.mip_feasibility_tolerance);
+      solution.col_value[duplicateCol] =
+          double((HighsCDouble(mergeVal) - solution.col_value[col]) / colScale);
+    }
   } else {
     // setting col to its lower bound yielded a feasible value for
     // duplicateCol
