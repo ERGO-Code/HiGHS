@@ -907,7 +907,7 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
                     const HighsInt* astart, const HighsInt* aindex,
                     const double* avalue, double* colvalue, double* coldual,
                     double* rowvalue, double* rowdual, HighsInt* colbasisstatus,
-                    HighsInt* rowbasisstatus, HighsInt* modelstatus);
+                    HighsInt* rowbasisstatus, int* modelstatus);
 
 HighsInt Highs_runQuiet(void* highs  //!< HiGHS object reference
 );
