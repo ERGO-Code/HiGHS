@@ -110,8 +110,7 @@ class HighsPseudocost {
       double unit_gain = objdelta / delta;
       double d = unit_gain - pseudocostup[col];
       nsamplesup[col] += 1;
-      pseudocostup[col] +=
-          d / std::min(std::max(HighsInt{4}, minreliable), nsamplesup[col]);
+      pseudocostup[col] += d / nsamplesup[col];
 
       d = unit_gain - cost_total;
       ++nsamplestotal;
@@ -120,8 +119,7 @@ class HighsPseudocost {
       double unit_gain = -objdelta / delta;
       double d = unit_gain - pseudocostdown[col];
       nsamplesdown[col] += 1;
-      pseudocostdown[col] +=
-          d / std::min(std::max(HighsInt{4}, minreliable), nsamplesdown[col]);
+      pseudocostdown[col] += d / nsamplesdown[col];
 
       d = unit_gain - cost_total;
       ++nsamplestotal;

@@ -257,6 +257,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
                                                       fracints[k].second);
   };
 
+  double minScore = mipsolver.mipdata_->feastol;
+
   auto selectBestScore = [&](bool finalSelection) {
     HighsInt best = -1;
     double bestscore = -1.0;
@@ -265,6 +267,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
     for (HighsInt k : evalqueue) {
       double score;
+
+      double s = 0.01 * std::min(upscorereliable[k] ? upscore[k] : 0,
+                                downscorereliable[k] ? downscore[k] : 0);
+      minScore = std::max(s, minScore);
+
       if ((upscore[k] == 0.0 && upscorereliable[k]) ||
           (downscore[k] == 0.0 && downscorereliable[k]))
         score = pseudocost.getScore(fracints[k].first, 0.0, 0.0);
@@ -354,7 +361,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
-        if (objdelta < mipsolver.mipdata_->epsilon) objdelta = 0.0;
+        if (objdelta < mipsolver.mipdata_->feastol) objdelta = 0.0;
 
         downscore[candidate] = objdelta;
         downscorereliable[candidate] = 1;
@@ -367,21 +374,15 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
               otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta == 0.0 && downscore[k] != 0.0) {
+            if (objdelta <= minScore && !downscorereliable[k])
               downscorereliable[k] = 1;
-              markBranchingVarDownReliableAtNode(fracints[k].first);
-              pseudocost.addObservation(fracints[k].first,
-                                        otherdownval - otherfracval, objdelta);
-            }
+
             downscore[k] = std::min(downscore[k], objdelta);
           } else if (sol[fracints[k].first] >=
                      otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta == 0.0 && upscore[k] != 0.0) {
+            if (objdelta <= minScore && !upscorereliable[k])
               upscorereliable[k] = 1;
-              markBranchingVarUpReliableAtNode(fracints[k].first);
-              pseudocost.addObservation(fracints[k].first,
-                                        otherupval - otherfracval, objdelta);
-            }
+
             upscore[k] = std::min(upscore[k], objdelta);
           }
         }
