@@ -801,7 +801,13 @@ bool HighsCutGeneration::postprocessCut() {
     for (HighsInt i = 0; i != rowlen; ++i)
       maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
 
-    double minCoefficientValue = maxAbsValue * 100 * feastol;
+    int expshift;
+    std::frexp(maxAbsValue, &expshift);
+    expshift = -expshift;
+
+    double minCoefficientValue =
+        std::ldexp(maxAbsValue * 100 * feastol, expshift);
+    rhs = std::ldexp((double)rhs, expshift);
 
     // now remove small coefficients and determine the smallest absolute
     // coefficient of an integral variable
@@ -809,31 +815,14 @@ bool HighsCutGeneration::postprocessCut() {
     for (HighsInt i = 0; i != rowlen; ++i) {
       if (vals[i] == 0.0) continue;
 
-      double val = std::abs(vals[i]);
+      vals[i] = std::ldexp(vals[i], expshift);
 
-      if (val <= minCoefficientValue) {
+      if (std::abs(vals[i]) <= minCoefficientValue) {
         if (vals[i] < 0.0) {
           if (upper[i] == HIGHS_CONST_INF) return false;
           rhs -= vals[i] * upper[i];
         } else
           vals[i] = 0.0;
-      } else if (lpRelaxation.isColIntegral(inds[i]))
-        minIntCoef = std::min(minIntCoef, val);
-    }
-
-    // if the smallest coefficient of an integral variable is not integral
-    // we want to scale the cut so that it becomes 1. To avoid rounding errors
-    // we instead shift the exponent.
-    if (std::abs(std::round(minIntCoef) - minIntCoef) > epsilon) {
-      int expshift;
-      std::frexp(minIntCoef, &expshift);
-      expshift = -expshift;
-
-      if (expshift != 0) {
-        maxAbsValue = std::ldexp(maxAbsValue, expshift);
-        rhs = std::ldexp((double)rhs, expshift);
-        for (HighsInt i = 0; i != rowlen; ++i)
-          vals[i] = std::ldexp(vals[i], expshift);
       }
     }
   }
