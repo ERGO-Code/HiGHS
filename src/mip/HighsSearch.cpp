@@ -366,7 +366,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
-        if (objdelta < mipsolver.mipdata_->feastol) objdelta = 0.0;
 
         downscore[candidate] = objdelta;
         downscorereliable[candidate] = 1;
@@ -378,11 +377,18 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
-              otherdownval + mipsolver.mipdata_->feastol)
+              otherdownval + mipsolver.mipdata_->feastol) {
+            if (objdelta <= minScore)
+              pseudocost.addObservation(fracints[k].first,
+                                        otherdownval - otherfracval, objdelta);
             downscore[k] = std::min(downscore[k], objdelta);
-          else if (sol[fracints[k].first] >=
-                   otherupval - mipsolver.mipdata_->feastol)
+          } else if (sol[fracints[k].first] >=
+                     otherupval - mipsolver.mipdata_->feastol) {
+            if (objdelta <= minScore)
+              pseudocost.addObservation(fracints[k].first,
+                                        otherupval - otherfracval, objdelta);
             upscore[k] = std::min(upscore[k], objdelta);
+          }
         }
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
@@ -491,11 +497,19 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
-              otherdownval + mipsolver.mipdata_->feastol)
+              otherdownval + mipsolver.mipdata_->feastol) {
+            if (objdelta <= minScore)
+              pseudocost.addObservation(fracints[k].first,
+                                        otherdownval - otherfracval, objdelta);
             downscore[k] = std::min(downscore[k], objdelta);
-          else if (sol[fracints[k].first] >=
-                   otherupval - mipsolver.mipdata_->feastol)
+
+          } else if (sol[fracints[k].first] >=
+                     otherupval - mipsolver.mipdata_->feastol) {
+            if (objdelta <= minScore)
+              pseudocost.addObservation(fracints[k].first,
+                                        otherupval - otherfracval, objdelta);
             upscore[k] = std::min(upscore[k], objdelta);
+          }
         }
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
