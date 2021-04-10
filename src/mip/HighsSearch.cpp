@@ -268,7 +268,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     for (HighsInt k : evalqueue) {
       double score;
 
-      double s = 0.01 * std::min(upscorereliable[k] ? upscore[k] : 0,
+      double s = 0.02 * std::min(upscorereliable[k] ? upscore[k] : 0,
                                  downscorereliable[k] ? downscore[k] : 0);
       minScore = std::max(s, minScore);
 
