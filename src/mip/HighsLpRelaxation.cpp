@@ -440,13 +440,14 @@ void HighsLpRelaxation::storeDualInfProof() {
 
   double maxval = 0;
   for (HighsInt i = 0; i != lp.numRow_; ++i)
-    maxval = std::max(maxval, std::abs(dualray[i]));
+    maxval = std::max(maxval, getMaxAbsRowVal(i) * std::abs(dualray[i]));
 
   int expscal;
   std::frexp(maxval, &expscal);
+  expscal = -expscal + 1;
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    dualray[i] = std::ldexp(dualray[i], -expscal);
+    dualray[i] = std::ldexp(dualray[i], expscal);
     if (dualray[i] < 0) {
       if (lp.rowUpper_[i] == HIGHS_CONST_INF) dualray[i] = 0.0;
     } else if (dualray[i] > 0) {

@@ -90,13 +90,31 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                     nonzeroWeights.data()) != HighsStatus::OK)
       continue;
 
+    // do not use aggregations which use too many rows for reasons of
+    // performance and numerical stability
+    if (numNonzeroWeights > 100 + 0.15 * lpRelaxation.numRows()) continue;
+
     if (numNonzeroWeights == 1) {
       lpAggregator.addRow(nonzeroWeights[0], 1);
     } else {
-      for (HighsInt j = 0; j != numNonzeroWeights; ++j) {
-        HighsInt row = nonzeroWeights[j];
-        double weight = rowWeights[row];
-        lpAggregator.addRow(row, rowWeights[row]);
+      double maxAbsColWeight = 0.0;
+      for (int j = 0; j != numNonzeroWeights; ++j) {
+        int row = nonzeroWeights[j];
+        double maxRowVal = lpRelaxation.getMaxAbsRowVal(row);
+        maxAbsColWeight =
+            std::max(std::abs(rowWeights[row]) * maxRowVal, maxAbsColWeight);
+      }
+
+      int expshift = 0;
+      if (maxAbsColWeight > 1e3 || maxAbsColWeight < 0.5) {
+        std::frexp(maxAbsColWeight, &expshift);
+        expshift = -expshift + 1;
+      }
+
+      for (int j = 0; j != numNonzeroWeights; ++j) {
+        int row = nonzeroWeights[j];
+        double weight = std::ldexp(rowWeights[row], expshift);
+        lpAggregator.addRow(row, weight);
       }
     }
 
