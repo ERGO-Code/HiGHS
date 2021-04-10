@@ -3066,12 +3066,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
 
-      if( mipsolver != nullptr )
-      {
-      HighsInt numStrenghtened = strengthenInequalities();
-      if( numStrenghtened > 0 )
-        highsLogUser(options->log_options, HighsLogType::INFO,
-                 "Strengthened %" HIGHSINT_FORMAT " coefficients\n", numStrenghtened);
+      if (mipsolver != nullptr) {
+        HighsInt numStrenghtened = strengthenInequalities();
+        if (numStrenghtened > 0)
+          highsLogUser(options->log_options, HighsLogType::INFO,
+                       "Strengthened %" HIGHSINT_FORMAT " coefficients\n",
+                       numStrenghtened);
       }
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
