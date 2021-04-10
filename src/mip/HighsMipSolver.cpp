@@ -361,8 +361,8 @@ void HighsMipSolver::cleanupSolve() {
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
                "  Solution status   %s\n",
-               utilModelStatusToString(modelstatus_).c_str(),
-               primal_bound_, dual_bound_, solutionstatus.c_str());
+               utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
+               dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::INFO,
                  "                    %.12g (objective)\n"

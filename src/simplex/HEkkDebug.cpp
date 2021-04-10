@@ -410,15 +410,16 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       num_dual_infeasibility > 0;
   if (illegal_dual_infeasibility) {
     // Dual simplex or optimal but has dual infeasibilities
-    highsLogUser(options.log_options, HighsLogType::ERROR,
-                 "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
-                 " Should be dual "
-                 "feasible, but num / max / "
-                 "sum dual infeasibility is %" HIGHSINT_FORMAT
-                 " / %g / %g; Phase = %" HIGHSINT_FORMAT "; status = %s\n",
-                 message.c_str(), iteration_count, num_dual_infeasibility,
-                 max_dual_infeasibility, sum_dual_infeasibility, phase,
-                 utilModelStatusToString(ekk_instance.scaled_model_status_).c_str());
+    highsLogUser(
+        options.log_options, HighsLogType::ERROR,
+        "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
+        " Should be dual "
+        "feasible, but num / max / "
+        "sum dual infeasibility is %" HIGHSINT_FORMAT
+        " / %g / %g; Phase = %" HIGHSINT_FORMAT "; status = %s\n",
+        message.c_str(), iteration_count, num_dual_infeasibility,
+        max_dual_infeasibility, sum_dual_infeasibility, phase,
+        utilModelStatusToString(ekk_instance.scaled_model_status_).c_str());
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::LOGICAL_ERROR;
   }

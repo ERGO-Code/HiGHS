@@ -234,7 +234,8 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const double* col_lower, const double* col_upper,
                              const double* row_lower, const double* row_upper,
                              const HighsInt* astart, const HighsInt* aindex,
-                             const double* avalue, const HighsInt* integrality) {
+                             const double* avalue,
+                             const HighsInt* integrality) {
   HighsLp lp;
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
@@ -1771,8 +1772,8 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       " "
       "(%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n\n",
       message.c_str(), modelStatusToString(model_status).c_str(),
-      modelStatusToString(scaled_model_status).c_str(), lp.numCol_,
-      lp.numRow_, unscaled_primal_status, (HighsInt)solution.col_value.size(),
+      modelStatusToString(scaled_model_status).c_str(), lp.numCol_, lp.numRow_,
+      unscaled_primal_status, (HighsInt)solution.col_value.size(),
       (HighsInt)solution.row_value.size(), unscaled_dual_status,
       (HighsInt)solution.col_dual.size(), (HighsInt)solution.row_dual.size(),
       basis.valid_, (HighsInt)basis.col_status.size(),
@@ -1794,7 +1795,7 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
 }
 
 // Start of deprecated methods
-//HighsStatus Highs::setHighsOptionValue(const std::string& option,
+// HighsStatus Highs::setHighsOptionValue(const std::string& option,
 //                                       const bool value) {
 //  return setOptionValue(option, value);
 //}

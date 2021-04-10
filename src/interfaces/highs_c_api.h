@@ -20,18 +20,22 @@ extern "C" {
  * @brief solves an LP using HiGHS
  */
 HighsInt Highs_lpCall(
-    const HighsInt numcol,   //!< number of columns
-    const HighsInt numrow,   //!< number of rows
-    const HighsInt numnz,    //!< number of entries in the constraint matrix
-    const double* colcost,   //!< array of length [numcol] with column costs
-    const double* collower,  //!< array of length [numcol] with lower column bounds
-    const double* colupper,  //!< array of length [numcol] with upper column bounds
+    const HighsInt numcol,  //!< number of columns
+    const HighsInt numrow,  //!< number of rows
+    const HighsInt numnz,   //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
-    const HighsInt* astart,  //!< array of length [numcol+1] with column start indices
+    const HighsInt*
+        astart,  //!< array of length [numcol+1] with column start indices
     const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
-    const double* avalue,    //!< array of length [numnz] with value of matrix entries
+    const double*
+        avalue,        //!< array of length [numnz] with value of matrix entries
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
@@ -47,9 +51,9 @@ HighsInt Highs_lpCall(
  * @brief solves a MIP using HiGHS
  */
 HighsInt Highs_mipCall(
-    const HighsInt numcol,       //!< number of columns
-    const HighsInt numrow,       //!< number of rows
-    const HighsInt numnz,        //!< number of entries in the constraint matrix
+    const HighsInt numcol,  //!< number of columns
+    const HighsInt numrow,  //!< number of rows
+    const HighsInt numnz,   //!< number of entries in the constraint matrix
     const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -63,17 +67,18 @@ HighsInt Highs_mipCall(
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue,  //!< array of length [numnz] with value of matrix entries
-    const HighsInt* integrality,  //!< array of length [numcol] indicating whether
-                             //!< variables are continuous (0) or integer (1)
+    const HighsInt*
+        integrality,   //!< array of length [numcol] indicating whether
+                       //!< variables are continuous (0) or integer (1)
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
     double* rowdual,   //!< array of length [numrow], filled with row duals
     HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
-                          //!< basis stati
-    HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row basis
-                          //!< status
-    int* modelstatus      //!< status of the model will be saved here
+                               //!< basis stati
+    HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
+                               //!< basis status
+    int* modelstatus  //!< status of the model will be saved here
 );
 
 /*
@@ -177,9 +182,9 @@ HighsInt Highs_passLp(
  */
 HighsInt Highs_passMip(
     void* highs,            //!< HiGHS object reference
-    const HighsInt numcol,       //!< number of columns
-    const HighsInt numrow,       //!< number of rows
-    const HighsInt numnz,        //!< number of entries in the constraint matrix
+    const HighsInt numcol,  //!< number of columns
+    const HighsInt numrow,  //!< number of rows
+    const HighsInt numnz,   //!< number of entries in the constraint matrix
     const double* colcost,  //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -193,48 +198,49 @@ HighsInt Highs_passMip(
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue,  //!< array of length [numnz] with value of matrix entries
-    const HighsInt* integrality  //!< array of length [numcol] indicating whether
-                            //!< variables are continuous (0) or integer (1)
+    const HighsInt*
+        integrality  //!< array of length [numcol] indicating whether
+                     //!< variables are continuous (0) or integer (1)
 );
 
-HighsInt Highs_setBoolOptionValue(void* highs,         //!< HiGHS object reference
-                             const char* option,  //!< name of the option
-                             const HighsInt value      //!< new value of option
+HighsInt Highs_setBoolOptionValue(void* highs,  //!< HiGHS object reference
+                                  const char* option,   //!< name of the option
+                                  const HighsInt value  //!< new value of option
 );
 
-HighsInt Highs_setIntOptionValue(void* highs,         //!< HiGHS object reference
-                            const char* option,  //!< name of the option
-                            const HighsInt value      //!< new value of option
+HighsInt Highs_setIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,   //!< name of the option
+                                 const HighsInt value  //!< new value of option
 );
 
-HighsInt Highs_setDoubleOptionValue(void* highs,         //!< HiGHS object reference
-                               const char* option,  //!< name of the option
-                               const double value   //!< new value of option
+HighsInt Highs_setDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const double value  //!< new value of option
 );
 
-HighsInt Highs_setStringOptionValue(void* highs,         //!< HiGHS object reference
-                               const char* option,  //!< name of the option
-                               const char* value    //!< new value of option
+HighsInt Highs_setStringOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const char* value  //!< new value of option
 );
 
 HighsInt Highs_setOptionValue(void* highs,         //!< HiGHS object reference
-                         const char* option,  //!< name of the option
-                         const char* value    //!< new value of option
+                              const char* option,  //!< name of the option
+                              const char* value    //!< new value of option
 );
 
-HighsInt Highs_getBoolOptionValue(void* highs,         //!< HiGHS object reference
-                             const char* option,  //!< name of the option
-                             HighsInt* value           //!< value of option
+HighsInt Highs_getBoolOptionValue(void* highs,  //!< HiGHS object reference
+                                  const char* option,  //!< name of the option
+                                  HighsInt* value      //!< value of option
 );
 
-HighsInt Highs_getIntOptionValue(void* highs,         //!< HiGHS object reference
-                            const char* option,  //!< name of the option
-                            HighsInt* value           //!< value of option
+HighsInt Highs_getIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 HighsInt* value      //!< value of option
 );
 
-HighsInt Highs_getDoubleOptionValue(void* highs,         //!< HiGHS object reference
-                               const char* option,  //!< name of the option
-                               double* value        //!< value of option
+HighsInt Highs_getDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    double* value        //!< value of option
 );
 
 HighsInt Highs_getStringOptionValue(
@@ -247,8 +253,8 @@ HighsInt Highs_getStringOptionValue(
  * @brief Get the type expected by an option
  */
 HighsInt Highs_getOptionType(void* highs,         //!< HiGHS object reference
-                        const char* option,  //!< The name of the option
-                        HighsInt* type            //!< The type of the option.
+                             const char* option,  //!< The name of the option
+                             HighsInt* type       //!< The type of the option.
 );
 
 /*
@@ -261,16 +267,16 @@ HighsInt Highs_resetOptions(void* highs  //!< HiGHS object reference
  * @brief
  */
 HighsInt Highs_getIntInfoValue(void* highs,       //!< HiGHS object reference
-                          const char* info,  //!< The info name
-                          HighsInt* value         //!< The info value
+                               const char* info,  //!< The info name
+                               HighsInt* value    //!< The info value
 );
 
 /*
  * @brief
  */
 HighsInt Highs_getDoubleInfoValue(void* highs,       //!< HiGHS object reference
-                             const char* info,  //!< The info name
-                             double* value      //!< The info value
+                                  const char* info,  //!< The info name
+                                  double* value      //!< The info value
 );
 /*
  * @brief
