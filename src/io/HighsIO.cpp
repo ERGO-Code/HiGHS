@@ -19,7 +19,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-void (*printmsgcb)(int, const char*, void*) = NULL;
+void (*printmsgcb)(HighsInt, const char*, void*) = NULL;
 void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
 
@@ -113,7 +113,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   va_end(argptr);
 }
 
-void highsSetLogCallback(void (*printmsgcb_)(int level, const char* msg,
+void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
                                              void* msgcb_data),
                          void (*logmsgcb_)(HighsLogType type, const char* msg,
                                            void* msgcb_data),
