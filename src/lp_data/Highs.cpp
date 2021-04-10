@@ -80,16 +80,6 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsLogfile(FILE* logfile) {
-  options_.output_flag = false;
-  return HighsStatus::OK;
-}
-
-HighsStatus Highs::setHighsOutput(FILE* output) {
-  options_.output_flag = false;
-  return HighsStatus::OK;
-}
-
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::WARNING,
@@ -1794,6 +1784,24 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
   setOrientation(lp_, desired_orientation);
 }
 
+// Start of deprecated methods
+//HighsStatus Highs::setHighsOptionValue(const std::string& option,
+//                                       const bool value) {
+//  return setOptionValue(option, value);
+//}
+
+HighsStatus Highs::setHighsLogfile(FILE* logfile) {
+  options_.output_flag = false;
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::setHighsOutput(FILE* output) {
+  options_.output_flag = false;
+  return HighsStatus::OK;
+}
+
+// End of deprecated methods
+
 // Private methods
 HighsPresolveStatus Highs::runPresolve() {
   presolve_.clear();
@@ -2329,11 +2337,4 @@ void Highs::underDevelopmentLogMessage(const string method_name) {
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
                method_name.c_str());
-}
-
-void Highs::getPresolveReductionCounts(HighsInt& rows, HighsInt& cols,
-                                       HighsInt& nnz) const {
-  rows = presolve_.info_.n_rows_removed;
-  cols = presolve_.info_.n_cols_removed;
-  nnz = presolve_.info_.n_nnz_removed;
 }

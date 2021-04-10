@@ -159,6 +159,7 @@ OptionStatus setOptionValue(const HighsLogOptions& log_options,
                             const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const bool value);
+
 OptionStatus setOptionValue(const HighsLogOptions& log_options,
                             const std::string& name,
                             std::vector<OptionRecord*>& option_records,
