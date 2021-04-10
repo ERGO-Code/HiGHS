@@ -387,6 +387,12 @@ double HighsMipSolverData::transformNewIncumbent(
   return double(obj - mipsolver.model_->offset_);
 }
 
+double HighsMipSolverData::percentageInactiveIntegers() const {
+  return 100.0 * (1.0 - double(integer_cols.size() +
+                               cliquetable.getSubstitutions().size()) /
+                            numintegercols);
+}
+
 void HighsMipSolverData::performRestart() {
   HighsBasis rootBasis;
   HighsPseudocostInitialization pscostinit(
@@ -845,10 +851,7 @@ restart:
     removeFixedIndices();
 
     if (mipsolver.options_mip_->presolve != off_string) {
-      double fixingRate =
-          100.0 * (1.0 - double(integer_cols.size() +
-                                cliquetable.getSubstitutions().size()) /
-                             numintegercols);
+      double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 10.0) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
                      "%.1f%% inactive integer columns, restarting\n",
@@ -970,10 +973,7 @@ restart:
 
   if (lower_bound <= upper_limit) {
     if (mipsolver.options_mip_->presolve != off_string) {
-      double fixingRate =
-          100.0 * (1.0 - double(integer_cols.size() +
-                                cliquetable.getSubstitutions().size()) /
-                             numintegercols);
+      double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,

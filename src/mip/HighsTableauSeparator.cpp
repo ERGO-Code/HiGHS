@@ -92,7 +92,11 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     // do not use aggregations which use too many rows for reasons of
     // performance and numerical stability
-    if (numNonzeroWeights > 100 + 0.15 * lpRelaxation.numRows()) continue;
+    // if (numNonzeroWeights > 1000 + 0.3 * lpRelaxation.numRows()) {
+    //  printf("tableau row aggregation density: %g\n",
+    //         numNonzeroWeights / (double)lpRelaxation.numRows());
+    //  continue;
+    //}
 
     if (numNonzeroWeights == 1) {
       lpAggregator.addRow(nonzeroWeights[0], 1);
@@ -100,21 +104,31 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       double maxAbsColWeight = 0.0;
       for (int j = 0; j != numNonzeroWeights; ++j) {
         int row = nonzeroWeights[j];
-        double maxRowVal = lpRelaxation.getMaxAbsRowVal(row);
-        maxAbsColWeight =
-            std::max(std::abs(rowWeights[row]) * maxRowVal, maxAbsColWeight);
+        maxAbsColWeight = std::max(std::abs(rowWeights[row]), maxAbsColWeight);
       }
 
       int expshift = 0;
       if (maxAbsColWeight > 1e3 || maxAbsColWeight < 0.5) {
         std::frexp(maxAbsColWeight, &expshift);
-        expshift = -expshift + 1;
+        expshift = -expshift;
       }
+
+      HighsInt numNzs = 0;
+      for (int j = 0; j != numNonzeroWeights; ++j) {
+        int row = nonzeroWeights[j];
+        rowWeights[row] = std::ldexp(rowWeights[row], expshift);
+        if (std::abs(rowWeights[row]) * lpRelaxation.getMaxAbsRowVal(row) <=
+            1000 * mip.mipdata_->feastol) {
+          rowWeights[row] = 0;
+        } else
+          numNzs += lpRelaxation.getRowLen(row);
+      }
+
+      if (numNzs > 0.5 * lpRelaxation.getLp().Avalue_.size()) continue;
 
       for (int j = 0; j != numNonzeroWeights; ++j) {
         int row = nonzeroWeights[j];
-        double weight = std::ldexp(rowWeights[row], expshift);
-        lpAggregator.addRow(row, weight);
+        lpAggregator.addRow(row, rowWeights[row]);
       }
     }
 
