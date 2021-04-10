@@ -265,16 +265,21 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     double bestnodes = -1.0;
     int64_t bestnumnodes = 0;
 
+    double oldminscore = minScore;
     for (HighsInt k : evalqueue) {
       double score;
 
-      double s = 0.02 * std::min(upscorereliable[k] ? upscore[k] : 0,
+      if (upscore[k] <= oldminscore) upscorereliable[k] = 1;
+      if (downscore[k] <= oldminscore) downscorereliable[k] = 1;
+
+      double s = 1e-3 * std::min(upscorereliable[k] ? upscore[k] : 0,
                                  downscorereliable[k] ? downscore[k] : 0);
       minScore = std::max(s, minScore);
 
-      if ((upscore[k] == 0.0 && upscorereliable[k]) ||
-          (downscore[k] == 0.0 && downscorereliable[k]))
-        score = pseudocost.getScore(fracints[k].first, 0.0, 0.0);
+      if (upscore[k] <= oldminscore || downscore[k] <= oldminscore)
+        score = pseudocost.getScore(fracints[k].first,
+                                    std::min(upscore[k], oldminscore),
+                                    std::min(downscore[k], oldminscore));
       else {
         score = upscore[k] == HIGHS_CONST_INF || downscore[k] == HIGHS_CONST_INF
                     ? finalSelection ? pseudocost.getScore(fracints[k].first,
@@ -373,18 +378,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
-              otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore && !downscorereliable[k])
-              downscorereliable[k] = 1;
-
+              otherdownval + mipsolver.mipdata_->feastol)
             downscore[k] = std::min(downscore[k], objdelta);
-          } else if (sol[fracints[k].first] >=
-                     otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore && !upscorereliable[k])
-              upscorereliable[k] = 1;
-
+          else if (sol[fracints[k].first] >=
+                   otherupval - mipsolver.mipdata_->feastol)
             upscore[k] = std::min(upscore[k], objdelta);
-          }
         }
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
@@ -493,19 +491,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
-              otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore && !downscorereliable[k])
-              downscorereliable[k] = 1;
-
+              otherdownval + mipsolver.mipdata_->feastol)
             downscore[k] = std::min(downscore[k], objdelta);
-
-          } else if (sol[fracints[k].first] >=
-                     otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore && !upscorereliable[k])
-              upscorereliable[k] = 1;
-
+          else if (sol[fracints[k].first] >=
+                   otherupval - mipsolver.mipdata_->feastol)
             upscore[k] = std::min(upscore[k], objdelta);
-          }
         }
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
