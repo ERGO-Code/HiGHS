@@ -78,7 +78,7 @@ HighsInt Highs_mipCall(
                                //!< basis stati
     HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
                                //!< basis status
-    int* modelstatus  //!< status of the model will be saved here
+    int* modelstatus           //!< status of the model will be saved here
 );
 
 /*
@@ -113,7 +113,6 @@ HighsInt Highs_clearModel(void* highs  //!< HiGHS object reference
 );
 
 /*
-<<<<<<< HEAD
  * @brief Sets the Logfile and Output to NULL - Deprecated
  */
 HighsInt Highs_runQuiet(void* highs  //!< HiGHS object reference
@@ -330,7 +329,7 @@ HighsInt Highs_getPrimalRay(
 );
 
 /**
- * @brief Returns the objective function value (if known) - Deprecated
+ * @brief Returns the objective function value (if known)
  */
 double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
 );

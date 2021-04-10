@@ -198,7 +198,7 @@ program fortrantest
   runstatus = Highs_passLp(highs, numcol, numrow, numnz, &
   colcost, collower, colupper, rowlower, rowupper, &
   astart, aindex, avalue)
-  print*, "Suppressing all HiGHS output";  runstatus = Highs_runQuiet(highs)
+!  print*, "Suppressing all HiGHS output"; runstatus = Highs_runQuiet(highs)
   runstatus = Highs_run(highs)
   modelstatus = Highs_getModelStatus(highs, scaled_model);
   call assert(runstatus .eq. 0, "Highs_run runstatus")
@@ -308,7 +308,7 @@ program fortrantest
   highs = Highs_create()
   ! Suppress HiGHS output
   print*, "Suppressing all HiGHS output"
-  runstatus = Highs_runQuiet(highs);
+!  runstatus = Highs_runQuiet(highs);
 
   runstatus = Highs_readModel(highs, "F90.mps"//C_NULL_CHAR)
   call assert(runstatus .eq. 0, "Highs_readModel runstatus")
