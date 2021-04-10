@@ -43,7 +43,7 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
     const HighsBasisStatus ideal_status, const double lower,
     const double upper);
 
-std::string utilHighsModelStatusToString(const HighsModelStatus model_status);
+std::string utilModelStatusToString(const HighsModelStatus model_status);
 
 std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status);
 

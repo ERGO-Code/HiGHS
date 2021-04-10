@@ -298,7 +298,7 @@ std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
 }
 
 // Return a string representation of HighsModelStatus.
-std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
+std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
     case HighsModelStatus::NOTSET:
       return "Not Set";

@@ -156,10 +156,18 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
         model_status = scaled_model_status;
       }
     }
+<<<<<<< HEAD
     highsLogUser(log_options, HighsLogType::INFO, "Model   status      : %s\n",
                  highs.highsModelStatusToString(model_status).c_str());
     highsLogUser(
         log_options, HighsLogType::INFO, "Primal  status      : %s\n",
+=======
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+                      "Model   status      : %s\n",
+                      highs.modelStatusToString(model_status).c_str());
+    HighsPrintMessage(
+        output, message_level, ML_ALWAYS, "Primal  status      : %s\n",
+>>>>>>> f90-interface
         highs.primalDualStatusToString(highs_info.primal_status).c_str());
     highsLogUser(
         log_options, HighsLogType::INFO, "Dual    status      : %s\n",

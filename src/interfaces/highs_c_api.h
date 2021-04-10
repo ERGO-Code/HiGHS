@@ -17,8 +17,9 @@ extern "C" {
 #endif
 
 /*
- * @brief runs a model using HiGHS
+ * @brief solves an LP using HiGHS
  */
+<<<<<<< HEAD
 HighsInt Highs_call(
     HighsInt numcol,   //!< number of columns
     HighsInt numrow,   //!< number of rows
@@ -30,17 +31,74 @@ HighsInt Highs_call(
     double* rowupper,  //!< array of length [numrow] with upper row bounds
     HighsInt* astart,  //!< array of length [numcol+1] with column start indices
     HighsInt*
+=======
+int Highs_lpCall(
+    const int numcol,       //!< number of columns
+    const int numrow,       //!< number of rows
+    const int numnz,        //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const int*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const int*
+>>>>>>> f90-interface
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     double* avalue,    //!< array of length [numnz] with value of matrix entries
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
     double* rowdual,   //!< array of length [numrow], filled with row duals
+<<<<<<< HEAD
     HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
                                //!< basis stati
     HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
                                //!< basis stati
     int* modelstatus           //!< status of the model will be saved here
+=======
+    int* colbasisstatus,  //!< array of length [numcol], filled with column
+                          //!< basis stati
+    int* rowbasisstatus,  //!< array of length [numrow], filled with row basis
+                          //!< status
+    int* modelstatus      //!< status of the model will be saved here
+);
+
+/*
+ * @brief solves a MIP using HiGHS
+ */
+int Highs_mipCall(
+    const int numcol,       //!< number of columns
+    const int numrow,       //!< number of rows
+    const int numnz,        //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const int*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const int*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const int* integrality,  //!< array of length [numcol] indicating whether
+                             //!< variables are continuous (0) or integer (1)
+    double* colvalue,  //!< array of length [numcol], filled with column values
+    double* coldual,   //!< array of length [numcol], filled with column duals
+    double* rowvalue,  //!< array of length [numrow], filled with row values
+    double* rowdual,   //!< array of length [numrow], filled with row duals
+    int* colbasisstatus,  //!< array of length [numcol], filled with column
+                          //!< basis stati
+    int* rowbasisstatus,  //!< array of length [numrow], filled with row basis
+                          //!< status
+    int* modelstatus      //!< status of the model will be saved here
+>>>>>>> f90-interface
 );
 
 /*
@@ -75,6 +133,7 @@ HighsInt Highs_clearModel(void* highs  //!< HiGHS object reference
 );
 
 /*
+<<<<<<< HEAD
  * @brief Sets the Logfile and Output to NULL - Deprecated
  */
 HighsInt Highs_runQuiet(void* highs  //!< HiGHS object reference
@@ -96,6 +155,8 @@ HighsInt Highs_setHighsOutput(
 );
 
 /*
+=======
+>>>>>>> f90-interface
  * @brief Runs HiGHS
  */
 HighsInt Highs_run(void* highs  //!< HiGHS object reference
@@ -104,6 +165,7 @@ HighsInt Highs_run(void* highs  //!< HiGHS object reference
 /*
  * @brief Reports the solution and basis status
  */
+<<<<<<< HEAD
 HighsInt Highs_writeSolution(void* highs,          //!< HiGHS object reference
                              const char* filename  //!< filename
 );
@@ -113,6 +175,11 @@ HighsInt Highs_writeSolution(void* highs,          //!< HiGHS object reference
  */
 HighsInt Highs_writeSolutionPretty(void* highs,  //!< HiGHS object reference
                                    const char* filename  //!< filename
+=======
+int Highs_writeSolution(void* highs,           //!< HiGHS object reference
+                        const char* filename,  //!< filename
+                        const int pretty       //!< Human-readable or not
+>>>>>>> f90-interface
 );
 
 /*
@@ -139,8 +206,9 @@ HighsInt Highs_passLp(
 );
 
 /*
- * @brief
+ * @brief pass a MIP to HiGHS
  */
+<<<<<<< HEAD
 HighsInt Highs_setHighsBoolOptionValue(
     void* highs,          //!< HiGHS object reference
     const char* option,   //!< name of the option
@@ -213,6 +281,71 @@ HighsInt Highs_getHighsDoubleOptionValue(
  * @brief
  */
 HighsInt Highs_getHighsStringOptionValue(
+=======
+int Highs_passMip(
+    void* highs,            //!< HiGHS object reference
+    const int numcol,       //!< number of columns
+    const int numrow,       //!< number of rows
+    const int numnz,        //!< number of entries in the constraint matrix
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const int*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const int*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const int* integrality  //!< array of length [numcol] indicating whether
+                            //!< variables are continuous (0) or integer (1)
+);
+
+int Highs_setBoolOptionValue(void* highs,         //!< HiGHS object reference
+                             const char* option,  //!< name of the option
+                             const int value      //!< new value of option
+);
+
+int Highs_setIntOptionValue(void* highs,         //!< HiGHS object reference
+                            const char* option,  //!< name of the option
+                            const int value      //!< new value of option
+);
+
+int Highs_setDoubleOptionValue(void* highs,         //!< HiGHS object reference
+                               const char* option,  //!< name of the option
+                               const double value   //!< new value of option
+);
+
+int Highs_setStringOptionValue(void* highs,         //!< HiGHS object reference
+                               const char* option,  //!< name of the option
+                               const char* value    //!< new value of option
+);
+
+int Highs_setOptionValue(void* highs,         //!< HiGHS object reference
+                         const char* option,  //!< name of the option
+                         const char* value    //!< new value of option
+);
+
+int Highs_getBoolOptionValue(void* highs,         //!< HiGHS object reference
+                             const char* option,  //!< name of the option
+                             int* value           //!< value of option
+);
+
+int Highs_getIntOptionValue(void* highs,         //!< HiGHS object reference
+                            const char* option,  //!< name of the option
+                            int* value           //!< value of option
+);
+
+int Highs_getDoubleOptionValue(void* highs,         //!< HiGHS object reference
+                               const char* option,  //!< name of the option
+                               double* value        //!< value of option
+);
+
+int Highs_getStringOptionValue(
+>>>>>>> f90-interface
     void* highs,         //!< HiGHS object reference
     const char* option,  //!< name of the option
     char* value  //!< pointer to allocated memory to store value of option
@@ -221,32 +354,54 @@ HighsInt Highs_getHighsStringOptionValue(
 /*
  * @brief Get the type expected by an option
  */
+<<<<<<< HEAD
 HighsInt Highs_getHighsOptionType(
     void* highs,         //!< HiGHS object reference
     const char* option,  //!< The name of the option
     HighsInt* type       //!< The type of the option.
+=======
+int Highs_getOptionType(void* highs,         //!< HiGHS object reference
+                        const char* option,  //!< The name of the option
+                        int* type            //!< The type of the option.
+>>>>>>> f90-interface
 );
 
 /*
  * @brief
  */
+<<<<<<< HEAD
 HighsInt Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
+=======
+int Highs_resetOptions(void* highs  //!< HiGHS object reference
+>>>>>>> f90-interface
 );
 
 /*
  * @brief
  */
+<<<<<<< HEAD
 HighsInt Highs_getHighsIntInfoValue(void* highs,  //!< HiGHS object reference
                                     const char* info,  //!< The info name
                                     HighsInt* value    //!< The info value
+=======
+int Highs_getIntInfoValue(void* highs,       //!< HiGHS object reference
+                          const char* info,  //!< The info name
+                          int* value         //!< The info value
+>>>>>>> f90-interface
 );
 
 /*
  * @brief
  */
+<<<<<<< HEAD
 HighsInt Highs_getHighsDoubleInfoValue(void* highs,  //!< HiGHS object reference
                                        const char* info,  //!< The info name
                                        double* value      //!< The info value
+=======
+int Highs_getDoubleInfoValue(void* highs,       //!< HiGHS object reference
+                             const char* info,  //!< The info name
+                             double* value      //!< The info value
+>>>>>>> f90-interface
 );
 /*
  * @brief
@@ -306,6 +461,7 @@ double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
 );
 
 /**
+<<<<<<< HEAD
  * @brief Returns the simplex iteration count (if known) - Deprecated
  */
 HighsInt Highs_getIterationCount(void* highs  //!< HiGHS object reference,
@@ -319,6 +475,8 @@ HighsInt Highs_getSimplexIterationCount(
 );
 
 /**
+=======
+>>>>>>> f90-interface
  * @brief Gets the basic variables in the order corresponding to
  * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
  * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
@@ -413,7 +571,7 @@ HighsInt Highs_setLogicalBasis(void* highs  //!< HiGHS object reference
 /**
  * @brief Returns the cumulative wall-clock time spent in Highs_run();
  */
-double Highs_getHighsRunTime(void* highs  //!< HiGHS object reference
+double Highs_getRunTime(void* highs  //!< HiGHS object reference
 );
 
 /**
@@ -802,7 +960,7 @@ HighsInt Highs_deleteRowsByMask(
 /**
  * @brief Returns the value of infinity used by HiGHS
  */
-double Highs_getHighsInfinity(void* highs  //!< HiGHS object reference
+double Highs_getInfinity(void* highs  //!< HiGHS object reference
 );
 
 /**
@@ -827,9 +985,15 @@ HighsInt Highs_getNumNz(void* highs  //!< HiGHS object reference
  * @brief Returns a pointer to a character representation of a HiGHS model
  * status
  */
+<<<<<<< HEAD
 const char* Highs_highsModelStatusToChar(
     void* highs,                     //!< HiGHS object reference
     HighsInt int_highs_model_status  //!< Status to interpret
+=======
+const char* Highs_modelStatusToChar(
+    void* highs,          //!< HiGHS object reference
+    int int_model_status  //!< Status to interpret
+>>>>>>> f90-interface
 );
 
 /**
@@ -879,6 +1043,95 @@ const char* Highs_primalDualStatusToChar(
 //  * LP of the (first?) HighsModelObject
 //  */
 // HighsStatus setBasis(const HighsBasis &basis);
+
+// *********************
+// * Deprecated methods*
+// *********************
+
+int Highs_call(const int numcol, const int numrow, const int numnz,
+               const double* colcost, const double* collower,
+               const double* colupper, const double* rowlower,
+               const double* rowupper, const int* astart, const int* aindex,
+               const double* avalue, double* colvalue, double* coldual,
+               double* rowvalue, double* rowdual, int* colbasisstatus,
+               int* rowbasisstatus, int* modelstatus);
+
+int Highs_runQuiet(void* highs  //!< HiGHS object reference
+);
+
+int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
+                          void* logfile  //!< File handle of the logfile
+);
+
+int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
+                         void* outputfile  //!< File handle of the output file
+);
+
+int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
+);
+
+int Highs_getSimplexIterationCount(void* highs  //!< HiGHS object reference,
+);
+
+int Highs_setHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+                                  const char* option,  //!< name of the option
+                                  const int value      //!< new value of option
+);
+
+int Highs_setHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 const int value      //!< new value of option
+);
+
+int Highs_setHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const double value  //!< new value of option
+);
+
+int Highs_setHighsStringOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const char* value  //!< new value of option
+);
+
+int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const char* value    //!< new value of option
+);
+
+int Highs_getHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+                                  const char* option,  //!< name of the option
+                                  int* value           //!< value of option
+);
+
+int Highs_getHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 int* value           //!< value of option
+);
+
+int Highs_getHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    double* value        //!< value of option
+);
+
+int Highs_getHighsStringOptionValue(
+    void* highs,         //!< HiGHS object reference
+    const char* option,  //!< name of the option
+    char* value  //!< pointer to allocated memory to store value of option
+);
+
+int Highs_getHighsOptionType(void* highs, const char* option, int* type);
+
+int Highs_resetHighsOptions(void* highs);
+
+int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value);
+
+int Highs_getHighsDoubleInfoValue(void* highs, const char* info, double* value);
+
+double Highs_getHighsInfinity(void* highs);
+
+double Highs_getHighsRunTime(void* highs);
+
+const char* Highs_highsModelStatusToChar(void* highs, int int_model_status);
 
 #ifdef __cplusplus
 }

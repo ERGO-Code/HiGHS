@@ -26,7 +26,7 @@ void minimal_api() {
   // The matrix A is represented in packed column-wise form: only its
   // nonzeros are stored
   //
-  // * The number of nonzeros in A is nnz
+  // * The number of nonzeros in A is numnz
   //
   // * The row indices of the nonnzeros in A are stored column-by-column
   // in aindex
@@ -63,7 +63,7 @@ void minimal_api() {
 
   const int numcol = 2;
   const int numrow = 3;
-  const int nnz = 5;
+  const int numnz = 5;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[numcol] = {2.0, 3.0};
@@ -74,8 +74,8 @@ void minimal_api() {
   double rowupper[numrow] = {6.0, 14.0, 1.0e30};
   // Define the constraint matrix column-wise
   int astart[numcol] = {0, 2};
-  int aindex[nnz] = {1, 2, 0, 1, 2};
-  double avalue[nnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  int aindex[numnz] = {1, 2, 0, 1, 2};
+  double avalue[numnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
 
   double* colvalue = (double*)malloc(sizeof(double) * numcol);
   double* coldual = (double*)malloc(sizeof(double) * numcol);
@@ -87,28 +87,30 @@ void minimal_api() {
 
   int modelstatus;
 
-  int status = Highs_call(numcol, numrow, nnz,
-			  colcost, collower, colupper,
-			  rowlower, rowupper,
+  int runstatus = Highs_call(numcol, numrow, numnz,
+			  colcost, collower, colupper, rowlower, rowupper,
 			  astart, aindex, avalue,
 			  colvalue, coldual, rowvalue, rowdual,
 			  colbasisstatus, rowbasisstatus,
 			  &modelstatus);
 
-  assert(status == 0);
+  assert(runstatus == 0);
 
-  printf("Run status = %d; Model status = %d\n", status, modelstatus);
+  printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
 
   int i;
   if (modelstatus == 9) {
+    double objective_value = 0;
     // Report the column primal and dual values, and basis status
     for (i = 0; i < numcol; i++) {
       printf("Col%d = %lf; dual = %lf; status = %d; \n", i, colvalue[i], coldual[i], colbasisstatus[i]);
+      objective_value += colvalue[i]*colcost[i];
     }
     // Report the row primal and dual values, and basis status
     for (i = 0; i < numrow; i++) {
       printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
     }
+    printf("Optimal objective value = %g\n", objective_value);
   }
 
   free(colvalue);
@@ -133,7 +135,7 @@ void full_api() {
 
   const int numcol = 2;
   const int numrow = 3;
-  const int nnz = 5;
+  const int numnz = 5;
   int i;
 
   // Define the column costs, lower bounds and upper bounds
@@ -146,8 +148,8 @@ void full_api() {
   // Define the constraint matrix row-wise, as it is added to the LP
   // with the rows
   int arstart[numrow] = {0, 1, 3};
-  int arindex[nnz] = {1, 0, 1, 0, 1};
-  double arvalue[nnz] = {1.0, 1.0, 2.0, 2.0, 1.0};
+  int arindex[numnz] = {1, 0, 1, 0, 1};
+  double arvalue[numnz] = {1.0, 1.0, 2.0, 2.0, 1.0};
 
   double* colvalue = (double*)malloc(sizeof(double) * numcol);
   double* coldual = (double*)malloc(sizeof(double) * numcol);
@@ -160,7 +162,7 @@ void full_api() {
   // Add two columns to the empty LP
   assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) );
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, nnz, arstart, arindex, arvalue) );
+  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) );
 
   int sense;
   Highs_getObjectiveSense(highs, &sense);
@@ -179,30 +181,30 @@ void full_api() {
   assert(sense == 1);
 
   int simplex_scale_strategy;
-  Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
   printf("simplex_scale_strategy = %d: setting it to 3\n", simplex_scale_strategy);
   simplex_scale_strategy = 3;
-  Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
+  Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
   // There are some functions to check what type of option value you should
   // provide.
   int option_type;
   int ret;
-  ret = Highs_getHighsOptionType(highs, "simplex_scale_strategy", &option_type);
+  ret = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
   assert(ret == 0);
   assert(option_type == 1);
-  ret = Highs_getHighsOptionType(highs, "bad_option", &option_type);
+  ret = Highs_getOptionType(highs, "bad_option", &option_type);
   assert(ret != 0);
 
   double primal_feasibility_tolerance;
-  Highs_getHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
   printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
   primal_feasibility_tolerance = 1e-6;
-  Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
+  Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
   Highs_setHighsBoolOptionValue(highs, "output_flag", 0);
   printf("Running quietly...\n");
-  int status = Highs_run(highs);
+  int runstatus = Highs_run(highs);
   printf("Running loudly...\n");
   Highs_setHighsBoolOptionValue(highs, "output_flag", 1);
 
@@ -210,16 +212,16 @@ void full_api() {
   const int scaled_model = 0;
   int modelstatus = Highs_getModelStatus(highs, scaled_model);
 
-  printf("Run status = %d; Model status = %d = %s\n", status, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
+  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
 
   double objective_function_value;
-  Highs_getHighsDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   int simplex_iteration_count = 0;
-  Highs_getHighsIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
   int primal_status = 0;
-  Highs_getHighsIntInfoValue(highs, "primal_status", &primal_status);
+  Highs_getIntInfoValue(highs, "primal_status", &primal_status);
   int dual_status = 0;
-  Highs_getHighsIntInfoValue(highs, "dual_status", &dual_status);
+  Highs_getIntInfoValue(highs, "dual_status", &dual_status);
 
   printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
   if (modelstatus == 9) {
@@ -250,16 +252,16 @@ void full_api() {
 
   // Define the constraint matrix col-wise to pass to the LP
   int astart[numcol] = {0, 2};
-  int aindex[nnz] = {1, 2, 0, 1, 2};
-  double avalue[nnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  int aindex[numnz] = {1, 2, 0, 1, 2};
+  double avalue[numnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  status = Highs_passLp(highs, numcol, numrow, nnz,
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz,
 			colcost, collower, colupper,
 			rowlower, rowupper,
 			astart, aindex, avalue);
-  status = Highs_run(highs);
+  runstatus = Highs_run(highs);
   modelstatus = Highs_getModelStatus(highs, scaled_model);
-  printf("Run status = %d; Model status = %d = %s\n", status, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
+  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
   Highs_destroy(highs);
 }
 

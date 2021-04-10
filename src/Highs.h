@@ -48,8 +48,8 @@ class Highs {
                         const double* col_lower, const double* col_upper,
                         const double* row_lower, const double* row_upper,
                         const HighsInt* astart, const HighsInt* aindex,
-                        const double* avalue);
-
+                        const double* avalue,
+                        const HighsInt* integrality = NULL);
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */
@@ -783,8 +783,7 @@ class Highs {
                                       const HighsInt hmo_ix = -1);
 #endif
 
-  std::string highsModelStatusToString(
-      const HighsModelStatus model_status) const;
+  std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string primalDualStatusToString(const HighsInt primal_dual_status);
 

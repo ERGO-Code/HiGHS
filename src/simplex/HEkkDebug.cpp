@@ -418,8 +418,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                  " / %g / %g; Phase = %" HIGHSINT_FORMAT "; status = %s\n",
                  message.c_str(), iteration_count, num_dual_infeasibility,
                  max_dual_infeasibility, sum_dual_infeasibility, phase,
-                 utilHighsModelStatusToString(ekk_instance.scaled_model_status_)
-                     .c_str());
+                 utilModelStatusToString(ekk_instance.scaled_model_status_).c_str());
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::LOGICAL_ERROR;
   }

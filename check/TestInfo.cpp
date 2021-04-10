@@ -64,7 +64,7 @@ TEST_CASE("highs-info", "[highs_info]") {
   const HighsModelStatus model_status = highs.getModelStatus();
   if (dev_run) {
     printf("From getModelStatus: model_status = %s\n",
-           highs.highsModelStatusToString(model_status).c_str());
+           highs.modelStatusToString(model_status).c_str());
     printf("From getHighsInfo: objective_function_value = %g\n",
            highs_info.objective_function_value);
 #ifdef IPX_ON

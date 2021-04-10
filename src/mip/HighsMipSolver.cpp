@@ -49,7 +49,7 @@ void HighsMipSolver::run() {
   if (modelstatus_ != HighsModelStatus::NOTSET) {
     highsLogUser(options_mip_->log_options, HighsLogType::INFO,
                  "Presolve: %s\n",
-                 utilHighsModelStatusToString(modelstatus_).c_str());
+                 utilModelStatusToString(modelstatus_).c_str());
     if (modelstatus_ == HighsModelStatus::OPTIMAL) {
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
@@ -346,7 +346,6 @@ void HighsMipSolver::cleanupSolve() {
   model_ = orig_model_;
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
-
   std::string solutionstatus = "-";
 
   if (havesolution) {
@@ -362,7 +361,7 @@ void HighsMipSolver::cleanupSolve() {
                "  Primal bound      %.12g\n"
                "  Dual bound        %.12g\n"
                "  Solution status   %s\n",
-               utilHighsModelStatusToString(modelstatus_).c_str(),
+               utilModelStatusToString(modelstatus_).c_str(),
                primal_bound_, dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
     highsLogUser(options_mip_->log_options, HighsLogType::INFO,
