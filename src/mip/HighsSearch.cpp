@@ -269,7 +269,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       double score;
 
       double s = 0.01 * std::min(upscorereliable[k] ? upscore[k] : 0,
-                                downscorereliable[k] ? downscore[k] : 0);
+                                 downscorereliable[k] ? downscore[k] : 0);
       minScore = std::max(s, minScore);
 
       if ((upscore[k] == 0.0 && upscorereliable[k]) ||
