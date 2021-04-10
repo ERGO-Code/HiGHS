@@ -71,15 +71,9 @@ void full_api() {
 void options() {
   void* highs = Highs_create();
 
-<<<<<<< HEAD
   HighsInt simplex_scale_strategy;
-  Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", 0);
-  Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
-=======
-  int simplex_scale_strategy;
   Highs_setIntOptionValue(highs, "simplex_scale_strategy", 0);
   Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
->>>>>>> f90-interface
   assert( simplex_scale_strategy == 0 );
 
   double primal_feasibility_tolerance;
