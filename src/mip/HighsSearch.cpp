@@ -494,22 +494,16 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
               otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta == 0.0 && downscore[k] != 0.0) {
+            if (objdelta <= minScore && !downscorereliable[k])
               downscorereliable[k] = 1;
-              markBranchingVarDownReliableAtNode(fracints[k].first);
-              pseudocost.addObservation(fracints[k].first,
-                                        otherdownval - otherfracval, objdelta);
-            }
+
             downscore[k] = std::min(downscore[k], objdelta);
 
           } else if (sol[fracints[k].first] >=
                      otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta == 0.0 && upscore[k] != 0.0) {
+            if (objdelta <= minScore && !upscorereliable[k])
               upscorereliable[k] = 1;
-              markBranchingVarUpReliableAtNode(fracints[k].first);
-              pseudocost.addObservation(fracints[k].first,
-                                        otherupval - otherfracval, objdelta);
-            }
+
             upscore[k] = std::min(upscore[k], objdelta);
           }
         }
