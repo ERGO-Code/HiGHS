@@ -87,36 +87,37 @@ class Highs {
    * @brief Sets an option to the bool/int/double/string  value if it's
    * legal and, for bool/int/double, only if it's of the correct type
    */
-  //  HighsStatus setHighsOptionValue(
-  //      const std::string& option,  //!< The option name
-  //      const bool value            //!< The option value
-  //  );
 
-  HighsStatus setHighsOptionValue(
+  HighsStatus setOptionValue(
+      const std::string& option,  //!< The option name
+      const bool value            //!< The option value
+  );
+
+  HighsStatus setOptionValue(
       const std::string& option,  //!< The option name
       const HighsInt value        //!< The option value
   );
 
 #ifdef HIGHSINT64
-  HighsStatus setHighsOptionValue(
+  HighsStatus setOptionValue(
       const std::string& option,  //!< The option name
       const int value             //!< The option value
   ) {
-    return setHighsOptionValue(option, HighsInt{value});
+    return setOptionValue(option, HighsInt{value});
   }
 #endif
 
-  HighsStatus setHighsOptionValue(
+  HighsStatus setOptionValue(
       const std::string& option,  //!< The option name
       const double value          //!< The option value
   );
 
-  HighsStatus setHighsOptionValue(
+  HighsStatus setOptionValue(
       const std::string& option,  //!< The option name
       const std::string value     //!< The option value
   );
 
-  HighsStatus setHighsOptionValue(
+  HighsStatus setOptionValue(
       const std::string& option,  //!< The option name
       const char* value           //!< The option value
   );
@@ -133,22 +134,22 @@ class Highs {
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
-  HighsStatus getHighsOptionValue(
+  HighsStatus getOptionValue(
       const std::string& option,  //!< The option name
       bool& value                 //!< The option value
   );
 
-  HighsStatus getHighsOptionValue(
+  HighsStatus getOptionValue(
       const std::string& option,  //!< The option name
       HighsInt& value             //!< The option value
   );
 
-  HighsStatus getHighsOptionValue(
+  HighsStatus getOptionValue(
       const std::string& option,  //!< The option name
       double& value               //!< The option value
   );
 
-  HighsStatus getHighsOptionValue(
+  HighsStatus getOptionValue(
       const std::string& option,  //!< The option name
       std::string& value          //!< The option value
   );
@@ -798,6 +799,59 @@ class Highs {
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
       const bool value            //!< The option value
+  );
+
+  HighsStatus setHighsOptionValue(
+      const std::string& option,  //!< The option name
+      const HighsInt value        //!< The option value
+  );
+
+#ifdef HIGHSINT64
+  HighsStatus setHighsOptionValue(
+      const std::string& option,  //!< The option name
+      const int value             //!< The option value
+  ) {
+    return setHighsOptionValue(option, HighsInt{value});
+  }
+#endif
+
+  HighsStatus setHighsOptionValue(
+      const std::string& option,  //!< The option name
+      const double value          //!< The option value
+  );
+
+  HighsStatus setHighsOptionValue(
+      const std::string& option,  //!< The option name
+      const std::string value     //!< The option value
+  );
+
+  HighsStatus setHighsOptionValue(
+      const std::string& option,  //!< The option name
+      const char* value           //!< The option value
+  );
+
+  /**
+   * @brief Gets an option value as bool/int/double/string and, for
+   * bool/int/double, only if it's of the correct type.
+   */
+  HighsStatus getHighsOptionValue(
+      const std::string& option,  //!< The option name
+      bool& value                 //!< The option value
+  );
+
+  HighsStatus getHighsOptionValue(
+      const std::string& option,  //!< The option name
+      HighsInt& value             //!< The option value
+  );
+
+  HighsStatus getHighsOptionValue(
+      const std::string& option,  //!< The option name
+      double& value               //!< The option value
+  );
+
+  HighsStatus getHighsOptionValue(
+      const std::string& option,  //!< The option name
+      std::string& value          //!< The option value
   );
 
   double getObjectiveValue() { return info_.objective_function_value; }

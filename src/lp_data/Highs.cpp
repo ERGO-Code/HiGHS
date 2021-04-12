@@ -40,7 +40,7 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
+HighsStatus Highs::setOptionValue(const std::string& option,
                                        const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -48,7 +48,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
+HighsStatus Highs::setOptionValue(const std::string& option,
                                        const HighsInt value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -56,7 +56,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
+HighsStatus Highs::setOptionValue(const std::string& option,
                                        const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -64,7 +64,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
+HighsStatus Highs::setOptionValue(const std::string& option,
                                        const std::string value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -72,7 +72,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
+HighsStatus Highs::setOptionValue(const std::string& option,
                                        const char* value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -99,14 +99,14 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
 
 const HighsOptions& Highs::getHighsOptions() { return options_; }
 
-HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
+HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::getHighsOptionValue(const std::string& option,
+HighsStatus Highs::getOptionValue(const std::string& option,
                                        HighsInt& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -114,7 +114,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::getHighsOptionValue(const std::string& option,
+HighsStatus Highs::getOptionValue(const std::string& option,
                                        double& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -122,7 +122,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::getHighsOptionValue(const std::string& option,
+HighsStatus Highs::getOptionValue(const std::string& option,
                                        std::string& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
@@ -1795,10 +1795,49 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
 }
 
 // Start of deprecated methods
-// HighsStatus Highs::setHighsOptionValue(const std::string& option,
-//                                       const bool value) {
-//  return setLocalOptionValue(option, value);
-//}
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+                                      const bool value) {
+ return setOptionValue(option, value);
+}
+
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+                                       const HighsInt value) {
+ return setOptionValue(option, value);
+}
+
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+                                       const double value) {
+ return setOptionValue(option, value);
+}
+
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+                                       const std::string value) {
+ return setOptionValue(option, value);
+}
+
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+                                       const char* value) {
+ return setOptionValue(option, value);
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
+ return getOptionValue(option, value);
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+                                       HighsInt& value) {
+ return getOptionValue(option, value);
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+                                       double& value) {
+ return getOptionValue(option, value);
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+                                       std::string& value) {
+ return getOptionValue(option, value);
+}
 
 HighsStatus Highs::setHighsLogfile(FILE* logfile) {
   options_.output_flag = false;
