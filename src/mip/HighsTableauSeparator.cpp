@@ -90,46 +90,38 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                     nonzeroWeights.data()) != HighsStatus::OK)
       continue;
 
-    // do not use aggregations which use too many rows for reasons of
-    // performance and numerical stability
-    // if (numNonzeroWeights > 1000 + 0.3 * lpRelaxation.numRows()) {
-    //  printf("tableau row aggregation density: %g\n",
-    //         numNonzeroWeights / (double)lpRelaxation.numRows());
-    //  continue;
-    //}
+    // already handled by other separator
+    if (numNonzeroWeights == 1) continue;
 
-    if (numNonzeroWeights == 1) {
-      lpAggregator.addRow(nonzeroWeights[0], 1);
-    } else {
-      double maxAbsColWeight = 0.0;
-      for (int j = 0; j != numNonzeroWeights; ++j) {
-        int row = nonzeroWeights[j];
-        maxAbsColWeight = std::max(std::abs(rowWeights[row]), maxAbsColWeight);
-      }
+    double maxAbsColContribution = 0.0;
+    for (int j = 0; j != numNonzeroWeights; ++j) {
+      int row = nonzeroWeights[j];
+      maxAbsColContribution = std::max(
+          std::abs(rowWeights[row]) * lpRelaxation.getMaxAbsRowVal(row),
+          maxAbsColContribution);
+    }
 
-      int expshift = 0;
-      if (maxAbsColWeight > 1e3 || maxAbsColWeight < 0.5) {
-        std::frexp(maxAbsColWeight, &expshift);
-        expshift = -expshift;
-      }
+    int expshift = 0;
+    std::frexp(maxAbsColContribution, &expshift);
+    expshift = -expshift;
 
-      HighsInt numNzs = 0;
-      for (int j = 0; j != numNonzeroWeights; ++j) {
-        int row = nonzeroWeights[j];
-        rowWeights[row] = std::ldexp(rowWeights[row], expshift);
-        if (std::abs(rowWeights[row]) * lpRelaxation.getMaxAbsRowVal(row) <=
-            1000 * mip.mipdata_->feastol) {
-          rowWeights[row] = 0;
-        } else
-          numNzs += lpRelaxation.getRowLen(row);
-      }
+    HighsInt numNzs = 0;
+    for (int j = 0; j != numNonzeroWeights; ++j) {
+      HighsInt row = nonzeroWeights[j];
+      rowWeights[row] = std::ldexp(rowWeights[row], expshift);
+      if (std::abs(rowWeights[row]) * lpRelaxation.getMaxAbsRowVal(row) <=
+          mip.mipdata_->feastol) {
+        rowWeights[row] = 0;
+      } else
+        numNzs += lpRelaxation.getRowLen(row);
+    }
 
-      if (numNzs > 0.5 * lpRelaxation.getLp().Avalue_.size()) continue;
+    // if (numNzs > 0.5 * lpRelaxation.getLp().Avalue_.size()) continue;
 
-      for (int j = 0; j != numNonzeroWeights; ++j) {
-        int row = nonzeroWeights[j];
-        lpAggregator.addRow(row, rowWeights[row]);
-      }
+    for (int j = 0; j != numNonzeroWeights; ++j) {
+      int row = nonzeroWeights[j];
+      if (rowWeights[row] == 0) continue;
+      lpAggregator.addRow(row, rowWeights[row]);
     }
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);

@@ -848,7 +848,17 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   HighsInt numZeros = 0;
 
   double maxact = -feastol;
+  double maxAbsVal = 0;
+  for (HighsInt i = 0; i < rowlen; ++i)
+    maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
+
+  int expshift = 0;
+  std::frexp(maxAbsVal, &expshift);
+  expshift = -expshift;
+  rhs *= std::ldexp(1.0, expshift);
+
   for (HighsInt i = 0; i != rowlen; ++i) {
+    vals[i] = std::ldexp(vals[i], expshift);
     if (std::abs(vals[i]) <= feastol) {
       if (vals[i] < 0) {
         if (upper[i] == HIGHS_CONST_INF) return false;
