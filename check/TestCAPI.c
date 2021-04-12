@@ -72,13 +72,13 @@ void options() {
   void* highs = Highs_create();
 
   HighsInt simplex_scale_strategy;
-  Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", 0);
-  Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  Highs_setIntOptionValue(highs, "simplex_scale_strategy", 0);
+  Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
   assert( simplex_scale_strategy == 0 );
 
   double primal_feasibility_tolerance;
-  Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", 2.0);
-  Highs_getHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", 2.0);
+  Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
   assert( primal_feasibility_tolerance == 2.0 );
 
   Highs_destroy(highs);

@@ -48,8 +48,8 @@ class Highs {
                         const double* col_lower, const double* col_upper,
                         const double* row_lower, const double* row_upper,
                         const HighsInt* astart, const HighsInt* aindex,
-                        const double* avalue);
-
+                        const double* avalue,
+                        const HighsInt* integrality = NULL);
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */
@@ -87,10 +87,10 @@ class Highs {
    * @brief Sets an option to the bool/int/double/string  value if it's
    * legal and, for bool/int/double, only if it's of the correct type
    */
-  HighsStatus setHighsOptionValue(
-      const std::string& option,  //!< The option name
-      const bool value            //!< The option value
-  );
+  //  HighsStatus setHighsOptionValue(
+  //      const std::string& option,  //!< The option name
+  //      const bool value            //!< The option value
+  //  );
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
@@ -119,14 +119,6 @@ class Highs {
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
       const char* value           //!< The option value
-  );
-
-  // Deprecated
-  HighsStatus setHighsLogfile(FILE* logfile = NULL  //!< The log file
-  );
-
-  // Deprecated
-  HighsStatus setHighsOutput(FILE* output = NULL  //!< The log file
   );
 
   HighsStatus readHighsOptions(const std::string filename  //!< The filename
@@ -217,16 +209,6 @@ class Highs {
    * @brief Returns the current model status
    */
   const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
-
-  /**
-   * @brief Returns the objective function value (if known) - Deprecated
-   */
-  double getObjectiveValue() { return info_.objective_function_value; }
-
-  /**
-   * @brief Returns the simplex iteration count (if known) - Deprecated
-   */
-  HighsInt getSimplexIterationCount() { return info_.simplex_iteration_count; }
 
   /**
    * @brief Indicates whether a dual unbounded ray exdists, and gets
@@ -801,21 +783,31 @@ class Highs {
                                       const HighsInt hmo_ix = -1);
 #endif
 
-  std::string highsModelStatusToString(
-      const HighsModelStatus model_status) const;
+  std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string primalDualStatusToString(const HighsInt primal_dual_status);
-
-#ifdef OSI_FOUND
-  friend class OsiHiGHSSolverInterface;
-#endif
-  void getPresolveReductionCounts(HighsInt& rows, HighsInt& cols,
-                                  HighsInt& nnz) const;
-  PresolveComponentInfo getPresolveInfo() const { return presolve_.info_; }
 
   void setMatrixOrientation(const MatrixOrientation& desired_orientation =
                                 MatrixOrientation::COLWISE);
 
+#ifdef OSI_FOUND
+  friend class OsiHiGHSSolverInterface;
+#endif
+  // Start of deprecated methods
+
+  HighsStatus setHighsOptionValue(
+      const std::string& option,  //!< The option name
+      const bool value            //!< The option value
+  );
+
+  double getObjectiveValue() { return info_.objective_function_value; }
+
+  HighsInt getSimplexIterationCount() { return info_.simplex_iteration_count; }
+
+  HighsStatus setHighsLogfile(FILE* logfile = NULL);
+
+  HighsStatus setHighsOutput(FILE* output = NULL);
+  // End of deprecated methods
  private:
   HighsSolution solution_;
   HighsBasis basis_;

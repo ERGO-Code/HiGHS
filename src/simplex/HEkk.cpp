@@ -130,7 +130,7 @@ HighsStatus HEkk::solve() {
               "Status %s\n",
               algorithm.c_str(), simplex_info_.num_primal_infeasibility,
               simplex_info_.num_dual_infeasibility,
-              utilHighsModelStatusToString(scaled_model_status_).c_str());
+              utilModelStatusToString(scaled_model_status_).c_str());
   if (scaled_model_status_ == HighsModelStatus::NOTSET) {
     call_status = cleanup();
     return_status =

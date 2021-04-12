@@ -60,7 +60,7 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
  *
  * Set to NULL to reset to default, which is to print to logfile and output file
  */
-void highsSetLogCallback(void (*printmsgcb_)(int level, const char* msg,
+void highsSetLogCallback(void (*printmsgcb_)(HighsInt level, const char* msg,
                                              void* msgcb_data),
                          void (*logmsgcb_)(HighsLogType type, const char* msg,
                                            void* msgcb_data),

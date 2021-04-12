@@ -10,7 +10,7 @@ char printedmsg[100000];
 void* receiveddata = NULL;
 
 // callback that saves message away for comparison
-static void myprintmsgcb(int level, const char* msg, void* msgcb_data) {
+static void myprintmsgcb(HighsInt level, const char* msg, void* msgcb_data) {
   strcpy(printedmsg, msg);
   receiveddata = msgcb_data;
 }

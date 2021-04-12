@@ -80,16 +80,6 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsLogfile(FILE* logfile) {
-  options_.output_flag = false;
-  return HighsStatus::OK;
-}
-
-HighsStatus Highs::setHighsOutput(FILE* output) {
-  options_.output_flag = false;
-  return HighsStatus::OK;
-}
-
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::WARNING,
@@ -244,7 +234,8 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const double* col_lower, const double* col_upper,
                              const double* row_lower, const double* row_upper,
                              const HighsInt* astart, const HighsInt* aindex,
-                             const double* avalue) {
+                             const double* avalue,
+                             const HighsInt* integrality) {
   HighsLp lp;
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
@@ -275,6 +266,15 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
   lp.orientation_ = MatrixOrientation::COLWISE;
+  if (num_col > 0 && integrality != NULL) {
+    lp.integrality_.resize(num_col);
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      HighsInt integrality_status = integrality[iCol];
+      assert(integrality_status == (HighsInt)HighsVarType::CONTINUOUS ||
+             integrality_status == (HighsInt)HighsVarType::INTEGER);
+      lp.integrality_[iCol] = (HighsVarType)integrality_status;
+    }
+  }
   return passModel(std::move(lp));
 }
 
@@ -627,7 +627,7 @@ HighsStatus Highs::run() {
         }
         highsLogUser(options_.log_options, HighsLogType::INFO,
                      "Problem status detected on presolve: %s\n",
-                     highsModelStatusToString(model_status_).c_str());
+                     modelStatusToString(model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -1771,9 +1771,9 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       "); basis %" HIGHSINT_FORMAT
       " "
       "(%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n\n",
-      message.c_str(), utilHighsModelStatusToString(model_status).c_str(),
-      utilHighsModelStatusToString(scaled_model_status).c_str(), lp.numCol_,
-      lp.numRow_, unscaled_primal_status, (HighsInt)solution.col_value.size(),
+      message.c_str(), modelStatusToString(model_status).c_str(),
+      modelStatusToString(scaled_model_status).c_str(), lp.numCol_, lp.numRow_,
+      unscaled_primal_status, (HighsInt)solution.col_value.size(),
       (HighsInt)solution.row_value.size(), unscaled_dual_status,
       (HighsInt)solution.col_dual.size(), (HighsInt)solution.row_dual.size(),
       basis.valid_, (HighsInt)basis.col_status.size(),
@@ -1781,9 +1781,9 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
 }
 #endif
 
-std::string Highs::highsModelStatusToString(
+std::string Highs::modelStatusToString(
     const HighsModelStatus model_status) const {
-  return utilHighsModelStatusToString(model_status);
+  return utilModelStatusToString(model_status);
 }
 
 std::string Highs::primalDualStatusToString(const HighsInt primal_dual_status) {
@@ -1793,6 +1793,24 @@ std::string Highs::primalDualStatusToString(const HighsInt primal_dual_status) {
 void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
   setOrientation(lp_, desired_orientation);
 }
+
+// Start of deprecated methods
+// HighsStatus Highs::setHighsOptionValue(const std::string& option,
+//                                       const bool value) {
+//  return setOptionValue(option, value);
+//}
+
+HighsStatus Highs::setHighsLogfile(FILE* logfile) {
+  options_.output_flag = false;
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::setHighsOutput(FILE* output) {
+  options_.output_flag = false;
+  return HighsStatus::OK;
+}
+
+// End of deprecated methods
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve() {
@@ -2092,7 +2110,7 @@ HighsStatus Highs::getUseModelStatus(
         printf(
             "Unscaled model status was NOTSET: after running from logical "
             "basis it is %s\n",
-            highsModelStatusToString(model_status_).c_str());
+            modelStatusToString(model_status_).c_str());
 
       if (model_status_ != HighsModelStatus::NOTSET) {
         use_model_status = model_status_;
@@ -2329,11 +2347,4 @@ void Highs::underDevelopmentLogMessage(const string method_name) {
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
                method_name.c_str());
-}
-
-void Highs::getPresolveReductionCounts(HighsInt& rows, HighsInt& cols,
-                                       HighsInt& nnz) const {
-  rows = presolve_.info_.n_rows_removed;
-  cols = presolve_.info_.n_cols_removed;
-  nnz = presolve_.info_.n_nnz_removed;
 }
