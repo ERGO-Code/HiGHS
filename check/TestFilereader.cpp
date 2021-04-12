@@ -25,7 +25,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   const HighsInfo& info = highs.getHighsInfo();
 
@@ -88,14 +88,14 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
 
   HighsLp lp_free = highs.getLp();
 
-  status = highs.setHighsOptionValue("mps_parser_type_free", false);
+  status = highs.setOptionValue("mps_parser_type_free", false);
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.readModel(filename);
@@ -117,7 +117,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   // Read mps
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -182,7 +182,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -193,7 +193,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   REQUIRE(lp_free.integrality_ == kIntegers);
 
   // Read mps with fixed format parser.
-  status = highs.setHighsOptionValue("mps_parser_type_free", false);
+  status = highs.setOptionValue("mps_parser_type_free", false);
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.readModel(filename);

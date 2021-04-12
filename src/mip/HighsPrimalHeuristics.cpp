@@ -703,7 +703,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
                                            localdom.colUpper_.data());
 
     if (numintcols / (double)mipsolver.numCol() >= 0.2)
-      lprelax.getLpSolver().setHighsOptionValue("presolve", "on");
+      lprelax.getLpSolver().setOptionValue("presolve", "on");
     else
       lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis);
 
@@ -864,9 +864,9 @@ void HighsPrimalHeuristics::feasibilityPump() {
                                  objinds.size(), objinds.data(), objval.data());
   }
 
-  lprelax.getLpSolver().setHighsOptionValue("simplex_strategy",
+  lprelax.getLpSolver().setOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_PRIMAL);
-  lprelax.getLpSolver().setHighsOptionValue(
+  lprelax.getLpSolver().setOptionValue(
       "primal_simplex_bound_perturbation_multiplier", 0.0);
 
   lprelax.setIterationLimit(5 * mipsolver.mipdata_->avgrootlpiters);
@@ -947,10 +947,10 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
 void HighsPrimalHeuristics::centralRounding() {
   Highs ipm;
-  ipm.setHighsOptionValue("solver", "ipm");
-  ipm.setHighsOptionValue("run_crossover", false);
-  ipm.setHighsOptionValue("presolve", "off");
-  ipm.setHighsOptionValue("output_flag", false);
+  ipm.setOptionValue("solver", "ipm");
+  ipm.setOptionValue("run_crossover", false);
+  ipm.setOptionValue("presolve", "off");
+  ipm.setOptionValue("output_flag", false);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   // lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;

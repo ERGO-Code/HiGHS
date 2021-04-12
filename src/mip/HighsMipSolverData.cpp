@@ -265,11 +265,11 @@ void HighsMipSolverData::runSetup() {
     implications.cleanupVarbounds(col);
   domain.clearChangedCols();
 
-  lp.getLpSolver().setHighsOptionValue("presolve", "off");
-  // lp.getLpSolver().setHighsOptionValue("dual_simplex_cleanup_strategy", 0);
-  // lp.getLpSolver().setHighsOptionValue("dual_simplex_cost_perturbation_multiplier",
-  // 0.0); lp.getLpSolver().setHighsOptionValue("parallel", "on");
-  lp.getLpSolver().setHighsOptionValue("simplex_initial_condition_check",
+  lp.getLpSolver().setOptionValue("presolve", "off");
+  // lp.getLpSolver().setOptionValue("dual_simplex_cleanup_strategy", 0);
+  // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
+  // 0.0); lp.getLpSolver().setOptionValue("parallel", "on");
+  lp.getLpSolver().setOptionValue("simplex_initial_condition_check",
                                        false);
 
   checkObjIntegrality();
@@ -746,7 +746,7 @@ restart:
   // solve the first root lp
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
                "\nSolving root node LP relaxation\n");
-  // lp.getLpSolver().setHighsOptionValue(
+  // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
   lp.loadModel();
@@ -763,29 +763,29 @@ restart:
   }
 
   if (firstrootbasis.valid_) lp.getLpSolver().setBasis(firstrootbasis);
-  lp.getLpSolver().setHighsOptionValue("presolve", "on");
+  lp.getLpSolver().setOptionValue("presolve", "on");
 
-  lp.getLpSolver().setHighsOptionValue("output_flag",
+  lp.getLpSolver().setOptionValue("output_flag",
                                        mipsolver.options_mip_->output_flag);
-  //  lp.getLpSolver().setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
-  //  lp.getLpSolver().setHighsOptionValue("log_file",
+  //  lp.getLpSolver().setOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
+  //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
   int64_t lpIters = -lp.getNumLpIterations();
   HighsLpRelaxation::Status status = lp.resolveLp();
   lpIters += lp.getNumLpIterations();
 
-  lp.getLpSolver().setHighsOptionValue("output_flag", false);
+  lp.getLpSolver().setOptionValue("output_flag", false);
 
-  lp.getLpSolver().setHighsOptionValue("presolve", "off");
+  lp.getLpSolver().setOptionValue("presolve", "off");
   avgrootlpiters = lp.getAvgSolveIters();
   if (numRestarts == 0) firstrootlpiters = lpIters;
 
   total_lp_iterations += lpIters;
 
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
-  //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
-  //  lp.getLpSolver().setHighsOptionValue("log_dev_level", 0);
-  lp.getLpSolver().setHighsOptionValue("parallel", "off");
+  //  lp.getLpSolver().setOptionValue("output_flag", false);
+  //  lp.getLpSolver().setOptionValue("log_dev_level", 0);
+  lp.getLpSolver().setOptionValue("parallel", "off");
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;
   firstlpsolobj = lp.getObjective();

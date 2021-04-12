@@ -146,7 +146,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   const vector<double>& rowLower = lp.rowLower_;
   const vector<double>& rowUpper = lp.rowUpper_;
   double dual_feasibility_tolerance;
-  highs.getHighsOptionValue("dual_feasibility_tolerance",
+  highs.getOptionValue("dual_feasibility_tolerance",
                             dual_feasibility_tolerance);
   vector<double> row_ray_value;
   row_ray_value.assign(numRow, 0.0);
@@ -215,10 +215,10 @@ void testInfeasibleMps(const std::string model) {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
 
-  REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
 
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -244,7 +244,7 @@ void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::MINIMIZE) {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
 
   std::string model_file;
@@ -254,7 +254,7 @@ void testUnboundedMps(const std::string model,
   bool has_primal_ray;
   vector<double> dual_ray_value;
   vector<double> primal_ray_value;
-  REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
 
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -280,7 +280,7 @@ void testUnboundedMps(const std::string model,
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   std::string model_file;
   HighsLp lp;
@@ -293,7 +293,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> primal_ray_value;
 
   //  special_lps.issue285Lp(lp, require_model_status);
-  REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
 
   // Test dual ray for infeasible LP
   special_lps.scipLpi3Lp(lp, require_model_status);
@@ -403,7 +403,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   double inf = highs.getHighsInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
@@ -411,7 +411,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
-  highs.setHighsOptionValue("presolve", "off");
+  highs.setOptionValue("presolve", "off");
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_UNBOUNDED);
   bool has_ray = false;
@@ -433,7 +433,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   double inf = highs.getHighsInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
@@ -441,7 +441,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   HighsInt aindex[2] = {0, 1};
   double avalue[2] = {1.0, -1.0};
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
-  highs.setHighsOptionValue("presolve", "off");
+  highs.setOptionValue("presolve", "off");
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_UNBOUNDED);
   bool has_ray = false;

@@ -195,7 +195,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(return_bool);
 
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
 
   const HighsLp& internal_lp = highs.getLp();
@@ -228,7 +228,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   // Without presolve LP is found primal unbounded! ToDo: Fix this to be
   // infeasible
-  highs.setHighsOptionValue("presolve", "off");
+  highs.setOptionValue("presolve", "off");
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
 

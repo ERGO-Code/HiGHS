@@ -9,13 +9,13 @@ void ekk_solve(Highs& highs, std::string presolve,
                const HighsModelStatus require_model_status,
                const double require_optimal_objective = 0) {
   SpecialLps special_lps;
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("simplex_strategy",
+  REQUIRE(highs.setOptionValue("simplex_strategy",
                                     SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
 
-  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
 
@@ -66,7 +66,7 @@ void ekk_scipLpi3(Highs& highs) {
 TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   HighsLp lp;
   const bool from_file = true;
@@ -76,9 +76,9 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     // "/check/instances/adlittle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
-    REQUIRE(highs.setHighsOptionValue(
+    REQUIRE(highs.setOptionValue(
                 "simplex_strategy", SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
-    highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED);
+    highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED);
     REQUIRE(highs.run() == HighsStatus::OK);
   } else {
     //    ekk_distillation(highs);
@@ -89,7 +89,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   ekk_distillation(highs);
   ekk_blending(highs);
 }

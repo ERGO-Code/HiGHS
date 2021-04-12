@@ -412,7 +412,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   Highs avgas_highs;
   avgas_highs.passHighsOptions(options);
   if (!dev_run) {
-    avgas_highs.setHighsOptionValue("output_flag", false);
+    avgas_highs.setOptionValue("output_flag", false);
   }
   return_status = avgas_highs.passModel(avgas_lp);
   HighsStatusReport(options.log_options, "avgas_highs.passModel(avgas_lp)",
@@ -429,9 +429,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   Highs highs;
   highs.passHighsOptions(options);
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
-  return_status = highs.setHighsOptionValue("highs_debug_level", 2);
+  return_status = highs.setOptionValue("highs_debug_level", 2);
   REQUIRE(return_status == HighsStatus::OK);
 
   lp.model_name_ = "Building avgas";
@@ -1098,9 +1098,9 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getHighsInfo();
 
-  highs.setHighsOptionValue("output_flag", dev_run);
-  highs.setHighsOptionValue("log_to_console", true);
-  highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("log_to_console", true);
+  highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";

@@ -44,9 +44,9 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   double optimal_objective_function_value = -7.75;
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   } else {
-    highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
+    highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
   }
   const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getHighsInfo();

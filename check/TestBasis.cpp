@@ -128,7 +128,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   assert(model0_file != model1_file);
 
@@ -196,7 +196,7 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   assert(model0_file != model1_file);
 

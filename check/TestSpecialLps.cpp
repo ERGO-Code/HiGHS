@@ -10,12 +10,12 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
   SpecialLps special_lps;
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("solver", solver) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("solver", solver) == HighsStatus::OK);
 
-  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
 
@@ -387,11 +387,11 @@ void singularStartingBasis(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
   if (dev_run) {
-    REQUIRE(highs.setHighsOptionValue(
+    REQUIRE(highs.setOptionValue(
                 "log_dev_level", LOG_DEV_LEVEL_DETAILED) == HighsStatus::OK);
   }
 
-  REQUIRE(highs.setHighsOptionValue("highs_debug_level", 3) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("highs_debug_level", 3) == HighsStatus::OK);
 
   HighsBasis basis;
   basis.col_status.resize(lp.numCol_);
@@ -430,7 +430,7 @@ void unconstrained(Highs& highs) {
   lp.Astart_ = {0, 0, 0};
   lp.orientation_ = MatrixOrientation::COLWISE;
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::OPTIMAL);
   REQUIRE(highs.getObjectiveValue() == 1);
@@ -452,7 +452,7 @@ void unconstrained(Highs& highs) {
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   distillation(highs);
 }
@@ -460,28 +460,28 @@ TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue272(highs);
 }
 TEST_CASE("LP-280", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue280(highs);
 }
 TEST_CASE("LP-282", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue282(highs);
 }
 TEST_CASE("LP-285", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue285(highs);
 }
@@ -489,7 +489,7 @@ TEST_CASE("LP-285", "[highs_test_special_lps]") {
 TEST_CASE("LP-295", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue295(highs);
 }
@@ -497,49 +497,49 @@ TEST_CASE("LP-295", "[highs_test_special_lps]") {
 TEST_CASE("LP-306", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue306(highs);
 }
 TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue316(highs);
 }
 TEST_CASE("LP-425", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   issue425(highs);
 }
 TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   mpsGalenet(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   primalDualInfeasible1(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   primalDualInfeasible2(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   mpsUnbounded(highs);
 }
@@ -548,28 +548,28 @@ TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
 // TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
 //   Highs highs;
 //   if (!dev_run) {
-//     highs.setHighsOptionValue("output_flag", false);
+//     highs.setOptionValue("output_flag", false);
 //   }
 //   mpsGas11(highs);
 // }
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   almostNotUnbounded(highs);
 }
 TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   singularStartingBasis(highs);
 }
 TEST_CASE("LP-unconstrained", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   unconstrained(highs);
 }

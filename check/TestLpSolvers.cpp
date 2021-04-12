@@ -22,8 +22,8 @@ void testSolver(Highs& highs, const std::string solver,
 
   const HighsInfo& info = highs.getHighsInfo();
 
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
-  return_status = highs.setHighsOptionValue("solver", solver);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  return_status = highs.setOptionValue("solver", solver);
   REQUIRE(return_status == HighsStatus::OK);
 
   if (use_simplex) {
@@ -34,15 +34,15 @@ void testSolver(Highs& highs, const std::string solver,
     if (dev_run)
       printf("Simplex strategy %" HIGHSINT_FORMAT "\n", int_simplex_strategy);
     return_status =
-        highs.setHighsOptionValue("simplex_strategy", simplex_strategy);
+        highs.setOptionValue("simplex_strategy", simplex_strategy);
     REQUIRE(return_status == HighsStatus::OK);
   }
 
-  return_status = highs.getHighsOptionValue("time_limit", default_time_limit);
+  return_status = highs.getOptionValue("time_limit", default_time_limit);
   REQUIRE(return_status == HighsStatus::OK);
 
   if (use_simplex) {
-    return_status = highs.getHighsOptionValue("simplex_iteration_limit",
+    return_status = highs.getOptionValue("simplex_iteration_limit",
                                               default_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
     // Force HiGHS to start from a logical basis - if this is the
@@ -50,7 +50,7 @@ void testSolver(Highs& highs, const std::string solver,
     return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
-    return_status = highs.getHighsOptionValue("ipm_iteration_limit",
+    return_status = highs.getOptionValue("ipm_iteration_limit",
                                               default_ipm_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   }
@@ -83,7 +83,7 @@ void testSolver(Highs& highs, const std::string solver,
     if (dev_run) printf("Current run time is %g\n", run_time);
 
     double use_time_limit = run_time + local_time_limit;
-    return_status = highs.setHighsOptionValue("time_limit", use_time_limit);
+    return_status = highs.setOptionValue("time_limit", use_time_limit);
     REQUIRE(return_status == HighsStatus::OK);
 
     const HighsInt max_num_solve = 10 * ideal_num_solve;
@@ -110,7 +110,7 @@ void testSolver(Highs& highs, const std::string solver,
           "min_run_time_for_test\n",
           single_solve_run_time, min_run_time_for_test);
   }
-  return_status = highs.setHighsOptionValue("time_limit", default_time_limit);
+  return_status = highs.setOptionValue("time_limit", default_time_limit);
   REQUIRE(return_status == HighsStatus::OK);
   if (!use_simplex) {
     if (dev_run)
@@ -121,13 +121,13 @@ void testSolver(Highs& highs, const std::string solver,
   // First of all check that no iterations are performed if the
   // iteration limit is zero
   if (use_simplex) {
-    return_status = highs.setHighsOptionValue("simplex_iteration_limit", 0);
+    return_status = highs.setOptionValue("simplex_iteration_limit", 0);
     REQUIRE(return_status == HighsStatus::OK);
 
     return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
-    return_status = highs.setHighsOptionValue("ipm_iteration_limit", 0);
+    return_status = highs.setOptionValue("ipm_iteration_limit", 0);
     REQUIRE(return_status == HighsStatus::OK);
   }
 
@@ -153,7 +153,7 @@ void testSolver(Highs& highs, const std::string solver,
     if (dev_run)
       printf("Setting simplex_iteration_limit = %" HIGHSINT_FORMAT "\n",
              further_simplex_iterations);
-    return_status = highs.setHighsOptionValue("simplex_iteration_limit",
+    return_status = highs.setOptionValue("simplex_iteration_limit",
                                               further_simplex_iterations);
     REQUIRE(return_status == HighsStatus::OK);
     return_status = highs.setBasis();
@@ -162,7 +162,7 @@ void testSolver(Highs& highs, const std::string solver,
     if (dev_run)
       printf("Setting ipm_iteration_limit = %" HIGHSINT_FORMAT "\n",
              further_ipm_iterations);
-    return_status = highs.setHighsOptionValue("ipm_iteration_limit",
+    return_status = highs.setOptionValue("ipm_iteration_limit",
                                               further_ipm_iterations);
     REQUIRE(return_status == HighsStatus::OK);
   }
@@ -173,12 +173,12 @@ void testSolver(Highs& highs, const std::string solver,
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == further_simplex_iterations);
-    return_status = highs.setHighsOptionValue("simplex_iteration_limit",
+    return_status = highs.setOptionValue("simplex_iteration_limit",
                                               default_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     REQUIRE(info.ipm_iteration_count == further_ipm_iterations);
-    return_status = highs.setHighsOptionValue("ipm_iteration_limit",
+    return_status = highs.setOptionValue("ipm_iteration_limit",
                                               default_ipm_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   }
@@ -244,7 +244,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   HighsStatus read_status;
 
   Highs highs;
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   // Read mps
   model = "adlittle";
@@ -268,7 +268,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.resetHighsOptions();
   REQUIRE(return_status == HighsStatus::OK);
 
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   read_status = highs.readModel(model_file);
@@ -293,7 +293,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
 
   // Test the solver without scaling
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
-  REQUIRE(highs.setHighsOptionValue("simplex_scale_strategy", 0) ==
+  REQUIRE(highs.setOptionValue("simplex_scale_strategy", 0) ==
           HighsStatus::OK);
 
   return_status = highs.run();
@@ -315,11 +315,11 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   double save_dual_objective_value_upper_bound;
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   const HighsInfo& info = highs.getHighsInfo();
 
-  //  status = highs.setHighsOptionValue("log_dev_level",
+  //  status = highs.setOptionValue("log_dev_level",
   //  LOG_DEV_LEVEL_VERBOSE);
 
   double error;
@@ -341,12 +341,12 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(error < 1e-14);
 
   // Set dual objective value upper bound after saving the default value
-  status = highs.getHighsOptionValue("dual_objective_value_upper_bound",
+  status = highs.getOptionValue("dual_objective_value_upper_bound",
                                      save_dual_objective_value_upper_bound);
   REQUIRE(status == HighsStatus::OK);
 
   status =
-      highs.setHighsOptionValue("dual_objective_value_upper_bound",
+      highs.setOptionValue("dual_objective_value_upper_bound",
                                 larger_min_dual_objective_value_upper_bound);
   REQUIRE(status == HighsStatus::OK);
 
@@ -363,7 +363,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::OK);
 
   // Switch off presolve
-  status = highs.setHighsOptionValue("presolve", "off");
+  status = highs.setOptionValue("presolve", "off");
   REQUIRE(status == HighsStatus::OK);
 
   // Solve again
@@ -392,7 +392,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "bound of %g\n",
         smaller_min_dual_objective_value_upper_bound);
   status =
-      highs.setHighsOptionValue("dual_objective_value_upper_bound",
+      highs.setOptionValue("dual_objective_value_upper_bound",
                                 smaller_min_dual_objective_value_upper_bound);
   REQUIRE(status == HighsStatus::OK);
 
@@ -411,7 +411,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
   REQUIRE(bool_status);
 
-  status = highs.setHighsOptionValue("dual_objective_value_upper_bound",
+  status = highs.setOptionValue("dual_objective_value_upper_bound",
                                      use_max_dual_objective_value_upper_bound);
   REQUIRE(status == HighsStatus::OK);
 

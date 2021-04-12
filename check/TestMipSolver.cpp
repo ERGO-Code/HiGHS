@@ -21,9 +21,9 @@ void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
-  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
 
@@ -87,12 +87,12 @@ void rowlessMIP(Highs& highs) {
 
 TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   distillationMIP(highs);
 }
 
 TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
   Highs highs;
-  if (!dev_run) highs.setHighsOptionValue("output_flag", false);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   rowlessMIP(highs);
 }

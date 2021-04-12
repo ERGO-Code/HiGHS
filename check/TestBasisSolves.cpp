@@ -441,7 +441,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
 
   vector<HighsInt> basic_variables;

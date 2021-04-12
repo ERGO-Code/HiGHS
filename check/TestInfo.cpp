@@ -15,7 +15,7 @@ TEST_CASE("highs-info", "[highs_info]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsOptionValue("output_flag", false);
+    highs.setOptionValue("output_flag", false);
   }
   const HighsInfo& highs_info = highs.getHighsInfo();
 
@@ -32,7 +32,7 @@ TEST_CASE("highs-info", "[highs_info]") {
   REQUIRE(return_status == HighsStatus::OK);
 
 #ifdef IPX_ON
-  return_status = highs.setHighsOptionValue("solver", "ipm");
+  return_status = highs.setOptionValue("solver", "ipm");
   REQUIRE(return_status == HighsStatus::OK);
 #endif
 

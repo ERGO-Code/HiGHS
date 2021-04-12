@@ -1002,21 +1002,21 @@ HighsSearch::NodeResult HighsSearch::branch() {
     std::swap(tmpLp, lp);
 
     // reevaluate the node with LP presolve enabled
-    lp->getLpSolver().setHighsOptionValue("presolve", "on");
+    lp->getLpSolver().setOptionValue("presolve", "on");
     result = evaluateNode();
 
     if (result == NodeResult::Open) {
       // LP still not solved, reevaluate with primal simplex
       lp->getLpSolver().clearSolver();
-      lp->getLpSolver().setHighsOptionValue("simplex_strategy",
+      lp->getLpSolver().setOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_PRIMAL);
       result = evaluateNode();
-      lp->getLpSolver().setHighsOptionValue("simplex_strategy",
+      lp->getLpSolver().setOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_DUAL);
       if (result == NodeResult::Open) {
         // LP still not solved, reevaluate with IPM instead of simplex
         lp->getLpSolver().clearSolver();
-        lp->getLpSolver().setHighsOptionValue("solver", "ipm");
+        lp->getLpSolver().setOptionValue("solver", "ipm");
         result = evaluateNode();
 
         if (result == NodeResult::Open) {

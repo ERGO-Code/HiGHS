@@ -153,38 +153,38 @@ HighsInt Highs_clearModel(void* highs) {
 HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
                                   const HighsInt value) {
   return (HighsInt)((Highs*)highs)
-      ->setHighsOptionValue(std::string(option), (bool)value);
+      ->setOptionValue(std::string(option), (bool)value);
 }
 
 HighsInt Highs_setIntOptionValue(void* highs, const char* option,
                                  const HighsInt value) {
   return (HighsInt)((Highs*)highs)
-      ->setHighsOptionValue(std::string(option), value);
+      ->setOptionValue(std::string(option), value);
 }
 
 HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
                                     const double value) {
   return (HighsInt)((Highs*)highs)
-      ->setHighsOptionValue(std::string(option), value);
+      ->setOptionValue(std::string(option), value);
 }
 
 HighsInt Highs_setStringOptionValue(void* highs, const char* option,
                                     const char* value) {
   return (HighsInt)((Highs*)highs)
-      ->setHighsOptionValue(std::string(option), std::string(value));
+      ->setOptionValue(std::string(option), std::string(value));
 }
 
 HighsInt Highs_setOptionValue(void* highs, const char* option,
                               const char* value) {
   return (HighsInt)((Highs*)highs)
-      ->setHighsOptionValue(std::string(option), std::string(value));
+      ->setOptionValue(std::string(option), std::string(value));
 }
 
 HighsInt Highs_getBoolOptionValue(void* highs, const char* option,
                                   HighsInt* value) {
   bool v;
   HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
+      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
   *value = (HighsInt)v;
   return retcode;
 }
@@ -192,13 +192,13 @@ HighsInt Highs_getBoolOptionValue(void* highs, const char* option,
 HighsInt Highs_getIntOptionValue(void* highs, const char* option,
                                  HighsInt* value) {
   return (HighsInt)((Highs*)highs)
-      ->getHighsOptionValue(std::string(option), *value);
+      ->getOptionValue(std::string(option), *value);
 }
 
 HighsInt Highs_getDoubleOptionValue(void* highs, const char* option,
                                     double* value) {
   return (HighsInt)((Highs*)highs)
-      ->getHighsOptionValue(std::string(option), *value);
+      ->getOptionValue(std::string(option), *value);
 }
 
 HighsInt Highs_getStringOptionValue(void* highs, const char* option,
@@ -206,7 +206,7 @@ HighsInt Highs_getStringOptionValue(void* highs, const char* option,
   std::string v;
   memset(value, 0, 7);
   HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
+      (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), v);
   strcpy(value, v.c_str());
   return retcode;
 }
@@ -670,15 +670,15 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
 }
 
 HighsInt Highs_runQuiet(void* highs) {
-  return (HighsInt)((Highs*)highs)->setHighsOptionValue("output_flag", false);
+  return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
 HighsInt Highs_setHighsLogfile(void* highs, void* logfile) {
-  return (HighsInt)((Highs*)highs)->setHighsOptionValue("output_flag", false);
+  return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
 HighsInt Highs_setHighsOutput(void* highs, void* outputfile) {
-  return (HighsInt)((Highs*)highs)->setHighsOptionValue("output_flag", false);
+  return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
 HighsInt Highs_getIterationCount(void* highs) {

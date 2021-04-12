@@ -204,7 +204,7 @@ class HighsLpRelaxation {
   void recoverBasis();
 
   void setObjectiveLimit(double objlim = HIGHS_CONST_INF) {
-    // lpsolver.setHighsOptionValue("dual_objective_value_upper_bound", objlim);
+    // lpsolver.setOptionValue("dual_objective_value_upper_bound", objlim);
   }
 
   void storeBasis() {
@@ -280,7 +280,7 @@ class HighsLpRelaxation {
   double getObjective() const { return objective; }
 
   void setIterationLimit(HighsInt limit = HIGHS_CONST_I_INF) {
-    lpsolver.setHighsOptionValue("simplex_iteration_limit", limit);
+    lpsolver.setOptionValue("simplex_iteration_limit", limit);
   }
 };
 
