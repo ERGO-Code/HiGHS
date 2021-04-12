@@ -859,7 +859,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
   for (HighsInt i = 0; i != rowlen; ++i) {
     vals[i] = std::ldexp(vals[i], expshift);
-    if (std::abs(vals[i]) <= feastol) {
+
+    if (std::abs(vals[i]) <= 10 * feastol) {
       if (vals[i] < 0) {
         if (upper[i] == HIGHS_CONST_INF) return false;
         rhs -= vals[i] * upper[i];
@@ -976,12 +977,12 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<HighsInt>& inds_,
                                      std::vector<double>& vals_, double& rhs_) {
-  bool intsPositive = true;
-  if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
-    return false;
-
-#if 1
+#if 0
   if (vals_.size() > 1) {
+    bool intsPositive = true;
+    if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
+      return false;
+
     std::vector<HighsInt> indsCheck_ = inds_;
     std::vector<double> valsCheck_ = vals_;
     rowlen = indsCheck_.size();
@@ -992,7 +993,6 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     bool hasUnboundedInts = false;
     bool hasGeneralInts = false;
     bool hasContinuous = false;
-    bool oldIntsPositive = intsPositive;
     // printf("before preprocessing of base inequality:\n");
     checkNumerics(vals, rowlen, double(rhs));
     if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
@@ -1015,10 +1015,13 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     vals = valsCheck_.data();
     lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
         inds, vals, rowlen, tmprhs_);
-
-    intsPositive = oldIntsPositive;
   }
 #endif
+
+  bool intsPositive = true;
+  if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
+    return false;
+
   rowlen = inds_.size();
   this->inds = inds_.data();
   this->vals = vals_.data();

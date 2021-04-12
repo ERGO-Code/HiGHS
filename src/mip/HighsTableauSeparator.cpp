@@ -114,7 +114,11 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         numNzs += lpRelaxation.getRowLen(row);
     }
 
-    // if (numNzs > 0.5 * lpRelaxation.getLp().Avalue_.size()) continue;
+    // if (numNzs > 0.5 * lpRelaxation.numNonzeros()) {
+    //   printf("%.2f%% nonzeros involved in tableau row\n",
+    //          100.0 * numNzs / (double)lpRelaxation.numNonzeros());
+    //   continue;
+    // }
 
     for (int j = 0; j != numNonzeroWeights; ++j) {
       int row = nonzeroWeights[j];
