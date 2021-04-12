@@ -668,6 +668,8 @@ void HighsLpRelaxation::storeDualUBProof() {
     }
   }
 
+  dualproofvals.resize(proofLen);
+  dualproofinds.resize(proofLen);
   dualproofrhs = double(upper);
   mipsolver.mipdata_->domain.tightenCoefficients(
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
