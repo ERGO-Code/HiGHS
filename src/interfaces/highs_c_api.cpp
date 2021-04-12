@@ -220,12 +220,12 @@ HighsInt Highs_resetOptions(void* highs) {
 }
 
 HighsInt Highs_getIntInfoValue(void* highs, const char* info, HighsInt* value) {
-  return (HighsInt)((Highs*)highs)->getHighsInfoValue(info, *value);
+  return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
 HighsInt Highs_getDoubleInfoValue(void* highs, const char* info,
                                   double* value) {
-  return (HighsInt)((Highs*)highs)->getHighsInfoValue(info, *value);
+  return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }
 
 void Highs_getSolution(void* highs, double* colvalue, double* coldual,

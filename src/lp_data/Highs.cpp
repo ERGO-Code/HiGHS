@@ -160,27 +160,26 @@ HighsStatus Highs::writeOptions(const std::string filename,
 
 const HighsOptions& Highs::getOptions() const { return options_; }
 
-const HighsInfo& Highs::getHighsInfo() const { return info_; }
+const HighsInfo& Highs::getInfo() const { return info_; }
 
-HighsStatus Highs::getHighsInfoValue(const std::string& info, HighsInt& value) {
-  if (getInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
+HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
+  if (getLocalInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::getHighsInfoValue(const std::string& info,
-                                     double& value) const {
-  if (getInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
+HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
+  if (getLocalInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::writeHighsInfo(const std::string filename) {
+HighsStatus Highs::writeInfo(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   FILE* file;
   bool html;
   return_status =
-      interpretCallStatus(openWriteFile(filename, "writeHighsInfo", file, html),
+      interpretCallStatus(openWriteFile(filename, "writeInfo", file, html),
                           return_status, "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 

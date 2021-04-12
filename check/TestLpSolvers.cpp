@@ -20,7 +20,7 @@ void testSolver(Highs& highs, const std::string solver,
   const bool perform_timeout_test = false;  // true;  //
   const bool use_simplex = solver == "simplex";
 
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.setOptionValue("solver", solver);
@@ -279,7 +279,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
 
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 1);
 
   REQUIRE(info.simplex_iteration_count == 403);
@@ -315,7 +315,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   //  status = highs.setOptionValue("log_dev_level",
   //  LOG_DEV_LEVEL_VERBOSE);

@@ -139,7 +139,7 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::INFO, "\n");
     HighsModelStatus model_status = highs.getModelStatus();
     HighsModelStatus scaled_model_status = highs.getModelStatus(true);
-    HighsInfo highs_info = highs.getHighsInfo();
+    HighsInfo highs_info = highs.getInfo();
     if (model_status != scaled_model_status) {
       if (scaled_model_status == HighsModelStatus::OPTIMAL) {
         // The scaled model has been solved to optimality, but not the
@@ -177,8 +177,7 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
                    highs_info.crossover_iteration_count);
     if (model_status == HighsModelStatus::OPTIMAL) {
       double objective_function_value;
-      highs.getHighsInfoValue("objective_function_value",
-                              objective_function_value);
+      highs.getInfoValue("objective_function_value", objective_function_value);
       highsLogUser(log_options, HighsLogType::INFO,
                    "Objective value     : %17.10e\n", objective_function_value);
     }
@@ -208,7 +207,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   highs.setBasis();
   HighsStatus run_status = highs.run();
 
-  if (highs.getHighsInfo().mip_node_count == -1)
+  if (highs.getInfo().mip_node_count == -1)
     reportSolvedLpStats(use_options.log_options, run_status, highs);
   //  HighsRanging ranging; highs.getRanging(ranging);
   //  highs.writeSolution("", true);

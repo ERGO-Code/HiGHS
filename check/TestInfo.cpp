@@ -17,18 +17,18 @@ TEST_CASE("highs-info", "[highs_info]") {
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }
-  const HighsInfo& highs_info = highs.getHighsInfo();
+  const HighsInfo& highs_info = highs.getInfo();
 
   HighsStatus return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::OK);
 
   if (dev_run) {
-    return_status = highs.writeHighsInfo("");
+    return_status = highs.writeInfo("");
     REQUIRE(return_status == HighsStatus::OK);
   }
 
   std::string highs_info_file = "Highs.info";
-  return_status = highs.writeHighsInfo(highs_info_file);
+  return_status = highs.writeInfo(highs_info_file);
   REQUIRE(return_status == HighsStatus::OK);
 
 #ifdef IPX_ON
@@ -41,38 +41,37 @@ TEST_CASE("highs-info", "[highs_info]") {
 
   double objective_function_value;
   return_status =
-      highs.getHighsInfoValue("objective_value", objective_function_value);
+      highs.getInfoValue("objective_value", objective_function_value);
   REQUIRE(return_status == HighsStatus::Error);
 
-  return_status = highs.getHighsInfoValue("objective_function_value",
-                                          objective_function_value);
+  return_status =
+      highs.getInfoValue("objective_function_value", objective_function_value);
   REQUIRE(return_status == HighsStatus::OK);
 
   if (dev_run)
-    printf("From getHighsInfoValue: objective_function_value = %g\n",
+    printf("From getInfoValue: objective_function_value = %g\n",
            objective_function_value);
 
   HighsInt simplex_iteration_count;
   return_status =
-      highs.getHighsInfoValue("iteration_count", simplex_iteration_count);
+      highs.getInfoValue("iteration_count", simplex_iteration_count);
   REQUIRE(return_status == HighsStatus::Error);
 
-  return_status = highs.getHighsInfoValue("simplex_iteration_count",
-                                          simplex_iteration_count);
+  return_status =
+      highs.getInfoValue("simplex_iteration_count", simplex_iteration_count);
   REQUIRE(return_status == HighsStatus::OK);
 
   const HighsModelStatus model_status = highs.getModelStatus();
   if (dev_run) {
     printf("From getModelStatus: model_status = %s\n",
            highs.modelStatusToString(model_status).c_str());
-    printf("From getHighsInfo: objective_function_value = %g\n",
+    printf("From getInfo: objective_function_value = %g\n",
            highs_info.objective_function_value);
 #ifdef IPX_ON
-    printf("From getHighsInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
+    printf("From getInfo: ipm_iteration_count = %" HIGHSINT_FORMAT "\n",
            highs_info.ipm_iteration_count);
 #else
-    printf("From getHighsInfo: simplex_iteration_count = %" HIGHSINT_FORMAT
-           "\n",
+    printf("From getInfo: simplex_iteration_count = %" HIGHSINT_FORMAT "\n",
            highs_info.simplex_iteration_count);
 #endif
   }

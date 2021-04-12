@@ -677,7 +677,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     callstatus = HighsStatus::Error;
   }
 
-  const HighsInfo& info = lpsolver.getHighsInfo();
+  const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
   numlpiters += itercount;
 

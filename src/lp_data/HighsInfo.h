@@ -81,12 +81,14 @@ InfoStatus checkInfo(const HighsOptions& options,
 InfoStatus checkInfo(const InfoRecordInt& info);
 InfoStatus checkInfo(const InfoRecordDouble& info);
 
-InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        HighsInt& value);
-InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        double& value);
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name,
+                             const std::vector<InfoRecord*>& info_records,
+                             HighsInt& value);
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name,
+                             const std::vector<InfoRecord*>& info_records,
+                             double& value);
 
 HighsStatus writeInfoToFile(FILE* file,
                             const std::vector<InfoRecord*>& info_records,

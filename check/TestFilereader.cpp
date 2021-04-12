@@ -27,7 +27,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   // Try to run HiGHS with default options. No model loaded so OK
   run_status = highs.run();
@@ -150,7 +150,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
   double mps_objective_function_value = info.objective_function_value;
 
   // Read lp and compare objective with mps

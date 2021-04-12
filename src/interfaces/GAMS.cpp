@@ -259,8 +259,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
   Highs* highs = gh->highs;
 
   gmoSetHeadnTail(gmo, gmoHresused, gevTimeDiffStart(gh->gev));
-  gmoSetHeadnTail(gmo, gmoHiterused,
-                  highs->getHighsInfo().simplex_iteration_count);
+  gmoSetHeadnTail(gmo, gmoHiterused, highs->getInfo().simplex_iteration_count);
 
   // figure out model and solution status and whether we should have a solution
   // to be written
@@ -371,7 +370,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
     // if there were =N= rows (lp08), then gmoCompleteObjective wouldn't get
     // their activity right
     // gmoCompleteObjective(gmo,
-    // highs->getHighsInfo().objective_function_value);
+    // highs->getInfo().objective_function_value);
     gmoCompleteSolution(gmo);
   }
 

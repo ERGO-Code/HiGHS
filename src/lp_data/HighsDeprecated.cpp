@@ -89,3 +89,18 @@ HighsStatus Highs::setHighsOutput(FILE* output) {
   options_.output_flag = false;
   return HighsStatus::OK;
 }
+
+const HighsInfo& Highs::getHighsInfo() const { return getInfo(); }
+
+HighsStatus Highs::getHighsInfoValue(const std::string& info, HighsInt& value) {
+  return getInfoValue(info, value);
+}
+
+HighsStatus Highs::getHighsInfoValue(const std::string& info,
+                                     double& value) const {
+  return getInfoValue(info, value);
+}
+
+HighsStatus Highs::writeHighsInfo(const std::string filename) {
+  return writeInfo(filename);
+}

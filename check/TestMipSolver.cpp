@@ -22,7 +22,7 @@ void solve(Highs& highs, std::string presolve,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1) {
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
   REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);

@@ -163,16 +163,16 @@ class Highs {
    * type.
    */
 
-  const HighsInfo& getHighsInfo() const;
+  const HighsInfo& getInfo() const;
 
-  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
-                                HighsInt& value           //!< The info value
+  HighsStatus getInfoValue(const std::string& info,  //!< The info name
+                           HighsInt& value           //!< The info value
   );
 
-  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
-                                double& value) const;     //!< The info value
+  HighsStatus getInfoValue(const std::string& info,  //!< The info name
+                           double& value) const;     //!< The info value
 
-  HighsStatus writeHighsInfo(const std::string filename  //!< The filename
+  HighsStatus writeInfo(const std::string filename  //!< The filename
   );
   /**
    * Methods for model output
@@ -864,6 +864,19 @@ class Highs {
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
   HighsStatus setHighsOutput(FILE* output = NULL);
+
+  const HighsInfo& getHighsInfo() const;
+
+  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+                                HighsInt& value           //!< The info value
+  );
+
+  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+                                double& value) const;     //!< The info value
+
+  HighsStatus writeHighsInfo(const std::string filename  //!< The filename
+  );
+
   // End of deprecated methods
  private:
   HighsSolution solution_;

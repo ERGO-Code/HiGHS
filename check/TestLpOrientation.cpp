@@ -49,7 +49,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
     highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
   }
   const HighsLp& highs_lp = highs.getLp();
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs_lp.orientation_ == MatrixOrientation::NONE);
 

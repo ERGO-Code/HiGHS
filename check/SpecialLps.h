@@ -303,7 +303,7 @@ class SpecialLps {
 
   void reportSolution(Highs& highs, const bool dev_run = false) {
     if (!dev_run) return;
-    const HighsInfo& info = highs.getHighsInfo();
+    const HighsInfo& info = highs.getInfo();
     if (info.primal_status == PrimalDualStatus::STATUS_FEASIBLE_POINT) {
       const HighsSolution& solution = highs.getSolution();
       printf("Solution\n");

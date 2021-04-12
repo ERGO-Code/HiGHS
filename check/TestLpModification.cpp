@@ -473,8 +473,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   double avgas_optimal_objective_value;
-  highs.getHighsInfoValue("objective_function_value",
-                          avgas_optimal_objective_value);
+  highs.getInfoValue("objective_function_value", avgas_optimal_objective_value);
   double optimal_objective_value;
 
   // Getting columns from the LP is OK
@@ -537,7 +536,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
+  highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
 #ifdef HiGHSDEV
@@ -683,7 +682,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
+  highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
 #ifdef HiGHSDEV
@@ -787,7 +786,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
+  highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
   // Fix columns 1, 3, 5, 7 to check resetting of their nonbasic status
@@ -816,7 +815,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
-  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
+  highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
   const HighsLp& local_lp = highs.getLp();
@@ -1096,7 +1095,7 @@ TEST_CASE("LP-getrows", "[highs_data]") {
 TEST_CASE("LP-interval-changes", "[highs_data]") {
   Highs highs;
   const HighsOptions& options = highs.getOptions();
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("log_to_console", true);
@@ -1145,8 +1144,8 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   double optimal_objective_function_value;
-  highs.getHighsInfoValue("objective_function_value",
-                          optimal_objective_function_value);
+  highs.getInfoValue("objective_function_value",
+                     optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value ==
           avgas_optimal_objective_function_value);
 
@@ -1182,8 +1181,8 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
-  highs.getHighsInfoValue("objective_function_value",
-                          optimal_objective_function_value);
+  highs.getInfoValue("objective_function_value",
+                     optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value ==
           avgas_optimal_objective_function_value);
 
@@ -1218,8 +1217,8 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
-  highs.getHighsInfoValue("objective_function_value",
-                          optimal_objective_function_value);
+  highs.getInfoValue("objective_function_value",
+                     optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value ==
           avgas_optimal_objective_function_value);
 }

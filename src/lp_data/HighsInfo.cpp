@@ -116,9 +116,10 @@ InfoStatus checkInfo(const HighsOptions& options,
   return InfoStatus::OK;
 }
 
-InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        HighsInt& value) {
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name,
+                             const std::vector<InfoRecord*>& info_records,
+                             HighsInt& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
@@ -135,9 +136,10 @@ InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
   return InfoStatus::OK;
 }
 
-InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        double& value) {
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name,
+                             const std::vector<InfoRecord*>& info_records,
+                             double& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;

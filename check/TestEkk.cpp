@@ -10,7 +10,7 @@ void ekk_solve(Highs& highs, std::string presolve,
                const double require_optimal_objective = 0) {
   SpecialLps special_lps;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL) ==
           HighsStatus::OK);

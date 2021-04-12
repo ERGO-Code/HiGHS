@@ -11,7 +11,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_iteration_count = -1) {
   SpecialLps special_lps;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs.setOptionValue("solver", solver) == HighsStatus::OK);
 
@@ -32,7 +32,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     if (solver == "simplex") {
       iteration_count = highs.getSimplexIterationCount();
     } else {
-      iteration_count = highs.getHighsInfo().ipm_iteration_count;
+      iteration_count = highs.getInfo().ipm_iteration_count;
     }
     REQUIRE(iteration_count == require_iteration_count);
   }
@@ -407,7 +407,7 @@ void singularStartingBasis(Highs& highs) {
 
   REQUIRE(highs.run() == HighsStatus::OK);
 
-  const HighsInfo& info = highs.getHighsInfo();
+  const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
