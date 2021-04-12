@@ -1727,9 +1727,9 @@ bool Highs::scaleRow(const HighsInt row, const double scaleval) {
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
-double Highs::getHighsInfinity() { return HIGHS_CONST_INF; }
+double Highs::getInfinity() { return HIGHS_CONST_INF; }
 
-double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }
+double Highs::getRunTime() { return timer_.readRunHighsClock(); }
 
 HighsStatus Highs::clearSolver() {
   clearModelStatus();

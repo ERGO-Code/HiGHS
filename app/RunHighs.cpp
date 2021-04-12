@@ -181,7 +181,7 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
       highsLogUser(log_options, HighsLogType::INFO,
                    "Objective value     : %17.10e\n", objective_function_value);
     }
-    double run_time = highs.getHighsRunTime();
+    double run_time = highs.getRunTime();
     highsLogUser(log_options, HighsLogType::INFO,
                  "HiGHS run time      : %13.2f\n", run_time);
     // Possibly write the solution to a file

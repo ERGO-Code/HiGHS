@@ -104,3 +104,7 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info,
 HighsStatus Highs::writeHighsInfo(const std::string filename) {
   return writeInfo(filename);
 }
+
+double Highs::getHighsInfinity() { return getInfinity(); }
+
+double Highs::getHighsRunTime() { return getRunTime(); }

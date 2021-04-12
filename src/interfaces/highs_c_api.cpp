@@ -378,7 +378,7 @@ HighsInt Highs_setLogicalBasis(void* highs) {
 }
 
 double Highs_getRunTime(void* highs) {
-  return (double)((Highs*)highs)->getHighsRunTime();
+  return (double)((Highs*)highs)->getRunTime();
 }
 
 HighsInt Highs_addRow(void* highs, const double lower, const double upper,
@@ -608,9 +608,7 @@ HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask) {
   return ((Highs*)highs)->deleteRows(mask);
 }
 
-double Highs_getInfinity(void* highs) {
-  return ((Highs*)highs)->getHighsInfinity();
-}
+double Highs_getInfinity(void* highs) { return ((Highs*)highs)->getInfinity(); }
 
 HighsInt Highs_getNumCols(void* highs) {
   return ((Highs*)highs)->getLp().numCol_;

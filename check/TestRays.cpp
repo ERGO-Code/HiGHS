@@ -405,7 +405,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }
-  double inf = highs.getHighsInfinity();
+  double inf = highs.getInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
   HighsInt aindex[2] = {0, 1};
@@ -435,7 +435,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }
-  double inf = highs.getHighsInfinity();
+  double inf = highs.getInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
   HighsInt aindex[2] = {0, 1};

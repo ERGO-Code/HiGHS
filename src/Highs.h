@@ -751,12 +751,12 @@ class Highs {
   /**
    * @brief Gets the value of infinity used by HiGHS
    */
-  double getHighsInfinity();
+  double getInfinity();
 
   /**
    * @brief Gets the run time of HiGHS
    */
-  double getHighsRunTime();
+  double getRunTime();
   /**
    * @brief Clear data associated with solving the model: basis, solution and
    * internal data etc
@@ -877,6 +877,9 @@ class Highs {
   HighsStatus writeHighsInfo(const std::string filename  //!< The filename
   );
 
+  double getHighsInfinity();
+
+  double getHighsRunTime();
   // End of deprecated methods
  private:
   HighsSolution solution_;

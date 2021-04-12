@@ -55,10 +55,10 @@ void testSolver(Highs& highs, const std::string solver,
   }
 
   // Vanilla solve: get solution time to calibrate time limit test
-  double run_time = highs.getHighsRunTime();
+  double run_time = highs.getRunTime();
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
-  const double single_solve_run_time = highs.getHighsRunTime() - run_time;
+  const double single_solve_run_time = highs.getRunTime() - run_time;
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == default_iteration_count.simplex);
@@ -78,7 +78,7 @@ void testSolver(Highs& highs, const std::string solver,
     const double local_time_limit = ideal_num_solve * single_solve_run_time;
 
     // Solve with time limit
-    run_time = highs.getHighsRunTime();
+    run_time = highs.getRunTime();
     if (dev_run) printf("Current run time is %g\n", run_time);
 
     double use_time_limit = run_time + local_time_limit;
@@ -93,7 +93,7 @@ void testSolver(Highs& highs, const std::string solver,
       if (highs.getModelStatus() == HighsModelStatus::REACHED_TIME_LIMIT) break;
     }
     REQUIRE(num_solve < max_num_solve);
-    run_time = highs.getHighsRunTime();
+    run_time = highs.getRunTime();
     if (dev_run)
       printf("Current run time is %g: time limit is %g (difference = %g)\n",
              run_time, use_time_limit, run_time - use_time_limit);
