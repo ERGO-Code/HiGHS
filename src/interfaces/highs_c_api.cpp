@@ -170,8 +170,6 @@ HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
 
 HighsInt Highs_setStringOptionValue(void* highs, const char* option,
                                     const char* value) {
-  printf("setStringOptionValue: %s = %s\n", option, value);
-  fflush(stdout);
   return (HighsInt)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
 }

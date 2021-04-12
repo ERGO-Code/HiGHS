@@ -78,7 +78,7 @@ program fortrantest
   integer ( c_int ) rowbasisstatus(numrow)
   integer modelstatus
   integer runstatus
-  
+  integer ( c_int ), parameter :: modelstatus_optimal = 7
   ! For the full API test
   type ( c_ptr ) :: highs
   
@@ -107,7 +107,6 @@ program fortrantest
 
   double precision, pointer :: double_null(:)
   integer, pointer :: integer_null(:)
-  character( c_char ), parameter :: mps_file_name = "F90.mps"
   character( c_char ) :: file_name(7)
   
   colcost(1) = 2
@@ -159,6 +158,9 @@ program fortrantest
 
   !================================================================================
   ! Illustrate use of Highs_call to solve a given LP
+  print*, "*********"
+  print*, "Section 1"
+  print*, "*********"
   runstatus = Highs_call( numcol, numrow, numnz,&
        colcost, collower, colupper, rowlower, rowupper,&
        astart, aindex, avalue,&
@@ -171,7 +173,7 @@ program fortrantest
   endif
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
       
-  if (modelstatus .eq. 9) then
+  if (modelstatus .eq. modelstatus_optimal) then
      objective_function_value = 0
      ! Report the column primal and dual values, and basis status
      do col = 1, numcol
@@ -201,8 +203,9 @@ program fortrantest
 !  print*, "Suppressing all HiGHS output"; runstatus = Highs_runQuiet(highs)
   runstatus = Highs_run(highs)
   modelstatus = Highs_getModelStatus(highs, scaled_model);
+  print*, "modelstatus = ", modelstatus
   call assert(runstatus .eq. 0, "Highs_run runstatus")
-  call assert(modelstatus .eq. 9, "Highs_run modelstatus optimal")
+  call assert(modelstatus .eq. modelstatus_optimal, "Highs_run modelstatus optimal")
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);
   runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count"//C_NULL_CHAR, iteration_count);
@@ -212,6 +215,9 @@ program fortrantest
   !================================================================================
   ! Illustrate use of Highs_addCols and Highs_addRows to build model,
   ! and then Highs_changeObjectiveSense to switch to maximization
+  print*, "*********"
+  print*, "Section 2"
+  print*, "*********"
   highs = Highs_create()
   ! Create double and integer values equal to NULL pointer
   call C_F_POINTER(C_NULL_PTR, double_null, [0])
@@ -273,8 +279,9 @@ program fortrantest
   call assert(runstatus .eq. 2, "getOptionType runstatus")
 
   write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value, "; Iteration count = ", iteration_count
-  call assert(modelstatus .eq. 9, "Optimal => modelstatus = 9")
-  if (modelstatus .eq. 9) then
+  print*, "modelstatus = ", modelstatus
+  call assert(modelstatus .eq. modelstatus_optimal, "Optimal => modelstatus = modelstatus_optimal")
+  if (modelstatus .eq. modelstatus_optimal) then
      call assert(primal_status .eq. 3, "Optimal => primal_status = 3")
      call assert(dual_status .eq. 3, "Optimal => dual_status = 3")
      ! Get the primal and dual solution
@@ -305,11 +312,15 @@ program fortrantest
   !================================================================================
   ! Illustrate use of Highs_readModel to read model, and
   ! Highs_writeSolution to write the solution
+  print*, "*********"
+  print*, "Section 3"
+  print*, "*********"
   highs = Highs_create()
   ! Suppress HiGHS output
   print*, "Suppressing all HiGHS output"
 !  runstatus = Highs_runQuiet(highs);
 
+  ! Read the LP
   runstatus = Highs_readModel(highs, "F90.mps"//C_NULL_CHAR)
   call assert(runstatus .eq. 0, "Highs_readModel runstatus")
   ! Solve the LP
@@ -322,26 +333,23 @@ program fortrantest
   write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value, "; Iteration count = ", iteration_count
 
   ! Write solution to the screen
-  runstatus = Highs_writeSolution(highs, ""//C_NULL_CHAR, 1)
+  runstatus = Highs_writeSolutionPretty(highs, ""//C_NULL_CHAR)
   call Highs_destroy(highs)
   
   !================================================================================
   ! Illustrate use of setting bool options and string options
-  ! (model_file and solution_file) so only run(highs) is required
+  ! (solution_file) so only run(highs) is required
+  print*, "*********"
+  print*, "Section 4"
+  print*, "*********"
   highs = Highs_create()
 
   ! Get and set string options
-  runstatus = Highs_getStringOptionValue(highs, "model_file"//C_NULL_CHAR, file_name)
-  write(*, '(a, a, a)')"Default model_file is |", file_name, "|"
-  runstatus = Highs_setStringOptionValue(highs, "model_file"//C_NULL_CHAR, "F90.mps"//C_NULL_CHAR)!mps_file_name)
-  runstatus = Highs_getStringOptionValue(highs, "model_file"//C_NULL_CHAR, file_name)
-  write(*, '(a, a, a)')"New model_file is |", file_name, "|"
-
   runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
-  write(*, '(a, a, a)')"Default solution_file is |", file_name, "|"
-  runstatus = Highs_setStringOptionValue(highs, "solution_file"//C_NULL_CHAR, "F90.sol"//C_NULL_CHAR)!solution_file_name)
+  print*, "Default solution_file is |", file_name, "|"  
+  runstatus = Highs_setStringOptionValue(highs, "solution_file"//C_NULL_CHAR, "F90.sol"//C_NULL_CHAR)
   runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
-  write(*, '(a, a, a)')"New solution_file is |", file_name, "|"
+  print*, "New solution_file is |", file_name, "|"  
 
 ! Get and set bool options. NB Cannot pass .true. as it's 4-byte
   runstatus = Highs_getBoolOptionValue(highs, "write_solution_to_file"//C_NULL_CHAR, write_solution_to_file)
@@ -354,11 +362,13 @@ program fortrantest
   write_solution_pretty = .true.
   runstatus = Highs_setBoolOptionValue(highs, "write_solution_pretty"//C_NULL_CHAR, write_solution_pretty)
 
+  ! Read the LP
+  runstatus = Highs_readModel(highs, "F90.mps"//C_NULL_CHAR)
   ! Solve the LP
   runstatus = Highs_run(highs);
   ! Get the model status
   modelstatus = Highs_getModelStatus(highs, scaled_model);
-  call assert(modelstatus .eq. 6, "Highs_run modelstatus empty")
+  call assert(modelstatus .eq. modelstatus_optimal, "Highs_run modelstatus optimal")
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);
   runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count"//C_NULL_CHAR, iteration_count);

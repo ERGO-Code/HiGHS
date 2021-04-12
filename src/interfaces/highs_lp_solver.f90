@@ -58,13 +58,19 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_writeModel
 
-    function Highs_writeSolution ( h, f, v ) result ( s ) bind ( c, name='Highs_writeSolution' )
+    function Highs_writeSolution ( h, f ) result ( s ) bind ( c, name='Highs_writeSolution' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: f(*)
-      integer ( c_int ) :: v
       integer ( c_int ) :: s
     end function Highs_writeSolution
+
+    function Highs_writeSolutionPretty ( h, f ) result ( s ) bind ( c, name='Highs_writeSolutionPretty' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: f(*)
+      integer ( c_int ) :: s
+    end function Highs_writeSolutionPretty
 
     function Highs_passLp ( h, numcol, numrow, numnz,&
          colcost, collower, colupper, rowlower, rowupper, &
