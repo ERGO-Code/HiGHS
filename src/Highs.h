@@ -465,6 +465,46 @@ class Highs {
   );
 
   /**
+   * @brief Change the integrality of a column
+   */
+  bool changeColIntegrality(
+      const HighsInt
+          col,  //!< The index of the column whose integrality is to change
+      const HighsVarType integrality  //!< The new integrality
+  );
+
+  /**
+   * @brief Change the integrality of multiple columns given by an interval
+   */
+  bool changeColsIntegrality(
+      const HighsInt from_col,  //!< The index of the first column whose
+                                //!< integrality changes
+      const HighsInt to_col,    //!< One more than the index of the last column
+                                //!< whose integrality changes
+      const HighsVarType*
+          integrality  //!< Array of size num_set_entries with new integrality
+  );
+
+  /**
+   * @brief Change the integrality of multiple columns given by a set of indices
+   */
+  bool changeColsIntegrality(
+      const HighsInt num_set_entries,  //!< The number of indides in the set
+      const HighsInt* set,  //!< Array of size num_set_entries with indices of
+                            //!< columns whose integralitys change
+      const HighsVarType*
+          integrality  //!< Array of size num_set_entries with new integrality
+  );
+
+  /**
+   * @brief Change the integrality of multiple columns given by a mask
+   */
+  bool changeColsIntegrality(
+      const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+      const HighsVarType* integrality  //!< Full length array of new integrality
+  );
+
+  /**
    * @brief Change the cost of a column
    */
   bool changeColCost(
@@ -978,6 +1018,8 @@ class Highs {
                                       double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
+  HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
+                                         const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,

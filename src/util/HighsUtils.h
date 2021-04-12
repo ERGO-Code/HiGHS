@@ -97,6 +97,9 @@ void updateIndexCollectionOutInIndex(
 HighsInt dataSizeOfIndexCollection(
     const HighsIndexCollection& index_collection);
 
+bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
+                                 const HighsVarType* user_data,
+                                 const std::string name);
 bool intUserDataNotNull(const HighsLogOptions& log_options,
                         const HighsInt* user_data, const std::string name);
 bool doubleUserDataNotNull(const HighsLogOptions& log_options,

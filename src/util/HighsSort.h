@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "lp_data/HConst.h"
 #include "util/HighsInt.h"
 
 using std::vector;
@@ -128,5 +129,8 @@ void sortSetData(const HighsInt num_set_entries, HighsInt* set,
                  const double* data0, const double* data1, const double* data2,
                  double* sorted_data0, double* sorted_data1,
                  double* sorted_data2);
+
+void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+                 const HighsVarType* data0, HighsVarType* sorted_data0);
 
 #endif /* UTIL_HIGHSSORT_H_ */

@@ -1526,6 +1526,48 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
   return HighsStatus::OK;
 }
 
+HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsIndexCollection& index_collection,
+                                const vector<HighsVarType>& new_integrality) {
+  HighsStatus return_status = HighsStatus::OK;
+  // Check parameters for technique and, if OK set the loop limits
+  if (!assessIndexCollection(log_options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+  HighsInt from_k;
+  HighsInt to_k;
+  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  if (from_k > to_k) return HighsStatus::OK;
+
+  const bool& interval = index_collection.is_interval_;
+  const bool& mask = index_collection.is_mask_;
+  const HighsInt* col_set = index_collection.set_;
+  const HighsInt* col_mask = index_collection.mask_;
+
+  // Change the integrality to the user-supplied integrality, according to the
+  // technique
+  HighsInt lp_col;
+  HighsInt usr_col = -1;
+  for (HighsInt k = from_k; k < to_k + 1; k++) {
+    if (interval || mask) {
+      lp_col = k;
+    } else {
+      lp_col = col_set[k];
+    }
+    HighsInt col = lp_col;
+    if (interval) {
+      usr_col++;
+    } else {
+      usr_col = k;
+    }
+    if (mask && !col_mask[col]) continue;
+    lp.integrality_[col] = new_integrality[usr_col];
+  }
+  return HighsStatus::OK;
+}
+
 HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
                           const vector<double>& new_col_cost) {

@@ -236,6 +236,19 @@ HighsInt dataSizeOfIndexCollection(
   }
 }
 
+bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
+                                 const HighsVarType* user_data,
+                                 const std::string name) {
+  bool null_data = false;
+  if (user_data == NULL) {
+    highsLogUser(log_options, HighsLogType::ERROR,
+                 "User-supplied %s are NULL\n", name.c_str());
+    null_data = true;
+  }
+  assert(!null_data);
+  return null_data;
+}
+
 bool intUserDataNotNull(const HighsLogOptions& log_options,
                         const HighsInt* user_data, const std::string name) {
   bool null_data = false;

@@ -771,6 +771,40 @@ HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   return HighsStatus::OK;
 }
 
+HighsStatus Highs::changeIntegralityInterface(
+    HighsIndexCollection& index_collection,
+    const HighsVarType* usr_integrality) {
+  HighsModelObject& highs_model_object = hmos_[0];
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsOptions& options = highs_model_object.options_;
+  bool null_data = highsVarTypeUserDataNotNull(
+      options.log_options, usr_integrality, "column integrality");
+  if (null_data) return HighsStatus::Error;
+  HighsInt num_usr_integrality = dataSizeOfIndexCollection(index_collection);
+  // If a non-positive number of integrality (may) need changing nothing needs
+  // to be done
+  if (num_usr_integrality <= 0) return HighsStatus::OK;
+  // Take a copy of the cost that can be normalised
+  std::vector<HighsVarType> local_integrality{
+      usr_integrality, usr_integrality + num_usr_integrality};
+  // If changing the integrality for a set of columns, ensure that the
+  // set and data are in ascending order
+  if (index_collection.is_set_)
+    sortSetData(index_collection.set_num_entries_, index_collection.set_,
+                usr_integrality, &local_integrality[0]);
+  HighsLp& lp = lp_;
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status = changeLpIntegrality(
+      options.log_options, lp, index_collection, local_integrality);
+  if (call_status == HighsStatus::Error) return HighsStatus::Error;
+
+  // Deduce the consequences of new integrality
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ =
+      highs_model_object.scaled_model_status_;
+  return HighsStatus::OK;
+}
+
 HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
                                         const double* usr_col_cost) {
   HighsModelObject& highs_model_object = hmos_[0];

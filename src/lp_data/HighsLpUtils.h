@@ -150,6 +150,10 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                       const HighsInt col,
                                       const double new_value);
 
+HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsIndexCollection& index_collection,
+                                const vector<HighsVarType>& new_integrality);
+
 HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
                           const vector<double>& new_col_cost);

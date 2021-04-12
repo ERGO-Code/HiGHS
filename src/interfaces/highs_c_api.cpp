@@ -337,37 +337,41 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
                         const HighsInt* rowstatus) {
   HighsBasis basis;
   const HighsInt num_col = Highs_getNumCols(highs);
-  basis.col_status.resize(num_col);
-  for (HighsInt i = 0; i < num_col; i++) {
-    if (colstatus[i] == (HighsInt)HighsBasisStatus::LOWER) {
-      basis.col_status[i] = HighsBasisStatus::LOWER;
-    } else if (colstatus[i] == (HighsInt)HighsBasisStatus::BASIC) {
-      basis.col_status[i] = HighsBasisStatus::BASIC;
-    } else if (colstatus[i] == (HighsInt)HighsBasisStatus::UPPER) {
-      basis.col_status[i] = HighsBasisStatus::UPPER;
-    } else if (colstatus[i] == (HighsInt)HighsBasisStatus::ZERO) {
-      basis.col_status[i] = HighsBasisStatus::ZERO;
-    } else if (colstatus[i] == (HighsInt)HighsBasisStatus::NONBASIC) {
-      basis.col_status[i] = HighsBasisStatus::NONBASIC;
-    } else {
-      return (HighsInt)HighsStatus::Error;
+  if (num_col > 0) {
+    basis.col_status.resize(num_col);
+    for (HighsInt i = 0; i < num_col; i++) {
+      if (colstatus[i] == (HighsInt)HighsBasisStatus::LOWER) {
+        basis.col_status[i] = HighsBasisStatus::LOWER;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::BASIC) {
+        basis.col_status[i] = HighsBasisStatus::BASIC;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::UPPER) {
+        basis.col_status[i] = HighsBasisStatus::UPPER;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::ZERO) {
+        basis.col_status[i] = HighsBasisStatus::ZERO;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::NONBASIC) {
+        basis.col_status[i] = HighsBasisStatus::NONBASIC;
+      } else {
+        return (HighsInt)HighsStatus::Error;
+      }
     }
   }
   const HighsInt num_row = Highs_getNumRows(highs);
-  basis.row_status.resize(num_row);
-  for (HighsInt i = 0; i < num_row; i++) {
-    if (rowstatus[i] == (HighsInt)HighsBasisStatus::LOWER) {
-      basis.row_status[i] = HighsBasisStatus::LOWER;
-    } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::BASIC) {
-      basis.row_status[i] = HighsBasisStatus::BASIC;
-    } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::UPPER) {
-      basis.row_status[i] = HighsBasisStatus::UPPER;
-    } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::ZERO) {
-      basis.row_status[i] = HighsBasisStatus::ZERO;
-    } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::NONBASIC) {
-      basis.row_status[i] = HighsBasisStatus::NONBASIC;
-    } else {
-      return (HighsInt)HighsStatus::Error;
+  if (num_row > 0) {
+    basis.row_status.resize(num_row);
+    for (HighsInt i = 0; i < num_row; i++) {
+      if (rowstatus[i] == (HighsInt)HighsBasisStatus::LOWER) {
+        basis.row_status[i] = HighsBasisStatus::LOWER;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::BASIC) {
+        basis.row_status[i] = HighsBasisStatus::BASIC;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::UPPER) {
+        basis.row_status[i] = HighsBasisStatus::UPPER;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::ZERO) {
+        basis.row_status[i] = HighsBasisStatus::ZERO;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::NONBASIC) {
+        basis.row_status[i] = HighsBasisStatus::NONBASIC;
+      } else {
+        return (HighsInt)HighsStatus::Error;
+      }
     }
   }
   return (HighsInt)((Highs*)highs)->setBasis(basis);
@@ -418,8 +422,57 @@ HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
   return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
-HighsInt Highs_changeColsCost(void* highs, const HighsInt col,
-                              const double cost) {
+HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
+                                    const HighsInt integrality) {
+  return ((Highs*)highs)->changeColIntegrality(col, (HighsVarType)integrality);
+}
+
+HighsInt Highs_changeColsIntegralityByRange(void* highs,
+                                            const HighsInt from_col,
+                                            const HighsInt to_col,
+                                            const HighsInt* integrality) {
+  vector<HighsVarType> pass_integrality;
+  HighsInt num_ix = to_col - from_col + 1;
+  if (num_ix > 0) {
+    pass_integrality.resize(num_ix);
+    for (HighsInt ix = 0; ix < num_ix; ix++) {
+      pass_integrality[ix] = (HighsVarType)integrality[ix];
+    }
+  }
+  return ((Highs*)highs)
+      ->changeColsIntegrality(from_col, to_col, &pass_integrality[0]);
+}
+
+HighsInt Highs_changeColsIntegralityBySet(void* highs,
+                                          const HighsInt num_set_entries,
+                                          const HighsInt* set,
+                                          const HighsInt* integrality) {
+  vector<HighsVarType> pass_integrality;
+  if (num_set_entries > 0) {
+    pass_integrality.resize(num_set_entries);
+    for (HighsInt ix = 0; ix < num_set_entries; ix++) {
+      pass_integrality[ix] = (HighsVarType)integrality[ix];
+    }
+  }
+  return ((Highs*)highs)
+      ->changeColsIntegrality(num_set_entries, set, &pass_integrality[0]);
+}
+
+HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
+                                           const HighsInt* integrality) {
+  const HighsInt num_col = Highs_getNumCols(highs);
+  vector<HighsVarType> pass_integrality;
+  if (num_col > 0) {
+    pass_integrality.resize(num_col);
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+      pass_integrality[iCol] = (HighsVarType)integrality[iCol];
+    }
+  }
+  return ((Highs*)highs)->changeColsIntegrality(mask, &pass_integrality[0]);
+}
+
+HighsInt Highs_changeColCost(void* highs, const HighsInt col,
+                             const double cost) {
   return ((Highs*)highs)->changeColCost(col, cost);
 }
 

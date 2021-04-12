@@ -41,9 +41,9 @@ HighsInt Highs_lpCall(
     double* rowvalue,  //!< array of length [numrow], filled with row values
     double* rowdual,   //!< array of length [numrow], filled with row duals
     HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
-                               //!< basis stati
+                               //!< basis status
     HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
-                               //!< basis stati
+                               //!< basis status
     int* modelstatus           //!< status of the model will be saved here
 );
 
@@ -498,6 +498,50 @@ HighsInt Highs_addCols(
 HighsInt Highs_changeObjectiveSense(
     void* highs,          //!< HiGHS object reference
     const HighsInt sense  //!< New objective sense
+);
+
+/**
+ * @brief Change the integrality of a column
+ */
+HighsInt Highs_changeColIntegrality(
+    void* highs,  //!< HiGHS object reference
+    const HighsInt
+        col,  //!< The index of the column whose integrality is to change
+    const HighsInt integrality  //!< The new integrality
+);
+
+/**
+ * @brief Change the integrality of multiple columns given by an interval
+ */
+HighsInt Highs_changeColsIntegralityByRange(
+    void* highs,  //!< HiGHS object reference
+    const HighsInt
+        from_col,  //!< The index of the first column whose integrality changes
+    const HighsInt to_col,  //!< One more than the index of the last column
+                            //!< whose integrality changes
+    const HighsInt*
+        integrality  //!< Array of size num_set_entries with new integralitys
+);
+
+/**
+ * @brief Change the integrality of multiple columns given by a set of indices
+ */
+HighsInt Highs_changeColsIntegralityBySet(
+    void* highs,                     //!< HiGHS object reference
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,  //!< Array of size num_set_entries with indices of
+                          //!< columns whose integralitys change
+    const HighsInt*
+        integrality  //!< Array of size num_set_entries with new integralitys
+);
+
+/**
+ * @brief Change the integrality of multiple columns given by a mask
+ */
+HighsInt Highs_changeColsIntegralityByMask(
+    void* highs,           //!< HiGHS object reference
+    const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+    const HighsInt* integrality  //!< Full length array of new integralitys
 );
 
 /**

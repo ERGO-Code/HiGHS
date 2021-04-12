@@ -15,8 +15,6 @@
 
 #include <cstddef>
 
-#include "lp_data/HConst.h"
-
 using std::vector;
 
 void addToDecreasingHeap(HighsInt& n, HighsInt mx_n, vector<double>& heap_v,
@@ -327,24 +325,44 @@ bool increasingSetOk(const double* set, const HighsInt set_num_entries,
   return true;
 }
 
-void sortSetData(const HighsInt num_entries, HighsInt* set, const double* data0,
-                 const double* data1, const double* data2, double* sorted_data0,
-                 double* sorted_data1, double* sorted_data2) {
-  vector<HighsInt> sort_set_vec(1 + num_entries);
-  vector<HighsInt> perm_vec(1 + num_entries);
+void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+                 const double* data0, const double* data1, const double* data2,
+                 double* sorted_data0, double* sorted_data1,
+                 double* sorted_data2) {
+  vector<HighsInt> sort_set_vec(1 + num_set_entries);
+  vector<HighsInt> perm_vec(1 + num_set_entries);
 
   HighsInt* sort_set = &sort_set_vec[0];
   HighsInt* perm = &perm_vec[0];
 
-  for (HighsInt ix = 0; ix < num_entries; ix++) {
+  for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     sort_set[1 + ix] = set[ix];
     perm[1 + ix] = ix;
   }
-  maxheapsort(sort_set, perm, num_entries);
-  for (HighsInt ix = 0; ix < num_entries; ix++) {
+  maxheapsort(sort_set, perm, num_set_entries);
+  for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     set[ix] = sort_set[1 + ix];
     if (data0 != NULL) sorted_data0[ix] = data0[perm[1 + ix]];
     if (data1 != NULL) sorted_data1[ix] = data1[perm[1 + ix]];
     if (data2 != NULL) sorted_data2[ix] = data2[perm[1 + ix]];
+  }
+}
+
+void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+                 const HighsVarType* data0, HighsVarType* sorted_data0) {
+  vector<HighsInt> sort_set_vec(1 + num_set_entries);
+  vector<HighsInt> perm_vec(1 + num_set_entries);
+
+  HighsInt* sort_set = &sort_set_vec[0];
+  HighsInt* perm = &perm_vec[0];
+
+  for (HighsInt ix = 0; ix < num_set_entries; ix++) {
+    sort_set[1 + ix] = set[ix];
+    perm[1 + ix] = ix;
+  }
+  maxheapsort(sort_set, perm, num_set_entries);
+  for (HighsInt ix = 0; ix < num_set_entries; ix++) {
+    set[ix] = sort_set[1 + ix];
+    if (data0 != NULL) sorted_data0[ix] = data0[perm[1 + ix]];
   }
 }

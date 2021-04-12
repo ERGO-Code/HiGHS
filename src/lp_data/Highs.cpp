@@ -1267,6 +1267,71 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
+bool Highs::changeColIntegrality(const HighsInt col,
+                                 const HighsVarType integrality) {
+  return changeColsIntegrality(1, &col, &integrality);
+}
+
+bool Highs::changeColsIntegrality(const HighsInt from_col,
+                                  const HighsInt to_col,
+                                  const HighsVarType* integrality) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_col;
+  index_collection.to_ = to_col;
+  if (!haveHmo("changeColsIntegrality")) return false;
+  call_status = changeIntegralityInterface(index_collection, integrality);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeIntegrality");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
+bool Highs::changeColsIntegrality(const HighsInt num_set_entries,
+                                  const HighsInt* set,
+                                  const HighsVarType* integrality) {
+  if (num_set_entries <= 0) return true;
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<HighsInt> local_set{set, set + num_set_entries};
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_set_ = true;
+  index_collection.set_ = &local_set[0];
+  index_collection.set_num_entries_ = num_set_entries;
+  if (!haveHmo("changeColsIntegrality")) return false;
+  call_status = changeIntegralityInterface(index_collection, integrality);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeIntegrality");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
+bool Highs::changeColsIntegrality(const HighsInt* mask,
+                                  const HighsVarType* integrality) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  // Create a local mask that is not const since
+  // index_collection.mask_ cannot be const as it changes when
+  // deleting rows/columns
+  vector<HighsInt> local_mask{mask, mask + lp_.numCol_};
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_mask_ = true;
+  index_collection.mask_ = &local_mask[0];
+  if (!haveHmo("changeColsIntegrality")) return false;
+  call_status = changeIntegralityInterface(index_collection, integrality);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeIntegrality");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
 bool Highs::changeColCost(const HighsInt col, const double cost) {
   return changeColsCost(1, &col, &cost);
 }

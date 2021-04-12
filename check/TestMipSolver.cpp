@@ -96,3 +96,73 @@ TEST_CASE("MIP-rowless", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   rowlessMIP(highs);
 }
+
+TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+
+  Highs highs;
+  highs.readModel(filename);
+  highs.run();
+  highs.readModel(filename);
+  const HighsLp& lp = highs.getLp();
+  const HighsInfo& info = highs.getInfo();
+  vector<HighsVarType> integrality;
+  integrality.resize(lp.numCol_);
+  HighsInt from_col0 = 0;
+  HighsInt to_col0 = 2;
+  HighsInt from_col1 = 5;
+  HighsInt to_col1 = 7;
+  HighsInt num_set_entries = 6;
+  vector<HighsInt> set;
+  set.push_back(0);
+  set.push_back(7);
+  set.push_back(1);
+  set.push_back(5);
+  set.push_back(2);
+  set.push_back(6);
+  vector<HighsInt> mask;
+  mask.assign(lp.numCol_, 0);
+  for (HighsInt ix = 0; ix < num_set_entries; ix++) {
+    HighsInt iCol = set[ix];
+    mask[iCol] = 1;
+    integrality[ix] = HighsVarType::INTEGER;
+  }
+  REQUIRE(highs.changeColsIntegrality(from_col0, to_col0, &integrality[0]));
+  REQUIRE(highs.changeColsIntegrality(from_col1, to_col1, &integrality[0]));
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 3);
+  } else {
+    highs.setOptionValue("output_flag", false);
+  }
+  highs.writeModel("");
+  highs.run();
+  highs.writeSolution("", true);
+  double optimal_objective = info.objective_function_value;
+  if (dev_run) printf("Objective = %g\n", optimal_objective);
+
+  highs.clearModel();
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+  REQUIRE(
+      highs.changeColsIntegrality(num_set_entries, &set[0], &integrality[0]));
+  highs.writeModel("");
+  highs.run();
+  highs.writeSolution("", true);
+  REQUIRE(info.objective_function_value == optimal_objective);
+
+  integrality.assign(lp.numCol_, HighsVarType::CONTINUOUS);
+  for (HighsInt ix = 0; ix < num_set_entries; ix++) {
+    HighsInt iCol = set[ix];
+    integrality[iCol] = HighsVarType::INTEGER;
+  }
+
+  highs.clearModel();
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.readModel(filename);
+  REQUIRE(highs.changeColsIntegrality(&mask[0], &integrality[0]));
+  highs.writeModel("");
+  highs.run();
+  highs.writeSolution("", true);
+  REQUIRE(info.objective_function_value == optimal_objective);
+}
