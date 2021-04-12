@@ -856,11 +856,15 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   std::frexp(maxAbsVal, &expshift);
   expshift = -expshift;
   rhs *= std::ldexp(1.0, expshift);
+  for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
-    vals[i] = std::ldexp(vals[i], expshift);
-
-    if (std::abs(vals[i]) <= 10 * feastol) {
+    double cancelSlack = vals[i] > 0 ? solval[i] : upper[i] - solval[i];
+    if (std::abs(vals[i]) <= feastol ||
+        (cancelSlack <= feastol &&
+         std::abs(vals[i] * upper[i]) <= 1000 * feastol)) {
+      // if( std::abs(vals[i]) > feastol )
+      //   printf("removing val %g with upper bound %g\n", vals[i], upper[i]);
       if (vals[i] < 0) {
         if (upper[i] == HIGHS_CONST_INF) return false;
         rhs -= vals[i] * upper[i];
@@ -979,16 +983,18 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<double>& vals_, double& rhs_) {
 #if 0
   if (vals_.size() > 1) {
-    bool intsPositive = true;
-    if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
-      return false;
-
     std::vector<HighsInt> indsCheck_ = inds_;
     std::vector<double> valsCheck_ = vals_;
+    double tmprhs_ = rhs_;
+    bool intsPositive = true;
+    if (!transLp.transform(valsCheck_, upper, solval, indsCheck_, tmprhs_,
+                           intsPositive))
+      return false;
+
     rowlen = indsCheck_.size();
     this->inds = indsCheck_.data();
     this->vals = valsCheck_.data();
-    this->rhs = rhs_;
+    this->rhs = tmprhs_;
     complementation.clear();
     bool hasUnboundedInts = false;
     bool hasGeneralInts = false;
@@ -1001,7 +1007,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     // printf("after preprocessing of base inequality:\n");
     checkNumerics(vals, rowlen, double(rhs));
 
-    double tmprhs_ = (double)rhs;
+    tmprhs_ = (double)rhs;
     valsCheck_.resize(rowlen);
     indsCheck_.resize(rowlen);
     if (!transLp.untransform(valsCheck_, indsCheck_, tmprhs_)) return false;
