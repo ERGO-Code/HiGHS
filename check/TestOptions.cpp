@@ -326,7 +326,7 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(highs_option_type == HighsOptionType::STRING);
 
-  HighsOptions options = highs.getHighsOptions();
+  HighsOptions options = highs.getOptions();
   REQUIRE(options.small_matrix_value == small_matrix_value);
   REQUIRE(options.allowed_simplex_matrix_scale_factor ==
           allowed_simplex_matrix_scale_factor);

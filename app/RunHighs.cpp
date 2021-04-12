@@ -186,7 +186,7 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::INFO,
                  "HiGHS run time      : %13.2f\n", run_time);
     // Possibly write the solution to a file
-    const HighsOptions& options = highs.getHighsOptions();
+    const HighsOptions& options = highs.getOptions();
     if (options.write_solution_to_file)
       highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
@@ -196,7 +196,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   // Solve LP case.
   Highs highs;
   highs.passHighsOptions(use_options);
-  //  const HighsOptions& options = highs.getHighsOptions();
+  //  const HighsOptions& options = highs.getOptions();
 
   // Load problem.
   highs.passModel(lp);
