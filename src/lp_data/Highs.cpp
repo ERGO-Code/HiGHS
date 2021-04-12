@@ -40,42 +40,41 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
-HighsStatus Highs::setOptionValue(const std::string& option,
-                                       const bool value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
+  if (setLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
-                                       const HighsInt value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+                                  const HighsInt value) {
+  if (setLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
-                                       const double value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+                                  const double value) {
+  if (setLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
-                                       const std::string value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+                                  const std::string value) {
+  if (setLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option,
-                                       const char* value) {
-  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+                                  const char* value) {
+  if (setLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
@@ -92,7 +91,8 @@ HighsStatus Highs::readOptions(const std::string filename) {
 }
 
 HighsStatus Highs::passOptions(const HighsOptions& options) {
-  if (passLocalOptions(options_.log_options, options, options_) == OptionStatus::OK)
+  if (passLocalOptions(options_.log_options, options, options_) ==
+      OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
@@ -100,40 +100,38 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
 const HighsOptions& Highs::getOptions() { return options_; }
 
 HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getOptionValue(const std::string& option, HighsInt& value) {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::getOptionValue(const std::string& option,
-                                       HighsInt& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
-    return HighsStatus::OK;
-  return HighsStatus::Error;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                       double& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
-    return HighsStatus::OK;
-  return HighsStatus::Error;
-}
-
-HighsStatus Highs::getOptionValue(const std::string& option,
-                                       std::string& value) {
-  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
-      OptionStatus::OK)
+                                  std::string& value) {
+  if (getLocalOptionValue(options_.log_options, option, options_.records,
+                          value) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::getOptionType(const std::string& option,
-                                      HighsOptionType& type) {
-  if (getLocalOptionType(options_.log_options, option, options_.records, type) ==
-      OptionStatus::OK)
+                                 HighsOptionType& type) {
+  if (getLocalOptionType(options_.log_options, option, options_.records,
+                         type) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
@@ -143,14 +141,14 @@ HighsStatus Highs::resetOptions() {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::writeOptions(
-    const std::string filename, const bool report_only_non_default_values) {
+HighsStatus Highs::writeOptions(const std::string filename,
+                                const bool report_only_non_default_values) {
   HighsStatus return_status = HighsStatus::OK;
   FILE* file;
   bool html;
-  return_status = interpretCallStatus(
-      openWriteFile(filename, "writeOptions", file, html), return_status,
-      "openWriteFile");
+  return_status =
+      interpretCallStatus(openWriteFile(filename, "writeOptions", file, html),
+                          return_status, "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 
   return_status = interpretCallStatus(

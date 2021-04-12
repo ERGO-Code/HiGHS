@@ -15,28 +15,28 @@
 #include "Highs.h"
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                      const bool value) {
- return setOptionValue(option, value);
+                                       const bool value) {
+  return setOptionValue(option, value);
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const HighsInt value) {
- return setOptionValue(option, value);
+  return setOptionValue(option, value);
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const double value) {
- return setOptionValue(option, value);
+  return setOptionValue(option, value);
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const std::string value) {
- return setOptionValue(option, value);
+  return setOptionValue(option, value);
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const char* value) {
- return setOptionValue(option, value);
+  return setOptionValue(option, value);
 }
 
 HighsStatus Highs::readHighsOptions(const std::string filename) {
@@ -48,22 +48,22 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
- return getOptionValue(option, value);
+  return getOptionValue(option, value);
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        HighsInt& value) {
- return getOptionValue(option, value);
+  return getOptionValue(option, value);
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        double& value) {
- return getOptionValue(option, value);
+  return getOptionValue(option, value);
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        std::string& value) {
- return getOptionValue(option, value);
+  return getOptionValue(option, value);
 }
 
 HighsStatus Highs::getHighsOptionType(const std::string& option,
@@ -71,9 +71,7 @@ HighsStatus Highs::getHighsOptionType(const std::string& option,
   return getOptionType(option, type);
 }
 
-HighsStatus Highs::resetHighsOptions() {
-  return resetOptions();
-}
+HighsStatus Highs::resetHighsOptions() { return resetOptions(); }
 
 HighsStatus Highs::writeHighsOptions(
     const std::string filename, const bool report_only_non_default_values) {

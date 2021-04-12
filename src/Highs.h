@@ -88,38 +88,32 @@ class Highs {
    * legal and, for bool/int/double, only if it's of the correct type
    */
 
-  HighsStatus setOptionValue(
-      const std::string& option,  //!< The option name
-      const bool value            //!< The option value
+  HighsStatus setOptionValue(const std::string& option,  //!< The option name
+                             const bool value            //!< The option value
   );
 
-  HighsStatus setOptionValue(
-      const std::string& option,  //!< The option name
-      const HighsInt value        //!< The option value
+  HighsStatus setOptionValue(const std::string& option,  //!< The option name
+                             const HighsInt value        //!< The option value
   );
 
 #ifdef HIGHSINT64
-  HighsStatus setOptionValue(
-      const std::string& option,  //!< The option name
-      const int value             //!< The option value
+  HighsStatus setOptionValue(const std::string& option,  //!< The option name
+                             const int value             //!< The option value
   ) {
     return setOptionValue(option, HighsInt{value});
   }
 #endif
 
-  HighsStatus setOptionValue(
-      const std::string& option,  //!< The option name
-      const double value          //!< The option value
+  HighsStatus setOptionValue(const std::string& option,  //!< The option name
+                             const double value          //!< The option value
   );
 
-  HighsStatus setOptionValue(
-      const std::string& option,  //!< The option name
-      const std::string value     //!< The option value
+  HighsStatus setOptionValue(const std::string& option,  //!< The option name
+                             const std::string value     //!< The option value
   );
 
-  HighsStatus setOptionValue(
-      const std::string& option,  //!< The option name
-      const char* value           //!< The option value
+  HighsStatus setOptionValue(const std::string& option,  //!< The option name
+                             const char* value           //!< The option value
   );
 
   HighsStatus readOptions(const std::string filename  //!< The filename
@@ -134,41 +128,35 @@ class Highs {
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
-  HighsStatus getOptionValue(
-      const std::string& option,  //!< The option name
-      bool& value                 //!< The option value
+  HighsStatus getOptionValue(const std::string& option,  //!< The option name
+                             bool& value                 //!< The option value
   );
 
-  HighsStatus getOptionValue(
-      const std::string& option,  //!< The option name
-      HighsInt& value             //!< The option value
+  HighsStatus getOptionValue(const std::string& option,  //!< The option name
+                             HighsInt& value             //!< The option value
   );
 
-  HighsStatus getOptionValue(
-      const std::string& option,  //!< The option name
-      double& value               //!< The option value
+  HighsStatus getOptionValue(const std::string& option,  //!< The option name
+                             double& value               //!< The option value
   );
 
-  HighsStatus getOptionValue(
-      const std::string& option,  //!< The option name
-      std::string& value          //!< The option value
+  HighsStatus getOptionValue(const std::string& option,  //!< The option name
+                             std::string& value          //!< The option value
   );
 
   /**
    * @brief Get the type expected by an option
    */
-  HighsStatus getOptionType(
-      const std::string& option,  //!< The option name
-      HighsOptionType& type       //!< The option type
+  HighsStatus getOptionType(const std::string& option,  //!< The option name
+                            HighsOptionType& type       //!< The option type
   );
 
   const HighsOptions& getOptions() const;
 
   HighsStatus resetOptions();
 
-  HighsStatus writeOptions(
-      const std::string filename,  //!< The filename
-      const bool report_only_non_default_values = true);
+  HighsStatus writeOptions(const std::string filename,  //!< The filename
+                           const bool report_only_non_default_values = true);
 
   /**
    * @brief Gets an option value as int/double, and only if it's of the correct

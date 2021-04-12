@@ -563,8 +563,7 @@ void HighsLpRelaxation::storeDualUBProof() {
 
   assert(scale == 1.0);
 
-  HighsCDouble upper =
-      lpsolver.getOptions().dual_objective_value_upper_bound;
+  HighsCDouble upper = lpsolver.getOptions().dual_objective_value_upper_bound;
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (dualray[i] == 0.0) continue;
 
@@ -728,8 +727,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (checkDualProof()) return Status::Infeasible;
       hasdualproof = false;
 
-      HighsInt scalestrategy =
-          lpsolver.getOptions().simplex_scale_strategy;
+      HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
       if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
         lpsolver.setHighsOptionValue("simplex_scale_strategy",
                                      SIMPLEX_SCALE_STRATEGY_OFF);
@@ -774,8 +772,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "error: optimal with unscaled infeasibilities (primal:%g, "
         //     "dual:%g)\n",
         //     info.max_primal_infeasibility, info.max_dual_infeasibility);
-        HighsInt scalestrategy =
-            lpsolver.getOptions().simplex_scale_strategy;
+        HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
         if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
           lpsolver.setHighsOptionValue("simplex_scale_strategy",
                                        SIMPLEX_SCALE_STRATEGY_OFF);
