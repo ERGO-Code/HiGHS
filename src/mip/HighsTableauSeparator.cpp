@@ -93,16 +93,14 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     // already handled by other separator
     if (numNonzeroWeights == 1) continue;
 
-    double maxAbsColContribution = 0.0;
+    double maxAbsRowWeight = 0.0;
     for (int j = 0; j != numNonzeroWeights; ++j) {
       int row = nonzeroWeights[j];
-      maxAbsColContribution = std::max(
-          std::abs(rowWeights[row]) * lpRelaxation.getMaxAbsRowVal(row),
-          maxAbsColContribution);
+      maxAbsRowWeight = std::max(std::abs(rowWeights[row]), maxAbsRowWeight);
     }
 
     int expshift = 0;
-    std::frexp(maxAbsColContribution, &expshift);
+    std::frexp(maxAbsRowWeight, &expshift);
     expshift = -expshift;
 
     HighsInt numNzs = 0;
