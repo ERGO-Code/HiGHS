@@ -859,12 +859,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
-    double cancelSlack = vals[i] > 0 ? solval[i] : upper[i] - solval[i];
-    if (std::abs(vals[i]) <= feastol ||
-        (cancelSlack <= feastol &&
-         std::abs(vals[i] * upper[i]) <= 1000 * feastol)) {
-      // if( std::abs(vals[i]) > feastol )
-      //   printf("removing val %g with upper bound %g\n", vals[i], upper[i]);
+    if (std::abs(vals[i]) <= 10 * feastol) {
       if (vals[i] < 0) {
         if (upper[i] == HIGHS_CONST_INF) return false;
         rhs -= vals[i] * upper[i];
