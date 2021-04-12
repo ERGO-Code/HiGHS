@@ -80,7 +80,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::readHighsOptions(const std::string filename) {
+HighsStatus Highs::readOptions(const std::string filename) {
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::WARNING,
                  "Empty file name so not reading options\n");
@@ -91,13 +91,13 @@ HighsStatus Highs::readHighsOptions(const std::string filename) {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
-  if (passOptions(options_.log_options, options, options_) == OptionStatus::OK)
+HighsStatus Highs::passOptions(const HighsOptions& options) {
+  if (passLocalOptions(options_.log_options, options, options_) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
-const HighsOptions& Highs::getHighsOptions() { return options_; }
+const HighsOptions& Highs::getOptions() { return options_; }
 
 HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
@@ -1793,63 +1793,6 @@ std::string Highs::primalDualStatusToString(const HighsInt primal_dual_status) {
 void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
   setOrientation(lp_, desired_orientation);
 }
-
-// Start of deprecated methods
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                      const bool value) {
- return setOptionValue(option, value);
-}
-
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                       const HighsInt value) {
- return setOptionValue(option, value);
-}
-
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                       const double value) {
- return setOptionValue(option, value);
-}
-
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                       const std::string value) {
- return setOptionValue(option, value);
-}
-
-HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                       const char* value) {
- return setOptionValue(option, value);
-}
-
-HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
- return getOptionValue(option, value);
-}
-
-HighsStatus Highs::getHighsOptionValue(const std::string& option,
-                                       HighsInt& value) {
- return getOptionValue(option, value);
-}
-
-HighsStatus Highs::getHighsOptionValue(const std::string& option,
-                                       double& value) {
- return getOptionValue(option, value);
-}
-
-HighsStatus Highs::getHighsOptionValue(const std::string& option,
-                                       std::string& value) {
- return getOptionValue(option, value);
-}
-
-HighsStatus Highs::setHighsLogfile(FILE* logfile) {
-  options_.output_flag = false;
-  return HighsStatus::OK;
-}
-
-HighsStatus Highs::setHighsOutput(FILE* output) {
-  options_.output_flag = false;
-  return HighsStatus::OK;
-}
-
-// End of deprecated methods
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve() {

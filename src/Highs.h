@@ -122,13 +122,13 @@ class Highs {
       const char* value           //!< The option value
   );
 
-  HighsStatus readHighsOptions(const std::string filename  //!< The filename
+  HighsStatus readOptions(const std::string filename  //!< The filename
   );
 
-  HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
+  HighsStatus passOptions(const HighsOptions& options  //!< The options
   );
 
-  const HighsOptions& getHighsOptions();
+  const HighsOptions& getOptions();
 
   /**
    * @brief Gets an option value as bool/int/double/string and, for
@@ -829,6 +829,14 @@ class Highs {
       const std::string& option,  //!< The option name
       const char* value           //!< The option value
   );
+
+  HighsStatus readHighsOptions(const std::string filename  //!< The filename
+  );
+
+  HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
+  );
+
+  const HighsOptions& getHighsOptions();
 
   /**
    * @brief Gets an option value as bool/int/double/string and, for

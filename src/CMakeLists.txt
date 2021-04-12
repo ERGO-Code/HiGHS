@@ -89,6 +89,7 @@ set(sources
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsDeprecated.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
@@ -485,6 +486,7 @@ target_sources(libhighs PRIVATE
     io/LoadOptions.cpp
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
+    lp_data/HighsDeprecated.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp

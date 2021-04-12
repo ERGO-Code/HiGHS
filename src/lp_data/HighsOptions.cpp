@@ -501,7 +501,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
   return OptionStatus::OK;
 }
 
-OptionStatus passOptions(const HighsLogOptions& log_options,
+OptionStatus passLocalOptions(const HighsLogOptions& log_options,
                          const HighsOptions& from_options,
                          HighsOptions& to_options) {
   // (Attempt to) set option value from the HighsOptions passed in

@@ -194,7 +194,7 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
                             OptionRecordString& option,
                             std::string const value);
 
-OptionStatus passOptions(const HighsLogOptions& log_options,
+OptionStatus passLocalOptions(const HighsLogOptions& log_options,
                          const HighsOptions& from_options,
                          HighsOptions& to_options);
 
