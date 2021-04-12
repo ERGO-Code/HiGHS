@@ -448,8 +448,9 @@ void HighsLpRelaxation::storeDualInfProof() {
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     dualray[i] = std::ldexp(dualray[i], expscal);
-    if (std::abs(dualray[i]) * getMaxAbsRowVal(i) <=
-        mipsolver.mipdata_->feastol)
+    if (std::abs(dualray[i]) <= mipsolver.mipdata_->epsilon ||
+        std::abs(dualray[i]) * getMaxAbsRowVal(i) <=
+            mipsolver.mipdata_->feastol)
       dualray[i] = 0;
     else if (dualray[i] < 0) {
       if (lp.rowUpper_[i] == HIGHS_CONST_INF) dualray[i] = 0.0;
@@ -589,7 +590,7 @@ void HighsLpRelaxation::storeDualUBProof() {
 
     double val = scale * double(sum);
 
-    if (std::abs(val) <= 1e-12) continue;
+    if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
     if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS ||
         std::abs(val) < mipsolver.mipdata_->feastol ||

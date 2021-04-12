@@ -231,6 +231,8 @@ class HighsLpRelaxation {
 
   HighsInt numCols() const { return lpsolver.getNumCols(); }
 
+  HighsInt numNonzeros() const { return lpsolver.getLp().Avalue_.size(); }
+
   void addCuts(HighsCutSet& cutset);
 
   void performAging(bool useBasis = true);

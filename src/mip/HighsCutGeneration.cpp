@@ -848,8 +848,18 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   HighsInt numZeros = 0;
 
   double maxact = -feastol;
+  double maxAbsVal = 0;
+  for (HighsInt i = 0; i < rowlen; ++i)
+    maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
+
+  int expshift = 0;
+  std::frexp(maxAbsVal, &expshift);
+  expshift = -expshift;
+  rhs *= std::ldexp(1.0, expshift);
+  for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
+
   for (HighsInt i = 0; i != rowlen; ++i) {
-    if (std::abs(vals[i]) <= feastol) {
+    if (std::abs(vals[i]) <= 10 * feastol) {
       if (vals[i] < 0) {
         if (upper[i] == HIGHS_CONST_INF) return false;
         rhs -= vals[i] * upper[i];
@@ -946,9 +956,71 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   return maxact > rhs;
 }
 
+#if 0
+static void checkNumerics(const double* vals, HighsInt len, double rhs) {
+  double maxAbsCoef = 0.0;
+  double minAbsCoef = HIGHS_CONST_INF;
+  HighsCDouble sqrnorm = 0;
+  for (HighsInt i = 0; i < len; ++i) {
+    sqrnorm += vals[i] * vals[i];
+    maxAbsCoef = std::max(std::abs(vals[i]), maxAbsCoef);
+    minAbsCoef = std::min(std::abs(vals[i]), minAbsCoef);
+  }
+
+  double norm = double(sqrt(sqrnorm));
+
+  // printf("length: %" HIGHSINT_FORMAT
+  //       ", minCoef: %g, maxCoef, %g, norm %g, rhs: %g, dynamism=%g\n",
+  //       len, minAbsCoef, maxAbsCoef, norm, rhs, maxAbsCoef / minAbsCoef);
+}
+#endif
+
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<HighsInt>& inds_,
                                      std::vector<double>& vals_, double& rhs_) {
+#if 0
+  if (vals_.size() > 1) {
+    std::vector<HighsInt> indsCheck_ = inds_;
+    std::vector<double> valsCheck_ = vals_;
+    double tmprhs_ = rhs_;
+    bool intsPositive = true;
+    if (!transLp.transform(valsCheck_, upper, solval, indsCheck_, tmprhs_,
+                           intsPositive))
+      return false;
+
+    rowlen = indsCheck_.size();
+    this->inds = indsCheck_.data();
+    this->vals = valsCheck_.data();
+    this->rhs = tmprhs_;
+    complementation.clear();
+    bool hasUnboundedInts = false;
+    bool hasGeneralInts = false;
+    bool hasContinuous = false;
+    // printf("before preprocessing of base inequality:\n");
+    checkNumerics(vals, rowlen, double(rhs));
+    if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
+                                  hasContinuous))
+      return false;
+    // printf("after preprocessing of base inequality:\n");
+    checkNumerics(vals, rowlen, double(rhs));
+
+    tmprhs_ = (double)rhs;
+    valsCheck_.resize(rowlen);
+    indsCheck_.resize(rowlen);
+    if (!transLp.untransform(valsCheck_, indsCheck_, tmprhs_)) return false;
+
+    // printf("after untransform of base inequality:\n");
+    checkNumerics(vals, rowlen, double(rhs));
+
+    // finally check whether the cut is violated
+    rowlen = indsCheck_.size();
+    inds = indsCheck_.data();
+    vals = valsCheck_.data();
+    lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
+        inds, vals, rowlen, tmprhs_);
+  }
+#endif
+
   bool intsPositive = true;
   if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
     return false;
