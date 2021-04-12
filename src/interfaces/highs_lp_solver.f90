@@ -281,6 +281,43 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_changeObjectiveSense
     
+    function Highs_changeColIntegrality (h, c, integrality) result(s) bind(c, name='Highs_changeColIntegrality')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: c
+      integer ( c_int ), VALUE :: integrality
+      integer ( c_int ) :: s
+    end function Highs_changeColIntegrality
+
+    function Highs_changeColsIntegralityByRange (h, from, to, integrality) result(s) &
+         bind(c, name='Highs_changeColsIntegralityByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      integer ( c_int ) :: integrality(*)
+      integer(c_int) :: s
+    end function Highs_changeColsIntegralityByRange
+
+    function Highs_changeColsIntegralityBySet (h, nse, set, integrality) result(s) &
+         bind(c, name='Highs_changeColsIntegralityBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: nse
+      integer ( c_int ) :: set(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_changeColsIntegralityBySet
+
+    function Highs_changeColsIntegralityByMask (h, mask, integrality) result(s) &
+         bind(c, name='Highs_changeColsIntegralityByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: mask(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_changeColsIntegralityByMask
+
     function Highs_changeColCost (h, c, co) result(s) bind(c, name='Highs_changeColCost')
       use iso_c_binding
       type(c_ptr), VALUE :: h
@@ -288,6 +325,15 @@ module highs_lp_solver
       real ( c_double ), VALUE :: co
       integer ( c_int ) :: s
     end function Highs_changeColCost
+
+    function Highs_changeColsCostByRange (h, from, to, cost) result(s) bind(c, name='Highs_changeColsCostByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      real(c_double) :: cost(*)
+      integer(c_int) :: s
+    end function Highs_changeColsCostByRange
 
     function Highs_changeColsCostBySet (h, nse, set, cost) result(s) bind(c, name='Highs_changeColsCostBySet')
       use iso_c_binding
