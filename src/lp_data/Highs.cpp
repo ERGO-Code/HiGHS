@@ -42,7 +42,7 @@ Highs::Highs() {
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
-  if (setOptionValue(options_.log_options, option, options_.records, value) ==
+  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -50,7 +50,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const HighsInt value) {
-  if (setOptionValue(options_.log_options, option, options_.records, value) ==
+  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -58,7 +58,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const double value) {
-  if (setOptionValue(options_.log_options, option, options_.records, value) ==
+  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -66,7 +66,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const std::string value) {
-  if (setOptionValue(options_.log_options, option, options_.records, value) ==
+  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -74,7 +74,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const char* value) {
-  if (setOptionValue(options_.log_options, option, options_.records, value) ==
+  if (setLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -100,7 +100,7 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
 const HighsOptions& Highs::getHighsOptions() { return options_; }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
-  if (getOptionValue(options_.log_options, option, options_.records, value) ==
+  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -108,7 +108,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        HighsInt& value) {
-  if (getOptionValue(options_.log_options, option, options_.records, value) ==
+  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -116,7 +116,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        double& value) {
-  if (getOptionValue(options_.log_options, option, options_.records, value) ==
+  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -124,7 +124,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        std::string& value) {
-  if (getOptionValue(options_.log_options, option, options_.records, value) ==
+  if (getLocalOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -1797,7 +1797,7 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
 // Start of deprecated methods
 // HighsStatus Highs::setHighsOptionValue(const std::string& option,
 //                                       const bool value) {
-//  return setOptionValue(option, value);
+//  return setLocalOptionValue(option, value);
 //}
 
 HighsStatus Highs::setHighsLogfile(FILE* logfile) {

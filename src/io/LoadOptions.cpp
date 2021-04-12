@@ -38,7 +38,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      if (setOptionValue(options.log_options, option, options.records, value) !=
+      if (setLocalOptionValue(options.log_options, option, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
