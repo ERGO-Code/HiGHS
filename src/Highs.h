@@ -836,12 +836,6 @@ class Highs {
   HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
   );
 
-  const HighsOptions& getHighsOptions();
-
-  /**
-   * @brief Gets an option value as bool/int/double/string and, for
-   * bool/int/double, only if it's of the correct type.
-   */
   HighsStatus getHighsOptionValue(
       const std::string& option,  //!< The option name
       bool& value                 //!< The option value
