@@ -215,12 +215,12 @@ OptionStatus getLocalOptionValue(const HighsLogOptions& log_options,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
-OptionStatus getOptionType(const HighsLogOptions& log_options,
+OptionStatus getLocalOptionType(const HighsLogOptions& log_options,
                            const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type);
 
-void resetOptions(std::vector<OptionRecord*>& option_records);
+void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,

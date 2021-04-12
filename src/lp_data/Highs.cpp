@@ -130,26 +130,26 @@ HighsStatus Highs::getOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::getHighsOptionType(const std::string& option,
+HighsStatus Highs::getOptionType(const std::string& option,
                                       HighsOptionType& type) {
-  if (getOptionType(options_.log_options, option, options_.records, type) ==
+  if (getLocalOptionType(options_.log_options, option, options_.records, type) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::resetHighsOptions() {
-  resetOptions(options_.records);
+HighsStatus Highs::resetOptions() {
+  resetLocalOptions(options_.records);
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::writeHighsOptions(
+HighsStatus Highs::writeOptions(
     const std::string filename, const bool report_only_non_default_values) {
   HighsStatus return_status = HighsStatus::OK;
   FILE* file;
   bool html;
   return_status = interpretCallStatus(
-      openWriteFile(filename, "writeHighsOptions", file, html), return_status,
+      openWriteFile(filename, "writeOptions", file, html), return_status,
       "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 
@@ -160,7 +160,7 @@ HighsStatus Highs::writeHighsOptions(
   return return_status;
 }
 
-const HighsOptions& Highs::getHighsOptions() const { return options_; }
+const HighsOptions& Highs::getOptions() const { return options_; }
 
 const HighsInfo& Highs::getHighsInfo() const { return info_; }
 

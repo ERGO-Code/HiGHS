@@ -157,16 +157,16 @@ class Highs {
   /**
    * @brief Get the type expected by an option
    */
-  HighsStatus getHighsOptionType(
+  HighsStatus getOptionType(
       const std::string& option,  //!< The option name
       HighsOptionType& type       //!< The option type
   );
 
-  const HighsOptions& getHighsOptions() const;
+  const HighsOptions& getOptions() const;
 
-  HighsStatus resetHighsOptions();
+  HighsStatus resetOptions();
 
-  HighsStatus writeHighsOptions(
+  HighsStatus writeOptions(
       const std::string filename,  //!< The filename
       const bool report_only_non_default_values = true);
 
@@ -855,6 +855,19 @@ class Highs {
       const std::string& option,  //!< The option name
       std::string& value          //!< The option value
   );
+
+  HighsStatus getHighsOptionType(
+      const std::string& option,  //!< The option name
+      HighsOptionType& type       //!< The option type
+  );
+
+  const HighsOptions& getHighsOptions() const;
+
+  HighsStatus resetHighsOptions();
+
+  HighsStatus writeHighsOptions(
+      const std::string filename,  //!< The filename
+      const bool report_only_non_default_values = true);
 
   double getObjectiveValue() { return info_.objective_function_value; }
 

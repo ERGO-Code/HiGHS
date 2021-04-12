@@ -651,7 +651,7 @@ OptionStatus getLocalOptionValue(const HighsLogOptions& log_options,
   return OptionStatus::OK;
 }
 
-OptionStatus getOptionType(const HighsLogOptions& log_options,
+OptionStatus getLocalOptionType(const HighsLogOptions& log_options,
                            const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type) {
@@ -663,7 +663,7 @@ OptionStatus getOptionType(const HighsLogOptions& log_options,
   return OptionStatus::OK;
 }
 
-void resetOptions(std::vector<OptionRecord*>& option_records) {
+void resetLocalOptions(std::vector<OptionRecord*>& option_records) {
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
