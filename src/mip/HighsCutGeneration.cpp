@@ -961,6 +961,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   return maxact > rhs;
 }
 
+#if 0
 static void checkNumerics(const double* vals, HighsInt len, double rhs) {
   double maxAbsCoef = 0.0;
   double minAbsCoef = HIGHS_CONST_INF;
@@ -977,6 +978,7 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
   //       ", minCoef: %g, maxCoef, %g, norm %g, rhs: %g, dynamism=%g\n",
   //       len, minAbsCoef, maxAbsCoef, norm, rhs, maxAbsCoef / minAbsCoef);
 }
+#endif
 
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<HighsInt>& inds_,
