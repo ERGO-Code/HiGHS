@@ -104,10 +104,9 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setOptionValue("output_flag", false);
   lpsolver.setOptionValue("highs_random_seed",
-                               mipsolver.options_mip_->highs_random_seed);
-  lpsolver.setOptionValue(
-      "primal_feasibility_tolerance",
-      mipsolver.options_mip_->mip_feasibility_tolerance);
+                          mipsolver.options_mip_->highs_random_seed);
+  lpsolver.setOptionValue("primal_feasibility_tolerance",
+                          mipsolver.options_mip_->mip_feasibility_tolerance);
   lpsolver.setOptionValue(
       "dual_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance * 0.1);
@@ -129,7 +128,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored) {
   lpsolver.setOptionValue("output_flag", false);
-  lpsolver.passHighsOptions(other.lpsolver.getOptions());
+  lpsolver.passOptions(other.lpsolver.getOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
   mask.resize(mipsolver.numCol());
@@ -730,7 +729,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
       if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
         lpsolver.setOptionValue("simplex_scale_strategy",
-                                     SIMPLEX_SCALE_STRATEGY_OFF);
+                                SIMPLEX_SCALE_STRATEGY_OFF);
         HighsBasis basis = lpsolver.getBasis();
         lpsolver.clearSolver();
         lpsolver.setBasis(basis);
@@ -775,7 +774,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
         if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
           lpsolver.setOptionValue("simplex_scale_strategy",
-                                       SIMPLEX_SCALE_STRATEGY_OFF);
+                                  SIMPLEX_SCALE_STRATEGY_OFF);
           HighsBasis basis = lpsolver.getBasis();
           lpsolver.clearSolver();
           lpsolver.setBasis(basis);
@@ -804,7 +803,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
         ipm.setOptionValue("simplex_iteration_limit",
-                                info.simplex_iteration_count);
+                           info.simplex_iteration_count);
         ipm.run();
         lpsolver.setBasis(ipm.getBasis());
         return run(false);

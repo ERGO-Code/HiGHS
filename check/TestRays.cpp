@@ -147,7 +147,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   const vector<double>& rowUpper = lp.rowUpper_;
   double dual_feasibility_tolerance;
   highs.getOptionValue("dual_feasibility_tolerance",
-                            dual_feasibility_tolerance);
+                       dual_feasibility_tolerance);
   vector<double> row_ray_value;
   row_ray_value.assign(numRow, 0.0);
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {

@@ -178,7 +178,6 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
       HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS};
 
   HighsStatus status;
-  //  HighsOptions options;
 
   Highs highs;
   if (!dev_run) {

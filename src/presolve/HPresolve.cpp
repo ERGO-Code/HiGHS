@@ -4864,7 +4864,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     if (presolve.run(postSolveStack) != HighsModelStatus::NOTSET) return;
     Highs highs;
     highs.passModel(model);
-    highs.passHighsOptions(options);
+    highs.passOptions(options);
     highs.setOptionValue("presolve", "off");
     highs.run();
     if (highs.getModelStatus(true) != HighsModelStatus::OPTIMAL) return;
@@ -4880,7 +4880,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 #if 0
   Highs highs;
   highs.passModel(model);
-  highs.passHighsOptions(options);
+  highs.passOptions(options);
   highs.setSolution(sol);
   highs.setBasis(basis);
   highs.run();
@@ -4961,7 +4961,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     tmpBasis.valid_ = true;
     refineBasis(model, tmpSol, tmpBasis);
     Highs highs;
-    highs.passHighsOptions(options);
+    highs.passOptions(options);
     highs.passModel(model);
     highs.setBasis(tmpBasis);
     // highs.writeModel("model.mps");

@@ -158,14 +158,12 @@ HighsInt Highs_setBoolOptionValue(void* highs, const char* option,
 
 HighsInt Highs_setIntOptionValue(void* highs, const char* option,
                                  const HighsInt value) {
-  return (HighsInt)((Highs*)highs)
-      ->setOptionValue(std::string(option), value);
+  return (HighsInt)((Highs*)highs)->setOptionValue(std::string(option), value);
 }
 
 HighsInt Highs_setDoubleOptionValue(void* highs, const char* option,
                                     const double value) {
-  return (HighsInt)((Highs*)highs)
-      ->setOptionValue(std::string(option), value);
+  return (HighsInt)((Highs*)highs)->setOptionValue(std::string(option), value);
 }
 
 HighsInt Highs_setStringOptionValue(void* highs, const char* option,
@@ -191,14 +189,12 @@ HighsInt Highs_getBoolOptionValue(void* highs, const char* option,
 
 HighsInt Highs_getIntOptionValue(void* highs, const char* option,
                                  HighsInt* value) {
-  return (HighsInt)((Highs*)highs)
-      ->getOptionValue(std::string(option), *value);
+  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
 }
 
 HighsInt Highs_getDoubleOptionValue(void* highs, const char* option,
                                     double* value) {
-  return (HighsInt)((Highs*)highs)
-      ->getOptionValue(std::string(option), *value);
+  return (HighsInt)((Highs*)highs)->getOptionValue(std::string(option), *value);
 }
 
 HighsInt Highs_getStringOptionValue(void* highs, const char* option,
@@ -214,13 +210,13 @@ HighsInt Highs_getStringOptionValue(void* highs, const char* option,
 HighsInt Highs_getOptionType(void* highs, const char* option, HighsInt* type) {
   HighsOptionType t;
   HighsInt retcode =
-      (HighsInt)((Highs*)highs)->getHighsOptionType(std::string(option), t);
+      (HighsInt)((Highs*)highs)->getOptionType(std::string(option), t);
   *type = (HighsInt)t;
   return retcode;
 }
 
 HighsInt Highs_resetOptions(void* highs) {
-  return (HighsInt)((Highs*)highs)->resetHighsOptions();
+  return (HighsInt)((Highs*)highs)->resetOptions();
 }
 
 HighsInt Highs_getIntInfoValue(void* highs, const char* info, HighsInt* value) {

@@ -12,8 +12,8 @@ void ekk_solve(Highs& highs, std::string presolve,
   if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setOptionValue("simplex_strategy",
-                                    SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL) ==
+          HighsStatus::OK);
 
   REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
 
@@ -28,7 +28,7 @@ void ekk_solve(Highs& highs, std::string presolve,
                                     require_optimal_objective, dev_run));
   }
 
-  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::OK);
 }
 
 void ekk_distillation(Highs& highs) {
@@ -76,8 +76,8 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     // "/check/instances/adlittle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
-    REQUIRE(highs.setOptionValue(
-                "simplex_strategy", SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
+    REQUIRE(highs.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL) ==
+            HighsStatus::OK);
     highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED);
     REQUIRE(highs.run() == HighsStatus::OK);
   } else {

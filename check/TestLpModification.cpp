@@ -410,7 +410,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsLp lp;
 
   Highs avgas_highs;
-  avgas_highs.passHighsOptions(options);
+  avgas_highs.passOptions(options);
   if (!dev_run) {
     avgas_highs.setOptionValue("output_flag", false);
   }
@@ -427,7 +427,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  return_status = avgas_highs.writeModel("");
 
   Highs highs;
-  highs.passHighsOptions(options);
+  highs.passOptions(options);
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }

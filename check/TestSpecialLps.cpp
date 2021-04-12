@@ -36,7 +36,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     }
     REQUIRE(iteration_count == require_iteration_count);
   }
-  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::OK);
 }
 
 void distillation(Highs& highs) {
@@ -387,8 +387,8 @@ void singularStartingBasis(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
   if (dev_run) {
-    REQUIRE(highs.setOptionValue(
-                "log_dev_level", LOG_DEV_LEVEL_DETAILED) == HighsStatus::OK);
+    REQUIRE(highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED) ==
+            HighsStatus::OK);
   }
 
   REQUIRE(highs.setOptionValue("highs_debug_level", 3) == HighsStatus::OK);
@@ -415,7 +415,7 @@ void singularStartingBasis(Highs& highs) {
     REQUIRE(special_lps.objectiveOk(info.objective_function_value,
                                     optimal_objective, dev_run));
 
-  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::OK);
 
   special_lps.reportSolution(highs, dev_run);
 }

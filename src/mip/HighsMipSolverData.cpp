@@ -269,8 +269,7 @@ void HighsMipSolverData::runSetup() {
   // lp.getLpSolver().setOptionValue("dual_simplex_cleanup_strategy", 0);
   // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
   // 0.0); lp.getLpSolver().setOptionValue("parallel", "on");
-  lp.getLpSolver().setOptionValue("simplex_initial_condition_check",
-                                       false);
+  lp.getLpSolver().setOptionValue("simplex_initial_condition_check", false);
 
   checkObjIntegrality();
   basisTransfer();
@@ -766,7 +765,7 @@ restart:
   lp.getLpSolver().setOptionValue("presolve", "on");
 
   lp.getLpSolver().setOptionValue("output_flag",
-                                       mipsolver.options_mip_->output_flag);
+                                  mipsolver.options_mip_->output_flag);
   //  lp.getLpSolver().setOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);

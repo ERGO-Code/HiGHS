@@ -10,7 +10,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Create an empty LP
   HighsLp lp;
   HighsOptions options;
-  //  HighsTimer timer;
   HighsStatus return_status;
   bool return_bool;
   options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
@@ -51,7 +50,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   const double my_infinity = 1e30;
   Highs highs;
-  highs.passHighsOptions(options);
+  highs.passOptions(options);
 
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   return_bool =

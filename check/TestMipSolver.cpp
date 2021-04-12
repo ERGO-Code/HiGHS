@@ -35,7 +35,7 @@ void solve(Highs& highs, std::string presolve,
     REQUIRE(objectiveOk(info.objective_function_value,
                         require_optimal_objective, dev_run));
   }
-  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::OK);
 }
 
 void distillationMIP(Highs& highs) {
