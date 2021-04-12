@@ -440,7 +440,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 
   double maxval = 0;
   for (HighsInt i = 0; i != lp.numRow_; ++i)
-    maxval = std::max(maxval, std::abs(dualray[i]) * getMaxAbsRowVal(i));
+    maxval = std::max(maxval, std::abs(dualray[i]));
 
   int expscal;
   std::frexp(maxval, &expscal);
@@ -468,8 +468,6 @@ void HighsLpRelaxation::storeDualInfProof() {
     }
   }
 
-  maxval = 0;
-
   for (HighsInt i = 0; i != lp.numCol_; ++i) {
     HighsInt start = lp.Astart_[i];
     HighsInt end = lp.Astart_[i + 1];
@@ -486,6 +484,7 @@ void HighsLpRelaxation::storeDualInfProof() {
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
     if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS ||
+        std::abs(val) <= mipsolver.mipdata_->feastol ||
         mipsolver.mipdata_->domain.colLower_[i] ==
             mipsolver.mipdata_->domain.colUpper_[i]) {
       if (val < 0) {
@@ -499,39 +498,11 @@ void HighsLpRelaxation::storeDualInfProof() {
       continue;
     }
 
-    maxval = std::max(std::abs(val), maxval);
     dualproofvals.push_back(val);
     dualproofinds.push_back(i);
   }
 
-  // finally scale the resulting proof constraint and remove small coefficients
-  std::frexp(maxval, &expscal);
-  expscal = -expscal;
-
-  upper *= std::ldexp(1.0, expscal);
-  HighsInt proofLen = dualproofvals.size();
-  for (HighsInt i = proofLen - 1; i >= 0; --i) {
-    dualproofvals[i] = std::ldexp(dualproofvals[i], expscal);
-
-    if (std::abs(dualproofvals[i]) <= mipsolver.mipdata_->feastol) {
-      if (dualproofvals[i] < 0) {
-        if (mipsolver.mipdata_->domain.colUpper_[i] == HIGHS_CONST_INF) return;
-        upper -= dualproofvals[i] * mipsolver.mipdata_->domain.colUpper_[i];
-      } else {
-        if (mipsolver.mipdata_->domain.colLower_[i] == -HIGHS_CONST_INF) return;
-        upper -= dualproofvals[i] * mipsolver.mipdata_->domain.colLower_[i];
-      }
-
-      --proofLen;
-      dualproofvals[i] = dualproofvals[proofLen];
-      dualproofinds[i] = dualproofinds[proofLen];
-    }
-  }
-
-  dualproofvals.resize(proofLen);
-  dualproofinds.resize(proofLen);
   dualproofrhs = double(upper);
-
   mipsolver.mipdata_->domain.tightenCoefficients(
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
@@ -563,8 +534,7 @@ void HighsLpRelaxation::storeDualUBProof() {
   double scale = 0.0;
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (std::abs(dualray[i]) * getMaxAbsRowVal(i) <=
-        mipsolver.mipdata_->feastol) {
+    if (std::abs(dualray[i]) <= mipsolver.mipdata_->feastol) {
       dualray[i] = 0.0;
       continue;
     }
@@ -606,8 +576,6 @@ void HighsLpRelaxation::storeDualUBProof() {
     }
   }
 
-  double maxval = 0;
-
   for (HighsInt i = 0; i != lp.numCol_; ++i) {
     HighsInt start = lp.Astart_[i];
     HighsInt end = lp.Astart_[i + 1];
@@ -624,6 +592,7 @@ void HighsLpRelaxation::storeDualUBProof() {
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
     if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS ||
+        std::abs(val) < mipsolver.mipdata_->feastol ||
         mipsolver.mipdata_->domain.colLower_[i] ==
             mipsolver.mipdata_->domain.colUpper_[i]) {
       if (val < 0) {
@@ -638,38 +607,10 @@ void HighsLpRelaxation::storeDualUBProof() {
       continue;
     }
 
-    maxval = std::max(std::abs(val), maxval);
     dualproofvals.push_back(val);
     dualproofinds.push_back(i);
   }
 
-  // finally scale the resulting proof constraint and remove small coefficients
-  int expscal = 0;
-  std::frexp(maxval, &expscal);
-  expscal = -expscal;
-
-  upper *= std::ldexp(1.0, expscal);
-  HighsInt proofLen = dualproofvals.size();
-  for (HighsInt i = proofLen - 1; i >= 0; --i) {
-    dualproofvals[i] = std::ldexp(dualproofvals[i], expscal);
-
-    if (std::abs(dualproofvals[i]) <= mipsolver.mipdata_->feastol) {
-      if (dualproofvals[i] < 0) {
-        if (mipsolver.mipdata_->domain.colUpper_[i] == HIGHS_CONST_INF) return;
-        upper -= dualproofvals[i] * mipsolver.mipdata_->domain.colUpper_[i];
-      } else {
-        if (mipsolver.mipdata_->domain.colLower_[i] == -HIGHS_CONST_INF) return;
-        upper -= dualproofvals[i] * mipsolver.mipdata_->domain.colLower_[i];
-      }
-
-      --proofLen;
-      dualproofvals[i] = dualproofvals[proofLen];
-      dualproofinds[i] = dualproofinds[proofLen];
-    }
-  }
-
-  dualproofvals.resize(proofLen);
-  dualproofinds.resize(proofLen);
   dualproofrhs = double(upper);
   mipsolver.mipdata_->domain.tightenCoefficients(
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
