@@ -178,7 +178,7 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   bool stop = false;
   // heurlp.setIterationLimit(2 * mipsolver.mipdata_->maxrootlpiters);
   // printf("iterlimit: %" HIGHSINT_FORMAT "\n",
-  //       heurlp.getLpSolver().getHighsOptions().simplex_iteration_limit);
+  //       heurlp.getLpSolver().getOptions().simplex_iteration_limit);
   HighsInt targetdepth = 1;
   HighsInt nbacktracks = -1;
   std::shared_ptr<const HighsBasis> basis;

@@ -129,7 +129,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored) {
   lpsolver.setHighsOptionValue("output_flag", false);
-  lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
+  lpsolver.passHighsOptions(other.lpsolver.getOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
   mask.resize(mipsolver.numCol());
@@ -563,7 +563,7 @@ void HighsLpRelaxation::storeDualUBProof() {
   assert(scale == 1.0);
 
   HighsCDouble upper =
-      lpsolver.getHighsOptions().dual_objective_value_upper_bound;
+      lpsolver.getOptions().dual_objective_value_upper_bound;
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (dualray[i] == 0.0) continue;
 
@@ -686,7 +686,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     lpsolver.clearSolver();
 #if 0
     // first try to use the primal simplex solver starting from the last basis
-    if (lpsolver.getHighsOptions().simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
+    if (lpsolver.getOptions().simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
       lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_PRIMAL);
       recoverBasis();
       auto retval = run(resolve_on_error);
@@ -728,7 +728,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       hasdualproof = false;
 
       HighsInt scalestrategy =
-          lpsolver.getHighsOptions().simplex_scale_strategy;
+          lpsolver.getOptions().simplex_scale_strategy;
       if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
         lpsolver.setHighsOptionValue("simplex_scale_strategy",
                                      SIMPLEX_SCALE_STRATEGY_OFF);
@@ -774,7 +774,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "dual:%g)\n",
         //     info.max_primal_infeasibility, info.max_dual_infeasibility);
         HighsInt scalestrategy =
-            lpsolver.getHighsOptions().simplex_scale_strategy;
+            lpsolver.getOptions().simplex_scale_strategy;
         if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
           lpsolver.setHighsOptionValue("simplex_scale_strategy",
                                        SIMPLEX_SCALE_STRATEGY_OFF);
