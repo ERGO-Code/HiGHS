@@ -3,7 +3,6 @@
 ./HiGHS_CopyrightHeader.pl ../src/ipm/*.h
 ./HiGHS_CopyrightHeader.pl ../src/interfaces/*.cpp
 ./HiGHS_CopyrightHeader.pl ../src/interfaces/*.h
-./HiGHS_CopyrightHeader.pl ../src/interfaces/*.c
 ./HiGHS_CopyrightHeader.pl ../src/interfaces/*.hpp
 ./HiGHS_CopyrightHeader.pl ../src/io/*.cpp
 ./HiGHS_CopyrightHeader.pl ../src/io/*.h
@@ -19,3 +18,4 @@
 ./HiGHS_CopyrightHeader.pl ../src/test/*.cpp
 ./HiGHS_CopyrightHeader.pl ../src/util/*.h
 ./HiGHS_CopyrightHeader.pl ../src/util/*.cpp
+./HiGHS_CopyrightHeader.pl ../app/RunHighs.cpp
