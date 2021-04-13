@@ -165,13 +165,15 @@ const HighsOptions& Highs::getOptions() const { return options_; }
 const HighsInfo& Highs::getInfo() const { return info_; }
 
 HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
-  if (getLocalInfoValue(options_, info, info_.records, value) == InfoStatus::kOk)
+  if (getLocalInfoValue(options_, info, info_.records, value) ==
+      InfoStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
-  if (getLocalInfoValue(options_, info, info_.records, value) == InfoStatus::kOk)
+  if (getLocalInfoValue(options_, info, info_.records, value) ==
+      InfoStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }

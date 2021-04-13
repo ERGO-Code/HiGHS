@@ -165,7 +165,6 @@ set(headers
     ../external/filereaderlp/builder.hpp
     ../external/filereaderlp/model.hpp
     ../external/filereaderlp/reader.hpp
-    ipm/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -577,7 +576,6 @@ set(headers_fast_build_
     ../external/filereaderlp/builder.hpp
     ../external/filereaderlp/model.hpp
     ../external/filereaderlp/reader.hpp
-    ipm/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h

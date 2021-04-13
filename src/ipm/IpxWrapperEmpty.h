@@ -16,7 +16,6 @@
 #ifndef IPM_IPX_WRAPPER_EMPTY_H_
 #define IPM_IPX_WRAPPER_EMPTY_H_
 
-#include "ipm/IpxStatus.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 

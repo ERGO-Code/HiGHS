@@ -452,7 +452,7 @@ void HighsPostsolveStack::ForcingRow::undo(
     solution.col_dual[basicCol] = 0;
     basis.row_status[row] =
         (rowType == RowType::kGeq ? HighsBasisStatus::kLower
-                                 : HighsBasisStatus::kUpper);
+                                  : HighsBasisStatus::kUpper);
 
     basis.col_status[basicCol] = HighsBasisStatus::kBasic;
   }

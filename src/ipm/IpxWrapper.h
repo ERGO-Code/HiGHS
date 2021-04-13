@@ -19,19 +19,18 @@
 #include <algorithm>
 
 #include "ipm/IpxSolution.h"
-#include "ipm/IpxStatus.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 
-IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
-                        std::vector<double>& obj, std::vector<double>& col_lb,
-                        std::vector<double>& col_ub, ipx::Int& num_row,
-                        std::vector<ipx::Int>& Ap, std::vector<ipx::Int>& Ai,
-                        std::vector<double>& Ax, std::vector<double>& rhs,
-                        std::vector<char>& constraint_type) {
+void fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
+                   std::vector<double>& obj, std::vector<double>& col_lb,
+                   std::vector<double>& col_ub, ipx::Int& num_row,
+                   std::vector<ipx::Int>& Ap, std::vector<ipx::Int>& Ai,
+                   std::vector<double>& Ax, std::vector<double>& rhs,
+                   std::vector<char>& constraint_type) {
   num_col = lp.numCol_;
   num_row = lp.numRow_;
 
@@ -179,8 +178,6 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     }
   }
   */
-
-  return IpxStatus::OK;
 }
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
@@ -578,9 +575,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
-  IpxStatus result = fillInIpxData(lp, num_col, objective, col_lb, col_ub,
-                                   num_row, Ap, Ai, Av, rhs, constraint_type);
-  if (result != IpxStatus::OK) return HighsStatus::kError;
+  fillInIpxData(lp, num_col, objective, col_lb, col_ub, num_row, Ap, Ai, Av,
+                rhs, constraint_type);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",

@@ -121,7 +121,7 @@ class HMpsFF {
     kTimeout
   };
 
-  enum class Boundtype { kLe, kEq, kGe }; //, kFr };
+  enum class Boundtype { kLe, kEq, kGe };  //, kFr };
   std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 
