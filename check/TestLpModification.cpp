@@ -9,7 +9,7 @@ const bool dev_run = false;
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
   if (!dev_run) return;
-  highsLogUser(log_options, HighsLogType::INFO,
+  highsLogUser(log_options, HighsLogType::kInfo,
                "%s: HighsStatus = %" HIGHSINT_FORMAT " - %s\n", message.c_str(),
                (int)status, HighsStatusToString(status).c_str());
 }
@@ -342,9 +342,9 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   log_options.log_file_stream = NULL;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  highsLogDev(log_options, HighsLogType::VERBOSE, "\nReporting LP: %s\n",
+  highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting LP: %s\n",
               message);
-  reportLp(log_options, lp, HighsLogType::VERBOSE);
+  reportLp(log_options, lp, HighsLogType::kVerbose);
 }
 
 void messageReportMatrix(const char* message, const HighsInt num_col,
@@ -358,7 +358,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
   log_options.log_dev_level = &log_dev_level;
-  highsLogDev(log_options, HighsLogType::VERBOSE, "\nReporting Matrix: %s\n",
+  highsLogDev(log_options, HighsLogType::kVerbose, "\nReporting Matrix: %s\n",
               message);
   reportMatrix(log_options, message, num_col, num_nz, start, index, value);
 }
@@ -417,7 +417,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_status = avgas_highs.passModel(avgas_lp);
   HighsStatusReport(options.log_options, "avgas_highs.passModel(avgas_lp)",
                     return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   REQUIRE(avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
                               0, NULL, NULL, NULL));
@@ -432,16 +432,16 @@ TEST_CASE("LP-modification", "[highs_data]") {
     highs.setOptionValue("output_flag", false);
   }
   return_status = highs.setOptionValue("highs_debug_level", 2);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   lp.model_name_ = "Building avgas";
   return_status = highs.passModel(lp);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kNotset);
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kModelEmpty);
@@ -454,7 +454,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   //  return_status = highs.writeModel("");
 
@@ -467,7 +467,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(
       areLpEqual(highs.getLp(), avgas_highs.getLp(), options.infinite_bound));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -521,7 +521,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After deleting columns 1, 3, 5, 7");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
                         col1357_upper, col1357_num_nz, col1357_start,
@@ -531,7 +531,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After restoring columns 1, 3, 5, 7\n");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -550,7 +550,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After deleting all columns");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Delete all the rows: OK
   REQUIRE(highs.deleteRows(0, num_row - 1));
@@ -559,13 +559,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After deleteRows(0, num_row - 1)");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding row vectors and matrix to model with columns returns OK
   REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
@@ -575,7 +575,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("With columns but and rows");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Getting rows from the LP is OK
   HighsInt from_row_ix = 0;
@@ -647,26 +647,26 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After deleting all columns");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Can't add rows with no columns
   REQUIRE(!highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
                          row0135789_num_nz, row0135789_start, row0135789_index,
                          row0135789_value));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
                         row0135789_num_nz, row0135789_start, row0135789_index,
                         row0135789_value));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addRows(row012_num_row, row012_lower, row012_upper,
                         row012_num_nz, row012_start, row012_index,
@@ -677,7 +677,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After restoring all rows");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -701,7 +701,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.deleteCols(col1357_num_ix, col1357_col_set));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   HighsInt col0123_col_mask[] = {1, 1, 1, 1};
   //  HighsInt col0123_col_set[] = {0, 1, 2, 3};
@@ -726,11 +726,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.deleteRows(0, num_row - 1));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.deleteCols(col0123_col_mask));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
 #ifdef HiGHSDEV
   highs.reportModelStatusSolutionBasis("After deleting all rows and columns");
@@ -744,7 +744,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After restoring 7 rows");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addRows(row012_num_row, row012_lower, row012_upper, 0,
                         row012_start, row012_index, row012_value));
@@ -753,7 +753,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After restoring all rows");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
                         col1357_upper, col1357_num_nz, col1357_start,
@@ -763,7 +763,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After restoring columns 1, 3, 5, 7");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -781,7 +781,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.reportModelStatusSolutionBasis("After restoring columns 0-3");
 #endif
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
@@ -802,7 +802,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower,
                                  col1357_upper));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Now restore the upper bounds to check resetting of their nonbasic status
   col1357_upper[0] = 1;
@@ -813,7 +813,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower,
                                  col1357_upper));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
@@ -837,7 +837,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
                                  row0135789_lower, row0135789_upper));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   row0135789_upper[0] = local_lp.rowUpper_[0];
   row0135789_upper[1] = local_lp.rowUpper_[1];
@@ -850,15 +850,15 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
                                  row0135789_lower, row0135789_upper));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.deleteRows(0, num_row - 1));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.deleteCols(0, num_col - 1));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
 #ifdef HiGHSDEV
   highs.reportModelStatusSolutionBasis("After deleteing all rows and columns");
@@ -868,7 +868,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
 #ifdef HiGHSDEV
   highs.reportModelStatusSolutionBasis("With columns but no rows");
@@ -878,7 +878,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
                         &ARstart[0], &ARindex[0], &ARvalue[0]));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   col1357_cost[0] = 2.01;
   col1357_cost[1] = 2.31;
@@ -914,18 +914,18 @@ TEST_CASE("LP-modification", "[highs_data]") {
   // Attempting to set a cost to a finite value returns OK
   REQUIRE(highs.changeColCost(7, 77));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Attempting to set row bounds with infinite lower bound returns error
   REQUIRE(!highs.changeRowBounds(2, kHighsInf, 3.21));
 
   REQUIRE(highs.changeRowBounds(2, -kHighsInf, 3.21));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Attempting to set col bounds with -infinite upper bound returns error
   REQUIRE(!highs.changeColBounds(2, 0.21, -kHighsInf));
@@ -971,7 +971,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
            rm_col, before_num_col, after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   before_num_row = highs.getNumRows();
   rm_row = 0;
@@ -983,7 +983,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
            rm_row, before_num_row, after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   before_num_col = highs.getNumCols();
   rm_col = before_num_col - 1;
@@ -995,7 +995,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
            rm_col, before_num_col, after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   before_num_row = highs.getNumRows();
   rm_row = before_num_row - 1;
@@ -1007,7 +1007,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
            rm_row, before_num_row, after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(!highs.scaleCol(-1, 2.0));
 
@@ -1017,11 +1017,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.scaleCol(highs.getNumCols() - 1, 2.0));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.scaleCol(0, -2.0));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(!highs.scaleRow(-1, 2.0));
 
@@ -1031,11 +1031,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.scaleRow(0, 2.0));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.scaleRow(highs.getNumRows() - 1, -2.0));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 }
 
 TEST_CASE("LP-getcols", "[highs_data]") {
@@ -1103,11 +1103,11 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
   const HighsLp& lp = highs.getLp();
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   double avgas_optimal_objective_function_value = info.objective_function_value;
 
@@ -1141,7 +1141,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
     REQUIRE(get_col2345_cost[usr_col] == set_col2345_cost[usr_col]);
   REQUIRE(highs.changeColsCost(from_col, to_col, &og_col2345_cost[0]));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   double optimal_objective_function_value;
   highs.getInfoValue("objective_function_value",
@@ -1179,7 +1179,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   REQUIRE(highs.changeColsBounds(from_col, to_col, &og_col01234_lower[0],
                                  &og_col01234_upper[0]));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   highs.getInfoValue("objective_function_value",
                      optimal_objective_function_value);
@@ -1215,7 +1215,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   REQUIRE(highs.changeRowsBounds(from_row, to_row, &og_row56789_lower[0],
                                  &og_row56789_upper[0]));
 
-  callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   highs.getInfoValue("objective_function_value",
                      optimal_objective_function_value);

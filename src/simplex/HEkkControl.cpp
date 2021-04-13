@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkControl.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "simplex/HEkk.h"
@@ -107,7 +106,7 @@ bool HEkk::switchToDevex() {
          costly_DSE_fraction_num_total_iteration_before_switch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogUser(options_.log_options, HighsLogType::INFO,
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex after %" HIGHSINT_FORMAT
                    " costly DSE iterations of %" HIGHSINT_FORMAT
                    " with "
@@ -128,7 +127,7 @@ bool HEkk::switchToDevex() {
     switch_to_devex = simplex_info_.allow_dual_steepest_edge_to_devex_switch &&
                       local_measure > local_threshold;
     if (switch_to_devex) {
-      highsLogUser(options_.log_options, HighsLogType::INFO,
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex with log error measure of %g > "
                    "%g = threshold\n",
                    local_measure, local_threshold);

@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsGFkLU.h
  * @brief linear system solve in GF(k) for mod-k cut separation
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_GFk_SOLVE_H_

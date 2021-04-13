@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderLp.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #ifndef IO_FILEREADER_LP_H_

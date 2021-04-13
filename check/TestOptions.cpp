@@ -181,148 +181,148 @@ TEST_CASE("highs-options", "[highs_options]") {
     highs.setOptionValue("output_flag", false);
   }
   HighsStatus return_status = highs.writeOptions("Highs.set");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Check setting boolean options
   std::string setting_string = "fixed";
   return_status = highs.setOptionValue("mps_parser_type_free", setting_string);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status = highs.setOptionValue("mps_parser_type_free", "fixed");
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status = highs.setOptionValue("mps_parser_type_free", "False");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.setOptionValue("mps_parser_type_free", "F");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   bool mps_parser_type_free = false;
   return_status =
       highs.setOptionValue("mps_parser_type_free", mps_parser_type_free);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.setOptionValue("mps_parser_type", true);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Check setting HighsInt options
 
   return_status =
       highs.setOptionValue("allowed_simplex_matrix_scale_factor", -1);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status =
       highs.setOptionValue("allowed_simplex_matrix_scale_factor", 25);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   std::string allowed_simplex_matrix_scale_factor_string = "1e-7";
   return_status =
       highs.setOptionValue("allowed_simplex_matrix_scale_factor",
                            allowed_simplex_matrix_scale_factor_string);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status =
       highs.setOptionValue("allowed_simplex_matrix_scale_factor", "3.14159");
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   if (dev_run)
     printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
   return_status = highs.writeOptions("Highs.set");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   double allowed_simplex_matrix_scale_factor_double = 1e-7;
   return_status =
       highs.setOptionValue("allowed_simplex_matrix_scale_factor",
                            allowed_simplex_matrix_scale_factor_double);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   HighsInt allowed_simplex_matrix_scale_factor = 12;
   return_status = highs.setOptionValue("allowed_simplex_matrix_scale_factor",
                                        allowed_simplex_matrix_scale_factor);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) printf("\nAfter testing HighsInt options\n");
   return_status = highs.writeOptions("Highs.set");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Check setting double options
 
   return_status = highs.setOptionValue("large_matrix_value", -1);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status = highs.setOptionValue("large_matrix_value", "1");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.setOptionValue("small_matrix_value", -1);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status = highs.setOptionValue("small_matrix_value", "1e-6");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   double small_matrix_value = 1e-7;
   return_status =
       highs.setOptionValue("small_matrix_value", small_matrix_value);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Check setting string options
 
   return_status = highs.setOptionValue(presolve_string, "ml.mps");
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   std::string model_file = "ml.mps";
   return_status = highs.setOptionValue(presolve_string, model_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status = highs.setOptionValue(presolve_string, "off");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   std::string presolve = "choose";
   return_status = highs.setOptionValue(presolve_string, presolve);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.setOptionValue(model_file_string, model_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status = highs.writeOptions("Highs.set");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   HighsOptionType highs_option_type;
 
   bool get_mps_parser_type_free;
   return_status =
       highs.getOptionValue("mps_parser_type_free", get_mps_parser_type_free);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(get_mps_parser_type_free == false);
 
   return_status =
       highs.getOptionType("mps_parser_type_free", highs_option_type);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_option_type == HighsOptionType::kBool);
 
   HighsInt get_allowed_simplex_matrix_scale_factor;
   return_status = highs.getOptionValue("allowed_simplex_matrix_scale_factor",
                                        get_allowed_simplex_matrix_scale_factor);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(get_allowed_simplex_matrix_scale_factor ==
           allowed_simplex_matrix_scale_factor);
 
   return_status = highs.getOptionType("allowed_simplex_matrix_scale_factor",
                                       highs_option_type);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_option_type == HighsOptionType::kInt);
 
   double get_small_matrix_value;
   return_status =
       highs.getOptionValue("small_matrix_value", get_small_matrix_value);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
   return_status = highs.getOptionType("small_matrix_value", highs_option_type);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_option_type == HighsOptionType::kDouble);
 
   return_status = highs.getOptionType("log_file", highs_option_type);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs_option_type == HighsOptionType::kString);
 
   HighsOptions options = highs.getOptions();

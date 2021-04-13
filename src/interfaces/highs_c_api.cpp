@@ -351,7 +351,7 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
       } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
         basis.col_status[i] = HighsBasisStatus::kNonbasic;
       } else {
-        return (HighsInt)HighsStatus::Error;
+        return (HighsInt)HighsStatus::kError;
       }
     }
   }
@@ -370,7 +370,7 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
       } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
         basis.row_status[i] = HighsBasisStatus::kNonbasic;
       } else {
-        return (HighsInt)HighsStatus::Error;
+        return (HighsInt)HighsStatus::kError;
       }
     }
   }

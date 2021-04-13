@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsLp.h"
 

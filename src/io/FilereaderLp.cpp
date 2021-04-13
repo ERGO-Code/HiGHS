@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderLp.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "io/FilereaderLp.h"
@@ -225,5 +224,5 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
 
   fclose(file);
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

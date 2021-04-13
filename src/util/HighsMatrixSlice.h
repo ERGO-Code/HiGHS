@@ -10,7 +10,6 @@
 /**@file util/HighsMatrixSlice.h
  * @brief Provides a uniform interface to iterate rows and columns in different
  * underlying matrix storage formats
- * @author Leona Gottwald
  */
 
 #include <cstddef>

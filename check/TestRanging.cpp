@@ -56,15 +56,15 @@ void testRanging(Highs& highs) {
   HighsLp lp;
   double optimal_objective;
 
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  //  REQUIRE(quietRun(highs) == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  //  REQUIRE(quietRun(highs) == HighsStatus::kOk);
   highs.run();
 
   REQUIRE(modelStatusOk(highs));
   optimal_objective = highs.getObjectiveValue();
 
   HighsRanging ranging;
-  REQUIRE(highs.getRanging(ranging) == HighsStatus::OK);
+  REQUIRE(highs.getRanging(ranging) == HighsStatus::kOk);
   HighsBasis basis = highs.getBasis();
   assert(basis.valid_);
   HighsSolution solution = highs.getSolution();
@@ -514,7 +514,7 @@ TEST_CASE("Ranging-min", "[highs_test_ranging]") {
   if (from_file) {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   } else {
     SpecialLps special_lps;
     special_lps.blendingLp(lp, require_model_status, optimal_objective);
@@ -536,7 +536,7 @@ TEST_CASE("Ranging-max", "[highs_test_ranging]") {
   if (from_file) {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
     REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
   } else {
     SpecialLps special_lps;

@@ -32,14 +32,14 @@ TEST_CASE("msgcb", "[highs_io]") {
   log_options.log_dev_level = &log_dev_level;
   highsSetLogCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
-  highsLogDev(log_options, HighsLogType::INFO, "Hi %s!", "HiGHS");
+  highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);
   REQUIRE(receiveddata == &dummydata);
 
   // Check that nothing is printed if the type is VERBOSE when
   // log_dev_level is LOG_DEV_LEVEL_INFO;
   *printedmsg = '\0';
-  highsLogDev(log_options, HighsLogType::VERBOSE, "Hi %s!", "HiGHS");
+  highsLogDev(log_options, HighsLogType::kVerbose, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 
   {
@@ -47,12 +47,12 @@ TEST_CASE("msgcb", "[highs_io]") {
     memset(longmsg, 'H', sizeof(longmsg));
     longmsg[sizeof(longmsg) - 2] = '\0';
     longmsg[sizeof(longmsg) - 1] = '\n';
-    highsLogDev(log_options, HighsLogType::INFO, longmsg);
+    highsLogDev(log_options, HighsLogType::kInfo, longmsg);
     REQUIRE(strncmp(printedmsg, "HHHH", 4) == 0);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }
 
-  highsLogUser(log_options, HighsLogType::INFO, "Hello %s!\n", "HiGHS");
+  highsLogUser(log_options, HighsLogType::kInfo, "Hello %s!\n", "HiGHS");
   REQUIRE(strlen(printedmsg) > 9);
   REQUIRE(strcmp(printedmsg, "         Hello HiGHS!\n") == 0);
   REQUIRE(receiveddata == &dummydata);
@@ -62,7 +62,7 @@ TEST_CASE("msgcb", "[highs_io]") {
     memset(longmsg, 'H', sizeof(longmsg));
     longmsg[sizeof(longmsg) - 2] = '\0';
     longmsg[sizeof(longmsg) - 1] = '\n';
-    highsLogUser(log_options, HighsLogType::WARNING, longmsg);
+    highsLogUser(log_options, HighsLogType::kWarning, longmsg);
     REQUIRE(strstr(printedmsg, "HHHH") != NULL);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }

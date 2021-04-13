@@ -10,7 +10,6 @@
 /**@file util/HighsLinearSumBounds.h
  * @brief Data structure to compute and update bounds on a linear sum of
  * variables with finite or infinite bounds
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_LINEAR_SUM_BOUNDS_H_

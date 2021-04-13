@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsRandom.h
  * @brief Random number generators for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHSRANDOM_H_
 #define UTIL_HIGHSRANDOM_H_

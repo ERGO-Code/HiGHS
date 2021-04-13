@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HSimplex.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_

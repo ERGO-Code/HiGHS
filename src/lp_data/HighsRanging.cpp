@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsRanging.cpp
  * @brief Compute LP ranging data for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsRanging.h"
 
@@ -42,15 +41,15 @@ double possInfProduct(double poss_inf, double value) {
 HighsStatus getRangingData(HighsRanging& ranging,
                            const HighsModelObject& highs_model_object) {
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::kOptimal) {
-    highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without an optimal solution\n");
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
   const HEkk& ekk_instance = highs_model_object.ekk_instance_;
   if (!ekk_instance.simplex_lp_status_.valid) {
-    highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without a valid Simplex LP\n");
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
   // Aliases
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
@@ -575,7 +574,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
                                   b_up_l.begin() + numTotal};
 
   writeRanging(ranging, highs_model_object);
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 void writeRanging(const HighsRanging& ranging,
@@ -585,7 +584,7 @@ void writeRanging(const HighsRanging& ranging,
     return;
   HighsLp& lp = highs_model_object.lp_;
   HighsLogOptions& log_options = highs_model_object.options_.log_options;
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "\nRanging data: Optimal objective = %g\n"
               "           |                               Bound ranging        "
               "                           "
@@ -595,7 +594,7 @@ void writeRanging(const HighsRanging& ranging,
               " | DownObj    Down       Value      Up         UpObj\n",
               highs_model_object.solution_params_.objective_function_value);
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    highsLogDev(log_options, HighsLogType::VERBOSE,
+    highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
                 iCol,
@@ -612,13 +611,13 @@ void writeRanging(const HighsRanging& ranging,
                 ranging.col_cost_up.value_[iCol],
                 ranging.col_cost_up.objective_[iCol]);
   }
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "           |                               Bound ranging        "
               "                             \n"
               "Col Status | DownObj    Down       (Lower      Value      Upper "
               "    ) Up         UpObj   \n");
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    highsLogDev(log_options, HighsLogType::VERBOSE,
+    highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g |\n",
                 iRow,

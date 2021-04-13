@@ -23,11 +23,11 @@ void solve(Highs& highs, std::string presolve,
            const double require_iteration_count = -1) {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
-  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
@@ -35,7 +35,7 @@ void solve(Highs& highs, std::string presolve,
     REQUIRE(objectiveOk(info.objective_function_value,
                         require_optimal_objective, dev_run));
   }
-  REQUIRE(highs.resetOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::kOk);
 }
 
 void distillationMIP(Highs& highs) {
@@ -58,7 +58,7 @@ void distillationMIP(Highs& highs) {
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
   require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = 32.0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve doesn't reduce the LP
   solve(highs, "on", require_model_status, optimal_objective);
 }
@@ -79,7 +79,7 @@ void rowlessMIP(Highs& highs) {
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
   require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = -1.0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve reduces the LP to empty
   solve(highs, "on", require_model_status, optimal_objective);
   solve(highs, "off", require_model_status, optimal_objective);

@@ -997,7 +997,7 @@ void HighsPrimalHeuristics::centralRounding() {
       }
     }
     if (nfixed > 0)
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
                    " integers) sitting at bound at "
                    "analytic center\n",

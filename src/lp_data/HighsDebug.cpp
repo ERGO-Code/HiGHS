@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsDebug.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsDebug.h"
 
@@ -21,16 +20,16 @@ HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status) {
     case HighsDebugStatus::kNotChecked:
     case HighsDebugStatus::kOk:
     case HighsDebugStatus::kSmallError:
-      return HighsStatus::OK;
+      return HighsStatus::kOk;
     case HighsDebugStatus::kWarning:
     case HighsDebugStatus::kLargeError:
-      return HighsStatus::Warning;
+      return HighsStatus::kWarning;
     case HighsDebugStatus::kError:
     case HighsDebugStatus::kExcessiveError:
     case HighsDebugStatus::kLogicalError:
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     default:
-      return HighsStatus::OK;
+      return HighsStatus::kOk;
   }
 }
 

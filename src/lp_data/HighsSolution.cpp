@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolution.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsSolution.h"
 
@@ -292,7 +291,7 @@ HighsStatus ipxSolutionToHighsSolution(
     highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
   }
   */
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
@@ -379,9 +378,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #endif
     assert(!unrecognised);
     if (unrecognised) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Unrecognised ipx_col_status value from IPX\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     }
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
@@ -510,9 +509,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #endif
     assert(!unrecognised);
     if (unrecognised) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Unrecognised ipx_row_status value from IPX\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     }
     if (highs_basis.row_status[row] == HighsBasisStatus::kBasic)
       num_basic_variables++;
@@ -536,7 +535,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
            " are basic and %" HIGHSINT_FORMAT " have basic slacks\n",
            num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
 #endif
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 #endif
 

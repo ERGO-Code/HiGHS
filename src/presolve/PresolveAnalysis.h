@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/PresolveAnalysis.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef PRESOLVE_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_PRESOLVE_ANALYSIS_H_

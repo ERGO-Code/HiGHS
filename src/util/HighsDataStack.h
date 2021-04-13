@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsDataStack.h
  * @brief A stack of unstructured data stored as bytes
- * @author Leona Gottwald
  */
 
 #ifndef UTIL_HIGHS_DATA_STACK_H_

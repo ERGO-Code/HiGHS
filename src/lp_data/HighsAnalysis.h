@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsAnalysis.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_ANALYSIS_H_
 #define LP_DATA_HIGHS_ANALYSIS_H_

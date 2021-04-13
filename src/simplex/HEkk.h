@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkk.h
  * @brief Phase 2 primal simplex solver for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_

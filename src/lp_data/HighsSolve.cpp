@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolve.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "lp_data/HighsInfo.h"
@@ -25,13 +24,13 @@
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus solveLp(HighsModelObject& model, const string message) {
-  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = model.options_;
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndSolutionParams(model);
-  highsLogUser(options.log_options, HighsLogType::INFO,
+  highsLogUser(options.log_options, HighsLogType::kInfo,
                (message + "\n").c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -39,16 +38,16 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   call_status = assessLp(model.lp_, options_);
   // If any errors have been found or normalisation carried out,
   // call_status will be ERROR or WARNING, so only valid return is OK.
-  assert(call_status == HighsStatus::OK);
+  assert(call_status == HighsStatus::kOk);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::Error) return return_status;
+  if (return_status == HighsStatus::kError) return return_status;
 #endif
   if (!model.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(model);
     return_status =
         interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
-    if (return_status == HighsStatus::Error) return return_status;
+    if (return_status == HighsStatus::kError) return return_status;
     // Set the scaled model status and solution params for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
   } else if (options.solver == ipm_string) {
@@ -61,46 +60,46 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
                    model.unscaled_model_status_, model.solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
-    if (return_status == HighsStatus::Error) return return_status;
+    if (return_status == HighsStatus::kError) return return_status;
     if (imprecise_solution) {
       // IPX+crossover has not obtained a solution satisfying the tolerances.
       highsLogUser(
-          options.log_options, HighsLogType::WARNING,
+          options.log_options, HighsLogType::kWarning,
           "Imprecise solution returned from IPX so use simplex to clean up\n");
-      // Reset the return status (that should be HighsStatus::Warning)
+      // Reset the return status (that should be HighsStatus::kWarning)
       // since it will now be determined by the outcome of the simplex
       // solve
-      assert(return_status == HighsStatus::Warning);
-      return_status = HighsStatus::OK;
+      assert(return_status == HighsStatus::kWarning);
+      return_status = HighsStatus::kOk;
       // Use the simplex method to clean up
       call_status = solveLpSimplex(model);
       return_status =
           interpretCallStatus(call_status, return_status, "solveLpSimplex");
-      if (return_status == HighsStatus::Error) return return_status;
+      if (return_status == HighsStatus::kError) return return_status;
       if (!isSolutionRightSize(model.lp_, model.solution_)) {
-        highsLogUser(options.log_options, HighsLogType::ERROR,
+        highsLogUser(options.log_options, HighsLogType::kError,
                      "Inconsistent solution returned from solver\n");
-        return HighsStatus::Error;
+        return HighsStatus::kError;
       }
     } else {
       // Set the scaled model status and solution params for completeness
       model.scaled_model_status_ = model.unscaled_model_status_;
     }
 #else
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Model cannot be solved with IPM\n");
-    return HighsStatus::Error;
+    return HighsStatus::kError;
 #endif
   } else {
     // Use Simplex
     call_status = solveLpSimplex(model);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpSimplex");
-    if (return_status == HighsStatus::Error) return return_status;
+    if (return_status == HighsStatus::kError) return return_status;
     if (!isSolutionRightSize(model.lp_, model.solution_)) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Inconsistent solution returned from solver\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     }
   }
   // Possibly analyse the HiGHS basic solution
@@ -132,9 +131,9 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 
   // Check that the LP really is unconstrained!
   assert(lp.numRow_ == 0);
-  if (lp.numRow_ != 0) return HighsStatus::Error;
+  if (lp.numRow_ != 0) return HighsStatus::kError;
 
-  highsLogUser(options.log_options, HighsLogType::INFO,
+  highsLogUser(options.log_options, HighsLogType::kInfo,
                "Solving an unconstrained LP with %" HIGHSINT_FORMAT
                " columns\n",
                lp.numCol_);
@@ -249,5 +248,5 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
       solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
     }
   }
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

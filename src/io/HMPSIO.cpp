@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HMPSIO.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "io/HMPSIO.h"
 
@@ -192,7 +191,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   Astart.push_back(Aindex.size());
 
   if (num_alien_entries)
-    highsLogUser(log_options, HighsLogType::WARNING,
+    highsLogUser(log_options, HighsLogType::kWarning,
                  "COLUMNS section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
                  "  section: ignored",
@@ -223,7 +222,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
           name = field_5;
         }
         num_alien_entries++;
-        highsLogUser(log_options, HighsLogType::INFO,
+        highsLogUser(log_options, HighsLogType::kInfo,
                      "RHS     section contains row %-8s not in ROWS    "
                      "section, line: %s",
                      name.c_str(), line);
@@ -243,7 +242,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     save_flag1 = flag[1];
   }
   if (num_alien_entries)
-    highsLogUser(log_options, HighsLogType::WARNING,
+    highsLogUser(log_options, HighsLogType::kWarning,
                  "RHS     section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
                  "  section: ignored",
@@ -317,7 +316,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     }
   }
   if (num_alien_entries)
-    highsLogUser(log_options, HighsLogType::WARNING,
+    highsLogUser(log_options, HighsLogType::kWarning,
                  "RANGES  section entries contain %8" HIGHSINT_FORMAT
                  " with row not in ROWS  "
                  "  section: ignored",
@@ -383,7 +382,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     }
   }
   if (num_alien_entries)
-    highsLogUser(log_options, HighsLogType::WARNING,
+    highsLogUser(log_options, HighsLogType::kWarning,
                  "BOUNDS  section entries contain %8" HIGHSINT_FORMAT
                  " with col not in "
                  "COLUMNS section: ignored",
@@ -490,8 +489,8 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   HighsStatus col_name_status =
       normaliseNames(options.log_options, "Column", lp.numCol_, local_col_names,
                      max_col_name_length);
-  if (col_name_status == HighsStatus::Error) return col_name_status;
-  warning_found = col_name_status == HighsStatus::Warning || warning_found;
+  if (col_name_status == HighsStatus::kError) return col_name_status;
+  warning_found = col_name_status == HighsStatus::kWarning || warning_found;
   //
   // Normalise the row names
   HighsInt max_row_name_length = kHighsIInf;
@@ -499,14 +498,14 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   HighsStatus row_name_status =
       normaliseNames(options.log_options, "Row", lp.numRow_, local_row_names,
                      max_row_name_length);
-  if (row_name_status == HighsStatus::Error) return col_name_status;
-  warning_found = row_name_status == HighsStatus::Warning || warning_found;
+  if (row_name_status == HighsStatus::kError) return col_name_status;
+  warning_found = row_name_status == HighsStatus::kWarning || warning_found;
 
   HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);
   bool use_free_format = free_format;
   if (!free_format) {
     if (max_name_length > 8) {
-      highsLogUser(options.log_options, HighsLogType::WARNING,
+      highsLogUser(options.log_options, HighsLogType::kWarning,
                    "Maximum name length is %" HIGHSINT_FORMAT
                    " so using free format rather "
                    "than fixed format",
@@ -520,8 +519,8 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
       lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
       local_col_names, local_row_names, use_free_format);
-  if (write_status == HighsStatus::OK && warning_found)
-    return HighsStatus::Warning;
+  if (write_status == HighsStatus::kOk && warning_found)
+    return HighsStatus::kWarning;
   return write_status;
 }
 
@@ -543,9 +542,9 @@ HighsStatus writeMPS(
 #endif
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
-    highsLogUser(log_options, HighsLogType::ERROR, "Cannot open file %s",
+    highsLogUser(log_options, HighsLogType::kError, "Cannot open file %s",
                  filename.c_str());
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
 #ifdef HiGHSDEV
   printf("writeMPS: Opened file  OK\n");
@@ -556,11 +555,11 @@ HighsStatus writeMPS(
   HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
     highsLogUser(
-        log_options, HighsLogType::ERROR,
+        log_options, HighsLogType::kError,
         "Cannot write fixed MPS with names of length (up to) %" HIGHSINT_FORMAT
         "",
         max_name_length);
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
   vector<HighsInt> r_ty;
   vector<double> rhs, ranges;
@@ -818,5 +817,5 @@ HighsStatus writeMPS(
   }
   //#endif
   fclose(file);
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

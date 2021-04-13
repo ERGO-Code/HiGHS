@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file interfaces/OsiHiGHSInterface.hpp
  * @brief Osi/HiGHS interface header
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H

@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDual.h
  * @brief Dual simplex solver for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HEKKDUAL_H_
 #define SIMPLEX_HEKKDUAL_H_
@@ -79,7 +78,7 @@ class HEkkDual {
    */
   HighsStatus solve();
 
-  const SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
+  const SimplexAlgorithm algorithm = SimplexAlgorithm::kDual;
 
  public:
   /**

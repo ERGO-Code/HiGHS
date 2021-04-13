@@ -46,7 +46,7 @@
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
-  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus return_status = HighsStatus::kOk;
   //  HighsStatus call_status;
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
@@ -62,12 +62,12 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   assert(positive_num_row);
   if (!positive_num_row) {
     highsLogUser(
-        options.log_options, HighsLogType::ERROR,
+        options.log_options, HighsLogType::kError,
         "solveLpEkkSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
         ") "
         "number of constraints\n",
         highs_model_object.lp_.numRow_);
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
 
   // If the simplex LP isn't initialised, scale and pass the current LP
@@ -76,12 +76,12 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // If there is no simplex basis, use the HiGHS basis
   if (!simplex_lp_status.has_basis && highs_model_object.basis_.valid_) {
     return_status = ekk_instance.setBasis(highs_model_object.basis_);
-    if (return_status == HighsStatus::Error) return HighsStatus::Error;
+    if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
 
   // Solve the LP!
   return_status = ekk_instance.solve();
-  if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  if (return_status == HighsStatus::kError) return HighsStatus::kError;
 
   // Copy solution data into the HMO
   HighsSolutionParams& solution_params = highs_model_object.solution_params_;
@@ -134,7 +134,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     highs_model_object.unscaled_model_status_ = HighsModelStatus::kNotset;
     assert(num_unscaled_primal_infeasibility > 0 ||
            num_unscaled_dual_infeasibility > 0);
-    highsLogUser(highs_model_object.options_.log_options, HighsLogType::INFO,
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::kInfo,
                  "Have num/max/sum primal (%" HIGHSINT_FORMAT
                  "/%g/%g) and dual (%" HIGHSINT_FORMAT
                  "/%g/%g) "
@@ -146,7 +146,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
                  solution_params.max_dual_infeasibility,
                  solution_params.sum_dual_infeasibility);
     if (ekk_instance.scaled_model_status_ == HighsModelStatus::kOptimal)
-      highsLogUser(highs_model_object.options_.log_options, HighsLogType::INFO,
+      highsLogUser(highs_model_object.options_.log_options, HighsLogType::kInfo,
                    "Possibly re-solve with feasibility tolerances of %g "
                    "primal and %g dual\n",
                    new_primal_feasibility_tolerance,

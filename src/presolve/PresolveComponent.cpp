@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file PresolveComponent.cpp
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "presolve/PresolveComponent.h"
@@ -20,13 +19,13 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
                                     bool mip) {
   data_.postSolveStack.initializeIndexMaps(lp.numRow_, lp.numCol_);
   data_.reduced_lp_ = lp;
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
   options_ = &options;
 
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {

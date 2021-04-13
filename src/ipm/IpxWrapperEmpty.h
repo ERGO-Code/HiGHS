@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ipm/IpxWrapperEmpty.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IPM_IPX_WRAPPER_EMPTY_H_
 #define IPM_IPX_WRAPPER_EMPTY_H_
@@ -25,7 +24,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
   unscaled_model_status = HighsModelStatus::kNotset;
-  return HighsStatus::Error;
+  return HighsStatus::kError;
 }
 
 #endif

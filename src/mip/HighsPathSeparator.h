@@ -11,7 +11,6 @@
  * @brief Class for separating cuts from heuristically aggregating rows from the
  * LP to indetify path's in a network
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_PATH_SEPARATOR_H_

@@ -11,7 +11,6 @@
  * @brief LP transformations useful for cutting plane separation. This includes
  * bound substitution with simple and variable bounds, handling of slack
  * variables, flipping the complementation of integers.
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_TRANSFORMED_LP_H_

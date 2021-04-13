@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file PresolveComponent.h
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_

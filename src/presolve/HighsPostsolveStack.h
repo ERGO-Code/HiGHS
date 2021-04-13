@@ -10,7 +10,6 @@
 /**@file HighsPostsolveStack.h
  * @brief Class to hold all information for postsolve and can transform back
  * primal and dual solutions.
- * @author Leona Gottwald
  */
 
 #ifndef PRESOLVE_HIGHS_POSTSOLVE_STACK_H_

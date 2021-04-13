@@ -8,7 +8,6 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsModKSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsModkSeparator.h"

@@ -7,13 +7,13 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_optimal_objective = 0) {
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("solver", solver) == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("solver", solver) == HighsStatus::kOk);
 
-  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::kOk);
 
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
@@ -24,7 +24,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     //     require_optimal_objective));
   }
 
-  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetHighsOptions() == HighsStatus::kOk);
 }
 
 void mpsGas11(Highs& highs) {
@@ -35,7 +35,7 @@ void mpsGas11(Highs& highs) {
   std::string model = "gas11";
   std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);

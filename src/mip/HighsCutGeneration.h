@@ -11,7 +11,6 @@
  * @brief Class that generates cuts from single row relaxations
  *
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_CUT_GENERATION_H_

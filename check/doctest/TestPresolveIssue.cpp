@@ -46,7 +46,7 @@ HighsStatus issue425() {
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-   assert(status == HighsStatus::OK);
+   assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;

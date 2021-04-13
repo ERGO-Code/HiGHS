@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsInt.h
  * @brief The definition for the integer type to use
- * @author Leona Gottwald
  */
 
 #ifndef UTIL_HIGHS_INT_H_

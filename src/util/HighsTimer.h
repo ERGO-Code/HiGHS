@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsTimer.h
  * @brief Profiling facility for computational components in HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHSTIMER_H_
 #define UTIL_HIGHSTIMER_H_

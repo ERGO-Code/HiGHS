@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsModelUtils.h
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHSMODELUTILS_H_
 #define LP_DATA_HIGHSMODELUTILS_H_

@@ -360,7 +360,7 @@ double HighsMipSolverData::transformNewIncumbent(
         mipsolver.row_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance;
     highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::WARNING,
+        mipsolver.options_mip_->log_options, HighsLogType::kWarning,
         "Untransformed solution with objective %g is violated by %.12g for the "
         "original model\n",
         double(obj),
@@ -625,7 +625,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
     highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::INFO,
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
         "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
@@ -649,7 +649,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
     highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::INFO,
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %7.2f%% | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
@@ -658,7 +658,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         100 * double(pruned_treeweight));
   } else {
     highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::INFO,
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %8.2f | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
@@ -744,7 +744,7 @@ void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
 restart:
   // solve the first root lp
-  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving root node LP relaxation\n");
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
@@ -753,7 +753,7 @@ restart:
 
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Adding %" HIGHSINT_FORMAT " cuts to LP after restart\n",
                  cutpool.getNumCuts());
     assert(numRestarts != 0);
@@ -853,7 +853,7 @@ restart:
     if (mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 10.0) {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         performRestart();
@@ -976,7 +976,7 @@ restart:
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         maxSepaRounds = std::min(maxSepaRounds, nseparounds);
@@ -997,7 +997,7 @@ bool HighsMipSolverData::checkLimits() const {
   if (options.mip_max_nodes != kHighsIInf &&
       num_nodes >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-      highsLogDev(options.log_options, HighsLogType::INFO,
+      highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached node limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kReachedIterationLimit;
     }
@@ -1006,7 +1006,7 @@ bool HighsMipSolverData::checkLimits() const {
   if (options.mip_max_leaves != kHighsIInf &&
       num_leaves >= options.mip_max_leaves) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-      highsLogDev(options.log_options, HighsLogType::INFO,
+      highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached leave node limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kReachedIterationLimit;
     }
@@ -1015,7 +1015,7 @@ bool HighsMipSolverData::checkLimits() const {
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
-      highsLogDev(options.log_options, HighsLogType::INFO,
+      highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached time limit\n");
       mipsolver.modelstatus_ = HighsModelStatus::kReachedTimeLimit;
     }
@@ -1059,7 +1059,7 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Objective function is integral with scale %g\n", objintscale);
   }
 }

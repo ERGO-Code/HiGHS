@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsRedcostFixing.h
  * @brief reduced cost fixing using the current cutoff bound
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_REDCOST_FIXING_H_

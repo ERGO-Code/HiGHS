@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsComponent.h
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHS_COMPONENT_H_
 #define UTIL_HIGHS_COMPONENT_H_

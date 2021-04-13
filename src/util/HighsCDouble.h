@@ -11,7 +11,6 @@
 /**@file util/HighsCDouble.h
  * @brief Quad precision type implemented with two standard double precision
  *        representing the value and a compensation term
- * @author Leona Gottwald
  */
 #ifndef UTIL_HIGHSCDOUBLE_H_
 #define UTIL_HIGHSCDOUBLE_H_

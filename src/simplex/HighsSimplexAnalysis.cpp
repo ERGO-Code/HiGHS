@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexAnalysis.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include <cmath>
 //#include <cstdio>
@@ -442,7 +441,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
         (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
         (lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
     if (switch_to_devex) {
-      highsLogUser(log_options, HighsLogType::INFO,
+      highsLogUser(log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex after %" HIGHSINT_FORMAT
                    " costly DSE iterations of %" HIGHSINT_FORMAT
                    " with "
@@ -462,7 +461,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
     switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
                       dse_weight_error_measure > dse_weight_error_threshold;
     if (switch_to_devex) {
-      highsLogUser(log_options, HighsLogType::INFO,
+      highsLogUser(log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex with log error measure of %g > "
                    "%g = threshold",
                    dse_weight_error_measure, dse_weight_error_threshold);
@@ -903,7 +902,8 @@ void HighsSimplexAnalysis::summaryReport() {
            sum_multi_chosen, pct_minor_iterations_performed);
   }
 
-  highsLogDev(log_options, HighsLogType::INFO, "\nCost perturbation summary\n");
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "\nCost perturbation summary\n");
   logValueDistribution(log_options, cost_perturbation1_distribution);
   logValueDistribution(log_options, cost_perturbation2_distribution);
 

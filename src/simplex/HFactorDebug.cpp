@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HFactorDebug.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "simplex/HFactorDebug.h"
@@ -28,7 +27,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::kNotChecked;
   if (force)
-    highsLogDev(options.log_options, HighsLogType::INFO,
+    highsLogDev(options.log_options, HighsLogType::kInfo,
                 "CheckINVERT:   Forcing debug\n");
 
   HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
@@ -79,18 +78,18 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (solve_error_norm) {
     if (solve_error_norm > solve_excessive_error) {
       value_adjective = "Excessive";
-      report_level = HighsLogType::ERROR;
+      report_level = HighsLogType::kError;
       return_status = HighsDebugStatus::kError;
     } else if (solve_error_norm > solve_large_error) {
       value_adjective = "Large";
-      report_level = HighsLogType::WARNING;
+      report_level = HighsLogType::kWarning;
       return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
-      report_level = HighsLogType::INFO;
+      report_level = HighsLogType::kInfo;
     }
 
-    if (force) report_level = HighsLogType::INFO;
+    if (force) report_level = HighsLogType::kInfo;
 
     highsLogDev(
         options.log_options, report_level,
@@ -138,15 +137,15 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (inverse_error_norm) {
     if (inverse_error_norm > inverse_excessive_error) {
       value_adjective = "Excessive";
-      report_level = HighsLogType::ERROR;
+      report_level = HighsLogType::kError;
       return_status = HighsDebugStatus::kError;
     } else if (inverse_error_norm > inverse_large_error) {
       value_adjective = "Large";
-      report_level = HighsLogType::WARNING;
+      report_level = HighsLogType::kWarning;
       return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
-      report_level = HighsLogType::INFO;
+      report_level = HighsLogType::kInfo;
     }
     highsLogDev(options.log_options, report_level,
                 "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
@@ -165,62 +164,62 @@ void debugReportRankDeficiency(
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (call_id == 0) {
     if (numRow > 123) return;
-    highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency0:");
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "buildRankDeficiency0:");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIndex  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nPerm   ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nPerm   ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   permute[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIwork  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIwork  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   iwork[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nBaseI  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nBaseI  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   baseIndex[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "\n");
   } else if (call_id == 1) {
     if (rank_deficiency > 100) return;
-    highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency1:");
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "buildRankDeficiency1:");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIndex  ");
     for (HighsInt i = 0; i < rank_deficiency; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nnoPvR  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nnoPvR  ");
     for (HighsInt i = 0; i < rank_deficiency; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   noPvR[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nnoPvC  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nnoPvC  ");
     for (HighsInt i = 0; i < rank_deficiency; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   noPvC[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "\n");
     if (numRow > 123) return;
-    highsLogDev(log_options, HighsLogType::WARNING, "Index  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "Index  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIwork  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIwork  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   iwork[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "\n");
   } else if (call_id == 2) {
     if (numRow > 123) return;
-    highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency2:");
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "buildRankDeficiency2:");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIndex  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nPerm   ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nPerm   ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   permute[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "\n");
   }
 }
 
@@ -248,18 +247,18 @@ void debugReportRankDeficientASM(
       HighsInt ASMrow = MCindex[en];
       HighsInt i = -iwork[ASMrow] - 1;
       if (i < 0 || i >= rank_deficiency) {
-        highsLogDev(log_options, HighsLogType::WARNING,
+        highsLogDev(log_options, HighsLogType::kWarning,
                     "STRANGE: 0 > i = %" HIGHSINT_FORMAT " || %" HIGHSINT_FORMAT
                     " = i >= rank_deficiency = %" HIGHSINT_FORMAT "\n",
                     i, i, rank_deficiency);
       } else {
         if (noPvR[i] != ASMrow) {
-          highsLogDev(log_options, HighsLogType::WARNING,
+          highsLogDev(log_options, HighsLogType::kWarning,
                       "STRANGE: %" HIGHSINT_FORMAT
                       " = noPvR[i] != ASMrow = %" HIGHSINT_FORMAT "\n",
                       noPvR[i], ASMrow);
         }
-        highsLogDev(log_options, HighsLogType::WARNING,
+        highsLogDev(log_options, HighsLogType::kWarning,
                     "Setting ASM(%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT
                     ") = %11.4g\n",
                     i, j, MCvalue[en]);
@@ -267,26 +266,28 @@ void debugReportRankDeficientASM(
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::WARNING, "ASM:                    ");
+  highsLogDev(log_options, HighsLogType::kWarning, "ASM:                    ");
   for (HighsInt j = 0; j < rank_deficiency; j++)
-    highsLogDev(log_options, HighsLogType::WARNING, " %11" HIGHSINT_FORMAT "",
+    highsLogDev(log_options, HighsLogType::kWarning, " %11" HIGHSINT_FORMAT "",
                 j);
-  highsLogDev(log_options, HighsLogType::WARNING, "\n                        ");
+  highsLogDev(log_options, HighsLogType::kWarning,
+              "\n                        ");
   for (HighsInt j = 0; j < rank_deficiency; j++)
-    highsLogDev(log_options, HighsLogType::WARNING, " %11" HIGHSINT_FORMAT "",
+    highsLogDev(log_options, HighsLogType::kWarning, " %11" HIGHSINT_FORMAT "",
                 noPvC[j]);
-  highsLogDev(log_options, HighsLogType::WARNING, "\n                        ");
+  highsLogDev(log_options, HighsLogType::kWarning,
+              "\n                        ");
   for (HighsInt j = 0; j < rank_deficiency; j++)
-    highsLogDev(log_options, HighsLogType::WARNING, "------------");
-  highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "------------");
+  highsLogDev(log_options, HighsLogType::kWarning, "\n");
   for (HighsInt i = 0; i < rank_deficiency; i++) {
-    highsLogDev(log_options, HighsLogType::WARNING,
+    highsLogDev(log_options, HighsLogType::kWarning,
                 "%11" HIGHSINT_FORMAT " %11" HIGHSINT_FORMAT "|", i, noPvR[i]);
     for (HighsInt j = 0; j < rank_deficiency; j++) {
-      highsLogDev(log_options, HighsLogType::WARNING, " %11.4g",
+      highsLogDev(log_options, HighsLogType::kWarning, " %11.4g",
                   ASM[i + j * rank_deficiency]);
     }
-    highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "\n");
   }
   free(ASM);
 }
@@ -299,30 +300,30 @@ void debugReportMarkSingC(const HighsInt call_id,
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (numRow > 123) return;
   if (call_id == 0) {
-    highsLogDev(log_options, HighsLogType::WARNING, "\nMarkSingC1");
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nMarkSingC1");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIndex  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::WARNING, "\niwork  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\niwork  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   iwork[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nBaseI  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nBaseI  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   baseIndex[i]);
   } else if (call_id == 1) {
-    highsLogDev(log_options, HighsLogType::WARNING, "\nMarkSingC2");
-    highsLogDev(log_options, HighsLogType::WARNING, "\nIndex  ");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nMarkSingC2");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nIndex  ");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   i);
-    highsLogDev(log_options, HighsLogType::WARNING, "\nNwBaseI");
+    highsLogDev(log_options, HighsLogType::kWarning, "\nNwBaseI");
     for (HighsInt i = 0; i < numRow; i++)
-      highsLogDev(log_options, HighsLogType::WARNING, " %2" HIGHSINT_FORMAT "",
+      highsLogDev(log_options, HighsLogType::kWarning, " %2" HIGHSINT_FORMAT "",
                   baseIndex[i]);
-    highsLogDev(log_options, HighsLogType::WARNING, "\n");
+    highsLogDev(log_options, HighsLogType::kWarning, "\n");
   }
 }
 
@@ -334,7 +335,7 @@ void debugLogRankDeficiency(
   if (highs_debug_level == kHighsDebugLevelNone) return;
   if (!rank_deficiency) return;
   highsLogDev(
-      log_options, HighsLogType::WARNING,
+      log_options, HighsLogType::kWarning,
       "Rank deficiency %1" HIGHSINT_FORMAT ": basis_matrix (%" HIGHSINT_FORMAT
       " el); INVERT (%" HIGHSINT_FORMAT " el); kernel (%" HIGHSINT_FORMAT
       " "
@@ -359,7 +360,7 @@ void debugPivotValueAnalysis(const HighsInt highs_debug_level,
   }
   mean_pivot = exp(mean_pivot / numRow);
   if (highs_debug_level > kHighsDebugLevelCheap || min_pivot < 1e-8)
-    highsLogDev(log_options, HighsLogType::ERROR,
+    highsLogDev(log_options, HighsLogType::kError,
                 "InvertPivotAnalysis: %" HIGHSINT_FORMAT
                 " pivots: Min %g; Mean "
                 "%g; Max %g\n",

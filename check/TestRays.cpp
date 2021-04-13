@@ -218,25 +218,25 @@ void testInfeasibleMps(const std::string model) {
     highs.setOptionValue("output_flag", false);
   }
 
-  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kPrimalInfeasible;
-  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   lp = highs.getLp();
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
   // Check that there is a dual ray
   dual_ray_value.resize(lp.numRow_);
-  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == true);
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
-          HighsStatus::OK);
+          HighsStatus::kOk);
   checkDualRayValue(highs, dual_ray_value);
   // Check that there is no primal ray
-  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == false);
 }
 
@@ -254,26 +254,26 @@ void testUnboundedMps(const std::string model,
   bool has_primal_ray;
   vector<double> dual_ray_value;
   vector<double> primal_ray_value;
-  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kPrimalUnbounded;
-  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.changeObjectiveSense(sense));
   lp = highs.getLp();
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
   // Check that there is no dual ray
-  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
   // Check that there is a primal ray
   primal_ray_value.resize(lp.numCol_);
-  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
   REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
-          HighsStatus::OK);
+          HighsStatus::kOk);
   checkPrimalRayValue(highs, primal_ray_value);
 }
 
@@ -293,22 +293,22 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> primal_ray_value;
 
   //  special_lps.issue285Lp(lp, require_model_status);
-  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
   // Test dual ray for infeasible LP
   special_lps.scipLpi3Lp(lp, require_model_status);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is a dual ray
   dual_ray_value.resize(lp.numRow_);
-  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == true);
   // Get the dual ray
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
-          HighsStatus::OK);
+          HighsStatus::kOk);
   vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
   if (dev_run) {
     printf("Dual ray:\nRow    computed    expected\n");
@@ -318,39 +318,39 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   }
   checkDualRayValue(highs, dual_ray_value);
   // Check that there is no primal ray
-  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == false);
 
   // Check that there are no rays for this LP
   special_lps.issue272Lp(lp, require_model_status, optimal_objective);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
-  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == false);
 
   // Test primal ray for unbounded LP
   special_lps.scipLpi2Lp(lp, require_model_status);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
   if (dev_run) highs.writeSolution("", true);
 
   // Check that there is no dual ray
-  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
 
   // Check that there is a primal ray
   primal_ray_value.resize(lp.numCol_);
-  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
   REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
-          HighsStatus::OK);
+          HighsStatus::kOk);
   vector<double> expected_primal_ray = {0.5, -1};
   if (dev_run) {
     printf("Primal ray:\nRow    computed    expected\n");
@@ -364,9 +364,9 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   // Test that there's no primal or dual ray for this LP that is both
   // primal and dual infeasible
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
 }
 

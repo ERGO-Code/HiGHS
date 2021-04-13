@@ -8,7 +8,6 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsTableauSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsTableauSeparator.h"
@@ -87,7 +86,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   for (const auto& fracvar : fractionalBasisvars) {
     HighsInt i = fracvar.second;
     if (lpSolver.getBasisInverseRow(i, rowWeights.data(), &numNonzeroWeights,
-                                    nonzeroWeights.data()) != HighsStatus::OK)
+                                    nonzeroWeights.data()) != HighsStatus::kOk)
       continue;
 
     // already handled by other separator

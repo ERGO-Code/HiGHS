@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsDebugSol.h
  * @brief Debug solution for MIP solver
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_DEBUG_SOL_H_

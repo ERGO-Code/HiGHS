@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsMatrixPic.h
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHSMATRIXPIC_H_
 #define UTIL_HIGHSMATRIXPIC_H_

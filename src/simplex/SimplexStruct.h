@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/SimplexStruct.h
  * @brief Structs for HiGHS simplex solvers
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
@@ -51,8 +50,6 @@ struct HighsSimplexLpStatus {
       false;                    // The dual objective function value is known
   bool has_dual_ray = false;    // A dual unbounded ray is known
   bool has_primal_ray = false;  // A primal unbounded ray is known
-  SimplexSolutionStatus solution_status =
-      SimplexSolutionStatus::UNSET;  // The solution status is UNSET
 };
 
 struct HighsSimplexInfo {

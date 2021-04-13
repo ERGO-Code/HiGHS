@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/FactorTimer.h
  * @brief Indices of factor iClocks
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_FACTORTIMER_H_
 #define SIMPLEX_FACTORTIMER_H_

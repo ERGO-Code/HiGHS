@@ -8,7 +8,6 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsPathSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsPathSeparator.h"

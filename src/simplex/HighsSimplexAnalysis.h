@@ -10,7 +10,6 @@
 /**@file simplex/HighsSimplexAnalysis.h
  * @brief Analyse simplex iterations, both for run-time control and data
  * gathering
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
@@ -310,8 +309,8 @@ class HighsSimplexAnalysis {
   double max_average_log_high_dual_steepest_edge_weight_error = 0;
   double max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
 
-  const HighsLogType iteration_report_log_type = HighsLogType::VERBOSE;
-  const HighsLogType invert_report_log_type = HighsLogType::INFO;
+  const HighsLogType iteration_report_log_type = HighsLogType::kVerbose;
+  const HighsLogType invert_report_log_type = HighsLogType::kInfo;
   HighsInt num_invert_report_since_last_header = -1;
   HighsInt num_iteration_report_since_last_header = -1;
 

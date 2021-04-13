@@ -1021,7 +1021,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
         if (result == NodeResult::Open) {
           highsLogUser(mipsolver.options_mip_->log_options,
-                       HighsLogType::WARNING,
+                       HighsLogType::kWarning,
                        "Failed to solve node with all integer columns "
                        "fixed. Declaring node infeasible.\n");
           // LP still not solved, give up and declare as infeasible

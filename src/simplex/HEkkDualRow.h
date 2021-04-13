@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualRow.h
  * @brief Dual simplex ratio test for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HEKKDUALROW_H_
 #define SIMPLEX_HEKKDUALROW_H_

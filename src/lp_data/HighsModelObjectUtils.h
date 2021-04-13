@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsModelObjectUtil.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHSMODELOBJECTUTILS_H_
 #define LP_DATA_HIGHSMODELOBJECTUTILS_H_

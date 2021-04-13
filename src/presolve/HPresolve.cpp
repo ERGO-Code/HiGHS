@@ -1019,7 +1019,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postSolveStack));
 
-    highsLogUser(options->log_options, HighsLogType::INFO,
+    highsLogUser(options->log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
                  " deleted rows, %" HIGHSINT_FORMAT
                  " deleted "
@@ -2991,14 +2991,14 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   }
 
   if (options->presolve != "off") {
-    highsLogUser(options->log_options, HighsLogType::INFO,
+    highsLogUser(options->log_options, HighsLogType::kInfo,
                  "\nPresolving model\n");
 
     auto report = [&]() {
       HighsInt numCol = model->numCol_ - numDeletedCols;
       HighsInt numRow = model->numRow_ - numDeletedRows;
       HighsInt numNonz = Avalue.size() - freeslots.size();
-      highsLogUser(options->log_options, HighsLogType::INFO,
+      highsLogUser(options->log_options, HighsLogType::kInfo,
                    "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                    " cols, %" HIGHSINT_FORMAT " nonzeros\n",
                    numRow, numCol, numNonz);
@@ -3037,7 +3037,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         double nzReduction = 100.0 * (1.0 - (numNonzeros() / (double)numNz));
 
         if (nzReduction > 0) {
-          highsLogUser(options->log_options, HighsLogType::INFO,
+          highsLogUser(options->log_options, HighsLogType::kInfo,
                        "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
 
           fastPresolveLoop(postSolveStack);
@@ -3064,7 +3064,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
       if (mipsolver != nullptr) {
         HighsInt numStrenghtened = strengthenInequalities();
         if (numStrenghtened > 0)
-          highsLogUser(options->log_options, HighsLogType::INFO,
+          highsLogUser(options->log_options, HighsLogType::kInfo,
                        "Strengthened %" HIGHSINT_FORMAT " coefficients\n",
                        numStrenghtened);
       }
@@ -3087,7 +3087,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
     report();
   } else {
-    highsLogUser(options->log_options, HighsLogType::INFO,
+    highsLogUser(options->log_options, HighsLogType::kInfo,
                  "\nPresolve is switched off\n");
   }
 

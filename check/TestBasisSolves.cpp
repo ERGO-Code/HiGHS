@@ -172,7 +172,7 @@ void testBasisSolve(Highs& highs) {
   HighsInt basic_col;
 
   highs_status = highs.getBasicVariables(&basic_variables[0]);
-  REQUIRE(highs_status == HighsStatus::OK);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   for (HighsInt ix = 0; ix < numRow; ix++) known_solution[ix] = 0;
   bool transpose = true;
@@ -200,7 +200,7 @@ void testBasisSolve(Highs& highs) {
   } else {
     highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0]);
   }
-  REQUIRE(highs_status == HighsStatus::OK);
+  REQUIRE(highs_status == HighsStatus::kOk);
   residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs,
                                               solution_col, transpose);
   REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
@@ -239,7 +239,7 @@ void testBasisSolve(Highs& highs) {
       highs_status =
           highs.getBasisSolve(&rhs[0], &solution_col[0], &solution_num_nz,
                               &solution_col_indices[0]);
-      REQUIRE(highs_status == HighsStatus::OK);
+      REQUIRE(highs_status == HighsStatus::kOk);
       bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
           numRow, solution_col, &solution_num_nz, solution_col_indices);
       REQUIRE(solution_nz_ok == true);
@@ -269,7 +269,7 @@ void testBasisSolve(Highs& highs) {
     highs_status =
         highs.getBasisInverseRow(check_row, &solution_col[0], &solution_num_nz,
                                  &solution_col_indices[0]);
-    REQUIRE(highs_status == HighsStatus::OK);
+    REQUIRE(highs_status == HighsStatus::kOk);
     bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
         numRow, solution_col, &solution_num_nz, solution_col_indices);
     REQUIRE(solution_nz_ok == true);
@@ -302,7 +302,7 @@ void testBasisSolve(Highs& highs) {
     highs_status =
         highs.getBasisInverseCol(check_col, &solution_col[0], &solution_num_nz,
                                  &solution_col_indices[0]);
-    REQUIRE(highs_status == HighsStatus::OK);
+    REQUIRE(highs_status == HighsStatus::kOk);
     bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
         numRow, solution_col, &solution_num_nz, solution_col_indices);
     REQUIRE(solution_nz_ok == true);
@@ -332,7 +332,7 @@ void testBasisSolve(Highs& highs) {
   for (;;) {
     for (HighsInt row = 0; row < numRow; row++) rhs[row] = random.fraction();
     highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0]);
-    REQUIRE(highs_status == HighsStatus::OK);
+    REQUIRE(highs_status == HighsStatus::kOk);
     // Check solution
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs,
                                                 solution_col, false);
@@ -356,7 +356,7 @@ void testBasisSolve(Highs& highs) {
   for (;;) {
     for (HighsInt row = 0; row < numRow; row++) rhs[row] = random.fraction();
     highs_status = highs.getBasisTransposeSolve(&rhs[0], &solution_col[0]);
-    REQUIRE(highs_status == HighsStatus::OK);
+    REQUIRE(highs_status == HighsStatus::kOk);
     // Check solution
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs,
                                                 solution_col, true);
@@ -384,7 +384,7 @@ void testBasisSolve(Highs& highs) {
     highs_status =
         highs.getReducedRow(check_row, &solution_row[0], &solution_num_nz,
                             &solution_row_indices[0]);
-    REQUIRE(highs_status == HighsStatus::OK);
+    REQUIRE(highs_status == HighsStatus::kOk);
     bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
         numCol, solution_row, &solution_num_nz, solution_row_indices);
     REQUIRE(solution_nz_ok == true);
@@ -406,7 +406,7 @@ void testBasisSolve(Highs& highs) {
     highs_status =
         highs.getReducedColumn(check_col, &solution_col[0], &solution_num_nz,
                                &solution_col_indices[0]);
-    REQUIRE(highs_status == HighsStatus::OK);
+    REQUIRE(highs_status == HighsStatus::kOk);
     // Check solution
     for (HighsInt row = 0; row < numRow; row++) rhs[row] = 0;
     for (HighsInt el = lp.Astart_[check_col]; el < lp.Astart_[check_col + 1];
@@ -455,32 +455,32 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   // Check the no model traps
   highs_status = highs.getBasicVariables(&basic_variables[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseRow(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseCol(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisTransposeSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getReducedRow(0, &solution_row[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getReducedColumn(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   // Read the LP given by filename
   highs_status = highs.readModel(filename);
-  REQUIRE(highs_status == HighsStatus::OK);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   highs_status = highs.writeModel("");
-  REQUIRE(highs_status == HighsStatus::OK);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   HighsInt numRow = highs.getNumRows();
   HighsInt numCol = highs.getNumCols();
@@ -491,73 +491,73 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   // Check the NULL pointer trap for RHS
   highs_status = highs.getBasisSolve(NULL, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisSolve(NULL, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   // Check the NULL pointer trap for the basic variables
   highs_status = highs.getBasicVariables(NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   // Check the NULL pointer trap for the solution vector
   highs_status = highs.getBasisInverseRow(0, NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseCol(0, NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisSolve(&rhs[0], NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisTransposeSolve(&rhs[0], NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getReducedRow(0, NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getReducedColumn(0, NULL);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   // Check the indexing traps
   highs_status = highs.getBasisInverseRow(-1, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseRow(numRow, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseCol(-1, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseCol(numCol, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   // Check the no INVERSE traps - these should all work, as the first should
   // force inversion!!!
   highs_status = highs.getBasicVariables(&basic_variables[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseRow(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisInverseCol(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getBasisTransposeSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getReducedRow(0, &solution_row[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   highs_status = highs.getReducedColumn(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::Error);
+  REQUIRE(highs_status == HighsStatus::kError);
 
   // Solve and perform numerical tests
   highs_status = highs.run();
-  REQUIRE(highs_status == HighsStatus::OK);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   testBasisSolve(highs);
 
@@ -571,7 +571,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   // Load the optimal basis
   highs_status = highs.setBasis(basis);
-  REQUIRE(highs_status == HighsStatus::OK);
+  REQUIRE(highs_status == HighsStatus::kOk);
 
   testBasisSolve(highs);
 

@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HCrash.cpp
  * @brief Bixby and Maros-style crash for the HiGHS simplex solver
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
 

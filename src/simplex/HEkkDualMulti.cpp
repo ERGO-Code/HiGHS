@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualMulti.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include <cassert>
 #include <cmath>
@@ -55,7 +54,7 @@ void HEkkDual::iterateMulti() {
       majorUpdate();
     } else {
       highsLogUser(
-          ekk_instance_.options_.log_options, HighsLogType::WARNING,
+          ekk_instance_.options_.log_options, HighsLogType::kWarning,
           "PAMI skipping majorUpdate() due to multi_nFinish = %" HIGHSINT_FORMAT
           "; "
           "rebuild_reason = %" HIGHSINT_FORMAT "\n",

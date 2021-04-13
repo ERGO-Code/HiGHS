@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/HAggregator.h
  * @brief
- * @author Leona Gottwald
  */
 #ifndef PRESOLVE_HAGGREGATOR_H_
 #define PRESOLVE_HAGGREGATOR_H_

@@ -47,7 +47,7 @@ void HighsMipSolver::run() {
   mipdata_->init();
   mipdata_->runPresolve();
   if (modelstatus_ != HighsModelStatus::kNotset) {
-    highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "Presolve: %s\n",
                  utilModelStatusToString(modelstatus_).c_str());
     if (modelstatus_ == HighsModelStatus::kOptimal) {
@@ -79,7 +79,7 @@ restart:
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
 
-  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
@@ -186,7 +186,7 @@ restart:
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
-      highsLogDev(options_mip_->log_options, HighsLogType::INFO,
+      highsLogDev(options_mip_->log_options, HighsLogType::kInfo,
                   "added %" HIGHSINT_FORMAT " global bound changes\n",
                   (HighsInt)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
@@ -354,7 +354,7 @@ void HighsMipSolver::cleanupSolve() {
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     solutionstatus = feasible ? "feasible" : "infeasible";
   }
-  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "\nSolving report\n"
                "  Status            %s\n"
                "  Primal bound      %.12g\n"
@@ -363,14 +363,14 @@ void HighsMipSolver::cleanupSolve() {
                utilModelStatusToString(modelstatus_).c_str(), primal_bound_,
                dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
-    highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+    highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "                    %.12g (objective)\n"
                  "                    %.12g (bound viol.)\n"
                  "                    %.12g (int. viol.)\n"
                  "                    %.12g (row viol.)\n",
                  solution_objective_, bound_violation_, integrality_violation_,
                  row_violation_);
-  highsLogUser(options_mip_->log_options, HighsLogType::INFO,
+  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Timing            %.2f (total)\n"
                "                    %.2f (presolve)\n"
                "                    %.2f (postsolve)\n"

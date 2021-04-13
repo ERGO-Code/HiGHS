@@ -10,7 +10,6 @@
 /**@file mip/HighsSeparator.h
  * @brief Base class for separators
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_SEPARATOR_H_

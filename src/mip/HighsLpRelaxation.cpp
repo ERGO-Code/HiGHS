@@ -288,7 +288,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
     HighsBasis b = mipsolver.mipdata_->firstrootbasis;
     b.row_status.resize(nlprows, HighsBasisStatus::kBasic);
     HighsStatus st = lpsolver.setBasis(b);
-    assert(st != HighsStatus::Error);
+    assert(st != HighsStatus::kError);
   }
 
   HighsInt ndelcuts = 0;
@@ -422,7 +422,7 @@ void HighsLpRelaxation::storeDualInfProof() {
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
-    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::VERBOSE,
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kVerbose,
                 "no dual ray stored\n");
     return;
   }
@@ -674,14 +674,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   try {
     callstatus = lpsolver.run();
   } catch (const std::runtime_error&) {
-    callstatus = HighsStatus::Error;
+    callstatus = HighsStatus::kError;
   }
 
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
   numlpiters += itercount;
 
-  if (callstatus == HighsStatus::Error) {
+  if (callstatus == HighsStatus::kError) {
     lpsolver.clearSolver();
 #if 0
     // first try to use the primal simplex solver starting from the last basis
@@ -747,7 +747,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return Status::Infeasible;
 
       // highsLogUser(mipsolver.options_mip_->log_options,
-      //                 HighsLogType::WARNING,
+      //                 HighsLogType::kWarning,
       //                 "LP failed to reliably determine infeasibility\n");
 
       // printf("error: unreliable infeasiblities, modelstatus = %"
@@ -823,7 +823,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // printf("error: lpsolver stopped with unexpected status %"
       // HIGHSINT_FORMAT "\n",
       //        (HighsInt)scaledmodelstatus);
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::WARNING,
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
                    "LP solved to unexpected status (%" HIGHSINT_FORMAT ")\n",
                    (HighsInt)scaledmodelstatus);
       return Status::Error;

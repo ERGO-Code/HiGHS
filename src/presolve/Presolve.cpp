@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/Presolve.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "presolve/Presolve.h"
 
@@ -222,7 +221,7 @@ void Presolve::reportDevMidMainLoop() {
 void Presolve::reportDevMainLoop() {
   if (iPrint == 0) {
     if (timer.getTime() > 10)
-      highsLogDev(log_options, HighsLogType::VERBOSE,
+      highsLogDev(log_options, HighsLogType::kVerbose,
                   "Presolve finished main loop %" HIGHSINT_FORMAT "... ",
                   stats.dev.n_loops + 1);
   } else {
@@ -445,7 +444,7 @@ HighsInt Presolve::presolve(HighsInt print) {
     HighsInt diff = prev_cols_rows - current_cols_rows;
     double iteration_reduction_pct =
         100 * (1.0 * diff) / (1.0 * model_cols_rows);
-    highsLogDev(log_options, HighsLogType::VERBOSE,
+    highsLogDev(log_options, HighsLogType::kVerbose,
                 "Iteration %2" HIGHSINT_FORMAT
                 " (Presolve)   Current number rows = %9" HIGHSINT_FORMAT
                 "; cols = %9" HIGHSINT_FORMAT
@@ -479,7 +478,7 @@ HighsInt Presolve::presolve(HighsInt print) {
       HighsInt diff = prev_cols_rows - current_cols_rows;
       double iteration_reduction_pct =
           100 * (1.0 * diff) / (1.0 * model_cols_rows);
-      highsLogDev(log_options, HighsLogType::VERBOSE,
+      highsLogDev(log_options, HighsLogType::kVerbose,
                   "Iteration %2" HIGHSINT_FORMAT
                   " (Aggregator) Current number rows = %9" HIGHSINT_FORMAT
                   "; cols = %9" HIGHSINT_FORMAT
@@ -1355,7 +1354,7 @@ void Presolve::runPropagator() {
                                flagCol, rowLower, rowUpper);
   propagator.computeRowActivities();
   HighsInt nboundchgs = propagator.propagate();
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "Propagation found %" HIGHSINT_FORMAT " bound changes\n",
               nboundchgs);
   // propagation found nothing, so we can stop here. Only for mip we also try
@@ -1366,7 +1365,7 @@ void Presolve::runPropagator() {
     HighsInt ntotalcoeffchgs = 0;
     while (true) {
       HighsInt ncoeffchgs = propagator.tightenCoefficients();
-      highsLogDev(log_options, HighsLogType::VERBOSE,
+      highsLogDev(log_options, HighsLogType::kVerbose,
                   "tightened %" HIGHSINT_FORMAT " coefficients\n", ncoeffchgs);
       // if no coefficients where tightened we can stop
       if (ncoeffchgs == 0) break;
@@ -1470,7 +1469,7 @@ void Presolve::runPropagator() {
   implColLower = colLower;
   implColUpper = colUpper;
 
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "Tightened %" HIGHSINT_FORMAT " bounds\n", ntightened);
   if (ntightened != 0) hasChange = true;
 }
@@ -1570,7 +1569,7 @@ void Presolve::detectImpliedIntegers() {
     }
   }
 
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "found %" HIGHSINT_FORMAT
               " implied integers with primal detection method\n",
               numimplint);
@@ -1645,12 +1644,12 @@ void Presolve::detectImpliedIntegers() {
     ++numimplint;
   }
 
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "found %" HIGHSINT_FORMAT
               " implied integers with dual detection method\n",
               numimplint - primalimplint);
 
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "implint detection found %" HIGHSINT_FORMAT " implied integers\n",
               numimplint);
 }

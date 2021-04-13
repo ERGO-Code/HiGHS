@@ -10,7 +10,6 @@
 /**@file simplex/HMatrix.h
  * @brief Column-wise and partitioned row-wise representaiton of the constraint
  * matrix for the simplex solver
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HMATRIX_H_
 #define SIMPLEX_HMATRIX_H_

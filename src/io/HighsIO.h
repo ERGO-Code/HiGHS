@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HighsIO.h
  * @brief IO methods for HiGHS - currently just print/log messages
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef HIGHS_IO_H
 #define HIGHS_IO_H
@@ -23,7 +22,7 @@ class HighsOptions;
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsLogType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
+enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
 const char* const HighsLogTypeTag[] = {"", "",          "",
                                        "", "WARNING: ", "ERROR:   "};
 enum LogDevLevel {

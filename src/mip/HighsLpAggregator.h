@@ -11,7 +11,6 @@
  * @brief Class to aggregate rows of the LP
  *
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_LP_AGGREGATOR_H_

@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderMps.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "io/FilereaderMps.h"
 
@@ -43,12 +42,12 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       case FreeFormatParserReturnCode::FILENOTFOUND:
         return FilereaderRetcode::FILENOTFOUND;
       case FreeFormatParserReturnCode::FIXED_FORMAT:
-        highsLogUser(options.log_options, HighsLogType::WARNING,
+        highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Free format reader has detected row/col names with "
                      "spaces: switching to fixed format parser\n");
         break;
       case FreeFormatParserReturnCode::TIMEOUT:
-        highsLogUser(options.log_options, HighsLogType::WARNING,
+        highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Free format reader reached time_limit while parsing "
                      "the input file\n");
         return FilereaderRetcode::TIMEOUT;
@@ -64,14 +63,14 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       options.keep_n_rows);
   if (return_code == FilereaderRetcode::OK) setOrientation(model);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has column names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numCol_, model.col_names_, true);
 #endif
   }
   if (namesWithSpaces(model.numRow_, model.row_names_)) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has row names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numRow_, model.row_names_, true);

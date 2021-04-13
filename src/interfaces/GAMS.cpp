@@ -61,7 +61,7 @@ static void gevprint(HighsInt level, const char* msg, void* msgcb_data) {
 
 static void gevlog(HighsLogType type, const char* msg, void* msgcb_data) {
   gevHandle_t gev = (gevHandle_t)msgcb_data;
-  if (type == HighsLogType::INFO)
+  if (type == HighsLogType::kInfo)
     gevLogPChar(gev, msg);
   else
     gevLogStatPChar(gev, msg);
@@ -508,7 +508,7 @@ DllExport HighsInt STDCALL C__hisCallSolver(void* Cptr) {
 
   /* solve the problem */
   status = gh->highs->run();
-  if (status != HighsStatus::OK) goto TERMINATE;
+  if (status != HighsStatus::kOk) goto TERMINATE;
 
   /* pass solution, status, etc back to GMO */
   if (processSolve(gh)) goto TERMINATE;

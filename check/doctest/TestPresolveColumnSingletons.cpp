@@ -45,7 +45,7 @@ HighsStatus zeroCostColSing() {
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -100,7 +100,7 @@ HighsStatus colSingDoubletonEquality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -154,7 +154,7 @@ HighsStatus colSingDoubletonInequality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -191,7 +191,7 @@ HighsStatus twoColSingDoubletonEquality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -228,7 +228,7 @@ HighsStatus twoColSingDoubletonInequality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   highs.run();
   status = highs.run();

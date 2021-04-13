@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HSimplexDebug.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include <sstream>
@@ -79,7 +78,7 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
     iteration_report << "PrSwap " << delta_primal_bound_swap << "; ";
   }
 
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "Simplex iterations: %sTotal %" HIGHSINT_FORMAT "\n",
               iteration_report.str().c_str(), delta_iteration_count);
 }

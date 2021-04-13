@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLpUtils.h
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHSLPUTILS_H_
 #define LP_DATA_HIGHSLPUTILS_H_
@@ -179,7 +178,7 @@ HighsStatus changeBounds(const HighsLogOptions& log_options,
  */
 void reportLp(const HighsLogOptions& log_options,
               const HighsLp& lp,  //!< LP whose data are to be reported
-              const HighsLogType report_level = HighsLogType::INFO
+              const HighsLogType report_level = HighsLogType::kInfo
               //!< INFO => scalar [dimensions];
               //!< DETAILED => vector[costs/bounds];
               //!< VERBOSE => vector+matrix

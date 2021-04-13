@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsSort.h
  * @brief Sorting routines for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHSSORT_H_
 #define UTIL_HIGHSSORT_H_

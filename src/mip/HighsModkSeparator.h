@@ -37,7 +37,6 @@
  * generate inequalities with superadditive lifting from the aggregated row
  * whenever all integer variables are bounded.
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_MODK_SEPARATOR_H_

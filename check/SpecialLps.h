@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/SpeciaLps.h
  * @brief Utilities for tests with special LPs
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_SPECIALPS_H_
 #define SIMPLEX_SPECIALPS_H_

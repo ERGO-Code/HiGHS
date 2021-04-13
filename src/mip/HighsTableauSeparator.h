@@ -10,7 +10,6 @@
 /**@file mip/HighsTableauSeparator.h
  * @brief Class for separating cuts from the LP tableaux rows
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_TABLEAU_SEPARATOR_H_
