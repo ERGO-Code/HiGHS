@@ -398,7 +398,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Upper, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
 
     } else {
       bool accept;
@@ -434,7 +434,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Lower, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
     }
   }
 
@@ -500,7 +500,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Upper, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
     } else {
       bool accept;
 
@@ -535,7 +535,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Lower, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
     }
   }
 
@@ -855,7 +855,7 @@ void HighsDomain::computeRowActivities() {
 double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
   double oldbound;
 
-  if (boundchg.boundtype == HighsBoundType::Lower) {
+  if (boundchg.boundtype == HighsBoundType::kLower) {
     oldbound = colLower_[boundchg.column];
     colLower_[boundchg.column] = boundchg.boundval;
     if (!infeasible_)
@@ -888,7 +888,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   mipsolver->mipdata_->debugSolution.boundChangeAdded(
       *this, boundchg, reason.type == Reason::kBranching);
 
-  if (boundchg.boundtype == HighsBoundType::Lower) {
+  if (boundchg.boundtype == HighsBoundType::kLower) {
     if (boundchg.boundval <= colLower_[boundchg.column]) return;
     if (boundchg.boundval > colUpper_[boundchg.column]) {
       if (boundchg.boundval - colUpper_[boundchg.column] >
@@ -941,10 +941,10 @@ void HighsDomain::setDomainChangeStack(
   domchgreason_.clear();
   HighsInt stacksize = domchgstack.size();
   for (HighsInt k = 0; k != stacksize; ++k) {
-    if (domchgstack[k].boundtype == HighsBoundType::Lower &&
+    if (domchgstack[k].boundtype == HighsBoundType::kLower &&
         domchgstack[k].boundval <= colLower_[domchgstack[k].column])
       continue;
-    if (domchgstack[k].boundtype == HighsBoundType::Upper &&
+    if (domchgstack[k].boundtype == HighsBoundType::kUpper &&
         domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
       continue;
 
@@ -998,7 +998,7 @@ HighsDomainChange HighsDomain::backtrack() {
     domchgstack_.clear();
     prevboundval_.clear();
     domchgreason_.clear();
-    return HighsDomainChange({HighsBoundType::Lower, -1, 0.0});
+    return HighsDomainChange({HighsBoundType::kLower, -1, 0.0});
   }
 
   HighsDomainChange backtrackboundchg = domchgstack_[k];
@@ -1260,7 +1260,7 @@ double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
 }
 
 bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {
-  double otherbound = domchg.boundtype == HighsBoundType::Upper
+  double otherbound = domchg.boundtype == HighsBoundType::kUpper
                           ? colLower_[domchg.column]
                           : colUpper_[domchg.column];
   return std::abs(domchg.boundval - otherbound) <= mipsolver->mipdata_->epsilon;

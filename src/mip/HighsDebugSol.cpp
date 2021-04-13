@@ -106,7 +106,7 @@ void HighsDebugSol::boundChangeAdded(const HighsDomain& domain,
 
   if (conflictingBounds.count(&domain) == 0) return;
 
-  if (domchg.boundtype == HighsBoundType::Lower) {
+  if (domchg.boundtype == HighsBoundType::kLower) {
     if (domchg.boundval <=
         debugSolution[domchg.column] + mipsolver->mipdata_->feastol)
       return;

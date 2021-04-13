@@ -299,15 +299,15 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     if (strline[start] == 'G') {
       rowLower.push_back(0.0);
       rowUpper.push_back(kHighsInf);
-      row_type.push_back(boundtype::GE);
+      row_type.push_back(Boundtype::kGe);
     } else if (strline[start] == 'E') {
       rowLower.push_back(0.0);
       rowUpper.push_back(0.0);
-      row_type.push_back(boundtype::EQ);
+      row_type.push_back(Boundtype::kEq);
     } else if (strline[start] == 'L') {
       rowLower.push_back(-kHighsInf);
       rowUpper.push_back(0.0);
-      row_type.push_back(boundtype::LE);
+      row_type.push_back(Boundtype::kLe);
     } else if (strline[start] == 'N') {
       if (objectiveName == "") {
         isobj = true;
@@ -549,14 +549,14 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
   auto addrhs = [this](double val, HighsInt rowidx) {
     if (rowidx > -1) {
-      if (row_type[rowidx] == boundtype::EQ ||
-          row_type[rowidx] == boundtype::LE) {
+      if (row_type[rowidx] == Boundtype::kEq ||
+          row_type[rowidx] == Boundtype::kLe) {
         assert(size_t(rowidx) < rowUpper.size());
         rowUpper[rowidx] = val;
       }
 
-      if (row_type[rowidx] == boundtype::EQ ||
-          row_type[rowidx] == boundtype::GE) {
+      if (row_type[rowidx] == Boundtype::kEq ||
+          row_type[rowidx] == Boundtype::kGe) {
         assert(size_t(rowidx) < rowLower.size());
         rowLower[rowidx] = val;
       }
@@ -918,14 +918,14 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
   };
 
   auto addrhs = [this](double val, HighsInt& rowidx) {
-    if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
-        row_type[rowidx] == boundtype::LE) {
+    if ((row_type[rowidx] == Boundtype::kEq && val < 0) ||
+        row_type[rowidx] == Boundtype::kLe) {
       assert(rowUpper.at(rowidx) < kHighsInf);
       rowLower.at(rowidx) = rowUpper.at(rowidx) - fabs(val);
     }
 
-    else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
-             row_type[rowidx] == boundtype::GE) {
+    else if ((row_type[rowidx] == Boundtype::kEq && val > 0) ||
+             row_type[rowidx] == Boundtype::kGe) {
       assert(rowLower.at(rowidx) > (-kHighsInf));
       rowUpper.at(rowidx) = rowLower.at(rowidx) + fabs(val);
     }

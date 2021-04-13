@@ -1657,13 +1657,13 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
     if (v.val == 1) {
       if (domain.colLower_[v.col] == 1.0) continue;
 
-      domain.changeBound(HighsBoundType::Lower, v.col, 1.0,
+      domain.changeBound(HighsBoundType::kLower, v.col, 1.0,
                          HighsDomain::Reason::cliqueTable());
       if (domain.infeasible()) return;
     } else {
       if (domain.colUpper_[v.col] == 0.0) continue;
 
-      domain.changeBound(HighsBoundType::Upper, v.col, 0.0,
+      domain.changeBound(HighsBoundType::kUpper, v.col, 0.0,
                          HighsDomain::Reason::cliqueTable());
       if (domain.infeasible()) return;
     }
@@ -1695,13 +1695,13 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
       if (cliqueentries[i].val == 1) {
         if (domain.colUpper_[cliqueentries[i].col] == 0.0) continue;
 
-        domain.changeBound(HighsBoundType::Upper, cliqueentries[i].col, 0.0,
+        domain.changeBound(HighsBoundType::kUpper, cliqueentries[i].col, 0.0,
                            HighsDomain::Reason::cliqueTable());
         if (domain.infeasible()) return;
       } else {
         if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
 
-        domain.changeBound(HighsBoundType::Lower, cliqueentries[i].col, 1.0,
+        domain.changeBound(HighsBoundType::kLower, cliqueentries[i].col, 1.0,
                            HighsDomain::Reason::cliqueTable());
         if (domain.infeasible()) return;
       }

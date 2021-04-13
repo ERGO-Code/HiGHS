@@ -31,9 +31,9 @@ const char* const HighsLogTypeTag[] = {"", "",          "",
 enum LogDevLevel {
   kHighsLogDevLevelMin = 0,
   kHighsLogDevLevelNone = kHighsLogDevLevelMin,  // 0
-  kHighsLogDevLevelInfo,                         // 1
-  kHighsLogDevLevelDetailed,                     // 2
-  kHighsLogDevLevelVerbose,                      // 3
+  kHighsLogDevLevelInfo,                      // 1
+  kHighsLogDevLevelDetailed,                  // 2
+  kHighsLogDevLevelVerbose,                   // 3
   kHighsLogDevLevelMax = kHighsLogDevLevelVerbose
 };
 

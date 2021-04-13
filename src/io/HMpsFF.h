@@ -121,8 +121,8 @@ class HMpsFF {
     kTimeout
   };
 
-  enum class boundtype { LE, EQ, GE, FR };
-  std::vector<boundtype> row_type;
+  enum class Boundtype { kLe, kEq, kGe }; //, kFr };
+  std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 
   std::vector<Triplet> entries;

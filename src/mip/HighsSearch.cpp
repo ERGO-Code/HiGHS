@@ -71,11 +71,11 @@ void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
     double intval = std::floor(basesol[i] + 0.5);
     if (std::abs(relaxsol[i] - intval) < mipsolver.mipdata_->feastol) {
       if (localdom.colLower_[i] < intval)
-        localdom.changeBound(HighsBoundType::Lower, i,
+        localdom.changeBound(HighsBoundType::kLower, i,
                              std::min(intval, localdom.colUpper_[i]),
                              HighsDomain::Reason::unspecified());
       if (localdom.colUpper_[i] > intval)
-        localdom.changeBound(HighsBoundType::Upper, i,
+        localdom.changeBound(HighsBoundType::kUpper, i,
                              std::max(intval, localdom.colLower_[i]),
                              HighsDomain::Reason::unspecified());
     }
@@ -91,13 +91,13 @@ void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
     double upval = std::ceil(lpsol[i] - mipsolver.mipdata_->feastol);
 
     if (localdom.colLower_[i] < downval) {
-      localdom.changeBound(HighsBoundType::Lower, i,
+      localdom.changeBound(HighsBoundType::kLower, i,
                            std::min(downval, localdom.colUpper_[i]),
                            HighsDomain::Reason::unspecified());
       if (localdom.infeasible()) return;
     }
     if (localdom.colUpper_[i] > upval) {
-      localdom.changeBound(HighsBoundType::Upper, i,
+      localdom.changeBound(HighsBoundType::kUpper, i,
                            std::max(upval, localdom.colLower_[i]),
                            HighsDomain::Reason::unspecified());
       if (localdom.infeasible()) return;
@@ -127,7 +127,7 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   currnode.branching_point = branchpoint;
   currnode.branchingdecision.column = col;
   currnode.branchingdecision.boundval = newub;
-  currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+  currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
@@ -146,7 +146,7 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
   currnode.branching_point = branchpoint;
   currnode.branchingdecision.column = col;
   currnode.branchingdecision.boundval = newlb;
-  currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+  currnode.branchingdecision.boundtype = HighsBoundType::kLower;
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
@@ -338,14 +338,14 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     if (!downscorereliable[candidate]) {
       // evaluate down branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
-      localdom.changeBound(HighsBoundType::Upper, col, downval);
+      localdom.changeBound(HighsBoundType::kUpper, col, downval);
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         localdom.clearChangedCols();
-        localdom.changeBound(HighsBoundType::Lower, col, upval,
+        localdom.changeBound(HighsBoundType::kLower, col, upval,
                              HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         return -1;
@@ -409,7 +409,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Lower, col, upval,
+            localdom.changeBound(HighsBoundType::kLower, col, upval,
                                  HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -422,7 +422,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Lower, col, upval,
+            localdom.changeBound(HighsBoundType::kLower, col, upval,
                                  HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -434,7 +434,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         lp->flushDomain(localdom);
-        localdom.changeBound(HighsBoundType::Lower, col, upval,
+        localdom.changeBound(HighsBoundType::kLower, col, upval,
                              HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -457,14 +457,14 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     } else {
       // evaluate up branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
-      localdom.changeBound(HighsBoundType::Lower, col, upval);
+      localdom.changeBound(HighsBoundType::kLower, col, upval);
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         localdom.clearChangedCols();
-        localdom.changeBound(HighsBoundType::Upper, col, downval,
+        localdom.changeBound(HighsBoundType::kUpper, col, downval,
                              HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         return -1;
@@ -530,7 +530,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Upper, col, downval,
+            localdom.changeBound(HighsBoundType::kUpper, col, downval,
                                  HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -543,7 +543,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Upper, col, downval,
+            localdom.changeBound(HighsBoundType::kUpper, col, downval,
                                  HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -555,7 +555,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         lp->flushDomain(localdom);
-        localdom.changeBound(HighsBoundType::Upper, col, downval,
+        localdom.changeBound(HighsBoundType::kUpper, col, downval,
                              HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -687,7 +687,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     int64_t inferences = domchgstack.size() - (currnode.domgchgStackPos + 1);
     pseudocost.addInferenceObservation(
         parent->branchingdecision.column, inferences,
-        parent->branchingdecision.boundtype == HighsBoundType::Lower);
+        parent->branchingdecision.boundtype == HighsBoundType::kLower);
   }
 
   NodeResult result = NodeResult::Open;
@@ -699,7 +699,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
         parent->branching_point != parent->branchingdecision.boundval) {
       HighsInt col = parent->branchingdecision.column;
       bool upbranch =
-          parent->branchingdecision.boundtype == HighsBoundType::Lower;
+          parent->branchingdecision.boundtype == HighsBoundType::kLower;
       pseudocost.addCutoffObservation(col, upbranch);
     }
   } else {
@@ -785,7 +785,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           parent->branching_point != parent->branchingdecision.boundval) {
         HighsInt col = parent->branchingdecision.column;
         bool upbranch =
-            parent->branchingdecision.boundtype == HighsBoundType::Lower;
+            parent->branchingdecision.boundtype == HighsBoundType::kLower;
         pseudocost.addCutoffObservation(col, upbranch);
       }
     }
@@ -841,44 +841,44 @@ HighsSearch::NodeResult HighsSearch::branch() {
       HighsInt col = branching.first;
       switch (childselrule) {
         case ChildSelectionRule::Up:
-          currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+          currnode.branchingdecision.boundtype = HighsBoundType::kLower;
           currnode.branchingdecision.boundval =
               std::ceil(currnode.branching_point);
           break;
         case ChildSelectionRule::Down:
-          currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+          currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
           currnode.branchingdecision.boundval =
               std::floor(currnode.branching_point);
           break;
         case ChildSelectionRule::RootSol:
           if (currnode.branching_point >= mipsolver.mipdata_->rootlpsol[col]) {
-            currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
           } else {
-            currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
           }
           break;
         case ChildSelectionRule::Obj:
           if (mipsolver.colCost(col) >= 0) {
-            currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
           } else {
-            currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
           }
           break;
         case ChildSelectionRule::Random:
           if (random.bit()) {
-            currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
           } else {
-            currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
           }
@@ -886,11 +886,11 @@ HighsSearch::NodeResult HighsSearch::branch() {
         case ChildSelectionRule::BestCost: {
           if (pseudocost.getPseudocostUp(col, currnode.branching_point) >
               pseudocost.getPseudocostDown(col, currnode.branching_point)) {
-            currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
           } else {
-            currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
           }
@@ -899,11 +899,11 @@ HighsSearch::NodeResult HighsSearch::branch() {
         case ChildSelectionRule::WorstCost:
           if (pseudocost.getPseudocostUp(col, currnode.branching_point) >=
               pseudocost.getPseudocostDown(col, currnode.branching_point)) {
-            currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
           } else {
-            currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
           }
@@ -924,20 +924,20 @@ HighsSearch::NodeResult HighsSearch::branch() {
                 col, currnode.branching_point);
           }
           if (numnodesup > numnodesdown) {  // > -> neos*-inde sehr schnell
-            currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
           } else if (numnodesdown > numnodesup) {
-            currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
             currnode.branchingdecision.boundval =
                 std::floor(currnode.branching_point);
           } else {
             if (mipsolver.colCost(col) >= 0) {
-              currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+              currnode.branchingdecision.boundtype = HighsBoundType::kLower;
               currnode.branchingdecision.boundval =
                   std::ceil(currnode.branching_point);
             } else {
-              currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+              currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
               currnode.branchingdecision.boundval =
                   std::floor(currnode.branching_point);
             }
@@ -982,7 +982,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
         bestscore = score;
         double upval = std::ceil(fracval);
         currnode.branching_point = upval;
-        currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+        currnode.branchingdecision.boundtype = HighsBoundType::kLower;
         currnode.branchingdecision.column = i;
         currnode.branchingdecision.boundval = upval;
       }
@@ -1079,12 +1079,12 @@ bool HighsSearch::backtrack() {
   bool fallbackbranch =
       currnode.branchingdecision.boundval == currnode.branching_point;
 
-  if (currnode.branchingdecision.boundtype == HighsBoundType::Lower) {
-    currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+  if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
+    currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
     currnode.branchingdecision.boundval =
         std::floor(currnode.branchingdecision.boundval - 0.5);
   } else {
-    currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+    currnode.branchingdecision.boundtype = HighsBoundType::kLower;
     currnode.branchingdecision.boundval =
         std::ceil(currnode.branchingdecision.boundval + 0.5);
   }
@@ -1130,12 +1130,12 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   bool fallbackbranch =
       currnode.branchingdecision.boundval == currnode.branching_point;
 
-  if (currnode.branchingdecision.boundtype == HighsBoundType::Lower) {
-    currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+  if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
+    currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
     currnode.branchingdecision.boundval =
         std::floor(currnode.branchingdecision.boundval - 0.5);
   } else {
-    currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+    currnode.branchingdecision.boundtype = HighsBoundType::kLower;
     currnode.branchingdecision.boundval =
         std::ceil(currnode.branchingdecision.boundval + 0.5);
   }

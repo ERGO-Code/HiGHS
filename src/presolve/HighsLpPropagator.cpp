@@ -162,7 +162,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Upper, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
 
     } else {
       bool accept;
@@ -187,7 +187,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Lower, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
     }
   }
 
@@ -240,7 +240,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Upper, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
     } else {
       bool accept;
 
@@ -263,7 +263,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
           accept = false;
       }
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::Lower, Rindex[i], bound};
+        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
     }
   }
 
@@ -429,7 +429,7 @@ double HighsLpPropagator::doChangeBound(const HighsDomainChange& boundchg) {
   double oldbound;
   ++numBoundChgs_;
 
-  if (boundchg.boundtype == HighsBoundType::Lower) {
+  if (boundchg.boundtype == HighsBoundType::kLower) {
     oldbound = colLower_[boundchg.column];
     colLower_[boundchg.column] = boundchg.boundval;
     updateActivityLbChange(boundchg.column, oldbound, boundchg.boundval);
@@ -444,7 +444,7 @@ double HighsLpPropagator::doChangeBound(const HighsDomainChange& boundchg) {
 
 void HighsLpPropagator::changeBound(HighsDomainChange boundchg) {
   assert(boundchg.column >= 0);
-  if (boundchg.boundtype == HighsBoundType::Lower) {
+  if (boundchg.boundtype == HighsBoundType::kLower) {
     if (boundchg.boundval > colUpper_[boundchg.column]) {
       if (boundchg.boundval - colUpper_[boundchg.column] > 1e-6) {
         infeasible_ = true;

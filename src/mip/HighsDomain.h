@@ -208,10 +208,10 @@ class HighsDomain {
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
     if (colLower_[col] < val)
-      changeBound({HighsBoundType::Lower, col, val}, reason);
+      changeBound({HighsBoundType::kLower, col, val}, reason);
 
     if (infeasible_ == 0 && colUpper_[col] > val)
-      changeBound({HighsBoundType::Upper, col, val}, reason);
+      changeBound({HighsBoundType::kUpper, col, val}, reason);
   }
 
   HighsDomainChange backtrack();
@@ -229,9 +229,9 @@ class HighsDomain {
     reducedstack.reserve(domchgstack_.size());
     for (const HighsDomainChange& domchg : domchgstack_) {
       // keep only the tightest bound change for each variable
-      if ((domchg.boundtype == HighsBoundType::Lower &&
+      if ((domchg.boundtype == HighsBoundType::kLower &&
            colLower_[domchg.column] != domchg.boundval) ||
-          (domchg.boundtype == HighsBoundType::Upper &&
+          (domchg.boundtype == HighsBoundType::kUpper &&
            colUpper_[domchg.column] != domchg.boundval))
         continue;
 
