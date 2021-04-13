@@ -19,7 +19,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 
-const double inf = HIGHS_CONST_INF;
+const double inf = kHighsInf;
 
 class SpecialLps {
  public:

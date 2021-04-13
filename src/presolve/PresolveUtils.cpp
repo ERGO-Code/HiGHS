@@ -146,7 +146,7 @@ void printRowWise(
   }
   std::cout << "------l------\n";
   for (HighsInt i = 0; i < cols; i++) {
-    if (colLower[i] > -HIGHS_CONST_INF)
+    if (colLower[i] > -kHighsInf)
       std::cout << colLower[i] << " ";
     else
       std::cout << "-inf";
@@ -154,7 +154,7 @@ void printRowWise(
   std::cout << std::endl;
   std::cout << "------u------\n";
   for (HighsInt i = 0; i < cols; i++) {
-    if (colUpper[i] < HIGHS_CONST_INF)
+    if (colUpper[i] < kHighsInf)
       std::cout << colUpper[i] << " ";
     else
       std::cout << "inf ";
@@ -192,7 +192,7 @@ void printA(const HighsInt numRow, const HighsInt numCol,
   }
   std::cout << "------l------\n";
   for (HighsInt i = 0; i < numCol; i++) {
-    if (colLower[i] > -HIGHS_CONST_INF)
+    if (colLower[i] > -kHighsInf)
       std::cout << colLower[i] << " ";
     else
       std::cout << "-inf ";
@@ -201,7 +201,7 @@ void printA(const HighsInt numRow, const HighsInt numCol,
   std::cout << std::endl;
   std::cout << "------u------\n";
   for (HighsInt i = 0; i < numCol; i++) {
-    if (colUpper[i] < HIGHS_CONST_INF)
+    if (colUpper[i] < kHighsInf)
       std::cout << colUpper[i] << " ";
     else
       std::cout << "inf ";

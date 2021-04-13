@@ -71,7 +71,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
       const HighsInt start = (section == 0) ? randomStart : 0;
       const HighsInt end = (section == 0) ? numRow : randomStart;
       for (HighsInt iRow = start; iRow < end; iRow++) {
-        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           //	  printf("Dense: Row %4" HIGHSINT_FORMAT " weight = %g\n", iRow,
@@ -102,7 +102,7 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
       const HighsInt end = (section == 0) ? workCount : randomStart;
       for (HighsInt i = start; i < end; i++) {
         HighsInt iRow = workIndex[i];
-        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           /*
@@ -158,7 +158,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
         // Was
         //    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
         // Continue
-        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           if (cutoffMerit * myWeight < myInfeas) {
@@ -193,7 +193,7 @@ void HEkkDualRHS::chooseMultiGlobal(HighsInt* chIndex, HighsInt* chCount,
         //    for (HighsInt i = 0; i < workCount; i++) {
         // Continue
         HighsInt iRow = workIndex[i];
-        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > kHighsZero) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           /*
@@ -261,7 +261,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
       const HighsInt start = (section == 0) ? randomStart : 0;
       const HighsInt end = (section == 0) ? numRow : randomStart;
       for (HighsInt iRow = start; iRow < end; iRow++) {
-        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > kHighsZero) {
           HighsInt iPart = workPartition[iRow];
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
@@ -294,7 +294,7 @@ void HEkkDualRHS::chooseMultiHyperGraphPart(HighsInt* chIndex,
       const HighsInt end = (section == 0) ? workCount : randomStart;
       for (HighsInt i = start; i < end; i++) {
         HighsInt iRow = workIndex[i];
-        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > kHighsZero) {
           HighsInt iPart = workPartition[iRow];
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];

@@ -42,7 +42,7 @@ void solveMatrixT(const HighsInt Xstart, const HighsInt Xend,
     pivotX += Tvalue[k] * RHSarray[Tindex[k]];
 
   // Scatter by Y
-  if (fabs(pivotX) > HIGHS_CONST_TINY) {
+  if (fabs(pivotX) > kHighsTiny) {
     HighsInt workCount = *RHScount;
 
     pivotX /= Tpivot;
@@ -51,8 +51,7 @@ void solveMatrixT(const HighsInt Xstart, const HighsInt Xend,
       const double value0 = RHSarray[index];
       const double value1 = value0 - pivotX * Tvalue[k];
       if (value0 == 0) RHSindex[workCount++] = index;
-      RHSarray[index] =
-          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+      RHSarray[index] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     }
 
     *RHScount = workCount;
@@ -124,7 +123,7 @@ void solveHyper(const HighsInt Hsize, const HighsInt* Hlookup,
       listMark[i] = 0;
       HighsInt pivotRow = HpivotIndex[i];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         RHSindex[RHScount++] = pivotRow;
         const HighsInt start = Hstart[i];
         const HighsInt end = Hend[i];
@@ -141,7 +140,7 @@ void solveHyper(const HighsInt Hsize, const HighsInt* Hlookup,
       listMark[i] = 0;
       HighsInt pivotRow = HpivotIndex[i];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         pivotX /= HpivotValue[i];
         RHSarray[pivotRow] = pivotX;
         RHSindex[RHScount++] = pivotRow;
@@ -782,7 +781,7 @@ HighsInt HFactor::buildKernel() {
           mwz_column_mark[iRow] = 0;
           nFillin--;
           value -= my_pivot * mwz_column_array[iRow];
-          if (fabs(value) < HIGHS_CONST_TINY) {
+          if (fabs(value) < kHighsTiny) {
             value = 0;
             nCancel++;
           }
@@ -1074,7 +1073,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
     for (HighsInt i = 0; i < numRow; i++) {
       HighsInt pivotRow = LpivotIndex[i];
       const double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         RHSindex[RHScount++] = pivotRow;
         const HighsInt start = Lstart[i];
         const HighsInt end = Lstart[i + 1];
@@ -1120,7 +1119,7 @@ void HFactor::btranL(HVector& rhs, double historical_density,
     for (HighsInt i = numRow - 1; i >= 0; i--) {
       HighsInt pivotRow = LpivotIndex[i];
       const double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
         const HighsInt start = LRstart[i];
@@ -1209,7 +1208,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
       // Normal part
       const HighsInt pivotRow = UpivotIndex[iLogic];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         pivotX /= UpivotValue[iLogic];
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
@@ -1301,7 +1300,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
       // Normal part
       const HighsInt pivotRow = UpivotIndex[iLogic];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         pivotX /= UpivotValue[iLogic];
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
@@ -1376,8 +1375,7 @@ void HFactor::ftranFT(HVector& vector) const {
     // This would skip the situation where they are both zeros
     if (value0 || value1) {
       if (value0 == 0) RHSindex[RHScount++] = iRow;
-      RHSarray[iRow] =
-          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+      RHSarray[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     }
   }
 
@@ -1417,8 +1415,7 @@ void HFactor::btranFT(HVector& vector) const {
         double value0 = RHSarray[iRow];
         double value1 = value0 - pivotX * PFvalue[k];
         if (value0 == 0) RHSindex[RHScount++] = iRow;
-        RHSarray[iRow] =
-            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+        RHSarray[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
       }
     }
   }
@@ -1447,7 +1444,7 @@ void HFactor::ftranPF(HVector& vector) const {
   for (HighsInt i = 0; i < PFpivotCount; i++) {
     HighsInt pivotRow = PFpivotIndex[i];
     double pivotX = RHSarray[pivotRow];
-    if (fabs(pivotX) > HIGHS_CONST_TINY) {
+    if (fabs(pivotX) > kHighsTiny) {
       pivotX /= PFpivotValue[i];
       RHSarray[pivotRow] = pivotX;
       for (HighsInt k = PFstart[i]; k < PFstart[i + 1]; k++) {
@@ -1455,8 +1452,7 @@ void HFactor::ftranPF(HVector& vector) const {
         const double value0 = RHSarray[index];
         const double value1 = value0 - pivotX * PFvalue[k];
         if (value0 == 0) RHSindex[RHScount++] = index;
-        RHSarray[index] =
-            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+        RHSarray[index] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
       }
     }
   }
@@ -1488,7 +1484,7 @@ void HFactor::btranPF(HVector& vector) const {
     pivotX /= PFpivotValue[i];
 
     if (RHSarray[pivotRow] == 0) RHSindex[RHScount++] = pivotRow;
-    RHSarray[pivotRow] = (fabs(pivotX) < HIGHS_CONST_TINY) ? 1e-100 : pivotX;
+    RHSarray[pivotRow] = (fabs(pivotX) < kHighsTiny) ? 1e-100 : pivotX;
   }
 
   // Save count
@@ -1639,7 +1635,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
       HighsInt index = iwork[i];
       double value = dwork[index];
       dwork[index] = 0;  // This effectively removes all duplication
-      if (fabs(value) > HIGHS_CONST_TINY) {
+      if (fabs(value) > kHighsTiny) {
         Uindex.push_back(index);
         Uvalue.push_back(value);
       }
@@ -1662,7 +1658,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
       HighsInt pp = sorted_pp[isort].second;
       HighsInt pRow = iRow[pp];
       double multiplier = -pValue[pp] * dwork[pRow];
-      if (fabs(dwork[pRow]) > HIGHS_CONST_TINY) {
+      if (fabs(dwork[pRow]) > kHighsTiny) {
         for (HighsInt i = 0; i < epWork[pp]->packCount; i++) {
           HighsInt index = epWork[pp]->packIndex[i];
           double value = epWork[pp]->packValue[i];
@@ -1700,7 +1696,7 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, HighsInt* iRow
       HighsInt index = iwork[i];
       double value = dwork[index];
       dwork[index] = 0;
-      if (fabs(value) > HIGHS_CONST_TINY) {
+      if (fabs(value) > kHighsTiny) {
         PFindex.push_back(index);
         PFvalue.push_back(value * pivotX);
       }

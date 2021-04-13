@@ -29,7 +29,7 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                bool submip)
     : options_mip_(&options),
       model_(&lp),
-      solution_objective_(HIGHS_CONST_INF),
+      solution_objective_(kHighsInf),
       submip(submip),
       rootbasis(nullptr),
       pscostinit(nullptr),
@@ -180,7 +180,7 @@ restart:
     if (mipdata_->domain.infeasible() || mipdata_->nodequeue.empty()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
-      mipdata_->lower_bound = std::min(HIGHS_CONST_INF, mipdata_->upper_bound);
+      mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
       break;
     }
 
@@ -248,7 +248,7 @@ restart:
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) {
         ++numStallNodes;
-        if (options_mip_->mip_max_stall_nodes != HIGHS_CONST_I_INF &&
+        if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
             numStallNodes >= options_mip_->mip_max_stall_nodes) {
           limit_reached = true;
           modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
@@ -281,8 +281,7 @@ restart:
         if (mipdata_->domain.infeasible()) {
           mipdata_->nodequeue.clear();
           mipdata_->pruned_treeweight = 1.0;
-          mipdata_->lower_bound =
-              std::min(HIGHS_CONST_INF, mipdata_->upper_bound);
+          mipdata_->lower_bound = std::min(kHighsInf, mipdata_->upper_bound);
           break;
         }
 
@@ -331,7 +330,7 @@ restart:
 
 void HighsMipSolver::cleanupSolve() {
   timer_.start(timer_.postsolve_clock);
-  bool havesolution = solution_objective_ != HIGHS_CONST_INF;
+  bool havesolution = solution_objective_ != kHighsInf;
   dual_bound_ = mipdata_->lower_bound + model_->offset_;
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;

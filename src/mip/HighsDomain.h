@@ -246,13 +246,11 @@ class HighsDomain {
                            double& rhs) const;
 
   double getMinActivity(HighsInt row) const {
-    return activitymininf_[row] == 0 ? double(activitymin_[row])
-                                     : -HIGHS_CONST_INF;
+    return activitymininf_[row] == 0 ? double(activitymin_[row]) : -kHighsInf;
   }
 
   double getMaxActivity(HighsInt row) const {
-    return activitymaxinf_[row] == 0 ? double(activitymax_[row])
-                                     : HIGHS_CONST_INF;
+    return activitymaxinf_[row] == 0 ? double(activitymax_[row]) : kHighsInf;
   }
 
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut);

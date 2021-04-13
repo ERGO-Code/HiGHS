@@ -411,8 +411,8 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       model_status == HighsModelStatus::OPTIMAL;
 
   if (get_new_scaled_feasibility_tolerances) {
-    new_primal_feasibility_tolerance = HIGHS_CONST_INF;
-    new_dual_feasibility_tolerance = HIGHS_CONST_INF;
+    new_primal_feasibility_tolerance = kHighsInf;
+    new_dual_feasibility_tolerance = kHighsInf;
   }
 
   assert(int(scale.col_.size()) == lp.numCol_);
@@ -577,7 +577,7 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
   const double no_scaling_original_matrix_max_value = 5.0;
-  double original_matrix_min_value = HIGHS_CONST_INF;
+  double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   for (HighsInt k = 0, AnX = Astart[numCol]; k < AnX; k++) {
     double value = fabs(Avalue[k]);
@@ -679,7 +679,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
 
-  double original_matrix_min_value = HIGHS_CONST_INF;
+  double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   for (HighsInt k = 0, AnX = Astart[numCol]; k < AnX; k++) {
     double value = fabs(Avalue[k]);
@@ -688,7 +688,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   }
 
   // Include cost in scaling if minimum nonzero cost is less than 0.1
-  double min_nonzero_cost = HIGHS_CONST_INF;
+  double min_nonzero_cost = kHighsInf;
   for (HighsInt i = 0; i < numCol; i++) {
     if (colCost[i]) min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
   }
@@ -698,9 +698,9 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   // Limits on scaling factors
   double max_allow_scale;
   double min_allow_scale;
-  // Now that HIGHS_CONST_INF =
+  // Now that kHighsInf =
   // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
-  // work so, in recognition, use the old value of HIGHS_CONST_INF
+  // work so, in recognition, use the old value of kHighsInf
   const double finite_infinity = 1e200;
   max_allow_scale = pow(2.0, options.allowed_simplex_matrix_scale_factor);
   min_allow_scale = 1 / max_allow_scale;
@@ -1006,9 +1006,9 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double min_allow_row_scale = min_allow_scale;
   const double max_allow_row_scale = max_allow_scale;
 
-  double min_row_scale = HIGHS_CONST_INF;
+  double min_row_scale = kHighsInf;
   double max_row_scale = 0;
-  double original_matrix_min_value = HIGHS_CONST_INF;
+  double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
   // Determine the row scaling. Also determine the max/min row scaling
   // factors, and max/min original matrix values
@@ -1038,9 +1038,9 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   // Determine the column scaling, whilst applying the row scaling
   // Also determine the max/min column scaling factors, and max/min
   // matrix values
-  double min_col_scale = HIGHS_CONST_INF;
+  double min_col_scale = kHighsInf;
   double max_col_scale = 0;
-  double matrix_min_value = HIGHS_CONST_INF;
+  double matrix_min_value = kHighsInf;
   double matrix_max_value = 0;
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     double col_max_value = 0;

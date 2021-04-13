@@ -44,13 +44,13 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       continue;
     }
 
-    double lowerslack = HIGHS_CONST_INF;
-    double upperslack = HIGHS_CONST_INF;
+    double lowerslack = kHighsInf;
+    double upperslack = kHighsInf;
 
-    if (lp.rowLower_[i] != -HIGHS_CONST_INF)
+    if (lp.rowLower_[i] != -kHighsInf)
       lowerslack = lpSolution.row_value[i] - lp.rowLower_[i];
 
-    if (lp.rowUpper_[i] != HIGHS_CONST_INF)
+    if (lp.rowUpper_[i] != kHighsInf)
       upperslack = lp.rowUpper_[i] - lpSolution.row_value[i];
 
     if (lowerslack > mip.mipdata_->feastol &&

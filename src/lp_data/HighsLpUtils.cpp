@@ -387,7 +387,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
       // Check whether a finite lower bound will be treated as -Infinity
       bool infinite_lower_bound = lower[usr_ix] <= -infinite_bound;
       if (infinite_lower_bound) {
-        lower[usr_ix] = -HIGHS_CONST_INF;
+        lower[usr_ix] = -kHighsInf;
         num_infinite_lower_bound++;
       }
     }
@@ -395,7 +395,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
       // Check whether a finite upper bound will be treated as Infinity
       bool infinite_upper_bound = upper[usr_ix] >= infinite_bound;
       if (infinite_upper_bound) {
-        upper[usr_ix] = HIGHS_CONST_INF;
+        upper[usr_ix] = kHighsInf;
         num_infinite_upper_bound++;
       }
     }
@@ -504,7 +504,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const HighsInt vec_dim,
   HighsInt num_new_nz = 0;
   HighsInt num_small_values = 0;
   double max_small_value = 0;
-  double min_small_value = HIGHS_CONST_INF;
+  double min_small_value = kHighsInf;
   // Set up a zeroed vector to detect duplicate indices
   vector<HighsInt> check_vector;
   if (vec_dim > 0) check_vector.assign(vec_dim, 0);
@@ -2216,19 +2216,18 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
            (HighsInt)equality_lp.Avalue_.size());
     const HighsInt nnz = equality_lp.Astart_[equality_lp.numCol_];
 
-    if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] >= HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] <= -kHighsInf && lp.rowUpper_[row] >= kHighsInf) {
       // free row
       equality_lp.Astart_.push_back(nnz + 1);
       equality_lp.Aindex_.push_back(row);
       equality_lp.Avalue_.push_back(1.0);
 
       equality_lp.numCol_++;
-      equality_lp.colLower_.push_back(-HIGHS_CONST_INF);
-      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colLower_.push_back(-kHighsInf);
+      equality_lp.colUpper_.push_back(kHighsInf);
       equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] >= HIGHS_CONST_INF) {
+    } else if (lp.rowLower_[row] > -kHighsInf &&
+               lp.rowUpper_[row] >= kHighsInf) {
       // only lower bound
       rhs[row] = lp.rowLower_[row];
 
@@ -2238,10 +2237,10 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
 
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(0);
-      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colUpper_.push_back(kHighsInf);
       equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    } else if (lp.rowLower_[row] <= -kHighsInf &&
+               lp.rowUpper_[row] < kHighsInf) {
       // only upper bound
       rhs[row] = lp.rowUpper_[row];
 
@@ -2251,10 +2250,10 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
 
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(0);
-      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colUpper_.push_back(kHighsInf);
       equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] < HIGHS_CONST_INF &&
+    } else if (lp.rowLower_[row] > -kHighsInf &&
+               lp.rowUpper_[row] < kHighsInf &&
                lp.rowLower_[row] != lp.rowUpper_[row]) {
       // both lower and upper bound that are different
       double rhs_value, coefficient;
@@ -2325,8 +2324,8 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
   dual.colCost_.resize(ncols);
 
   for (HighsInt col = 0; col < ncols; col++) {
-    dual.colLower_[col] = -HIGHS_CONST_INF;
-    dual.colUpper_[col] = HIGHS_CONST_INF;
+    dual.colLower_[col] = -kHighsInf;
+    dual.colUpper_[col] = kHighsInf;
     // cost b'y
     dual.colCost_[col] = lp.rowLower_[col];
   }
@@ -2353,11 +2352,11 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
 
   // Add columns (zl)
   for (HighsInt col = 0; col < lp.numCol_; col++) {
-    if (lp.colLower_[col] > -HIGHS_CONST_INF) {
+    if (lp.colLower_[col] > -kHighsInf) {
       const HighsInt nnz = dual.Astart_[dual.numCol_];
 
       dual.colLower_.push_back(0);
-      dual.colUpper_.push_back(HIGHS_CONST_INF);
+      dual.colUpper_.push_back(kHighsInf);
 
       dual.colCost_.push_back(lp.colLower_[col]);
 
@@ -2372,11 +2371,11 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
 
   // Add columns (zu)
   for (HighsInt col = 0; col < lp.numCol_; col++) {
-    if (lp.colUpper_[col] < HIGHS_CONST_INF) {
+    if (lp.colUpper_[col] < kHighsInf) {
       const HighsInt nnz = dual.Astart_[dual.numCol_];
 
       dual.colLower_.push_back(0);
-      dual.colUpper_.push_back(HIGHS_CONST_INF);
+      dual.colUpper_.push_back(kHighsInf);
 
       dual.colCost_.push_back(-lp.colUpper_[col]);
 

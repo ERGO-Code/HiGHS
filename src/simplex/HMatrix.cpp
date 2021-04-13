@@ -176,16 +176,14 @@ void HMatrix::collect_aj(HVector& vector, HighsInt iCol,
       double value0 = vector.array[index];
       double value1 = value0 + multiplier * Avalue[k];
       if (value0 == 0) vector.index[vector.count++] = index;
-      vector.array[index] =
-          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+      vector.array[index] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     }
   } else {
     HighsInt index = iCol - numCol;
     double value0 = vector.array[index];
     double value1 = value0 + multiplier;
     if (value0 == 0) vector.index[vector.count++] = index;
-    vector.array[index] =
-        (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+    vector.array[index] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
   }
 }
 
@@ -201,7 +199,7 @@ void HMatrix::priceByColumn(HVector& row_ap, const HVector& row_ep) const {
     for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
       value += ep_array[Aindex[k]] * Avalue[k];
     }
-    if (fabs(value) > HIGHS_CONST_TINY) {
+    if (fabs(value) > kHighsTiny) {
       ap_array[iCol] = value;
       ap_index[ap_count++] = iCol;
     }
@@ -256,8 +254,7 @@ void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap,
         double value0 = ap_array[index];
         double value1 = value0 + multiplier * ARvalue[k];
         if (value0 == 0) ap_index[ap_count++] = index;
-        ap_array[index] =
-            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+        ap_array[index] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
       }
       nx_i = i + 1;
     }
@@ -291,15 +288,14 @@ void HMatrix::priceByRowDenseResult(HVector& row_ap, const HVector& row_ep,
       HighsInt index = ARindex[k];
       double value0 = ap_array[index];
       double value1 = value0 + multiplier * ARvalue[k];
-      ap_array[index] =
-          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
+      ap_array[index] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
     }
   }
   // Determine indices of nonzeros in PRICE result
   HighsInt ap_count = 0;
   for (HighsInt index = 0; index < numCol; index++) {
     double value1 = ap_array[index];
-    if (fabs(value1) < HIGHS_CONST_TINY) {
+    if (fabs(value1) < kHighsTiny) {
       ap_array[index] = 0;
     } else {
       ap_index[ap_count++] = index;
@@ -320,7 +316,7 @@ void HMatrix::priceByRowSparseResultRemoveCancellation(HVector& row_ap) const {
   for (HighsInt i = 0; i < apcount1; i++) {
     const HighsInt index = ap_index[i];
     const double value = ap_array[index];
-    if (fabs(value) > HIGHS_CONST_TINY) {
+    if (fabs(value) > kHighsTiny) {
       ap_index[ap_count++] = index;
     } else {
       ap_array[index] = 0;

@@ -179,11 +179,11 @@ static HighsInt setupProblem(gamshighs_t* gh) {
 
       case gmoequ_G:
         gh->lp->rowLower_[i] = gmoGetRhsOne(gh->gmo, i);
-        gh->lp->rowUpper_[i] = HIGHS_CONST_INF;
+        gh->lp->rowUpper_[i] = kHighsInf;
         break;
 
       case gmoequ_L:
-        gh->lp->rowLower_[i] = -HIGHS_CONST_INF;
+        gh->lp->rowLower_[i] = -kHighsInf;
         gh->lp->rowUpper_[i] = gmoGetRhsOne(gh->gmo, i);
         break;
 
@@ -497,8 +497,8 @@ DllExport HighsInt STDCALL C__hisCallSolver(void* Cptr) {
   gmoObjReformSet(gh->gmo, 1);
   gmoIndexBaseSet(gh->gmo, 0);
   gmoSetNRowPerm(gh->gmo); /* hide =N= rows */
-  gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
-  gmoPinfSet(gh->gmo, HIGHS_CONST_INF);
+  gmoMinfSet(gh->gmo, -kHighsInf);
+  gmoPinfSet(gh->gmo, kHighsInf);
 
   if (setupOptions(gh)) goto TERMINATE;
 
@@ -539,8 +539,8 @@ DllExport HighsInt STDCALL C__hisModifyProblem(void* Cptr) {
   gmoObjReformSet(gh->gmo, 1);
   gmoIndexBaseSet(gh->gmo, 0);
   gmoSetNRowPerm(gh->gmo); /* hide =N= rows */
-  gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
-  gmoPinfSet(gh->gmo, HIGHS_CONST_INF);
+  gmoMinfSet(gh->gmo, -kHighsInf);
+  gmoPinfSet(gh->gmo, kHighsInf);
 
   HighsInt maxsize = std::max(gmoN(gh->gmo), gmoM(gh->gmo));
 
@@ -582,11 +582,11 @@ DllExport HighsInt STDCALL C__hisModifyProblem(void* Cptr) {
 
       case gmoequ_G:
         array1[i] = rhs;
-        array2[i] = HIGHS_CONST_INF;
+        array2[i] = kHighsInf;
         break;
 
       case gmoequ_L:
-        array1[i] = -HIGHS_CONST_INF;
+        array1[i] = -kHighsInf;
         array2[i] = rhs;
         break;
 

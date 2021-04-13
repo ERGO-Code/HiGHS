@@ -19,7 +19,7 @@
 HighsDebugSol::HighsDebugSol(HighsMipSolver& mipsolver)
     : debugSolActive(false) {
   this->mipsolver = &mipsolver;
-  debugSolObjective = -HIGHS_CONST_INF;
+  debugSolObjective = -kHighsInf;
   debugSolActive = false;
 }
 

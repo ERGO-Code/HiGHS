@@ -265,8 +265,8 @@ void HEkkPrimal::initialise() {
 
   num_free_col = 0;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
-    if (ekk_instance_.simplex_info_.workLower_[iCol] == -HIGHS_CONST_INF &&
-        ekk_instance_.simplex_info_.workUpper_[iCol] == HIGHS_CONST_INF) {
+    if (ekk_instance_.simplex_info_.workLower_[iCol] == -kHighsInf &&
+        ekk_instance_.simplex_info_.workUpper_[iCol] == kHighsInf) {
       // Free column
       num_free_col++;
     }
@@ -946,7 +946,7 @@ void HEkkPrimal::phase1ChooseRow() {
       // Whether it can become infeasible (again) by going below its
       // lower bound
       if (baseValue[iRow] > baseLower[iRow] - primal_feasibility_tolerance &&
-          baseLower[iRow] > -HIGHS_CONST_INF) {
+          baseLower[iRow] > -kHighsInf) {
         double dRelaxTheta =
             (baseValue[iRow] - baseLower[iRow] + primal_feasibility_tolerance) /
             dAlpha;
@@ -969,7 +969,7 @@ void HEkkPrimal::phase1ChooseRow() {
       // Whether it can become infeasible (again) by going above its
       // upper bound
       if (baseValue[iRow] < baseUpper[iRow] + primal_feasibility_tolerance &&
-          baseUpper[iRow] < +HIGHS_CONST_INF) {
+          baseUpper[iRow] < +kHighsInf) {
         double dRelaxTheta =
             (baseValue[iRow] - baseUpper[iRow] - primal_feasibility_tolerance) /
             dAlpha;
@@ -1118,7 +1118,7 @@ void HEkkPrimal::considerBoundSwap() {
   if (row_out < 0) {
     assert(solvePhase == SOLVE_PHASE_2);
     // No binding ratio in CHUZR, so flip or unbounded
-    theta_primal = move_in * HIGHS_CONST_INF;
+    theta_primal = move_in * kHighsInf;
     move_out = 0;
   } else {
     // Determine the step to the leaving bound
@@ -1136,7 +1136,7 @@ void HEkkPrimal::considerBoundSwap() {
     } else {
       theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha_col;
     }
-    assert(theta_primal > -HIGHS_CONST_INF && theta_primal < HIGHS_CONST_INF);
+    assert(theta_primal > -kHighsInf && theta_primal < kHighsInf);
   }
 
   // Look to see if there is a bound flip
@@ -2204,7 +2204,7 @@ void HEkkPrimal::localReportIter(const bool header) {
         double dual = simplex_info.workDual_[check_column];
         double weight = devex_weight[check_column];
         double infeasibility = -move * dual;
-        if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF)
+        if (lower == -kHighsInf && upper == kHighsInf)
           infeasibility = fabs(dual);
         if (infeasibility < dual_feasibility_tolerance) infeasibility = 0;
         double measure = infeasibility / weight;
@@ -2232,8 +2232,8 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     bool nonbasic_free =
         simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_TRUE &&
-        simplex_info.workLower_[iCol] <= -HIGHS_CONST_INF &&
-        simplex_info.workUpper_[iCol] >= HIGHS_CONST_INF;
+        simplex_info.workLower_[iCol] <= -kHighsInf &&
+        simplex_info.workUpper_[iCol] >= kHighsInf;
     if (nonbasic_free) nonbasic_free_col_set.add(iCol);
   }
   //  nonbasic_free_col_set.print();

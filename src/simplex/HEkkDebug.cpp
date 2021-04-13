@@ -530,8 +530,7 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
-  if (options.highs_debug_level < kHighsDebugLevelCostly)
-    return return_status;
+  if (options.highs_debug_level < kHighsDebugLevelCostly) return return_status;
   const bool correct_nonbasicMove =
       ekkDebugNonbasicMove(ekk_instance) != HighsDebugStatus::LOGICAL_ERROR;
   if (!correct_nonbasicMove) {
@@ -1216,8 +1215,8 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
   // Check the number of free columns
   HighsInt check_num_free_col = 0;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
-    if (simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF)
+    if (simplex_info.workLower_[iVar] <= -kHighsInf &&
+        simplex_info.workUpper_[iVar] >= kHighsInf)
       check_num_free_col++;
   }
   if (check_num_free_col != num_free_col) {
@@ -1242,8 +1241,8 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
   for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
     bool nonbasic_free =
         simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
-        simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+        simplex_info.workLower_[iVar] <= -kHighsInf &&
+        simplex_info.workUpper_[iVar] >= kHighsInf;
     if (nonbasic_free) check_num_nonbasic_free_col++;
   }
   if (check_num_nonbasic_free_col != num_nonbasic_free_col) {
@@ -1260,8 +1259,8 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
     HighsInt iVar = nonbasic_free_col_set_entry[ix];
     bool nonbasic_free =
         simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
-        simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+        simplex_info.workLower_[iVar] <= -kHighsInf &&
+        simplex_info.workUpper_[iVar] >= kHighsInf;
     if (!nonbasic_free) {
       highsLogDev(options.log_options, HighsLogType::INFO,
                   "NonbasicFreeColumnData: Variable %" HIGHSINT_FORMAT

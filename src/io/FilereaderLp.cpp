@@ -147,7 +147,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile(file, "= %+g", model.rowLower_[row]);
       this->writeToFileLineend(file);
     } else {
-      if (model.rowLower_[row] > -HIGHS_CONST_INF) {
+      if (model.rowLower_[row] > -kHighsInf) {
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < model.numCol_; var++) {
@@ -161,7 +161,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         }
         this->writeToFile(file, ">= %+g", model.rowLower_[row]);
         this->writeToFileLineend(file);
-      } else if (model.rowUpper_[row] < HIGHS_CONST_INF) {
+      } else if (model.rowUpper_[row] < kHighsInf) {
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < model.numCol_; var++) {
@@ -187,19 +187,18 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   for (HighsInt i = 0; i < model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (model.colLower_[i] > -HIGHS_CONST_INF &&
-        model.colUpper_[i] < HIGHS_CONST_INF) {
+    if (model.colLower_[i] > -kHighsInf && model.colUpper_[i] < kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= %+g",
                         model.colLower_[i], i + 1, model.colUpper_[i]);
       this->writeToFileLineend(file);
-    } else if (model.colLower_[i] <= -HIGHS_CONST_INF &&
-               model.colUpper_[i] < HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] <= -kHighsInf &&
+               model.colUpper_[i] < kHighsInf) {
       this->writeToFile(file, " -inf <= x%" HIGHSINT_FORMAT " <= %+g", i + 1,
                         model.colUpper_[i]);
       this->writeToFileLineend(file);
 
-    } else if (model.colLower_[i] > -HIGHS_CONST_INF &&
-               model.colUpper_[i] >= HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] > -kHighsInf &&
+               model.colUpper_[i] >= kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= +inf",
                         model.colLower_[i], i + 1);
       this->writeToFileLineend(file);

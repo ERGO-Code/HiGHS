@@ -78,12 +78,12 @@ double HighsLpRelaxation::slackLower(HighsInt row) const {
           mipsolver.mipdata_->cutpool, lprows[row].index);
     case LpRow::kModel:
       double rowlower = rowLower(row);
-      if (rowlower != -HIGHS_CONST_INF) return rowlower;
+      if (rowlower != -kHighsInf) return rowlower;
       return mipsolver.mipdata_->domain.getMinActivity(lprows[row].index);
   };
 
   assert(false);
-  return -HIGHS_CONST_INF;
+  return -kHighsInf;
 }
 
 double HighsLpRelaxation::slackUpper(HighsInt row) const {
@@ -92,12 +92,12 @@ double HighsLpRelaxation::slackUpper(HighsInt row) const {
     case LpRow::kCutPool:
       return rowupper;
     case LpRow::kModel:
-      if (rowupper != HIGHS_CONST_INF) return rowupper;
+      if (rowupper != kHighsInf) return rowupper;
       return mipsolver.mipdata_->domain.getMaxActivity(lprows[row].index);
   };
 
   assert(false);
-  return HIGHS_CONST_INF;
+  return kHighsInf;
 }
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
@@ -116,7 +116,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
-  objective = -HIGHS_CONST_INF;
+  objective = -kHighsInf;
   currentbasisstored = false;
 }
 
@@ -137,7 +137,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   numSolved = 0;
   epochs = 0;
   maxNumFractional = 0;
-  objective = -HIGHS_CONST_INF;
+  objective = -kHighsInf;
 }
 
 void HighsLpRelaxation::loadModel() {
@@ -276,7 +276,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
 
   ++epochs;
   if (epochs % std::max(size_t(agelimit) / 2u, size_t(2)) != 0)
-    agelimit = HIGHS_CONST_I_INF;
+    agelimit = kHighsIInf;
   else if (epochs < agelimit)
     agelimit = epochs;
 
@@ -284,7 +284,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   HighsInt nummodelrows = getNumModelRows();
   std::vector<HighsInt> deletemask;
 
-  if (!useBasis && agelimit != HIGHS_CONST_I_INF) {
+  if (!useBasis && agelimit != kHighsIInf) {
     HighsBasis b = mipsolver.mipdata_->firstrootbasis;
     b.row_status.resize(nlprows, HighsBasisStatus::BASIC);
     HighsStatus st = lpsolver.setBasis(b);
@@ -343,12 +343,12 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (row_dual[i] < 0) {
-      if (lp.rowLower_[i] != -HIGHS_CONST_INF)
+      if (lp.rowLower_[i] != -kHighsInf)
         upper += row_dual[i] * lp.rowLower_[i];
       else
         row_dual[i] = 0;
     } else if (row_dual[i] > 0) {
-      if (lp.rowUpper_[i] != HIGHS_CONST_INF)
+      if (lp.rowUpper_[i] != kHighsInf)
         upper += row_dual[i] * lp.rowUpper_[i];
       else
         row_dual[i] = 0;
@@ -388,10 +388,10 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     if (removeValue) {
       if (val < 0) {
-        if (globaldomain.colUpper_[i] == HIGHS_CONST_INF) return false;
+        if (globaldomain.colUpper_[i] == kHighsInf) return false;
         upper -= val * globaldomain.colUpper_[i];
       } else {
-        if (globaldomain.colLower_[i] == -HIGHS_CONST_INF) return false;
+        if (globaldomain.colLower_[i] == -kHighsInf) return false;
 
         upper -= val * globaldomain.colLower_[i];
       }
@@ -428,7 +428,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 
   dualproofinds.clear();
   dualproofvals.clear();
-  dualproofrhs = HIGHS_CONST_INF;
+  dualproofrhs = kHighsInf;
   const HighsLp& lp = lpsolver.getLp();
   dualproofbuffer.resize(numrow);
 
@@ -452,18 +452,18 @@ void HighsLpRelaxation::storeDualInfProof() {
             mipsolver.mipdata_->feastol)
       dualray[i] = 0;
     else if (dualray[i] < 0) {
-      if (lp.rowUpper_[i] == HIGHS_CONST_INF) dualray[i] = 0.0;
+      if (lp.rowUpper_[i] == kHighsInf) dualray[i] = 0.0;
     } else if (dualray[i] > 0) {
-      if (lp.rowLower_[i] == -HIGHS_CONST_INF) dualray[i] = 0.0;
+      if (lp.rowLower_[i] == -kHighsInf) dualray[i] = 0.0;
     }
   }
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (dualray[i] < 0) {
-      assert(lp.rowUpper_[i] != HIGHS_CONST_INF);
+      assert(lp.rowUpper_[i] != kHighsInf);
       upper -= dualray[i] * lp.rowUpper_[i];
     } else if (dualray[i] > 0) {
-      assert(lp.rowLower_[i] != -HIGHS_CONST_INF);
+      assert(lp.rowLower_[i] != -kHighsInf);
       upper -= dualray[i] * lp.rowLower_[i];
     }
   }
@@ -488,10 +488,10 @@ void HighsLpRelaxation::storeDualInfProof() {
         mipsolver.mipdata_->domain.colLower_[i] ==
             mipsolver.mipdata_->domain.colUpper_[i]) {
       if (val < 0) {
-        if (mipsolver.mipdata_->domain.colUpper_[i] == HIGHS_CONST_INF) return;
+        if (mipsolver.mipdata_->domain.colUpper_[i] == kHighsInf) return;
         upper -= val * mipsolver.mipdata_->domain.colUpper_[i];
       } else {
-        if (mipsolver.mipdata_->domain.colLower_[i] == -HIGHS_CONST_INF) return;
+        if (mipsolver.mipdata_->domain.colLower_[i] == -kHighsInf) return;
         upper -= val * mipsolver.mipdata_->domain.colLower_[i];
       }
 
@@ -515,7 +515,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
-  dualproofrhs = HIGHS_CONST_INF;
+  dualproofrhs = kHighsInf;
   assert(lpsolver.getModelStatus(true) ==
          HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
 
@@ -540,7 +540,7 @@ void HighsLpRelaxation::storeDualUBProof() {
     }
 
     if (scale * dualray[i] <= 0.0) {
-      if (lp.rowUpper_[i] == HIGHS_CONST_INF) {
+      if (lp.rowUpper_[i] == kHighsInf) {
         if (scale == 0.0)
           scale = copysign(1.0, dualray[i]);
         else
@@ -549,7 +549,7 @@ void HighsLpRelaxation::storeDualUBProof() {
     }
 
     if (scale * dualray[i] >= 0.0) {
-      if (lp.rowLower_[i] == -HIGHS_CONST_INF) {
+      if (lp.rowLower_[i] == -kHighsInf) {
         if (scale == 0.0)
           scale = -copysign(1.0, dualray[i]);
         else
@@ -567,10 +567,10 @@ void HighsLpRelaxation::storeDualUBProof() {
     if (dualray[i] == 0.0) continue;
 
     if (scale * dualray[i] < 0) {
-      assert(lp.rowUpper_[i] != HIGHS_CONST_INF);
+      assert(lp.rowUpper_[i] != kHighsInf);
       upper -= scale * dualray[i] * lp.rowUpper_[i];
     } else {
-      assert(lp.rowLower_[i] != -HIGHS_CONST_INF);
+      assert(lp.rowLower_[i] != -kHighsInf);
       upper -= scale * dualray[i] * lp.rowLower_[i];
     }
   }
@@ -595,10 +595,10 @@ void HighsLpRelaxation::storeDualUBProof() {
         mipsolver.mipdata_->domain.colLower_[i] ==
             mipsolver.mipdata_->domain.colUpper_[i]) {
       if (val < 0) {
-        if (mipsolver.mipdata_->domain.colUpper_[i] == HIGHS_CONST_INF) return;
+        if (mipsolver.mipdata_->domain.colUpper_[i] == kHighsInf) return;
         upper -= val * mipsolver.mipdata_->domain.colUpper_[i];
       } else {
-        if (mipsolver.mipdata_->domain.colLower_[i] == -HIGHS_CONST_INF) return;
+        if (mipsolver.mipdata_->domain.colLower_[i] == -kHighsInf) return;
 
         upper -= val * mipsolver.mipdata_->domain.colLower_[i];
       }
@@ -622,7 +622,7 @@ void HighsLpRelaxation::storeDualUBProof() {
 
 bool HighsLpRelaxation::checkDualProof() const {
   if (!hasdualproof) return true;
-  if (dualproofrhs == HIGHS_CONST_INF) return false;
+  if (dualproofrhs == kHighsInf) return false;
 
   HighsInt len = dualproofinds.size();
 
@@ -633,11 +633,11 @@ bool HighsLpRelaxation::checkDualProof() const {
   for (HighsInt i = 0; i != len; ++i) {
     HighsInt col = dualproofinds[i];
     if (dualproofvals[i] > 0) {
-      if (lp.colLower_[col] == -HIGHS_CONST_INF) return false;
+      if (lp.colLower_[col] == -kHighsInf) return false;
       viol += dualproofvals[i] * lp.colLower_[col];
     } else {
       assert(dualproofvals[i] < 0);
-      if (lp.colUpper_[col] == HIGHS_CONST_INF) return false;
+      if (lp.colUpper_[col] == kHighsInf) return false;
       viol += dualproofvals[i] * lp.colUpper_[col];
     }
   }
@@ -940,7 +940,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         break;
       }
       case Status::Infeasible:
-        objective = HIGHS_CONST_INF;
+        objective = kHighsInf;
         break;
       default:
         break;

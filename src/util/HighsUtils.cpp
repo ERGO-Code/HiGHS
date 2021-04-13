@@ -281,7 +281,7 @@ double getNorm2(const std::vector<double> values) {
 }
 
 bool highs_isInfinity(double val) {
-  if (val >= HIGHS_CONST_INF) return true;
+  if (val >= kHighsInf) return true;
   return false;
 }
 
@@ -636,7 +636,7 @@ bool initialiseValueDistribution(const std::string distribution_name,
   value_distribution.num_count_ = num_count;
   value_distribution.num_zero_ = 0;
   value_distribution.num_one_ = 0;
-  value_distribution.min_value_ = HIGHS_CONST_INF;
+  value_distribution.min_value_ = kHighsInf;
   value_distribution.max_value_ = 0;
   value_distribution.sum_count_ = 0;
   return true;

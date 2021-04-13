@@ -212,7 +212,7 @@ class HighsGFkSolve {
 
       HighsInt pivot = -1;
       HighsInt pivotRow = -1;
-      HighsInt pivotRowLen = HIGHS_CONST_I_INF;
+      HighsInt pivotRowLen = kHighsIInf;
       for (HighsInt coliter = colhead[pivotCol]; coliter != -1;
            coliter = Anext[coliter]) {
         HighsInt row = Arow[coliter];

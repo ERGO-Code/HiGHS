@@ -138,8 +138,8 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
       details.checked++;
       double infeas = 0;
       // j not in L or U
-      if (state.colLower[i] <= -HIGHS_CONST_INF &&
-          state.colUpper[i] >= HIGHS_CONST_INF) {
+      if (state.colLower[i] <= -kHighsInf &&
+          state.colUpper[i] >= kHighsInf) {
         if (fabs(state.colDual[i]) > tol) {
           if (dev_print == 1)
             std::cout << "Dual feasibility fail: l=-inf, x[" << i
@@ -258,7 +258,7 @@ void checkComplementarySlackness(const State& state,
     if (state.flagCol[i]) {
       double infeas = 0;
       details.checked++;
-      if (state.colLower[i] > -HIGHS_CONST_INF &&
+      if (state.colLower[i] > -kHighsInf &&
           fabs(state.colValue[i] - state.colLower[i]) > tol) {
         if (fabs(state.colDual[i]) > tol &&
             fabs(state.colValue[i] - state.colUpper[i]) > tol) {
@@ -270,7 +270,7 @@ void checkComplementarySlackness(const State& state,
           infeas = fabs(state.colDual[i]);
         }
       }
-      if (state.colUpper[i] < HIGHS_CONST_INF &&
+      if (state.colUpper[i] < kHighsInf &&
           fabs(state.colUpper[i] - state.colValue[i]) > tol) {
         if (fabs(state.colDual[i]) > tol &&
             fabs(state.colValue[i] - state.colLower[i]) > tol) {

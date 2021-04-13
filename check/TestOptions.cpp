@@ -18,7 +18,7 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   bool success = loadOptionsFromFile(options);
   REQUIRE(success == true);
-  REQUIRE(options.presolve == on_string);
+  REQUIRE(options.presolve == kHighsOnString);
   REQUIRE(options.small_matrix_value == 0.001);
   REQUIRE(options.mps_parser_type_free);
 

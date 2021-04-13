@@ -93,7 +93,7 @@ void HEkkDualRow::choosePossible() {
           : ekk_instance_.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
   const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
-  workTheta = HIGHS_CONST_INF;
+  workTheta = kHighsInf;
   workCount = 0;
   for (HighsInt i = 0; i < packCount; i++) {
     const HighsInt iCol = packIndex[i];

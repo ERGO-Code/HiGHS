@@ -34,8 +34,8 @@ class HFactor;
  * num_threads-2 slices; PAMI uses num_threads-1 slices
  */
 const HighsInt HIGHS_SLICED_LIMIT =
-    HIGHS_THREAD_LIMIT;  // Was 100, but can't see why this should be higher
-                         // than HIGHS_THREAD_LIMIT;
+    kHighsThreadLimit;  // Was 100, but can't see why this should be higher
+                        // than kHighsThreadLimit;
 
 /**
  * Parameters controlling number of Devex iterations.
@@ -528,8 +528,8 @@ class HEkkDual {
   HighsInt multi_nFinish;
   HighsInt multi_iteration;
   HighsInt multi_chooseAgain;
-  MChoice multi_choice[HIGHS_THREAD_LIMIT];
-  MFinish multi_finish[HIGHS_THREAD_LIMIT];
+  MChoice multi_choice[kHighsThreadLimit];
+  MFinish multi_finish[kHighsThreadLimit];
 
   //  double build_syntheticTick;
   //  double total_syntheticTick;

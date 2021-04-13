@@ -158,7 +158,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
       // Upper bound must be infinite
-      if (colUpper[iCol] < HIGHS_CONST_INF) {
+      if (colUpper[iCol] < kHighsInf) {
         ray_error_norm += fabs(primal_ray_value[iCol]);
         if (primal_ray_value[iCol] > zero_ray_value_tolerance && dev_run)
           printf("Column %" HIGHSINT_FORMAT
@@ -168,7 +168,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       }
     } else if (primal_ray_value[iCol] < 0) {
       // Lower bound must be infinite
-      if (colLower[iCol] > -HIGHS_CONST_INF) {
+      if (colLower[iCol] > -kHighsInf) {
         ray_error_norm += fabs(primal_ray_value[iCol]);
         if (primal_ray_value[iCol] < -zero_ray_value_tolerance && dev_run)
           printf("Column %" HIGHSINT_FORMAT
@@ -181,7 +181,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     if (row_ray_value[iRow] > 0) {
       // Upper bound must be infinite
-      if (rowUpper[iRow] > HIGHS_CONST_INF) {
+      if (rowUpper[iRow] > kHighsInf) {
         ray_error_norm += fabs(row_ray_value[iRow]);
         if (row_ray_value[iRow] > zero_ray_value_tolerance && dev_run)
           printf("Row %" HIGHSINT_FORMAT
@@ -190,7 +190,7 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       }
     } else if (row_ray_value[iRow] < -0) {
       // Lower bound must be infinite
-      if (rowLower[iRow] > -HIGHS_CONST_INF) {
+      if (rowLower[iRow] > -kHighsInf) {
         ray_error_norm += fabs(row_ray_value[iRow]);
         if (row_ray_value[iRow] < -zero_ray_value_tolerance && dev_run)
           printf("Row %" HIGHSINT_FORMAT

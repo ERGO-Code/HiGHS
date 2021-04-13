@@ -127,7 +127,7 @@ void testRanging(Highs& highs) {
     double solved_dn = 0;
     double error;
     // Col cost up ranging
-    if (col_cost_up_value < HIGHS_CONST_INF) {
+    if (col_cost_up_value < kHighsInf) {
       highs.changeColCost(i, col_cost_up_value);
       highs.setBasis(basis);
       if (test_all_col_cost) {
@@ -157,7 +157,7 @@ void testRanging(Highs& highs) {
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
     // Col cost down ranging
-    if (col_cost_dn_value > -HIGHS_CONST_INF) {
+    if (col_cost_dn_value > -kHighsInf) {
       highs.changeColCost(i, col_cost_dn_value);
       highs.setBasis(basis);
       if (test_all_col_cost) {
@@ -227,7 +227,7 @@ void testRanging(Highs& highs) {
     double solved_dn = 0;
     double error;
     // Col bound up ranging
-    if (col_bound_up_value < HIGHS_CONST_INF) {
+    if (col_bound_up_value < kHighsInf) {
       // Free cols should not have a finite col_bound_up_value
       assert(col_status[i] != HighsBasisStatus::ZERO);
       new_lower = lower;
@@ -275,7 +275,7 @@ void testRanging(Highs& highs) {
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
     // Col bound down ranging
-    if (col_bound_dn_value > -HIGHS_CONST_INF) {
+    if (col_bound_dn_value > -kHighsInf) {
       // Free cols should not have a finite col_bound_dn_value
       assert(col_status[i] != HighsBasisStatus::ZERO);
       new_lower = lower;
@@ -364,7 +364,7 @@ void testRanging(Highs& highs) {
     double solved_dn = 0;
     double error;
     // Row bound up ranging
-    if (row_bound_up_value < HIGHS_CONST_INF) {
+    if (row_bound_up_value < kHighsInf) {
       // Free rows should not have a finite row_bound_up_value
       assert(row_status[i] != HighsBasisStatus::ZERO);
       new_lower = lower;
@@ -412,7 +412,7 @@ void testRanging(Highs& highs) {
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
     // Row bound down ranging
-    if (row_bound_dn_value > -HIGHS_CONST_INF) {
+    if (row_bound_dn_value > -kHighsInf) {
       // Free rows should not have a finite row_bound_dn_value
       assert(row_status[i] != HighsBasisStatus::ZERO);
       new_lower = lower;

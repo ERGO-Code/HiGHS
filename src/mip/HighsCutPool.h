@@ -32,7 +32,7 @@ struct HighsCutSet {
 
   void resize(HighsInt nnz) {
     HighsInt ncuts = numCuts();
-    lower_.resize(ncuts, -HIGHS_CONST_INF);
+    lower_.resize(ncuts, -kHighsInf);
     upper_.resize(ncuts);
     ARstart_.resize(ncuts + 1);
     ARindex_.resize(nnz);

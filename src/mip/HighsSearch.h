@@ -82,11 +82,10 @@ class HighsSearch {
     HighsInt domgchgStackPos;
     uint8_t opensubtrees;
 
-    NodeData(double parentlb = -HIGHS_CONST_INF,
-             double parentestimate = -HIGHS_CONST_INF)
+    NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf)
         : lower_bound(parentlb),
           estimate(parentestimate),
-          lp_objective(-HIGHS_CONST_INF),
+          lp_objective(-kHighsInf),
           domgchgStackPos(-1),
           opensubtrees(2) {}
   };

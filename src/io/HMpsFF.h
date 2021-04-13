@@ -61,7 +61,7 @@ class HMpsFF {
                                          const std::string filename,
                                          HighsLp& lp);
 
-  double time_limit = HIGHS_CONST_INF;
+  double time_limit = kHighsInf;
 
  private:
   double start_time;

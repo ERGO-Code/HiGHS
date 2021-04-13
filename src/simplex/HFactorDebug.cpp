@@ -348,7 +348,7 @@ void debugPivotValueAnalysis(const HighsInt highs_debug_level,
                              const HighsInt numRow,
                              const vector<double>& UpivotValue) {
   if (highs_debug_level < kHighsDebugLevelCheap) return;
-  double min_pivot = HIGHS_CONST_INF;
+  double min_pivot = kHighsInf;
   double mean_pivot = 0;
   double max_pivot = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {

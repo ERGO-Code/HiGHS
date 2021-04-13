@@ -909,7 +909,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[6] = 3.91;
 
   // Attempting to set a cost to infinity may return error
-  REQUIRE(highs.changeColCost(7, HIGHS_CONST_INF) == allow_infinite_costs);
+  REQUIRE(highs.changeColCost(7, kHighsInf) == allow_infinite_costs);
 
   // Attempting to set a cost to a finite value returns OK
   REQUIRE(highs.changeColCost(7, 77));
@@ -921,16 +921,16 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   // Attempting to set row bounds with infinite lower bound returns error
-  REQUIRE(!highs.changeRowBounds(2, HIGHS_CONST_INF, 3.21));
+  REQUIRE(!highs.changeRowBounds(2, kHighsInf, 3.21));
 
-  REQUIRE(highs.changeRowBounds(2, -HIGHS_CONST_INF, 3.21));
+  REQUIRE(highs.changeRowBounds(2, -kHighsInf, 3.21));
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   // Attempting to set col bounds with -infinite upper bound returns error
-  REQUIRE(!highs.changeColBounds(2, 0.21, -HIGHS_CONST_INF));
+  REQUIRE(!highs.changeColBounds(2, 0.21, -kHighsInf));
 
-  REQUIRE(highs.changeColBounds(2, 0.21, HIGHS_CONST_INF));
+  REQUIRE(highs.changeColBounds(2, 0.21, kHighsInf));
 
   REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
                                  row0135789_lower, row0135789_upper));

@@ -461,7 +461,7 @@ HighsStatus Highs::run() {
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
 
-  if (!options_.solver.compare(choose_string) && isMip(lp_)) {
+  if (!options_.solver.compare(kHighsChooseString) && isMip(lp_)) {
     // Solve the model as a MIP
     call_status = callSolveMip();
     return_status =
@@ -491,7 +491,7 @@ HighsStatus Highs::run() {
   // original LP
   HighsInt solved_hmo = original_hmo;
 
-  if (!basis_.valid_ && options_.presolve != off_string) {
+  if (!basis_.valid_ && options_.presolve != kHighsOffString) {
     // No HiGHS basis so consider presolve
     //
     // If using IPX to solve the reduced LP, crossover must be run
@@ -576,7 +576,7 @@ HighsStatus Highs::run() {
         //	HighsOptions save_options = options;
         const double save_dual_objective_value_upper_bound =
             options_.dual_objective_value_upper_bound;
-        options_.dual_objective_value_upper_bound = HIGHS_CONST_INF;
+        options_.dual_objective_value_upper_bound = kHighsInf;
         this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(solved_hmo, "Solving the presolved LP");
@@ -719,8 +719,7 @@ HighsStatus Highs::run() {
           // returned from postsolve
           const bool force_debug = false;
           HighsInt save_highs_debug_level = options_.highs_debug_level;
-          if (force_debug)
-            options_.highs_debug_level = kHighsDebugLevelCostly;
+          if (force_debug) options_.highs_debug_level = kHighsDebugLevelCostly;
           debugHighsBasicSolution("After returning from postsolve", options_,
                                   lp_, hmos_[original_hmo].basis_,
                                   hmos_[original_hmo].solution_);
@@ -1113,7 +1112,7 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
       value += lp.Avalue_[el] * basis_inverse_row_vector[row];
     }
     row_vector[col] = 0;
-    if (fabs(value) > HIGHS_CONST_TINY) {
+    if (fabs(value) > kHighsTiny) {
       if (return_indices) row_indices[(*row_num_nz)++] = col;
       row_vector[col] = value;
     }
@@ -1792,7 +1791,7 @@ bool Highs::scaleRow(const HighsInt row, const double scaleval) {
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
-double Highs::getInfinity() { return HIGHS_CONST_INF; }
+double Highs::getInfinity() { return kHighsInf; }
 
 double Highs::getRunTime() { return timer_.readRunHighsClock(); }
 
@@ -1860,7 +1859,8 @@ void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
 HighsPresolveStatus Highs::runPresolve() {
   presolve_.clear();
   // Exit if the problem is empty or if presolve is set to off.
-  if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
+  if (options_.presolve == kHighsOffString)
+    return HighsPresolveStatus::NotPresolved;
 
   // Ensure that the LP is column-wise
   // setOrientation(lp_);
@@ -1872,7 +1872,7 @@ HighsPresolveStatus Highs::runPresolve() {
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
-  if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
+  if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
     double left = options_.time_limit - start_presolve;
     if (left <= 0) {
       highsLogDev(options_.log_options, HighsLogType::ERROR,
@@ -1889,7 +1889,7 @@ HighsPresolveStatus Highs::runPresolve() {
   // Presolve.
   presolve_.init(lp_, timer_);
   presolve_.options_ = &options_;
-  if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
+  if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
     double current = timer_.readRunHighsClock();
     double time_init = current - start_presolve;
     double left = presolve_.options_->time_limit - time_init;
@@ -2016,7 +2016,7 @@ HighsStatus Highs::callSolveMip() {
   info_.max_dual_infeasibility = -1;      // Not known
   info_.sum_dual_infeasibilities = -1;    // Not known
   // The solution needs to be here, but just resize it for now
-  if (solver.solution_objective_ != HIGHS_CONST_INF) {
+  if (solver.solution_objective_ != kHighsInf) {
     info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     HighsInt solver_solution_size = solver.solution_.size();
     assert(solver_solution_size >= lp_.numCol_);
@@ -2144,7 +2144,7 @@ HighsStatus Highs::getUseModelStatus(
     } else if (rerun_from_logical_basis) {
       std::string save_presolve = options_.presolve;
       basis_.valid_ = false;
-      options_.presolve = on_string;
+      options_.presolve = kHighsOnString;
       call_status = run();
       return_status = interpretCallStatus(call_status, return_status, "run()");
       options_.presolve = save_presolve;

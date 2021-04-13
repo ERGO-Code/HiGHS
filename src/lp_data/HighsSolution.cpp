@@ -259,14 +259,13 @@ HighsStatus ipxSolutionToHighsSolution(
   for (HighsInt row = 0; row < lp.numRow_; row++) {
     double lower = lp.rowLower_[row];
     double upper = lp.rowUpper_[row];
-    if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
       highs_solution.row_value[row] = row_activity[row];
       //      highs_solution.row_dual[row] = 0;
     } else {
       // Non-free row, so IPX will have it
-      if ((lower > -HIGHS_CONST_INF && upper < HIGHS_CONST_INF) &&
-          (lower < upper)) {
+      if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
         // Boxed row - look at its slack
         num_boxed_rows++;
         highs_solution.row_value[row] = ipx_col_value[ipx_slack];
@@ -406,15 +405,14 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #ifdef HiGHSDEV
     HighsInt this_ipx_row = ipx_row;
 #endif
-    if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so make it basic at its row activity
       highs_basis.row_status[row] = HighsBasisStatus::BASIC;
       highs_solution.row_value[row] = row_activity[row];
       highs_solution.row_dual[row] = 0;
     } else {
       // Non-free row, so IPX will have it
-      if ((lower > -HIGHS_CONST_INF && upper < HIGHS_CONST_INF) &&
-          (lower < upper)) {
+      if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
         // Boxed row - look at its slack
         num_boxed_rows++;
         double slack_value = ipx_col_value[ipx_slack];

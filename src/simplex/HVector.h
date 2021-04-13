@@ -52,7 +52,7 @@ class HVector {
   HVector* next;           //!< Allows vectors to be linked for PAMI
 
   /**
-   * @brief Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY
+   * @brief Packing: Zero values in Vector.array which exceed kHighsTiny
    * in magnitude
    *
    */

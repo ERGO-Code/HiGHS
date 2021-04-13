@@ -392,7 +392,7 @@ double OsiHiGHSSolverInterface::getInfinity() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::INFO,
               "Calling OsiHiGHSSolverInterface::getInfinity()\n");
-  return HIGHS_CONST_INF;
+  return kHighsInf;
 }
 
 const double* OsiHiGHSSolverInterface::getRowRange() const {
@@ -758,19 +758,19 @@ void OsiHiGHSSolverInterface::loadProblem(
   if (colub != NULL) {
     lp.colUpper_.assign(colub, colub + numcols);
   } else {
-    lp.colUpper_.assign(numcols, HIGHS_CONST_INF);
+    lp.colUpper_.assign(numcols, kHighsInf);
   }
 
   if (rowlb != NULL) {
     lp.rowLower_.assign(rowlb, rowlb + numrows);
   } else {
-    lp.rowLower_.assign(numrows, -HIGHS_CONST_INF);
+    lp.rowLower_.assign(numrows, -kHighsInf);
   }
 
   if (rowub != NULL) {
     lp.rowUpper_.assign(rowub, rowub + numrows);
   } else {
-    lp.rowUpper_.assign(numrows, HIGHS_CONST_INF);
+    lp.rowUpper_.assign(numrows, kHighsInf);
   }
 
   lp.Astart_.assign(start, start + numcols + 1);

@@ -102,8 +102,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     model.colLower_.reserve(numCol);
     model.colUpper_.reserve(numCol);
 
-    model.colLower_.assign(numCol, -HIGHS_CONST_INF);
-    model.colUpper_.assign(numCol, HIGHS_CONST_INF);
+    model.colLower_.assign(numCol, -kHighsInf);
+    model.colUpper_.assign(numCol, kHighsInf);
 
     for (i = 0; i < numCol; i++) {
       f >> model.colLower_[i];
@@ -122,8 +122,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     }
     model.rowLower_.reserve(numRow);
     model.rowUpper_.reserve(numRow);
-    model.rowLower_.assign(numRow, -HIGHS_CONST_INF);
-    model.rowUpper_.assign(numRow, HIGHS_CONST_INF);
+    model.rowLower_.assign(numRow, -kHighsInf);
+    model.rowUpper_.assign(numRow, kHighsInf);
 
     for (i = 0; i < numRow; i++) {
       f >> model.rowLower_[i];

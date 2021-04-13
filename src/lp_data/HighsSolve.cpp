@@ -180,7 +180,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
           // Unite upper bound of -inf
           value = 0;
           status = HighsBasisStatus::ZERO;
-          primal_infeasibility = HIGHS_CONST_INF;
+          primal_infeasibility = kHighsInf;
         } else {
           value = upper;
           status = HighsBasisStatus::UPPER;

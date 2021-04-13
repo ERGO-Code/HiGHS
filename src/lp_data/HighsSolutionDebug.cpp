@@ -337,9 +337,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
-    report =
-        options.highs_debug_level > kHighsDebugLevelExpensive ||
-        (options.highs_debug_level == kHighsDebugLevelExpensive && query);
+    report = options.highs_debug_level > kHighsDebugLevelExpensive ||
+             (options.highs_debug_level == kHighsDebugLevelExpensive && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -449,9 +448,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
-    report =
-        options.highs_debug_level > kHighsDebugLevelExpensive ||
-        (options.highs_debug_level == kHighsDebugLevelExpensive && query);
+    report = options.highs_debug_level > kHighsDebugLevelExpensive ||
+             (options.highs_debug_level == kHighsDebugLevelExpensive && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -585,8 +583,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
   std::string value_adjective;
   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
-  const bool force_report =
-      options.highs_debug_level >= kHighsDebugLevelCostly;
+  const bool force_report = options.highs_debug_level >= kHighsDebugLevelCostly;
   if (primal_dual_errors.num_nonzero_basic_duals) {
     value_adjective = "Error";
     report_level = HighsLogType::ERROR;

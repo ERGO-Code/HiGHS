@@ -204,7 +204,7 @@ struct HighsSimplexInfo {
 
   HighsInt min_threads = 1;
   HighsInt num_threads = 1;
-  HighsInt max_threads = HIGHS_THREAD_LIMIT;
+  HighsInt max_threads = kHighsThreadLimit;
 
   // Cutoff for PAMI
   double pami_cutoff = 0.95;

@@ -115,13 +115,13 @@ class AggregationHeuristic {
         continue;
       }
 
-      double lowerslack = HIGHS_CONST_INF;
-      double upperslack = HIGHS_CONST_INF;
+      double lowerslack = kHighsInf;
+      double upperslack = kHighsInf;
 
-      if (lp.rowLower_[i] != -HIGHS_CONST_INF)
+      if (lp.rowLower_[i] != -kHighsInf)
         lowerslack = lpsol.row_value[i] - lp.rowLower_[i];
 
-      if (lp.rowUpper_[i] != HIGHS_CONST_INF)
+      if (lp.rowUpper_[i] != kHighsInf)
         upperslack = lp.rowUpper_[i] - lpsol.row_value[i];
 
       if (lowerslack > mip.mipdata_->feastol &&
@@ -163,8 +163,8 @@ class AggregationHeuristic {
       HighsInt start = lp.Astart_[i];
       HighsInt end = lp.Astart_[i + 1];
 
-      HighsInt lblen = HIGHS_CONST_I_INF;
-      HighsInt ublen = HIGHS_CONST_I_INF;
+      HighsInt lblen = kHighsIInf;
+      HighsInt ublen = kHighsIInf;
 
       for (HighsInt j = start; j != end; ++j) {
         HighsInt row = lp.Aindex_[j];
@@ -220,17 +220,17 @@ class AggregationHeuristic {
         lbdist = 0.0;
         rowusable[collbtype[i]] = false;
       } else
-        lbdist = domain.colLower_[i] != -HIGHS_CONST_INF
+        lbdist = domain.colLower_[i] != -kHighsInf
                      ? lpsol.col_value[i] - domain.colLower_[i]
-                     : HIGHS_CONST_INF;
+                     : kHighsInf;
 
       if (colubtype[i] != -1) {
         ubdist = 0.0;
         rowusable[colubtype[i]] = false;
       } else
-        ubdist = domain.colUpper_[i] != HIGHS_CONST_INF
+        ubdist = domain.colUpper_[i] != kHighsInf
                      ? domain.colUpper_[i] - lpsol.col_value[i]
-                     : HIGHS_CONST_INF;
+                     : kHighsInf;
 
       bounddistance[i] = std::min(lbdist, ubdist);
       if (bounddistance[i] < mip.mipdata_->feastol) bounddistance[i] = 0;
@@ -305,7 +305,7 @@ class AggregationHeuristic {
         // equations
         inds.push_back(lp.numCol_ + currpath[i]);
         vals.push_back(-std::abs(currpathweights[i]));
-        upper.push_back(HIGHS_CONST_INF);
+        upper.push_back(kHighsInf);
         complementation.push_back(0);
         solvals.push_back(0);
       }
@@ -335,16 +335,16 @@ class AggregationHeuristic {
       // bounds adjust the right hand side accordingly
       if (bounddistance[col] > mip.mipdata_->feastol) bounddistpos.push_back(j);
 
-      if (bounddistance[col] == HIGHS_CONST_INF) freevar = true;
+      if (bounddistance[col] == kHighsInf) freevar = true;
 
       if (freevar) continue;
 
-      double simplelbdist = domain.colLower_[col] != -HIGHS_CONST_INF
+      double simplelbdist = domain.colLower_[col] != -kHighsInf
                                 ? lpsol.col_value[col] - domain.colLower_[col]
-                                : HIGHS_CONST_INF;
-      double simpleubdist = domain.colUpper_[col] != HIGHS_CONST_INF
+                                : kHighsInf;
+      double simpleubdist = domain.colUpper_[col] != kHighsInf
                                 ? domain.colUpper_[col] - lpsol.col_value[col]
-                                : HIGHS_CONST_INF;
+                                : kHighsInf;
 
       if (baseval < 0) {
         if (colubtype[col] != -1) {
@@ -394,8 +394,8 @@ class AggregationHeuristic {
         } else if (simplelbdist - mip.mipdata_->feastol <= bounddistance[col]) {
           inds.push_back(col);
           complementation.push_back(1);
-          if (domain.colUpper_[col] == HIGHS_CONST_INF)
-            upper.push_back(HIGHS_CONST_INF);
+          if (domain.colUpper_[col] == kHighsInf)
+            upper.push_back(kHighsInf);
           else
             upper.push_back(domain.colUpper_[col] - domain.colLower_[col]);
           vals.push_back(
@@ -433,7 +433,7 @@ class AggregationHeuristic {
 
           inds.push_back(lp.numCol_ + LBrow);
           complementation.push_back(0);
-          upper.push_back(HIGHS_CONST_INF);
+          upper.push_back(kHighsInf);
           solvals.push_back(0);
 
           for (HighsInt k = 0; k != LBlen; ++k) {
@@ -506,8 +506,8 @@ class AggregationHeuristic {
           // variable
           inds.push_back(col);
           complementation.push_back(-1);
-          if (domain.colLower_[col] == -HIGHS_CONST_INF)
-            upper.push_back(HIGHS_CONST_INF);
+          if (domain.colLower_[col] == -kHighsInf)
+            upper.push_back(kHighsInf);
           else
             upper.push_back(domain.colUpper_[col] - domain.colLower_[col]);
           solvals.push_back(domain.colUpper_[col] - lpsol.col_value[col]);
@@ -543,7 +543,7 @@ class AggregationHeuristic {
 
           inds.push_back(lp.numCol_ + UBrow);
           complementation.push_back(0);
-          upper.push_back(HIGHS_CONST_INF);
+          upper.push_back(kHighsInf);
           solvals.push_back(0);
           rhs += scale * UBconst;
 
@@ -588,12 +588,12 @@ class AggregationHeuristic {
       }
 
       assert(mip.variableType(col) != HighsVarType::CONTINUOUS);
-      assert(domain.colLower_[col] != -HIGHS_CONST_INF ||
-             domain.colUpper_[col] != HIGHS_CONST_INF);
+      assert(domain.colLower_[col] != -kHighsInf ||
+             domain.colUpper_[col] != kHighsInf);
 
-      if (domain.colLower_[col] == -HIGHS_CONST_INF ||
-          domain.colUpper_[col] == HIGHS_CONST_INF)
-        upper.push_back(HIGHS_CONST_INF);
+      if (domain.colLower_[col] == -kHighsInf ||
+          domain.colUpper_[col] == kHighsInf)
+        upper.push_back(kHighsInf);
       else
         upper.push_back(
             std::floor(domain.colUpper_[col] - domain.colLower_[col] + 0.5));
@@ -602,11 +602,11 @@ class AggregationHeuristic {
 
       if (upper.back() == 1.0)
         ++nbin;
-      else if (upper.back() == HIGHS_CONST_INF)
+      else if (upper.back() == kHighsInf)
         ++nunbndint;
       else
         ++nint;
-      if (val < 0 && domain.colUpper_[col] != HIGHS_CONST_INF) {
+      if (val < 0 && domain.colUpper_[col] != kHighsInf) {
         solvals.push_back(domain.colUpper_[col] - lpsol.col_value[col]);
         complementation.push_back(-1);
         vals.push_back(complementWithUpper(val, domain.colUpper_[col], rhs));
@@ -622,7 +622,7 @@ class AggregationHeuristic {
     HighsCDouble maxact = 0.0;
     bool unbnd = false;
     for (HighsInt i = 0; i != len; ++i) {
-      if (upper[i] == HIGHS_CONST_INF) {
+      if (upper[i] == kHighsInf) {
         unbnd = true;
         break;
       }
@@ -733,7 +733,7 @@ class AggregationHeuristic {
 
     HighsInt nextaggrow = -1;
     HighsCDouble nextaggscale;
-    HighsInt naggbounddist = HIGHS_CONST_I_INF;
+    HighsInt naggbounddist = kHighsIInf;
 
     for (HighsInt pos : bounddistpos) {
       HighsInt col = baseinds[pos];
@@ -814,12 +814,12 @@ class AggregationHeuristic {
         if (std::abs(val) > 1e-10) {
           if (std::abs(val) <= mip.mipdata_->feastol) {
             if (val < 0) {
-              if (domain.colUpper_[baseinds[b]] == HIGHS_CONST_INF)
+              if (domain.colUpper_[baseinds[b]] == kHighsInf)
                 return false;
 
               rhs -= val * domain.colUpper_[baseinds[b]];
             } else {
-              if (domain.colLower_[baseinds[b]] == -HIGHS_CONST_INF)
+              if (domain.colLower_[baseinds[b]] == -kHighsInf)
                 return false;
 
               rhs -= val * domain.colLower_[baseinds[b]];

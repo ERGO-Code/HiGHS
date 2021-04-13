@@ -625,7 +625,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
-  if (options.parallel == on_string &&
+  if (options.parallel == kHighsOnString &&
       simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
     // The parallel strategy is on and the simplex strategy is dual so use
     // PAMI if there are enough OMP threads
@@ -1120,11 +1120,11 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
                    simplex_info_.dual_simplex_cost_perturbation_multiplier *
                    (1 + simplex_info_.numTotRandomValue_[i]);
     const double previous_cost = simplex_info_.workCost_[i];
-    if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free - no perturb
-    } else if (upper >= HIGHS_CONST_INF) {  // Lower
+    } else if (upper >= kHighsInf) {  // Lower
       simplex_info_.workCost_[i] += xpert;
-    } else if (lower <= -HIGHS_CONST_INF) {  // Upper
+    } else if (lower <= -kHighsInf) {  // Upper
       simplex_info_.workCost_[i] += -xpert;
     } else if (lower != upper) {  // Boxed
       simplex_info_.workCost_[i] +=
@@ -1169,18 +1169,18 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
     HighsInt num_col = simplex_lp_.numCol_;
     HighsInt num_row = simplex_lp_.numRow_;
     HighsInt num_tot = num_col + num_row;
-    double min_abs_lower = HIGHS_CONST_INF;
+    double min_abs_lower = kHighsInf;
     double max_abs_lower = -1;
-    double min_abs_upper = HIGHS_CONST_INF;
+    double min_abs_upper = kHighsInf;
     double max_abs_upper = -1;
     for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
       double abs_lower = fabs(simplex_info_.workLower_[iVar]);
       double abs_upper = fabs(simplex_info_.workUpper_[iVar]);
-      if (abs_lower && abs_lower < HIGHS_CONST_INF) {
+      if (abs_lower && abs_lower < kHighsInf) {
         min_abs_lower = min(abs_lower, min_abs_lower);
         max_abs_lower = max(abs_lower, max_abs_lower);
       }
-      if (abs_upper && abs_upper < HIGHS_CONST_INF) {
+      if (abs_upper && abs_upper < kHighsInf) {
         min_abs_upper = min(abs_upper, min_abs_upper);
         max_abs_upper = max(abs_upper, max_abs_upper);
       }
@@ -1200,7 +1200,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
       if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE && fixed)
         continue;
       double random_value = simplex_info_.numTotRandomValue_[iVar];
-      if (lower > -HIGHS_CONST_INF) {
+      if (lower > -kHighsInf) {
         if (lower < -1) {
           lower -= random_value * base * (-lower);
         } else if (lower < 1) {
@@ -1210,7 +1210,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
         }
         simplex_info_.workLower_[iVar] = lower;
       }
-      if (upper < HIGHS_CONST_INF) {
+      if (upper < kHighsInf) {
         if (upper < -1) {
           upper += random_value * base * (-upper);
         } else if (upper < 1) {
@@ -1251,7 +1251,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   // variables, where the bounds are [-1000, 1000]. Hence the dual
   // objective is the negation of the sum of infeasibilities, unless there are
   // free In Phase 1: change to dual phase 1 bound.
-  const double inf = HIGHS_CONST_INF;
+  const double inf = kHighsInf;
   const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     if (simplex_info_.workLower_[iCol] == -inf &&
@@ -1657,7 +1657,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
 
 void HEkk::correctDual(HighsInt* free_infeasibility_count) {
   const double tau_d = options_.dual_feasibility_tolerance;
-  const double inf = HIGHS_CONST_INF;
+  const double inf = kHighsInf;
   HighsInt workCount = 0;
   double flip_dual_objective_value_change = 0;
   double shift_dual_objective_value_change = 0;

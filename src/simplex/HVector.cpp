@@ -70,14 +70,14 @@ void HVector::clear() {
 
 void HVector::tight() {
   /*
-   * Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY in
+   * Packing: Zero values in Vector.array which exceed kHighsTiny in
    * magnitude
    */
   HighsInt totalCount = 0;
   for (HighsInt i = 0; i < count; i++) {
     const HighsInt my_index = index[i];
     const double value = array[my_index];
-    if (fabs(value) > HIGHS_CONST_TINY) {
+    if (fabs(value) > kHighsTiny) {
       index[totalCount++] = my_index;
     } else {
       array[my_index] = 0;
@@ -154,7 +154,7 @@ void HVector::saxpy(const double pivotX, const HVector* pivot) {
     const double x0 = workArray[iRow];
     const double x1 = x0 + pivotX * pivotArray[iRow];
     if (x0 == 0) workIndex[workCount++] = iRow;
-    workArray[iRow] = (fabs(x1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : x1;
+    workArray[iRow] = (fabs(x1) < kHighsTiny) ? kHighsZero : x1;
   }
   count = workCount;
 }

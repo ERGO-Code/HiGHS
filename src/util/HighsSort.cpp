@@ -275,7 +275,7 @@ bool increasingSetOk(const HighsInt* set, const HighsInt set_num_entries,
       previous_entry = set_entry_lower;
     }
   } else {
-    previous_entry = -HIGHS_CONST_I_INF;
+    previous_entry = -kHighsIInf;
   }
   for (HighsInt k = 0; k < set_num_entries; k++) {
     HighsInt entry = set[k];
@@ -300,17 +300,17 @@ bool increasingSetOk(const double* set, const HighsInt set_num_entries,
   if (check_bounds) {
     if (strict) {
       if (set_entry_lower < 0) {
-        previous_entry = (1 + HIGHS_CONST_TINY) * set_entry_lower;
+        previous_entry = (1 + kHighsTiny) * set_entry_lower;
       } else if (set_entry_lower > 0) {
-        previous_entry = (1 - HIGHS_CONST_TINY) * set_entry_lower;
+        previous_entry = (1 - kHighsTiny) * set_entry_lower;
       } else {
-        previous_entry = -HIGHS_CONST_TINY;
+        previous_entry = -kHighsTiny;
       }
     } else {
       previous_entry = set_entry_lower;
     }
   } else {
-    previous_entry = -HIGHS_CONST_INF;
+    previous_entry = -kHighsInf;
   }
   for (HighsInt k = 0; k < set_num_entries; k++) {
     double entry = set[k];

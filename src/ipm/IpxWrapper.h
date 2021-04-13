@@ -48,11 +48,9 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   for (HighsInt row = 0; row < num_row; row++)
     if (lp.rowLower_[row] < lp.rowUpper_[row] &&
-        lp.rowLower_[row] > -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] < HIGHS_CONST_INF)
+        lp.rowLower_[row] > -kHighsInf && lp.rowUpper_[row] < kHighsInf)
       general_bounded_rows.push_back(row);
-    else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
-             lp.rowUpper_[row] >= HIGHS_CONST_INF)
+    else if (lp.rowLower_[row] <= -kHighsInf && lp.rowUpper_[row] >= kHighsInf)
       free_rows.push_back(row);
 
   const HighsInt num_slack = general_bounded_rows.size();
@@ -63,19 +61,18 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   constraint_type.reserve(num_row);
 
   for (int row = 0; row < num_row; row++) {
-    if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] >= HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] > -kHighsInf && lp.rowUpper_[row] >= kHighsInf) {
       rhs.push_back(lp.rowLower_[row]);
       constraint_type.push_back('>');
-    } else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    } else if (lp.rowLower_[row] <= -kHighsInf &&
+               lp.rowUpper_[row] < kHighsInf) {
       rhs.push_back(lp.rowUpper_[row]);
       constraint_type.push_back('<');
     } else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
       rhs.push_back(lp.rowUpper_[row]);
       constraint_type.push_back('=');
-    } else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    } else if (lp.rowLower_[row] > -kHighsInf &&
+               lp.rowUpper_[row] < kHighsInf) {
       // general bounded
       rhs.push_back(0);
       constraint_type.push_back('=');
@@ -106,8 +103,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   for (HighsInt col = 0; col < lp.numCol_; col++)
     for (HighsInt k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
       HighsInt row = lp.Aindex_[k];
-      if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
-          lp.rowUpper_[row] < HIGHS_CONST_INF)
+      if (lp.rowLower_[row] > -kHighsInf || lp.rowUpper_[row] < kHighsInf)
         sizes[col]++;
     }
   // Copy Astart and Aindex to ipx::Int array.
@@ -133,8 +129,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   //  (int)num_col, (int)Ap[num_col]);
   for (HighsInt k = 0; k < nnz; k++) {
     HighsInt row = lp.Aindex_[k];
-    if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
-        lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] > -kHighsInf || lp.rowUpper_[row] < kHighsInf) {
       Ai.push_back(reduced_rowmap[lp.Aindex_[k]]);
       Ax.push_back(lp.Avalue_[k]);
     }
@@ -149,12 +144,12 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   col_lb.resize(num_col);
   col_ub.resize(num_col);
   for (HighsInt col = 0; col < lp.numCol_; col++) {
-    if (lp.colLower_[col] <= -HIGHS_CONST_INF)
+    if (lp.colLower_[col] <= -kHighsInf)
       col_lb[col] = -INFINITY;
     else
       col_lb[col] = lp.colLower_[col];
 
-    if (lp.colUpper_[col] >= HIGHS_CONST_INF)
+    if (lp.colUpper_[col] >= kHighsInf)
       col_ub[col] = INFINITY;
     else
       col_ub[col] = lp.colUpper_[col];
@@ -511,7 +506,7 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
     // Looks like the LP is unbounded
     model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;
-  } else if (ipx_info.pobjval < -HIGHS_CONST_INF) {
+  } else if (ipx_info.pobjval < -kHighsInf) {
     // Looks like the LP is unbounded
     model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;

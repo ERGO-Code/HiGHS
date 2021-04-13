@@ -60,7 +60,7 @@ void checkIncreasingSort(const HighsInt num_sorted,
   // point from the original values to their new positions
   bool error0 = false;
   bool error1 = false;
-  double previous = -HIGHS_CONST_INF;
+  double previous = -kHighsInf;
   for (HighsInt ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] < previous) {
       printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n",
@@ -89,7 +89,7 @@ void checkDecreasingSort(const HighsInt num_sorted,
   // point from the original values to their new positions
   bool error0 = false;
   bool error1 = false;
-  double previous = HIGHS_CONST_INF;
+  double previous = kHighsInf;
   for (HighsInt ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] > previous) {
       printf("Values[%2" HIGHSINT_FORMAT "] = %f5.4 < %f5.4 = previous\n",
@@ -209,18 +209,18 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   sortSetData(num_values, &sorted_set[0], &lb[0], &ub[0], NULL, &sorted_lb[0],
               &sorted_ub[0], NULL);
 
-  HighsInt prev_ix = -HIGHS_CONST_I_INF;
+  HighsInt prev_ix = -kHighsIInf;
   for (HighsInt k0 = 0; k0 < num_values; k0++) {
     HighsInt ix = sorted_set[k0];
     REQUIRE(ix >= prev_ix);
-    HighsInt k1 = -HIGHS_CONST_I_INF;
+    HighsInt k1 = -kHighsIInf;
     for (HighsInt k_1 = 0; k_1 < num_values; k_1++) {
       if (set[k_1] == ix) {
         k1 = k_1;
         break;
       }
     }
-    REQUIRE(k1 > -HIGHS_CONST_I_INF);
+    REQUIRE(k1 > -kHighsIInf);
     REQUIRE(sorted_lb[k0] == lb[k1]);
     REQUIRE(sorted_ub[k0] == ub[k1]);
   }

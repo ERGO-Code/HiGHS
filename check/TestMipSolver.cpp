@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const double inf = HIGHS_CONST_INF;
+const double inf = kHighsInf;
 const bool dev_run = false;
 
 bool objectiveOk(const double optimal_objective,

@@ -181,10 +181,10 @@ void HEkkDual::majorChooseRowBtran() {
 
   // 4.1. Prepare BTRAN buffer
   HighsInt multi_ntasks = 0;
-  HighsInt multi_iRow[HIGHS_THREAD_LIMIT];
-  HighsInt multi_iwhich[HIGHS_THREAD_LIMIT];
-  double multi_EdWt[HIGHS_THREAD_LIMIT];
-  HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
+  HighsInt multi_iRow[kHighsThreadLimit];
+  HighsInt multi_iwhich[kHighsThreadLimit];
+  double multi_EdWt[kHighsThreadLimit];
+  HVector_ptr multi_vector[kHighsThreadLimit];
   for (HighsInt ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].row_out >= 0) {
       multi_iRow[multi_ntasks] = multi_choice[ich].row_out;
@@ -452,9 +452,9 @@ void HEkkDual::minorUpdateRows() {
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
   if (updateRows_inDense) {
     HighsInt multi_nTasks = 0;
-    HighsInt multi_iwhich[HIGHS_THREAD_LIMIT];
-    double multi_xpivot[HIGHS_THREAD_LIMIT];
-    HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
+    HighsInt multi_iwhich[kHighsThreadLimit];
+    double multi_xpivot[kHighsThreadLimit];
+    HVector_ptr multi_vector[kHighsThreadLimit];
 
     /*
      * Dense mode
@@ -467,7 +467,7 @@ void HEkkDual::minorUpdateRows() {
       if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
         double pivotX = matrix->compute_dot(*next_ep, variable_in);
-        if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
+        if (fabs(pivotX) < kHighsTiny) continue;
         multi_vector[multi_nTasks] = next_ep;
         multi_xpivot[multi_nTasks] = -pivotX / alpha_row;
         multi_iwhich[multi_nTasks] = ich;
@@ -498,7 +498,7 @@ void HEkkDual::minorUpdateRows() {
       if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
         double pivotX = matrix->compute_dot(*next_ep, variable_in);
-        if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
+        if (fabs(pivotX) < kHighsTiny) continue;
         next_ep->saxpy(-pivotX / alpha_row, Row);
         next_ep->tight();
         if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -579,7 +579,7 @@ void HEkkDual::majorUpdateFtranPrepare() {
         HighsInt iRow = Vec->index[k];
         pivotX += Vec->array[iRow] * jRow_epArray[iRow];
       }
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
+      if (fabs(pivotX) > kHighsTiny) {
         pivotX /= jFinish->alpha_row;
         matrix->collect_aj(*Vec, jFinish->variable_in, -pivotX);
         matrix->collect_aj(*Vec, jFinish->variable_out, pivotX);
@@ -603,8 +603,8 @@ void HEkkDual::majorUpdateFtranParallel() {
 
   // Prepare buffers
   HighsInt multi_ntasks = 0;
-  double multi_density[HIGHS_THREAD_LIMIT * 2 + 1];
-  HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
+  double multi_density[kHighsThreadLimit * 2 + 1];
+  HVector_ptr multi_vector[kHighsThreadLimit * 2 + 1];
   // BFRT first
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
@@ -700,7 +700,7 @@ void HEkkDual::majorUpdateFtranFinal() {
         double pivotX2 = myRow[pivotRow];
 
         // The FTRAN regular buffer
-        if (fabs(pivotX1) > HIGHS_CONST_TINY) {
+        if (fabs(pivotX1) > kHighsTiny) {
           const double pivot = pivotX1 / pivotAlpha;
 #pragma omp parallel for
           for (HighsInt i = 0; i < solver_num_row; i++)
@@ -708,7 +708,7 @@ void HEkkDual::majorUpdateFtranFinal() {
           myCol[pivotRow] = pivot;
         }
         // The FTRAN-DSE buffer
-        if (fabs(pivotX2) > HIGHS_CONST_TINY) {
+        if (fabs(pivotX2) > kHighsTiny) {
           const double pivot = pivotX2 / pivotAlpha;
 #pragma omp parallel for
           for (HighsInt i = 0; i < solver_num_row; i++)
@@ -727,14 +727,14 @@ void HEkkDual::majorUpdateFtranFinal() {
         HighsInt pivotRow = jFinish->row_out;
         double pivotX1 = Col->array[pivotRow];
         // The FTRAN regular buffer
-        if (fabs(pivotX1) > HIGHS_CONST_TINY) {
+        if (fabs(pivotX1) > kHighsTiny) {
           pivotX1 /= jFinish->alpha_row;
           Col->saxpy(-pivotX1, jFinish->col_aq);
           Col->array[pivotRow] = pivotX1;
         }
         // The FTRAN-DSE buffer
         double pivotX2 = Row->array[pivotRow];
-        if (fabs(pivotX2) > HIGHS_CONST_TINY) {
+        if (fabs(pivotX2) > kHighsTiny) {
           pivotX2 /= jFinish->alpha_row;
           Row->saxpy(-pivotX2, jFinish->col_aq);
           Row->array[pivotRow] = pivotX2;

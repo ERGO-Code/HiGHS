@@ -128,8 +128,8 @@ void HighsMipSolverData::init() {
   epsilon = mipsolver.options_mip_->mip_epsilon;
   heuristic_effort = mipsolver.options_mip_->mip_heuristic_effort;
 
-  firstlpsolobj = -HIGHS_CONST_INF;
-  rootlpsolobj = -HIGHS_CONST_INF;
+  firstlpsolobj = -kHighsInf;
+  rootlpsolobj = -kHighsInf;
   analyticCenterComputed = false;
   numRestarts = 0;
   numImprovingSols = 0;
@@ -146,8 +146,8 @@ void HighsMipSolverData::init() {
   last_displeave = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
-  lower_bound = -HIGHS_CONST_INF;
-  upper_bound = HIGHS_CONST_INF;
+  lower_bound = -kHighsInf;
+  upper_bound = kHighsInf;
   upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
@@ -199,13 +199,13 @@ void HighsMipSolverData::runSetup() {
       for (HighsInt j = start; j != end; ++j) {
         HighsInt row = model.Aindex_[j];
 
-        if (model.rowLower_[row] != -HIGHS_CONST_INF) {
+        if (model.rowLower_[row] != -kHighsInf) {
           if (model.Avalue_[j] < 0)
             ++uplocks[i];
           else
             ++downlocks[i];
         }
-        if (model.rowUpper_[row] != HIGHS_CONST_INF) {
+        if (model.rowUpper_[row] != kHighsInf) {
           if (model.Avalue_[j] < 0)
             ++downlocks[i];
           else
@@ -248,7 +248,7 @@ void HighsMipSolverData::runSetup() {
   domain.propagate();
   if (domain.infeasible()) {
     mipsolver.modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-    lower_bound = HIGHS_CONST_INF;
+    lower_bound = kHighsInf;
     pruned_treeweight = 1.0;
     return;
   }
@@ -352,7 +352,7 @@ double HighsMipSolverData::transformNewIncumbent(
     mipsolver.solution_objective_ = double(obj);
   } else {
     bool currentFeasible =
-        mipsolver.solution_objective_ != HIGHS_CONST_INF &&
+        mipsolver.solution_objective_ != kHighsInf &&
         mipsolver.bound_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.integrality_violation_ <=
@@ -376,7 +376,7 @@ double HighsMipSolverData::transformNewIncumbent(
     }
 
     // return infinity so that it is not used for bounding
-    return HIGHS_CONST_INF;
+    return kHighsInf;
   }
 
   // return the objective value in the transformed space
@@ -444,7 +444,7 @@ void HighsMipSolverData::performRestart() {
   runPresolve();
 
   if (mipsolver.modelstatus_ != HighsModelStatus::NOTSET) {
-    if (mipsolver.solution_objective_ != HIGHS_CONST_INF &&
+    if (mipsolver.solution_objective_ != kHighsInf &&
         mipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE)
       mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
     return;
@@ -636,12 +636,12 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
   double lb = mipsolver.mipdata_->lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
-  double ub = HIGHS_CONST_INF;
-  double gap = HIGHS_CONST_INF;
+  double ub = kHighsInf;
+  double gap = kHighsInf;
   HighsInt lpcuts =
       mipsolver.mipdata_->lp.numRows() - mipsolver.model_->numRow_;
 
-  if (upper_bound != HIGHS_CONST_INF) {
+  if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
@@ -678,7 +678,7 @@ bool HighsMipSolverData::rootSeparationRound(
 
   if (status == HighsLpRelaxation::Status::Infeasible) {
     pruned_treeweight = 1.0;
-    lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+    lower_bound = std::min(kHighsInf, upper_bound);
     num_nodes = 1;
     num_leaves = 1;
     return true;
@@ -693,7 +693,7 @@ bool HighsMipSolverData::rootSeparationRound(
     domain.propagate();
     if (domain.infeasible()) {
       pruned_treeweight = 1.0;
-      lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+      lower_bound = std::min(kHighsInf, upper_bound);
       num_nodes = 1;
       num_leaves = 1;
       return true;
@@ -704,7 +704,7 @@ bool HighsMipSolverData::rootSeparationRound(
     lower_bound = lp.getObjective();
     redcostfixing.addRootRedcost(
         mipsolver, lp.getLpSolver().getSolution().col_dual, lower_bound);
-    if (upper_limit != HIGHS_CONST_INF) {
+    if (upper_limit != kHighsInf) {
       redcostfixing.propagateRootRedcost(mipsolver);
 
       if (domain.infeasible())
@@ -720,7 +720,7 @@ bool HighsMipSolverData::rootSeparationRound(
 
       if (status == HighsLpRelaxation::Status::Infeasible) {
         pruned_treeweight = 1.0;
-        lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+        lower_bound = std::min(kHighsInf, upper_bound);
         num_nodes = 1;
         num_leaves = 1;
         return true;
@@ -729,7 +729,7 @@ bool HighsMipSolverData::rootSeparationRound(
   }
 
   if (mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
-    lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+    lower_bound = std::min(kHighsInf, upper_bound);
     pruned_treeweight = 1.0;
     num_nodes = 1;
     num_leaves = 1;
@@ -740,7 +740,7 @@ bool HighsMipSolverData::rootSeparationRound(
 }
 
 void HighsMipSolverData::evaluateRootNode() {
-  HighsInt maxSepaRounds = mipsolver.submip ? 5 : HIGHS_CONST_I_INF;
+  HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
 restart:
   // solve the first root lp
   highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
@@ -806,7 +806,7 @@ restart:
     lower_bound = lp.getObjective();
     redcostfixing.addRootRedcost(
         mipsolver, lp.getLpSolver().getSolution().col_dual, lower_bound);
-    if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF)
+    if (mipsolver.mipdata_->upper_limit != kHighsInf)
       redcostfixing.propagateRootRedcost(mipsolver);
   }
 
@@ -820,7 +820,7 @@ restart:
   if (status == HighsLpRelaxation::Status::Infeasible ||
       mipsolver.mipdata_->domain.infeasible() ||
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
-    lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+    lower_bound = std::min(kHighsInf, upper_bound);
     pruned_treeweight = 1.0;
     num_nodes = 1;
     num_leaves = 1;
@@ -849,7 +849,7 @@ restart:
 
     removeFixedIndices();
 
-    if (mipsolver.options_mip_->presolve != off_string) {
+    if (mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 10.0) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
@@ -938,18 +938,18 @@ restart:
     rootlpsolobj = lp.getObjective();
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-    if (!analyticCenterComputed || upper_limit == HIGHS_CONST_INF) {
+    if (!analyticCenterComputed || upper_limit == kHighsInf) {
       analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
     }
 
     if (!rootlpsol.empty() &&
-        (moreHeuristicsAllowed() || upper_limit == HIGHS_CONST_INF)) {
+        (moreHeuristicsAllowed() || upper_limit == kHighsInf)) {
       heuristics.RENS(rootlpsol);
       heuristics.flushStatistics();
 
-      if (upper_limit == HIGHS_CONST_INF && !mipsolver.submip) {
+      if (upper_limit == kHighsInf && !mipsolver.submip) {
         heuristics.feasibilityPump();
         heuristics.flushStatistics();
       }
@@ -971,7 +971,7 @@ restart:
   rootlpsolobj = lp.getObjective();
 
   if (lower_bound <= upper_limit) {
-    if (mipsolver.options_mip_->presolve != off_string) {
+    if (mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 2.5 ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
@@ -993,7 +993,7 @@ restart:
 
 bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
-  if (options.mip_max_nodes != HIGHS_CONST_I_INF &&
+  if (options.mip_max_nodes != kHighsIInf &&
       num_nodes >= options.mip_max_nodes) {
     if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
       highsLogDev(options.log_options, HighsLogType::INFO,
@@ -1002,7 +1002,7 @@ bool HighsMipSolverData::checkLimits() const {
     }
     return true;
   }
-  if (options.mip_max_leaves != HIGHS_CONST_I_INF &&
+  if (options.mip_max_leaves != kHighsIInf &&
       num_leaves >= options.mip_max_leaves) {
     if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
       highsLogDev(options.log_options, HighsLogType::INFO,

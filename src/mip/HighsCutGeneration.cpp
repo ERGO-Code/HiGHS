@@ -601,7 +601,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
   // try to flip complementation of integers to increase efficacy
 
   for (HighsInt k : integerinds) {
-    if (upper[k] == HIGHS_CONST_INF) continue;
+    if (upper[k] == kHighsInf) continue;
 
     complementation[k] = 1 - complementation[k];
     solval[k] = upper[k] - solval[k];
@@ -713,7 +713,7 @@ bool HighsCutGeneration::postprocessCut() {
       if (std::abs(vals[i]) <= minCoefficientValue) {
         if (vals[i] < 0) {
           double ub = upper[i];
-          if (ub == HIGHS_CONST_INF)
+          if (ub == kHighsInf)
             return false;
           else
             rhs -= ub * vals[i];
@@ -758,7 +758,7 @@ bool HighsCutGeneration::postprocessCut() {
         // upperbound constraint to make it exactly integral instead and
         // therefore weaken the right hand side
         if (delta < 0.0) {
-          if (upper[i] == HIGHS_CONST_INF) return false;
+          if (upper[i] == kHighsInf) return false;
 
           rhs -= delta * upper[i];
         }
@@ -776,7 +776,7 @@ bool HighsCutGeneration::postprocessCut() {
     }
 
     if (scaleSmallestValToOne) {
-      double minAbsValue = HIGHS_CONST_INF;
+      double minAbsValue = kHighsInf;
       for (HighsInt i = 0; i != rowlen; ++i) {
         if (vals[i] == 0.0) continue;
         minAbsValue = std::min(std::abs(vals[i]), minAbsValue);
@@ -811,7 +811,7 @@ bool HighsCutGeneration::postprocessCut() {
 
     // now remove small coefficients and determine the smallest absolute
     // coefficient of an integral variable
-    double minIntCoef = HIGHS_CONST_INF;
+    double minIntCoef = kHighsInf;
     for (HighsInt i = 0; i != rowlen; ++i) {
       if (vals[i] == 0.0) continue;
 
@@ -819,7 +819,7 @@ bool HighsCutGeneration::postprocessCut() {
 
       if (std::abs(vals[i]) <= minCoefficientValue) {
         if (vals[i] < 0.0) {
-          if (upper[i] == HIGHS_CONST_INF) return false;
+          if (upper[i] == kHighsInf) return false;
           rhs -= vals[i] * upper[i];
         } else
           vals[i] = 0.0;
@@ -861,7 +861,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   for (HighsInt i = 0; i != rowlen; ++i) {
     if (std::abs(vals[i]) <= 10 * feastol) {
       if (vals[i] < 0) {
-        if (upper[i] == HIGHS_CONST_INF) return false;
+        if (upper[i] == kHighsInf) return false;
         rhs -= vals[i] * upper[i];
       }
 
@@ -874,17 +874,17 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       hasContinuous = true;
 
       if (vals[i] > 0) {
-        if (upper[i] == HIGHS_CONST_INF)
-          maxact = HIGHS_CONST_INF;
+        if (upper[i] == kHighsInf)
+          maxact = kHighsInf;
         else
           maxact += vals[i] * upper[i];
       }
     } else {
-      if (upper[i] == HIGHS_CONST_INF) {
+      if (upper[i] == kHighsInf) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
-        if (vals[i] > 0.0) maxact = HIGHS_CONST_INF;
-        if (maxact == HIGHS_CONST_INF) break;
+        if (vals[i] > 0.0) maxact = kHighsInf;
+        if (maxact == kHighsInf) break;
       } else if (upper[i] != 1.0) {
         hasGeneralInts = true;
       }
@@ -959,7 +959,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 #if 0
 static void checkNumerics(const double* vals, HighsInt len, double rhs) {
   double maxAbsCoef = 0.0;
-  double minAbsCoef = HIGHS_CONST_INF;
+  double minAbsCoef = kHighsInf;
   HighsCDouble sqrnorm = 0;
   for (HighsInt i = 0; i < len; ++i) {
     sqrnorm += vals[i] * vals[i];
@@ -1153,7 +1153,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
     upper[i] = globaldomain.colUpper_[col] - globaldomain.colLower_[col];
 
-    if (vals[i] < 0 && globaldomain.colUpper_[col] != HIGHS_CONST_INF) {
+    if (vals[i] < 0 && globaldomain.colUpper_[col] != kHighsInf) {
       rhs -= globaldomain.colUpper_[col] * vals[i];
       vals[i] = -vals[i];
       complementation[i] = 1;

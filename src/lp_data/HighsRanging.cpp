@@ -22,11 +22,11 @@
 #include "lp_data/HighsModelUtils.h"
 
 double infProduct(double value) {
-  // Multiplying value and HIGHS_CONST_INF
+  // Multiplying value and kHighsInf
   if (value == 0) {
     return 0;
   } else {
-    return value * HIGHS_CONST_INF;
+    return value * kHighsInf;
   }
 }
 
@@ -77,7 +77,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const HighsInt numCol = ekk_instance.simplex_lp_.numCol_;
   const HighsInt numTotal = numCol + numRow;
   const double H_TT = 1e-13;
-  const double H_INF = HIGHS_CONST_INF;
+  const double H_INF = kHighsInf;
   const double objective =
       highs_model_object.solution_params_.objective_function_value;
 
@@ -392,7 +392,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
       // Check if b_up_b > upper
       if (value_[j] != upper_[j] && b_up_b[j] > upper_[j]) {
         b_up_b[j] = upper_[j];
-        assert(lower_[j] > -HIGHS_CONST_INF);
+        assert(lower_[j] > -kHighsInf);
         b_up_f[j] = objective + sense * (upper_[j] - lower_[j]) * dualv;
         b_up_e[j] = j;
         b_up_l[j] = j;
@@ -417,7 +417,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
       // Check if b_dn_b < lower
       if (value_[j] != lower_[j] && b_dn_b[j] < lower_[j]) {
         b_dn_b[j] = lower_[j];
-        assert(upper_[j] < HIGHS_CONST_INF);
+        assert(upper_[j] < kHighsInf);
         b_dn_f[j] = objective + sense * (lower_[j] - upper_[j]) * dualv;
         b_dn_e[j] = j;
         b_dn_l[j] = j;

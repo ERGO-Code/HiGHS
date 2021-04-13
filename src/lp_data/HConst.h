@@ -19,21 +19,21 @@
 
 #include "util/HighsInt.h"
 
-const HighsInt HIGHS_CONST_I_INF = std::numeric_limits<HighsInt>::max();
-const double HIGHS_CONST_INF = std::numeric_limits<double>::infinity();
-const double HIGHS_CONST_TINY = 1e-14;
-const double HIGHS_CONST_ZERO = 1e-50;
-const std::string off_string = "off";
-const std::string choose_string = "choose";
-const std::string on_string = "on";
-const HighsInt HIGHS_THREAD_LIMIT = 8;  // 32;
+const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
+const double kHighsInf = std::numeric_limits<double>::infinity();
+const double kHighsTiny = 1e-14;
+const double kHighsZero = 1e-50;
+const std::string kHighsOffString = "off";
+const std::string kHighsChooseString = "choose";
+const std::string kHighsOnString = "on";
+const HighsInt kHighsThreadLimit = 8;  // 32;
 
 enum HighsDebugLevel {
   kHighsDebugLevelMin = 0,
   kHighsDebugLevelNone = kHighsDebugLevelMin,  // 0
-  kHighsDebugLevelCheap,                         // 1
-  kHighsDebugLevelCostly,                        // 2
-  kHighsDebugLevelExpensive,                     // 3
+  kHighsDebugLevelCheap,                       // 1
+  kHighsDebugLevelCostly,                      // 2
+  kHighsDebugLevelExpensive,                   // 3
   kHighsDebugLevelMax = kHighsDebugLevelExpensive
 };
 

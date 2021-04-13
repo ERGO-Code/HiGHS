@@ -849,7 +849,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
   std::vector<HighsInt> mask(mipsolver.model_->numCol_, 1);
   std::vector<double> cost(mipsolver.model_->numCol_, 0.0);
-  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -859,8 +859,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       }
     }
 
-    lprelax.getLpSolver().addRow(-HIGHS_CONST_INF,
-                                 mipsolver.mipdata_->upper_limit,
+    lprelax.getLpSolver().addRow(-kHighsInf, mipsolver.mipdata_->upper_limit,
                                  objinds.size(), objinds.data(), objval.data());
   }
 
@@ -958,7 +957,7 @@ void HighsPrimalHeuristics::centralRounding() {
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);
   ipm.passModel(std::move(lpmodel));
 
-  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -968,8 +967,8 @@ void HighsPrimalHeuristics::centralRounding() {
       }
     }
 
-    ipm.addRow(-HIGHS_CONST_INF, mipsolver.mipdata_->upper_limit,
-               objinds.size(), objinds.data(), objval.data());
+    ipm.addRow(-kHighsInf, mipsolver.mipdata_->upper_limit, objinds.size(),
+               objinds.data(), objval.data());
   }
   ipm.run();
   const std::vector<double>& sol = ipm.getSolution().col_value;

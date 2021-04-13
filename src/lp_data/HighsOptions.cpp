@@ -28,23 +28,25 @@ std::string optionEntryType2string(const HighsOptionType type) {
 
 bool commandLineOffChooseOnOk(const HighsLogOptions& log_options,
                               const string& value) {
-  if (value == off_string || value == choose_string || value == on_string)
+  if (value == kHighsOffString || value == kHighsChooseString ||
+      value == kHighsOnString)
     return true;
   highsLogUser(log_options, HighsLogType::WARNING,
                "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), off_string.c_str(), choose_string.c_str(),
-               on_string.c_str());
+               value.c_str(), kHighsOffString.c_str(),
+               kHighsChooseString.c_str(), kHighsOnString.c_str());
   return false;
 }
 
 bool commandLineSolverOk(const HighsLogOptions& log_options,
                          const string& value) {
-  if (value == simplex_string || value == choose_string || value == ipm_string)
+  if (value == simplex_string || value == kHighsChooseString ||
+      value == ipm_string)
     return true;
   highsLogUser(log_options, HighsLogType::WARNING,
                "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), simplex_string.c_str(), choose_string.c_str(),
-               ipm_string.c_str());
+               value.c_str(), simplex_string.c_str(),
+               kHighsChooseString.c_str(), ipm_string.c_str());
   return false;
 }
 

@@ -295,14 +295,14 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     if (strline[start] == 'G') {
       rowLower.push_back(0.0);
-      rowUpper.push_back(HIGHS_CONST_INF);
+      rowUpper.push_back(kHighsInf);
       row_type.push_back(boundtype::GE);
     } else if (strline[start] == 'E') {
       rowLower.push_back(0.0);
       rowUpper.push_back(0.0);
       row_type.push_back(boundtype::EQ);
     } else if (strline[start] == 'L') {
-      rowLower.push_back(-HIGHS_CONST_INF);
+      rowLower.push_back(-kHighsInf);
       rowUpper.push_back(0.0);
       row_type.push_back(boundtype::LE);
     } else if (strline[start] == 'N') {
@@ -465,7 +465,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
       // initialize with default bounds
       colLower.push_back(0.0);
-      colUpper.push_back(HIGHS_CONST_INF);
+      colUpper.push_back(kHighsInf);
     }
 
     assert(ncols > 0);
@@ -841,7 +841,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
 
       // initialize with default bounds
       colLower.push_back(0.0);
-      colUpper.push_back(HIGHS_CONST_INF);
+      colUpper.push_back(kHighsInf);
       numCol++;
     }
     if (isdefaultbound) {
@@ -863,8 +863,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       } else {
         // continuous: MI, PL or FR
         col_binary[colidx] = false;
-        if (islb) colLower[colidx] = -HIGHS_CONST_INF;
-        if (isub) colUpper[colidx] = HIGHS_CONST_INF;
+        if (islb) colLower[colidx] = -kHighsInf;
+        if (isub) colUpper[colidx] = kHighsInf;
       }
       continue;
     }
@@ -917,13 +917,13 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
   auto addrhs = [this](double val, HighsInt& rowidx) {
     if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
         row_type[rowidx] == boundtype::LE) {
-      assert(rowUpper.at(rowidx) < HIGHS_CONST_INF);
+      assert(rowUpper.at(rowidx) < kHighsInf);
       rowLower.at(rowidx) = rowUpper.at(rowidx) - fabs(val);
     }
 
     else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
              row_type[rowidx] == boundtype::GE) {
-      assert(rowLower.at(rowidx) > (-HIGHS_CONST_INF));
+      assert(rowLower.at(rowidx) > (-kHighsInf));
       rowUpper.at(rowidx) = rowLower.at(rowidx) + fabs(val);
     }
   };

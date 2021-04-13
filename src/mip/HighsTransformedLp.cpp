@@ -54,7 +54,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     size_t bestvlbnodes = 0;
 
     for (const auto& vub : implications.getVUBs(col)) {
-      if (vub.second.coef == HIGHS_CONST_INF) continue;
+      if (vub.second.coef == kHighsInf) continue;
       if (mipsolver.mipdata_->domain.isFixed(vub.first)) continue;
       assert(mipsolver.mipdata_->domain.isBinary(vub.first));
       double vubval = lpSolution.col_value[vub.first] * vub.second.coef +
@@ -79,7 +79,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     }
 
     for (const auto& vlb : implications.getVLBs(col)) {
-      if (vlb.second.coef == -HIGHS_CONST_INF) continue;
+      if (vlb.second.coef == -kHighsInf) continue;
       if (mipsolver.mipdata_->domain.isFixed(vlb.first)) continue;
       assert(mipsolver.mipdata_->domain.isBinary(vlb.first));
       assert(vlb.first >= 0 && vlb.first < mipsolver.numCol());
@@ -140,7 +140,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       size_t bestvlbnodes = 0;
 
       for (const auto& vub : implications.getVUBs(col)) {
-        if (vub.second.coef == HIGHS_CONST_INF) continue;
+        if (vub.second.coef == kHighsInf) continue;
         if (mipsolver.mipdata_->domain.isFixed(vub.first)) continue;
         assert(mipsolver.mipdata_->domain.isBinary(vub.first));
         double vubval = lpSolution.col_value[vub.first] * vub.second.coef +
@@ -165,7 +165,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
       }
 
       for (const auto& vlb : implications.getVLBs(col)) {
-        if (vlb.second.coef == -HIGHS_CONST_INF) continue;
+        if (vlb.second.coef == -kHighsInf) continue;
         if (mipsolver.mipdata_->domain.isFixed(vlb.first)) continue;
         assert(mipsolver.mipdata_->domain.isBinary(vlb.first));
         assert(vlb.first >= 0 && vlb.first < mipsolver.numCol());
@@ -257,11 +257,10 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
       continue;
     }
 
-    if (lb == -HIGHS_CONST_INF && ub == HIGHS_CONST_INF) return false;
+    if (lb == -kHighsInf && ub == kHighsInf) return false;
 
     if (lprelaxation.isColIntegral(col)) {
-      if (lb == -HIGHS_CONST_INF || ub == HIGHS_CONST_INF)
-        integersPositive = false;
+      if (lb == -kHighsInf || ub == kHighsInf) integersPositive = false;
       bool useVbd = false;
       if (ub - lb > 1.5) {
         if (vals[i] < 0 && ubDist[col] == 0.0 &&
@@ -423,13 +422,13 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
 
     switch (boundTypes[col]) {
       case BoundType::kSimpleLb: {
-        assert(lb != -HIGHS_CONST_INF);
+        assert(lb != -kHighsInf);
         tmpRhs -= lb * vals[j];
         solval[j] = lbDist[col];
         break;
       }
       case BoundType::kSimpleUb: {
-        assert(ub != HIGHS_CONST_INF);
+        assert(ub != kHighsInf);
         tmpRhs -= ub * vals[j];
         vals[j] = -vals[j];
         solval[j] = ubDist[col];
@@ -540,12 +539,12 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
       if (absval <= mip.mipdata_->feastol) {
         if (val > 0) {
-          if (mip.mipdata_->domain.colLower_[col] == -HIGHS_CONST_INF)
+          if (mip.mipdata_->domain.colLower_[col] == -kHighsInf)
             abort = true;
           else
             tmpRhs -= val * mip.mipdata_->domain.colLower_[col];
         } else {
-          if (mip.mipdata_->domain.colUpper_[col] == HIGHS_CONST_INF)
+          if (mip.mipdata_->domain.colUpper_[col] == kHighsInf)
             abort = true;
           else
             tmpRhs -= val * mip.mipdata_->domain.colUpper_[col];

@@ -66,10 +66,10 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                   gap +
                               tolerance);
 
-    if ((localdomain.colUpper_[col] == HIGHS_CONST_INF &&
+    if ((localdomain.colUpper_[col] == kHighsInf &&
          lpredcost[col] > tolerance) ||
         lpredcost[col] > threshold) {
-      assert(localdomain.colLower_[col] != -HIGHS_CONST_INF);
+      assert(localdomain.colLower_[col] != -kHighsInf);
       assert(lpredcost[col] > tolerance);
       double newub =
           double(floor(gap / lpredcost[col] + localdomain.colLower_[col] +
@@ -80,10 +80,10 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       localdomain.changeBound(HighsBoundType::Upper, col, newub,
                               HighsDomain::Reason::unspecified());
       if (localdomain.infeasible()) return;
-    } else if ((localdomain.colLower_[col] == -HIGHS_CONST_INF &&
+    } else if ((localdomain.colLower_[col] == -kHighsInf &&
                 lpredcost[col] < -tolerance) ||
                lpredcost[col] < -threshold) {
-      assert(localdomain.colUpper_[col] != HIGHS_CONST_INF);
+      assert(localdomain.colUpper_[col] != kHighsInf);
       assert(lpredcost[col] < -tolerance);
       double newlb =
           double(ceil(gap / lpredcost[col] + localdomain.colUpper_[col] -
@@ -116,7 +116,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
       HighsInt lb = (HighsInt)mipsolver.mipdata_->domain.colLower_[col];
       HighsInt maxub;
-      if (mipsolver.mipdata_->domain.colUpper_[col] == HIGHS_CONST_INF)
+      if (mipsolver.mipdata_->domain.colUpper_[col] == kHighsInf)
         maxub = lb + 10;
       else
         maxub = (HighsInt)(mipsolver.mipdata_->domain.colUpper_[col] - 0.5);
@@ -164,7 +164,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
       HighsInt ub = (HighsInt)mipsolver.mipdata_->domain.colUpper_[col];
       HighsInt minlb;
-      if (mipsolver.mipdata_->domain.colLower_[col] == -HIGHS_CONST_INF)
+      if (mipsolver.mipdata_->domain.colLower_[col] == -kHighsInf)
         minlb = ub - 10;
       else
         minlb = (HighsInt)(mipsolver.mipdata_->domain.colLower_[col] + 1.5);

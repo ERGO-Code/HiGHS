@@ -93,40 +93,39 @@ class HighsLinearSumBounds {
 
   double getSumLowerOrig(HighsInt sum) const {
     return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
-                                        : -HIGHS_CONST_INF;
+                                        : -kHighsInf;
   }
 
   double getSumUpperOrig(HighsInt sum) const {
-    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum])
-                                        : HIGHS_CONST_INF;
+    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum]) : kHighsInf;
   }
 
   double getSumLower(HighsInt sum) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -HIGHS_CONST_INF;
+    return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -kHighsInf;
   }
 
   double getSumUpper(HighsInt sum) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : HIGHS_CONST_INF;
+    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : kHighsInf;
   }
 
   double getSumLower(HighsInt sum, double offset) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -HIGHS_CONST_INF;
+                                    : -kHighsInf;
   }
 
   double getSumUpper(HighsInt sum, double offset) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : HIGHS_CONST_INF;
+                                    : kHighsInf;
   }
 
   double getSumLower(HighsInt sum, HighsCDouble offset) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -HIGHS_CONST_INF;
+                                    : -kHighsInf;
   }
 
   double getSumUpper(HighsInt sum, HighsCDouble offset) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : HIGHS_CONST_INF;
+                                    : kHighsInf;
   }
 
   HighsInt getNumInfSumLower(HighsInt sum) const { return numInfSumLower[sum]; }

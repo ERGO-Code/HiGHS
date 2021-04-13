@@ -297,20 +297,20 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     switch (rowType[iRow]) {
       case 'L':
-        rowLower[iRow] = -HIGHS_CONST_INF;
+        rowLower[iRow] = -kHighsInf;
         rowUpper[iRow] = RHS[iRow];
         break;
       case 'G':
         rowLower[iRow] = RHS[iRow];
-        rowUpper[iRow] = +HIGHS_CONST_INF;
+        rowUpper[iRow] = +kHighsInf;
         break;
       case 'E':
         rowLower[iRow] = RHS[iRow];
         rowUpper[iRow] = RHS[iRow];
         break;
       case 'N':
-        rowLower[iRow] = -HIGHS_CONST_INF;
-        rowUpper[iRow] = +HIGHS_CONST_INF;
+        rowLower[iRow] = -kHighsInf;
+        rowUpper[iRow] = +kHighsInf;
         break;
       case 'X':
         break;
@@ -329,7 +329,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   // Load BOUNDS
   num_alien_entries = 0;
   colLower.assign(numCol, 0);
-  colUpper.assign(numCol, HIGHS_CONST_INF);
+  colUpper.assign(numCol, kHighsInf);
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
       // Find the column index associated woith the name "data[2]". If
@@ -342,23 +342,22 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
             colLower[iCol] = data[0];
             break;
           case 'I': /*MI*/
-            colLower[iCol] = -HIGHS_CONST_INF;
+            colLower[iCol] = -kHighsInf;
             break;
           case 'L': /*PL*/
-            colUpper[iCol] = HIGHS_CONST_INF;
+            colUpper[iCol] = kHighsInf;
             break;
           case 'X': /*FX*/
             colLower[iCol] = data[0];
             colUpper[iCol] = data[0];
             break;
           case 'R': /*FR*/
-            colLower[iCol] = -HIGHS_CONST_INF;
-            colUpper[iCol] = HIGHS_CONST_INF;
+            colLower[iCol] = -kHighsInf;
+            colUpper[iCol] = kHighsInf;
             break;
           case 'P': /*UP*/
             colUpper[iCol] = data[0];
-            if (colLower[iCol] == 0 && data[0] < 0)
-              colLower[iCol] = -HIGHS_CONST_INF;
+            if (colLower[iCol] == 0 && data[0] < 0) colLower[iCol] = -kHighsInf;
             break;
         }
       } else {
@@ -380,7 +379,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol] == HighsVarType::INTEGER) {
       num_int++;
-      if (colUpper[iCol] >= HIGHS_CONST_INF) colUpper[iCol] = 1;
+      if (colUpper[iCol] >= kHighsInf) colUpper[iCol] = 1;
     }
   }
   if (num_alien_entries)
@@ -486,7 +485,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   if (have_row_names) local_row_names = lp.row_names_;
   //
   // Normalise the column names
-  HighsInt max_col_name_length = HIGHS_CONST_I_INF;
+  HighsInt max_col_name_length = kHighsIInf;
   if (!free_format) max_col_name_length = 8;
   HighsStatus col_name_status =
       normaliseNames(options.log_options, "Column", lp.numCol_, local_col_names,
@@ -495,7 +494,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   warning_found = col_name_status == HighsStatus::Warning || warning_found;
   //
   // Normalise the row names
-  HighsInt max_row_name_length = HIGHS_CONST_I_INF;
+  HighsInt max_row_name_length = kHighsIInf;
   if (!free_format) max_row_name_length = 8;
   HighsStatus row_name_status =
       normaliseNames(options.log_options, "Row", lp.numRow_, local_row_names,

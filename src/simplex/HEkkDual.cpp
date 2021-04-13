@@ -456,7 +456,7 @@ void HEkkDual::initParallel() {
       SIMPLEX_STRATEGY_DUAL_MULTI) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
-    if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
+    if (multi_num > kHighsThreadLimit) multi_num = kHighsThreadLimit;
     for (HighsInt i = 0; i < multi_num; i++) {
       multi_choice[i].row_ep.setup(solver_num_row);
       multi_choice[i].col_aq.setup(solver_num_row);
@@ -2081,7 +2081,7 @@ void HEkkDual::exitPhase1ResetDuals() {
         lp_lower = simplex_lp.rowLower_[iRow];
         lp_upper = simplex_lp.rowUpper_[iRow];
       }
-      if (lp_lower <= -HIGHS_CONST_INF && lp_upper >= HIGHS_CONST_INF) {
+      if (lp_lower <= -kHighsInf && lp_upper >= kHighsInf) {
         const double shift = -simplex_info.workDual_[iVar];
         simplex_info.workDual_[iVar] = 0;
         simplex_info.workCost_[iVar] = simplex_info.workCost_[iVar] + shift;
