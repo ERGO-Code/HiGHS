@@ -127,8 +127,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       num_unscaled_dual_infeasibility == 0) {
     // Optimal
     highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
-    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
   } else {
     // Not optimal - should try refinement
     highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;

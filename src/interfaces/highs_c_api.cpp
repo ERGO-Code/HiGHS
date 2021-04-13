@@ -692,8 +692,8 @@ const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
 const char* Highs_primalDualStatusToChar(void* highs,
                                          HighsInt int_primal_dual_status) {
   const char* illegal_primal_dual_status = "Primal/Dual status out of range";
-  if (int_primal_dual_status < PrimalDualStatus::STATUS_MIN ||
-      int_primal_dual_status > PrimalDualStatus::STATUS_MAX)
+  if (int_primal_dual_status < kHighsPrimalDualStatusMin ||
+      int_primal_dual_status > kHighsPrimalDualStatusMax)
     return illegal_primal_dual_status;
   const std::string string_primal_dual_status =
       ((Highs*)highs)->primalDualStatusToString(int_primal_dual_status);

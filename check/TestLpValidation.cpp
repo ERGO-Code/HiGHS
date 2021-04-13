@@ -87,7 +87,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   // Try to add a column with illegal cost
   bool require_return_bool;
-  if (allow_infinite_costs) {
+  if (kHighsAllowInfiniteCosts) {
     require_return_bool = true;
   } else {
     require_return_bool = false;

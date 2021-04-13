@@ -304,7 +304,7 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     double abs_cost = fabs(cost[usr_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
-      error_found = !allow_infinite_costs;
+      error_found = !kHighsAllowInfiniteCosts;
       HighsLogType log_type = HighsLogType::WARNING;
       if (error_found) log_type = HighsLogType::ERROR;
       highsLogUser(options.log_options, log_type,

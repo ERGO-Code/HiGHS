@@ -2000,8 +2000,8 @@ HighsStatus Highs::callSolveMip() {
   info_.simplex_iteration_count = -1;    // Not known
   info_.ipm_iteration_count = -1;        // Not known
   info_.crossover_iteration_count = -1;  // Not known
-  info_.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
-  info_.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
+  info_.primal_status = kHighsPrimalDualStatusNoSolution;
+  info_.dual_status = kHighsPrimalDualStatusNoSolution;
   info_.objective_function_value = solver.solution_objective_;
   info_.mip_dual_bound = solver.dual_bound_;
   info_.mip_gap =
@@ -2018,7 +2018,7 @@ HighsStatus Highs::callSolveMip() {
   info_.sum_dual_infeasibilities = -1;    // Not known
   // The solution needs to be here, but just resize it for now
   if (solver.solution_objective_ != kHighsInf) {
-    info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    info_.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     HighsInt solver_solution_size = solver.solution_.size();
     assert(solver_solution_size >= lp_.numCol_);
     solution_.col_value.resize(lp_.numCol_);
@@ -2217,8 +2217,8 @@ void Highs::clearModelStatus() {
 }
 
 void Highs::clearSolution() {
-  info_.primal_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
-  info_.dual_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
+  info_.primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
+  info_.dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
   clearSolutionUtil(solution_);
 }
 
@@ -2271,9 +2271,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         have_solution = true;
         // The following is an aspiration
         //        assert(info_.primal_status ==
-        //                   (HighsInt)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        //                   (HighsInt)kHighsPrimalDualStatusFeasiblePoint);
         //        assert(info_.dual_status ==
-        //                   (HighsInt)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        //                   (HighsInt)kHighsPrimalDualStatusFeasiblePoint);
         assert(model_status_ == HighsModelStatus::NOTSET ||
                model_status_ == HighsModelStatus::OPTIMAL);
         assert(return_status == HighsStatus::OK);

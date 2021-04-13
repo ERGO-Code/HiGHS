@@ -271,19 +271,19 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
 // Return a string representation of PrimalDualStatus
 std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
   switch (primal_dual_status) {
-    case PrimalDualStatus::STATUS_NOTSET:
+    case kHighsPrimalDualStatusNotset:
       return "Not set";
       break;
-    case PrimalDualStatus::STATUS_NO_SOLUTION:
+    case kHighsPrimalDualStatusNoSolution:
       return "No solution";
       break;
-    case PrimalDualStatus::STATUS_UNKNOWN:
+    case kHighsPrimalDualStatusUnknown:
       return "Point of unknown feasibility";
       break;
-    case PrimalDualStatus::STATUS_INFEASIBLE_POINT:
+    case kHighsPrimalDualStatusInfeasiblePoint:
       return "Infeasible point";
       break;
-    case PrimalDualStatus::STATUS_FEASIBLE_POINT:
+    case kHighsPrimalDualStatusFeasiblePoint:
       return "Feasible point";
       break;
     default:

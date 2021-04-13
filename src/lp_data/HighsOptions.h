@@ -401,7 +401,7 @@ class HighsOptions : public HighsOptionsStruct {
     // Options read from the command line
     record_string =
         new OptionRecordString(model_file_string, "Model file", advanced,
-                               &model_file, FILENAME_DEFAULT);
+                               &model_file, kHighsFilenameDefault);
     records.push_back(record_string);
     record_string = new OptionRecordString(
         presolve_string, "Presolve option: \"off\", \"choose\" or \"on\"",
@@ -421,7 +421,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
     record_string =
         new OptionRecordString(options_file_string, "Options file", advanced,
-                               &options_file, FILENAME_DEFAULT);
+                               &options_file, kHighsFilenameDefault);
     records.push_back(record_string);
     // Options read from the file
     record_double =
@@ -571,7 +571,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_string =
         new OptionRecordString("solution_file", "Solution file", advanced,
-                               &solution_file, FILENAME_DEFAULT);
+                               &solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
     record_string = new OptionRecordString(log_file_string, "Log file",
@@ -604,7 +604,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_string = new OptionRecordString(
         "mip_debug_solution_file",
         "Solution file for debug solution of the MIP solver", advanced,
-        &mip_debug_solution_file, FILENAME_DEFAULT);
+        &mip_debug_solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 #endif
 
@@ -702,12 +702,14 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_dualise_strategy", "Strategy for dualising before simplex",
-        advanced, &simplex_dualise_strategy, OPTION_OFF, OPTION_OFF, OPTION_ON);
+        advanced, &simplex_dualise_strategy, kHighsOptionOff, kHighsOptionOff,
+        kHighsOptionOn);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_permute_strategy", "Strategy for permuting before simplex",
-        advanced, &simplex_permute_strategy, OPTION_OFF, OPTION_OFF, OPTION_ON);
+        advanced, &simplex_permute_strategy, kHighsOptionOff, kHighsOptionOff,
+        kHighsOptionOn);
     records.push_back(record_int);
 
     record_int =

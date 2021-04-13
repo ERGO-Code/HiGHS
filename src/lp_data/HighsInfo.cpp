@@ -16,8 +16,8 @@
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
-  primal_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
-  dual_status = (HighsInt)PrimalDualStatus::STATUS_NOTSET;
+  primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
+  dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
   objective_function_value = 0;
   num_primal_infeasibilities = illegal_infeasibility_count;
   max_primal_infeasibility = illegal_infeasibility_measure;

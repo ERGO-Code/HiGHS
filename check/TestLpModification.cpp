@@ -909,7 +909,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[6] = 3.91;
 
   // Attempting to set a cost to infinity may return error
-  REQUIRE(highs.changeColCost(7, kHighsInf) == allow_infinite_costs);
+  REQUIRE(highs.changeColCost(7, kHighsInf) == kHighsAllowInfiniteCosts);
 
   // Attempting to set a cost to a finite value returns OK
   REQUIRE(highs.changeColCost(7, 77));

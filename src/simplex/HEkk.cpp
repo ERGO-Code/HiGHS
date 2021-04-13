@@ -462,11 +462,11 @@ HighsSolutionParams HEkk::getSolutionParams() {
   solution_params.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   if (scaled_model_status_ == HighsModelStatus::OPTIMAL) {
-    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
   } else {
-    solution_params.primal_status = PrimalDualStatus::STATUS_NOTSET;
-    solution_params.dual_status = PrimalDualStatus::STATUS_NOTSET;
+    solution_params.primal_status = kHighsPrimalDualStatusNotset;
+    solution_params.dual_status = kHighsPrimalDualStatusNotset;
   }
   // Output from solution analysis method
   solution_params.objective_function_value =

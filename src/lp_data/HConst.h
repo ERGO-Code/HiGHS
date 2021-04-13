@@ -72,26 +72,30 @@ enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
 enum class HighsInfoType { kInt = 1, kDouble };
 
-enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
+enum OptionOffChooseOn {
+  kHighsOptionOff = -1,
+  kHighsOptionChoose,
+  kHighsOptionOn
+};
 
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 
 enum PrimalDualStatus {
-  STATUS_NOTSET = -1,
-  STATUS_MIN = STATUS_NOTSET,
-  STATUS_NO_SOLUTION,
-  STATUS_UNKNOWN,
-  STATUS_INFEASIBLE_POINT,
-  STATUS_FEASIBLE_POINT,
-  STATUS_MAX = STATUS_FEASIBLE_POINT
+  kHighsPrimalDualStatusNotset = -1,
+  kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNotset,
+  kHighsPrimalDualStatusNoSolution,
+  kHighsPrimalDualStatusUnknown,
+  kHighsPrimalDualStatusInfeasiblePoint,
+  kHighsPrimalDualStatusFeasiblePoint,
+  kHighsPrimalDualStatusMax = kHighsPrimalDualStatusFeasiblePoint
 };
 
-const std::string FILENAME_DEFAULT = "";
+const std::string kHighsFilenameDefault = "";
 
 // Need to allow infinite costs to pass SCIP LPI unit tests
-const bool allow_infinite_costs = true;
+const bool kHighsAllowInfiniteCosts = true;
 
 // Primal/dual statuses and corresponding HighsModelStatus
 // values. Note that if dual infeasibility is identified, then the

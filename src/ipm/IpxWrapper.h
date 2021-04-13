@@ -758,10 +758,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     return_status = HighsStatus::Warning;
   } else {
     model_status = HighsModelStatus::OPTIMAL;
-    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     // Currently only have a dual solution if there is a basic solution
     if (have_basic_solution)
-      solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
     return_status = HighsStatus::OK;
   }
   double objective_function_value = lp.offset_;

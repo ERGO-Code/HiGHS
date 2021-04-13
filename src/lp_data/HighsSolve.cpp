@@ -237,16 +237,16 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 
   if (infeasible) {
     model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
-    solution_params.primal_status = STATUS_INFEASIBLE_POINT;
-    solution_params.dual_status = STATUS_UNKNOWN;
+    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.dual_status = kHighsPrimalDualStatusUnknown;
   } else {
-    solution_params.primal_status = STATUS_FEASIBLE_POINT;
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     if (unbounded) {
       model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
-      solution_params.dual_status = STATUS_INFEASIBLE_POINT;
+      solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
     } else {
       model_status = HighsModelStatus::OPTIMAL;
-      solution_params.dual_status = STATUS_FEASIBLE_POINT;
+      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
     }
   }
   return HighsStatus::OK;
