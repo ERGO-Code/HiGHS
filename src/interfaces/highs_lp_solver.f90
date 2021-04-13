@@ -209,7 +209,7 @@ module highs_lp_solver
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer ( c_int ) :: model_status
-      integer ( c_int ) :: scaled_model
+      integer ( c_int ), VALUE :: scaled_model
     end function Highs_getModelStatus
 
     function Highs_getObjectiveValue (h) result(ov) bind(c, name='Highs_getObjectiveValue')
