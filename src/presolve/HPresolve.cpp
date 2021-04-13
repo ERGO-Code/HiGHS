@@ -42,9 +42,9 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postSolveStack,
   for (const HighsSliceNonzero& nonzero : getSortedRowVector(row)) {
     // for (HighsInt rowiter = rowhead[row]; rowiter != -1; rowiter =
     // ARnext[rowiter]) {
-    char colchar = model->integrality_[nonzero.index()] == HighsVarType::kInteger
-                       ? 'y'
-                       : 'x';
+    char colchar =
+        model->integrality_[nonzero.index()] == HighsVarType::kInteger ? 'y'
+                                                                       : 'x';
     char signchar = nonzero.value() < 0 ? '-' : '+';
     printf("%c%g %c%" HIGHSINT_FORMAT " ", signchar, std::abs(nonzero.value()),
            colchar, postSolveStack.getOrigColIndex(nonzero.index()));
@@ -5050,7 +5050,8 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
         } else {
           HighsInt nzPos = findNonzero(candRow, nonzero.index());
           if (nzPos == -1) {
-            if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
+            if (model->integrality_[nonzero.index()] ==
+                    HighsVarType::kInteger &&
                 model->colUpper_[nonzero.index()] -
                         model->colLower_[nonzero.index()] >
                     1.5) {

@@ -375,7 +375,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
     bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
                        globaldomain.colLower_[i] == globaldomain.colUpper_[i];
 
-    if (!removeValue && mipsolver.variableType(i) == HighsVarType::kContinuous) {
+    if (!removeValue &&
+        mipsolver.variableType(i) == HighsVarType::kContinuous) {
       if (val > 0)
         removeValue =
             lpsolver.getSolution().col_value[i] - globaldomain.colLower_[i] <=

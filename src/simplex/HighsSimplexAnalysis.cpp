@@ -35,8 +35,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   model_name_ = lp.model_name_;
   lp_name_ = lp.lp_name_;
   // Set up analysis logic short-cuts
-  analyse_lp_data =
-      kHighsAnalysisLevelModelData & options.highs_analysis_level;
+  analyse_lp_data = kHighsAnalysisLevelModelData & options.highs_analysis_level;
   analyse_simplex_data =
       kHighsAnalysisLevelSolverData & options.highs_analysis_level;
   analyse_simplex_time =
