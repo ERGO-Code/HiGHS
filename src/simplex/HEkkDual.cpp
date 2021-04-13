@@ -1037,7 +1037,7 @@ void HEkkDual::cleanup() {
   ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase);
   // Possibly take a copy of the original duals before recomputing them
   vector<double> original_workDual;
-  if (ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP)
+  if (ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap)
     original_workDual = simplex_info.workDual_;
   // Compute the dual values
   ekk_instance_.computeDual();

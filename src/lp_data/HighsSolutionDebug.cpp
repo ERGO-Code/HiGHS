@@ -33,7 +33,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsBasis& basis) {
   // Cheap analysis of a HiGHS basis, checking vector sizes, numbers
   // of basic/nonbasic variables
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (!basis.valid_) return return_status;
@@ -50,7 +50,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp lp,
                                      const HighsBasis& basis) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(lp, basis);
@@ -66,7 +66,7 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
 HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
                                         const HighsLp lp,
                                         const HighsSolution& solution) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isSolutionRightSize(lp, solution);
@@ -124,7 +124,7 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
                                          const HighsSolution& solution) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options, assuming no knowledge of solution parameters or model status
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
@@ -165,7 +165,7 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsModelStatus model_status) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // solution_params
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   // No basis to test if model status corresponds to warning or error
   if (highsStatusFromHighsModelStatus(model_status) != HighsStatus::OK)
@@ -338,8 +338,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       sum_dual_infeasibility += dual_infeasibility;
     }
     report =
-        options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
-        (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
+        options.highs_debug_level > kHighsDebugLevelExpensive ||
+        (options.highs_debug_level == kHighsDebugLevelExpensive && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -365,7 +365,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       dual_activities[iCol] += solution.row_dual[iRow] * Avalue;
     }
   }
-  bool report = options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE;
+  bool report = options.highs_debug_level > kHighsDebugLevelExpensive;
   header_written = false;
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     double primal_residual_error =
@@ -450,8 +450,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       sum_dual_infeasibility += dual_infeasibility;
     }
     report =
-        options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
-        (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
+        options.highs_debug_level > kHighsDebugLevelExpensive ||
+        (options.highs_debug_level == kHighsDebugLevelExpensive && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -586,7 +586,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
   HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const bool force_report =
-      options.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY;
+      options.highs_debug_level >= kHighsDebugLevelCostly;
   if (primal_dual_errors.num_nonzero_basic_duals) {
     value_adjective = "Error";
     report_level = HighsLogType::ERROR;

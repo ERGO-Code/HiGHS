@@ -35,7 +35,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsSimplexLpStatus& simplex_lp_status =
       ekk_instance.simplex_lp_status_;
   if (!simplex_lp_status.valid ||
-      highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+      highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const HighsOptions& options = ekk_instance.options_;
@@ -100,7 +100,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const SimplexBasis& simplex_basis) {
   // Cheap analysis of a Simplex basis, checking vector sizes, numbers
   // of basic/nonbasic variables and non-repetition of basic variables
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   // Check consistency of nonbasicFlag
@@ -175,7 +175,7 @@ HighsDebugStatus debugDualChuzcFailQuad0(
     const HighsInt numVar, const double* workDual, const double selectTheta,
     const double remainTheta, const bool force) {
   // Non-trivially expensive assessment of CHUZC failure
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+  if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::NOT_CHECKED;
 
   highsLogDev(options.log_options, HighsLogType::INFO,
@@ -200,7 +200,7 @@ HighsDebugStatus debugDualChuzcFailQuad1(
     const HighsInt numVar, const double* workDual, const double selectTheta,
     const bool force) {
   // Non-trivially expensive assessment of CHUZC failure
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+  if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::NOT_CHECKED;
 
   highsLogDev(
@@ -226,7 +226,7 @@ HighsDebugStatus debugDualChuzcFailHeap(
     const HighsInt numVar, const double* workDual, const double selectTheta,
     const bool force) {
   // Non-trivially expensive assessment of CHUZC failure
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+  if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::NOT_CHECKED;
 
   highsLogDev(options.log_options, HighsLogType::INFO,
@@ -248,7 +248,7 @@ HighsDebugStatus debugDualChuzcFailHeap(
 HighsDebugStatus debugNonbasicFlagConsistent(
     const HighsOptions& options, const HighsLp& simplex_lp,
     const SimplexBasis& simplex_basis) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -362,7 +362,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   if (!simplex_lp_status.valid ||
-      highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+      highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const HighsOptions& options = highs_model_object.options_;
@@ -424,7 +424,7 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp& simplex_lp,
                                      const SimplexBasis& simplex_basis) {
   // Cheap analysis of a Simplex basis, checking vector sizes
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
@@ -440,7 +440,7 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
 HighsDebugStatus debugSimplexInfoBasisRightSize(
     const HighsModelObject& highs_model_object) {
   // Trivially cheap check of dimensions and sizes
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
 
   const HighsOptions& options = highs_model_object.options_;
@@ -487,7 +487,7 @@ HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n", numCol,
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs) {
   // Non-trivially expensive analysis of computed primal values.
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
   const std::vector<double>& primal_value =
@@ -545,7 +545,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
                                   const std::vector<double>& basic_costs,
                                   const std::vector<double>& row_dual) {
   // Non-trivially expensive analysis of computed dual values.
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
   const std::vector<double>& new_dual =
@@ -720,7 +720,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
     const bool force) {
   // Non-trivially expensive check of dual feasibility.
   if (highs_model_object.options_.highs_debug_level <
-          HIGHS_DEBUG_LEVEL_COSTLY &&
+          kHighsDebugLevelCostly &&
       !force)
     return HighsDebugStatus::NOT_CHECKED;
   if (force)
@@ -776,7 +776,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   // Non-trivially expensive check of updated objective value. Computes the
   // exact objective value
   if (highs_model_object.options_.highs_debug_level <
-          HIGHS_DEBUG_LEVEL_COSTLY &&
+          kHighsDebugLevelCostly &&
       !force)
     return HighsDebugStatus::NOT_CHECKED;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -916,7 +916,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   // Cheap check of updated objective value - assumes that the
   // objective value computed directly is correct, so only call after
   // this has been done
-  if (highs_model_object.options_.highs_debug_level == HIGHS_DEBUG_LEVEL_NONE)
+  if (highs_model_object.options_.highs_debug_level == kHighsDebugLevelNone)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   std::string algorithm_name = "dual";
@@ -972,7 +972,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
 HighsDebugStatus debugFixedNonbasicMove(
     const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check of nonbasicMove for fixed variables
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -997,7 +997,7 @@ HighsDebugStatus::LOGICAL_ERROR;
 
 HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check of NonbasicMove
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const HighsOptions& options = highs_model_object.options_;
@@ -1088,7 +1088,7 @@ num_free_variable_move_errors, num_lower_bounded_variable_move_errors,
 HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message) {
   // Non-trivially expensive assessment of basis condition
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   double basis_condition = computeBasisCondition(highs_model_object);
   std::string value_adjective;
@@ -1119,7 +1119,7 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
 
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
                               const std::vector<double>& original_dual) {
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -1205,7 +1205,7 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
 HighsDebugStatus debugFreeListNumEntries(
     const HighsModelObject& highs_model_object, const std::set<HighsInt>&
 freeList) { if (highs_model_object.options_.highs_debug_level <
-HIGHS_DEBUG_LEVEL_CHEAP) return HighsDebugStatus::NOT_CHECKED;
+kHighsDebugLevelCheap) return HighsDebugStatus::NOT_CHECKED;
 
   HighsInt freelist_num_entries = 0;
   if (freeList.size() > 0) {
@@ -1307,7 +1307,7 @@ std::vector<std::pair<HighsInt, double>>& sorted_workData, const
 std::vector<HighsInt>& workGroup, const std::vector<HighsInt>& alt_workGroup) {
   // Cheap comparison and possible non-trivially expensive reporting
   // of the two sorting methods for BFRT nodes in dual CHUZC
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsOptions& options = highs_model_object.options_;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
@@ -1318,7 +1318,7 @@ std::vector<HighsInt>& workGroup, const std::vector<HighsInt>& alt_workGroup) {
                       "Quad workPivot = %" HIGHSINT_FORMAT "; Heap workPivot =
 %" HIGHSINT_FORMAT "\n", workPivot, alt_workPivot); return_status =
 HighsDebugStatus::WARNING; if (highs_model_object.options_.highs_debug_level <
-        HIGHS_DEBUG_LEVEL_COSTLY)
+        kHighsDebugLevelCostly)
       return return_status;
     debugDualChuzcWorkDataAndGroupReport(highs_model_object, workDelta,
                                          workTheta, "Original", workCount,
@@ -1334,7 +1334,7 @@ HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object) {
   // Non-trivially expensive analysis of a simplex basic solution, starting from
   // solution_params
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
 
   if (highsStatusFromHighsModelStatus(
@@ -1442,7 +1442,7 @@ HighsDebugStatus debugSimplexBasicSolution(
 HighsDebugStatus debugSimplexHighsSolutionDifferences(
     const HighsModelObject& highs_model_object) {
   // Nontrivially expensive check of dimensions and sizes
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
 
   const HighsOptions& options = highs_model_object.options_;
@@ -1625,7 +1625,7 @@ HighsDebugStatus debugSimplexBasisCorrect(
   // Nontrivially expensive analysis of a Simplex basis, checking
   // consistency, and then correctness of nonbasicMove
   const HighsOptions& options = highs_model_object.options_;
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1639,7 +1639,7 @@ HighsDebugStatus debugSimplexBasisCorrect(
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (options.highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   const bool correct_nonbasicMove =
       debugNonbasicMove(highs_model_object) != HighsDebugStatus::LOGICAL_ERROR;
@@ -1654,7 +1654,7 @@ HighsDebugStatus debugSimplexBasisCorrect(
 
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const HighsInt phase) {
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsDebugStatus return_status = HighsDebugStatus::OK;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -1690,7 +1690,7 @@ HIGHSINT_FORMAT "", simplex_lp_status.has_dual_steepest_edge_weights); if
 HighsLogType::ERROR, "Not OK to solve since simplex_lp_status.has_invert =
 %" HIGHSINT_FORMAT "\n", simplex_lp_status.has_invert);
   }
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Basis and data check
   if (debugBasisConsistent(highs_model_object.options_, simplex_lp,
@@ -1991,7 +1991,7 @@ void debugReportReinvertOnNumericalTrouble(
     const double numerical_trouble_measure, const double alpha_from_col,
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert) {
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
     return;
   const double abs_alpha_from_col = fabs(alpha_from_col);
   const double abs_alpha_from_row = fabs(alpha_from_row);

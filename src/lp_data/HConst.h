@@ -29,12 +29,12 @@ const std::string on_string = "on";
 const HighsInt HIGHS_THREAD_LIMIT = 8;  // 32;
 
 enum HighsDebugLevel {
-  HIGHS_DEBUG_LEVEL_MIN = 0,
-  HIGHS_DEBUG_LEVEL_NONE = HIGHS_DEBUG_LEVEL_MIN,  // 0
-  HIGHS_DEBUG_LEVEL_CHEAP,                         // 1
-  HIGHS_DEBUG_LEVEL_COSTLY,                        // 2
-  HIGHS_DEBUG_LEVEL_EXPENSIVE,                     // 3
-  HIGHS_DEBUG_LEVEL_MAX = HIGHS_DEBUG_LEVEL_EXPENSIVE
+  kHighsDebugLevelMin = 0,
+  kHighsDebugLevelNone = kHighsDebugLevelMin,  // 0
+  kHighsDebugLevelCheap,                         // 1
+  kHighsDebugLevelCostly,                        // 2
+  kHighsDebugLevelExpensive,                     // 3
+  kHighsDebugLevelMax = kHighsDebugLevelExpensive
 };
 
 enum class HighsDebugStatus {

@@ -44,7 +44,7 @@ HighsStatus HEkk::passLp(const HighsLp& lp) {
   // Shouldn't have to check the incoming LP since this is an internal
   // call, but it may be an LP that's set up internally with errors
   // :-) ...
-  if (options_.highs_debug_level > HIGHS_DEBUG_LEVEL_NONE) {
+  if (options_.highs_debug_level > kHighsDebugLevelNone) {
     // ... so, if debugging, check the LP.
     call_status = assessLp(simplex_lp_, options_);
     return_status = interpretCallStatus(call_status, return_status, "assessLp");

@@ -25,7 +25,7 @@ const double inverse_excessive_error = sqrt(inverse_large_error);
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor, const bool force) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+  if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::NOT_CHECKED;
   if (force)
     highsLogDev(options.log_options, HighsLogType::INFO,
@@ -98,7 +98,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
         value_adjective.c_str(), solve_error_norm);
   }
 
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE)
+  if (options.highs_debug_level < kHighsDebugLevelExpensive)
     return return_status;
 
   double columnDensity = 0;
@@ -162,7 +162,7 @@ void debugReportRankDeficiency(
     const vector<HighsInt>& permute, const vector<HighsInt>& iwork,
     const HighsInt* baseIndex, const HighsInt rank_deficiency,
     const vector<HighsInt>& noPvR, const vector<HighsInt>& noPvC) {
-  if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
+  if (highs_debug_level == kHighsDebugLevelNone) return;
   if (call_id == 0) {
     if (numRow > 123) return;
     highsLogDev(log_options, HighsLogType::WARNING, "buildRankDeficiency0:");
@@ -231,7 +231,7 @@ void debugReportRankDeficientASM(
     const vector<double>& MCvalue, const vector<HighsInt>& iwork,
     const HighsInt rank_deficiency, const vector<HighsInt>& noPvC,
     const vector<HighsInt>& noPvR) {
-  if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
+  if (highs_debug_level == kHighsDebugLevelNone) return;
   if (rank_deficiency > 10) return;
   double* ASM;
   ASM = (double*)malloc(sizeof(double) * rank_deficiency * rank_deficiency);
@@ -296,7 +296,7 @@ void debugReportMarkSingC(const HighsInt call_id,
                           const HighsLogOptions& log_options,
                           const HighsInt numRow, const vector<HighsInt>& iwork,
                           const HighsInt* baseIndex) {
-  if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
+  if (highs_debug_level == kHighsDebugLevelNone) return;
   if (numRow > 123) return;
   if (call_id == 0) {
     highsLogDev(log_options, HighsLogType::WARNING, "\nMarkSingC1");
@@ -331,7 +331,7 @@ void debugLogRankDeficiency(
     const HighsInt rank_deficiency, const HighsInt basis_matrix_num_el,
     const HighsInt invert_num_el, const HighsInt& kernel_dim,
     const HighsInt kernel_num_el, const HighsInt nwork) {
-  if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
+  if (highs_debug_level == kHighsDebugLevelNone) return;
   if (!rank_deficiency) return;
   highsLogDev(
       log_options, HighsLogType::WARNING,
@@ -347,7 +347,7 @@ void debugPivotValueAnalysis(const HighsInt highs_debug_level,
                              const HighsLogOptions& log_options,
                              const HighsInt numRow,
                              const vector<double>& UpivotValue) {
-  if (highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP) return;
+  if (highs_debug_level < kHighsDebugLevelCheap) return;
   double min_pivot = HIGHS_CONST_INF;
   double mean_pivot = 0;
   double max_pivot = 0;
@@ -358,7 +358,7 @@ void debugPivotValueAnalysis(const HighsInt highs_debug_level,
     mean_pivot += log(abs_pivot);
   }
   mean_pivot = exp(mean_pivot / numRow);
-  if (highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP || min_pivot < 1e-8)
+  if (highs_debug_level > kHighsDebugLevelCheap || min_pivot < 1e-8)
     highsLogDev(log_options, HighsLogType::ERROR,
                 "InvertPivotAnalysis: %" HIGHSINT_FORMAT
                 " pivots: Min %g; Mean "

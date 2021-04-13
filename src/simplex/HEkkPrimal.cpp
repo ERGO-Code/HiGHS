@@ -274,7 +274,7 @@ void HEkkPrimal::initialise() {
   // Set up the HSet instances, possibly using the internal error reporting and
   // debug option
   const bool debug =
-      ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
+      ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap;
   if (num_free_col) {
     highsLogUser(ekk_instance_.options_.log_options, HighsLogType::INFO,
                  "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
@@ -484,7 +484,7 @@ void HEkkPrimal::cleanup() {
   // Possibly take a copy of the original duals before recomputing them
   /*
   vector<double> original_baseValue;
-  if (ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP)
+  if (ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap)
     original_baseValue = simplex_info.baseValue_;
   */
   // Compute the primal values
@@ -637,7 +637,7 @@ void HEkkPrimal::iterate() {
   bool check = ekk_instance_.iteration_count_ >= check_iter;
   if (check) {
     printf("Iter %" HIGHSINT_FORMAT "\n", ekk_instance_.iteration_count_);
-    ekk_instance_.options_.highs_debug_level = HIGHS_DEBUG_LEVEL_EXPENSIVE;
+    ekk_instance_.options_.highs_debug_level = kHighsDebugLevelExpensive;
   }
   if (debugPrimalSimplex("Before iteration") ==
       HighsDebugStatus::LOGICAL_ERROR) {

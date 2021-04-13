@@ -482,8 +482,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
-                            advanced, &highs_debug_level, HIGHS_DEBUG_LEVEL_MIN,
-                            HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
+                            advanced, &highs_debug_level, kHighsDebugLevelMin,
+                            kHighsDebugLevelMin, kHighsDebugLevelMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(

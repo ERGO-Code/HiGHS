@@ -141,7 +141,7 @@ class HFactor {
       HighsInt* baseIndex,     //!< Indices of basic variables
       double pivot_threshold = default_pivot_threshold,  //!< Pivoting threshold
       double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
-      HighsInt highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
+      HighsInt highs_debug_level = kHighsDebugLevelMin,
       bool output_flag = false, FILE* logfile = NULL,
       bool log_to_console = true, int log_dev_level = 0,
       const bool use_original_HFactor_logic = true,

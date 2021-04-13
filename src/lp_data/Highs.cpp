@@ -377,17 +377,17 @@ HighsStatus Highs::run() {
   if (!haveHmo("run")) return HighsStatus::Error;
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
-  HighsInt min_highs_debug_level = HIGHS_DEBUG_LEVEL_MIN;
-  //  HIGHS_DEBUG_LEVEL_CHEAP;
-  //  HIGHS_DEBUG_LEVEL_COSTLY;
-  //  HIGHS_DEBUG_LEVEL_EXPENSIVE;
-  //  HIGHS_DEBUG_LEVEL_MAX;
+  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+  //  kHighsDebugLevelCheap;
+  //  kHighsDebugLevelCostly;
+  //  kHighsDebugLevelExpensive;
+  //  kHighsDebugLevelMax;
 #ifdef HiGHSDEV
-  min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-                           //  HIGHS_DEBUG_LEVEL_CHEAP;
-      HIGHS_DEBUG_LEVEL_COSTLY;
-  //  HIGHS_DEBUG_LEVEL_EXPENSIVE;
-  //  HIGHS_DEBUG_LEVEL_MAX;
+  min_highs_debug_level =  // kHighsDebugLevelMin;
+                           //  kHighsDebugLevelCheap;
+      kHighsDebugLevelCostly;
+  //  kHighsDebugLevelExpensive;
+  //  kHighsDebugLevelMax;
   if (options_.highs_debug_level < min_highs_debug_level)
     printf(
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
@@ -720,7 +720,7 @@ HighsStatus Highs::run() {
           const bool force_debug = false;
           HighsInt save_highs_debug_level = options_.highs_debug_level;
           if (force_debug)
-            options_.highs_debug_level = HIGHS_DEBUG_LEVEL_COSTLY;
+            options_.highs_debug_level = kHighsDebugLevelCostly;
           debugHighsBasicSolution("After returning from postsolve", options_,
                                   lp_, hmos_[original_hmo].basis_,
                                   hmos_[original_hmo].solution_);
