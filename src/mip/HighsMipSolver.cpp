@@ -39,18 +39,18 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
 HighsMipSolver::~HighsMipSolver() = default;
 
 void HighsMipSolver::run() {
-  modelstatus_ = HighsModelStatus::NOTSET;
+  modelstatus_ = HighsModelStatus::kNotset;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runPresolve();
-  if (modelstatus_ != HighsModelStatus::NOTSET) {
+  if (modelstatus_ != HighsModelStatus::kNotset) {
     highsLogUser(options_mip_->log_options, HighsLogType::INFO,
                  "Presolve: %s\n",
                  utilModelStatusToString(modelstatus_).c_str());
-    if (modelstatus_ == HighsModelStatus::OPTIMAL) {
+    if (modelstatus_ == HighsModelStatus::kOptimal) {
       mipdata_->lower_bound = 0;
       mipdata_->upper_bound = 0;
       mipdata_->transformNewIncumbent(std::vector<double>());
@@ -61,7 +61,7 @@ void HighsMipSolver::run() {
 
   mipdata_->runSetup();
 restart:
-  if (modelstatus_ == HighsModelStatus::NOTSET) {
+  if (modelstatus_ == HighsModelStatus::kNotset) {
     mipdata_->evaluateRootNode();
   }
   if (mipdata_->nodequeue.empty()) {
@@ -251,7 +251,7 @@ restart:
         if (options_mip_->mip_max_stall_nodes != kHighsIInf &&
             numStallNodes >= options_mip_->mip_max_stall_nodes) {
           limit_reached = true;
-          modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+          modelstatus_ = HighsModelStatus::kReachedIterationLimit;
           break;
         }
       } else
@@ -314,7 +314,7 @@ restart:
       basis = mipdata_->lp.getStoredBasis();
       if (!basis || !isBasisConsistent(mipdata_->lp.getLp(), *basis)) {
         HighsBasis b = mipdata_->firstrootbasis;
-        b.row_status.resize(mipdata_->lp.numRows(), HighsBasisStatus::BASIC);
+        b.row_status.resize(mipdata_->lp.numRows(), HighsBasisStatus::kBasic);
         basis = std::make_shared<const HighsBasis>(std::move(b));
         mipdata_->lp.setStoredBasis(basis);
       }
@@ -335,11 +335,11 @@ void HighsMipSolver::cleanupSolve() {
   primal_bound_ = mipdata_->upper_bound + model_->offset_;
   node_count_ = mipdata_->num_nodes;
 
-  if (modelstatus_ == HighsModelStatus::NOTSET) {
+  if (modelstatus_ == HighsModelStatus::kNotset) {
     if (havesolution)
-      modelstatus_ = HighsModelStatus::OPTIMAL;
+      modelstatus_ = HighsModelStatus::kOptimal;
     else
-      modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+      modelstatus_ = HighsModelStatus::kPrimalInfeasible;
   }
 
   model_ = orig_model_;
@@ -388,5 +388,5 @@ void HighsMipSolver::cleanupSolve() {
                (long long unsigned)mipdata_->sepa_lp_iterations,
                (long long unsigned)mipdata_->heuristic_lp_iterations);
 
-  assert(modelstatus_ != HighsModelStatus::NOTSET);
+  assert(modelstatus_ != HighsModelStatus::kNotset);
 }

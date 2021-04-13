@@ -31,7 +31,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   // Try to run HiGHS with default options. No model loaded so OK
   run_status = highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::MODEL_EMPTY);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kModelEmpty);
   REQUIRE(run_status == HighsStatus::OK);
 
   // Load a non-existent file and try to run HiGHS

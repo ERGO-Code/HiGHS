@@ -355,7 +355,7 @@ void checkBasicFeasibleSolution(const State& state,
     if (state.flagCol[j]) {
       details.checked++;
       double infeas = 0;
-      if (state.col_status[j] == HighsBasisStatus::BASIC &&
+      if (state.col_status[j] == HighsBasisStatus::kBasic &&
           fabs(state.colDual[j]) > tol) {
         if (dev_print == 1)
           std::cout << "Col " << j << " is basic but has nonzero dual "
@@ -379,7 +379,7 @@ void checkBasicFeasibleSolution(const State& state,
     if (state.flagRow[i]) {
       details.checked++;
       double infeas = 0;
-      if (state.row_status[i] == HighsBasisStatus::BASIC &&
+      if (state.row_status[i] == HighsBasisStatus::kBasic &&
           fabs(state.rowDual[i]) > tol) {
         if (dev_print == 1)
           std::cout << "Row " << i << " is basic but has nonzero dual: "
@@ -410,12 +410,12 @@ void checkBasicFeasibleSolution(const State& state,
   for (int i = 0; i < state.numRow; i++) {
     if (state.flagRow[i]) current_n_rows++;
 
-    if (state.flagRow[i] && state.row_status[i] == HighsBasisStatus::BASIC)
+    if (state.flagRow[i] && state.row_status[i] == HighsBasisStatus::kBasic)
       current_n_rows_basic++;
   }
 
   for (int i = 0; i < state.numCol; i++) {
-    if (state.flagCol[i] && state.col_status[i] == HighsBasisStatus::BASIC)
+    if (state.flagCol[i] && state.col_status[i] == HighsBasisStatus::kBasic)
       current_n_cols_basic++;
   }
 

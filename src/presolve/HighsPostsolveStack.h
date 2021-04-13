@@ -343,7 +343,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                  HighsBasisStatus::LOWER});
+                                  HighsBasisStatus::kLower});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -357,7 +357,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                  HighsBasisStatus::UPPER});
+                                  HighsBasisStatus::kUpper});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -370,7 +370,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(
-        FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::ZERO});
+        FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::kZero});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -384,7 +384,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                  HighsBasisStatus::NONBASIC});
+                                  HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }

@@ -500,19 +500,19 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
                                  HighsModelStatus& model_status) {
   if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
     // Looks like the LP is infeasible
-    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    model_status = HighsModelStatus::kPrimalInfeasible;
     return HighsStatus::OK;
   } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
     // Looks like the LP is unbounded
-    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    model_status = HighsModelStatus::kPrimalUnbounded;
     return HighsStatus::OK;
   } else if (ipx_info.pobjval < -kHighsInf) {
     // Looks like the LP is unbounded
-    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    model_status = HighsModelStatus::kPrimalUnbounded;
     return HighsStatus::OK;
   } else {
     // Don't know
-    model_status = HighsModelStatus::SOLVE_ERROR;
+    model_status = HighsModelStatus::kSolveError;
     return HighsStatus::Error;
   }
   return HighsStatus::Warning;
@@ -605,7 +605,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
         reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
     // Return error if IPX solve error has occurred
     if (solve_return_status == HighsStatus::Error) {
-      model_status = HighsModelStatus::SOLVE_ERROR;
+      model_status = HighsModelStatus::kSolveError;
       return HighsStatus::Error;
     }
   }
@@ -618,7 +618,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Return error if IPX IPM or crossover error has occurred
   if (ipm_return_status == HighsStatus::Error ||
       crossover_return_status == HighsStatus::Error) {
-    model_status = HighsModelStatus::SOLVE_ERROR;
+    model_status = HighsModelStatus::kSolveError;
     return HighsStatus::Error;
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved or
@@ -644,7 +644,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::Error;
     // Can stop and reach time limit
     if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::REACHED_TIME_LIMIT;
+      model_status = HighsModelStatus::kReachedTimeLimit;
       return HighsStatus::Warning;
     }
     //========
@@ -660,10 +660,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     // Can stop with iter limit
     // Can stop with no progress
     if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::REACHED_TIME_LIMIT;
+      model_status = HighsModelStatus::kReachedTimeLimit;
       return HighsStatus::Warning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
-      model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      model_status = HighsModelStatus::kReachedIterationLimit;
       return HighsStatus::Warning;
     } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
       reportIpmNoProgress(options, ipx_info);
@@ -692,10 +692,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Can solve and be primal_infeas
   // Can solve and be dual_infeas
   if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
-    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    model_status = HighsModelStatus::kPrimalInfeasible;
     return HighsStatus::OK;
   } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    model_status = HighsModelStatus::kPrimalUnbounded;
     return HighsStatus::OK;
   }
 
@@ -754,10 +754,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   HighsStatus return_status;
   if (imprecise_solution) {
-    model_status = HighsModelStatus::NOTSET;
+    model_status = HighsModelStatus::kNotset;
     return_status = HighsStatus::Warning;
   } else {
-    model_status = HighsModelStatus::OPTIMAL;
+    model_status = HighsModelStatus::kOptimal;
     solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     // Currently only have a dual solution if there is a basic solution
     if (have_basic_solution)

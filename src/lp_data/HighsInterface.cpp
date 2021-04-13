@@ -189,7 +189,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     appendNonbasicColsToBasis(simplex_lp, simplex_basis, XnumNewCol);
 
   // Deduce the consequences of adding new columns
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_COLS);
@@ -369,7 +369,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
 
   // Deduce the consequences of adding new rows
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
@@ -409,7 +409,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   if (lp.numCol_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
-    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
     highs_model_object.unscaled_model_status_ =
         highs_model_object.scaled_model_status_;
     basis.valid_ = false;
@@ -475,7 +475,7 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   if (lp.numRow_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
-    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
     highs_model_object.unscaled_model_status_ =
         highs_model_object.scaled_model_status_;
     basis.valid_ = false;
@@ -762,7 +762,7 @@ HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   // Assume that objective sense changes
   // Set the LP objective sense
   lp_.sense_ = Xsense;
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   // Set any Simplex LP objective sense
@@ -799,7 +799,7 @@ HighsStatus Highs::changeIntegralityInterface(
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Deduce the consequences of new integrality
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   return HighsStatus::OK;
@@ -851,7 +851,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
     }
   }
   // Deduce the consequences of new costs
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::NEW_COSTS);
@@ -925,7 +925,7 @@ HighsStatus Highs::changeColBoundsInterface(
   }
 
   // Deduce the consequences of new col bounds
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::NEW_BOUNDS);
@@ -998,7 +998,7 @@ HighsStatus Highs::changeRowBoundsInterface(
     if (return_status == HighsStatus::Error) return return_status;
   }
   // Deduce the consequences of new row bounds
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::NEW_BOUNDS);
@@ -1036,7 +1036,7 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if it's a new row
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
@@ -1067,10 +1067,10 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
 
   if (scaleval < 0 && basis.valid_) {
     // Negative, so flip any nonbasic status
-    if (basis.col_status[col] == HighsBasisStatus::LOWER) {
-      basis.col_status[col] = HighsBasisStatus::UPPER;
-    } else if (basis.col_status[col] == HighsBasisStatus::UPPER) {
-      basis.col_status[col] = HighsBasisStatus::LOWER;
+    if (basis.col_status[col] == HighsBasisStatus::kLower) {
+      basis.col_status[col] = HighsBasisStatus::kUpper;
+    } else if (basis.col_status[col] == HighsBasisStatus::kUpper) {
+      basis.col_status[col] = HighsBasisStatus::kLower;
     }
   }
   if (simplex_lp_status.valid) {
@@ -1090,7 +1090,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   }
 
   // Deduce the consequences of a scaled column
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::SCALED_COL);
@@ -1121,10 +1121,10 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
 
   if (scaleval < 0 && basis.valid_) {
     // Negative, so flip any nonbasic status
-    if (basis.row_status[row] == HighsBasisStatus::LOWER) {
-      basis.row_status[row] = HighsBasisStatus::UPPER;
-    } else if (basis.row_status[row] == HighsBasisStatus::UPPER) {
-      basis.row_status[row] = HighsBasisStatus::LOWER;
+    if (basis.row_status[row] == HighsBasisStatus::kLower) {
+      basis.row_status[row] = HighsBasisStatus::kUpper;
+    } else if (basis.row_status[row] == HighsBasisStatus::kUpper) {
+      basis.row_status[row] = HighsBasisStatus::kLower;
     }
   }
   if (simplex_lp_status.valid) {
@@ -1145,7 +1145,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   }
 
   // Deduce the consequences of a scaled row
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::SCALED_ROW);
@@ -1207,16 +1207,16 @@ HighsStatus Highs::setNonbasicStatusInterface(
     assert(ignore_to_ix < ix_dim);
     if (columns) {
       for (HighsInt iCol = set_from_ix; iCol <= set_to_ix; iCol++) {
-        if (basis.col_status[iCol] == HighsBasisStatus::BASIC) continue;
+        if (basis.col_status[iCol] == HighsBasisStatus::kBasic) continue;
         // Nonbasic column
         double lower = lp.colLower_[iCol];
         double upper = lp.colUpper_[iCol];
         if (!highs_isInfinity(-lower)) {
-          basis.col_status[iCol] = HighsBasisStatus::LOWER;
+          basis.col_status[iCol] = HighsBasisStatus::kLower;
         } else if (!highs_isInfinity(upper)) {
-          basis.col_status[iCol] = HighsBasisStatus::UPPER;
+          basis.col_status[iCol] = HighsBasisStatus::kUpper;
         } else {
-          basis.col_status[iCol] = HighsBasisStatus::ZERO;
+          basis.col_status[iCol] = HighsBasisStatus::kZero;
         }
         if (has_simplex_basis) {
           // todo @ Julian this assert fails on glass4
@@ -1250,16 +1250,16 @@ HighsStatus Highs::setNonbasicStatusInterface(
       }
     } else {
       for (HighsInt iRow = set_from_ix; iRow <= set_to_ix; iRow++) {
-        if (basis.row_status[iRow] == HighsBasisStatus::BASIC) continue;
+        if (basis.row_status[iRow] == HighsBasisStatus::kBasic) continue;
         // Nonbasic column
         double lower = lp.rowLower_[iRow];
         double upper = lp.rowUpper_[iRow];
         if (!highs_isInfinity(-lower)) {
-          basis.row_status[iRow] = HighsBasisStatus::LOWER;
+          basis.row_status[iRow] = HighsBasisStatus::kLower;
         } else if (!highs_isInfinity(upper)) {
-          basis.row_status[iRow] = HighsBasisStatus::UPPER;
+          basis.row_status[iRow] = HighsBasisStatus::kUpper;
         } else {
-          basis.row_status[iRow] = HighsBasisStatus::ZERO;
+          basis.row_status[iRow] = HighsBasisStatus::kZero;
         }
         if (has_simplex_basis) {
           assert(simplex_basis.nonbasicFlag_[lp.numCol_ + iRow] ==

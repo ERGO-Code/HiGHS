@@ -23,7 +23,7 @@ void ekk_solve(Highs& highs, std::string presolve,
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::kOptimal) {
     REQUIRE(special_lps.objectiveOk(info.objective_function_value,
                                     require_optimal_objective, dev_run));
   }

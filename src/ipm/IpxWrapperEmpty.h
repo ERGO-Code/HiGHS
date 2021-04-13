@@ -24,7 +24,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsIterationCounts& iteration_counts,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
-  unscaled_model_status = HighsModelStatus::NOTSET;
+  unscaled_model_status = HighsModelStatus::kNotset;
   return HighsStatus::Error;
 }
 

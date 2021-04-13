@@ -1313,38 +1313,38 @@ void OsiHiGHSSolverInterface::getBasisStatus(HighsInt* cstat,
 
   for (size_t i = 0; i < highs->basis_.col_status.size(); ++i)
     switch (highs->basis_.col_status[i]) {
-      case HighsBasisStatus::BASIC:
+      case HighsBasisStatus::kBasic:
         cstat[i] = 1;
         break;
-      case HighsBasisStatus::LOWER:
+      case HighsBasisStatus::kLower:
         cstat[i] = 3;
         break;
-      case HighsBasisStatus::UPPER:
+      case HighsBasisStatus::kUpper:
         cstat[i] = 2;
         break;
-      case HighsBasisStatus::ZERO:
+      case HighsBasisStatus::kZero:
         cstat[i] = 0;
         break;
-      case HighsBasisStatus::NONBASIC:
+      case HighsBasisStatus::kNonbasic:
         cstat[i] = 3;
         break;
     }
 
   for (size_t i = 0; i < highs->basis_.row_status.size(); ++i)
     switch (highs->basis_.row_status[i]) {
-      case HighsBasisStatus::BASIC:
+      case HighsBasisStatus::kBasic:
         rstat[i] = 1;
         break;
-      case HighsBasisStatus::LOWER:
+      case HighsBasisStatus::kLower:
         rstat[i] = 3;
         break;
-      case HighsBasisStatus::UPPER:
+      case HighsBasisStatus::kUpper:
         rstat[i] = 2;
         break;
-      case HighsBasisStatus::ZERO:
+      case HighsBasisStatus::kZero:
         rstat[i] = 0;
         break;
-      case HighsBasisStatus::NONBASIC:
+      case HighsBasisStatus::kNonbasic:
         rstat[i] = 3;
         break;
     }

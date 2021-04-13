@@ -141,7 +141,7 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     HighsModelStatus scaled_model_status = highs.getModelStatus(true);
     HighsInfo highs_info = highs.getInfo();
     if (model_status != scaled_model_status) {
-      if (scaled_model_status == HighsModelStatus::OPTIMAL) {
+      if (scaled_model_status == HighsModelStatus::kOptimal) {
         // The scaled model has been solved to optimality, but not the
         // unscaled model, flag this up, but report the scaled model
         // status
@@ -175,7 +175,7 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
       highsLogUser(log_options, HighsLogType::INFO,
                    "Crossover iterations: %" HIGHSINT_FORMAT "\n",
                    highs_info.crossover_iteration_count);
-    if (model_status == HighsModelStatus::OPTIMAL) {
+    if (model_status == HighsModelStatus::kOptimal) {
       double objective_function_value;
       highs.getInfoValue("objective_function_value", objective_function_value);
       highsLogUser(log_options, HighsLogType::INFO,

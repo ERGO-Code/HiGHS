@@ -47,8 +47,8 @@ void assessNewBounds(double& lower, double& upper) {
 }
 
 bool modelStatusOk(Highs& highs) {
-  if (highs.getModelStatus() == HighsModelStatus::OPTIMAL) return true;
-  if (highs.getModelStatus(true) == HighsModelStatus::OPTIMAL) return true;
+  if (highs.getModelStatus() == HighsModelStatus::kOptimal) return true;
+  if (highs.getModelStatus(true) == HighsModelStatus::kOptimal) return true;
   return false;
 }
 
@@ -229,15 +229,15 @@ void testRanging(Highs& highs) {
     // Col bound up ranging
     if (col_bound_up_value < kHighsInf) {
       // Free cols should not have a finite col_bound_up_value
-      assert(col_status[i] != HighsBasisStatus::ZERO);
+      assert(col_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (col_status[i] != HighsBasisStatus::BASIC) {
+      if (col_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = col_bound_up_value;
           new_upper = col_bound_up_value;
-        } else if (col_status[i] == HighsBasisStatus::LOWER) {
+        } else if (col_status[i] == HighsBasisStatus::kLower) {
           new_lower = col_bound_up_value;
         } else {
           new_upper = col_bound_up_value;
@@ -277,15 +277,15 @@ void testRanging(Highs& highs) {
     // Col bound down ranging
     if (col_bound_dn_value > -kHighsInf) {
       // Free cols should not have a finite col_bound_dn_value
-      assert(col_status[i] != HighsBasisStatus::ZERO);
+      assert(col_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (col_status[i] != HighsBasisStatus::BASIC) {
+      if (col_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = col_bound_dn_value;
           new_upper = col_bound_dn_value;
-        } else if (col_status[i] == HighsBasisStatus::LOWER) {
+        } else if (col_status[i] == HighsBasisStatus::kLower) {
           new_lower = col_bound_dn_value;
         } else {
           new_upper = col_bound_dn_value;
@@ -366,15 +366,15 @@ void testRanging(Highs& highs) {
     // Row bound up ranging
     if (row_bound_up_value < kHighsInf) {
       // Free rows should not have a finite row_bound_up_value
-      assert(row_status[i] != HighsBasisStatus::ZERO);
+      assert(row_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (row_status[i] != HighsBasisStatus::BASIC) {
+      if (row_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = row_bound_up_value;
           new_upper = row_bound_up_value;
-        } else if (row_status[i] == HighsBasisStatus::LOWER) {
+        } else if (row_status[i] == HighsBasisStatus::kLower) {
           new_lower = row_bound_up_value;
         } else {
           new_upper = row_bound_up_value;
@@ -414,15 +414,15 @@ void testRanging(Highs& highs) {
     // Row bound down ranging
     if (row_bound_dn_value > -kHighsInf) {
       // Free rows should not have a finite row_bound_dn_value
-      assert(row_status[i] != HighsBasisStatus::ZERO);
+      assert(row_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (row_status[i] != HighsBasisStatus::BASIC) {
+      if (row_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = row_bound_dn_value;
           new_upper = row_bound_dn_value;
-        } else if (row_status[i] == HighsBasisStatus::LOWER) {
+        } else if (row_status[i] == HighsBasisStatus::kLower) {
           new_lower = row_bound_dn_value;
         } else {
           new_upper = row_bound_dn_value;

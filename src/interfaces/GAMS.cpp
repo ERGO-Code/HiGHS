@@ -69,15 +69,15 @@ static void gevlog(HighsLogType type, const char* msg, void* msgcb_data) {
 
 static enum gmoVarEquBasisStatus translateBasisStatus(HighsBasisStatus status) {
   switch (status) {
-    case HighsBasisStatus::BASIC:
+    case HighsBasisStatus::kBasic:
       return gmoBstat_Basic;
-    case HighsBasisStatus::LOWER:
+    case HighsBasisStatus::kLower:
       return gmoBstat_Lower;
-    case HighsBasisStatus::NONBASIC:
+    case HighsBasisStatus::kNonbasic:
     case HighsBasisStatus::SUPER:
-    case HighsBasisStatus::ZERO:
+    case HighsBasisStatus::kZero:
       return gmoBstat_Super;
-    case HighsBasisStatus::UPPER:
+    case HighsBasisStatus::kUpper:
       return gmoBstat_Upper;
   }
   // this should never happen
@@ -87,13 +87,13 @@ static enum gmoVarEquBasisStatus translateBasisStatus(HighsBasisStatus status) {
 static HighsBasisStatus translateBasisStatus(enum gmoVarEquBasisStatus status) {
   switch (status) {
     case gmoBstat_Basic:
-      return HighsBasisStatus::BASIC;
+      return HighsBasisStatus::kBasic;
     case gmoBstat_Lower:
-      return HighsBasisStatus::LOWER;
+      return HighsBasisStatus::kLower;
     case gmoBstat_Super:
       return HighsBasisStatus::SUPER;
     case gmoBstat_Upper:
-      return HighsBasisStatus::UPPER;
+      return HighsBasisStatus::kUpper;
   }
   // this should never happen
   return HighsBasisStatus::SUPER;
@@ -229,13 +229,13 @@ static HighsInt setupProblem(gamshighs_t* gh) {
     for (HighsInt i = 0; i < numCol; ++i) {
       basis.col_status[i] = translateBasisStatus(
           (enum gmoVarEquBasisStatus)gmoGetVarStatOne(gh->gmo, i));
-      if (basis.col_status[i] == HighsBasisStatus::BASIC) ++nbasic;
+      if (basis.col_status[i] == HighsBasisStatus::kBasic) ++nbasic;
     }
 
     for (HighsInt i = 0; i < numRow; ++i) {
       basis.row_status[i] = translateBasisStatus(
           (enum gmoVarEquBasisStatus)gmoGetEquStatOne(gh->gmo, i));
-      if (basis.row_status[i] == HighsBasisStatus::BASIC) ++nbasic;
+      if (basis.row_status[i] == HighsBasisStatus::kBasic) ++nbasic;
     }
 
     basis.valid_ = nbasic == numRow;
@@ -265,22 +265,22 @@ static HighsInt processSolve(gamshighs_t* gh) {
   // to be written
   bool writesol = false;
   switch (highs->getModelStatus()) {
-    case HighsModelStatus::NOTSET:
-    case HighsModelStatus::LOAD_ERROR:
-    case HighsModelStatus::MODEL_ERROR:
-    case HighsModelStatus::PRESOLVE_ERROR:
-    case HighsModelStatus::SOLVE_ERROR:
-    case HighsModelStatus::POSTSOLVE_ERROR:
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
       gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
       gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
       break;
 
-    case HighsModelStatus::MODEL_EMPTY:
+    case HighsModelStatus::kModelEmpty:
       gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalInfeasible:
       // TODO is there an infeasible solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleGlobal :
       // gmoModelStat_InfeasibleNoSolution);
@@ -288,7 +288,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
+    case HighsModelStatus::kPrimalUnbounded:
       // TODO is there a (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_Unbounded :
       // gmoModelStat_UnboundedNoSolution);
@@ -296,13 +296,13 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       writesol = true;
       break;
 
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       // TODO is there a solution to write and is it feasible?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -310,7 +310,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kReachedTimeLimit:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -318,7 +318,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Resource);
       break;
 
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    case HighsModelStatus::kReachedIterationLimit:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);

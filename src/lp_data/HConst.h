@@ -129,40 +129,40 @@ enum class HighsModelStatus {
   // NB Add new status values to the end so that int cast of status
   // values is unchanged, since enums are not preserved in some
   // interfaces
-  NOTSET = 0,
-  HIGHS_MODEL_STATUS_MIN = NOTSET,
-  LOAD_ERROR,
-  MODEL_ERROR,
-  PRESOLVE_ERROR,
-  SOLVE_ERROR,
-  POSTSOLVE_ERROR,
-  MODEL_EMPTY,
-  OPTIMAL,
-  PRIMAL_INFEASIBLE,
-  PRIMAL_INFEASIBLE_OR_UNBOUNDED,
-  PRIMAL_UNBOUNDED,
-  REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
-  REACHED_TIME_LIMIT,
-  REACHED_ITERATION_LIMIT,
-  PRIMAL_DUAL_INFEASIBLE,
-  DUAL_INFEASIBLE,
-  HIGHS_MODEL_STATUS_MAX = DUAL_INFEASIBLE
+  kNotset = 0,
+  kMin = kNotset,
+  kLoadError,
+  kModelError,
+  kPresolveError,
+  kSolveError,
+  kPostsolveError,
+  kModelEmpty,
+  kOptimal,
+  kPrimalInfeasible,
+  kPrimalInfeasibleOrUnbounded,
+  kPrimalUnbounded,
+  kReachedDualObjectiveValueUpperBound,
+  kReachedTimeLimit,
+  kReachedIterationLimit,
+  kPrimalDualInfeasible,
+  kDualInfeasible,
+  kMax = kDualInfeasible
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
 enum class HighsBasisStatus {
-  LOWER =
-      0,  // (slack) variable is at its lower bound [including fixed variables]
-  BASIC,  // (slack) variable is basic
-  UPPER,  // (slack) variable is at its upper bound
-  ZERO,   // free variable is non-basic and set to zero
-  NONBASIC  // nonbasic with no specific bound information - useful for users
-            // and postsolve
+  kLower =
+      0,   // (slack) variable is at its lower bound [including fixed variables]
+  kBasic,  // (slack) variable is basic
+  kUpper,  // (slack) variable is at its upper bound
+  kZero,   // free variable is non-basic and set to zero
+  kNonbasic  // nonbasic with no specific bound information - useful for users
+             // and postsolve
 };
 
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
-const HighsInt illegal_infeasibility_count = -1;
-const double illegal_infeasibility_measure = -1;
+const HighsInt kHighsIllegalInfeasibilityCount = -1;
+const double kHighsIllegalInfeasibilityMeasure = -1;
 
 #endif /* LP_DATA_HCONST_H_ */

@@ -41,7 +41,7 @@ double possInfProduct(double poss_inf, double value) {
 
 HighsStatus getRangingData(HighsRanging& ranging,
                            const HighsModelObject& highs_model_object) {
-  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
+  if (highs_model_object.scaled_model_status_ != HighsModelStatus::kOptimal) {
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
                  "Cannot get ranging without an optimal solution\n");
     return HighsStatus::Error;
@@ -581,7 +581,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
 void writeRanging(const HighsRanging& ranging,
                   const HighsModelObject& highs_model_object) {
   if (!highs_model_object.options_.log_dev_level) return;
-  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL)
+  if (highs_model_object.scaled_model_status_ != HighsModelStatus::kOptimal)
     return;
   HighsLp& lp = highs_model_object.lp_;
   HighsLogOptions& log_options = highs_model_object.options_.log_options;

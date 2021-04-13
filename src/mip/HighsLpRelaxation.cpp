@@ -214,7 +214,7 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
   HighsInt ndelcuts = 0;
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
-    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::BASIC) {
+    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
       if (ndelcuts == 0) deletemask.resize(nlprows);
       ++ndelcuts;
       deletemask[i] = 1;
@@ -286,7 +286,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
 
   if (!useBasis && agelimit != kHighsIInf) {
     HighsBasis b = mipsolver.mipdata_->firstrootbasis;
-    b.row_status.resize(nlprows, HighsBasisStatus::BASIC);
+    b.row_status.resize(nlprows, HighsBasisStatus::kBasic);
     HighsStatus st = lpsolver.setBasis(b);
     assert(st != HighsStatus::Error);
   }
@@ -295,7 +295,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
     if (!useBasis ||
-        lpsolver.getBasis().row_status[i] == HighsBasisStatus::BASIC) {
+        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
       if (mipsolver.mipdata_->cutpool.ageLpCut(lprows[i].index, agelimit)) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
@@ -415,7 +415,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 }
 
 void HighsLpRelaxation::storeDualInfProof() {
-  assert(lpsolver.getModelStatus(true) == HighsModelStatus::PRIMAL_INFEASIBLE);
+  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kPrimalInfeasible);
 
   HighsInt numrow = lpsolver.getNumRows();
   hasdualproof = false;
@@ -518,7 +518,7 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofvals.clear();
   dualproofrhs = kHighsInf;
   assert(lpsolver.getModelStatus(true) ==
-         HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+         HighsModelStatus::kReachedDualObjectiveValueUpperBound);
 
   HighsInt numrow = lpsolver.getNumRows();
   bool hasdualray = false;
@@ -712,13 +712,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   switch (scaledmodelstatus) {
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       storeDualUBProof();
       if (checkDualProof()) return Status::Infeasible;
 
       return Status::Error;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
-    case HighsModelStatus::PRIMAL_INFEASIBLE: {
+    case HighsModelStatus::kPrimalDualInfeasible:
+    case HighsModelStatus::kPrimalInfeasible: {
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
 
@@ -743,7 +743,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
 
       // trust the primal simplex result without scaling
-      if (lpsolver.getModelStatus() == HighsModelStatus::PRIMAL_INFEASIBLE)
+      if (lpsolver.getModelStatus() == HighsModelStatus::kPrimalInfeasible)
         return Status::Infeasible;
 
       // highsLogUser(mipsolver.options_mip_->log_options,
@@ -757,7 +757,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       //        (HighsInt)lpsolver.getModelStatus(true));
       return Status::Error;
     }
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
       ++numSolved;
@@ -791,7 +791,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return Status::UnscaledDualFeasible;
 
       return Status::UnscaledInfeasible;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT: {
+    case HighsModelStatus::kReachedIterationLimit: {
       if (resolve_on_error) {
         // printf(
         //     "error: lpsolver reached iteration limit, resolving with basis "
@@ -812,12 +812,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // printf("error: lpsolver reached iteration limit\n");
       return Status::Error;
     }
-    // case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
-    // case HighsModelStatus::PRIMAL_INFEASIBLE:
+    // case HighsModelStatus::kPrimalDualInfeasible:
+    // case HighsModelStatus::kPrimalInfeasible:
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
     //    return Status::Infeasible;
     //  return Status::Error;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kReachedTimeLimit:
       return Status::Error;
     default:
       // printf("error: lpsolver stopped with unexpected status %"

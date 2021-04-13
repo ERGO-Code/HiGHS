@@ -141,7 +141,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
 
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);
-  basis.col_status.assign(lp.numCol_, HighsBasisStatus::NONBASIC);
+  basis.col_status.assign(lp.numCol_, HighsBasisStatus::kNonbasic);
 
   double primal_feasibility_tolerance =
       solution_params.primal_feasibility_tolerance;
@@ -168,7 +168,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     double upper = lp.colUpper_[iCol];
     double value;
     double primal_infeasibility = 0;
-    HighsBasisStatus status = HighsBasisStatus::NONBASIC;
+    HighsBasisStatus status = HighsBasisStatus::kNonbasic;
     if (lower > upper) {
       // Inconsistent bounds, so set the variable to lower bound,
       // unless it's infinite. Otherwise set the variable to upper
@@ -179,47 +179,47 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         if (highs_isInfinity(-upper)) {
           // Unite upper bound of -inf
           value = 0;
-          status = HighsBasisStatus::ZERO;
+          status = HighsBasisStatus::kZero;
           primal_infeasibility = kHighsInf;
         } else {
           value = upper;
-          status = HighsBasisStatus::UPPER;
+          status = HighsBasisStatus::kUpper;
           primal_infeasibility = lower - value;
         }
       } else {
         value = lower;
-        status = HighsBasisStatus::LOWER;
+        status = HighsBasisStatus::kLower;
         primal_infeasibility = value - upper;
       }
     } else if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free column: must have zero cost
       value = 0;
-      status = HighsBasisStatus::ZERO;
+      status = HighsBasisStatus::kZero;
       if (fabs(dual) > dual_feasibility_tolerance) unbounded = true;
     } else if (dual >= dual_feasibility_tolerance) {
       // Column with sufficiently positive dual: set to lower bound
       // and check for unboundedness
       if (highs_isInfinity(-lower)) unbounded = true;
       value = lower;
-      status = HighsBasisStatus::LOWER;
+      status = HighsBasisStatus::kLower;
     } else if (dual <= -dual_feasibility_tolerance) {
       // Column with sufficiently negative dual: set to upper bound
       // and check for unboundedness
       if (highs_isInfinity(upper)) unbounded = true;
       value = upper;
-      status = HighsBasisStatus::UPPER;
+      status = HighsBasisStatus::kUpper;
     } else {
       // Column with sufficiently small dual: set to lower bound (if
       // finite) otherwise upper bound
       if (highs_isInfinity(-lower)) {
         value = upper;
-        status = HighsBasisStatus::UPPER;
+        status = HighsBasisStatus::kUpper;
       } else {
         value = lower;
-        status = HighsBasisStatus::LOWER;
+        status = HighsBasisStatus::kLower;
       }
     }
-    assert(status != HighsBasisStatus::NONBASIC);
+    assert(status != HighsBasisStatus::kNonbasic);
     solution.col_value[iCol] = value;
     solution.col_dual[iCol] = (HighsInt)lp.sense_ * dual;
     basis.col_status[iCol] = status;
@@ -236,16 +236,16 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   basis.valid_ = true;
 
   if (infeasible) {
-    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    model_status = HighsModelStatus::kPrimalInfeasible;
     solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
     solution_params.dual_status = kHighsPrimalDualStatusUnknown;
   } else {
     solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     if (unbounded) {
-      model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+      model_status = HighsModelStatus::kPrimalUnbounded;
       solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
     } else {
-      model_status = HighsModelStatus::OPTIMAL;
+      model_status = HighsModelStatus::kOptimal;
       solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
     }
   }

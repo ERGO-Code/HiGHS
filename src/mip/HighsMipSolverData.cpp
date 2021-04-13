@@ -247,14 +247,14 @@ void HighsMipSolverData::runSetup() {
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {
-    mipsolver.modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+    mipsolver.modelstatus_ = HighsModelStatus::kPrimalInfeasible;
     lower_bound = kHighsInf;
     pruned_treeweight = 1.0;
     return;
   }
 
   if (model.numCol_ == 0) {
-    mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
+    mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     return;
   }
 
@@ -443,10 +443,10 @@ void HighsMipSolverData::performRestart() {
 
   runPresolve();
 
-  if (mipsolver.modelstatus_ != HighsModelStatus::NOTSET) {
+  if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     if (mipsolver.solution_objective_ != kHighsInf &&
-        mipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE)
-      mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
+        mipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible)
+      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     return;
   }
   runSetup();
@@ -467,8 +467,8 @@ void HighsMipSolverData::basisTransfer() {
   if (mipsolver.rootbasis) {
     HighsInt numRow = mipsolver.numRow() + cutpool.getNumCuts();
     firstrootbasis.col_status.assign(mipsolver.numCol(),
-                                     HighsBasisStatus::NONBASIC);
-    firstrootbasis.row_status.assign(numRow, HighsBasisStatus::NONBASIC);
+                                     HighsBasisStatus::kNonbasic);
+    firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
     firstrootbasis.valid_ = true;
     HighsInt missingbasic = numRow;
 
@@ -476,7 +476,7 @@ void HighsMipSolverData::basisTransfer() {
       HighsBasisStatus status =
           mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
 
-      if (status == HighsBasisStatus::BASIC) {
+      if (status == HighsBasisStatus::kBasic) {
         --missingbasic;
         firstrootbasis.col_status[i] = status;
 
@@ -489,7 +489,7 @@ void HighsMipSolverData::basisTransfer() {
         HighsBasisStatus status =
             mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
 
-        if (status == HighsBasisStatus::BASIC) {
+        if (status == HighsBasisStatus::kBasic) {
           --missingbasic;
           firstrootbasis.row_status[i] = status;
           if (missingbasic == 0) break;
@@ -507,7 +507,7 @@ void HighsMipSolverData::basisTransfer() {
       std::vector<HighsInt> nonbasiccols;
       nonbasiccols.reserve(model.numCol_);
       for (HighsInt i = 0; i != model.numCol_; ++i) {
-        if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
+        if (firstrootbasis.col_status[i] != HighsBasisStatus::kBasic)
           nonbasiccols.push_back(i);
       }
       std::sort(nonbasiccols.begin(), nonbasiccols.end(),
@@ -525,14 +525,14 @@ void HighsMipSolverData::basisTransfer() {
         bool hasbasic = false;
         for (HighsInt j = start; j != end; ++j) {
           if (firstrootbasis.row_status[model.Aindex_[j]] ==
-              HighsBasisStatus::BASIC) {
+              HighsBasisStatus::kBasic) {
             hasbasic = true;
             break;
           }
         }
 
         if (!hasbasic) {
-          firstrootbasis.col_status[i] = HighsBasisStatus::BASIC;
+          firstrootbasis.col_status[i] = HighsBasisStatus::kBasic;
           --missingbasic;
           if (missingbasic == 0) break;
         }
@@ -542,7 +542,8 @@ void HighsMipSolverData::basisTransfer() {
         std::vector<std::pair<HighsInt, int>> nonbasicrows;
 
         for (HighsInt i = 0; i != model.numRow_; ++i) {
-          if (firstrootbasis.row_status[i] == HighsBasisStatus::BASIC) continue;
+          if (firstrootbasis.row_status[i] == HighsBasisStatus::kBasic)
+            continue;
 
           const HighsInt start = ARstart_[i];
           const HighsInt end = ARstart_[i + 1];
@@ -550,13 +551,13 @@ void HighsMipSolverData::basisTransfer() {
           HighsInt nbasic = 0;
           for (HighsInt j = start; j != end; ++j) {
             if (firstrootbasis.col_status[ARindex_[j]] ==
-                HighsBasisStatus::BASIC) {
+                HighsBasisStatus::kBasic) {
               ++nbasic;
             }
           }
 
           if (nbasic == 0) {
-            firstrootbasis.row_status[i] = HighsBasisStatus::BASIC;
+            firstrootbasis.row_status[i] = HighsBasisStatus::kBasic;
             --missingbasic;
             if (missingbasic == 0) break;
           } else {
@@ -569,7 +570,7 @@ void HighsMipSolverData::basisTransfer() {
 
         for (std::pair<HighsInt, int> nonbasicrow : nonbasicrows)
           firstrootbasis.row_status[nonbasicrow.second] =
-              HighsBasisStatus::BASIC;
+              HighsBasisStatus::kBasic;
       }
     }
   }
@@ -795,9 +796,9 @@ restart:
     // cuts so set it to the slack basis if the current basis already includes
     // cuts, e.g. due to a restart
     firstrootbasis.col_status.assign(mipsolver.numCol(),
-                                     HighsBasisStatus::NONBASIC);
+                                     HighsBasisStatus::kNonbasic);
     firstrootbasis.row_status.assign(mipsolver.numRow(),
-                                     HighsBasisStatus::BASIC);
+                                     HighsBasisStatus::kBasic);
     firstrootbasis.valid_ = true;
   }
   rootlpsolobj = firstlpsolobj;
@@ -856,7 +857,7 @@ restart:
                      "%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         performRestart();
-        if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) goto restart;
+        if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
         return;
       }
@@ -927,7 +928,7 @@ restart:
     addIncumbent(lp.getLpSolver().getSolution().col_value, lp.getObjective(),
                  'T');
     if (lower_bound > upper_limit) {
-      mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
+      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
       pruned_treeweight = 1.0;
       num_nodes = 1;
       num_leaves = 1;
@@ -980,7 +981,7 @@ restart:
                      fixingRate);
         maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         performRestart();
-        if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) goto restart;
+        if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
         return;
       }
@@ -995,28 +996,28 @@ bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != kHighsIInf &&
       num_nodes >= options.mip_max_nodes) {
-    if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::INFO,
                   "reached node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      mipsolver.modelstatus_ = HighsModelStatus::kReachedIterationLimit;
     }
     return true;
   }
   if (options.mip_max_leaves != kHighsIInf &&
       num_leaves >= options.mip_max_leaves) {
-    if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::INFO,
                   "reached leave node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      mipsolver.modelstatus_ = HighsModelStatus::kReachedIterationLimit;
     }
     return true;
   }
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
-    if (mipsolver.modelstatus_ == HighsModelStatus::NOTSET) {
+    if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::INFO,
                   "reached time limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
+      mipsolver.modelstatus_ = HighsModelStatus::kReachedTimeLimit;
     }
     return true;
   }

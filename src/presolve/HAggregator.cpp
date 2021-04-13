@@ -982,8 +982,8 @@ void HAggregator::PostsolveStack::undo(HighsSolution& solution,
     solution.col_dual[reduction.col] = 0;
     solution.row_dual[reduction.row] = double(dualval / reduction.substcoef);
 
-    basis.col_status[reduction.col] = HighsBasisStatus::BASIC;
-    basis.row_status[reduction.row] = HighsBasisStatus::NONBASIC;
+    basis.col_status[reduction.col] = HighsBasisStatus::kBasic;
+    basis.row_status[reduction.row] = HighsBasisStatus::kNonbasic;
   }
 }
 
@@ -1014,8 +1014,8 @@ void HAggregator::PostsolveStack::undo(
     col_dual[reduction.col] = 0;
     row_dual[reduction.row] = double(dualval / reduction.substcoef);
 
-    col_status[reduction.col] = HighsBasisStatus::BASIC;
-    row_status[reduction.row] = HighsBasisStatus::NONBASIC;
+    col_status[reduction.col] = HighsBasisStatus::kBasic;
+    row_status[reduction.row] = HighsBasisStatus::kNonbasic;
   }
 }
 

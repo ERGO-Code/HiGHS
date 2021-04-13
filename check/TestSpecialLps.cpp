@@ -23,7 +23,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::kOptimal) {
     REQUIRE(special_lps.objectiveOk(info.objective_function_value,
                                     require_optimal_objective, dev_run));
   }
@@ -167,7 +167,7 @@ void issue316(Highs& highs) {
   //
   // Resulted in fixes being added to unconstrained LP solver
   bool bool_status;
-  const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double min_optimal_objective = -6;
   const double max_optimal_objective = 12;
   REQUIRE(highs.clearModel() == HighsStatus::OK);
@@ -204,7 +204,7 @@ void mpsGalenet(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportLpName("mpsGalenet", dev_run);
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_INFEASIBLE;
+      HighsModelStatus::kPrimalInfeasible;
 
   std::string model = "galenet";
   std::string model_file;
@@ -227,7 +227,7 @@ void primalDualInfeasible1(Highs& highs) {
   special_lps.primalDualInfeasible1Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve doesn't reduce the LP, but does identify primal infeasibility
-  solve(highs, "on", "simplex", HighsModelStatus::PRIMAL_INFEASIBLE);
+  solve(highs, "on", "simplex", HighsModelStatus::kPrimalInfeasible);
   solve(highs, "off", "simplex", require_model_status);
   // Don't run the IPX test until it's fixed
   //  solve(highs, "on", "ipm", require_model_status);
@@ -243,7 +243,7 @@ void primalDualInfeasible2(Highs& highs) {
   special_lps.primalDualInfeasible2Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve doesn't reduce the LP, but does identify primal infeasibility
-  solve(highs, "on", "simplex", HighsModelStatus::PRIMAL_INFEASIBLE);
+  solve(highs, "on", "simplex", HighsModelStatus::kPrimalInfeasible);
   // ERROR without presolve because primal simplex solver not available
   //  solve(highs, "off", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
@@ -259,7 +259,7 @@ void mpsUnbounded(Highs& highs) {
   //
   // Resulted in fixes being added to hsol dual
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_UNBOUNDED;
+      HighsModelStatus::kPrimalUnbounded;
 
   // Unit test fails for IPX with adlittle solved as maximization
   std::string model = "adlittle";
@@ -269,9 +269,8 @@ void mpsUnbounded(Highs& highs) {
 
   REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
 
-  // Presolve identifies HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED
-  solve(highs, "on", "simplex",
-        HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED);
+  // Presolve identifies HighsModelStatus::kPrimalInfeasibleOrUnbounded
+  solve(highs, "on", "simplex", HighsModelStatus::kPrimalInfeasibleOrUnbounded);
   solve(highs, "off", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
   //  solve(highs, "off", "ipm", require_model_status);
@@ -282,7 +281,7 @@ void mpsGas11(Highs& highs) {
   special_lps.reportLpName("mpsGas11", dev_run);
   // Lots of trouble is caused by gas11
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_UNBOUNDED;
+      HighsModelStatus::kPrimalUnbounded;
 
   std::string model = "gas11";
   std::string model_file;
@@ -304,9 +303,9 @@ void almostNotUnbounded(Highs& highs) {
   // No
   HighsLp lp;
   const HighsModelStatus require_model_status0 =
-      HighsModelStatus::PRIMAL_UNBOUNDED;
-  const HighsModelStatus require_model_status1 = HighsModelStatus::OPTIMAL;
-  const HighsModelStatus require_model_status2 = HighsModelStatus::OPTIMAL;
+      HighsModelStatus::kPrimalUnbounded;
+  const HighsModelStatus require_model_status1 = HighsModelStatus::kOptimal;
+  const HighsModelStatus require_model_status2 = HighsModelStatus::kOptimal;
   const double optimal_objective1 = -1;
   const double optimal_objective2 = -3;
 
@@ -369,7 +368,7 @@ void singularStartingBasis(Highs& highs) {
   // This problem tests how well HiGHS handles a singular initial
   // basis
   HighsLp lp;
-  const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -3;
 
   lp.numCol_ = 3;
@@ -396,11 +395,11 @@ void singularStartingBasis(Highs& highs) {
   HighsBasis basis;
   basis.col_status.resize(lp.numCol_);
   basis.row_status.resize(lp.numRow_);
-  basis.col_status[0] = HighsBasisStatus::BASIC;
-  basis.col_status[1] = HighsBasisStatus::BASIC;
-  basis.col_status[2] = HighsBasisStatus::LOWER;
-  basis.row_status[0] = HighsBasisStatus::UPPER;
-  basis.row_status[1] = HighsBasisStatus::UPPER;
+  basis.col_status[0] = HighsBasisStatus::kBasic;
+  basis.col_status[1] = HighsBasisStatus::kBasic;
+  basis.col_status[2] = HighsBasisStatus::kLower;
+  basis.row_status[0] = HighsBasisStatus::kUpper;
+  basis.row_status[1] = HighsBasisStatus::kUpper;
   basis.valid_ = true;
 
   REQUIRE(highs.setBasis(basis) == HighsStatus::OK);
@@ -411,7 +410,7 @@ void singularStartingBasis(Highs& highs) {
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL)
+  if (require_model_status == HighsModelStatus::kOptimal)
     REQUIRE(special_lps.objectiveOk(info.objective_function_value,
                                     optimal_objective, dev_run));
 
@@ -432,21 +431,21 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::OPTIMAL);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == 1);
   REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
   REQUIRE(highs.setBasis() == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_UNBOUNDED);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kPrimalUnbounded);
   REQUIRE(highs.changeColCost(0, -1));
   REQUIRE(highs.setBasis() == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::OPTIMAL);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == -6);
   REQUIRE(highs.changeColBounds(0, 4, 1));
   REQUIRE(highs.setBasis() == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_INFEASIBLE);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kPrimalInfeasible);
 }
 
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {

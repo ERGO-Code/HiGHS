@@ -935,8 +935,8 @@ class Highs {
   // can be passed back, regardless of whether there is a HMO, or not,
   // and also to make objective_value and iteration_count independent
   // of whether simplex or IMP is used as a solver.
-  HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   // Each HighsModelObject holds a const ref to its lp_. There are potentially
   // several hmos_ to allow for the solution of several different modified

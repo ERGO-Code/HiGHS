@@ -68,7 +68,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // Find the first basic variable
   HighsInt iCol;
   for (iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC) break;
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic) break;
   }
   assert(iCol < lp.numCol_);
   const HighsInt changeCol = iCol;

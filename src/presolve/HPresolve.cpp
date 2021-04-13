@@ -3207,9 +3207,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
     case Result::Ok:
       break;
     case Result::PrimalInfeasible:
-      return HighsModelStatus::PRIMAL_INFEASIBLE;
+      return HighsModelStatus::kPrimalInfeasible;
     case Result::DualInfeasible:
-      return HighsModelStatus::DUAL_INFEASIBLE;
+      return HighsModelStatus::kDualInfeasible;
   }
 
   shrinkProblem(postSolveStack);
@@ -3262,12 +3262,12 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
       mipsolver->mipdata_->upper_bound = 0;
       mipsolver->mipdata_->lower_bound = 0;
     }
-    return HighsModelStatus::OPTIMAL;
+    return HighsModelStatus::kOptimal;
   }
 
   if (!mipsolver) setRelaxedImpliedBounds();
 
-  return HighsModelStatus::NOTSET;
+  return HighsModelStatus::kNotset;
 }
 
 void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
@@ -4850,13 +4850,13 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     HPresolve presolve;
     presolve.setInput(model, options);
     // presolve.setReductionLimit(1622017);
-    if (presolve.run(postSolveStack) != HighsModelStatus::NOTSET) return;
+    if (presolve.run(postSolveStack) != HighsModelStatus::kNotset) return;
     Highs highs;
     highs.passModel(model);
     highs.passOptions(options);
     highs.setOptionValue("presolve", "off");
     highs.run();
-    if (highs.getModelStatus(true) != HighsModelStatus::OPTIMAL) return;
+    if (highs.getModelStatus(true) != HighsModelStatus::kOptimal) return;
     reducedsol = highs.getSolution();
     reducedbasis = highs.getBasis();
   }

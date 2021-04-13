@@ -19,12 +19,12 @@ void HighsInfo::clear() {
   primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
   dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
   objective_function_value = 0;
-  num_primal_infeasibilities = illegal_infeasibility_count;
-  max_primal_infeasibility = illegal_infeasibility_measure;
-  sum_primal_infeasibilities = illegal_infeasibility_measure;
-  num_dual_infeasibilities = illegal_infeasibility_count;
-  max_dual_infeasibility = illegal_infeasibility_measure;
-  sum_dual_infeasibilities = illegal_infeasibility_measure;
+  num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 }
 
 std::string infoEntryType2string(const HighsInfoType type) {

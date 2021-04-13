@@ -31,7 +31,7 @@ void solve(Highs& highs, std::string presolve,
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::kOptimal) {
     REQUIRE(objectiveOk(info.objective_function_value,
                         require_optimal_objective, dev_run));
   }
@@ -56,7 +56,7 @@ void distillationMIP(Highs& highs) {
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
-  require_model_status = HighsModelStatus::OPTIMAL;
+  require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = 32.0;
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve doesn't reduce the LP
@@ -77,7 +77,7 @@ void rowlessMIP(Highs& highs) {
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
-  require_model_status = HighsModelStatus::OPTIMAL;
+  require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = -1.0;
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve reduces the LP to empty

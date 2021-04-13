@@ -148,10 +148,10 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
       options, lp, basis, solution, check_primal_objective_value,
       check_dual_objective_value, solution_params, primal_dual_errors);
 
-  HighsModelStatus model_status = HighsModelStatus::NOTSET;
+  HighsModelStatus model_status = HighsModelStatus::kNotset;
   if (solution_params.num_primal_infeasibility == 0 &&
       solution_params.num_dual_infeasibility == 0)
-    model_status = HighsModelStatus::OPTIMAL;
+    model_status = HighsModelStatus::kOptimal;
 
   debugReportHighsBasicSolution(message, options, solution_params,
                                 model_status);
@@ -172,8 +172,8 @@ HighsDebugStatus debugHighsBasicSolution(
     return HighsDebugStatus::kOk;
 
   // No basis to test if model status is primal infeasible or unbounded
-  if (model_status == HighsModelStatus::PRIMAL_INFEASIBLE ||
-      model_status == HighsModelStatus::PRIMAL_UNBOUNDED)
+  if (model_status == HighsModelStatus::kPrimalInfeasible ||
+      model_status == HighsModelStatus::kPrimalUnbounded)
     return HighsDebugStatus::kOk;
 
   // Check that there is a solution and valid basis to use
@@ -303,7 +303,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     double dual = solution.col_dual[iCol];
     HighsBasisStatus status = basis.col_status[iCol];
     primal_objective_value += lp.colCost_[iCol] * value;
-    if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    if (status != HighsBasisStatus::kBasic)
+      dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
     bool report = false;
@@ -320,7 +321,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
     sum_primal_infeasibility += primal_infeasibility;
-    if (status == HighsBasisStatus::BASIC) {
+    if (status == HighsBasisStatus::kBasic) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
         num_nonzero_basic_duals++;
@@ -414,7 +415,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     double value = solution.row_value[iRow];
     double dual = -solution.row_dual[iRow];
     HighsBasisStatus status = basis.row_status[iRow];
-    if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    if (status != HighsBasisStatus::kBasic)
+      dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
     bool report = false;
@@ -431,7 +433,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
     sum_primal_infeasibility += primal_infeasibility;
-    if (status == HighsBasisStatus::BASIC) {
+    if (status == HighsBasisStatus::kBasic) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
         num_nonzero_basic_duals++;
@@ -492,7 +494,7 @@ bool debugBasicSolutionVariable(
   }
   //  primal_infeasibility = std::max(primal_residual, 0.);
   // ToDo Strange: nonbasic_flag seems to be inverted???
-  if (status == HighsBasisStatus::BASIC) {
+  if (status == HighsBasisStatus::kBasic) {
     // Basic variable: look for primal infeasibility
     if (count) num_basic_var++;
     if (primal_infeasibility > primal_feasibility_tolerance) {

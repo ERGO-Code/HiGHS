@@ -90,7 +90,7 @@ void testSolver(Highs& highs, const std::string solver,
     for (num_solve = 0; num_solve < max_num_solve; num_solve++) {
       if (use_simplex) return_status = highs.setBasis();
       return_status = highs.run();
-      if (highs.getModelStatus() == HighsModelStatus::REACHED_TIME_LIMIT) break;
+      if (highs.getModelStatus() == HighsModelStatus::kReachedTimeLimit) break;
     }
     REQUIRE(num_solve < max_num_solve);
     run_time = highs.getRunTime();
@@ -137,7 +137,7 @@ void testSolver(Highs& highs, const std::string solver,
            (HighsInt)return_status,
            highs.modelStatusToString(model_status).c_str());
   REQUIRE(return_status == HighsStatus::Warning);
-  REQUIRE(model_status == HighsModelStatus::REACHED_ITERATION_LIMIT);
+  REQUIRE(model_status == HighsModelStatus::kReachedIterationLimit);
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == 0);
@@ -168,7 +168,7 @@ void testSolver(Highs& highs, const std::string solver,
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::Warning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::REACHED_ITERATION_LIMIT);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kReachedIterationLimit);
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == further_simplex_iterations);
@@ -285,10 +285,10 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(info.simplex_iteration_count == 403);
 
   HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::NOTSET);
+  REQUIRE(model_status == HighsModelStatus::kNotset);
 
   model_status = highs.getModelStatus(true);
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   // Test the solver without scaling
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
@@ -331,7 +331,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   error = fabs((info.objective_function_value - min_objective_function_value) /
                min_objective_function_value);
@@ -378,7 +378,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status ==
-          HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+          HighsModelStatus::kReachedDualObjectiveValueUpperBound);
 
   // Solve again
   // This smaller dual objective value upper bound is satisfied at the start of
@@ -400,7 +400,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status ==
-          HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+          HighsModelStatus::kReachedDualObjectiveValueUpperBound);
 
   // Solve as maximization and ensure that the dual objective value upper bound
   // isn't used
@@ -425,7 +425,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   error = fabs((info.objective_function_value - max_objective_function_value) /
                max_objective_function_value);

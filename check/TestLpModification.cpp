@@ -439,12 +439,12 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::NOTSET);
+  REQUIRE(model_status == HighsModelStatus::kNotset);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::MODEL_EMPTY);
+  REQUIRE(model_status == HighsModelStatus::kModelEmpty);
 
   // Adding column vectors and matrix to model with no rows returns an error
   REQUIRE(!highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
@@ -470,7 +470,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   double avgas_optimal_objective_value;
   highs.getInfoValue("objective_function_value", avgas_optimal_objective_value);
@@ -534,7 +534,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
@@ -680,7 +680,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
@@ -766,7 +766,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
 #ifdef HiGHSDEV
   highs.reportModelStatusSolutionBasis(
@@ -784,7 +784,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   callRun(highs, options.log_options, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);

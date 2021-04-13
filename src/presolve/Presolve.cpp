@@ -3687,8 +3687,8 @@ HighsPostsolveStatus Presolve::primalPostsolve(
         // Row is basic and column is non basic.
         if ((rowub == kHighsInf || (rowub - rowVal > tol)) &&
             (rowlb == -kHighsInf || (rowVal - rowlb > tol))) {
-          row_status.at(c.row) = HighsBasisStatus::BASIC;
-          col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+          row_status.at(c.row) = HighsBasisStatus::kBasic;
+          col_status.at(c.col) = HighsBasisStatus::kNonbasic;
           valueRowDual[c.row] = 0;
           flagRow[c.row] = 1;
           valueColDual[c.col] = getColumnDualPost(c.col);
@@ -3734,8 +3734,8 @@ HighsPostsolveStatus Presolve::primalPostsolve(
             // since either dual value zero for it is infeasible
             // or the column cost has changed for col j hence the row dual has
             // to be nonzero to balance out the Stationarity of Lagrangian.
-            row_status.at(c.row) = HighsBasisStatus::NONBASIC;
-            col_status.at(c.col) = HighsBasisStatus::BASIC;
+            row_status.at(c.row) = HighsBasisStatus::kNonbasic;
+            col_status.at(c.col) = HighsBasisStatus::kBasic;
             valueColDual[c.col] = 0;
             flagRow[c.row] = 1;
             valueRowDual[c.row] = getRowDualPost(c.row, c.col);
@@ -3743,8 +3743,8 @@ HighsPostsolveStatus Presolve::primalPostsolve(
           } else {
             // zero row dual is feasible, set row to basic and column to
             // nonbasic.
-            row_status.at(c.row) = HighsBasisStatus::BASIC;
-            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+            row_status.at(c.row) = HighsBasisStatus::kBasic;
+            col_status.at(c.col) = HighsBasisStatus::kNonbasic;
             valueRowDual[c.row] = 0;
             flagRow[c.row] = 1;
             valueColDual[c.col] = getColumnDualPost(c.col);
@@ -3845,8 +3845,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   vector<HighsBasisStatus> temp_row_status = row_status;
 
   nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
-  col_status.assign(numColOriginal, HighsBasisStatus::NONBASIC);  // Was LOWER
-  row_status.assign(numRowOriginal, HighsBasisStatus::NONBASIC);  // Was LOWER
+  col_status.assign(numColOriginal, HighsBasisStatus::kNonbasic);  // Was LOWER
+  row_status.assign(numRowOriginal, HighsBasisStatus::kNonbasic);  // Was LOWER
 
   for (HighsInt i = 0; i < numCol; ++i) {
     HighsInt iCol = eqIndexOfReduced.at(i);
@@ -3907,7 +3907,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         flagRow[c.row] = true;
         flagCol[x] = true;
         flagCol[y] = true;
-        row_status.at(c.row) = HighsBasisStatus::BASIC;
+        row_status.at(c.row) = HighsBasisStatus::kBasic;
         break;
       }
       case DOUBLETON_EQUATION: {  // Doubleton equation row
@@ -4262,8 +4262,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         // Row is basic and column is non basic.
         if ((rowub == kHighsInf || (rowub - rowVal > tol)) &&
             (rowlb == -kHighsInf || (rowVal - rowlb > tol))) {
-          row_status.at(c.row) = HighsBasisStatus::BASIC;
-          col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+          row_status.at(c.row) = HighsBasisStatus::kBasic;
+          col_status.at(c.col) = HighsBasisStatus::kNonbasic;
           valueRowDual[c.row] = 0;
           flagRow[c.row] = 1;
           valueColDual[c.col] = getColumnDualPost(c.col);
@@ -4309,8 +4309,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
             // since either dual value zero for it is infeasible
             // or the column cost has changed for col j hence the row dual has
             // to be nonzero to balance out the Stationarity of Lagrangian.
-            row_status.at(c.row) = HighsBasisStatus::NONBASIC;
-            col_status.at(c.col) = HighsBasisStatus::BASIC;
+            row_status.at(c.row) = HighsBasisStatus::kNonbasic;
+            col_status.at(c.col) = HighsBasisStatus::kBasic;
             valueColDual[c.col] = 0;
             flagRow[c.row] = 1;
             valueRowDual[c.row] = getRowDualPost(c.row, c.col);
@@ -4318,8 +4318,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           } else {
             // zero row dual is feasible, set row to basic and column to
             // nonbasic.
-            row_status.at(c.row) = HighsBasisStatus::BASIC;
-            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+            row_status.at(c.row) = HighsBasisStatus::kBasic;
+            col_status.at(c.col) = HighsBasisStatus::kNonbasic;
             valueRowDual[c.row] = 0;
             flagRow[c.row] = 1;
             valueColDual[c.col] = getColumnDualPost(c.col);
@@ -4396,7 +4396,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // Check number of basic variables
   HighsInt num_basic_var = 0;
   for (HighsInt iCol = 0; iCol < numColOriginal; iCol++) {
-    if (col_status[iCol] == HighsBasisStatus::BASIC) {
+    if (col_status[iCol] == HighsBasisStatus::kBasic) {
       assert(num_basic_var < numRowOriginal);
       if (num_basic_var == numRowOriginal) {
         printf("Error in postsolve: more basic variables than rows\n");
@@ -4407,7 +4407,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   }
   for (HighsInt iRow = 0; iRow < numRowOriginal; iRow++) {
     // HighsInt iVar = numColOriginal + iRow;
-    if (row_status[iRow] == HighsBasisStatus::BASIC) {
+    if (row_status[iRow] == HighsBasisStatus::kBasic) {
       assert(num_basic_var < numRowOriginal);
       if (num_basic_var == numRowOriginal) {
         printf("Error from postsolve: more basic variables than rows\n");
@@ -4512,7 +4512,7 @@ void Presolve::setBasisElement(change c) {
                " (basic): empty row\n",
                c.row, numColOriginal + c.row);
       }
-      row_status.at(c.row) = HighsBasisStatus::BASIC;
+      row_status.at(c.row) = HighsBasisStatus::kBasic;
       break;
     }
     case REDUNDANT_ROW: {
@@ -4521,7 +4521,7 @@ void Presolve::setBasisElement(change c) {
                " (basic): redundant\n",
                c.row, numColOriginal + c.row);
       }
-      row_status.at(c.row) = HighsBasisStatus::BASIC;
+      row_status.at(c.row) = HighsBasisStatus::kBasic;
       break;
     }
     case FREE_SING_COL:
@@ -4532,7 +4532,7 @@ void Presolve::setBasisElement(change c) {
                "column\n",
                c.col, numColOriginal + c.row);
       }
-      col_status.at(c.col) = HighsBasisStatus::BASIC;
+      col_status.at(c.col) = HighsBasisStatus::kBasic;
 
       if (report_postsolve) {
         printf("2.5b: Recover row %3" HIGHSINT_FORMAT " as %3" HIGHSINT_FORMAT
@@ -4540,7 +4540,7 @@ void Presolve::setBasisElement(change c) {
                "column\n",
                c.row, numColOriginal + c.row);
       }
-      row_status.at(c.row) = HighsBasisStatus::NONBASIC;  // Was LOWER
+      row_status.at(c.row) = HighsBasisStatus::kNonbasic;  // Was LOWER
       break;
     }
     case EMPTY_COL:
@@ -4551,7 +4551,7 @@ void Presolve::setBasisElement(change c) {
                " (nonbasic): weakly dominated column\n",
                c.col);
       }
-      col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
+      col_status.at(c.col) = HighsBasisStatus::kNonbasic;  // Was LOWER
       break;
     }
     case FIXED_COL: {  // fixed variable:
@@ -4564,7 +4564,7 @@ void Presolve::setBasisElement(change c) {
                    "column\n",
                    c.col);
           }
-          col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
+          col_status.at(c.col) = HighsBasisStatus::kNonbasic;  // Was LOWER
         }
       break;
     }
@@ -4806,18 +4806,18 @@ string Presolve::getDualsForcingRow(HighsInt row, vector<HighsInt>& fRjs) {
 
   if (lo <= 0 && up >= 0) {
     valueRowDual.at(row) = 0;
-    row_status[row] = HighsBasisStatus::BASIC;
+    row_status[row] = HighsBasisStatus::kBasic;
   } else if (lo > 0) {
     // row is set to basic and column to non-basic but that should change
-    row_status[row] = HighsBasisStatus::NONBASIC;
-    col_status.at(lo_col) = HighsBasisStatus::BASIC;
+    row_status[row] = HighsBasisStatus::kNonbasic;
+    col_status.at(lo_col) = HighsBasisStatus::kBasic;
     valueRowDual.at(row) = lo;
     valueColDual.at(lo_col) = 0;
     // valueColDual[lo_col] should be zero since it imposed the lower bound.
   } else if (up < 0) {
     // row is set to basic and column to non-basic but that should change
-    row_status[row] = HighsBasisStatus::NONBASIC;
-    col_status.at(up_col) = HighsBasisStatus::BASIC;
+    row_status[row] = HighsBasisStatus::kNonbasic;
+    col_status.at(up_col) = HighsBasisStatus::kBasic;
     valueRowDual.at(row) = up;
     valueColDual.at(up_col) = 0;
   }
@@ -4829,7 +4829,7 @@ string Presolve::getDualsForcingRow(HighsInt row, vector<HighsInt>& fRjs) {
     if (lo > 0 && j == lo_col) continue;
     if (up < 0 && j == up_col) continue;
 
-    col_status[j] = HighsBasisStatus::NONBASIC;
+    col_status[j] = HighsBasisStatus::kNonbasic;
 
     cost = valueColDual.at(j);
     sum = 0;
@@ -4872,7 +4872,7 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
   flagRow.at(row) = 1;
 
   HighsBasisStatus local_status = col_status.at(col);
-  if (local_status != HighsBasisStatus::BASIC) {
+  if (local_status != HighsBasisStatus::kBasic) {
     // x was not basic but is now
     // if x is strictly between original bounds or a_ij*x_j is at a bound.
     if (fabs(valuePrimal.at(col) - l) > tol &&
@@ -4882,8 +4882,8 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
                " basic and row %3" HIGHSINT_FORMAT " nonbasic\n",
                col, row);
       }
-      col_status.at(col) = HighsBasisStatus::BASIC;
-      row_status.at(row) = HighsBasisStatus::NONBASIC;  // Was LOWER
+      col_status.at(col) = HighsBasisStatus::kBasic;
+      row_status.at(row) = HighsBasisStatus::kNonbasic;  // Was LOWER
       valueColDual[col] = 0;
       valueRowDual[row] = getRowDualPost(row, col);
     } else {
@@ -4899,13 +4899,13 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
           (!isRowAtLB && isRowAtUB && row_dual < 0) ||
           (!isRowAtLB && !isRowAtUB)) {
         // make row basic
-        row_status.at(row) = HighsBasisStatus::BASIC;
+        row_status.at(row) = HighsBasisStatus::kBasic;
         valueRowDual[row] = 0;
         valueColDual[col] = save_dual;
       } else {
         // column is basic
-        col_status.at(col) = HighsBasisStatus::BASIC;
-        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        col_status.at(col) = HighsBasisStatus::kBasic;
+        row_status.at(row) = HighsBasisStatus::kNonbasic;
         valueColDual[col] = 0;
         valueRowDual[row] = getRowDualPost(row, col);
       }
@@ -4915,7 +4915,7 @@ void Presolve::getDualsSingletonRow(const HighsInt row, const HighsInt col) {
     if (report_postsolve) {
       printf("3.3 : Make row %3" HIGHSINT_FORMAT " basic\n", row);
     }
-    row_status.at(row) = HighsBasisStatus::BASIC;
+    row_status.at(row) = HighsBasisStatus::kBasic;
     valueRowDual[row] = 0;
     // if the row dual is zero it does not contribute to the column dual.
   }
@@ -4983,8 +4983,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
   // x stayed, y was removed
   if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
     // If column y has value between bounds set it to basic.
-    col_status.at(y) = HighsBasisStatus::BASIC;
-    row_status.at(row) = HighsBasisStatus::NONBASIC;
+    col_status.at(y) = HighsBasisStatus::kBasic;
+    row_status.at(row) = HighsBasisStatus::kNonbasic;
 
     // makeYBasic();
     valueColDual.at(y) = 0;
@@ -4993,19 +4993,19 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
     return;
   }
 
-  if (((x_status_reduced == HighsBasisStatus::NONBASIC ||
-        x_status_reduced == HighsBasisStatus::UPPER) &&
+  if (((x_status_reduced == HighsBasisStatus::kNonbasic ||
+        x_status_reduced == HighsBasisStatus::kUpper) &&
        fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
-      ((x_status_reduced == HighsBasisStatus::NONBASIC ||
-        x_status_reduced == HighsBasisStatus::LOWER) &&
+      ((x_status_reduced == HighsBasisStatus::kNonbasic ||
+        x_status_reduced == HighsBasisStatus::kLower) &&
        fabs(valueX - lbxNew) < tol && lbxNew > lbxOld) ||
       (fabs(valueX - lbxNew) < tol && fabs(lbxOld - lbxNew) < tol &&
-       (x_status_reduced == HighsBasisStatus::UPPER ||
-        x_status_reduced == HighsBasisStatus::LOWER))) {
+       (x_status_reduced == HighsBasisStatus::kUpper ||
+        x_status_reduced == HighsBasisStatus::kLower))) {
     if (ubxNew > lbxNew) {
       // Column x is nonbasic at reduced solution at a reduced bound but needs
       // to be changed to basic since this bound is expanding.
-      assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
+      assert(col_status.at(y) == HighsBasisStatus::kNonbasic);
 
       x_make_basic = true;
       // makeXBasic()
@@ -5030,8 +5030,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
         valueColDual.at(x) = 0;
         valueRowDual.at(row) = getRowDualPost(row, x);
         valueColDual.at(y) = getColumnDualPost(y);
-        col_status.at(x) = HighsBasisStatus::BASIC;
-        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        col_status.at(x) = HighsBasisStatus::kBasic;
+        row_status.at(row) = HighsBasisStatus::kNonbasic;
         if (report)
           printf("4.77 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
         return;
@@ -5057,8 +5057,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
           feasible = false;
 
         if (feasible) {
-          col_status.at(x) = HighsBasisStatus::BASIC;
-          row_status.at(row) = HighsBasisStatus::NONBASIC;
+          col_status.at(x) = HighsBasisStatus::kBasic;
+          row_status.at(row) = HighsBasisStatus::kNonbasic;
           if (report)
             printf("4.1 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
           return;
@@ -5076,8 +5076,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
              fabs(uby - valuePrimal[y]) < tol);
       // If postsolved column y is at a bound. If lby != uby we have a
       // restriction on the dual sign of y.
-      // col_status.at(y) = HighsBasisStatus::BASIC;
-      // row_status.at(row) = HighsBasisStatus::NONBASIC;
+      // col_status.at(y) = HighsBasisStatus::kBasic;
+      // row_status.at(row) = HighsBasisStatus::kNonbasic;
 
       // valueColDual.at(y) = 0;
       // valueRowDual.at(row) = getRowDualPost(row, y);
@@ -5097,13 +5097,13 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
         row_basic = true;
       }  // Else Will need to check dual feasibility of y dual.
 
-      if (x_status_reduced != HighsBasisStatus::BASIC) {
+      if (x_status_reduced != HighsBasisStatus::kBasic) {
         // make x basic.
         valueColDual.at(x) = 0;
         valueRowDual.at(row) = getRowDualPost(row, x);
         valueColDual.at(y) = getColumnDualPost(y);
-        col_status.at(x) = HighsBasisStatus::BASIC;
-        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        col_status.at(x) = HighsBasisStatus::kBasic;
+        row_status.at(row) = HighsBasisStatus::kNonbasic;
         if (report)
           printf("4.778 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
         return;
@@ -5112,7 +5112,7 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
   }
 
   // Print & check some info.
-  // if (x_status_reduced == HighsBasisStatus::BASIC)
+  // if (x_status_reduced == HighsBasisStatus::kBasic)
   //   std::cout << "BASIC" << std::endl;
   // else
   //   std::cout << "NOT BASIC" << std::endl;
@@ -5130,7 +5130,7 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
       // std::cout << ubxNew << " ubxNew " << std::endl;
       // std::cout << valueX << " val  " << std::endl;
       // if X was non basic make it basic
-      if (x_status_reduced != HighsBasisStatus::BASIC) {
+      if (x_status_reduced != HighsBasisStatus::kBasic) {
         valueColDual.at(x) = 0;
         valueRowDual.at(row) = getRowDualPost(row, x);
         valueColDual.at(y) = getColumnDualPost(y);
@@ -5143,8 +5143,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
           if (valueColDual[y] > 0) feasible = false;
 
         if (feasible) {
-          col_status.at(x) = HighsBasisStatus::BASIC;
-          row_status.at(row) = HighsBasisStatus::NONBASIC;
+          col_status.at(x) = HighsBasisStatus::kBasic;
+          row_status.at(row) = HighsBasisStatus::kNonbasic;
           if (report)
             printf("4.122778 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
           return;
@@ -5159,8 +5159,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
       valueColDual.at(y) = 0;
       valueRowDual.at(row) = getRowDualPost(row, y);
       valueColDual.at(x) = getColumnDualPost(x);
-      col_status.at(y) = HighsBasisStatus::BASIC;
-      row_status.at(row) = HighsBasisStatus::NONBASIC;
+      col_status.at(y) = HighsBasisStatus::kBasic;
+      row_status.at(row) = HighsBasisStatus::kNonbasic;
       if (report)
         printf("4.122779 : Make column %3" HIGHSINT_FORMAT " basic\n", y);
       return;
@@ -5170,13 +5170,13 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
     }
   } else {
     // X strictly between bounds
-    assert(x_status_reduced == HighsBasisStatus::BASIC);
+    assert(x_status_reduced == HighsBasisStatus::kBasic);
     assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
   }
 
   if (row_basic) {
-    assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
-    row_status.at(row) = HighsBasisStatus::BASIC;
+    assert(col_status.at(y) == HighsBasisStatus::kNonbasic);
+    row_status.at(row) = HighsBasisStatus::kBasic;
 
     valueRowDual.at(row) = 0;
     valueColDual.at(y) = getColumnDualPost(y);
@@ -5185,8 +5185,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
   } else {
     // Try Y Basic.
 
-    col_status.at(y) = HighsBasisStatus::BASIC;
-    row_status.at(row) = HighsBasisStatus::NONBASIC;
+    col_status.at(y) = HighsBasisStatus::kBasic;
+    row_status.at(row) = HighsBasisStatus::kNonbasic;
 
     valueColDual.at(y) = 0;
     valueRowDual.at(row) = getRowDualPost(row, y);
@@ -5196,14 +5196,14 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
     // Check complementary slackness on x.
     if ((valueColDual[x] < -tol && fabs(valuePrimal[x] - lbxOld) > tol) ||
         (valueColDual[x] > tol && fabs(ubxOld - valuePrimal[x]) > tol)) {
-      if (x_status_reduced != HighsBasisStatus::BASIC) {
+      if (x_status_reduced != HighsBasisStatus::kBasic) {
         // make X basic.
         valueColDual.at(x) = 0;
         valueRowDual.at(row) = getRowDualPost(row, x);
         valueColDual.at(y) = getColumnDualPost(y);
-        col_status.at(x) = HighsBasisStatus::BASIC;
-        col_status.at(y) = HighsBasisStatus::NONBASIC;
-        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        col_status.at(x) = HighsBasisStatus::kBasic;
+        col_status.at(y) = HighsBasisStatus::kNonbasic;
+        row_status.at(row) = HighsBasisStatus::kNonbasic;
         if (report)
           printf("4.779 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
         return;
@@ -5211,8 +5211,8 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
       // If X already basic and y can not be feasibly made basic then the row
       // remains as the only option. X not working out
 
-      // row_status.at(row) = HighsBasisStatus::BASIC;
-      // col_status.at(y) = HighsBasisStatus::NONBASIC;
+      // row_status.at(row) = HighsBasisStatus::kBasic;
+      // col_status.at(y) = HighsBasisStatus::kNonbasic;
 
       // valueRowDual.at(row) = 0;
       // valueColDual.at(y) = getColumnDualPost(y);
@@ -5235,9 +5235,9 @@ void Presolve::getDualsDoubletonEquation(const HighsInt row,
       valueColDual.at(x) = 0;
       valueRowDual.at(row) = getRowDualPost(row, x);
       valueColDual.at(y) = getColumnDualPost(y);
-      col_status.at(x) = HighsBasisStatus::BASIC;
-      col_status.at(y) = HighsBasisStatus::NONBASIC;
-      row_status.at(row) = HighsBasisStatus::NONBASIC;
+      col_status.at(x) = HighsBasisStatus::kBasic;
+      col_status.at(y) = HighsBasisStatus::kNonbasic;
+      row_status.at(row) = HighsBasisStatus::kNonbasic;
       if (report)
         printf("4.879 : Make column %3" HIGHSINT_FORMAT " basic\n", x);
     }

@@ -1361,16 +1361,16 @@ HighsDebugStatus debugSimplexBasicSolution(
     if (iVar < lp.numCol_) {
       HighsInt iCol = iVar;
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
-        basis.col_status[iCol] = HighsBasisStatus::NONBASIC;
+        basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
       } else {
-        basis.col_status[iCol] = HighsBasisStatus::BASIC;
+        basis.col_status[iCol] = HighsBasisStatus::kBasic;
       }
     } else {
       HighsInt iRow = iVar - lp.numCol_;
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
-        basis.row_status[iRow] = HighsBasisStatus::NONBASIC;
+        basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
       } else {
-        basis.row_status[iRow] = HighsBasisStatus::BASIC;
+        basis.row_status[iRow] = HighsBasisStatus::kBasic;
       }
     }
   }

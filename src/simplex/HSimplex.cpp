@@ -88,11 +88,11 @@ void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis,
   // Make any new columns nonbasic
   for (HighsInt iCol = lp.numCol_; iCol < newNumCol; iCol++) {
     if (!highs_isInfinity(-lp.colLower_[iCol])) {
-      basis.col_status[iCol] = HighsBasisStatus::LOWER;
+      basis.col_status[iCol] = HighsBasisStatus::kLower;
     } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
-      basis.col_status[iCol] = HighsBasisStatus::UPPER;
+      basis.col_status[iCol] = HighsBasisStatus::kUpper;
     } else {
-      basis.col_status[iCol] = HighsBasisStatus::ZERO;
+      basis.col_status[iCol] = HighsBasisStatus::kZero;
     }
   }
 }
@@ -165,7 +165,7 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis,
   basis.row_status.resize(newNumRow);
   // Make the new rows basic
   for (HighsInt iRow = lp.numRow_; iRow < newNumRow; iRow++) {
-    basis.row_status[iRow] = HighsBasisStatus::BASIC;
+    basis.row_status[iRow] = HighsBasisStatus::kBasic;
   }
 }
 
@@ -408,7 +408,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
   // scaled solution and, if there are infeasibilities, identify new
   // feasibility tolerances for the scaled LP
   const bool get_new_scaled_feasibility_tolerances =
-      model_status == HighsModelStatus::OPTIMAL;
+      model_status == HighsModelStatus::kOptimal;
 
   if (get_new_scaled_feasibility_tolerances) {
     new_primal_feasibility_tolerance = kHighsInf;

@@ -106,15 +106,15 @@ bool HighsPrimalHeuristics::solveSubMip(
           size_t{1}, size_t(adjustmentfactor * submipsolver.node_count_));
   }
 
-  if (submipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE) {
+  if (submipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible) {
     infeasObservations += fixingRate;
     ++numInfeasObservations;
   }
   if (submipsolver.node_count_ <= 1 &&
-      submipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE)
+      submipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible)
     return false;
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
-  if (submipsolver.modelstatus_ != HighsModelStatus::PRIMAL_INFEASIBLE &&
+  if (submipsolver.modelstatus_ != HighsModelStatus::kPrimalInfeasible &&
       !submipsolver.solution_.empty()) {
     mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
   }
@@ -973,7 +973,7 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.run();
   const std::vector<double>& sol = ipm.getSolution().col_value;
   if (int(sol.size()) != mipsolver.numCol()) return;
-  if (ipm.getModelStatus() == HighsModelStatus::OPTIMAL) {
+  if (ipm.getModelStatus() == HighsModelStatus::kOptimal) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {

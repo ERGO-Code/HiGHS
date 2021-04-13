@@ -223,7 +223,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED);
+  REQUIRE(model_status == HighsModelStatus::kPrimalInfeasibleOrUnbounded);
 
   // Without presolve LP is found primal unbounded! ToDo: Fix this to be
   // infeasible
@@ -232,7 +232,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(run_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
+  REQUIRE(model_status == HighsModelStatus::kPrimalUnbounded);
 
   REQUIRE(!highs.changeCoeff(-1, 0, check_value));
   REQUIRE(!highs.changeCoeff(0, -1, check_value));

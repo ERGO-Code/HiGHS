@@ -92,23 +92,23 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
 std::string statusToString(const HighsBasisStatus status, const double lower,
                            const double upper) {
   switch (status) {
-    case HighsBasisStatus::LOWER:
+    case HighsBasisStatus::kLower:
       if (lower == upper) {
         return "FX";
       } else {
         return "LB";
       }
       break;
-    case HighsBasisStatus::BASIC:
+    case HighsBasisStatus::kBasic:
       return "BS";
       break;
-    case HighsBasisStatus::UPPER:
+    case HighsBasisStatus::kUpper:
       return "UB";
       break;
-    case HighsBasisStatus::ZERO:
+    case HighsBasisStatus::kZero:
       return "FR";
       break;
-    case HighsBasisStatus::NONBASIC:
+    case HighsBasisStatus::kNonbasic:
       return "NB";
       break;
   }
@@ -235,20 +235,20 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
     const HighsBasisStatus ideal_status, const double lower,
     const double upper) {
   HighsBasisStatus checked_status;
-  if (ideal_status == HighsBasisStatus::LOWER ||
-      ideal_status == HighsBasisStatus::ZERO) {
+  if (ideal_status == HighsBasisStatus::kLower ||
+      ideal_status == HighsBasisStatus::kZero) {
     // Looking to give status LOWER or ZERO
     if (highs_isInfinity(-lower)) {
       // Lower bound is infinite
       if (highs_isInfinity(upper)) {
         // Upper bound is infinite
-        checked_status = HighsBasisStatus::ZERO;
+        checked_status = HighsBasisStatus::kZero;
       } else {
         // Upper bound is finite
-        checked_status = HighsBasisStatus::UPPER;
+        checked_status = HighsBasisStatus::kUpper;
       }
     } else {
-      checked_status = HighsBasisStatus::LOWER;
+      checked_status = HighsBasisStatus::kLower;
     }
   } else {
     // Looking to give status UPPER
@@ -256,13 +256,13 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
       // Upper bound is infinite
       if (highs_isInfinity(-lower)) {
         // Lower bound is infinite
-        checked_status = HighsBasisStatus::ZERO;
+        checked_status = HighsBasisStatus::kZero;
       } else {
         // Upper bound is finite
-        checked_status = HighsBasisStatus::LOWER;
+        checked_status = HighsBasisStatus::kLower;
       }
     } else {
-      checked_status = HighsBasisStatus::UPPER;
+      checked_status = HighsBasisStatus::kUpper;
     }
   }
   return checked_status;
@@ -300,52 +300,52 @@ std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
 // Return a string representation of HighsModelStatus.
 std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::NOTSET:
+    case HighsModelStatus::kNotset:
       return "Not Set";
       break;
-    case HighsModelStatus::LOAD_ERROR:
+    case HighsModelStatus::kLoadError:
       return "Load error";
       break;
-    case HighsModelStatus::MODEL_ERROR:
+    case HighsModelStatus::kModelError:
       return "Model error";
       break;
-    case HighsModelStatus::PRESOLVE_ERROR:
+    case HighsModelStatus::kPresolveError:
       return "Presolve error";
       break;
-    case HighsModelStatus::SOLVE_ERROR:
+    case HighsModelStatus::kSolveError:
       return "Solve error";
       break;
-    case HighsModelStatus::POSTSOLVE_ERROR:
+    case HighsModelStatus::kPostsolveError:
       return "Postsolve error";
       break;
-    case HighsModelStatus::MODEL_EMPTY:
+    case HighsModelStatus::kModelEmpty:
       return "Model empty";
       break;
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalInfeasible:
       return "Infeasible";  //"Primal infeasible";
       break;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
+    case HighsModelStatus::kPrimalUnbounded:
       return "Unbounded";  //"Primal unbounded";
       break;
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       return "Optimal";
       break;
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       return "Reached dual objective upper bound";
       break;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kReachedTimeLimit:
       return "Reached time limit";
       break;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    case HighsModelStatus::kReachedIterationLimit:
       return "Reached iteration limit";
       break;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalDualInfeasible:
       return "Primal and dual infeasible";
       break;
-    case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
+    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
       return "Primal infeasible or unbounded";
       break;
-    case HighsModelStatus::DUAL_INFEASIBLE:
+    case HighsModelStatus::kDualInfeasible:
       return "Dual infeasible";
       break;
     default:
@@ -390,37 +390,37 @@ void copyHighsIterationCounts(const HighsInfo& info,
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::NOTSET:
+    case HighsModelStatus::kNotset:
       return HighsStatus::Error;
-    case HighsModelStatus::LOAD_ERROR:
+    case HighsModelStatus::kLoadError:
       return HighsStatus::Error;
-    case HighsModelStatus::MODEL_ERROR:
+    case HighsModelStatus::kModelError:
       return HighsStatus::Error;
-    case HighsModelStatus::PRESOLVE_ERROR:
+    case HighsModelStatus::kPresolveError:
       return HighsStatus::Error;
-    case HighsModelStatus::SOLVE_ERROR:
+    case HighsModelStatus::kSolveError:
       return HighsStatus::Error;
-    case HighsModelStatus::POSTSOLVE_ERROR:
+    case HighsModelStatus::kPostsolveError:
       return HighsStatus::Error;
-    case HighsModelStatus::MODEL_EMPTY:
+    case HighsModelStatus::kModelEmpty:
       return HighsStatus::OK;
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalInfeasible:
       return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
+    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
       return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
+    case HighsModelStatus::kPrimalUnbounded:
       return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalDualInfeasible:
       return HighsStatus::OK;
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       return HighsStatus::OK;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kReachedTimeLimit:
       return HighsStatus::Warning;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    case HighsModelStatus::kReachedIterationLimit:
       return HighsStatus::Warning;
-    case HighsModelStatus::DUAL_INFEASIBLE:
+    case HighsModelStatus::kDualInfeasible:
       return HighsStatus::Warning;
     default:
       return HighsStatus::Error;

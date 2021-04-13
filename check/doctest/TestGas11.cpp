@@ -17,7 +17,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::kOptimal) {
     // function not defined but not needed since Gas11 is infeasible.
     // REQUIRE(
     //     objectiveOk(info.objective_function_value,
@@ -30,7 +30,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 void mpsGas11(Highs& highs) {
   // Lots of trouble is caused by gas11
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_UNBOUNDED;
+      HighsModelStatus::kPrimalUnbounded;
 
   std::string model = "gas11";
   std::string model_file;

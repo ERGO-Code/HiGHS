@@ -37,8 +37,8 @@ class HighsModelObject {
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsModelStatus unscaled_model_status_ = HighsModelStatus::NOTSET;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   HighsSolutionParams solution_params_;
   HighsIterationCounts iteration_counts_;

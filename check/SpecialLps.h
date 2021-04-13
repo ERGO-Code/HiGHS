@@ -38,7 +38,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 8.83333333333333;
   }
 
@@ -57,7 +57,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 1;
   }
 
@@ -76,7 +76,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -18;
   }
 
@@ -94,7 +94,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    require_model_status = HighsModelStatus::kPrimalInfeasible;
   }
 
   void issue295Lp(HighsLp& lp, HighsModelStatus& require_model_status,
@@ -112,7 +112,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -2;
   }
 
@@ -133,7 +133,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -1.191;
   }
 
@@ -151,7 +151,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    require_model_status = HighsModelStatus::kPrimalInfeasible;
   }
 
   void primalDualInfeasible1Lp(HighsLp& lp,
@@ -169,7 +169,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+    require_model_status = HighsModelStatus::kPrimalDualInfeasible;
   }
 
   void primalDualInfeasible2Lp(HighsLp& lp,
@@ -187,7 +187,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+    require_model_status = HighsModelStatus::kPrimalDualInfeasible;
   }
 
   void scipLpi2Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
@@ -204,7 +204,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    require_model_status = HighsModelStatus::kPrimalUnbounded;
   }
 
   void scipLpi3Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
@@ -221,7 +221,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    require_model_status = HighsModelStatus::kPrimalInfeasible;
   }
 
   void distillationLp(HighsLp& lp, HighsModelStatus& require_model_status,
@@ -239,7 +239,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 31.2;
   }
 
@@ -258,7 +258,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -2850;
   }
 
