@@ -36,15 +36,15 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   lp_name_ = lp.lp_name_;
   // Set up analysis logic short-cuts
   analyse_lp_data =
-      HIGHS_ANALYSIS_LEVEL_MODEL_DATA & options.highs_analysis_level;
+      kHighsAnalysisLevelModelData & options.highs_analysis_level;
   analyse_simplex_data =
-      HIGHS_ANALYSIS_LEVEL_SOLVER_DATA & options.highs_analysis_level;
+      kHighsAnalysisLevelSolverData & options.highs_analysis_level;
   analyse_simplex_time =
-      HIGHS_ANALYSIS_LEVEL_SOLVER_TIME & options.highs_analysis_level;
+      kHighsAnalysisLevelSolverTime & options.highs_analysis_level;
   analyse_factor_data =
-      HIGHS_ANALYSIS_LEVEL_NLA_DATA & options.highs_analysis_level;
+      kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   analyse_factor_time =
-      HIGHS_ANALYSIS_LEVEL_NLA_TIME & options.highs_analysis_level;
+      kHighsAnalysisLevelNlaTime & options.highs_analysis_level;
 
   // Set up the thread clocks
   HighsInt omp_max_threads = 1;

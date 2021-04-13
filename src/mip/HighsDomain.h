@@ -256,7 +256,7 @@ class HighsDomain {
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut);
 
   bool isBinary(HighsInt col) const {
-    return mipsolver->variableType(col) != HighsVarType::CONTINUOUS &&
+    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
            colLower_[col] == 0.0 && colUpper_[col] == 1.0;
   }
 

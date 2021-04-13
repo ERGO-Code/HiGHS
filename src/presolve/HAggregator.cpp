@@ -22,7 +22,7 @@ void HAggregator::debugPrintRow(HighsInt row) {
     // for (HighsInt rowiter = rowhead[row]; rowiter != -1; rowiter =
     // ARnext[rowiter]) {
     char colchar =
-        integrality[Acol[rowiter]] == HighsVarType::INTEGER ? 'y' : 'x';
+        integrality[Acol[rowiter]] == HighsVarType::kInteger ? 'y' : 'x';
     char signchar = Avalue[rowiter] < 0 ? '-' : '+';
     printf("%c%g %c%" HIGHSINT_FORMAT " ", signchar, std::abs(Avalue[rowiter]), colchar,
            Acol[rowiter]);
@@ -49,7 +49,7 @@ void HAggregator::debugPrintSubMatrix(HighsInt row, HighsInt col) {
       if (it != entries.end()) {
         assert(Acol[it->second] == Acol[rowiter]);
         char colchar =
-            integrality[Acol[it->second]] == HighsVarType::INTEGER ? 'y' : 'x';
+            integrality[Acol[it->second]] == HighsVarType::kInteger ? 'y' : 'x';
         char signchar = Avalue[it->second] < 0 ? '-' : '+';
         printf("%c%g %c%" HIGHSINT_FORMAT " ", signchar, std::abs(Avalue[it->second]), colchar,
                Acol[it->second]);
@@ -812,7 +812,7 @@ HAggregator::PostsolveStack HAggregator::run() {
 
       row_numerics_threshold = std::max(row_numerics_threshold, absval);
 
-      if (integrality[col] == HighsVarType::INTEGER) {
+      if (integrality[col] == HighsVarType::kInteger) {
         // if there are non-integer variables in the row, no integer variable
         // can be used
         if (ncont != 0) continue;
@@ -939,7 +939,7 @@ HAggregator::PostsolveStack HAggregator::run() {
     // finally perform the substitution with the chosen candidate and update the
     // iterator to point to the next sparsest equation
     ++numsubst;
-    if (integrality[chosencand] == HighsVarType::INTEGER) ++numsubstint;
+    if (integrality[chosencand] == HighsVarType::kInteger) ++numsubstint;
 
     // printf("substituting col %" HIGHSINT_FORMAT " with row %" HIGHSINT_FORMAT
     // "\n", chosencand, sparsesteq); debugPrintSubMatrix(sparsesteq,
@@ -1225,7 +1225,7 @@ HighsInt HAggregator::strengthenInequalities() {
 
       if (ub <= bound_tolerance || weight <= bound_tolerance) continue;
 
-      if (integrality[col] == HighsVarType::CONTINUOUS) {
+      if (integrality[col] == HighsVarType::kContinuous) {
         continuouscontribution += weight * ub;
         continue;
       }

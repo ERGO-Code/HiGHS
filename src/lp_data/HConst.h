@@ -49,23 +49,23 @@ enum class HighsDebugStatus {
 };
 
 enum HighsAnalysisLevel {
-  HIGHS_ANALYSIS_LEVEL_MIN = 0,
-  HIGHS_ANALYSIS_LEVEL_NONE = HIGHS_ANALYSIS_LEVEL_MIN,
-  HIGHS_ANALYSIS_LEVEL_MODEL_DATA = 1,
-  HIGHS_ANALYSIS_LEVEL_SOLVER_DATA = 2,
-  HIGHS_ANALYSIS_LEVEL_SOLVER_TIME = 4,
-  HIGHS_ANALYSIS_LEVEL_NLA_DATA = 8,
-  HIGHS_ANALYSIS_LEVEL_NLA_TIME = 16,
-  HIGHS_ANALYSIS_LEVEL_MAX =
-      HIGHS_ANALYSIS_LEVEL_MODEL_DATA + HIGHS_ANALYSIS_LEVEL_SOLVER_DATA +
-      HIGHS_ANALYSIS_LEVEL_SOLVER_TIME + HIGHS_ANALYSIS_LEVEL_NLA_DATA +
-      HIGHS_ANALYSIS_LEVEL_NLA_TIME
+  kHighsAnalysisLevelMin = 0,
+  kHighsAnalysisLevelNone = kHighsAnalysisLevelMin,
+  kHighsAnalysisLevelModelData = 1,
+  kHighsAnalysisLevelSolverData = 2,
+  kHighsAnalysisLevelSolverTime = 4,
+  kHighsAnalysisLevelNlaData = 8,
+  kHighsAnalysisLevelNlaTime = 16,
+  kHighsAnalysisLevelMax =
+      kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverData +
+      kHighsAnalysisLevelSolverTime + kHighsAnalysisLevelNlaData +
+      kHighsAnalysisLevelNlaTime
 };
 
 enum class HighsVarType : uint8_t {
-  CONTINUOUS = 0,
-  INTEGER = 1,
-  IMPLICIT_INTEGER = 2,
+  kContinuous = 0,
+  kInteger = 1,
+  kImplicitInteger = 2,
 };
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING };

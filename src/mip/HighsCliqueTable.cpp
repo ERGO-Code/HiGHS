@@ -1363,7 +1363,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
 
     HighsInt nfixed = 0;
     for (HighsInt i = 0; i != len; ++i) {
-      if (mipsolver.variableType(inds[i]) != HighsVarType::INTEGER) continue;
+      if (mipsolver.variableType(inds[i]) != HighsVarType::kInteger) continue;
       if (vals[i] <= rhs + mipsolver.mipdata_->feastol) continue;
       if (globaldom.isFixed(inds[i])) continue;
 

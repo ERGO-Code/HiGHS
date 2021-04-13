@@ -206,7 +206,7 @@ retry:
   auto getFixingRate = [&]() {
     while (nCheckedChanges < localdom.getDomainChangeStack().size()) {
       HighsInt col = localdom.getDomainChangeStack()[nCheckedChanges++].column;
-      if (mipsolver.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      if (mipsolver.variableType(col) == HighsVarType::kContinuous) continue;
 
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
@@ -452,7 +452,7 @@ retry:
   auto getFixingRate = [&]() {
     while (nCheckedChanges < localdom.getDomainChangeStack().size()) {
       HighsInt col = localdom.getDomainChangeStack()[nCheckedChanges++].column;
-      if (mipsolver.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      if (mipsolver.variableType(col) == HighsVarType::kContinuous) continue;
 
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
@@ -879,7 +879,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     auto localdom = mipsolver.mipdata_->domain;
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
-      assert(mipsolver.variableType(i) == HighsVarType::INTEGER);
+      assert(mipsolver.variableType(i) == HighsVarType::kInteger);
       double intval = std::floor(roundedsol[i] + randgen.real(0.4, 0.6));
       intval = std::max(intval, localdom.colLower_[i]);
       intval = std::min(intval, localdom.colUpper_[i]);
@@ -921,7 +921,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       break;
 
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
-      assert(mipsolver.variableType(i) == HighsVarType::INTEGER);
+      assert(mipsolver.variableType(i) == HighsVarType::kInteger);
 
       if (lpsol[i] > roundedsol[i] - mipsolver.mipdata_->feastol)
         cost[i] = -1.0 + randgen.real(-1e-4, 1e-4);
@@ -986,14 +986,14 @@ void HighsPrimalHeuristics::centralRounding() {
                                                mipsolver.model_->colLower_[i]);
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
-        if (mipsolver.variableType(i) == HighsVarType::INTEGER) ++nintfixed;
+        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
       } else if (sol[i] >=
                  mipsolver.model_->colUpper_[i] - mipsolver.mipdata_->feastol) {
         mipsolver.mipdata_->domain.changeBound(HighsBoundType::Lower, i,
                                                mipsolver.model_->colUpper_[i]);
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
-        if (mipsolver.variableType(i) == HighsVarType::INTEGER) ++nintfixed;
+        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
       }
     }
     if (nfixed > 0)

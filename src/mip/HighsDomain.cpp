@@ -365,7 +365,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
         if (bound < colUpper_[Rindex[i]] &&
             colUpper_[Rindex[i]] - bound >
@@ -401,7 +401,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
         if (bound > colLower_[Rindex[i]] &&
             bound - colLower_[Rindex[i]] >
@@ -467,7 +467,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
         if (bound < colUpper_[Rindex[i]] &&
             colUpper_[Rindex[i]] - bound >
@@ -502,7 +502,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
         if (bound > colLower_[Rindex[i]] &&
             bound - colLower_[Rindex[i]] >
@@ -1203,7 +1203,7 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
     HighsCDouble upper = rhs;
     HighsInt tightened = 0;
     for (HighsInt i = 0; i != len; ++i) {
-      if (mipsolver->variableType(inds[i]) == HighsVarType::CONTINUOUS)
+      if (mipsolver->variableType(inds[i]) == HighsVarType::kContinuous)
         continue;
       if (vals[i] > maxabscoef) {
         HighsCDouble delta = vals[i] - maxabscoef;

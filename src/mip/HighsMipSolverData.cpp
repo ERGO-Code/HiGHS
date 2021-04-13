@@ -26,7 +26,7 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   for (HighsInt i = 0; i != mipsolver.model_->numCol_; ++i) {
     if (solution[i] < mipsolver.model_->colLower_[i] - feastol) return false;
     if (solution[i] > mipsolver.model_->colUpper_[i] + feastol) return false;
-    if (mipsolver.variableType(i) == HighsVarType::INTEGER &&
+    if (mipsolver.variableType(i) == HighsVarType::kInteger &&
         std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
       return false;
 
@@ -227,7 +227,7 @@ void HighsMipSolverData::runSetup() {
     bool integral = true;
     for (HighsInt j = start; j != end; ++j) {
       if (integral) {
-        if (mipsolver.variableType(ARindex_[j]) == HighsVarType::CONTINUOUS)
+        if (mipsolver.variableType(ARindex_[j]) == HighsVarType::kContinuous)
           integral = false;
         else {
           double intval = std::floor(ARvalue_[j] + 0.5);
@@ -276,14 +276,14 @@ void HighsMipSolverData::runSetup() {
 
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
-      case HighsVarType::CONTINUOUS:
+      case HighsVarType::kContinuous:
         continuous_cols.push_back(i);
         break;
-      case HighsVarType::IMPLICIT_INTEGER:
+      case HighsVarType::kImplicitInteger:
         implint_cols.push_back(i);
         integral_cols.push_back(i);
         break;
-      case HighsVarType::INTEGER:
+      case HighsVarType::kInteger:
         integer_cols.push_back(i);
         integral_cols.push_back(i);
     }
@@ -320,7 +320,7 @@ double HighsMipSolverData::transformNewIncumbent(
         std::max(bound_violation_,
                  solution.col_value[i] - mipsolver.orig_model_->colUpper_[i]);
 
-    if (mipsolver.orig_model_->integrality_[i] == HighsVarType::INTEGER) {
+    if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
       double intval = std::floor(solution.col_value[i] + 0.5);
       integrality_violation_ = std::max(
           std::abs(intval - solution.col_value[i]), integrality_violation_);
@@ -1030,7 +1030,7 @@ void HighsMipSolverData::checkObjIntegrality() {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     if (mipsolver.colCost(i) == 0.0) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) {
+    if (mipsolver.variableType(i) == HighsVarType::kContinuous) {
       objintscale = 0.0;
       break;
     }

@@ -42,7 +42,7 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postSolveStack,
   for (const HighsSliceNonzero& nonzero : getSortedRowVector(row)) {
     // for (HighsInt rowiter = rowhead[row]; rowiter != -1; rowiter =
     // ARnext[rowiter]) {
-    char colchar = model->integrality_[nonzero.index()] == HighsVarType::INTEGER
+    char colchar = model->integrality_[nonzero.index()] == HighsVarType::kInteger
                        ? 'y'
                        : 'x';
     char signchar = nonzero.value() < 0 ? '-' : '+';
@@ -77,7 +77,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
   }
 
   if (mipsolver == nullptr)
-    model->integrality_.assign(model->numCol_, HighsVarType::CONTINUOUS);
+    model->integrality_.assign(model->numCol_, HighsVarType::kContinuous);
 
   if (model_.orientation_ == MatrixOrientation::ROWWISE)
     fromCSR(model->Avalue_, model->Aindex_, model->Astart_);
@@ -161,7 +161,7 @@ bool HPresolve::isDualImpliedFree(HighsInt row) const {
 bool HPresolve::isImpliedIntegral(HighsInt col) {
   bool runDualDetection = true;
 
-  assert(model->integrality_[col] == HighsVarType::INTEGER);
+  assert(model->integrality_[col] == HighsVarType::kInteger);
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -232,7 +232,7 @@ bool HPresolve::isImpliedIntegral(HighsInt col) {
 bool HPresolve::isImpliedInteger(HighsInt col) {
   bool runDualDetection = true;
 
-  assert(model->integrality_[col] == HighsVarType::CONTINUOUS);
+  assert(model->integrality_[col] == HighsVarType::kContinuous);
 
   for (const HighsSliceNonzero& nz : getColumnVector(col)) {
     // if not all other columns are integer, skip row and also do not try the
@@ -319,9 +319,9 @@ void HPresolve::link(HighsInt pos) {
   impliedRowBounds.add(Arow[pos], Acol[pos], Avalue[pos]);
   impliedDualRowBounds.add(Acol[pos], Arow[pos], Avalue[pos]);
   ++rowsize[Arow[pos]];
-  if (model->integrality_[Acol[pos]] == HighsVarType::INTEGER)
+  if (model->integrality_[Acol[pos]] == HighsVarType::kInteger)
     ++rowsizeInteger[Arow[pos]];
-  else if (model->integrality_[Acol[pos]] == HighsVarType::IMPLICIT_INTEGER)
+  else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     ++rowsizeImplInt[Arow[pos]];
 }
 
@@ -357,9 +357,9 @@ void HPresolve::unlink(HighsInt pos) {
   highs_splay_unlink(pos, rowroot[Arow[pos]], get_row_left, get_row_right,
                      get_row_key);
   --rowsize[Arow[pos]];
-  if (model->integrality_[Acol[pos]] == HighsVarType::INTEGER)
+  if (model->integrality_[Acol[pos]] == HighsVarType::kInteger)
     --rowsizeInteger[Arow[pos]];
-  else if (model->integrality_[Acol[pos]] == HighsVarType::IMPLICIT_INTEGER)
+  else if (model->integrality_[Acol[pos]] == HighsVarType::kImplicitInteger)
     --rowsizeImplInt[Arow[pos]];
 
   if (!rowDeleted[Arow[pos]]) {
@@ -509,7 +509,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           // bound is an upper bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
-            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+            if (model->integrality_[col] != HighsVarType::kContinuous) {
               double roundedBound =
                   std::floor(impliedBound + options->mip_feasibility_tolerance);
 
@@ -536,7 +536,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           // bound is a lower bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
-            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+            if (model->integrality_[col] != HighsVarType::kContinuous) {
               double roundedBound =
                   std::ceil(impliedBound - options->mip_feasibility_tolerance);
 
@@ -581,7 +581,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           // bound is a lower bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
-            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+            if (model->integrality_[col] != HighsVarType::kContinuous) {
               double roundedBound =
                   std::ceil(impliedBound - options->mip_feasibility_tolerance);
 
@@ -609,7 +609,7 @@ void HPresolve::updateColImpliedBounds(HighsInt row, HighsInt col, double val) {
           // bound is an upper bound
           // check if we may round the bound due to integrality restrictions
           if (mipsolver != nullptr) {
-            if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+            if (model->integrality_[col] != HighsVarType::kContinuous) {
               double roundedBound =
                   std::floor(impliedBound + options->mip_feasibility_tolerance);
 
@@ -1127,7 +1127,7 @@ void HPresolve::markColDeleted(HighsInt col) {
 }
 
 void HPresolve::changeColUpper(HighsInt col, double newUpper) {
-  if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+  if (model->integrality_[col] != HighsVarType::kContinuous) {
     newUpper = std::floor(newUpper + options->mip_feasibility_tolerance);
     if (newUpper == model->colUpper_[col]) return;
   }
@@ -1143,7 +1143,7 @@ void HPresolve::changeColUpper(HighsInt col, double newUpper) {
 }
 
 void HPresolve::changeColLower(HighsInt col, double newLower) {
-  if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+  if (model->integrality_[col] != HighsVarType::kContinuous) {
     newLower = std::ceil(newLower - options->mip_feasibility_tolerance);
     if (newLower == model->colLower_[col]) return;
   }
@@ -1754,8 +1754,8 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
   double substcoef;
   double staycoef;
   double rhs = model->rowUpper_[row];
-  if (model->integrality_[Acol[nzPos1]] == HighsVarType::INTEGER) {
-    if (model->integrality_[Acol[nzPos2]] == HighsVarType::INTEGER) {
+  if (model->integrality_[Acol[nzPos1]] == HighsVarType::kInteger) {
+    if (model->integrality_[Acol[nzPos2]] == HighsVarType::kInteger) {
       // both columns integer. For substitution choose smaller absolute
       // coefficient value, or sparser column if values are equal
       if (std::abs(Avalue[nzPos1]) <
@@ -1804,7 +1804,7 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
       staycoef = Avalue[nzPos1];
     }
   } else {
-    if (model->integrality_[Acol[nzPos2]] == HighsVarType::INTEGER) {
+    if (model->integrality_[Acol[nzPos2]] == HighsVarType::kInteger) {
       // one col is integral, substitute the continuous one
       substcol = Acol[nzPos1];
       staycol = Acol[nzPos2];
@@ -2115,9 +2115,9 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
   }
 
   if (mipsolver != nullptr &&
-      model->integrality_[col] == HighsVarType::CONTINUOUS &&
+      model->integrality_[col] == HighsVarType::kContinuous &&
       isImpliedInteger(col)) {
-    model->integrality_[col] = HighsVarType::IMPLICIT_INTEGER;
+    model->integrality_[col] = HighsVarType::kImplicitInteger;
     ++rowsizeImplInt[row];
     double ceilLower =
         std::ceil(model->colLower_[col] - options->mip_feasibility_tolerance);
@@ -2130,13 +2130,13 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
 
   updateColImpliedBounds(row, col, colCoef);
 
-  if (model->integrality_[col] != HighsVarType::INTEGER)
+  if (model->integrality_[col] != HighsVarType::kInteger)
     updateRowDualImpliedBounds(row, col, colCoef);
 
   // now check if column is implied free within an equation and substitute the
   // column if that is the case
   if (isDualImpliedFree(row) && isImpliedFree(col)) {
-    if (model->integrality_[col] == HighsVarType::INTEGER &&
+    if (model->integrality_[col] == HighsVarType::kInteger &&
         !isImpliedIntegral(col))
       return Result::Ok;
     // todo, store which side of an implied free dual variable needs to be used
@@ -2231,7 +2231,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
           if (std::abs(std::abs(nonz.value()) - binCoef) <=
                   options->mip_epsilon &&
-              model->integrality_[nonz.index()] == HighsVarType::INTEGER &&
+              model->integrality_[nonz.index()] == HighsVarType::kInteger &&
               std::abs(model->colUpper_[nonz.index()] -
                        model->colLower_[nonz.index()] - 1.0) <=
                   options->mip_feasibility_tolerance) {
@@ -2559,7 +2559,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         double maxCoefValue = impliedRowUpper - model->rowUpper_[row];
         HighsCDouble rhs = model->rowUpper_[row];
         for (const HighsSliceNonzero& nonz : getRowVector(row)) {
-          if (model->integrality_[nonz.index()] == HighsVarType::CONTINUOUS)
+          if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
           if (nonz.value() >
@@ -2587,7 +2587,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         double maxCoefValue = model->rowLower_[row] - impliedRowLower;
         HighsCDouble rhs = model->rowLower_[row];
         for (const HighsSliceNonzero& nonz : getRowVector(row)) {
-          if (model->integrality_[nonz.index()] == HighsVarType::CONTINUOUS)
+          if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
           if (nonz.value() >
@@ -2881,11 +2881,11 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
 
   // integer columns cannot be used to tighten bounds on dual multipliers
   if (mipsolver != nullptr) {
-    if (model->integrality_[col] == HighsVarType::INTEGER)
+    if (model->integrality_[col] == HighsVarType::kInteger)
       return Result::Ok;
-    else if (model->integrality_[col] == HighsVarType::CONTINUOUS &&
+    else if (model->integrality_[col] == HighsVarType::kContinuous &&
              isImpliedInteger(col)) {
-      model->integrality_[col] = HighsVarType::IMPLICIT_INTEGER;
+      model->integrality_[col] = HighsVarType::kImplicitInteger;
       for (const HighsSliceNonzero& nonzero : getColumnVector(col))
         ++rowsizeImplInt[nonzero.index()];
       double ceilLower =
@@ -3340,7 +3340,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       substitutionOpportunities[i].first = -1;
       continue;
     }
-    if (model->integrality_[col] == HighsVarType::INTEGER &&
+    if (model->integrality_[col] == HighsVarType::kInteger &&
         !isImpliedIntegral(col))
       continue;
 
@@ -3365,7 +3365,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       }
 
       ++numsubst;
-      if (model->integrality_[col] == HighsVarType::INTEGER) ++numsubstint;
+      if (model->integrality_[col] == HighsVarType::kInteger) ++numsubstint;
       storeRow(row);
 
       postSolveStack.freeColSubstitution(row, col, rhs, model->colCost_[col],
@@ -3410,7 +3410,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
 
     nfail = 0;
     ++numsubst;
-    if (model->integrality_[col] == HighsVarType::INTEGER) ++numsubstint;
+    if (model->integrality_[col] == HighsVarType::kInteger) ++numsubstint;
     double rhs;
     HighsPostsolveStack::RowType rowType;
     if (model->rowLower_[row] == model->rowUpper_[row]) {
@@ -3832,7 +3832,7 @@ HighsInt HPresolve::strengthenInequalities() {
           weight <= options->mip_feasibility_tolerance)
         continue;
 
-      if (model->integrality_[col] == HighsVarType::CONTINUOUS) {
+      if (model->integrality_[col] == HighsVarType::kContinuous) {
         continuouscontribution += weight * ub;
         continue;
       }
@@ -3974,10 +3974,10 @@ HighsInt HPresolve::detectImpliedIntegers() {
 
   for (HighsInt col = 0; col != model->numCol_; ++col) {
     if (colDeleted[col]) continue;
-    if (model->integrality_[col] == HighsVarType::CONTINUOUS &&
+    if (model->integrality_[col] == HighsVarType::kContinuous &&
         isImpliedInteger(col)) {
       ++numImplInt;
-      model->integrality_[col] = HighsVarType::IMPLICIT_INTEGER;
+      model->integrality_[col] = HighsVarType::kImplicitInteger;
 
       for (const HighsSliceNonzero& nonzero : getColumnVector(col))
         ++rowsizeImplInt[nonzero.index()];
@@ -4210,8 +4210,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       // Now check the if the variable types rule out domination in one
       // direction and already skip the column if that rules out domination in
       // both directions due to the previous check on the objective.
-      if (model->integrality_[i] == HighsVarType::INTEGER &&
-          model->integrality_[parallelColCandidate] == HighsVarType::INTEGER) {
+      if (model->integrality_[i] == HighsVarType::kInteger &&
+          model->integrality_[parallelColCandidate] == HighsVarType::kInteger) {
         // both variables are integral, hence the scale must be integral
         // therefore first choose the smaller colMax value for col2, then check
         // integrality of colMax[col1] / colMax[col2].
@@ -4233,7 +4233,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // all values of scaled col due to integrality as the scaled column
         // moves on a grid of 1/scale.
         if (colScale != 1.0) checkDuplicateColImplBounds = false;
-      } else if (model->integrality_[i] == HighsVarType::INTEGER) {
+      } else if (model->integrality_[i] == HighsVarType::kInteger) {
         col = i;
         duplicateCol = parallelColCandidate;
         colScale = colMax[duplicateCol].first / colMax[col].first;
@@ -4249,7 +4249,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         // as col might be integral and dulicateCol is not integral. In that
         // case col cannot compensate for duplicate col
         checkColImplBounds =
-            model->integrality_[parallelColCandidate] != HighsVarType::INTEGER;
+            model->integrality_[parallelColCandidate] != HighsVarType::kInteger;
       }
 
       double objDiff = double(model->colCost_[col] * HighsCDouble(colScale) -
@@ -4318,13 +4318,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           mergeUpper =
               model->colUpper_[col] + colScale * model->colLower_[duplicateCol];
         }
-        if (model->integrality_[col] == HighsVarType::INTEGER) {
+        if (model->integrality_[col] == HighsVarType::kInteger) {
           // the only possible reduction if the column parallelism check
           // succeeds is to merge the two columns into one. If one column is
           // integral this means we have restrictions on integers and need to
           // check additional conditions to allow the merging of two integer
           // columns, or a continuous column and an integer.
-          if (model->integrality_[duplicateCol] != HighsVarType::INTEGER) {
+          if (model->integrality_[duplicateCol] != HighsVarType::kInteger) {
             // only one column is integral which cannot be duplicateCol due to
             // the way we assign the columns above
             if (std::abs(colScale * (model->colUpper_[duplicateCol] -
@@ -4433,8 +4433,8 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               colScale, model->colLower_[col], model->colUpper_[col],
               model->colLower_[duplicateCol], model->colUpper_[duplicateCol],
               col, duplicateCol,
-              model->integrality_[col] == HighsVarType::INTEGER,
-              model->integrality_[duplicateCol] == HighsVarType::INTEGER);
+              model->integrality_[col] == HighsVarType::kInteger,
+              model->integrality_[duplicateCol] == HighsVarType::kInteger);
 
           markChangedCol(col);
           if (colsize[duplicateCol] == 1) {
@@ -4842,7 +4842,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   HighsBasis basis;
 
   HighsLp model = lp;
-  model.integrality_.assign(lp.numCol_, HighsVarType::CONTINUOUS);
+  model.integrality_.assign(lp.numCol_, HighsVarType::kContinuous);
 
   HighsPostsolveStack postSolveStack;
   postSolveStack.initializeIndexMaps(lp.numRow_, lp.numCol_);
@@ -4906,7 +4906,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   // reductionLim = bad;
   do {
     model = lp;
-    model.integrality_.assign(lp.numCol_, HighsVarType::CONTINUOUS);
+    model.integrality_.assign(lp.numCol_, HighsVarType::kContinuous);
 
     {
       HPresolve presolve;
@@ -4915,7 +4915,7 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     }
 #if 1
     model = lp;
-    model.integrality_.assign(lp.numCol_, HighsVarType::CONTINUOUS);
+    model.integrality_.assign(lp.numCol_, HighsVarType::kContinuous);
     HPresolve presolve;
     presolve.setInput(model, options);
     HighsPostsolveStack tmp;
@@ -5050,7 +5050,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
         } else {
           HighsInt nzPos = findNonzero(candRow, nonzero.index());
           if (nzPos == -1) {
-            if (model->integrality_[nonzero.index()] == HighsVarType::INTEGER &&
+            if (model->integrality_[nonzero.index()] == HighsVarType::kInteger &&
                 model->colUpper_[nonzero.index()] -
                         model->colLower_[nonzero.index()] >
                     1.5) {
@@ -5114,7 +5114,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
       if (numCancel > misses) sparsifyRows.emplace_back(candRow, scale);
     }
 
-    if (model->integrality_[sparsestCol] != HighsVarType::INTEGER ||
+    if (model->integrality_[sparsestCol] != HighsVarType::kInteger ||
         (model->colUpper_[sparsestCol] - model->colLower_[sparsestCol]) < 1.5) {
       // now check for rows which do not contain the sparsest column but all
       // other columns by scanning the second sparsest column

@@ -139,7 +139,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
     if (Rvalue[i] > 0) {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::floor(bound + 1e-6);
         if (bound < colUpper_[Rindex[i]])
           accept = true;
@@ -164,7 +164,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
     } else {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::ceil(bound - 1e-6);
         if (bound > colLower_[Rindex[i]])
           accept = true;
@@ -217,7 +217,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
     if (Rvalue[i] < 0) {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::floor(bound + 1e-6);
         if (bound < colUpper_[Rindex[i]])
           accept = true;
@@ -241,7 +241,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
     } else {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::ceil(bound - 1e-6);
         if (bound > colLower_[Rindex[i]])
           accept = true;
@@ -578,7 +578,7 @@ HighsInt HighsLpPropagator::tightenCoefficients() {
 
     for (HighsInt j = start; j != end; ++j) {
       HighsInt col = ARindex_[j];
-      if (!flagCol[col] || integrality_[col] == HighsVarType::CONTINUOUS)
+      if (!flagCol[col] || integrality_[col] == HighsVarType::kContinuous)
         continue;
 
       double val = scale * ARvalue_[j];

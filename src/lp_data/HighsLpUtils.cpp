@@ -30,7 +30,7 @@ bool isMip(HighsLp& lp) {
   if (integrality_size) {
     assert(integrality_size == lp.numCol_);
     for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
-      if (lp.integrality_[iCol] != HighsVarType::CONTINUOUS) return true;
+      if (lp.integrality_[iCol] != HighsVarType::kContinuous) return true;
   }
   return false;
 }
@@ -1673,7 +1673,7 @@ HighsInt getNumInt(const HighsLp& lp) {
   HighsInt num_int = 0;
   if (lp.integrality_.size()) {
     for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
-      if (lp.integrality_[iCol] == HighsVarType::INTEGER) num_int++;
+      if (lp.integrality_[iCol] == HighsVarType::kInteger) num_int++;
   }
   return num_int;
 }
@@ -1836,7 +1836,7 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
                 type.c_str(), count);
     if (have_integer_columns) {
       std::string integer_column = "";
-      if (lp.integrality_[iCol] == HighsVarType::INTEGER) {
+      if (lp.integrality_[iCol] == HighsVarType::kInteger) {
         if (lp.colLower_[iCol] == 0 && lp.colUpper_[iCol] == 1) {
           integer_column = "Binary";
         } else {
@@ -2289,7 +2289,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
   equality_lp.rowLower_ = rhs;
   equality_lp.rowUpper_ = rhs;
   equality_lp.integrality_.assign(equality_lp.numCol_,
-                                  HighsVarType::CONTINUOUS);
+                                  HighsVarType::kContinuous);
   return HighsStatus::OK;
 }
 

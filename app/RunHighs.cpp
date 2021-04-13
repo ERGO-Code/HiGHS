@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
   bool is_mip = false;
   for (HighsInt i = 0; i < (HighsInt)lp.integrality_.size(); i++)
-    if (lp.integrality_[i] == HighsVarType::INTEGER) {
+    if (lp.integrality_[i] == HighsVarType::kInteger) {
       is_mip = true;
       break;
     }
@@ -122,7 +122,7 @@ void reportLpStatsOrError(const HighsLogOptions& log_options,
                  "Nonzeros : %" HIGHSINT_FORMAT "\n", lp.Avalue_.size());
     HighsInt num_int = 0;
     for (HighsUInt i = 0; i < lp.integrality_.size(); i++)
-      if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
+      if (lp.integrality_[i] != HighsVarType::kContinuous) num_int++;
     if (num_int)
       highsLogUser(log_options, HighsLogType::INFO,
                    "Integer  : %" HIGHSINT_FORMAT "\n", num_int);

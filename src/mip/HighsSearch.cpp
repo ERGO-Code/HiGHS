@@ -43,7 +43,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
     objval += sol[i] * mipsolver.colCost(i);
     assert(std::isfinite(sol[i]));
 
-    if (!integerfeasible || mipsolver.variableType(i) != HighsVarType::INTEGER)
+    if (!integerfeasible || mipsolver.variableType(i) != HighsVarType::kInteger)
       continue;
 
     double intval = std::floor(sol[i] + 0.5);
@@ -62,7 +62,7 @@ double HighsSearch::getCutoffBound() const {
 void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
                                        const std::vector<double>& relaxsol) {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
+    if (mipsolver.variableType(i) != HighsVarType::kInteger) continue;
     if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
 
     double intval = std::floor(basesol[i] + 0.5);
@@ -81,7 +81,7 @@ void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
 
 void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
+    if (mipsolver.variableType(i) != HighsVarType::kInteger) continue;
     if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
 
     double downval = std::floor(lpsol[i] + mipsolver.mipdata_->feastol);
@@ -118,7 +118,7 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
-  assert(mipsolver.variableType(col) != HighsVarType::CONTINUOUS);
+  assert(mipsolver.variableType(col) != HighsVarType::kContinuous);
 
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
@@ -137,7 +137,7 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
-  assert(mipsolver.variableType(col) != HighsVarType::CONTINUOUS);
+  assert(mipsolver.variableType(col) != HighsVarType::kContinuous);
 
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
@@ -658,9 +658,9 @@ void HighsSearch::resetLocalDomain() {
 #ifndef NDEBUG
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
-           mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+           mipsolver.variableType(i) == HighsVarType::kContinuous);
     assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
-           mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+           mipsolver.variableType(i) == HighsVarType::kContinuous);
   }
 #endif
 }
@@ -705,9 +705,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
-             mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+             mipsolver.variableType(i) == HighsVarType::kContinuous);
       assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
-             mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+             mipsolver.variableType(i) == HighsVarType::kContinuous);
     }
 #endif
     int64_t oldnumiters = lp->getNumLpIterations();

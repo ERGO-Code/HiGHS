@@ -153,12 +153,12 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "integer_columns") {
       f >> num_int;
       if (num_int) {
-        model.integrality_.resize(model.numCol_, HighsVarType::CONTINUOUS);
+        model.integrality_.resize(model.numCol_, HighsVarType::kContinuous);
         HighsInt iCol;
         for (i = 0; i < num_int; i++) {
           f >> iCol;
           if (indices_from_one) iCol--;
-          model.integrality_[iCol] = HighsVarType::INTEGER;
+          model.integrality_[iCol] = HighsVarType::kInteger;
         }
       }
       // Get the next keyword. If there's no integer_columns section

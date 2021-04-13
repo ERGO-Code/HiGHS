@@ -40,7 +40,7 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
     scale_lp = false;
   }
   const bool analyse_lp_data =
-      HIGHS_ANALYSIS_LEVEL_MODEL_DATA & options.highs_analysis_level;
+      kHighsAnalysisLevelModelData & options.highs_analysis_level;
   if (analyse_lp_data)
     analyseLp(options.log_options, highs_model_object.lp_, "Unscaled");
   // Possibly scale the LP. At least set the scaling factors to 1

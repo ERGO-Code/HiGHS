@@ -58,7 +58,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       fractionality = std::abs(std::round(solval) - solval);
     } else {
       HighsInt col = basisinds[i];
-      if (mip.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      if (mip.variableType(col) == HighsVarType::kContinuous) continue;
 
       double solval = lpSolution.col_value[col];
       fractionality = std::abs(std::round(solval) - solval);

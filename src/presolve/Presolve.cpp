@@ -614,22 +614,22 @@ pair<HighsInt, HighsInt> Presolve::getXYDoubletonEquations(const HighsInt row) {
   }
 
   HighsInt x, y;
-  if (mip && (integrality[col1] == HighsVarType::INTEGER ||
-              integrality[col2] == HighsVarType::INTEGER)) {
+  if (mip && (integrality[col1] == HighsVarType::kInteger ||
+              integrality[col2] == HighsVarType::kInteger)) {
     if (integrality[col1] != integrality[col2]) {
       // only one of the columns is integral, select the non-integral column to
       // be substituted out
-      if (integrality[col1] == HighsVarType::INTEGER) {
+      if (integrality[col1] == HighsVarType::kInteger) {
         // printf("column %" HIGHSINT_FORMAT " integral, column %"
         // HIGHSINT_FORMAT " is not\n", col1, col2);
-        assert(integrality[col2] != HighsVarType::INTEGER);
+        assert(integrality[col2] != HighsVarType::kInteger);
         y = col2;
         x = col1;
       } else {
         // printf("column %" HIGHSINT_FORMAT " integral, column %"
         // HIGHSINT_FORMAT " is not\n", col2, col1);
-        assert(integrality[col2] == HighsVarType::INTEGER);
-        assert(integrality[col1] != HighsVarType::INTEGER);
+        assert(integrality[col2] == HighsVarType::kInteger);
+        assert(integrality[col1] != HighsVarType::kInteger);
         y = col1;
         x = col2;
       }
@@ -1241,7 +1241,7 @@ void Presolve::initializeVectors() {
   colCostAtEl = colCost;
 
   // initialize integrality information
-  if (!mip) integrality.assign(numCol, HighsVarType::CONTINUOUS);
+  if (!mip) integrality.assign(numCol, HighsVarType::kContinuous);
 }
 
 void Presolve::runAggregator() {
@@ -1512,7 +1512,7 @@ void Presolve::detectImpliedIntegers() {
 
     for (HighsInt j = start; j != end; ++j) {
       if (!flagCol[ARindex[j]]) continue;
-      if (integrality[ARindex[j]] == HighsVarType::CONTINUOUS) ++numcont[i];
+      if (integrality[ARindex[j]] == HighsVarType::kContinuous) ++numcont[i];
     }
 
     if (numcont[i] == 1) equations.push_back(i);
@@ -1531,7 +1531,7 @@ void Presolve::detectImpliedIntegers() {
     HighsInt cont = -1;
     for (HighsInt j = start; j != end; ++j) {
       if (!flagCol[ARindex[j]]) continue;
-      if (integrality[ARindex[j]] == HighsVarType::CONTINUOUS) {
+      if (integrality[ARindex[j]] == HighsVarType::kContinuous) {
         cont = j;
         break;
       }
@@ -1558,7 +1558,7 @@ void Presolve::detectImpliedIntegers() {
     HighsInt col = ARindex[cont];
     const HighsInt colstart = Astart[col];
     const HighsInt colend = Aend[col];
-    integrality[col] = HighsVarType::IMPLICIT_INTEGER;
+    integrality[col] = HighsVarType::kImplicitInteger;
     roundIntegerBounds(col);
     ++numimplint;
 
@@ -1579,7 +1579,7 @@ void Presolve::detectImpliedIntegers() {
 
   for (HighsInt i = 0; i != numCol; ++i) {
     if (!flagCol[i]) continue;
-    if (integrality[i] != HighsVarType::CONTINUOUS) continue;
+    if (integrality[i] != HighsVarType::kContinuous) continue;
 
     const HighsInt colstart = Astart[i];
     const HighsInt colend = Aend[i];
@@ -1624,7 +1624,7 @@ void Presolve::detectImpliedIntegers() {
         if (ARindex[k] == i) continue;
         if (!flagCol[ARindex[k]]) continue;
 
-        if (integrality[ARindex[k]] == HighsVarType::CONTINUOUS) {
+        if (integrality[ARindex[k]] == HighsVarType::kContinuous) {
           impliedinteger = false;
           break;
         }
@@ -1640,7 +1640,7 @@ void Presolve::detectImpliedIntegers() {
     }
 
     if (!impliedinteger) continue;
-    integrality[i] = HighsVarType::IMPLICIT_INTEGER;
+    integrality[i] = HighsVarType::kImplicitInteger;
     roundIntegerBounds(i);
     ++numimplint;
   }
@@ -1657,7 +1657,7 @@ void Presolve::detectImpliedIntegers() {
 
 void Presolve::applyMipDualFixing() {
   for (HighsInt i = 0; i != numCol; ++i) {
-    if (!flagCol[i] || integrality[i] != HighsVarType::INTEGER) continue;
+    if (!flagCol[i] || integrality[i] != HighsVarType::kInteger) continue;
 
     HighsInt start = Astart[i];
     HighsInt end = Aend[i];
@@ -1767,7 +1767,7 @@ void Presolve::rowDualBoundsDominatedColumns() {
   for (list<HighsInt>::iterator it = singCol.begin(); it != singCol.end(); ++it)
     if (flagCol.at(*it)) {
       col = *it;
-      if (mip && integrality[col] == HighsVarType::INTEGER) continue;
+      if (mip && integrality[col] == HighsVarType::kInteger) continue;
       k = getSingColElementIndexInA(col);
       if (k < 0) continue;
       assert(k < (HighsInt)Aindex.size());
@@ -1978,7 +1978,7 @@ void Presolve::removeIfWeaklyDominated(const HighsInt j, const double d,
       double bnd;
 
       // calculate new bounds
-      if (!mip || integrality[j] != HighsVarType::INTEGER) {
+      if (!mip || integrality[j] != HighsVarType::kInteger) {
         if (colLower.at(j) > -kHighsInf || colUpper.at(j) >= kHighsInf)
           for (HighsInt kk = Astart.at(j); kk < Aend.at(j); ++kk)
             if (flagRow.at(Aindex.at(kk)) && d < kHighsInf) {
@@ -2088,7 +2088,7 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
 
 void Presolve::roundIntegerBounds(const HighsInt col) {
   // for mip we check if the bounds can be rounded
-  if (mip && integrality[col] != HighsVarType::CONTINUOUS) {
+  if (mip && integrality[col] != HighsVarType::kContinuous) {
     if (colLower[col] != -kHighsInf)
       colLower[col] =
           ceil(colLower[col] - default_primal_feasiblility_tolerance);
@@ -2322,7 +2322,7 @@ void Presolve::removeColumnSingletons() {
       // integrality of all coefficients divided by the coefficient of the
       // integral singleton variable coefficients before doing a substitution,
       // for now we skip the reductions
-      if (mip && integrality[col] == HighsVarType::INTEGER) {
+      if (mip && integrality[col] == HighsVarType::kInteger) {
         // for integral columns only handle equality rows
         if (rowLower[i] != rowUpper[i]) {
           ++it;
@@ -2333,7 +2333,7 @@ void Presolve::removeColumnSingletons() {
         for (HighsInt kk = ARstart[i]; kk < ARstart[i + 1]; ++kk) {
           HighsInt j = ARindex[kk];
           if (flagCol[j] && j != col) {
-            if (integrality[col] != HighsVarType::INTEGER) {
+            if (integrality[col] != HighsVarType::kInteger) {
               suitable = false;
               break;
             }
@@ -2379,7 +2379,7 @@ void Presolve::removeColumnSingletons() {
       // todo, I think this case might not work for integral variables
       // singleton column in a doubleton inequality
       // case two column singletons
-      if (!mip || integrality[col] != HighsVarType::INTEGER)
+      if (!mip || integrality[col] != HighsVarType::kInteger)
         if (nzRow.at(i) == 2) {
           const bool result_di =
               removeColumnSingletonInDoubletonInequality(col, i, k);

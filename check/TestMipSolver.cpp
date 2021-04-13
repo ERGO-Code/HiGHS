@@ -55,7 +55,7 @@ void distillationMIP(Highs& highs) {
   lp.orientation_ = MatrixOrientation::COLWISE;
   lp.sense_ = ObjSense::MINIMIZE;
   lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::INTEGER, HighsVarType::INTEGER};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
   require_model_status = HighsModelStatus::OPTIMAL;
   optimal_objective = 32.0;
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
@@ -76,7 +76,7 @@ void rowlessMIP(Highs& highs) {
   lp.orientation_ = MatrixOrientation::COLWISE;
   lp.sense_ = ObjSense::MINIMIZE;
   lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::INTEGER, HighsVarType::INTEGER};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
   require_model_status = HighsModelStatus::OPTIMAL;
   optimal_objective = -1.0;
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
@@ -126,7 +126,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
     mask[iCol] = 1;
-    integrality[ix] = HighsVarType::INTEGER;
+    integrality[ix] = HighsVarType::kInteger;
   }
   REQUIRE(highs.changeColsIntegrality(from_col0, to_col0, &integrality[0]));
   REQUIRE(highs.changeColsIntegrality(from_col1, to_col1, &integrality[0]));
@@ -151,10 +151,10 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
 
-  integrality.assign(lp.numCol_, HighsVarType::CONTINUOUS);
+  integrality.assign(lp.numCol_, HighsVarType::kContinuous);
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
-    integrality[iCol] = HighsVarType::INTEGER;
+    integrality[iCol] = HighsVarType::kInteger;
   }
 
   highs.clearModel();

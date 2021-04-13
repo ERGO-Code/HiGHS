@@ -267,8 +267,8 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
     lp.integrality_.resize(num_col);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
       HighsInt integrality_status = integrality[iCol];
-      assert(integrality_status == (HighsInt)HighsVarType::CONTINUOUS ||
-             integrality_status == (HighsInt)HighsVarType::INTEGER);
+      assert(integrality_status == (HighsInt)HighsVarType::kContinuous ||
+             integrality_status == (HighsInt)HighsVarType::kInteger);
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }

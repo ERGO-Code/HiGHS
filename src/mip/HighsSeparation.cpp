@@ -140,7 +140,7 @@ class AggregationHeuristic {
     // count number of continuous variables
     numcontinuous.assign(lp.numRow_, 0);
     for (HighsInt i : mip.mipdata_->continuous_cols) {
-      assert(mip.variableType(i) == HighsVarType::CONTINUOUS);
+      assert(mip.variableType(i) == HighsVarType::kContinuous);
 
       HighsInt start = lp.Astart_[i];
       HighsInt end = lp.Astart_[i + 1];
@@ -158,7 +158,7 @@ class AggregationHeuristic {
     bounddistance.assign(lp.numCol_, 0.0);
 
     for (HighsInt i : mip.mipdata_->continuous_cols) {
-      assert(mip.variableType(i) == HighsVarType::CONTINUOUS);
+      assert(mip.variableType(i) == HighsVarType::kContinuous);
 
       HighsInt start = lp.Astart_[i];
       HighsInt end = lp.Astart_[i + 1];
@@ -325,7 +325,7 @@ class AggregationHeuristic {
       // as variable bound usage can alter things
 
       // we first need to complement the continuous variables
-      if (mip.variableType(col) != HighsVarType::CONTINUOUS) {
+      if (mip.variableType(col) != HighsVarType::kContinuous) {
         vectorsum.add(col, baseval);
         continue;
       }
@@ -382,7 +382,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[UBindex[k]] *
                      (scale * UBvalue[k]);
             } else {
-              assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(UBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(UBindex[k], scale * UBvalue[k]);
             }
           }
@@ -448,7 +448,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[LBindex[k]] *
                      (scale * LBvalue[k]);
             } else {
-              assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(LBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(LBindex[k], scale * LBvalue[k]);
             }
           }
@@ -492,7 +492,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[LBindex[k]] *
                      (scale * LBvalue[k]);
             } else {
-              assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(LBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(LBindex[k], scale * LBvalue[k]);
             }
           }
@@ -559,7 +559,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[UBindex[k]] *
                      (scale * UBvalue[k]);
             } else {
-              assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(UBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(UBindex[k], scale * UBvalue[k]);
             }
           }
@@ -587,7 +587,7 @@ class AggregationHeuristic {
           rhs -= domain.colLower_[col] * val;
       }
 
-      assert(mip.variableType(col) != HighsVarType::CONTINUOUS);
+      assert(mip.variableType(col) != HighsVarType::kContinuous);
       assert(domain.colLower_[col] != -kHighsInf ||
              domain.colUpper_[col] != kHighsInf);
 
@@ -634,7 +634,7 @@ class AggregationHeuristic {
       HighsInt ntightened = 0;
       for (HighsInt i = 0; i != len; ++i) {
         if (inds[i] >= mip.numCol() ||
-            mip.variableType(inds[i]) == HighsVarType::CONTINUOUS)
+            mip.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
 
         if (vals[i] > maxabscoef) {

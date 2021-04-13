@@ -67,7 +67,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   double data[3];
 
   HighsInt num_alien_entries = 0;
-  HighsVarType integerCol = HighsVarType::CONTINUOUS;
+  HighsVarType integerCol = HighsVarType::kContinuous;
 
   // Load NAME
   load_mpsLine(file, integerCol, lmax, line, flag, data);
@@ -377,7 +377,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   // for integer variables without bounds
   HighsInt num_int = 0;
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    if (integerColumn[iCol] == HighsVarType::INTEGER) {
+    if (integerColumn[iCol] == HighsVarType::kInteger) {
       num_int++;
       if (colUpper[iCol] >= kHighsInf) colUpper[iCol] = 1;
     }
@@ -445,11 +445,11 @@ bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
         if (line[cnter + 1] == 'I' && line[cnter + 2] == 'N' &&
             line[cnter + 3] == 'T' && line[cnter + 4] == 'O' &&
             line[cnter + 5] == 'R' && line[cnter + 6] == 'G')
-          integerVar = HighsVarType::INTEGER;
+          integerVar = HighsVarType::kInteger;
         else if (line[cnter + 1] == 'I' && line[cnter + 2] == 'N' &&
                  line[cnter + 3] == 'T' && line[cnter + 4] == 'E' &&
                  line[cnter + 5] == 'N' && line[cnter + 6] == 'D')
-          integerVar = HighsVarType::CONTINUOUS;
+          integerVar = HighsVarType::kContinuous;
         continue;
       }
     }
@@ -613,7 +613,7 @@ HighsStatus writeMPS(
   have_int = false;
   if (integerColumn.size()) {
     for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-      if (integerColumn[c_n] == HighsVarType::INTEGER) {
+      if (integerColumn[c_n] == HighsVarType::kInteger) {
         have_int = true;
         break;
       }
@@ -625,7 +625,7 @@ HighsStatus writeMPS(
       break;
     }
     bool discrete = false;
-    if (have_int) discrete = integerColumn[c_n] == HighsVarType::INTEGER;
+    if (have_int) discrete = integerColumn[c_n] == HighsVarType::kInteger;
     if (!highs_isInfinity(colUpper[c_n]) || discrete) {
       // If the upper bound is finite, or the variable is integer then there is
       // a BOUNDS section. Integer variables with infinite upper bound are
@@ -687,7 +687,7 @@ HighsStatus writeMPS(
       continue;
     }
     if (have_int) {
-      if (integerColumn[c_n] == HighsVarType::INTEGER && !integerFg) {
+      if (integerColumn[c_n] == HighsVarType::kInteger && !integerFg) {
         // Start an integer section
         fprintf(file,
                 "    MARK%04" HIGHSINT_FORMAT
@@ -695,7 +695,7 @@ HighsStatus writeMPS(
                 nIntegerMk);
         nIntegerMk++;
         integerFg = true;
-      } else if (integerColumn[c_n] != HighsVarType::INTEGER && integerFg) {
+      } else if (integerColumn[c_n] != HighsVarType::kInteger && integerFg) {
         // End an integer section
         fprintf(file,
                 "    MARK%04" HIGHSINT_FORMAT
@@ -746,7 +746,7 @@ HighsStatus writeMPS(
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
       bool discrete = false;
-      if (have_int) discrete = integerColumn[c_n] == HighsVarType::INTEGER;
+      if (have_int) discrete = integerColumn[c_n] == HighsVarType::kInteger;
       if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {

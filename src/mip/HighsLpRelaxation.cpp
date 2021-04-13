@@ -315,7 +315,7 @@ void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
     currentbasisstored = false;
     for (HighsInt col : domain.getChangedCols()) {
       if (!continuous &&
-          mipsolver.variableType(col) == HighsVarType::CONTINUOUS)
+          mipsolver.variableType(col) == HighsVarType::kContinuous)
         continue;
       mask[col] = 1;
     }
@@ -375,7 +375,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
     bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
                        globaldomain.colLower_[i] == globaldomain.colUpper_[i];
 
-    if (!removeValue && mipsolver.variableType(i) == HighsVarType::CONTINUOUS) {
+    if (!removeValue && mipsolver.variableType(i) == HighsVarType::kContinuous) {
       if (val > 0)
         removeValue =
             lpsolver.getSolution().col_value[i] - globaldomain.colLower_[i] <=
@@ -483,7 +483,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS ||
+    if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
         std::abs(val) <= mipsolver.mipdata_->feastol ||
         mipsolver.mipdata_->domain.colLower_[i] ==
             mipsolver.mipdata_->domain.colUpper_[i]) {
@@ -590,7 +590,7 @@ void HighsLpRelaxation::storeDualUBProof() {
 
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
-    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS ||
+    if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
         std::abs(val) < mipsolver.mipdata_->feastol ||
         mipsolver.mipdata_->domain.colLower_[i] ==
             mipsolver.mipdata_->domain.colUpper_[i]) {

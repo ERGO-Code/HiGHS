@@ -172,10 +172,10 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   // integer variables are COL03,COL04 so x[2], x[3].
   const std::vector<HighsVarType> kIntegers{
-      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS,
-      HighsVarType::INTEGER,    HighsVarType::INTEGER,
-      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS,
-      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS};
+      HighsVarType::kContinuous, HighsVarType::kContinuous,
+      HighsVarType::kInteger,    HighsVarType::kInteger,
+      HighsVarType::kContinuous, HighsVarType::kContinuous,
+      HighsVarType::kContinuous, HighsVarType::kContinuous};
 
   HighsStatus status;
 

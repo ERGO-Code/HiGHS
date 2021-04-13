@@ -413,7 +413,7 @@ void HighsImplications::separateImpliedBounds(
         // printf("added implied bound cut to pool\n");
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
-                           HighsVarType::CONTINUOUS,
+                           HighsVarType::kContinuous,
                        false);
       }
     }
@@ -459,7 +459,7 @@ void HighsImplications::separateImpliedBounds(
         // printf("added implied bound cut to pool\n");
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
-                           HighsVarType::CONTINUOUS,
+                           HighsVarType::kContinuous,
                        false);
       }
     }
