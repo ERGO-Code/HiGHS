@@ -12,7 +12,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsOptions options;
   HighsStatus return_status;
   bool return_bool;
-  options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
+  options.log_dev_level = kHighsLogDevLevelVerbose;
   if (!dev_run) options.output_flag = false;
 
   Avgas avgas;

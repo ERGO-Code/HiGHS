@@ -44,7 +44,7 @@ Highs::Highs() {
 
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -52,7 +52,7 @@ HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const HighsInt value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -60,7 +60,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -68,7 +68,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const std::string value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -76,7 +76,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const char* value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -94,7 +94,7 @@ HighsStatus Highs::readOptions(const std::string filename) {
 
 HighsStatus Highs::passOptions(const HighsOptions& options) {
   if (passLocalOptions(options_.log_options, options, options_) ==
-      OptionStatus::OK)
+      OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -103,21 +103,21 @@ const HighsOptions& Highs::getOptions() { return options_; }
 
 HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::getOptionValue(const std::string& option, HighsInt& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -125,7 +125,7 @@ HighsStatus Highs::getOptionValue(const std::string& option, double& value) {
 HighsStatus Highs::getOptionValue(const std::string& option,
                                   std::string& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
-                          value) == OptionStatus::OK)
+                          value) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -133,7 +133,7 @@ HighsStatus Highs::getOptionValue(const std::string& option,
 HighsStatus Highs::getOptionType(const std::string& option,
                                  HighsOptionType& type) {
   if (getLocalOptionType(options_.log_options, option, options_.records,
-                         type) == OptionStatus::OK)
+                         type) == OptionStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -165,13 +165,15 @@ const HighsOptions& Highs::getOptions() const { return options_; }
 const HighsInfo& Highs::getInfo() const { return info_; }
 
 HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
-  if (getLocalInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
+  if (getLocalInfoValue(options_, info, info_.records, value) ==
+      InfoStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
 
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
-  if (getLocalInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
+  if (getLocalInfoValue(options_, info, info_.records, value) ==
+      InfoStatus::kOk)
     return HighsStatus::kOk;
   return HighsStatus::kError;
 }
@@ -291,7 +293,7 @@ HighsStatus Highs::readModel(const std::string filename) {
 
   FilereaderRetcode call_code = reader->readModelFromFile(options_, model);
   delete reader;
-  if (call_code != FilereaderRetcode::OK) {
+  if (call_code != FilereaderRetcode::kOk) {
     interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
     return_status = interpretCallStatus(HighsStatus::kError, return_status,
@@ -450,7 +452,7 @@ HighsStatus Highs::run() {
   highsSetLogCallback(options_);
 #ifdef HiGHSDEV
   if (checkOptions(options_.log_options, options_.records) !=
-      OptionStatus::OK) {
+      OptionStatus::kOk) {
     return_status = HighsStatus::kError;
     return returnFromRun(return_status);
   }
@@ -734,7 +736,7 @@ HighsStatus Highs::run() {
           HighsOptions& options = hmos_[solved_hmo].options_;
           HighsOptions save_options = options;
           const bool full_logging = false;
-          if (full_logging) options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
+          if (full_logging) options.log_dev_level = kHighsLogDevLevelVerbose;
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
@@ -1983,7 +1985,7 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
 HighsStatus Highs::callSolveMip() {
   HighsStatus return_status = HighsStatus::kOk;
   // Run the MIP solver
-  options_.log_dev_level = LOG_DEV_LEVEL_INFO;
+  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
   assert(lp_.orientation_ != MatrixOrientation::kRowwise);
   HighsMipSolver solver(options_, lp_);

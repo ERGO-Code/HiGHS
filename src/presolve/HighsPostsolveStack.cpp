@@ -91,11 +91,11 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   // set basis status
   basis.col_status[col] = HighsBasisStatus::kBasic;
-  if (rowType == RowType::Eq)
+  if (rowType == RowType::kEq)
     basis.row_status[row] = solution.row_dual[row] > 0
                                 ? HighsBasisStatus::kUpper
                                 : HighsBasisStatus::kLower;
-  else if (rowType == RowType::Geq)
+  else if (rowType == RowType::kGeq)
     basis.row_status[row] = HighsBasisStatus::kLower;
   else
     basis.row_status[row] = HighsBasisStatus::kUpper;
@@ -416,7 +416,7 @@ void HighsPostsolveStack::ForcingRow::undo(
   // compute the row dual multiplier and determine the new basic column
   HighsInt basicCol = -1;
   double dualDelta = 0;
-  if (rowType == RowType::Leq) {
+  if (rowType == RowType::kLeq) {
     for (const auto& rowVal : rowValues) {
       double colDual =
           solution.col_dual[rowVal.index] + rowVal.value * dualDelta;
@@ -451,8 +451,8 @@ void HighsPostsolveStack::ForcingRow::undo(
     }
     solution.col_dual[basicCol] = 0;
     basis.row_status[row] =
-        (rowType == RowType::Geq ? HighsBasisStatus::kLower
-                                 : HighsBasisStatus::kUpper);
+        (rowType == RowType::kGeq ? HighsBasisStatus::kLower
+                                  : HighsBasisStatus::kUpper);
 
     basis.col_status[basicCol] = HighsBasisStatus::kBasic;
   }

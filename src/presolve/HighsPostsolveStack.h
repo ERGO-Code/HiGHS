@@ -50,9 +50,9 @@ class HighsPostsolveStack {
   // well as the basis status as appropriate.
  public:
   enum class RowType {
-    Geq,
-    Leq,
-    Eq,
+    kGeq,
+    kLeq,
+    kEq,
   };
   struct Nonzero {
     HighsInt index;

@@ -29,12 +29,12 @@ enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
 const char* const HighsLogTypeTag[] = {"", "",          "",
                                        "", "WARNING: ", "ERROR:   "};
 enum LogDevLevel {
-  LOG_DEV_LEVEL_MIN = 0,
-  LOG_DEV_LEVEL_NONE = LOG_DEV_LEVEL_MIN,  // 0
-  LOG_DEV_LEVEL_INFO,                      // 1
-  LOG_DEV_LEVEL_DETAILED,                  // 2
-  LOG_DEV_LEVEL_VERBOSE,                   // 3
-  LOG_DEV_LEVEL_MAX = LOG_DEV_LEVEL_VERBOSE
+  kHighsLogDevLevelMin = 0,
+  kHighsLogDevLevelNone = kHighsLogDevLevelMin,  // 0
+  kHighsLogDevLevelInfo,                         // 1
+  kHighsLogDevLevelDetailed,                     // 2
+  kHighsLogDevLevelVerbose,                      // 3
+  kHighsLogDevLevelMax = kHighsLogDevLevelVerbose
 };
 
 struct HighsLogOptions {

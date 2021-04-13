@@ -770,7 +770,7 @@ restart:
 
   lp.getLpSolver().setOptionValue("output_flag",
                                   mipsolver.options_mip_->output_flag);
-  //  lp.getLpSolver().setOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
+  //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
   int64_t lpIters = -lp.getNumLpIterations();

@@ -49,21 +49,21 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
                                 const std::string filename,
                                 const FilereaderRetcode code) {
   switch (code) {
-    case FilereaderRetcode::OK:
+    case FilereaderRetcode::kOk:
       break;
-    case FilereaderRetcode::FILENOTFOUND:
+    case FilereaderRetcode::kFileNotFound:
       highsLogUser(log_options, HighsLogType::kError, "File %s not found\n",
                    filename.c_str());
       break;
-    case FilereaderRetcode::PARSERERROR:
+    case FilereaderRetcode::kParserError:
       highsLogUser(log_options, HighsLogType::kError,
                    "Parser error reading %s\n", filename.c_str());
       break;
-    case FilereaderRetcode::NOT_IMPLEMENTED:
+    case FilereaderRetcode::kNotImplemented:
       highsLogUser(log_options, HighsLogType::kError,
                    "Parser not implemented for %s", filename.c_str());
       break;
-    case FilereaderRetcode::TIMEOUT:
+    case FilereaderRetcode::kTimeout:
       highsLogUser(log_options, HighsLogType::kError,
                    "Parser reached timeout\n", filename.c_str());
       break;

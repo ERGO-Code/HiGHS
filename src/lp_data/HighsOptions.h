@@ -27,7 +27,7 @@
 
 using std::string;
 
-enum class OptionStatus { OK = 0, NO_FILE, UNKNOWN_OPTION, ILLEGAL_VALUE };
+enum class OptionStatus { kOk = 0, kUnknownOption, kIllegalValue };
 
 class OptionRecord {
  public:
@@ -667,8 +667,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "log_dev_level",
         "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &log_dev_level, LOG_DEV_LEVEL_MIN, LOG_DEV_LEVEL_NONE,
-        LOG_DEV_LEVEL_MAX);
+        advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
+        kHighsLogDevLevelMax);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("run_crossover",

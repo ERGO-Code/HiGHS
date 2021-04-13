@@ -874,7 +874,7 @@ void OsiHiGHSSolverInterface::loadProblem(
 //   std::string(extension);
 
 //   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_,
-//   lp); if (rc != FilereaderRetcode::OK)
+//   lp); if (rc != FilereaderRetcode::kOk)
 // 	  return (HighsInt)rc;
 //   this->setDblParam(OsiDblParam::OsiObjOffset, lp.offset_);
 //   highs->passModel(lp);

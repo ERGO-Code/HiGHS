@@ -24,7 +24,7 @@
 
 class HighsOptions;
 
-enum class InfoStatus { OK = 0, NO_FILE, UNKNOWN_INFO, ILLEGAL_VALUE };
+enum class InfoStatus { kOk = 0, kUnknownInfo, kIllegalValue };
 
 class InfoRecord {
  public:

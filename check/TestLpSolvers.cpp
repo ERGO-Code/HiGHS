@@ -319,7 +319,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
 
   //  status = highs.setOptionValue("log_dev_level",
-  //  LOG_DEV_LEVEL_VERBOSE);
+  //  kHighsLogDevLevelVerbose);
 
   double error;
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";

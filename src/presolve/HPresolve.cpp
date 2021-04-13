@@ -2155,19 +2155,19 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
     // for substitution
     storeRow(row);
 
-    HighsPostsolveStack::RowType rowType = HighsPostsolveStack::RowType::Eq;
+    HighsPostsolveStack::RowType rowType = HighsPostsolveStack::RowType::kEq;
     double rhs;
     if (model->rowLower_[row] == model->rowUpper_[row]) {
       rhs = model->rowUpper_[row];
-      rowType = HighsPostsolveStack::RowType::Eq;
+      rowType = HighsPostsolveStack::RowType::kEq;
     } else if ((model->rowUpper_[row] != kHighsInf &&
                 implRowDualLower[row] >=
                     -options->dual_feasibility_tolerance)) {
       rhs = model->rowUpper_[row];
-      rowType = HighsPostsolveStack::RowType::Leq;
+      rowType = HighsPostsolveStack::RowType::kLeq;
     } else {
       rhs = model->rowLower_[row];
-      rowType = HighsPostsolveStack::RowType::Geq;
+      rowType = HighsPostsolveStack::RowType::kGeq;
     }
 
     postSolveStack.freeColSubstitution(row, col, rhs, model->colCost_[col],
@@ -2655,7 +2655,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
 
     if (nfixings == rowsize[row]) {
       postSolveStack.forcingRow(row, rowVector, model->rowLower_[row],
-                                HighsPostsolveStack::RowType::Geq);
+                                HighsPostsolveStack::RowType::kGeq);
       // already mark the row as deleted, since otherwise it would be registered
       // as changed/singleton in the process of fixing and removing the
       // contained columns
@@ -2714,7 +2714,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
     }
     if (nfixings == rowsize[row]) {
       postSolveStack.forcingRow(row, rowVector, model->rowUpper_[row],
-                                HighsPostsolveStack::RowType::Leq);
+                                HighsPostsolveStack::RowType::kLeq);
       markRowDeleted(row);
       for (const HighsSliceNonzero& nonzero : rowVector) {
         if (nonzero.value() < 0) {
@@ -3362,16 +3362,16 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       double rhs;
       HighsPostsolveStack::RowType rowType;
       if (model->rowLower_[row] == model->rowUpper_[row]) {
-        rowType = HighsPostsolveStack::RowType::Eq;
+        rowType = HighsPostsolveStack::RowType::kEq;
         rhs = model->rowUpper_[row];
       } else if ((model->rowUpper_[row] != kHighsInf &&
                   implRowDualLower[row] >=
                       -options->dual_feasibility_tolerance)) {
-        rowType = HighsPostsolveStack::RowType::Leq;
+        rowType = HighsPostsolveStack::RowType::kLeq;
         rhs = model->rowUpper_[row];
         changeRowDualLower(row, -kHighsInf);
       } else {
-        rowType = HighsPostsolveStack::RowType::Geq;
+        rowType = HighsPostsolveStack::RowType::kGeq;
         rhs = model->rowLower_[row];
         changeRowDualUpper(row, kHighsInf);
       }
@@ -3426,16 +3426,16 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
     double rhs;
     HighsPostsolveStack::RowType rowType;
     if (model->rowLower_[row] == model->rowUpper_[row]) {
-      rowType = HighsPostsolveStack::RowType::Eq;
+      rowType = HighsPostsolveStack::RowType::kEq;
       rhs = model->rowUpper_[row];
     } else if ((model->rowUpper_[row] != kHighsInf &&
                 implRowDualLower[row] >=
                     -options->dual_feasibility_tolerance)) {
-      rowType = HighsPostsolveStack::RowType::Leq;
+      rowType = HighsPostsolveStack::RowType::kLeq;
       rhs = model->rowUpper_[row];
       changeRowDualLower(row, -kHighsInf);
     } else {
-      rowType = HighsPostsolveStack::RowType::Geq;
+      rowType = HighsPostsolveStack::RowType::kGeq;
       rhs = model->rowLower_[row];
       changeRowDualUpper(row, kHighsInf);
     }

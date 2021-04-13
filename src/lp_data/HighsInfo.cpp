@@ -42,10 +42,10 @@ InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
                         HighsInt& index) {
   HighsInt num_info = info_records.size();
   for (index = 0; index < num_info; index++)
-    if (info_records[index]->name == name) return InfoStatus::OK;
+    if (info_records[index]->name == name) return InfoStatus::kOk;
   highsLogUser(options.log_options, HighsLogType::kError,
                "getInfoIndex: Info \"%s\" is unknown\n", name.c_str());
-  return InfoStatus::UNKNOWN_INFO;
+  return InfoStatus::kUnknownInfo;
 }
 
 InfoStatus checkInfo(const HighsOptions& options,
@@ -112,10 +112,10 @@ InfoStatus checkInfo(const HighsOptions& options,
       }
     }
   }
-  if (error_found) return InfoStatus::ILLEGAL_VALUE;
+  if (error_found) return InfoStatus::kIllegalValue;
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "checkInfo: Info are OK\n");
-  return InfoStatus::OK;
+  return InfoStatus::kOk;
 }
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
@@ -124,18 +124,18 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
                              HighsInt& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
-  if (status != InfoStatus::OK) return status;
+  if (status != InfoStatus::kOk) return status;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::kInt) {
     highsLogUser(
         options.log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
         name.c_str(), infoEntryType2string(type).c_str());
-    return InfoStatus::ILLEGAL_VALUE;
+    return InfoStatus::kIllegalValue;
   }
   InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
   value = *info.value;
-  return InfoStatus::OK;
+  return InfoStatus::kOk;
 }
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
@@ -144,18 +144,18 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
                              double& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
-  if (status != InfoStatus::OK) return status;
+  if (status != InfoStatus::kOk) return status;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::kDouble) {
     highsLogUser(
         options.log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not double\n",
         name.c_str(), infoEntryType2string(type).c_str());
-    return InfoStatus::ILLEGAL_VALUE;
+    return InfoStatus::kIllegalValue;
   }
   InfoRecordDouble info = ((InfoRecordDouble*)info_records[index])[0];
   value = *info.value;
-  return InfoStatus::OK;
+  return InfoStatus::kOk;
 }
 
 HighsStatus writeInfoToFile(FILE* file,

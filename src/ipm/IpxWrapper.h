@@ -542,13 +542,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (!options.output_flag) parameters.display = 0;
   // Modify parameters.debug according to log_dev_level
   parameters.debug = 0;
-  if (options.log_dev_level == LOG_DEV_LEVEL_DETAILED) {
-    // Default options.log_dev_level setting is LOG_DEV_LEVEL_NONE, yielding
+  if (options.log_dev_level == kHighsLogDevLevelDetailed) {
+    // Default options.log_dev_level setting is kHighsLogDevLevelNone, yielding
     // default setting debug = 0
     parameters.debug = 0;
-  } else if (options.log_dev_level == LOG_DEV_LEVEL_INFO) {
+  } else if (options.log_dev_level == kHighsLogDevLevelInfo) {
     parameters.debug = 3;
-  } else if (options.log_dev_level == LOG_DEV_LEVEL_VERBOSE) {
+  } else if (options.log_dev_level == kHighsLogDevLevelVerbose) {
     parameters.debug = 4;
   }
   // Just test feasibility and optimality tolerances for now

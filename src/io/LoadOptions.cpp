@@ -42,7 +42,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
       trim(option);
       trim(value);
       if (setLocalOptionValue(options.log_options, option, options.records,
-                              value) != OptionStatus::OK)
+                              value) != OptionStatus::kOk)
         return false;
     }
   } else {

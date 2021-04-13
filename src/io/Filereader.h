@@ -21,11 +21,11 @@
 #include "lp_data/HighsOptions.h"
 
 enum class FilereaderRetcode {
-  OK = 0,
-  FILENOTFOUND = 1,
-  PARSERERROR = 2,
-  NOT_IMPLEMENTED = 3,
-  TIMEOUT
+  kOk = 0,
+  kFileNotFound = 1,
+  kParserError = 2,
+  kNotImplemented = 3,
+  kTimeout
 };
 
 void interpretFilereaderRetcode(const HighsLogOptions& log_options,

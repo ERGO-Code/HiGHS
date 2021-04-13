@@ -80,15 +80,15 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   // Always report HighsLogType INFO, WARNING or ERROR
   //
   // Report HighsLogType DETAILED if *log_options_.log_dev_level >=
-  // LOG_DEV_LEVEL_DETAILED
+  // kHighsLogDevLevelDetailed
   //
   // Report HighsLogType VERBOSE if *log_options_.log_dev_level >=
-  // LOG_DEV_LEVEL_VERBOSE
+  // kHighsLogDevLevelVerbose
   if (type == HighsLogType::kDetailed &&
-      *log_options_.log_dev_level < LOG_DEV_LEVEL_DETAILED)
+      *log_options_.log_dev_level < kHighsLogDevLevelDetailed)
     return;
   if (type == HighsLogType::kVerbose &&
-      *log_options_.log_dev_level < LOG_DEV_LEVEL_VERBOSE)
+      *log_options_.log_dev_level < kHighsLogDevLevelVerbose)
     return;
   va_list argptr;
   va_start(argptr, format);

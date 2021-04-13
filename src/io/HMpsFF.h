@@ -41,11 +41,11 @@
 using Triplet = std::tuple<HighsInt, HighsInt, double>;
 
 enum class FreeFormatParserReturnCode {
-  SUCCESS,
-  PARSERERROR,
-  FILENOTFOUND,
-  FIXED_FORMAT,
-  TIMEOUT,
+  kSuccess,
+  kParserError,
+  kFileNotFound,
+  kFixedFormat,
+  kTimeout,
 };
 
 namespace free_format_parser {
@@ -103,22 +103,22 @@ class HMpsFF {
   const bool any_first_non_blank_as_star_implies_comment = false;
   const bool handle_bv_in_bounds = false;
 
-  enum class parsekey {
-    NAME,
-    OBJSENSE,
-    MAX,
-    MIN,
-    ROWS,
-    COLS,
-    RHS,
-    BOUNDS,
-    RANGES,
-    NONE,
-    END,
-    FAIL,
-    COMMENT,
-    FIXED_FORMAT,
-    TIMEOUT
+  enum class Parsekey {
+    kName,
+    kObjsense,
+    kMax,
+    kMin,
+    kRows,
+    kCols,
+    kRhs,
+    kBounds,
+    kRanges,
+    kNone,
+    kEnd,
+    kFail,
+    kComment,
+    kFixedFormat,
+    kTimeout
   };
 
   enum class boundtype { LE, EQ, GE, FR };
@@ -134,21 +134,21 @@ class HMpsFF {
   FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
   /// checks first word of strline and wraps it by it_begin and it_end
-  HMpsFF::parsekey checkFirstWord(std::string& strline, HighsInt& start,
+  HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
                                   HighsInt& end, std::string& word) const;
 
-  HMpsFF::parsekey parseDefault(std::ifstream& file);
-  HMpsFF::parsekey parseObjsense(const HighsLogOptions& log_options,
+  HMpsFF::Parsekey parseDefault(std::ifstream& file);
+  HMpsFF::Parsekey parseObjsense(const HighsLogOptions& log_options,
                                  std::ifstream& file);
-  HMpsFF::parsekey parseRows(const HighsLogOptions& log_options,
+  HMpsFF::Parsekey parseRows(const HighsLogOptions& log_options,
                              std::ifstream& file);
-  HMpsFF::parsekey parseCols(const HighsLogOptions& log_options,
+  HMpsFF::Parsekey parseCols(const HighsLogOptions& log_options,
                              std::ifstream& file);
-  HMpsFF::parsekey parseRhs(const HighsLogOptions& log_options,
+  HMpsFF::Parsekey parseRhs(const HighsLogOptions& log_options,
                             std::ifstream& file);
-  HMpsFF::parsekey parseRanges(const HighsLogOptions& log_options,
+  HMpsFF::Parsekey parseRanges(const HighsLogOptions& log_options,
                                std::ifstream& file);
-  HMpsFF::parsekey parseBounds(const HighsLogOptions& log_options,
+  HMpsFF::Parsekey parseBounds(const HighsLogOptions& log_options,
                                std::ifstream& file);
 };
 
