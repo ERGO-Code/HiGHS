@@ -119,7 +119,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   return false;
 }
 
-bool HighsImplications::runProbing(HighsInt col, HighsInt& numboundchgs) {
+bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
@@ -155,40 +155,54 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numboundchgs) {
         ++d;
       else {
         assert(implicsup[u].column == implicsdown[d].column);
+        HighsInt implcol = implicsup[u].column;
+        double lbDown = globaldomain.colLower_[implcol];
+        double ubDown = globaldomain.colUpper_[implcol];
+        double lbUp = lbDown;
+        double ubUp = ubDown;
 
-        if (implicsup[u].boundtype == implicsdown[d].boundtype) {
-          if ((implicsup[u].boundtype == HighsBoundType::Lower &&
-               implicsdown[d].boundval < implicsup[u].boundval) ||
-              (implicsup[u].boundtype == HighsBoundType::Upper &&
-               implicsdown[d].boundval > implicsup[u].boundval))
-            globaldomain.changeBound(implicsdown[d],
-                                     HighsDomain::Reason::unspecified());
+        do {
+          if (implicsdown[d].boundtype == HighsBoundType::Lower)
+            lbDown = std::max(lbDown, implicsdown[d].boundval);
           else
-            globaldomain.changeBound(implicsup[u],
-                                     HighsDomain::Reason::unspecified());
-          assert(!globaldomain.infeasible());
-          ++numboundchgs;
-          globaldomain.propagate();
-          assert(!globaldomain.infeasible());
-          ++u;
+            ubDown = std::min(ubDown, implicsdown[d].boundval);
           ++d;
-        } else if (!globaldomain.isFixed(implicsup[u].column) &&
-                   !colsubstituted[implicsup[u].column] &&
-                   globaldomain.isFixing(implicsup[u]) &&
-                   globaldomain.isFixing(implicsdown[d])) {
+        } while (d < nimplicsdown && implicsdown[d].column == implcol);
+
+        do {
+          if (implicsup[u].boundtype == HighsBoundType::Lower)
+            lbUp = std::max(lbUp, implicsup[u].boundval);
+          else
+            ubUp = std::min(ubUp, implicsup[u].boundval);
+          ++u;
+        } while (u < nimplicsup && implicsup[u].column == implcol);
+
+        if (colsubstituted[implcol] || globaldomain.isFixed(implcol)) continue;
+
+        if (lbDown == ubDown && lbUp == ubUp &&
+            std::abs(lbDown - lbUp) > mipsolver.mipdata_->feastol) {
           HighsSubstitution substitution;
-          substitution.substcol = implicsup[u].column;
+          substitution.substcol = implcol;
           substitution.staycol = col;
-          substitution.offset = implicsdown[d].boundval;
-          substitution.scale = implicsup[u].boundval - implicsdown[d].boundval;
+          substitution.offset = lbDown;
+          substitution.scale = lbUp - lbDown;
           substitutions.push_back(substitution);
           colsubstituted[implicsup[u].column] = true;
+          ++numReductions;
+        } else {
+          double lb = std::min(lbDown, lbUp);
+          double ub = std::max(ubDown, ubUp);
 
-        } else if ((HighsInt)implicsup[u].boundtype <
-                   (HighsInt)implicsdown[d].boundtype)
-          ++u;
-        else
-          ++d;
+          if (lb > globaldomain.colLower_[implcol]) {
+            globaldomain.changeBound(HighsBoundType::Lower, implcol, lb);
+            ++numReductions;
+          }
+
+          if (ub < globaldomain.colUpper_[implcol]) {
+            globaldomain.changeBound(HighsBoundType::Upper, implcol, ub);
+            ++numReductions;
+          }
+        }
       }
     }
 
