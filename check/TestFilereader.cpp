@@ -31,54 +31,54 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   // Try to run HiGHS with default options. No model loaded so OK
   run_status = highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::MODEL_EMPTY);
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kModelEmpty);
+  REQUIRE(run_status == HighsStatus::kOk);
 
   // Load a non-existent file and try to run HiGHS
   model = "";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(run_status == HighsStatus::kOk);
 
   // Load a non-supported file type and try to run HiGHS
   model = "model";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
   return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(run_status == HighsStatus::kOk);
 
   // Load an existing MPS file and run HiGHS
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   return_status = highs.readModel(model_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(info.simplex_iteration_count == 75);
 
   model = "garbage";
   if (test_garbage_mps) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
     read_status = highs.readModel(model_file);
-    REQUIRE(read_status == HighsStatus::Error);
+    REQUIRE(read_status == HighsStatus::kError);
   }
 
   if (test_garbage_ems) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
     read_status = highs.readModel(model_file);
-    REQUIRE(read_status == HighsStatus::Error);
+    REQUIRE(read_status == HighsStatus::kError);
   }
 
   if (test_garbage_lp) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
     read_status = highs.readModel(model_file);
-    REQUIRE(read_status == HighsStatus::Error);
+    REQUIRE(read_status == HighsStatus::kError);
   }
 }
 TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
@@ -91,15 +91,15 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
     highs.setOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   HighsLp lp_free = highs.getLp();
 
   status = highs.setOptionValue("mps_parser_type_free", false);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   HighsLp lp_fixed = highs.getLp();
 
@@ -120,25 +120,25 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
     highs.setOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
   HighsLp lp_mps = highs.getLp();
 
   // Write lp
   std::string filename_lp = "adlittle.lp";
   status = highs.writeModel(filename_lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   /*
   bool are_the_same;
   // Write ems
   std::string filename_ems = "adlittle.ems";
   status = highs.writeModel(filename_ems);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   // Read ems and compare with mps
   std::cout << "Reading " << filename_ems << std::endl;
   status = highs.readModel(filename_ems);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   std::cout << "Compare LP from .ems and .mps" << std::endl;
   are_the_same = lp_mps == highs.getLp();
@@ -148,7 +148,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   */
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   const HighsInfo& info = highs.getInfo();
   double mps_objective_function_value = info.objective_function_value;
@@ -156,10 +156,10 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   // Read lp and compare objective with mps
   if (dev_run) std::cout << "Reading " << filename_lp << std::endl;
   status = highs.readModel(filename_lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   REQUIRE(mps_objective_function_value == info.objective_function_value);
 
@@ -172,10 +172,10 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   // integer variables are COL03,COL04 so x[2], x[3].
   const std::vector<HighsVarType> kIntegers{
-      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS,
-      HighsVarType::INTEGER,    HighsVarType::INTEGER,
-      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS,
-      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS};
+      HighsVarType::kContinuous, HighsVarType::kContinuous,
+      HighsVarType::kInteger,    HighsVarType::kInteger,
+      HighsVarType::kContinuous, HighsVarType::kContinuous,
+      HighsVarType::kContinuous, HighsVarType::kContinuous};
 
   HighsStatus status;
 
@@ -184,7 +184,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
     highs.setOptionValue("output_flag", false);
   }
   status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   HighsLp lp_free = highs.getLp();
 
@@ -193,10 +193,10 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   // Read mps with fixed format parser.
   status = highs.setOptionValue("mps_parser_type_free", false);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   HighsLp lp_fixed = highs.getLp();
 

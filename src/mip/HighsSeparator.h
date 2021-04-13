@@ -6,11 +6,13 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsSeparator.h
  * @brief Base class for separators
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_SEPARATOR_H_

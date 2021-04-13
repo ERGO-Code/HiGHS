@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_LP_RELAXATION_H_
 #define HIGHS_LP_RELAXATION_H_
@@ -144,7 +147,7 @@ class HighsLpRelaxation {
 
   bool isColIntegral(HighsInt col) const {
     return col < lpsolver.getLp().numCol_
-               ? mipsolver.variableType(col) != HighsVarType::CONTINUOUS
+               ? mipsolver.variableType(col) != HighsVarType::kContinuous
                : isRowIntegral(col - lpsolver.getLp().numCol_);
   }
 
@@ -203,7 +206,7 @@ class HighsLpRelaxation {
 
   void recoverBasis();
 
-  void setObjectiveLimit(double objlim = HIGHS_CONST_INF) {
+  void setObjectiveLimit(double objlim = kHighsInf) {
     // lpsolver.setOptionValue("dual_objective_value_upper_bound", objlim);
   }
 
@@ -279,7 +282,7 @@ class HighsLpRelaxation {
 
   double getObjective() const { return objective; }
 
-  void setIterationLimit(HighsInt limit = HIGHS_CONST_I_INF) {
+  void setIterationLimit(HighsInt limit = kHighsIInf) {
     lpsolver.setOptionValue("simplex_iteration_limit", limit);
   }
 };

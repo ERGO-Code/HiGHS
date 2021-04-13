@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkPrimal.h
  * @brief Phase 2 primal simplex solver for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HEKKPRIMAL_H_
 #define SIMPLEX_HEKKPRIMAL_H_
@@ -21,7 +23,7 @@
 
 using std::pair;
 
-const SimplexAlgorithm algorithm = SimplexAlgorithm::PRIMAL;
+const SimplexAlgorithm algorithm = SimplexAlgorithm::kPrimal;
 
 /**
  * @brief Primal simplex solver for HiGHS

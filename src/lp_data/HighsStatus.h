@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef LP_DATA_HIGHS_STATUS_H_
 #define LP_DATA_HIGHS_STATUS_H_
@@ -13,13 +16,13 @@
 #include <string>
 
 // HiGHS status
-enum class HighsStatus { OK = 0, Warning, Error };
+enum class HighsStatus { kOk = 0, kWarning, kError };
 
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status);
 
 // Return the maximum of two HighsStatus and possibly report on
-// call_status not being HighsStatus::OK
+// call_status not being HighsStatus::kOk
 HighsStatus interpretCallStatus(const HighsStatus call_status,
                                 const HighsStatus from_return_status,
                                 const std::string& message = "");

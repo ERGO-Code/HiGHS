@@ -6,12 +6,14 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsLpAggregator.h
  * @brief Class to aggregate rows of the LP
  *
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_LP_AGGREGATOR_H_

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsRanging.cpp
  * @brief Compute LP ranging data for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsRanging.h"
 
@@ -22,11 +24,11 @@
 #include "lp_data/HighsModelUtils.h"
 
 double infProduct(double value) {
-  // Multiplying value and HIGHS_CONST_INF
+  // Multiplying value and kHighsInf
   if (value == 0) {
     return 0;
   } else {
-    return value * HIGHS_CONST_INF;
+    return value * kHighsInf;
   }
 }
 
@@ -41,16 +43,16 @@ double possInfProduct(double poss_inf, double value) {
 
 HighsStatus getRangingData(HighsRanging& ranging,
                            const HighsModelObject& highs_model_object) {
-  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
-    highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
+  if (highs_model_object.scaled_model_status_ != HighsModelStatus::kOptimal) {
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without an optimal solution\n");
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
   const HEkk& ekk_instance = highs_model_object.ekk_instance_;
   if (!ekk_instance.simplex_lp_status_.valid) {
-    highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
+    highsLogUser(highs_model_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without a valid Simplex LP\n");
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
   // Aliases
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
@@ -77,7 +79,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const HighsInt numCol = ekk_instance.simplex_lp_.numCol_;
   const HighsInt numTotal = numCol + numRow;
   const double H_TT = 1e-13;
-  const double H_INF = HIGHS_CONST_INF;
+  const double H_INF = kHighsInf;
   const double objective =
       highs_model_object.solution_params_.objective_function_value;
 
@@ -88,7 +90,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   // sign, though. Maximization problems are, thus, accommodated by
   // applying the sign multiplier to dual information.
   HighsInt sense = 1;
-  if (highs_model_object.lp_.sense_ == ObjSense::MAXIMIZE) sense = -1;
+  if (highs_model_object.lp_.sense_ == ObjSense::kMaximize) sense = -1;
 
   vector<HighsInt> iWork_(numTotal);
   vector<double> dWork_(numTotal);
@@ -392,7 +394,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
       // Check if b_up_b > upper
       if (value_[j] != upper_[j] && b_up_b[j] > upper_[j]) {
         b_up_b[j] = upper_[j];
-        assert(lower_[j] > -HIGHS_CONST_INF);
+        assert(lower_[j] > -kHighsInf);
         b_up_f[j] = objective + sense * (upper_[j] - lower_[j]) * dualv;
         b_up_e[j] = j;
         b_up_l[j] = j;
@@ -417,7 +419,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
       // Check if b_dn_b < lower
       if (value_[j] != lower_[j] && b_dn_b[j] < lower_[j]) {
         b_dn_b[j] = lower_[j];
-        assert(upper_[j] < HIGHS_CONST_INF);
+        assert(upper_[j] < kHighsInf);
         b_dn_f[j] = objective + sense * (lower_[j] - upper_[j]) * dualv;
         b_dn_e[j] = j;
         b_dn_l[j] = j;
@@ -575,17 +577,17 @@ HighsStatus getRangingData(HighsRanging& ranging,
                                   b_up_l.begin() + numTotal};
 
   writeRanging(ranging, highs_model_object);
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 void writeRanging(const HighsRanging& ranging,
                   const HighsModelObject& highs_model_object) {
   if (!highs_model_object.options_.log_dev_level) return;
-  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL)
+  if (highs_model_object.scaled_model_status_ != HighsModelStatus::kOptimal)
     return;
   HighsLp& lp = highs_model_object.lp_;
   HighsLogOptions& log_options = highs_model_object.options_.log_options;
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "\nRanging data: Optimal objective = %g\n"
               "           |                               Bound ranging        "
               "                           "
@@ -595,7 +597,7 @@ void writeRanging(const HighsRanging& ranging,
               " | DownObj    Down       Value      Up         UpObj\n",
               highs_model_object.solution_params_.objective_function_value);
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    highsLogDev(log_options, HighsLogType::VERBOSE,
+    highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
                 iCol,
@@ -612,13 +614,13 @@ void writeRanging(const HighsRanging& ranging,
                 ranging.col_cost_up.value_[iCol],
                 ranging.col_cost_up.objective_[iCol]);
   }
-  highsLogDev(log_options, HighsLogType::VERBOSE,
+  highsLogDev(log_options, HighsLogType::kVerbose,
               "           |                               Bound ranging        "
               "                             \n"
               "Col Status | DownObj    Down       (Lower      Value      Upper "
               "    ) Up         UpObj   \n");
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    highsLogDev(log_options, HighsLogType::VERBOSE,
+    highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g |\n",
                 iRow,

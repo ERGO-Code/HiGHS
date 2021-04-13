@@ -6,9 +6,11 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsModKSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsModkSeparator.h"
@@ -124,7 +126,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (!lpRelaxation.isRowIntegral(row)) {
       for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::CONTINUOUS)
+        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (transLp.boundDistance(inds[i]) > 0) scaleVals.push_back(vals[i]);
       }
@@ -137,7 +139,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       intrhs = std::round(intscale * rhs);
 
       for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::CONTINUOUS)
+        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (transLp.boundDistance(inds[i]) > 0) {
           intSystemIndex.push_back(inds[i]);

@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef HIGHS_NODE_QUEUE_H_
@@ -37,8 +40,8 @@ class HighsNodeQueue {
 
     OpenNode()
         : domchgstack(),
-          lower_bound(-HIGHS_CONST_INF),
-          estimate(-HIGHS_CONST_INF),
+          lower_bound(-kHighsInf),
+          estimate(-kHighsInf),
           depth(0),
           leftlower(-1),
           rightlower(-1),

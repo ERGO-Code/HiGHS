@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HMpsFF.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IO_HMPSFF_H_
 #define IO_HMPSFF_H_
@@ -61,7 +63,7 @@ class HMpsFF {
                                          const std::string filename,
                                          HighsLp& lp);
 
-  double time_limit = HIGHS_CONST_INF;
+  double time_limit = kHighsInf;
 
  private:
   double start_time;
@@ -71,7 +73,7 @@ class HMpsFF {
   HighsInt nnz;
   std::string mpsName;
 
-  ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
+  ObjSense objSense = ObjSense::kMinimize;  // Minimization by default
   double objOffset = 0;
 
   std::vector<HighsInt> Astart;

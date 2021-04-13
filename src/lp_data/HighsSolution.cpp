@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolution.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsSolution.h"
 
@@ -101,7 +103,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
     //        std::max(primal_infeasibility, max_primal_infeasibility);
     //    sum_primal_infeasibility += primal_infeasibility;
 
-    if (status != HighsBasisStatus::BASIC) {
+    if (status != HighsBasisStatus::kBasic) {
       // Nonbasic variable: look for dual infeasibility
       if (primal_residual >= -primal_feasibility_tolerance) {
         // At a bound
@@ -132,7 +134,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
   }
 }
 
-// Refine any HighsBasisStatus::NONBASIC settings according to the LP
+// Refine any HighsBasisStatus::kNonbasic settings according to the LP
 // and any solution values
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis) {
@@ -143,70 +145,70 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
   const HighsInt num_col = lp.numCol_;
   const HighsInt num_row = lp.numRow_;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    if (basis.col_status[iCol] != HighsBasisStatus::NONBASIC) continue;
+    if (basis.col_status[iCol] != HighsBasisStatus::kNonbasic) continue;
     const double lower = lp.colLower_[iCol];
     const double upper = lp.colUpper_[iCol];
-    HighsBasisStatus status = HighsBasisStatus::NONBASIC;
+    HighsBasisStatus status = HighsBasisStatus::kNonbasic;
     if (lower == upper) {
-      status = HighsBasisStatus::LOWER;
+      status = HighsBasisStatus::kLower;
     } else if (!highs_isInfinity(-lower)) {
       if (!highs_isInfinity(upper)) {
         if (have_highs_solution) {
           if (solution.col_value[iCol] < 0.5 * (lower + upper)) {
-            status = HighsBasisStatus::LOWER;
+            status = HighsBasisStatus::kLower;
           } else {
-            status = HighsBasisStatus::UPPER;
+            status = HighsBasisStatus::kUpper;
           }
         } else {
           if (fabs(lower) < fabs(upper)) {
-            status = HighsBasisStatus::LOWER;
+            status = HighsBasisStatus::kLower;
           } else {
-            status = HighsBasisStatus::UPPER;
+            status = HighsBasisStatus::kUpper;
           }
         }
       } else {
-        status = HighsBasisStatus::LOWER;
+        status = HighsBasisStatus::kLower;
       }
     } else if (!highs_isInfinity(upper)) {
-      status = HighsBasisStatus::UPPER;
+      status = HighsBasisStatus::kUpper;
     } else {
-      status = HighsBasisStatus::ZERO;
+      status = HighsBasisStatus::kZero;
     }
-    assert(status != HighsBasisStatus::NONBASIC);
+    assert(status != HighsBasisStatus::kNonbasic);
     basis.col_status[iCol] = status;
   }
 
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    if (basis.row_status[iRow] != HighsBasisStatus::NONBASIC) continue;
+    if (basis.row_status[iRow] != HighsBasisStatus::kNonbasic) continue;
     const double lower = lp.rowLower_[iRow];
     const double upper = lp.rowUpper_[iRow];
-    HighsBasisStatus status = HighsBasisStatus::NONBASIC;
+    HighsBasisStatus status = HighsBasisStatus::kNonbasic;
     if (lower == upper) {
-      status = HighsBasisStatus::LOWER;
+      status = HighsBasisStatus::kLower;
     } else if (!highs_isInfinity(-lower)) {
       if (!highs_isInfinity(upper)) {
         if (have_highs_solution) {
           if (solution.row_value[iRow] < 0.5 * (lower + upper)) {
-            status = HighsBasisStatus::LOWER;
+            status = HighsBasisStatus::kLower;
           } else {
-            status = HighsBasisStatus::UPPER;
+            status = HighsBasisStatus::kUpper;
           }
         } else {
           if (fabs(lower) < fabs(upper)) {
-            status = HighsBasisStatus::LOWER;
+            status = HighsBasisStatus::kLower;
           } else {
-            status = HighsBasisStatus::UPPER;
+            status = HighsBasisStatus::kUpper;
           }
         }
       } else {
-        status = HighsBasisStatus::LOWER;
+        status = HighsBasisStatus::kLower;
       }
     } else if (!highs_isInfinity(upper)) {
-      status = HighsBasisStatus::UPPER;
+      status = HighsBasisStatus::kUpper;
     } else {
-      status = HighsBasisStatus::ZERO;
+      status = HighsBasisStatus::kZero;
     }
-    assert(status != HighsBasisStatus::NONBASIC);
+    assert(status != HighsBasisStatus::kNonbasic);
     basis.row_status[iRow] = status;
   }
 }
@@ -259,14 +261,13 @@ HighsStatus ipxSolutionToHighsSolution(
   for (HighsInt row = 0; row < lp.numRow_; row++) {
     double lower = lp.rowLower_[row];
     double upper = lp.rowUpper_[row];
-    if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
       highs_solution.row_value[row] = row_activity[row];
       //      highs_solution.row_dual[row] = 0;
     } else {
       // Non-free row, so IPX will have it
-      if ((lower > -HIGHS_CONST_INF && upper < HIGHS_CONST_INF) &&
-          (lower < upper)) {
+      if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
         // Boxed row - look at its slack
         num_boxed_rows++;
         highs_solution.row_value[row] = ipx_col_value[ipx_slack];
@@ -293,7 +294,7 @@ HighsStatus ipxSolutionToHighsSolution(
     highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
   }
   */
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
@@ -337,22 +338,22 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     bool unrecognised = false;
     if (ipx_col_status[col] == ipx_basic) {
       // Column is basic
-      highs_basis.col_status[col] = HighsBasisStatus::BASIC;
+      highs_basis.col_status[col] = HighsBasisStatus::kBasic;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = 0;
     } else if (ipx_col_status[col] == ipx_nonbasic_at_lb) {
       // Column is nonbasic at lower bound
-      highs_basis.col_status[col] = HighsBasisStatus::LOWER;
+      highs_basis.col_status[col] = HighsBasisStatus::kLower;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = ipx_col_dual[col];
     } else if (ipx_col_status[col] == ipx_nonbasic_at_ub) {
       // Column is nonbasic at upper bound
-      highs_basis.col_status[col] = HighsBasisStatus::UPPER;
+      highs_basis.col_status[col] = HighsBasisStatus::kUpper;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = ipx_col_dual[col];
     } else if (ipx_col_status[col] == ipx_superbasic) {
       // Column is superbasic
-      highs_basis.col_status[col] = HighsBasisStatus::ZERO;
+      highs_basis.col_status[col] = HighsBasisStatus::kZero;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = ipx_col_dual[col];
     } else {
@@ -380,9 +381,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #endif
     assert(!unrecognised);
     if (unrecognised) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Unrecognised ipx_col_status value from IPX\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     }
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
@@ -391,7 +392,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         row_activity[row] += highs_solution.col_value[col] * lp.Avalue_[el];
       }
     }
-    if (highs_basis.col_status[col] == HighsBasisStatus::BASIC)
+    if (highs_basis.col_status[col] == HighsBasisStatus::kBasic)
       num_basic_variables++;
   }
   HighsInt ipx_row = 0;
@@ -406,15 +407,14 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #ifdef HiGHSDEV
     HighsInt this_ipx_row = ipx_row;
 #endif
-    if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
+    if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so make it basic at its row activity
-      highs_basis.row_status[row] = HighsBasisStatus::BASIC;
+      highs_basis.row_status[row] = HighsBasisStatus::kBasic;
       highs_solution.row_value[row] = row_activity[row];
       highs_solution.row_dual[row] = 0;
     } else {
       // Non-free row, so IPX will have it
-      if ((lower > -HIGHS_CONST_INF && upper < HIGHS_CONST_INF) &&
-          (lower < upper)) {
+      if ((lower > -kHighsInf && upper < kHighsInf) && (lower < upper)) {
         // Boxed row - look at its slack
         num_boxed_rows++;
         double slack_value = ipx_col_value[ipx_slack];
@@ -424,24 +424,24 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         if (ipx_row_status[ipx_row] == ipx_basic) {
           // Row is basic
           num_boxed_rows_basic++;
-          highs_basis.row_status[row] = HighsBasisStatus::BASIC;
+          highs_basis.row_status[row] = HighsBasisStatus::kBasic;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = 0;
         } else if (ipx_col_status[ipx_slack] == ipx_basic) {
           // Slack is basic
           num_boxed_row_slacks_basic++;
-          highs_basis.row_status[row] = HighsBasisStatus::BASIC;
+          highs_basis.row_status[row] = HighsBasisStatus::kBasic;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = 0;
         } else if (ipx_col_status[ipx_slack] == ipx_nonbasic_at_lb) {
           // Slack at lower bound
-          highs_basis.row_status[row] = HighsBasisStatus::LOWER;
+          highs_basis.row_status[row] = HighsBasisStatus::kLower;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else if (ipx_col_status[ipx_slack] == ipx_nonbasic_at_ub) {
           // Slack is at its upper bound
           assert(ipx_col_status[ipx_slack] == ipx_nonbasic_at_ub);
-          highs_basis.row_status[row] = HighsBasisStatus::UPPER;
+          highs_basis.row_status[row] = HighsBasisStatus::kUpper;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else {
@@ -459,7 +459,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         ipx_slack++;
       } else if (ipx_row_status[ipx_row] == ipx_basic) {
         // Row is basic
-        highs_basis.row_status[row] = HighsBasisStatus::BASIC;
+        highs_basis.row_status[row] = HighsBasisStatus::kBasic;
         highs_solution.row_value[row] = rhs[ipx_row] - ipx_row_value[ipx_row];
         highs_solution.row_dual[row] = 0;
       } else {
@@ -470,17 +470,17 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         double dual = -ipx_row_dual[ipx_row];
         if (constraint_type[ipx_row] == '>') {
           // Row is at its lower bound
-          highs_basis.row_status[row] = HighsBasisStatus::LOWER;
+          highs_basis.row_status[row] = HighsBasisStatus::kLower;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else if (constraint_type[ipx_row] == '<') {
           // Row is at its upper bound
-          highs_basis.row_status[row] = HighsBasisStatus::UPPER;
+          highs_basis.row_status[row] = HighsBasisStatus::kUpper;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else if (constraint_type[ipx_row] == '=') {
           // Row is at its fixed value
-          highs_basis.row_status[row] = HighsBasisStatus::LOWER;
+          highs_basis.row_status[row] = HighsBasisStatus::kLower;
           highs_solution.row_value[row] = value;
           highs_solution.row_dual[row] = dual;
         } else {
@@ -512,11 +512,11 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #endif
     assert(!unrecognised);
     if (unrecognised) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Unrecognised ipx_row_status value from IPX\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     }
-    if (highs_basis.row_status[row] == HighsBasisStatus::BASIC)
+    if (highs_basis.row_status[row] == HighsBasisStatus::kBasic)
       num_basic_variables++;
   }
   assert(num_basic_variables == lp.numRow_);
@@ -538,7 +538,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
            " are basic and %" HIGHSINT_FORMAT " have basic slacks\n",
            num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
 #endif
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 #endif
 
@@ -594,7 +594,7 @@ void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
                                        HighsSolutionParams& solution_params,
                                        const HighsOptions& options) {
-  model_status = HighsModelStatus::NOTSET;
+  model_status = HighsModelStatus::kNotset;
   resetSolutionParams(solution_params, options);
 }
 
@@ -626,20 +626,20 @@ void invalidateSolutionParams(HighsSolutionParams& solution_params) {
 // Invalidate the solution status values in a HighsSolutionParams
 // instance.
 void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
-  solution_params.primal_status = PrimalDualStatus::STATUS_NOTSET;
-  solution_params.dual_status = PrimalDualStatus::STATUS_NOTSET;
+  solution_params.primal_status = kHighsPrimalDualStatusNotset;
+  solution_params.dual_status = kHighsPrimalDualStatusNotset;
 }
 
 // Invalidate the infeasibility values in a HighsSolutionParams
 // instance.
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params) {
-  solution_params.num_primal_infeasibility = illegal_infeasibility_count;
-  solution_params.max_primal_infeasibility = illegal_infeasibility_measure;
-  solution_params.sum_primal_infeasibility = illegal_infeasibility_measure;
-  solution_params.num_dual_infeasibility = illegal_infeasibility_count;
-  solution_params.max_dual_infeasibility = illegal_infeasibility_measure;
-  solution_params.sum_dual_infeasibility = illegal_infeasibility_measure;
+  solution_params.num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
+  solution_params.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solution_params.sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solution_params.num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
+  solution_params.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solution_params.sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
 }
 
 void copySolutionObjectiveParams(
@@ -671,11 +671,11 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   consistent = isBasisRightSize(lp, basis) && consistent;
   HighsInt num_basic_variables = 0;
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC)
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
       num_basic_variables++;
   }
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
+    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
       num_basic_variables++;
   }
   bool right_num_basic_variables = num_basic_variables == lp.numRow_;

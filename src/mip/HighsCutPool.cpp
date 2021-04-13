@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "mip/HighsCutPool.h"
@@ -141,7 +144,7 @@ void HighsCutPool::performAging() {
       ++modification_[i];
       matrix_.removeRow(i);
       ages_[i] = -1;
-      rhs_[i] = HIGHS_CONST_INF;
+      rhs_[i] = kHighsInf;
     } else
       ageDistribution[ages_[i]] += 1;
   }

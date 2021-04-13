@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsDebug.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsDebug.h"
 
@@ -18,19 +20,19 @@
 
 HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status) {
   switch (debug_status) {
-    case HighsDebugStatus::NOT_CHECKED:
-    case HighsDebugStatus::OK:
-    case HighsDebugStatus::SMALL_ERROR:
-      return HighsStatus::OK;
-    case HighsDebugStatus::WARNING:
-    case HighsDebugStatus::LARGE_ERROR:
-      return HighsStatus::Warning;
-    case HighsDebugStatus::ERROR:
-    case HighsDebugStatus::EXCESSIVE_ERROR:
-    case HighsDebugStatus::LOGICAL_ERROR:
-      return HighsStatus::Error;
+    case HighsDebugStatus::kNotChecked:
+    case HighsDebugStatus::kOk:
+    case HighsDebugStatus::kSmallError:
+      return HighsStatus::kOk;
+    case HighsDebugStatus::kWarning:
+    case HighsDebugStatus::kLargeError:
+      return HighsStatus::kWarning;
+    case HighsDebugStatus::kError:
+    case HighsDebugStatus::kExcessiveError:
+    case HighsDebugStatus::kLogicalError:
+      return HighsStatus::kError;
     default:
-      return HighsStatus::OK;
+      return HighsStatus::kOk;
   }
 }
 

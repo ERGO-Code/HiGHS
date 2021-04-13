@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsPrimalHeuristics.h"
 
@@ -106,15 +109,15 @@ bool HighsPrimalHeuristics::solveSubMip(
           size_t{1}, size_t(adjustmentfactor * submipsolver.node_count_));
   }
 
-  if (submipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE) {
+  if (submipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible) {
     infeasObservations += fixingRate;
     ++numInfeasObservations;
   }
   if (submipsolver.node_count_ <= 1 &&
-      submipsolver.modelstatus_ == HighsModelStatus::PRIMAL_INFEASIBLE)
+      submipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible)
     return false;
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
-  if (submipsolver.modelstatus_ != HighsModelStatus::PRIMAL_INFEASIBLE &&
+  if (submipsolver.modelstatus_ != HighsModelStatus::kPrimalInfeasible &&
       !submipsolver.solution_.empty()) {
     mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
   }
@@ -206,7 +209,7 @@ retry:
   auto getFixingRate = [&]() {
     while (nCheckedChanges < localdom.getDomainChangeStack().size()) {
       HighsInt col = localdom.getDomainChangeStack()[nCheckedChanges++].column;
-      if (mipsolver.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      if (mipsolver.variableType(col) == HighsVarType::kContinuous) continue;
 
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
@@ -452,7 +455,7 @@ retry:
   auto getFixingRate = [&]() {
     while (nCheckedChanges < localdom.getDomainChangeStack().size()) {
       HighsInt col = localdom.getDomainChangeStack()[nCheckedChanges++].column;
-      if (mipsolver.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      if (mipsolver.variableType(col) == HighsVarType::kContinuous) continue;
 
       if (localdom.isFixed(col)) fixedCols.insert(col);
     }
@@ -849,7 +852,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
   std::vector<HighsInt> mask(mipsolver.model_->numCol_, 1);
   std::vector<double> cost(mipsolver.model_->numCol_, 0.0);
-  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -859,8 +862,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       }
     }
 
-    lprelax.getLpSolver().addRow(-HIGHS_CONST_INF,
-                                 mipsolver.mipdata_->upper_limit,
+    lprelax.getLpSolver().addRow(-kHighsInf, mipsolver.mipdata_->upper_limit,
                                  objinds.size(), objinds.data(), objval.data());
   }
 
@@ -880,7 +882,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
 
     auto localdom = mipsolver.mipdata_->domain;
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
-      assert(mipsolver.variableType(i) == HighsVarType::INTEGER);
+      assert(mipsolver.variableType(i) == HighsVarType::kInteger);
       double intval = std::floor(roundedsol[i] + randgen.real(0.4, 0.6));
       intval = std::max(intval, localdom.colLower_[i]);
       intval = std::min(intval, localdom.colUpper_[i]);
@@ -922,7 +924,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       break;
 
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
-      assert(mipsolver.variableType(i) == HighsVarType::INTEGER);
+      assert(mipsolver.variableType(i) == HighsVarType::kInteger);
 
       if (lpsol[i] > roundedsol[i] - mipsolver.mipdata_->feastol)
         cost[i] = -1.0 + randgen.real(-1e-4, 1e-4);
@@ -958,7 +960,7 @@ void HighsPrimalHeuristics::centralRounding() {
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);
   ipm.passModel(std::move(lpmodel));
 
-  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -968,13 +970,13 @@ void HighsPrimalHeuristics::centralRounding() {
       }
     }
 
-    ipm.addRow(-HIGHS_CONST_INF, mipsolver.mipdata_->upper_limit,
-               objinds.size(), objinds.data(), objval.data());
+    ipm.addRow(-kHighsInf, mipsolver.mipdata_->upper_limit, objinds.size(),
+               objinds.data(), objval.data());
   }
   ipm.run();
   const std::vector<double>& sol = ipm.getSolution().col_value;
   if (int(sol.size()) != mipsolver.numCol()) return;
-  if (ipm.getModelStatus() == HighsModelStatus::OPTIMAL) {
+  if (ipm.getModelStatus() == HighsModelStatus::kOptimal) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -987,18 +989,18 @@ void HighsPrimalHeuristics::centralRounding() {
                                                mipsolver.model_->colLower_[i]);
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
-        if (mipsolver.variableType(i) == HighsVarType::INTEGER) ++nintfixed;
+        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
       } else if (sol[i] >=
                  mipsolver.model_->colUpper_[i] - mipsolver.mipdata_->feastol) {
         mipsolver.mipdata_->domain.changeBound(HighsBoundType::Lower, i,
                                                mipsolver.model_->colUpper_[i]);
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
-        if (mipsolver.variableType(i) == HighsVarType::INTEGER) ++nintfixed;
+        if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
       }
     }
     if (nfixed > 0)
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::INFO,
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
                    " integers) sitting at bound at "
                    "analytic center\n",

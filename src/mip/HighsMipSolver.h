@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef MIP_HIGHS_MIP_SOLVER_H_
 #define MIP_HIGHS_MIP_SOLVER_H_
@@ -79,7 +82,7 @@ class HighsMipSolver {
 
   void setModel(const HighsLp& model) {
     model_ = &model;
-    solution_objective_ = HIGHS_CONST_INF;
+    solution_objective_ = kHighsInf;
   }
 
   mutable HighsTimer timer_;

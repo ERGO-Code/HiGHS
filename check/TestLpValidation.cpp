@@ -45,14 +45,14 @@ TEST_CASE("LP-validation", "[highs_data]") {
   }
 
   return_status = assessLp(lp, options);
-  REQUIRE(return_status == HighsStatus::OK);
-  //  reportLp(lp, HighsLogType::VERBOSE);
+  REQUIRE(return_status == HighsStatus::kOk);
+  //  reportLp(lp, HighsLogType::kVerbose);
 
   const double my_infinity = 1e30;
   Highs highs;
   highs.passOptions(options);
 
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   return_bool =
       highs.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
@@ -83,11 +83,11 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
   XcolUpper[0] = my_infinity;
-  //  reportLp(lp, HighsLogType::VERBOSE);
+  //  reportLp(lp, HighsLogType::kVerbose);
 
   // Try to add a column with illegal cost
   bool require_return_bool;
-  if (allow_infinite_costs) {
+  if (kHighsAllowInfiniteCosts) {
     require_return_bool = true;
   } else {
     require_return_bool = false;
@@ -147,7 +147,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
 
-  //  reportLp(lp, HighsLogType::VERBOSE);
+  //  reportLp(lp, HighsLogType::kVerbose);
 
   // Add a couple of non-empty columns with some small and large values
   XnumNewCol = 2;
@@ -221,18 +221,18 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsStatus run_status;
   HighsModelStatus model_status;
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(run_status == HighsStatus::kOk);
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED);
+  REQUIRE(model_status == HighsModelStatus::kPrimalInfeasibleOrUnbounded);
 
   // Without presolve LP is found primal unbounded! ToDo: Fix this to be
   // infeasible
   highs.setOptionValue("presolve", "off");
   run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(run_status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
+  REQUIRE(model_status == HighsModelStatus::kPrimalUnbounded);
 
   REQUIRE(!highs.changeCoeff(-1, 0, check_value));
   REQUIRE(!highs.changeCoeff(0, -1, check_value));

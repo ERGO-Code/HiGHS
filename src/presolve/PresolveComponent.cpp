@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file PresolveComponent.cpp
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "presolve/PresolveComponent.h"
@@ -20,13 +22,13 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
                                     bool mip) {
   data_.postSolveStack.initializeIndexMaps(lp.numRow_, lp.numCol_);
   data_.reduced_lp_ = lp;
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
   options_ = &options;
 
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
@@ -45,11 +47,11 @@ HighsPresolveStatus PresolveComponent::run() {
   HighsModelStatus status = presolve.run(data_.postSolveStack);
 
   switch (status) {
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalInfeasible:
       return HighsPresolveStatus::Infeasible;
-    case HighsModelStatus::DUAL_INFEASIBLE:
+    case HighsModelStatus::kDualInfeasible:
       return HighsPresolveStatus::Unbounded;
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       return HighsPresolveStatus::ReducedToEmpty;
     default:
       return HighsPresolveStatus::Reduced;

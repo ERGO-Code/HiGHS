@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderLp.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "io/FilereaderLp.h"
@@ -77,8 +79,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     model.Astart_.push_back(nz);
-    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::MINIMIZE
-                                                  : ObjSense::MAXIMIZE;
+    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
+                                                  : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::PARSERERROR;
   }
@@ -109,7 +111,7 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsLp& model) {
-  assert(model.orientation_ != MatrixOrientation::ROWWISE);
+  assert(model.orientation_ != MatrixOrientation::kRowwise);
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -118,7 +120,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
 
   // write objective
   this->writeToFile(file, "%s",
-                    model.sense_ == ObjSense::MINIMIZE ? "min" : "max");
+                    model.sense_ == ObjSense::kMinimize ? "min" : "max");
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (HighsInt i = 0; i < model.numCol_; i++) {
@@ -147,7 +149,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile(file, "= %+g", model.rowLower_[row]);
       this->writeToFileLineend(file);
     } else {
-      if (model.rowLower_[row] > -HIGHS_CONST_INF) {
+      if (model.rowLower_[row] > -kHighsInf) {
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < model.numCol_; var++) {
@@ -161,7 +163,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         }
         this->writeToFile(file, ">= %+g", model.rowLower_[row]);
         this->writeToFileLineend(file);
-      } else if (model.rowUpper_[row] < HIGHS_CONST_INF) {
+      } else if (model.rowUpper_[row] < kHighsInf) {
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < model.numCol_; var++) {
@@ -187,19 +189,18 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   for (HighsInt i = 0; i < model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (model.colLower_[i] > -HIGHS_CONST_INF &&
-        model.colUpper_[i] < HIGHS_CONST_INF) {
+    if (model.colLower_[i] > -kHighsInf && model.colUpper_[i] < kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= %+g",
                         model.colLower_[i], i + 1, model.colUpper_[i]);
       this->writeToFileLineend(file);
-    } else if (model.colLower_[i] <= -HIGHS_CONST_INF &&
-               model.colUpper_[i] < HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] <= -kHighsInf &&
+               model.colUpper_[i] < kHighsInf) {
       this->writeToFile(file, " -inf <= x%" HIGHSINT_FORMAT " <= %+g", i + 1,
                         model.colUpper_[i]);
       this->writeToFileLineend(file);
 
-    } else if (model.colLower_[i] > -HIGHS_CONST_INF &&
-               model.colUpper_[i] >= HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] > -kHighsInf &&
+               model.colUpper_[i] >= kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= +inf",
                         model.colLower_[i], i + 1);
       this->writeToFileLineend(file);
@@ -226,5 +227,5 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
 
   fclose(file);
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

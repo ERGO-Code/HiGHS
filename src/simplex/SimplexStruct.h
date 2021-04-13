@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/SimplexStruct.h
  * @brief Structs for HiGHS simplex solvers
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
@@ -51,8 +53,6 @@ struct HighsSimplexLpStatus {
       false;                    // The dual objective function value is known
   bool has_dual_ray = false;    // A dual unbounded ray is known
   bool has_primal_ray = false;  // A primal unbounded ray is known
-  SimplexSolutionStatus solution_status =
-      SimplexSolutionStatus::UNSET;  // The solution status is UNSET
 };
 
 struct HighsSimplexInfo {
@@ -204,7 +204,7 @@ struct HighsSimplexInfo {
 
   HighsInt min_threads = 1;
   HighsInt num_threads = 1;
-  HighsInt max_threads = HIGHS_THREAD_LIMIT;
+  HighsInt max_threads = kHighsThreadLimit;
 
   // Cutoff for PAMI
   double pami_cutoff = 0.95;

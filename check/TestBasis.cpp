@@ -24,7 +24,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Read and solve a different model
   highs.readModel(model1_file);
@@ -36,7 +36,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Clear and load original model and basis
   highs.clearModel();
@@ -46,7 +46,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Ensure that no simplex iterations are required when solved from
   // the optimal basis
@@ -68,7 +68,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // Find the first basic variable
   HighsInt iCol;
   for (iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC) break;
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic) break;
   }
   assert(iCol < lp.numCol_);
   const HighsInt changeCol = iCol;
@@ -100,10 +100,10 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) {
     printf("After restoring lower bound of column %" HIGHSINT_FORMAT
@@ -132,16 +132,16 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   assert(model0_file != model1_file);
 
   return_status = highs.readModel(model0_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.writeBasis(basis_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.readBasis("Nobasis.bas");
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Check error return for some invalid basis files
   std::string invalid_basis_file = "InvalidBasis.bas";
@@ -151,7 +151,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "HiGHS Version 0" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);
@@ -159,7 +159,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << highs.getNumCols() - 1 << " " << highs.getNumRows() << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for incompatible number of rows
   f.open(invalid_basis_file, std::ios::out);
@@ -167,7 +167,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << highs.getNumCols() << " " << 0 << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for incomplete basis
   f.open(invalid_basis_file, std::ios::out);
@@ -176,7 +176,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "1 1" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   testBasisRestart(highs, true);
   testBasisReloadModel(highs, true);
@@ -200,13 +200,13 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
   assert(model0_file != model1_file);
 
   return_status = highs.readModel(model0_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   basis_data = highs.getBasis();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   testBasisRestart(highs, false);
   testBasisReloadModel(highs, false);

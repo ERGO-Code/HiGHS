@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsMatrixPic.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "util/HighsMatrixPic.h"
@@ -63,7 +65,7 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
                                   const HighsInt numRow, const HighsInt numCol,
                                   const std::vector<HighsInt>& ARstart,
                                   const std::vector<HighsInt>& ARindex) {
-  if (fileprefix == "") return HighsStatus::Error;
+  if (fileprefix == "") return HighsStatus::kError;
   std::string filename = fileprefix + ".pbm";
   std::ofstream f;
   f.open(filename, std::ios::out);
@@ -98,7 +100,7 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   assert(num_pixel_deep <= max_num_pixel_deep);
 
   highsLogUser(
-      options.log_options, HighsLogType::INFO,
+      options.log_options, HighsLogType::kInfo,
       "Representing LP constraint matrix sparsity pattern %" HIGHSINT_FORMAT
       "x%" HIGHSINT_FORMAT
       " .pbm file,"
@@ -145,5 +147,5 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   pic_num_row++;
   assert(pic_num_row == num_pixel_deep);
 
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

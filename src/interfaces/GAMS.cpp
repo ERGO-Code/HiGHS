@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* HiGHS link code */
 
@@ -61,7 +64,7 @@ static void gevprint(HighsInt level, const char* msg, void* msgcb_data) {
 
 static void gevlog(HighsLogType type, const char* msg, void* msgcb_data) {
   gevHandle_t gev = (gevHandle_t)msgcb_data;
-  if (type == HighsLogType::INFO)
+  if (type == HighsLogType::kInfo)
     gevLogPChar(gev, msg);
   else
     gevLogStatPChar(gev, msg);
@@ -69,15 +72,15 @@ static void gevlog(HighsLogType type, const char* msg, void* msgcb_data) {
 
 static enum gmoVarEquBasisStatus translateBasisStatus(HighsBasisStatus status) {
   switch (status) {
-    case HighsBasisStatus::BASIC:
+    case HighsBasisStatus::kBasic:
       return gmoBstat_Basic;
-    case HighsBasisStatus::LOWER:
+    case HighsBasisStatus::kLower:
       return gmoBstat_Lower;
-    case HighsBasisStatus::NONBASIC:
+    case HighsBasisStatus::kNonbasic:
     case HighsBasisStatus::SUPER:
-    case HighsBasisStatus::ZERO:
+    case HighsBasisStatus::kZero:
       return gmoBstat_Super;
-    case HighsBasisStatus::UPPER:
+    case HighsBasisStatus::kUpper:
       return gmoBstat_Upper;
   }
   // this should never happen
@@ -87,13 +90,13 @@ static enum gmoVarEquBasisStatus translateBasisStatus(HighsBasisStatus status) {
 static HighsBasisStatus translateBasisStatus(enum gmoVarEquBasisStatus status) {
   switch (status) {
     case gmoBstat_Basic:
-      return HighsBasisStatus::BASIC;
+      return HighsBasisStatus::kBasic;
     case gmoBstat_Lower:
-      return HighsBasisStatus::LOWER;
+      return HighsBasisStatus::kLower;
     case gmoBstat_Super:
       return HighsBasisStatus::SUPER;
     case gmoBstat_Upper:
-      return HighsBasisStatus::UPPER;
+      return HighsBasisStatus::kUpper;
   }
   // this should never happen
   return HighsBasisStatus::SUPER;
@@ -163,9 +166,9 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   gh->lp->colCost_.resize(numCol);
   gmoGetObjVector(gh->gmo, &gh->lp->colCost_[0], NULL);
   if (gmoSense(gh->gmo) == gmoObj_Min)
-    gh->lp->sense_ = ObjSense::MINIMIZE;
+    gh->lp->sense_ = ObjSense::kMinimize;
   else
-    gh->lp->sense_ = ObjSense::MAXIMIZE;
+    gh->lp->sense_ = ObjSense::kMaximize;
   gh->lp->offset_ = gmoObjConst(gh->gmo);
 
   /* row left- and right-hand-side */
@@ -179,11 +182,11 @@ static HighsInt setupProblem(gamshighs_t* gh) {
 
       case gmoequ_G:
         gh->lp->rowLower_[i] = gmoGetRhsOne(gh->gmo, i);
-        gh->lp->rowUpper_[i] = HIGHS_CONST_INF;
+        gh->lp->rowUpper_[i] = kHighsInf;
         break;
 
       case gmoequ_L:
-        gh->lp->rowLower_[i] = -HIGHS_CONST_INF;
+        gh->lp->rowLower_[i] = -kHighsInf;
         gh->lp->rowUpper_[i] = gmoGetRhsOne(gh->gmo, i);
         break;
 
@@ -229,13 +232,13 @@ static HighsInt setupProblem(gamshighs_t* gh) {
     for (HighsInt i = 0; i < numCol; ++i) {
       basis.col_status[i] = translateBasisStatus(
           (enum gmoVarEquBasisStatus)gmoGetVarStatOne(gh->gmo, i));
-      if (basis.col_status[i] == HighsBasisStatus::BASIC) ++nbasic;
+      if (basis.col_status[i] == HighsBasisStatus::kBasic) ++nbasic;
     }
 
     for (HighsInt i = 0; i < numRow; ++i) {
       basis.row_status[i] = translateBasisStatus(
           (enum gmoVarEquBasisStatus)gmoGetEquStatOne(gh->gmo, i));
-      if (basis.row_status[i] == HighsBasisStatus::BASIC) ++nbasic;
+      if (basis.row_status[i] == HighsBasisStatus::kBasic) ++nbasic;
     }
 
     basis.valid_ = nbasic == numRow;
@@ -265,22 +268,22 @@ static HighsInt processSolve(gamshighs_t* gh) {
   // to be written
   bool writesol = false;
   switch (highs->getModelStatus()) {
-    case HighsModelStatus::NOTSET:
-    case HighsModelStatus::LOAD_ERROR:
-    case HighsModelStatus::MODEL_ERROR:
-    case HighsModelStatus::PRESOLVE_ERROR:
-    case HighsModelStatus::SOLVE_ERROR:
-    case HighsModelStatus::POSTSOLVE_ERROR:
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
       gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
       gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
       break;
 
-    case HighsModelStatus::MODEL_EMPTY:
+    case HighsModelStatus::kModelEmpty:
       gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalInfeasible:
       // TODO is there an infeasible solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleGlobal :
       // gmoModelStat_InfeasibleNoSolution);
@@ -288,7 +291,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
+    case HighsModelStatus::kPrimalUnbounded:
       // TODO is there a (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_Unbounded :
       // gmoModelStat_UnboundedNoSolution);
@@ -296,13 +299,13 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       writesol = true;
       break;
 
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       // TODO is there a solution to write and is it feasible?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -310,7 +313,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kReachedTimeLimit:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -318,7 +321,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Resource);
       break;
 
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    case HighsModelStatus::kReachedIterationLimit:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -497,8 +500,8 @@ DllExport HighsInt STDCALL C__hisCallSolver(void* Cptr) {
   gmoObjReformSet(gh->gmo, 1);
   gmoIndexBaseSet(gh->gmo, 0);
   gmoSetNRowPerm(gh->gmo); /* hide =N= rows */
-  gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
-  gmoPinfSet(gh->gmo, HIGHS_CONST_INF);
+  gmoMinfSet(gh->gmo, -kHighsInf);
+  gmoPinfSet(gh->gmo, kHighsInf);
 
   if (setupOptions(gh)) goto TERMINATE;
 
@@ -508,7 +511,7 @@ DllExport HighsInt STDCALL C__hisCallSolver(void* Cptr) {
 
   /* solve the problem */
   status = gh->highs->run();
-  if (status != HighsStatus::OK) goto TERMINATE;
+  if (status != HighsStatus::kOk) goto TERMINATE;
 
   /* pass solution, status, etc back to GMO */
   if (processSolve(gh)) goto TERMINATE;
@@ -539,8 +542,8 @@ DllExport HighsInt STDCALL C__hisModifyProblem(void* Cptr) {
   gmoObjReformSet(gh->gmo, 1);
   gmoIndexBaseSet(gh->gmo, 0);
   gmoSetNRowPerm(gh->gmo); /* hide =N= rows */
-  gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
-  gmoPinfSet(gh->gmo, HIGHS_CONST_INF);
+  gmoMinfSet(gh->gmo, -kHighsInf);
+  gmoPinfSet(gh->gmo, kHighsInf);
 
   HighsInt maxsize = std::max(gmoN(gh->gmo), gmoM(gh->gmo));
 
@@ -582,11 +585,11 @@ DllExport HighsInt STDCALL C__hisModifyProblem(void* Cptr) {
 
       case gmoequ_G:
         array1[i] = rhs;
-        array2[i] = HIGHS_CONST_INF;
+        array2[i] = kHighsInf;
         break;
 
       case gmoequ_L:
-        array1[i] = -HIGHS_CONST_INF;
+        array1[i] = -kHighsInf;
         array2[i] = rhs;
         break;
 

@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/SpeciaLps.h
  * @brief Utilities for tests with special LPs
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_SPECIALPS_H_
 #define SIMPLEX_SPECIALPS_H_
@@ -19,7 +18,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 
-const double inf = HIGHS_CONST_INF;
+const double inf = kHighsInf;
 
 class SpecialLps {
  public:
@@ -35,10 +34,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {3, 5, 6, 2};
-    lp.sense_ = ObjSense::MAXIMIZE;
+    lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 8.83333333333333;
   }
 
@@ -54,10 +53,10 @@ class SpecialLps {
     lp.Astart_ = {0, 1, 2};
     lp.Aindex_ = {0, 1};
     lp.Avalue_ = {1, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 1;
   }
 
@@ -73,10 +72,10 @@ class SpecialLps {
     lp.Astart_ = {0, 3, 5};
     lp.Aindex_ = {0, 1, 2, 0, 1};
     lp.Avalue_ = {2, 1, 1, 1, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -18;
   }
 
@@ -91,10 +90,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 5};
     lp.Aindex_ = {0, 2, 0, 1, 2};
     lp.Avalue_ = {7, 2, -2, 1, -2};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kPrimalInfeasible;
   }
 
   void issue295Lp(HighsLp& lp, HighsModelStatus& require_model_status,
@@ -109,10 +108,10 @@ class SpecialLps {
     lp.Astart_ = {0, 1, 2, 2, 2, 2};
     lp.Aindex_ = {0, 1};
     lp.Avalue_ = {1, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -2;
   }
 
@@ -130,10 +129,10 @@ class SpecialLps {
     lp.Aindex_ = {4, 4, 0, 1, 3, 0, 4, 1, 5, 0, 1, 4};
     lp.Avalue_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
                   -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -1.191;
   }
 
@@ -148,10 +147,10 @@ class SpecialLps {
     lp.Astart_ = {0, 3, 5, 6, 7};
     lp.Aindex_ = {0, 2, 3, 1, 3, 3, 3};
     lp.Avalue_ = {1, 1, 1, 2, 1, 1, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kPrimalInfeasible;
   }
 
   void primalDualInfeasible1Lp(HighsLp& lp,
@@ -166,10 +165,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {1, -1, -1, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kPrimalDualInfeasible;
   }
 
   void primalDualInfeasible2Lp(HighsLp& lp,
@@ -184,10 +183,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {1, -1, -1, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kPrimalDualInfeasible;
   }
 
   void scipLpi2Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
@@ -201,10 +200,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {2, 1, 1, 3};
-    lp.sense_ = ObjSense::MAXIMIZE;
+    lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kPrimalUnbounded;
   }
 
   void scipLpi3Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
@@ -218,10 +217,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {2, 1, 1, 3};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kPrimalInfeasible;
   }
 
   void distillationLp(HighsLp& lp, HighsModelStatus& require_model_status,
@@ -236,10 +235,10 @@ class SpecialLps {
     lp.Astart_ = {0, 3, 6};
     lp.Aindex_ = {0, 1, 2, 0, 1, 2};
     lp.Avalue_ = {2, 3, 2, 2, 4, 1};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 31.2;
   }
 
@@ -255,10 +254,10 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {0.3, 0.7, 0.5, 0.5};
-    lp.sense_ = ObjSense::MINIMIZE;
+    lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
-    lp.orientation_ = MatrixOrientation::COLWISE;
-    require_model_status = HighsModelStatus::OPTIMAL;
+    lp.orientation_ = MatrixOrientation::kColwise;
+    require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -2850;
   }
 
@@ -267,7 +266,7 @@ class SpecialLps {
     blendingLp(lp, require_model_status, optimal_objective);
     for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
       lp.colCost_[iCol] = -lp.colCost_[iCol];
-    lp.sense_ = ObjSense::MAXIMIZE;
+    lp.sense_ = ObjSense::kMaximize;
     optimal_objective = -optimal_objective;
   }
 
@@ -304,7 +303,7 @@ class SpecialLps {
   void reportSolution(Highs& highs, const bool dev_run = false) {
     if (!dev_run) return;
     const HighsInfo& info = highs.getInfo();
-    if (info.primal_status == PrimalDualStatus::STATUS_FEASIBLE_POINT) {
+    if (info.primal_status == kHighsPrimalDualStatusFeasiblePoint) {
       const HighsSolution& solution = highs.getSolution();
       printf("Solution\n");
       printf("Col       Value        Dual\n");

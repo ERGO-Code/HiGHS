@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "io/Filereader.h"
@@ -49,20 +52,20 @@ void interpretFilereaderRetcode(const HighsLogOptions& log_options,
     case FilereaderRetcode::OK:
       break;
     case FilereaderRetcode::FILENOTFOUND:
-      highsLogUser(log_options, HighsLogType::ERROR, "File %s not found\n",
+      highsLogUser(log_options, HighsLogType::kError, "File %s not found\n",
                    filename.c_str());
       break;
     case FilereaderRetcode::PARSERERROR:
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Parser error reading %s\n", filename.c_str());
       break;
     case FilereaderRetcode::NOT_IMPLEMENTED:
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Parser not implemented for %s", filename.c_str());
       break;
     case FilereaderRetcode::TIMEOUT:
-      highsLogUser(log_options, HighsLogType::ERROR, "Parser reached timeout\n",
-                   filename.c_str());
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Parser reached timeout\n", filename.c_str());
       break;
   }
 }

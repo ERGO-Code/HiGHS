@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsDeprecated.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HConfig.h"
 #include "Highs.h"
@@ -82,12 +84,12 @@ const HighsOptions& Highs::getHighsOptions() const { return getOptions(); }
 
 HighsStatus Highs::setHighsLogfile(FILE* logfile) {
   options_.output_flag = false;
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::setHighsOutput(FILE* output) {
   options_.output_flag = false;
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }
 
 const HighsInfo& Highs::getHighsInfo() const { return getInfo(); }

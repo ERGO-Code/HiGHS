@@ -13,22 +13,22 @@ void ekk_solve(Highs& highs, std::string presolve,
   const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL) ==
-          HighsStatus::OK);
+          HighsStatus::kOk);
 
-  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::kOptimal) {
     REQUIRE(special_lps.objectiveOk(info.objective_function_value,
                                     require_optimal_objective, dev_run));
   }
 
-  REQUIRE(highs.resetOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::kOk);
 }
 
 void ekk_distillation(Highs& highs) {
@@ -38,7 +38,7 @@ void ekk_distillation(Highs& highs) {
   HighsModelStatus require_model_status;
   double optimal_objective;
   special_lps.distillationLp(lp, require_model_status, optimal_objective);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   ekk_solve(highs, "on", require_model_status, optimal_objective);
 }
 
@@ -49,7 +49,7 @@ void ekk_blending(Highs& highs) {
   HighsModelStatus require_model_status;
   double optimal_objective;
   special_lps.blendingLp(lp, require_model_status, optimal_objective);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   ekk_solve(highs, "on", require_model_status, optimal_objective);
 }
 
@@ -59,7 +59,7 @@ void ekk_scipLpi3(Highs& highs) {
   HighsLp lp;
   HighsModelStatus require_model_status;
   special_lps.scipLpi3Lp(lp, require_model_status);
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   ekk_solve(highs, "off", require_model_status);
 }
 
@@ -74,12 +74,12 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
     // "/check/instances/adlittle.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
     REQUIRE(highs.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL) ==
-            HighsStatus::OK);
+            HighsStatus::kOk);
     highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED);
-    REQUIRE(highs.run() == HighsStatus::OK);
+    REQUIRE(highs.run() == HighsStatus::kOk);
   } else {
     //    ekk_distillation(highs);
     ekk_blending(highs);

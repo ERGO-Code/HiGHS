@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderMps.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "io/FilereaderMps.h"
 
@@ -29,7 +31,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   // Parse file and return status.
   if (options.mps_parser_type_free) {
     HMpsFF parser{};
-    if (options.time_limit < HIGHS_CONST_INF && options.time_limit > 0)
+    if (options.time_limit < kHighsInf && options.time_limit > 0)
       parser.time_limit = options.time_limit;
 
     FreeFormatParserReturnCode result =
@@ -43,12 +45,12 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       case FreeFormatParserReturnCode::FILENOTFOUND:
         return FilereaderRetcode::FILENOTFOUND;
       case FreeFormatParserReturnCode::FIXED_FORMAT:
-        highsLogUser(options.log_options, HighsLogType::WARNING,
+        highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Free format reader has detected row/col names with "
                      "spaces: switching to fixed format parser\n");
         break;
       case FreeFormatParserReturnCode::TIMEOUT:
-        highsLogUser(options.log_options, HighsLogType::WARNING,
+        highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Free format reader reached time_limit while parsing "
                      "the input file\n");
         return FilereaderRetcode::TIMEOUT;
@@ -64,14 +66,14 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       options.keep_n_rows);
   if (return_code == FilereaderRetcode::OK) setOrientation(model);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has column names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numCol_, model.col_names_, true);
 #endif
   }
   if (namesWithSpaces(model.numRow_, model.row_names_)) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has row names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numRow_, model.row_names_, true);
@@ -83,6 +85,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsLp& model) {
-  assert(model.orientation_ != MatrixOrientation::ROWWISE);
+  assert(model.orientation_ != MatrixOrientation::kRowwise);
   return writeLpAsMPS(options, filename, model);
 }

@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
@@ -37,8 +40,8 @@ class HighsModelObject {
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsModelStatus unscaled_model_status_ = HighsModelStatus::NOTSET;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   HighsSolutionParams solution_params_;
   HighsIterationCounts iteration_counts_;

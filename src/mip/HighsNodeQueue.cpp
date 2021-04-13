@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsNodeQueue.h"
 
@@ -213,7 +216,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
   };
 
   // split the lower bound tree along the bounding value
-  lowerroot = highs_splay(std::make_tuple(upper_limit, -HIGHS_CONST_INF, 0),
+  lowerroot = highs_splay(std::make_tuple(upper_limit, -kHighsInf, 0),
                           lowerroot, get_left, get_right, get_key);
   HighsInt delroot;
 
@@ -294,9 +297,8 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
                            -int(nodes[n].domchgstack.size()), n);
   };
 
-  estimroot =
-      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_I_INF, 0),
-                  estimroot, get_left, get_right, get_key);
+  estimroot = highs_splay(std::make_tuple(-kHighsInf, -kHighsIInf, 0),
+                          estimroot, get_left, get_right, get_key);
   HighsInt bestestimnode = estimroot;
 
   unlink(bestestimnode);
@@ -311,9 +313,8 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
     return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
   };
 
-  lowerroot =
-      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_INF, 0),
-                  lowerroot, get_left, get_right, get_key);
+  lowerroot = highs_splay(std::make_tuple(-kHighsInf, -kHighsInf, 0), lowerroot,
+                          get_left, get_right, get_key);
   HighsInt bestboundnode = lowerroot;
 
   unlink(bestboundnode);
@@ -354,7 +355,7 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
   }
 
   HighsInt bestNode = -1;
-  double bestNodeCriterion = HIGHS_CONST_INF;
+  double bestNodeCriterion = kHighsInf;
   for (auto i = start; i != end; ++i) {
     double nodeCriterion = ESTIMATE_WEIGHT * nodes[i->second].estimate +
                            LOWERBOUND_WEIGHT * nodes[i->second].lower_bound;
@@ -378,7 +379,7 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
 }
 
 double HighsNodeQueue::getBestLowerBound() {
-  if (lowerroot == -1) return HIGHS_CONST_INF;
+  if (lowerroot == -1) return kHighsInf;
 
   auto get_left = [&](HighsInt n) -> HighsInt& { return nodes[n].leftlower; };
   auto get_right = [&](HighsInt n) -> HighsInt& { return nodes[n].rightlower; };
@@ -386,8 +387,7 @@ double HighsNodeQueue::getBestLowerBound() {
     return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
   };
 
-  lowerroot =
-      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_INF, 0),
-                  lowerroot, get_left, get_right, get_key);
+  lowerroot = highs_splay(std::make_tuple(-kHighsInf, -kHighsInf, 0), lowerroot,
+                          get_left, get_right, get_key);
   return nodes[lowerroot].lower_bound;
 }

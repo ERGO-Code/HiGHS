@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HFactor.h
  * @brief Basis matrix factorization, update and solves for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef HFACTOR_H_
 #define HFACTOR_H_
@@ -141,7 +143,7 @@ class HFactor {
       HighsInt* baseIndex,     //!< Indices of basic variables
       double pivot_threshold = default_pivot_threshold,  //!< Pivoting threshold
       double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
-      HighsInt highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
+      HighsInt highs_debug_level = kHighsDebugLevelMin,
       bool output_flag = false, FILE* logfile = NULL,
       bool log_to_console = true, int log_dev_level = 0,
       const bool use_original_HFactor_logic = true,

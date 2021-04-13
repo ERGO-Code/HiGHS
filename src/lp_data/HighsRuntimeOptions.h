@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef LP_DATA_HIGHSRUNTIMEOPTIONS_H_
@@ -108,7 +111,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     }
 
   } catch (const cxxopts::OptionException& e) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());
     return false;
   }

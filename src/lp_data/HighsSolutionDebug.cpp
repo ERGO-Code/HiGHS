@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolutionDebug.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsSolutionDebug.h"
 
@@ -33,16 +35,16 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsBasis& basis) {
   // Cheap analysis of a HiGHS basis, checking vector sizes, numbers
   // of basic/nonbasic variables
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   if (!basis.valid_) return return_status;
   bool consistent = isBasisConsistent(lp, basis);
   if (!consistent) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "HiGHS basis inconsistency\n");
     assert(consistent);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -50,15 +52,15 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp lp,
                                      const HighsBasis& basis) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   bool right_size = isBasisRightSize(lp, basis);
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "HiGHS basis size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -66,15 +68,15 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
 HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
                                         const HighsLp lp,
                                         const HighsSolution& solution) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   bool right_size = isSolutionRightSize(lp, solution);
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "HiGHS solution size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -124,13 +126,13 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
                                          const HighsSolution& solution) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options, assuming no knowledge of solution parameters or model status
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
 
   // Check that there is a solution and valid basis to use
   if (debugHaveBasisAndSolutionData(lp, basis, solution) !=
-      HighsDebugStatus::OK)
-    return HighsDebugStatus::LOGICAL_ERROR;
+      HighsDebugStatus::kOk)
+    return HighsDebugStatus::kLogicalError;
 
   // Extract the solution_params from options
   HighsSolutionParams solution_params;
@@ -148,10 +150,10 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
       options, lp, basis, solution, check_primal_objective_value,
       check_dual_objective_value, solution_params, primal_dual_errors);
 
-  HighsModelStatus model_status = HighsModelStatus::NOTSET;
+  HighsModelStatus model_status = HighsModelStatus::kNotset;
   if (solution_params.num_primal_infeasibility == 0 &&
       solution_params.num_dual_infeasibility == 0)
-    model_status = HighsModelStatus::OPTIMAL;
+    model_status = HighsModelStatus::kOptimal;
 
   debugReportHighsBasicSolution(message, options, solution_params,
                                 model_status);
@@ -165,21 +167,21 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsModelStatus model_status) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // solution_params
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
   // No basis to test if model status corresponds to warning or error
-  if (highsStatusFromHighsModelStatus(model_status) != HighsStatus::OK)
-    return HighsDebugStatus::OK;
+  if (highsStatusFromHighsModelStatus(model_status) != HighsStatus::kOk)
+    return HighsDebugStatus::kOk;
 
   // No basis to test if model status is primal infeasible or unbounded
-  if (model_status == HighsModelStatus::PRIMAL_INFEASIBLE ||
-      model_status == HighsModelStatus::PRIMAL_UNBOUNDED)
-    return HighsDebugStatus::OK;
+  if (model_status == HighsModelStatus::kPrimalInfeasible ||
+      model_status == HighsModelStatus::kPrimalUnbounded)
+    return HighsDebugStatus::kOk;
 
   // Check that there is a solution and valid basis to use
   if (debugHaveBasisAndSolutionData(lp, basis, solution) !=
-      HighsDebugStatus::OK)
-    return HighsDebugStatus::LOGICAL_ERROR;
+      HighsDebugStatus::kOk)
+    return HighsDebugStatus::kLogicalError;
 
   HighsSolutionParams check_solution_params;
   double check_primal_objective_value;
@@ -215,10 +217,10 @@ HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsBasis& basis,
                                                const HighsSolution& solution) {
   if (!isSolutionRightSize(lp, solution))
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   if (!isBasisRightSize(lp, basis) && basis.valid_)
-    return HighsDebugStatus::LOGICAL_ERROR;
-  return HighsDebugStatus::OK;
+    return HighsDebugStatus::kLogicalError;
+  return HighsDebugStatus::kOk;
 }
 
 void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
@@ -303,7 +305,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     double dual = solution.col_dual[iCol];
     HighsBasisStatus status = basis.col_status[iCol];
     primal_objective_value += lp.colCost_[iCol] * value;
-    if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    if (status != HighsBasisStatus::kBasic)
+      dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
     bool report = false;
@@ -320,7 +323,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
     sum_primal_infeasibility += primal_infeasibility;
-    if (status == HighsBasisStatus::BASIC) {
+    if (status == HighsBasisStatus::kBasic) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
         num_nonzero_basic_duals++;
@@ -337,9 +340,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
-    report =
-        options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
-        (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
+    report = options.highs_debug_level > kHighsDebugLevelExpensive ||
+             (options.highs_debug_level == kHighsDebugLevelExpensive && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -365,7 +367,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       dual_activities[iCol] += solution.row_dual[iRow] * Avalue;
     }
   }
-  bool report = options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE;
+  bool report = options.highs_debug_level > kHighsDebugLevelExpensive;
   header_written = false;
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     double primal_residual_error =
@@ -415,7 +417,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     double value = solution.row_value[iRow];
     double dual = -solution.row_dual[iRow];
     HighsBasisStatus status = basis.row_status[iRow];
-    if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    if (status != HighsBasisStatus::kBasic)
+      dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
     bool report = false;
@@ -432,7 +435,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
     sum_primal_infeasibility += primal_infeasibility;
-    if (status == HighsBasisStatus::BASIC) {
+    if (status == HighsBasisStatus::kBasic) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
         num_nonzero_basic_duals++;
@@ -449,9 +452,8 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
-    report =
-        options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
-        (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
+    report = options.highs_debug_level > kHighsDebugLevelExpensive ||
+             (options.highs_debug_level == kHighsDebugLevelExpensive && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -494,7 +496,7 @@ bool debugBasicSolutionVariable(
   }
   //  primal_infeasibility = std::max(primal_residual, 0.);
   // ToDo Strange: nonbasic_flag seems to be inverted???
-  if (status == HighsBasisStatus::BASIC) {
+  if (status == HighsBasisStatus::kBasic) {
     // Basic variable: look for primal infeasibility
     if (count) num_basic_var++;
     if (primal_infeasibility > primal_feasibility_tolerance) {
@@ -584,19 +586,18 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors) {
   std::string value_adjective;
   HighsLogType report_level;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  const bool force_report =
-      options.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  const bool force_report = options.highs_debug_level >= kHighsDebugLevelCostly;
   if (primal_dual_errors.num_nonzero_basic_duals) {
     value_adjective = "Error";
-    report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    report_level = HighsLogType::kError;
+    return_status = HighsDebugStatus::kLogicalError;
   } else {
     value_adjective = "";
-    report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    report_level = HighsLogType::kVerbose;
+    return_status = HighsDebugStatus::kOk;
   }
-  if (force_report) report_level = HighsLogType::INFO;
+  if (force_report) report_level = HighsLogType::kInfo;
   highsLogDev(
       options.log_options, report_level,
       "PrDuErrors : %-9s Nonzero basic duals:       num = %2" HIGHSINT_FORMAT
@@ -608,14 +609,14 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 
   if (primal_dual_errors.num_off_bound_nonbasic) {
     value_adjective = "Error";
-    report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    report_level = HighsLogType::kError;
+    return_status = HighsDebugStatus::kLogicalError;
   } else {
     value_adjective = "";
-    report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    report_level = HighsLogType::kVerbose;
+    return_status = HighsDebugStatus::kOk;
   }
-  if (force_report) report_level = HighsLogType::INFO;
+  if (force_report) report_level = HighsLogType::kInfo;
   highsLogDev(
       options.log_options, report_level,
       "PrDuErrors : %-9s Off-bound nonbasic values: num = %2" HIGHSINT_FORMAT
@@ -627,18 +628,18 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 
   if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    report_level = HighsLogType::kError;
+    return_status = HighsDebugStatus::kError;
   } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = HighsLogType::DETAILED;
-    return_status = HighsDebugStatus::WARNING;
+    report_level = HighsLogType::kDetailed;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "";
-    report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    report_level = HighsLogType::kVerbose;
+    return_status = HighsDebugStatus::kOk;
   }
-  if (force_report) report_level = HighsLogType::INFO;
+  if (force_report) report_level = HighsLogType::kInfo;
   highsLogDev(
       options.log_options, report_level,
       "PrDuErrors : %-9s Primal residual:           num = %2" HIGHSINT_FORMAT
@@ -650,18 +651,18 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 
   if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    report_level = HighsLogType::kError;
+    return_status = HighsDebugStatus::kError;
   } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = HighsLogType::DETAILED;
-    return_status = HighsDebugStatus::WARNING;
+    report_level = HighsLogType::kDetailed;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "";
-    report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    report_level = HighsLogType::kVerbose;
+    return_status = HighsDebugStatus::kOk;
   }
-  if (force_report) report_level = HighsLogType::INFO;
+  if (force_report) report_level = HighsLogType::kInfo;
   highsLogDev(
       options.log_options, report_level,
       "PrDuErrors : %-9s Dual residual:             num = %2" HIGHSINT_FORMAT
@@ -677,7 +678,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 HighsDebugStatus debugCompareSolutionParams(
     const HighsOptions& options, const HighsSolutionParams& solution_params0,
     const HighsSolutionParams& solution_params1) {
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   return_status =
       debugWorseStatus(debugCompareSolutionObjectiveParams(
                            options, solution_params0, solution_params1),
@@ -705,7 +706,7 @@ HighsDebugStatus debugCompareSolutionObjectiveParams(
 HighsDebugStatus debugCompareSolutionStatusParams(
     const HighsOptions& options, const HighsSolutionParams& solution_params0,
     const HighsSolutionParams& solution_params1) {
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   return_status = debugWorseStatus(
       debugCompareSolutionParamInteger("primal_status", options,
                                        solution_params0.primal_status,
@@ -722,7 +723,7 @@ HighsDebugStatus debugCompareSolutionStatusParams(
 HighsDebugStatus debugCompareSolutionInfeasibilityParams(
     const HighsOptions& options, const HighsSolutionParams& solution_params0,
     const HighsSolutionParams& solution_params1) {
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   return_status =
       debugWorseStatus(debugCompareSolutionParamInteger(
                            "num_primal_infeasibility", options,
@@ -762,22 +763,22 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
                                                 const HighsOptions& options,
                                                 const double v0,
                                                 const double v1) {
-  if (v0 == v1) return HighsDebugStatus::OK;
+  if (v0 == v1) return HighsDebugStatus::kOk;
   double delta = highsRelativeDifference(v0, v1);
   std::string value_adjective;
   HighsLogType report_level;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   if (delta > excessive_relative_solution_param_error) {
     value_adjective = "Excessive";
-    report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    report_level = HighsLogType::kError;
+    return_status = HighsDebugStatus::kError;
   } else if (delta > large_relative_solution_param_error) {
     value_adjective = "Large";
-    report_level = HighsLogType::DETAILED;
-    return_status = HighsDebugStatus::WARNING;
+    report_level = HighsLogType::kDetailed;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "OK";
-    report_level = HighsLogType::VERBOSE;
+    report_level = HighsLogType::kVerbose;
   }
   highsLogDev(options.log_options, report_level,
               "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
@@ -789,20 +790,20 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
                                                   const HighsInt v0,
                                                   const HighsInt v1) {
-  if (v0 == v1) return HighsDebugStatus::OK;
-  highsLogDev(options.log_options, HighsLogType::ERROR,
+  if (v0 == v1) return HighsDebugStatus::kOk;
+  highsLogDev(options.log_options, HighsLogType::kError,
               "SolutionPar:  difference of %" HIGHSINT_FORMAT " for %s\n",
               v1 - v0, name.c_str());
-  return HighsDebugStatus::LOGICAL_ERROR;
+  return HighsDebugStatus::kLogicalError;
 }
 
 void debugReportHighsBasicSolution(const string message,
                                    const HighsOptions& options,
                                    const HighsSolutionParams& solution_params,
                                    const HighsModelStatus model_status) {
-  highsLogDev(options.log_options, HighsLogType::INFO,
+  highsLogDev(options.log_options, HighsLogType::kInfo,
               "\nHiGHS basic solution: %s\n", message.c_str());
-  highsLogDev(options.log_options, HighsLogType::INFO,
+  highsLogDev(options.log_options, HighsLogType::kInfo,
               "Infeas:                Pr %" HIGHSINT_FORMAT
               "(Max %.4g, Sum %.4g); Du %" HIGHSINT_FORMAT
               "(Max %.4g, "

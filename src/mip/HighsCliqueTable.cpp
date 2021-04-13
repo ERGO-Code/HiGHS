@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsCliqueTable.h"
 
@@ -791,7 +794,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
         }
       }
     }
-    if (!hasNewEdge && origin == HIGHS_CONST_I_INF) return;
+    if (!hasNewEdge && origin == kHighsIInf) return;
     CliqueVar* unfixedend =
         std::remove_if(cliquevars, cliquevars + numcliquevars,
                        [&](CliqueVar v) { return globaldom.isFixed(v.col); });
@@ -804,7 +807,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
 }
 
 void HighsCliqueTable::removeClique(HighsInt cliqueid) {
-  if (cliques[cliqueid].origin != HIGHS_CONST_I_INF)
+  if (cliques[cliqueid].origin != kHighsIInf)
     deletedrows.push_back(cliques[cliqueid].origin);
 
   HighsInt start = cliques[cliqueid].start;
@@ -1002,10 +1005,10 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     if (globaldom.isBinary(inds[i])) ++nbin;
 
     if (vals[i] > 0) {
-      if (globaldom.colLower_[inds[i]] == -HIGHS_CONST_INF) return;
+      if (globaldom.colLower_[inds[i]] == -kHighsInf) return;
       minact += vals[i] * globaldom.colLower_[inds[i]];
     } else {
-      if (globaldom.colUpper_[inds[i]] == HIGHS_CONST_INF) return;
+      if (globaldom.colUpper_[inds[i]] == kHighsInf) return;
       minact += vals[i] * globaldom.colUpper_[inds[i]];
     }
   }
@@ -1197,7 +1200,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       entries[col] += val;
     }
 
-    if (mipsolver.rowUpper(i) != HIGHS_CONST_INF) {
+    if (mipsolver.rowUpper(i) != kHighsInf) {
       rhs = mipsolver.rowUpper(i) - offset;
       inds.clear();
       vals.clear();
@@ -1214,7 +1217,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         if (globaldom.isBinary(col)) ++nbin;
 
         if (val < 0) {
-          if (globaldom.colUpper_[col] == HIGHS_CONST_INF) {
+          if (globaldom.colUpper_[col] == kHighsInf) {
             freevar = true;
             break;
           }
@@ -1224,7 +1227,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
           complementation.push_back(-1);
           rhs -= val * globaldom.colUpper_[col];
         } else {
-          if (globaldom.colLower_[col] == -HIGHS_CONST_INF) {
+          if (globaldom.colLower_[col] == -kHighsInf) {
             freevar = true;
             break;
           }
@@ -1239,14 +1242,14 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       if (!freevar && nbin != 0) {
         // printf("extracing cliques from this row:\n");
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
-        //         -HIGHS_CONST_INF, rhs);
+        //         -kHighsInf, rhs);
         extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
                        clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
       }
     }
 
-    if (mipsolver.rowLower(i) != -HIGHS_CONST_INF) {
+    if (mipsolver.rowLower(i) != -kHighsInf) {
       rhs = -mipsolver.rowLower(i) + offset;
       inds.clear();
       vals.clear();
@@ -1262,7 +1265,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
         if (globaldom.isBinary(col)) ++nbin;
 
         if (val < 0) {
-          if (globaldom.colUpper_[col] == HIGHS_CONST_INF) {
+          if (globaldom.colUpper_[col] == kHighsInf) {
             freevar = true;
             break;
           }
@@ -1272,7 +1275,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
           complementation.push_back(-1);
           rhs -= val * globaldom.colUpper_[col];
         } else {
-          if (globaldom.colLower_[col] == -HIGHS_CONST_INF) {
+          if (globaldom.colLower_[col] == -kHighsInf) {
             freevar = true;
             break;
           }
@@ -1287,7 +1290,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
       if (!freevar && nbin != 0) {
         // printf("extracing cliques from this row:\n");
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
-        //         -HIGHS_CONST_INF, rhs);
+        //         -kHighsInf, rhs);
         extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
                        clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
@@ -1336,7 +1339,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
     if (globaldom.isBinary(col)) ++nbin;
 
     if (val < 0) {
-      if (globaldom.colUpper_[col] == HIGHS_CONST_INF) {
+      if (globaldom.colUpper_[col] == kHighsInf) {
         freevar = true;
         break;
       }
@@ -1346,7 +1349,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
       complementation.push_back(-1);
       rhs -= val * globaldom.colUpper_[col];
     } else {
-      if (globaldom.colLower_[col] == -HIGHS_CONST_INF) {
+      if (globaldom.colLower_[col] == -kHighsInf) {
         freevar = true;
         break;
       }
@@ -1363,7 +1366,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
 
     HighsInt nfixed = 0;
     for (HighsInt i = 0; i != len; ++i) {
-      if (mipsolver.variableType(inds[i]) != HighsVarType::INTEGER) continue;
+      if (mipsolver.variableType(inds[i]) != HighsVarType::kInteger) continue;
       if (vals[i] <= rhs + mipsolver.mipdata_->feastol) continue;
       if (globaldom.isFixed(inds[i])) continue;
 
@@ -1377,7 +1380,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
 
     // printf("extracing cliques from this row:\n");
     // printRow(globaldom, inds.data(), vals.data(), inds.size(),
-    //         -HIGHS_CONST_INF, rhs);
+    //         -kHighsInf, rhs);
     if (nbin != 0) {
       extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
                      clique, mipsolver.mipdata_->feastol);
@@ -1565,7 +1568,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
       } else {
         HighsInt nremoved = 0;
         HighsInt firstremovable = -1;
-        HighsInt origin = HIGHS_CONST_I_INF;
+        HighsInt origin = kHighsIInf;
         for (HighsInt cliqueid : cliquehitinds) {
           HighsInt hits = cliquehits[cliqueid];
           cliquehits[cliqueid] = 0;
@@ -1590,8 +1593,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
               firstremovable = cliqueid;
             } else {
               ++nremoved;
-              if (cliques[cliqueid].origin != HIGHS_CONST_I_INF) {
-                cliques[cliqueid].origin = HIGHS_CONST_I_INF;
+              if (cliques[cliqueid].origin != kHighsIInf) {
+                cliques[cliqueid].origin = kHighsIInf;
                 origin = -1;
               }
               removeClique(cliqueid);
@@ -1600,8 +1603,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
         }
 
         if (nremoved != 0) {
-          if (cliques[firstremovable].origin != HIGHS_CONST_I_INF) {
-            cliques[firstremovable].origin = HIGHS_CONST_I_INF;
+          if (cliques[firstremovable].origin != kHighsIInf) {
+            cliques[firstremovable].origin = kHighsIInf;
             origin = -1;
           }
           removeClique(firstremovable);
@@ -1795,8 +1798,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
   for (HighsInt k = 0; k != numcliqueslots; ++k) {
     if (cliques[k].start == -1) continue;
-    if (!cliques[k].equality && cliques[k].origin == HIGHS_CONST_I_INF)
-      continue;
+    if (!cliques[k].equality && cliques[k].origin == kHighsIInf) continue;
 
     HighsInt numclqvars = cliques[k].end - cliques[k].start;
     assert(numclqvars != 0);
@@ -1878,7 +1880,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
         vertexInfeasible(globaldomain, v.col, v.val);
     } else {
       HighsInt originrow = cliques[k].origin;
-      cliques[k].origin = HIGHS_CONST_I_INF;
+      cliques[k].origin = kHighsIInf;
 
       for (CliqueVar v : extensionvars)
         cliqueextensions.emplace_back(originrow, v);
@@ -1948,7 +1950,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
 
       if (extensionvars.size() > 1)
         doAddClique(extensionvars.data(), extensionvars.size(), false,
-                    HIGHS_CONST_I_INF);
+                    kHighsIInf);
     }
 
     extensionvars.clear();
@@ -1968,7 +1970,7 @@ void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
       HighsInt col = orig2reducedcol[cliqueentries[k].col];
 
       if (col == -1 || !globaldomain.isBinary(col))
-        cliqueentries[k].col = HIGHS_CONST_I_INF;
+        cliqueentries[k].col = kHighsIInf;
       else
         cliqueentries[k].col = col;
     }
@@ -1976,14 +1978,14 @@ void HighsCliqueTable::rebuild(HighsInt ncols, const HighsDomain& globaldomain,
     auto newend =
         std::remove_if(cliqueentries.begin() + cliques[i].start,
                        cliqueentries.begin() + cliques[i].end,
-                       [](CliqueVar v) { return v.col == HIGHS_CONST_I_INF; });
+                       [](CliqueVar v) { return v.col == kHighsIInf; });
     HighsInt numvars = newend - (cliqueentries.begin() + cliques[i].start);
     // since we do not know how variables in the clique that have been deleted
     // are replaced (i.e. are they fixed to 0 or 1, or substituted) we relax
     // them out which means the equality status needs to be set to false
     if (numvars >= 2)
       newCliqueTable.doAddClique(&cliqueentries[cliques[i].start], numvars,
-                                 false, HIGHS_CONST_I_INF);
+                                 false, kHighsIInf);
   }
 
   *this = std::move(newCliqueTable);
@@ -2000,8 +2002,7 @@ void HighsCliqueTable::buildFrom(const HighsCliqueTable& init) {
     HighsInt numvars = init.cliques[i].end - init.cliques[i].start;
 
     newCliqueTable.doAddClique(&init.cliqueentries[init.cliques[i].start],
-                               numvars, init.cliques[i].equality,
-                               HIGHS_CONST_I_INF);
+                               numvars, init.cliques[i].equality, kHighsIInf);
   }
 
   newCliqueTable.colsubstituted = init.colsubstituted;

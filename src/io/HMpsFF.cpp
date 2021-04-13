@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "io/HMpsFF.h"
@@ -246,11 +249,11 @@ HMpsFF::parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 
     // Interpret key being MAX or MIN
     if (key == HMpsFF::parsekey::MAX) {
-      objSense = ObjSense::MAXIMIZE;
+      objSense = ObjSense::kMaximize;
       continue;
     }
     if (key == HMpsFF::parsekey::MIN) {
-      objSense = ObjSense::MINIMIZE;
+      objSense = ObjSense::kMinimize;
       continue;
     }
     // start of new section?
@@ -286,7 +289,7 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     if (key != HMpsFF::parsekey::NONE) {
       numRow = int(nrows);
       if (!hasobj) {
-        highsLogUser(log_options, HighsLogType::WARNING,
+        highsLogUser(log_options, HighsLogType::kWarning,
                      "No objective row found\n");
         rowname2idx.emplace("artificial_empty_objective", -1);
       };
@@ -295,14 +298,14 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
 
     if (strline[start] == 'G') {
       rowLower.push_back(0.0);
-      rowUpper.push_back(HIGHS_CONST_INF);
+      rowUpper.push_back(kHighsInf);
       row_type.push_back(boundtype::GE);
     } else if (strline[start] == 'E') {
       rowLower.push_back(0.0);
       rowUpper.push_back(0.0);
       row_type.push_back(boundtype::EQ);
     } else if (strline[start] == 'L') {
-      rowLower.push_back(-HIGHS_CONST_INF);
+      rowLower.push_back(-kHighsInf);
       rowUpper.push_back(0.0);
       row_type.push_back(boundtype::LE);
     } else if (strline[start] == 'N') {
@@ -459,13 +462,13 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
 
       // Mark the column as integer and binary, according to whether
       // the integral_cols flag is set
-      col_integrality.push_back(integral_cols ? HighsVarType::INTEGER
-                                              : HighsVarType::CONTINUOUS);
+      col_integrality.push_back(integral_cols ? HighsVarType::kInteger
+                                              : HighsVarType::kContinuous);
       col_binary.push_back(integral_cols);
 
       // initialize with default bounds
       colLower.push_back(0.0);
-      colUpper.push_back(HIGHS_CONST_INF);
+      colUpper.push_back(kHighsInf);
     }
 
     assert(ncols > 0);
@@ -476,14 +479,14 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "No coefficient given for column %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      highsLogUser(log_options, HighsLogType::WARNING,
+      highsLogUser(log_options, HighsLogType::kWarning,
                    "COLUMNS section contains row %s not in ROWS section\n",
                    marker.c_str());
     } else {
@@ -498,7 +501,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       // parse second coefficient
       marker = first_word(strline, end);
       if (word == "") {
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "No coefficient given for column %s\n", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
@@ -515,7 +518,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
         highsLogUser(
-            log_options, HighsLogType::WARNING,
+            log_options, HighsLogType::kWarning,
             "COLUMNS section contains row %s not in ROWS section: ignored\n",
             marker.c_str());
         continue;
@@ -606,7 +609,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "No bound given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
@@ -625,7 +628,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
         word = first_word(strline, end_marker);
         end = first_word_end(strline, end_marker);
         if (word == "") {
-          highsLogUser(log_options, HighsLogType::ERROR,
+          highsLogUser(log_options, HighsLogType::kError,
                        "No bound given for SIF row %s\n", marker.c_str());
           return HMpsFF::parsekey::FAIL;
         }
@@ -634,7 +637,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     }
 
     if (mit == rowname2idx.end()) {
-      highsLogUser(log_options, HighsLogType::WARNING,
+      highsLogUser(log_options, HighsLogType::kWarning,
                    "RHS section contains row %s not in ROWS section: ignored\n",
                    marker.c_str());
     } else {
@@ -647,7 +650,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       // parse second coefficient
       marker = first_word(strline, end);
       if (word == "") {
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "No coefficient given for rhs of row %s\n",
                      marker.c_str());
         return HMpsFF::parsekey::FAIL;
@@ -665,7 +668,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
         highsLogUser(
-            log_options, HighsLogType::WARNING,
+            log_options, HighsLogType::kWarning,
             "RHS section contains row %s not in ROWS section: ignored\n",
             marker.c_str());
         continue;
@@ -727,27 +730,27 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     if (key != parsekey::NONE) {
       if (num_mi)
         highsLogUser(
-            log_options, HighsLogType::INFO,
+            log_options, HighsLogType::kInfo,
             "Number of MI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_mi);
       if (num_pl)
         highsLogUser(
-            log_options, HighsLogType::INFO,
+            log_options, HighsLogType::kInfo,
             "Number of PL entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_pl);
       if (num_bv)
         highsLogUser(
-            log_options, HighsLogType::INFO,
+            log_options, HighsLogType::kInfo,
             "Number of BV entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_bv);
       if (num_li)
         highsLogUser(
-            log_options, HighsLogType::INFO,
+            log_options, HighsLogType::kInfo,
             "Number of LI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_li);
       if (num_ui)
         highsLogUser(
-            log_options, HighsLogType::INFO,
+            log_options, HighsLogType::kInfo,
             "Number of UI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_ui);
       return key;
@@ -820,7 +823,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
       highsLogUser(
-          log_options, HighsLogType::WARNING,
+          log_options, HighsLogType::kWarning,
           "BOUNDS section contains col %s not in COLS section: ignored\n",
           marker.c_str());
       continue;
@@ -836,12 +839,12 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       colNames.push_back(colname);
 
       // Mark the column as continuous and non-binary
-      col_integrality.push_back(HighsVarType::CONTINUOUS);
+      col_integrality.push_back(HighsVarType::kContinuous);
       col_binary.push_back(false);
 
       // initialize with default bounds
       colLower.push_back(0.0);
-      colUpper.push_back(HIGHS_CONST_INF);
+      colUpper.push_back(kHighsInf);
       numCol++;
     }
     if (isdefaultbound) {
@@ -850,7 +853,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       // binary: BV
       {
         if (!islb || !isub) {
-          highsLogUser(log_options, HighsLogType::ERROR,
+          highsLogUser(log_options, HighsLogType::kError,
                        "BV row %s but [islb, isub] = [%1" HIGHSINT_FORMAT
                        ", %1" HIGHSINT_FORMAT "]\n",
                        marker.c_str(), islb, isub);
@@ -858,13 +861,13 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
           return HMpsFF::parsekey::FAIL;
         }
         // Mark the column as integer and binary
-        col_integrality[colidx] = HighsVarType::INTEGER;
+        col_integrality[colidx] = HighsVarType::kInteger;
         col_binary[colidx] = true;
       } else {
         // continuous: MI, PL or FR
         col_binary[colidx] = false;
-        if (islb) colLower[colidx] = -HIGHS_CONST_INF;
-        if (isub) colUpper[colidx] = HIGHS_CONST_INF;
+        if (islb) colLower[colidx] = -kHighsInf;
+        if (isub) colUpper[colidx] = kHighsInf;
       }
       continue;
     }
@@ -875,7 +878,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "No bound given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
@@ -885,11 +888,11 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
       HighsInt i_value = static_cast<HighsInt>(value);
       double dl = value - i_value;
       if (dl)
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "Bound for LI/UI row %s is %g: not integer\n",
                      marker.c_str(), value);
       // Bound marker LI or UI defines the column as integer
-      col_integrality[colidx] = HighsVarType::INTEGER;
+      col_integrality[colidx] = HighsVarType::kInteger;
     }
     // Column is not binary by default
     col_binary[colidx] = false;
@@ -917,13 +920,13 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
   auto addrhs = [this](double val, HighsInt& rowidx) {
     if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
         row_type[rowidx] == boundtype::LE) {
-      assert(rowUpper.at(rowidx) < HIGHS_CONST_INF);
+      assert(rowUpper.at(rowidx) < kHighsInf);
       rowLower.at(rowidx) = rowUpper.at(rowidx) - fabs(val);
     }
 
     else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
              row_type[rowidx] == boundtype::GE) {
-      assert(rowLower.at(rowidx) > (-HIGHS_CONST_INF));
+      assert(rowLower.at(rowidx) > (-kHighsInf));
       rowUpper.at(rowidx) = rowLower.at(rowidx) + fabs(val);
     }
   };
@@ -962,7 +965,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "No range given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
@@ -970,7 +973,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
       highsLogUser(
-          log_options, HighsLogType::WARNING,
+          log_options, HighsLogType::kWarning,
           "RANGES section contains row %s not in ROWS    section: ignored\n",
           marker.c_str());
       continue;
@@ -990,7 +993,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       end = first_word_end(strline, end_marker);
 
       if (word == "") {
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "No range given for row %s\n", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
@@ -998,7 +1001,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
         highsLogUser(
-            log_options, HighsLogType::WARNING,
+            log_options, HighsLogType::kWarning,
             "RANGES section contains row %s not in ROWS    section: ignored\n",
             marker.c_str());
         continue;
@@ -1009,7 +1012,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
       addrhs(value, rowidx);
 
       if (!is_end(strline, end)) {
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "Unknown specifiers in RANGES section for row %s\n",
                      marker.c_str());
         return HMpsFF::parsekey::FAIL;

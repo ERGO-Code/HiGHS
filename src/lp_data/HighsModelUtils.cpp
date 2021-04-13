@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsUtils.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "lp_data/HighsModelUtils.h"
@@ -58,31 +60,31 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "Analysing %" HIGHSINT_FORMAT " %s bounds\n", numBd, message);
   if (numFr > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "   Free:  %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numFr, (100 * numFr) / numBd);
   if (numLb > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "   LB:    %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numLb, (100 * numLb) / numBd);
   if (numUb > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "   UB:    %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numUb, (100 * numUb) / numBd);
   if (numBx > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "   Boxed: %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numBx, (100 * numBx) / numBd);
   if (numFx > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "   Fixed: %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
                 numFx, (100 * numFx) / numBd);
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "grep_CharMl,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
               ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
               ",%" HIGHSINT_FORMAT "\n",
@@ -92,23 +94,23 @@ void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
 std::string statusToString(const HighsBasisStatus status, const double lower,
                            const double upper) {
   switch (status) {
-    case HighsBasisStatus::LOWER:
+    case HighsBasisStatus::kLower:
       if (lower == upper) {
         return "FX";
       } else {
         return "LB";
       }
       break;
-    case HighsBasisStatus::BASIC:
+    case HighsBasisStatus::kBasic:
       return "BS";
       break;
-    case HighsBasisStatus::UPPER:
+    case HighsBasisStatus::kUpper:
       return "UB";
       break;
-    case HighsBasisStatus::ZERO:
+    case HighsBasisStatus::kZero:
       return "FR";
       break;
-    case HighsBasisStatus::NONBASIC:
+    case HighsBasisStatus::kNonbasic:
       return "NB";
       break;
   }
@@ -213,7 +215,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
     // Construct names, either because they are empty names, or
     // because the existing names are too long
 
-    highsLogUser(log_options, HighsLogType::WARNING,
+    highsLogUser(log_options, HighsLogType::kWarning,
                  "There are empty or excessively-long %s names: using "
                  "constructed names with prefix %s\n",
                  name_type.c_str(), name_prefix.c_str());
@@ -226,29 +228,29 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
   // Find the final maximum name length
   max_name_length = maxNameLength(num_name, names);
   // Can't have names with spaces and more than 8 characters
-  if (max_name_length > 8 && names_with_spaces) return HighsStatus::Error;
-  if (construct_names) return HighsStatus::Warning;
-  return HighsStatus::OK;
+  if (max_name_length > 8 && names_with_spaces) return HighsStatus::kError;
+  if (construct_names) return HighsStatus::kWarning;
+  return HighsStatus::kOk;
 }
 
 HighsBasisStatus checkedVarHighsNonbasicStatus(
     const HighsBasisStatus ideal_status, const double lower,
     const double upper) {
   HighsBasisStatus checked_status;
-  if (ideal_status == HighsBasisStatus::LOWER ||
-      ideal_status == HighsBasisStatus::ZERO) {
+  if (ideal_status == HighsBasisStatus::kLower ||
+      ideal_status == HighsBasisStatus::kZero) {
     // Looking to give status LOWER or ZERO
     if (highs_isInfinity(-lower)) {
       // Lower bound is infinite
       if (highs_isInfinity(upper)) {
         // Upper bound is infinite
-        checked_status = HighsBasisStatus::ZERO;
+        checked_status = HighsBasisStatus::kZero;
       } else {
         // Upper bound is finite
-        checked_status = HighsBasisStatus::UPPER;
+        checked_status = HighsBasisStatus::kUpper;
       }
     } else {
-      checked_status = HighsBasisStatus::LOWER;
+      checked_status = HighsBasisStatus::kLower;
     }
   } else {
     // Looking to give status UPPER
@@ -256,13 +258,13 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
       // Upper bound is infinite
       if (highs_isInfinity(-lower)) {
         // Lower bound is infinite
-        checked_status = HighsBasisStatus::ZERO;
+        checked_status = HighsBasisStatus::kZero;
       } else {
         // Upper bound is finite
-        checked_status = HighsBasisStatus::LOWER;
+        checked_status = HighsBasisStatus::kLower;
       }
     } else {
-      checked_status = HighsBasisStatus::UPPER;
+      checked_status = HighsBasisStatus::kUpper;
     }
   }
   return checked_status;
@@ -271,19 +273,19 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
 // Return a string representation of PrimalDualStatus
 std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
   switch (primal_dual_status) {
-    case PrimalDualStatus::STATUS_NOTSET:
+    case kHighsPrimalDualStatusNotset:
       return "Not set";
       break;
-    case PrimalDualStatus::STATUS_NO_SOLUTION:
+    case kHighsPrimalDualStatusNoSolution:
       return "No solution";
       break;
-    case PrimalDualStatus::STATUS_UNKNOWN:
+    case kHighsPrimalDualStatusUnknown:
       return "Point of unknown feasibility";
       break;
-    case PrimalDualStatus::STATUS_INFEASIBLE_POINT:
+    case kHighsPrimalDualStatusInfeasiblePoint:
       return "Infeasible point";
       break;
-    case PrimalDualStatus::STATUS_FEASIBLE_POINT:
+    case kHighsPrimalDualStatusFeasiblePoint:
       return "Feasible point";
       break;
     default:
@@ -300,52 +302,52 @@ std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
 // Return a string representation of HighsModelStatus.
 std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::NOTSET:
+    case HighsModelStatus::kNotset:
       return "Not Set";
       break;
-    case HighsModelStatus::LOAD_ERROR:
+    case HighsModelStatus::kLoadError:
       return "Load error";
       break;
-    case HighsModelStatus::MODEL_ERROR:
+    case HighsModelStatus::kModelError:
       return "Model error";
       break;
-    case HighsModelStatus::PRESOLVE_ERROR:
+    case HighsModelStatus::kPresolveError:
       return "Presolve error";
       break;
-    case HighsModelStatus::SOLVE_ERROR:
+    case HighsModelStatus::kSolveError:
       return "Solve error";
       break;
-    case HighsModelStatus::POSTSOLVE_ERROR:
+    case HighsModelStatus::kPostsolveError:
       return "Postsolve error";
       break;
-    case HighsModelStatus::MODEL_EMPTY:
+    case HighsModelStatus::kModelEmpty:
       return "Model empty";
       break;
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalInfeasible:
       return "Infeasible";  //"Primal infeasible";
       break;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
+    case HighsModelStatus::kPrimalUnbounded:
       return "Unbounded";  //"Primal unbounded";
       break;
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       return "Optimal";
       break;
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       return "Reached dual objective upper bound";
       break;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kReachedTimeLimit:
       return "Reached time limit";
       break;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    case HighsModelStatus::kReachedIterationLimit:
       return "Reached iteration limit";
       break;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+    case HighsModelStatus::kPrimalDualInfeasible:
       return "Primal and dual infeasible";
       break;
-    case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
+    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
       return "Primal infeasible or unbounded";
       break;
-    case HighsModelStatus::DUAL_INFEASIBLE:
+    case HighsModelStatus::kDualInfeasible:
       return "Dual infeasible";
       break;
     default:
@@ -390,39 +392,39 @@ void copyHighsIterationCounts(const HighsInfo& info,
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::NOTSET:
-      return HighsStatus::Error;
-    case HighsModelStatus::LOAD_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::MODEL_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::PRESOLVE_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::SOLVE_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::POSTSOLVE_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::MODEL_EMPTY:
-      return HighsStatus::OK;
-    case HighsModelStatus::OPTIMAL:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_INFEASIBLE_OR_UNBOUNDED:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
-      return HighsStatus::OK;
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return HighsStatus::OK;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
-      return HighsStatus::Warning;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
-      return HighsStatus::Warning;
-    case HighsModelStatus::DUAL_INFEASIBLE:
-      return HighsStatus::Warning;
+    case HighsModelStatus::kNotset:
+      return HighsStatus::kError;
+    case HighsModelStatus::kLoadError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kModelError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kPresolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kSolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kPostsolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kModelEmpty:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kOptimal:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kPrimalInfeasible:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kPrimalUnbounded:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kPrimalDualInfeasible:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kReachedTimeLimit:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kReachedIterationLimit:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kDualInfeasible:
+      return HighsStatus::kWarning;
     default:
-      return HighsStatus::Error;
+      return HighsStatus::kError;
   }
 }

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsGFkLU.h
  * @brief linear system solve in GF(k) for mod-k cut separation
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_GFk_SOLVE_H_
@@ -212,7 +214,7 @@ class HighsGFkSolve {
 
       HighsInt pivot = -1;
       HighsInt pivotRow = -1;
-      HighsInt pivotRowLen = HIGHS_CONST_I_INF;
+      HighsInt pivotRowLen = kHighsIInf;
       for (HighsInt coliter = colhead[pivotCol]; coliter != -1;
            coliter = Anext[coliter]) {
         HighsInt row = Arow[coliter];

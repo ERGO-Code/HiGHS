@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsUtils.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "util/HighsUtils.h"
@@ -66,23 +68,23 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
     // Changing by interval: check the parameters and that check set and mask
     // are false
     if (index_collection.is_set_) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index collection is both interval and set\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index collection is both interval and mask\n");
       return false;
     }
     if (index_collection.from_ < 0) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index interval lower limit is %" HIGHSINT_FORMAT " < 0\n",
                    index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index interval upper limit is %" HIGHSINT_FORMAT
                    " > %" HIGHSINT_FORMAT "\n",
                    index_collection.to_, index_collection.dimension_ - 1);
@@ -92,17 +94,17 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
     // Changing by set: check the parameters and check that interval and mask
     // are false
     if (index_collection.is_interval_) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index collection is both set and interval\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index collection is both set and mask\n");
       return false;
     }
     if (index_collection.set_ == NULL) {
-      highsLogUser(log_options, HighsLogType::ERROR, "Index set is NULL\n");
+      highsLogUser(log_options, HighsLogType::kError, "Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
@@ -111,7 +113,7 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
     HighsInt prev_set_entry = -1;
     for (HighsInt k = 0; k < index_collection.set_num_entries_; k++) {
       if (set[k] < 0 || set[k] > set_entry_upper) {
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "Index set entry set[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT
                      " is out of bounds [0, %" HIGHSINT_FORMAT "]\n",
@@ -119,7 +121,7 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
         return false;
       }
       if (set[k] <= prev_set_entry) {
-        highsLogUser(log_options, HighsLogType::ERROR,
+        highsLogUser(log_options, HighsLogType::kError,
                      "Index set entry set[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT
                      " is not greater than "
@@ -133,22 +135,22 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
     // Changing by mask: check the parameters and check that set and interval
     // are false
     if (index_collection.mask_ == NULL) {
-      highsLogUser(log_options, HighsLogType::ERROR, "Index mask is NULL\n");
+      highsLogUser(log_options, HighsLogType::kError, "Index mask is NULL\n");
       return false;
     }
     if (index_collection.is_interval_) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index collection is both mask and interval\n");
       return false;
     }
     if (index_collection.is_set_) {
-      highsLogUser(log_options, HighsLogType::ERROR,
+      highsLogUser(log_options, HighsLogType::kError,
                    "Index collection is both mask and set\n");
       return false;
     }
   } else {
     // No method defined
-    highsLogUser(log_options, HighsLogType::ERROR,
+    highsLogUser(log_options, HighsLogType::kError,
                  "Undefined index collection\n");
     return false;
   }
@@ -168,7 +170,7 @@ bool limitsForIndexCollection(const HighsLogOptions& log_options,
     from_k = 0;
     to_k = index_collection.dimension_ - 1;
   } else {
-    highsLogUser(log_options, HighsLogType::ERROR,
+    highsLogUser(log_options, HighsLogType::kError,
                  "Undefined index collection\n");
     return false;
   }
@@ -241,7 +243,7 @@ bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
                                  const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    highsLogUser(log_options, HighsLogType::ERROR,
+    highsLogUser(log_options, HighsLogType::kError,
                  "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
@@ -253,7 +255,7 @@ bool intUserDataNotNull(const HighsLogOptions& log_options,
                         const HighsInt* user_data, const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    highsLogUser(log_options, HighsLogType::ERROR,
+    highsLogUser(log_options, HighsLogType::kError,
                  "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
@@ -265,7 +267,7 @@ bool doubleUserDataNotNull(const HighsLogOptions& log_options,
                            const double* user_data, const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    highsLogUser(log_options, HighsLogType::ERROR,
+    highsLogUser(log_options, HighsLogType::kError,
                  "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
@@ -281,7 +283,7 @@ double getNorm2(const std::vector<double> values) {
 }
 
 bool highs_isInfinity(double val) {
-  if (val >= HIGHS_CONST_INF) return true;
+  if (val >= kHighsInf) return true;
   return false;
 }
 
@@ -382,27 +384,27 @@ void analyseVectorValues(const HighsLogOptions& log_options,
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
               " nonzeros (%3" HIGHSINT_FORMAT "%%): Analysis\n",
               message, vecDim, nNz, 100 * nNz / vecDim);
   if (nNegInfV > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " values are -Inf\n", nNegInfV);
   if (nPosInfV > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " values are +Inf\n", nPosInfV);
   HighsInt k = nVK;
   HighsInt vK = posVK[k];
   if (vK > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " values satisfy 10^(%3" HIGHSINT_FORMAT
                 ") <= v < Inf\n",
                 vK, k);
   for (HighsInt k = nVK - 1; k >= 0; k--) {
     HighsInt vK = posVK[k];
     if (vK > 0)
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " values satisfy 10^(%3" HIGHSINT_FORMAT
                   ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
                   vK, k, k + 1);
@@ -410,38 +412,38 @@ void analyseVectorValues(const HighsLogOptions& log_options,
   for (HighsInt k = 1; k <= nVK; k++) {
     HighsInt vK = negVK[k];
     if (vK > 0)
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " values satisfy 10^(%3" HIGHSINT_FORMAT
                   ") <= v < 10^(%3" HIGHSINT_FORMAT ")\n",
                   vK, -k, 1 - k);
   }
   vK = vecDim - nNz;
   if (vK > 0)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " values are zero\n", vK);
   if (analyseValueList) {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "           Value distribution:");
     if (excessVLsV)
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   " More than %" HIGHSINT_FORMAT " different values", VLsZ);
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "\n            Value        Count\n");
     for (HighsInt ix = 0; ix < VLsZ; ix++) {
       HighsInt pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "     %12g %12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                   "%%)\n",
                   VLsV[ix], VLsK[ix], pct);
     }
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "grep_value_distrib,%s,%" HIGHSINT_FORMAT "",
                 model_name.c_str(), VLsZ);
-    highsLogDev(log_options, HighsLogType::INFO, ",");
-    if (excessVLsV) highsLogDev(log_options, HighsLogType::INFO, "!");
+    highsLogDev(log_options, HighsLogType::kInfo, ",");
+    if (excessVLsV) highsLogDev(log_options, HighsLogType::kInfo, "!");
     for (HighsInt ix = 0; ix < VLsZ; ix++)
-      highsLogDev(log_options, HighsLogType::INFO, ",%g", VLsV[ix]);
-    highsLogDev(log_options, HighsLogType::INFO, "\n");
+      highsLogDev(log_options, HighsLogType::kInfo, ",%g", VLsV[ix]);
+    highsLogDev(log_options, HighsLogType::kInfo, "\n");
   }
 }
 
@@ -500,7 +502,7 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
     rowCatK[fdCat]++;
   }
 
-  highsLogDev(log_options, HighsLogType::INFO, "\n%s\n\n", message);
+  highsLogDev(log_options, HighsLogType::kInfo, "\n%s\n\n", message);
   HighsInt lastRpCat;
   for (HighsInt cat = 0; cat < maxCat + 1; cat++) {
     if (colCatK[cat]) lastRpCat = cat;
@@ -517,7 +519,7 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
     v = v / numCol + 0.5;
     pct = v;
     sumPct += pct;
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%) columns of count in [%3" HIGHSINT_FORMAT
                 ", %3" HIGHSINT_FORMAT "]\n",
@@ -531,18 +533,18 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   pct = v;
   sumPct += pct;
   if (cat == maxCat) {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%) columns of count in [%3" HIGHSINT_FORMAT ", inf]\n",
                 colCatK[cat], pct, CatV[cat]);
   } else {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%) columns of count in [%3" HIGHSINT_FORMAT
                 ", %3" HIGHSINT_FORMAT "]\n",
                 colCatK[cat], pct, CatV[cat], CatV[cat + 1] - 1);
   }
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "Max count is %" HIGHSINT_FORMAT " / %" HIGHSINT_FORMAT "\n\n",
               maxColCount, numRow);
 
@@ -562,7 +564,7 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
     v = v / numRow + 0.5;
     pct = v;
     sumPct += pct;
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%)    rows of count in [%3" HIGHSINT_FORMAT
                 ", %3" HIGHSINT_FORMAT "]\n",
@@ -576,18 +578,18 @@ void analyseMatrixSparsity(const HighsLogOptions& log_options,
   pct = v;
   sumPct += pct;
   if (cat == maxCat) {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%)    rows of count in [%3" HIGHSINT_FORMAT ", inf]\n",
                 rowCatK[cat], pct, CatV[cat]);
   } else {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
                 "%%)    rows of count in [%3" HIGHSINT_FORMAT
                 ", %3" HIGHSINT_FORMAT "]\n",
                 rowCatK[cat], pct, CatV[cat], CatV[cat + 1] - 1);
   }
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "Max count is %" HIGHSINT_FORMAT " / %" HIGHSINT_FORMAT "\n",
               maxRowCount, numCol);
 }
@@ -636,7 +638,7 @@ bool initialiseValueDistribution(const std::string distribution_name,
   value_distribution.num_count_ = num_count;
   value_distribution.num_zero_ = 0;
   value_distribution.num_one_ = 0;
-  value_distribution.min_value_ = HIGHS_CONST_INF;
+  value_distribution.min_value_ = kHighsInf;
   value_distribution.max_value_ = 0;
   value_distribution.sum_count_ = 0;
   return true;
@@ -685,7 +687,7 @@ bool logValueDistribution(const HighsLogOptions& log_options,
   const HighsInt num_count = value_distribution.num_count_;
   if (num_count < 0) return false;
   if (value_distribution.distribution_name_ != "")
-    highsLogDev(log_options, HighsLogType::INFO, "\n%s\n",
+    highsLogDev(log_options, HighsLogType::kInfo, "\n%s\n",
                 value_distribution.distribution_name_.c_str());
   std::string value_name = value_distribution.value_name_;
   bool not_reported_ones = true;
@@ -696,26 +698,27 @@ bool logValueDistribution(const HighsLogOptions& log_options,
   for (HighsInt i = 0; i < num_count + 1; i++)
     sum_count += value_distribution.count_[i];
   if (!sum_count) return false;
-  highsLogDev(log_options, HighsLogType::INFO, "Min value = %g\n", min_value);
-  highsLogDev(log_options, HighsLogType::INFO, "     Minimum %svalue is %10.4g",
-              value_name.c_str(), min_value);
+  highsLogDev(log_options, HighsLogType::kInfo, "Min value = %g\n", min_value);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "     Minimum %svalue is %10.4g", value_name.c_str(), min_value);
   if (mu > 0) {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "  corresponding to  %10" HIGHSINT_FORMAT
                 " / %10" HIGHSINT_FORMAT "\n",
                 (HighsInt)(min_value * mu), mu);
   } else {
-    highsLogDev(log_options, HighsLogType::INFO, "\n");
+    highsLogDev(log_options, HighsLogType::kInfo, "\n");
   }
-  highsLogDev(log_options, HighsLogType::INFO, "     Maximum %svalue is %10.4g",
-              value_name.c_str(), value_distribution.max_value_);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "     Maximum %svalue is %10.4g", value_name.c_str(),
+              value_distribution.max_value_);
   if (mu > 0) {
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "  corresponding to  %10" HIGHSINT_FORMAT
                 " / %10" HIGHSINT_FORMAT "\n",
                 (HighsInt)(value_distribution.max_value_ * mu), mu);
   } else {
-    highsLogDev(log_options, HighsLogType::INFO, "\n");
+    highsLogDev(log_options, HighsLogType::kInfo, "\n");
   }
   HighsInt sum_report_count = 0;
   double percentage;
@@ -725,7 +728,7 @@ bool logValueDistribution(const HighsLogOptions& log_options,
     percentage = doublePercentage(count, sum_count);
     sum_percentage += percentage;
     int_percentage = percentage;
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                 "%%) are %10.4g\n",
                 count, value_name.c_str(), int_percentage, 0.0);
@@ -736,19 +739,19 @@ bool logValueDistribution(const HighsLogOptions& log_options,
     percentage = doublePercentage(count, sum_count);
     sum_percentage += percentage;
     int_percentage = percentage;
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                 "%%) in (%10.4g, %10.4g)",
                 count, value_name.c_str(), int_percentage, 0.0,
                 value_distribution.limit_[0]);
     sum_report_count += count;
     if (mu > 0) {
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   " corresponding to (%10" HIGHSINT_FORMAT
                   ", %10" HIGHSINT_FORMAT ")\n",
                   0, (HighsInt)(value_distribution.limit_[0] * mu));
     } else {
-      highsLogDev(log_options, HighsLogType::INFO, "\n");
+      highsLogDev(log_options, HighsLogType::kInfo, "\n");
     }
   }
   for (HighsInt i = 1; i < num_count; i++) {
@@ -758,16 +761,16 @@ bool logValueDistribution(const HighsLogOptions& log_options,
         percentage = doublePercentage(count, sum_count);
         sum_percentage += percentage;
         int_percentage = percentage;
-        highsLogDev(log_options, HighsLogType::INFO,
+        highsLogDev(log_options, HighsLogType::kInfo,
                     "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                     "%%) are             %10.4g",
                     count, value_name.c_str(), int_percentage, 1.0);
         sum_report_count += count;
         if (mu > 0) {
-          highsLogDev(log_options, HighsLogType::INFO,
+          highsLogDev(log_options, HighsLogType::kInfo,
                       " corresponding to %10" HIGHSINT_FORMAT "\n", mu);
         } else {
-          highsLogDev(log_options, HighsLogType::INFO, "\n");
+          highsLogDev(log_options, HighsLogType::kInfo, "\n");
         }
       }
       not_reported_ones = false;
@@ -777,7 +780,7 @@ bool logValueDistribution(const HighsLogOptions& log_options,
       percentage = doublePercentage(count, sum_count);
       sum_percentage += percentage;
       int_percentage = percentage;
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                   "%%) in [%10.4g, %10.4g)",
                   count, value_name.c_str(), int_percentage,
@@ -785,13 +788,13 @@ bool logValueDistribution(const HighsLogOptions& log_options,
                   value_distribution.limit_[i]);
       sum_report_count += count;
       if (mu > 0) {
-        highsLogDev(log_options, HighsLogType::INFO,
+        highsLogDev(log_options, HighsLogType::kInfo,
                     " corresponding to [%10" HIGHSINT_FORMAT
                     ", %10" HIGHSINT_FORMAT ")\n",
                     (HighsInt)(value_distribution.limit_[i - 1] * mu),
                     (HighsInt)(value_distribution.limit_[i] * mu));
       } else {
-        highsLogDev(log_options, HighsLogType::INFO, "\n");
+        highsLogDev(log_options, HighsLogType::kInfo, "\n");
       }
     }
   }
@@ -801,16 +804,16 @@ bool logValueDistribution(const HighsLogOptions& log_options,
       percentage = doublePercentage(count, sum_count);
       sum_percentage += percentage;
       int_percentage = percentage;
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                   "%%) are             %10.4g",
                   count, value_name.c_str(), int_percentage, 1.0);
       sum_report_count += count;
       if (mu > 0) {
-        highsLogDev(log_options, HighsLogType::INFO,
+        highsLogDev(log_options, HighsLogType::kInfo,
                     "  corresponding to  %10" HIGHSINT_FORMAT "\n", mu);
       } else {
-        highsLogDev(log_options, HighsLogType::INFO, "\n");
+        highsLogDev(log_options, HighsLogType::kInfo, "\n");
       }
     }
     not_reported_ones = false;
@@ -820,18 +823,18 @@ bool logValueDistribution(const HighsLogOptions& log_options,
     percentage = doublePercentage(count, sum_count);
     sum_percentage += percentage;
     int_percentage = percentage;
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                 "%%) in [%10.4g,        inf)",
                 count, value_name.c_str(), int_percentage,
                 value_distribution.limit_[num_count - 1]);
     sum_report_count += count;
     if (mu > 0) {
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   " corresponding to [%10" HIGHSINT_FORMAT ",        inf)\n",
                   (HighsInt)(value_distribution.limit_[num_count - 1] * mu));
     } else {
-      highsLogDev(log_options, HighsLogType::INFO, "\n");
+      highsLogDev(log_options, HighsLogType::kInfo, "\n");
     }
   }
   if (not_reported_ones) {
@@ -840,24 +843,24 @@ bool logValueDistribution(const HighsLogOptions& log_options,
       percentage = doublePercentage(count, sum_count);
       sum_percentage += percentage;
       int_percentage = percentage;
-      highsLogDev(log_options, HighsLogType::INFO,
+      highsLogDev(log_options, HighsLogType::kInfo,
                   "%12" HIGHSINT_FORMAT " %svalues (%3" HIGHSINT_FORMAT
                   "%%) are             %10.4g",
                   count, value_name.c_str(), int_percentage, 1.0);
       sum_report_count += count;
       if (mu > 0) {
-        highsLogDev(log_options, HighsLogType::INFO,
+        highsLogDev(log_options, HighsLogType::kInfo,
                     "  corresponding to  %10" HIGHSINT_FORMAT "\n", mu);
       } else {
-        highsLogDev(log_options, HighsLogType::INFO, "\n");
+        highsLogDev(log_options, HighsLogType::kInfo, "\n");
       }
     }
   }
-  highsLogDev(log_options, HighsLogType::INFO,
+  highsLogDev(log_options, HighsLogType::kInfo,
               "%12" HIGHSINT_FORMAT " %svalues\n", sum_count,
               value_name.c_str());
   if (sum_report_count != sum_count)
-    highsLogDev(log_options, HighsLogType::INFO,
+    highsLogDev(log_options, HighsLogType::kInfo,
                 "ERROR: %" HIGHSINT_FORMAT
                 " = sum_report_count != sum_count = %" HIGHSINT_FORMAT "\n",
                 sum_report_count, sum_count);

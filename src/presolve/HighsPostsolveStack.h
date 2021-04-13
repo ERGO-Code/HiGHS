@@ -2,15 +2,17 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsPostsolveStack.h
  * @brief Class to hold all information for postsolve and can transform back
  * primal and dual solutions.
- * @author Leona Gottwald
  */
 
 #ifndef PRESOLVE_HIGHS_POSTSOLVE_STACK_H_
@@ -343,7 +345,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                  HighsBasisStatus::LOWER});
+                                  HighsBasisStatus::kLower});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -357,7 +359,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                  HighsBasisStatus::UPPER});
+                                  HighsBasisStatus::kUpper});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -370,7 +372,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(
-        FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::ZERO});
+        FixedCol{0.0, colCost, origColIndex[col], HighsBasisStatus::kZero});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }
@@ -384,7 +386,7 @@ class HighsPostsolveStack {
       colValues.emplace_back(origRowIndex[colVal.index()], colVal.value());
 
     reductionValues.push(FixedCol{fixValue, colCost, origColIndex[col],
-                                  HighsBasisStatus::NONBASIC});
+                                  HighsBasisStatus::kNonbasic});
     reductionValues.push(colValues);
     reductions.push_back(ReductionType::kFixedCol);
   }

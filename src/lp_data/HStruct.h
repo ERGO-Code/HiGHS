@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HStruct.h
  * @brief Structs for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
@@ -48,8 +50,8 @@ struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  HighsInt primal_status = PrimalDualStatus::STATUS_NOTSET;
-  HighsInt dual_status = PrimalDualStatus::STATUS_NOTSET;
+  HighsInt primal_status = kHighsPrimalDualStatusNotset;
+  HighsInt dual_status = kHighsPrimalDualStatusNotset;
   // Output from solution analysis method
   double objective_function_value;
   HighsInt num_primal_infeasibility;

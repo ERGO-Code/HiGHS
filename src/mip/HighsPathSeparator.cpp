@@ -6,9 +6,11 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsPathSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsPathSeparator.h"
@@ -44,13 +46,13 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       continue;
     }
 
-    double lowerslack = HIGHS_CONST_INF;
-    double upperslack = HIGHS_CONST_INF;
+    double lowerslack = kHighsInf;
+    double upperslack = kHighsInf;
 
-    if (lp.rowLower_[i] != -HIGHS_CONST_INF)
+    if (lp.rowLower_[i] != -kHighsInf)
       lowerslack = lpSolution.row_value[i] - lp.rowLower_[i];
 
-    if (lp.rowUpper_[i] != HIGHS_CONST_INF)
+    if (lp.rowUpper_[i] != kHighsInf)
       upperslack = lp.rowUpper_[i] - lpSolution.row_value[i];
 
     if (lowerslack > mip.mipdata_->feastol &&
@@ -90,7 +92,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       HighsInt j;
       for (j = 0; j != len; ++j) {
-        if (mip.variableType(rowinds[j]) != HighsVarType::CONTINUOUS) continue;
+        if (mip.variableType(rowinds[j]) != HighsVarType::kContinuous) continue;
         if (transLp.boundDistance(rowinds[j]) == 0.0) continue;
 
         break;
@@ -99,7 +101,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       HighsInt col = rowinds[j];
       double val = rowvals[j];
 
-      assert(mip.variableType(rowinds[j]) == HighsVarType::CONTINUOUS);
+      assert(mip.variableType(rowinds[j]) == HighsVarType::kContinuous);
       assert(transLp.boundDistance(col) > 0.0);
 
       if (colSubstitutions[col].first != -1) continue;

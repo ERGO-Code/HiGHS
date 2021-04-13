@@ -24,7 +24,7 @@ void testSolver(Highs& highs, const std::string solver,
 
   if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.setOptionValue("solver", solver);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (use_simplex) {
     SimplexStrategy simplex_strategy =
@@ -34,30 +34,30 @@ void testSolver(Highs& highs, const std::string solver,
     if (dev_run)
       printf("Simplex strategy %" HIGHSINT_FORMAT "\n", int_simplex_strategy);
     return_status = highs.setOptionValue("simplex_strategy", simplex_strategy);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   }
 
   return_status = highs.getOptionValue("time_limit", default_time_limit);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (use_simplex) {
     return_status = highs.getOptionValue("simplex_iteration_limit",
                                          default_simplex_iteration_limit);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
     // Force HiGHS to start from a logical basis - if this is the
     // second or subsequent call to testSolver
     return_status = highs.setBasis();
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   } else {
     return_status = highs.getOptionValue("ipm_iteration_limit",
                                          default_ipm_iteration_limit);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   }
 
   // Vanilla solve: get solution time to calibrate time limit test
   double run_time = highs.getRunTime();
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   const double single_solve_run_time = highs.getRunTime() - run_time;
 
   if (use_simplex) {
@@ -83,14 +83,14 @@ void testSolver(Highs& highs, const std::string solver,
 
     double use_time_limit = run_time + local_time_limit;
     return_status = highs.setOptionValue("time_limit", use_time_limit);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
 
     const HighsInt max_num_solve = 10 * ideal_num_solve;
     HighsInt num_solve;
     for (num_solve = 0; num_solve < max_num_solve; num_solve++) {
       if (use_simplex) return_status = highs.setBasis();
       return_status = highs.run();
-      if (highs.getModelStatus() == HighsModelStatus::REACHED_TIME_LIMIT) break;
+      if (highs.getModelStatus() == HighsModelStatus::kReachedTimeLimit) break;
     }
     REQUIRE(num_solve < max_num_solve);
     run_time = highs.getRunTime();
@@ -110,7 +110,7 @@ void testSolver(Highs& highs, const std::string solver,
           single_solve_run_time, min_run_time_for_test);
   }
   return_status = highs.setOptionValue("time_limit", default_time_limit);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
   if (!use_simplex) {
     if (dev_run)
       printf("IPM: %" HIGHSINT_FORMAT "; Crossover: %" HIGHSINT_FORMAT "\n",
@@ -121,13 +121,13 @@ void testSolver(Highs& highs, const std::string solver,
   // iteration limit is zero
   if (use_simplex) {
     return_status = highs.setOptionValue("simplex_iteration_limit", 0);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
 
     return_status = highs.setBasis();
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   } else {
     return_status = highs.setOptionValue("ipm_iteration_limit", 0);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   }
 
   return_status = highs.run();
@@ -136,8 +136,8 @@ void testSolver(Highs& highs, const std::string solver,
     printf("Returns status = %" HIGHSINT_FORMAT "; model status = %s\n",
            (HighsInt)return_status,
            highs.modelStatusToString(model_status).c_str());
-  REQUIRE(return_status == HighsStatus::Warning);
-  REQUIRE(model_status == HighsModelStatus::REACHED_ITERATION_LIMIT);
+  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(model_status == HighsModelStatus::kReachedIterationLimit);
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == 0);
@@ -154,32 +154,32 @@ void testSolver(Highs& highs, const std::string solver,
              further_simplex_iterations);
     return_status = highs.setOptionValue("simplex_iteration_limit",
                                          further_simplex_iterations);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
     return_status = highs.setBasis();
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   } else {
     if (dev_run)
       printf("Setting ipm_iteration_limit = %" HIGHSINT_FORMAT "\n",
              further_ipm_iterations);
     return_status =
         highs.setOptionValue("ipm_iteration_limit", further_ipm_iterations);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   }
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::Warning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::REACHED_ITERATION_LIMIT);
+  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kReachedIterationLimit);
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == further_simplex_iterations);
     return_status = highs.setOptionValue("simplex_iteration_limit",
                                          default_simplex_iteration_limit);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   } else {
     REQUIRE(info.ipm_iteration_count == further_ipm_iterations);
     return_status = highs.setOptionValue("ipm_iteration_limit",
                                          default_ipm_iteration_limit);
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   }
 }
 
@@ -252,32 +252,32 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
                    simplex_strategy_iteration_count);
 
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::OK);
+  REQUIRE(read_status == HighsStatus::kOk);
 
   return_status = highs.setBasis();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
 
   // Now check that we can change model within the same Highs instance
   // First reset all the options to their default values
   return_status = highs.resetOptions();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
   model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::OK);
+  REQUIRE(read_status == HighsStatus::kOk);
 
   return_status = highs.setBasis();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 1);
@@ -285,17 +285,18 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(info.simplex_iteration_count == 403);
 
   HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::NOTSET);
+  REQUIRE(model_status == HighsModelStatus::kNotset);
 
   model_status = highs.getModelStatus(true);
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   // Test the solver without scaling
-  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
-  REQUIRE(highs.setOptionValue("simplex_scale_strategy", 0) == HighsStatus::OK);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("simplex_scale_strategy", 0) ==
+          HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   REQUIRE(info.simplex_iteration_count == 598);
 }
@@ -323,15 +324,15 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   double error;
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";
   status = highs.readModel(filename);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   // Solve vanilla
   if (dev_run) printf("\nSolving vanilla LP\n");
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   error = fabs((info.objective_function_value - min_objective_function_value) /
                min_objective_function_value);
@@ -341,11 +342,11 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   // Set dual objective value upper bound after saving the default value
   status = highs.getOptionValue("dual_objective_value_upper_bound",
                                 save_dual_objective_value_upper_bound);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.setOptionValue("dual_objective_value_upper_bound",
                                 larger_min_dual_objective_value_upper_bound);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
   if (dev_run)
@@ -354,14 +355,14 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "%g\n",
         larger_min_dual_objective_value_upper_bound);
   status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   // Switch off presolve
   status = highs.setOptionValue("presolve", "off");
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
   // This larger dual objective value upper bound is satisfied during phase 2
@@ -371,14 +372,14 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "bound of %g\n",
         larger_min_dual_objective_value_upper_bound);
   status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status ==
-          HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+          HighsModelStatus::kReachedDualObjectiveValueUpperBound);
 
   // Solve again
   // This smaller dual objective value upper bound is satisfied at the start of
@@ -390,26 +391,26 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         smaller_min_dual_objective_value_upper_bound);
   status = highs.setOptionValue("dual_objective_value_upper_bound",
                                 smaller_min_dual_objective_value_upper_bound);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status ==
-          HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+          HighsModelStatus::kReachedDualObjectiveValueUpperBound);
 
   // Solve as maximization and ensure that the dual objective value upper bound
   // isn't used
-  bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
+  bool_status = highs.changeObjectiveSense(ObjSense::kMaximize);
   REQUIRE(bool_status);
 
   status = highs.setOptionValue("dual_objective_value_upper_bound",
                                 use_max_dual_objective_value_upper_bound);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
   if (dev_run)
@@ -419,13 +420,13 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "upper bound of %g\n",
         use_max_dual_objective_value_upper_bound);
   status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   error = fabs((info.objective_function_value - max_objective_function_value) /
                max_objective_function_value);

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HCrash.cpp
  * @brief Bixby and Maros-style crash for the HiGHS simplex solver
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
 
@@ -321,7 +323,7 @@ bool HCrash::bixby_iz_da() {
   // each row of the basis matrix
   bixby_n_cdd_r = numRow;
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    bixby_pseudo_pv_v[r_n] = HIGHS_CONST_INF;
+    bixby_pseudo_pv_v[r_n] = kHighsInf;
     if (crsh_r_ty[r_n] == crsh_vr_ty_fx) {
       bixby_pv_in_r[r_n] = 0;
       bixby_vr_in_r[r_n] = no_ix;
@@ -336,7 +338,7 @@ bool HCrash::bixby_iz_da() {
     }
   }
   if (bixby_n_cdd_r == 0) return false;
-  double mx_co_v = -HIGHS_CONST_INF;
+  double mx_co_v = -kHighsInf;
   for (HighsInt c_n = 0; c_n < numCol; c_n++) {
     // Find largest |entry| in each column
     crsh_mtx_c_mx_abs_v[c_n] = 0.0;
@@ -385,7 +387,7 @@ bool HCrash::bixby_iz_da() {
     double sense_col_cost = objSense * colCost[c_n];
     if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    if (colUpper[c_n] >= HIGHS_CONST_INF) {
+    if (colUpper[c_n] >= kHighsInf) {
       bixby_mrt_v[os + n_en] = colLower[c_n] + sense_col_cost / co_v_mu;
     } else {
       bixby_mrt_v[os + n_en] = -colUpper[c_n] + sense_col_cost / co_v_mu;
@@ -438,7 +440,7 @@ bool HCrash::bixby_iz_da() {
     double sense_col_cost = objSense * colCost[c_n];
     if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    bixby_mrt_v[os + n_en] = HIGHS_CONST_INF;
+    bixby_mrt_v[os + n_en] = kHighsInf;
     bixby_mrt_ix[os + n_en] = c_n;
   }
   if (n_en > 0) {
@@ -463,15 +465,15 @@ void HCrash::bixby_rp_mrt() {
   const double* colCost = &simplex_lp.colCost_[0];
   const double* colLower = &simplex_lp.colLower_[0];
   const double* colUpper = &simplex_lp.colUpper_[0];
-  double mx_co_v = -HIGHS_CONST_INF;
+  double mx_co_v = -kHighsInf;
   for (HighsInt c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
     mx_co_v = max(fabs(sense_col_cost), mx_co_v);
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  double prev_mrt_v0 = -HIGHS_CONST_INF;
-  double prev_mrt_v = -HIGHS_CONST_INF;
+  double prev_mrt_v0 = -kHighsInf;
+  double prev_mrt_v = -kHighsInf;
   bool rp_c;
   bool rp_al_c = false;
   HighsInt n_mrt_v = 0;
@@ -489,8 +491,8 @@ void HCrash::bixby_rp_mrt() {
     else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
              (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
       rp_c = true;
-      prev_mrt_v = -HIGHS_CONST_INF;
-      prev_mrt_v0 = -HIGHS_CONST_INF;
+      prev_mrt_v = -kHighsInf;
+      prev_mrt_v0 = -kHighsInf;
     } else if (rp_al_c)
       rp_c = true;
     else
@@ -721,7 +723,7 @@ void HCrash::ltssf_u_da() {
   // then get the new maximum row priority value TODO Surely this is
   // not necessary with 2-d headers
   if ((crsh_r_pri_mn_r_k[cz_r_pri_v] > numCol) && (cz_r_pri_v == mx_r_pri_v)) {
-    mx_r_pri_v = -HIGHS_CONST_I_INF;
+    mx_r_pri_v = -kHighsIInf;
     for (HighsInt pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++)
       if (crsh_r_pri_mn_r_k[pri_v] <= numCol) mx_r_pri_v = pri_v;
   }
@@ -953,8 +955,8 @@ void HCrash::ltssf_iz_da() {
       crsh_r_pri_k_hdr[pri_v * (numCol + 1) + c_n] = no_lk;
     }
   }
-  mn_abs_pv_v = HIGHS_CONST_INF;
-  mn_rlv_pv_v = HIGHS_CONST_INF;
+  mn_abs_pv_v = kHighsInf;
+  mn_rlv_pv_v = kHighsInf;
   n_abs_pv_no_ok = 0;
   n_rlv_pv_no_ok = 0;
   // Determine the status and type of each row
@@ -1198,8 +1200,8 @@ void HCrash::ltssf_cz_c() {
 
   n_eqv_c = 0;
   pv_v = 0.0;
-  double mn_co = HIGHS_CONST_INF;
-  HighsInt mx_c_pri_fn_v = -HIGHS_CONST_I_INF;
+  double mn_co = kHighsInf;
+  HighsInt mx_c_pri_fn_v = -kHighsIInf;
   for (HighsInt el_n = CrshARstart[cz_r_n]; el_n < CrshARstart[cz_r_n + 1];
        el_n++) {
     HighsInt c_n = CrshARindex[el_n];
@@ -1392,13 +1394,13 @@ void HCrash::crsh_iz_vr_ty() {
     }
   } else {
     for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-      if (rowUpper[r_n] >= HIGHS_CONST_INF) {
-        if (rowLower[r_n] <= -HIGHS_CONST_INF)
+      if (rowUpper[r_n] >= kHighsInf) {
+        if (rowLower[r_n] <= -kHighsInf)
           crsh_r_ty[r_n] = crsh_vr_ty_fr;  // Free row
         else
           crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) row
       } else {
-        if (rowLower[r_n] <= -HIGHS_CONST_INF)
+        if (rowLower[r_n] <= -kHighsInf)
           crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) row
         else {
           // Two-sided row - maybe fixed (equality)
@@ -1411,13 +1413,13 @@ void HCrash::crsh_iz_vr_ty() {
     }
     // Set up the column variable types for crash
     for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-      if (colUpper[c_n] >= HIGHS_CONST_INF) {
-        if (colLower[c_n] <= -HIGHS_CONST_INF)
+      if (colUpper[c_n] >= kHighsInf) {
+        if (colLower[c_n] <= -kHighsInf)
           crsh_c_ty[c_n] = crsh_vr_ty_fr;  // Free column
         else
           crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) column
       } else {
-        if (colLower[c_n] <= -HIGHS_CONST_INF)
+        if (colLower[c_n] <= -kHighsInf)
           crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) column
         else {
           // Two-sided row - maybe fixed (equality)
@@ -1476,15 +1478,15 @@ void HCrash::crsh_an_c_co() {
       n_fs_c_co += 1;
       continue;
     }
-    if (colUpper[c_n] >= HIGHS_CONST_INF) {
+    if (colUpper[c_n] >= kHighsInf) {
       // Free column: nonzero cost cannot be feasible
-      if (colLower[c_n] > -HIGHS_CONST_INF) {
+      if (colLower[c_n] > -kHighsInf) {
         // Lower-bounded (1-sided) column: non-negative cost is feasible
         double sense_col_cost = objSense * colCost[c_n];
         if (sense_col_cost >= 0.0) n_fs_c_co += 1;
       }
     } else {
-      if (colLower[c_n] <= -HIGHS_CONST_INF) {
+      if (colLower[c_n] <= -kHighsInf) {
         // Upper-bonded (1-sided) column: non-positive cost is feasible
         double sense_col_cost = objSense * colCost[c_n];
         if (sense_col_cost <= 0.0) n_fs_c_co += 1;

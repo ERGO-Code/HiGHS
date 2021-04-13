@@ -2,7 +2,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const double inf = HIGHS_CONST_INF;
+const double inf = kHighsInf;
 const bool dev_run = false;
 
 bool objectiveOk(const double optimal_objective,
@@ -23,19 +23,19 @@ void solve(Highs& highs, std::string presolve,
            const double require_iteration_count = -1) {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
-  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::OK);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
 
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::kOk);
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::kOptimal) {
     REQUIRE(objectiveOk(info.objective_function_value,
                         require_optimal_objective, dev_run));
   }
-  REQUIRE(highs.resetOptions() == HighsStatus::OK);
+  REQUIRE(highs.resetOptions() == HighsStatus::kOk);
 }
 
 void distillationMIP(Highs& highs) {
@@ -52,13 +52,13 @@ void distillationMIP(Highs& highs) {
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
   lp.Avalue_ = {2, 3, 2, 2, 4, 1};
-  lp.orientation_ = MatrixOrientation::COLWISE;
-  lp.sense_ = ObjSense::MINIMIZE;
+  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::INTEGER, HighsVarType::INTEGER};
-  require_model_status = HighsModelStatus::OPTIMAL;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = 32.0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve doesn't reduce the LP
   solve(highs, "on", require_model_status, optimal_objective);
 }
@@ -73,13 +73,13 @@ void rowlessMIP(Highs& highs) {
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {1, 1};
   lp.Astart_ = {0, 0, 0};
-  lp.orientation_ = MatrixOrientation::COLWISE;
-  lp.sense_ = ObjSense::MINIMIZE;
+  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
-  lp.integrality_ = {HighsVarType::INTEGER, HighsVarType::INTEGER};
-  require_model_status = HighsModelStatus::OPTIMAL;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  require_model_status = HighsModelStatus::kOptimal;
   optimal_objective = -1.0;
-  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   // Presolve reduces the LP to empty
   solve(highs, "on", require_model_status, optimal_objective);
   solve(highs, "off", require_model_status, optimal_objective);
@@ -126,7 +126,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
     mask[iCol] = 1;
-    integrality[ix] = HighsVarType::INTEGER;
+    integrality[ix] = HighsVarType::kInteger;
   }
   REQUIRE(highs.changeColsIntegrality(from_col0, to_col0, &integrality[0]));
   REQUIRE(highs.changeColsIntegrality(from_col1, to_col1, &integrality[0]));
@@ -151,10 +151,10 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
 
-  integrality.assign(lp.numCol_, HighsVarType::CONTINUOUS);
+  integrality.assign(lp.numCol_, HighsVarType::kContinuous);
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
-    integrality[iCol] = HighsVarType::INTEGER;
+    integrality[iCol] = HighsVarType::kInteger;
   }
 
   highs.clearModel();

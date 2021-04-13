@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HVector.h
  * @brief Vector structure for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HVECTOR_H_
 #define SIMPLEX_HVECTOR_H_
@@ -52,7 +54,7 @@ class HVector {
   HVector* next;           //!< Allows vectors to be linked for PAMI
 
   /**
-   * @brief Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY
+   * @brief Packing: Zero values in Vector.array which exceed kHighsTiny
    * in magnitude
    *
    */

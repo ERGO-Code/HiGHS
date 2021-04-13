@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_DOMAIN_H_
 #define HIGHS_DOMAIN_H_
@@ -246,19 +249,17 @@ class HighsDomain {
                            double& rhs) const;
 
   double getMinActivity(HighsInt row) const {
-    return activitymininf_[row] == 0 ? double(activitymin_[row])
-                                     : -HIGHS_CONST_INF;
+    return activitymininf_[row] == 0 ? double(activitymin_[row]) : -kHighsInf;
   }
 
   double getMaxActivity(HighsInt row) const {
-    return activitymaxinf_[row] == 0 ? double(activitymax_[row])
-                                     : HIGHS_CONST_INF;
+    return activitymaxinf_[row] == 0 ? double(activitymax_[row]) : kHighsInf;
   }
 
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut);
 
   bool isBinary(HighsInt col) const {
-    return mipsolver->variableType(col) != HighsVarType::CONTINUOUS &&
+    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
            colLower_[col] == 0.0 && colUpper_[col] == 1.0;
   }
 

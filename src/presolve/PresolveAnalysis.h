@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/PresolveAnalysis.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef PRESOLVE_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_PRESOLVE_ANALYSIS_H_
@@ -238,7 +240,7 @@ class PresolveTimer {
     numerics_record.num_tol_true = 0;
     numerics_record.num_10tol_true = 0;
     numerics_record.num_clear_true = 0;
-    numerics_record.min_positive_true = HIGHS_CONST_INF;
+    numerics_record.min_positive_true = kHighsInf;
   }
 
   void updateNumericsRecord(HighsInt record, const double value) {

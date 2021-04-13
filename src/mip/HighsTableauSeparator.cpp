@@ -6,9 +6,11 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsTableauSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsTableauSeparator.h"
@@ -58,7 +60,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       fractionality = std::abs(std::round(solval) - solval);
     } else {
       HighsInt col = basisinds[i];
-      if (mip.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      if (mip.variableType(col) == HighsVarType::kContinuous) continue;
 
       double solval = lpSolution.col_value[col];
       fractionality = std::abs(std::round(solval) - solval);
@@ -87,7 +89,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   for (const auto& fracvar : fractionalBasisvars) {
     HighsInt i = fracvar.second;
     if (lpSolver.getBasisInverseRow(i, rowWeights.data(), &numNonzeroWeights,
-                                    nonzeroWeights.data()) != HighsStatus::OK)
+                                    nonzeroWeights.data()) != HighsStatus::kOk)
       continue;
 
     // already handled by other separator

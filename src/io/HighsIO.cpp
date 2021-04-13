@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HighsIO.cpp
  * @brief IO methods for HiGHS - currently just print/log messages
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsIO.h"
 
@@ -30,12 +32,12 @@ void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
   if (!*log_options_.output_flag ||
       (log_options_.log_file_stream == NULL && !*log_options_.log_to_console))
     return;
-  // highsLogUser should not be passed HighsLogType::DETAILED or
-  // HighsLogType::VERBOSE
-  assert(type != HighsLogType::DETAILED);
-  assert(type != HighsLogType::VERBOSE);
+  // highsLogUser should not be passed HighsLogType::kDetailed or
+  // HighsLogType::kVerbose
+  assert(type != HighsLogType::kDetailed);
+  assert(type != HighsLogType::kVerbose);
   const bool prefix =
-      type == HighsLogType::WARNING || type == HighsLogType::ERROR;
+      type == HighsLogType::kWarning || type == HighsLogType::kError;
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
@@ -82,10 +84,10 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
   //
   // Report HighsLogType VERBOSE if *log_options_.log_dev_level >=
   // LOG_DEV_LEVEL_VERBOSE
-  if (type == HighsLogType::DETAILED &&
+  if (type == HighsLogType::kDetailed &&
       *log_options_.log_dev_level < LOG_DEV_LEVEL_DETAILED)
     return;
-  if (type == HighsLogType::VERBOSE &&
+  if (type == HighsLogType::kVerbose &&
       *log_options_.log_dev_level < LOG_DEV_LEVEL_VERBOSE)
     return;
   va_list argptr;

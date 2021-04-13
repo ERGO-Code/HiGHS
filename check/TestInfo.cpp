@@ -20,33 +20,33 @@ TEST_CASE("highs-info", "[highs_info]") {
   const HighsInfo& highs_info = highs.getInfo();
 
   HighsStatus return_status = highs.readModel(filename);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) {
     return_status = highs.writeInfo("");
-    REQUIRE(return_status == HighsStatus::OK);
+    REQUIRE(return_status == HighsStatus::kOk);
   }
 
   std::string highs_info_file = "Highs.info";
   return_status = highs.writeInfo(highs_info_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
 #ifdef IPX_ON
   return_status = highs.setOptionValue("solver", "ipm");
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 #endif
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   double objective_function_value;
   return_status =
       highs.getInfoValue("objective_value", objective_function_value);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status =
       highs.getInfoValue("objective_function_value", objective_function_value);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run)
     printf("From getInfoValue: objective_function_value = %g\n",
@@ -55,11 +55,11 @@ TEST_CASE("highs-info", "[highs_info]") {
   HighsInt simplex_iteration_count;
   return_status =
       highs.getInfoValue("iteration_count", simplex_iteration_count);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   return_status =
       highs.getInfoValue("simplex_iteration_count", simplex_iteration_count);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   const HighsModelStatus model_status = highs.getModelStatus();
   if (dev_run) {

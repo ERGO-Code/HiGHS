@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HConst.h
  * @brief Constants for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
@@ -19,85 +21,83 @@
 
 #include "util/HighsInt.h"
 
-const HighsInt HIGHS_CONST_I_INF = std::numeric_limits<HighsInt>::max();
-const double HIGHS_CONST_INF = std::numeric_limits<double>::infinity();
-const double HIGHS_CONST_TINY = 1e-14;
-const double HIGHS_CONST_ZERO = 1e-50;
-const std::string off_string = "off";
-const std::string choose_string = "choose";
-const std::string on_string = "on";
-const HighsInt HIGHS_THREAD_LIMIT = 8;  // 32;
+const HighsInt kHighsIInf = std::numeric_limits<HighsInt>::max();
+const double kHighsInf = std::numeric_limits<double>::infinity();
+const double kHighsTiny = 1e-14;
+const double kHighsZero = 1e-50;
+const std::string kHighsOffString = "off";
+const std::string kHighsChooseString = "choose";
+const std::string kHighsOnString = "on";
+const HighsInt kHighsThreadLimit = 8;  // 32;
 
 enum HighsDebugLevel {
-  HIGHS_DEBUG_LEVEL_MIN = 0,
-  HIGHS_DEBUG_LEVEL_NONE = HIGHS_DEBUG_LEVEL_MIN,  // 0
-  HIGHS_DEBUG_LEVEL_CHEAP,                         // 1
-  HIGHS_DEBUG_LEVEL_COSTLY,                        // 2
-  HIGHS_DEBUG_LEVEL_EXPENSIVE,                     // 3
-  HIGHS_DEBUG_LEVEL_MAX = HIGHS_DEBUG_LEVEL_EXPENSIVE
+  kHighsDebugLevelMin = 0,
+  kHighsDebugLevelNone = kHighsDebugLevelMin,  // 0
+  kHighsDebugLevelCheap,                       // 1
+  kHighsDebugLevelCostly,                      // 2
+  kHighsDebugLevelExpensive,                   // 3
+  kHighsDebugLevelMax = kHighsDebugLevelExpensive
 };
 
 enum class HighsDebugStatus {
-  NOT_CHECKED = -1,
-  OK,
-  SMALL_ERROR,
-  WARNING,
-  LARGE_ERROR,
-  ERROR,
-  EXCESSIVE_ERROR,
-  LOGICAL_ERROR,
+  kNotChecked = -1,
+  kOk,
+  kSmallError,
+  kWarning,
+  kLargeError,
+  kError,
+  kExcessiveError,
+  kLogicalError,
 };
 
 enum HighsAnalysisLevel {
-  HIGHS_ANALYSIS_LEVEL_MIN = 0,
-  HIGHS_ANALYSIS_LEVEL_NONE = HIGHS_ANALYSIS_LEVEL_MIN,
-  HIGHS_ANALYSIS_LEVEL_MODEL_DATA = 1,
-  HIGHS_ANALYSIS_LEVEL_SOLVER_DATA = 2,
-  HIGHS_ANALYSIS_LEVEL_SOLVER_TIME = 4,
-  HIGHS_ANALYSIS_LEVEL_NLA_DATA = 8,
-  HIGHS_ANALYSIS_LEVEL_NLA_TIME = 16,
-  HIGHS_ANALYSIS_LEVEL_MAX =
-      HIGHS_ANALYSIS_LEVEL_MODEL_DATA + HIGHS_ANALYSIS_LEVEL_SOLVER_DATA +
-      HIGHS_ANALYSIS_LEVEL_SOLVER_TIME + HIGHS_ANALYSIS_LEVEL_NLA_DATA +
-      HIGHS_ANALYSIS_LEVEL_NLA_TIME
+  kHighsAnalysisLevelMin = 0,
+  kHighsAnalysisLevelNone = kHighsAnalysisLevelMin,
+  kHighsAnalysisLevelModelData = 1,
+  kHighsAnalysisLevelSolverData = 2,
+  kHighsAnalysisLevelSolverTime = 4,
+  kHighsAnalysisLevelNlaData = 8,
+  kHighsAnalysisLevelNlaTime = 16,
+  kHighsAnalysisLevelMax =
+      kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverData +
+      kHighsAnalysisLevelSolverTime + kHighsAnalysisLevelNlaData +
+      kHighsAnalysisLevelNlaTime
 };
 
 enum class HighsVarType : uint8_t {
-  CONTINUOUS = 0,
-  INTEGER = 1,
-  IMPLICIT_INTEGER = 2,
+  kContinuous = 0,
+  kInteger = 1,
+  kImplicitInteger = 2,
 };
 
-enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING };
+enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
-enum class HighsInfoType { INT = 1, DOUBLE };
+enum class HighsInfoType { kInt = 1, kDouble };
 
-enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
+enum OptionOffChooseOn {
+  kHighsOptionOff = -1,
+  kHighsOptionChoose,
+  kHighsOptionOn
+};
 
 /** SCIP/HiGHS Objective sense */
-enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
-enum class MatrixOrientation { NONE = 0, COLWISE, ROWWISE };
-
-enum SolverOption {
-  SOLVER_OPTION_SIMPLEX = -1,
-  SOLVER_OPTION_CHOOSE,
-  SOLVER_OPTION_IPM
-};
+enum class ObjSense { kMinimize = 1, kMaximize = -1 };
+enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 
 enum PrimalDualStatus {
-  STATUS_NOTSET = -1,
-  STATUS_MIN = STATUS_NOTSET,
-  STATUS_NO_SOLUTION,
-  STATUS_UNKNOWN,
-  STATUS_INFEASIBLE_POINT,
-  STATUS_FEASIBLE_POINT,
-  STATUS_MAX = STATUS_FEASIBLE_POINT
+  kHighsPrimalDualStatusNotset = -1,
+  kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNotset,
+  kHighsPrimalDualStatusNoSolution,
+  kHighsPrimalDualStatusUnknown,
+  kHighsPrimalDualStatusInfeasiblePoint,
+  kHighsPrimalDualStatusFeasiblePoint,
+  kHighsPrimalDualStatusMax = kHighsPrimalDualStatusFeasiblePoint
 };
 
-const std::string FILENAME_DEFAULT = "";
+const std::string kHighsFilenameDefault = "";
 
 // Need to allow infinite costs to pass SCIP LPI unit tests
-const bool allow_infinite_costs = true;
+const bool kHighsAllowInfiniteCosts = true;
 
 // Primal/dual statuses and corresponding HighsModelStatus
 // values. Note that if dual infeasibility is identified, then the
@@ -131,40 +131,40 @@ enum class HighsModelStatus {
   // NB Add new status values to the end so that int cast of status
   // values is unchanged, since enums are not preserved in some
   // interfaces
-  NOTSET = 0,
-  HIGHS_MODEL_STATUS_MIN = NOTSET,
-  LOAD_ERROR,
-  MODEL_ERROR,
-  PRESOLVE_ERROR,
-  SOLVE_ERROR,
-  POSTSOLVE_ERROR,
-  MODEL_EMPTY,
-  OPTIMAL,
-  PRIMAL_INFEASIBLE,
-  PRIMAL_INFEASIBLE_OR_UNBOUNDED,
-  PRIMAL_UNBOUNDED,
-  REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
-  REACHED_TIME_LIMIT,
-  REACHED_ITERATION_LIMIT,
-  PRIMAL_DUAL_INFEASIBLE,
-  DUAL_INFEASIBLE,
-  HIGHS_MODEL_STATUS_MAX = DUAL_INFEASIBLE
+  kNotset = 0,
+  kMin = kNotset,
+  kLoadError,
+  kModelError,
+  kPresolveError,
+  kSolveError,
+  kPostsolveError,
+  kModelEmpty,
+  kOptimal,
+  kPrimalInfeasible,
+  kPrimalInfeasibleOrUnbounded,
+  kPrimalUnbounded,
+  kReachedDualObjectiveValueUpperBound,
+  kReachedTimeLimit,
+  kReachedIterationLimit,
+  kPrimalDualInfeasible,
+  kDualInfeasible,
+  kMax = kDualInfeasible
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
 enum class HighsBasisStatus {
-  LOWER =
-      0,  // (slack) variable is at its lower bound [including fixed variables]
-  BASIC,  // (slack) variable is basic
-  UPPER,  // (slack) variable is at its upper bound
-  ZERO,   // free variable is non-basic and set to zero
-  NONBASIC  // nonbasic with no specific bound information - useful for users
-            // and postsolve
+  kLower =
+      0,   // (slack) variable is at its lower bound [including fixed variables]
+  kBasic,  // (slack) variable is basic
+  kUpper,  // (slack) variable is at its upper bound
+  kZero,   // free variable is non-basic and set to zero
+  kNonbasic  // nonbasic with no specific bound information - useful for users
+             // and postsolve
 };
 
 // Illegal values of num/max/sum infeasibility - used to indicate that true
 // values aren't known
-const HighsInt illegal_infeasibility_count = -1;
-const double illegal_infeasibility_measure = -1;
+const HighsInt kHighsIllegalInfeasibilityCount = -1;
+const double kHighsIllegalInfeasibilityMeasure = -1;
 
 #endif /* LP_DATA_HCONST_H_ */

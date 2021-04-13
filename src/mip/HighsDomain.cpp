@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsDomain.h"
 
@@ -20,11 +23,11 @@
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {
   if (coef < 0) {
-    if (ub == HIGHS_CONST_INF) return -HIGHS_CONST_INF;
+    if (ub == kHighsInf) return -kHighsInf;
 
     return coef * ub;
   } else {
-    if (lb == -HIGHS_CONST_INF) return -HIGHS_CONST_INF;
+    if (lb == -kHighsInf) return -kHighsInf;
 
     return coef * lb;
   }
@@ -33,11 +36,11 @@ static double activityContributionMin(double coef, const double& lb,
 static double activityContributionMax(double coef, const double& lb,
                                       const double& ub) {
   if (coef < 0) {
-    if (lb == -HIGHS_CONST_INF) return HIGHS_CONST_INF;
+    if (lb == -kHighsInf) return kHighsInf;
 
     return coef * lb;
   } else {
-    if (ub == HIGHS_CONST_INF) return HIGHS_CONST_INF;
+    if (ub == kHighsInf) return kHighsInf;
 
     return coef * ub;
   }
@@ -137,12 +140,12 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
 
         activitycutversion_[row] = cutpool->getModificationCount(row);
 
-        deltamin = HIGHS_CONST_INF;
+        deltamin = kHighsInf;
       } else {
-        if (oldbound == -HIGHS_CONST_INF) {
+        if (oldbound == -kHighsInf) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
-        } else if (newbound == -HIGHS_CONST_INF) {
+        } else if (newbound == -kHighsInf) {
           ++activitycutsinf_[row];
           deltamin = -oldbound * val;
         } else {
@@ -185,10 +188,10 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
 
         assert(row < int(activitycutversion_.size()));
 
-        if (oldbound == -HIGHS_CONST_INF) {
+        if (oldbound == -kHighsInf) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
-        } else if (newbound == -HIGHS_CONST_INF) {
+        } else if (newbound == -kHighsInf) {
           ++activitycutsinf_[row];
           deltamin = -oldbound * val;
         } else {
@@ -224,12 +227,12 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
 
         activitycutversion_[row] = cutpool->getModificationCount(row);
 
-        deltamin = HIGHS_CONST_INF;
+        deltamin = kHighsInf;
       } else {
-        if (oldbound == HIGHS_CONST_INF) {
+        if (oldbound == kHighsInf) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
-        } else if (newbound == HIGHS_CONST_INF) {
+        } else if (newbound == kHighsInf) {
           ++activitycutsinf_[row];
           deltamin = -oldbound * val;
         } else {
@@ -270,10 +273,10 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
 
         assert(row < int(activitycutversion_.size()));
 
-        if (oldbound == HIGHS_CONST_INF) {
+        if (oldbound == kHighsInf) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
-        } else if (newbound == HIGHS_CONST_INF) {
+        } else if (newbound == kHighsInf) {
           ++activitycutsinf_[row];
           deltamin = -oldbound * val;
         } else {
@@ -303,7 +306,7 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
     double contributionmin =
         activityContributionMin(val, colLower_[col], colUpper_[col]);
 
-    if (contributionmin == -HIGHS_CONST_INF)
+    if (contributionmin == -kHighsInf)
       ++ninfmin;
     else
       activitymin += contributionmin;
@@ -327,7 +330,7 @@ void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
     double contributionmin =
         activityContributionMax(val, colLower_[col], colUpper_[col]);
 
-    if (contributionmin == HIGHS_CONST_INF)
+    if (contributionmin == kHighsInf)
       ++ninfmax;
     else
       activitymax += contributionmin;
@@ -350,7 +353,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
     double actcontribution = activityContributionMin(
         Rvalue[i], colLower_[Rindex[i]], colUpper_[Rindex[i]]);
     if (ninfmin == 1) {
-      if (actcontribution != -HIGHS_CONST_INF) continue;
+      if (actcontribution != -kHighsInf) continue;
 
       minresact = minactivity;
     } else {
@@ -358,15 +361,14 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rupper - minresact) / Rvalue[i];
-    if (std::abs(double(boundVal) * HIGHS_CONST_TINY) >
-        mipsolver->mipdata_->feastol)
+    if (std::abs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
       continue;
 
     if (Rvalue[i] > 0) {
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
         if (bound < colUpper_[Rindex[i]] &&
             colUpper_[Rindex[i]] - bound >
@@ -380,12 +382,12 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
           bound = colLower_[Rindex[i]];
         else
           bound = double(boundVal);
-        if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
+        if (colUpper_[Rindex[i]] == kHighsInf)
           accept = true;
         else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
                  colUpper_[Rindex[i]]) {
           double relativeImprove = colUpper_[Rindex[i]] - bound;
-          if (colLower_[Rindex[i]] != -HIGHS_CONST_INF)
+          if (colLower_[Rindex[i]] != -kHighsInf)
             relativeImprove /= colUpper_[Rindex[i]] - colLower_[Rindex[i]];
           else
             relativeImprove /=
@@ -402,7 +404,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
         if (bound > colLower_[Rindex[i]] &&
             bound - colLower_[Rindex[i]] >
@@ -416,12 +418,12 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
           bound = colUpper_[Rindex[i]];
         else
           bound = double(boundVal);
-        if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
+        if (colLower_[Rindex[i]] == -kHighsInf)
           accept = true;
         else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
                  colLower_[Rindex[i]]) {
           double relativeImprove = bound - colLower_[Rindex[i]];
-          if (colUpper_[Rindex[i]] != HIGHS_CONST_INF)
+          if (colUpper_[Rindex[i]] != kHighsInf)
             relativeImprove /= colUpper_[Rindex[i]] - colLower_[Rindex[i]];
           else
             relativeImprove /=
@@ -453,7 +455,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
     double actcontribution = activityContributionMax(
         Rvalue[i], colLower_[Rindex[i]], colUpper_[Rindex[i]]);
     if (ninfmax == 1) {
-      if (actcontribution != HIGHS_CONST_INF) continue;
+      if (actcontribution != kHighsInf) continue;
 
       maxresact = maxactivity;
     } else {
@@ -461,15 +463,14 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
     }
 
     HighsCDouble boundVal = (Rlower - maxresact) / Rvalue[i];
-    if (std::abs(double(boundVal) * HIGHS_CONST_TINY) >
-        mipsolver->mipdata_->feastol)
+    if (std::abs(double(boundVal) * kHighsTiny) > mipsolver->mipdata_->feastol)
       continue;
 
     if (Rvalue[i] < 0) {
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::floor(double(boundVal + mipsolver->mipdata_->feastol));
         if (bound < colUpper_[Rindex[i]] &&
             colUpper_[Rindex[i]] - bound >
@@ -483,12 +484,12 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
           bound = colLower_[Rindex[i]];
         else
           bound = double(boundVal);
-        if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
+        if (colUpper_[Rindex[i]] == kHighsInf)
           accept = true;
         else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
                  colUpper_[Rindex[i]]) {
           double relativeImprove = colUpper_[Rindex[i]] - bound;
-          if (colLower_[Rindex[i]] != -HIGHS_CONST_INF)
+          if (colLower_[Rindex[i]] != -kHighsInf)
             relativeImprove /= colUpper_[Rindex[i]] - colLower_[Rindex[i]];
           else
             relativeImprove /=
@@ -504,7 +505,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       bool accept;
 
       double bound;
-      if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
+      if (mipsolver->variableType(Rindex[i]) != HighsVarType::kContinuous) {
         bound = std::ceil(double(boundVal - mipsolver->mipdata_->feastol));
         if (bound > colLower_[Rindex[i]] &&
             bound - colLower_[Rindex[i]] >
@@ -518,12 +519,12 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
           bound = colUpper_[Rindex[i]];
         else
           bound = double(boundVal);
-        if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
+        if (colLower_[Rindex[i]] == -kHighsInf)
           accept = true;
         else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
                  colLower_[Rindex[i]]) {
           double relativeImprove = bound - colLower_[Rindex[i]];
-          if (colUpper_[Rindex[i]] != HIGHS_CONST_INF)
+          if (colUpper_[Rindex[i]] != kHighsInf)
             relativeImprove /= colUpper_[Rindex[i]] - colLower_[Rindex[i]];
           else
             relativeImprove /=
@@ -552,10 +553,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
   for (HighsInt i = start; i != end; ++i) {
     if (mip->Avalue_[i] > 0) {
       double deltamin;
-      if (oldbound == -HIGHS_CONST_INF) {
+      if (oldbound == -kHighsInf) {
         --activitymininf_[mip->Aindex_[i]];
         deltamin = newbound * mip->Avalue_[i];
-      } else if (newbound == -HIGHS_CONST_INF) {
+      } else if (newbound == -kHighsInf) {
         ++activitymininf_[mip->Aindex_[i]];
         deltamin = -oldbound * mip->Avalue_[i];
       } else {
@@ -565,7 +566,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (deltamin <= 0) continue;
 
-      if (mip->rowUpper_[mip->Aindex_[i]] != HIGHS_CONST_INF &&
+      if (mip->rowUpper_[mip->Aindex_[i]] != kHighsInf &&
           activitymininf_[mip->Aindex_[i]] == 0 &&
           activitymin_[mip->Aindex_[i]] - mip->rowUpper_[mip->Aindex_[i]] >
               mipsolver->mipdata_->feastol) {
@@ -579,17 +580,17 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (activitymininf_[mip->Aindex_[i]] <= 1 &&
           !propagateflags_[mip->Aindex_[i]] &&
-          mip->rowUpper_[mip->Aindex_[i]] != HIGHS_CONST_INF) {
+          mip->rowUpper_[mip->Aindex_[i]] != kHighsInf) {
         markPropagate(mip->Aindex_[i]);
         // propagateflags_[mip->Aindex_[i]] = 1;
         // propagateinds_.push_back(mip->Aindex_[i]);
       }
     } else {
       double deltamax;
-      if (oldbound == -HIGHS_CONST_INF) {
+      if (oldbound == -kHighsInf) {
         --activitymaxinf_[mip->Aindex_[i]];
         deltamax = newbound * mip->Avalue_[i];
-      } else if (newbound == -HIGHS_CONST_INF) {
+      } else if (newbound == -kHighsInf) {
         ++activitymaxinf_[mip->Aindex_[i]];
         deltamax = -oldbound * mip->Avalue_[i];
       } else {
@@ -599,7 +600,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (deltamax >= 0) continue;
 
-      if (mip->rowLower_[mip->Aindex_[i]] != -HIGHS_CONST_INF &&
+      if (mip->rowLower_[mip->Aindex_[i]] != -kHighsInf &&
           activitymaxinf_[mip->Aindex_[i]] == 0 &&
           mip->rowLower_[mip->Aindex_[i]] - activitymax_[mip->Aindex_[i]] >
               mipsolver->mipdata_->feastol) {
@@ -613,7 +614,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (activitymaxinf_[mip->Aindex_[i]] <= 1 &&
           !propagateflags_[mip->Aindex_[i]] &&
-          mip->rowLower_[mip->Aindex_[i]] != -HIGHS_CONST_INF) {
+          mip->rowLower_[mip->Aindex_[i]] != -kHighsInf) {
         markPropagate(mip->Aindex_[i]);
         // propagateflags_[mip->Aindex_[i]] = 1;
         // propagateinds_.push_back(mip->Aindex_[i]);
@@ -634,10 +635,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     for (HighsInt i = start; i != end; ++i) {
       if (mip->Avalue_[i] > 0) {
         double deltamin;
-        if (oldbound == -HIGHS_CONST_INF) {
+        if (oldbound == -kHighsInf) {
           --activitymininf_[mip->Aindex_[i]];
           deltamin = newbound * mip->Avalue_[i];
-        } else if (newbound == -HIGHS_CONST_INF) {
+        } else if (newbound == -kHighsInf) {
           ++activitymininf_[mip->Aindex_[i]];
           deltamin = -oldbound * mip->Avalue_[i];
         } else {
@@ -646,10 +647,10 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         activitymin_[mip->Aindex_[i]] += deltamin;
       } else {
         double deltamax;
-        if (oldbound == -HIGHS_CONST_INF) {
+        if (oldbound == -kHighsInf) {
           --activitymaxinf_[mip->Aindex_[i]];
           deltamax = newbound * mip->Avalue_[i];
-        } else if (newbound == -HIGHS_CONST_INF) {
+        } else if (newbound == -kHighsInf) {
           ++activitymaxinf_[mip->Aindex_[i]];
           deltamax = -oldbound * mip->Avalue_[i];
         } else {
@@ -674,10 +675,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   for (HighsInt i = start; i != end; ++i) {
     if (mip->Avalue_[i] > 0) {
       double deltamax;
-      if (oldbound == HIGHS_CONST_INF) {
+      if (oldbound == kHighsInf) {
         --activitymaxinf_[mip->Aindex_[i]];
         deltamax = newbound * mip->Avalue_[i];
-      } else if (newbound == HIGHS_CONST_INF) {
+      } else if (newbound == kHighsInf) {
         ++activitymaxinf_[mip->Aindex_[i]];
         deltamax = -oldbound * mip->Avalue_[i];
       } else {
@@ -687,7 +688,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
       if (deltamax >= 0) continue;
 
-      if (mip->rowLower_[mip->Aindex_[i]] != -HIGHS_CONST_INF &&
+      if (mip->rowLower_[mip->Aindex_[i]] != -kHighsInf &&
           activitymaxinf_[mip->Aindex_[i]] == 0 &&
           mip->rowLower_[mip->Aindex_[i]] - activitymax_[mip->Aindex_[i]] >
               mipsolver->mipdata_->feastol) {
@@ -701,17 +702,17 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
       if (activitymaxinf_[mip->Aindex_[i]] <= 1 &&
           !propagateflags_[mip->Aindex_[i]] &&
-          mip->rowLower_[mip->Aindex_[i]] != -HIGHS_CONST_INF) {
+          mip->rowLower_[mip->Aindex_[i]] != -kHighsInf) {
         markPropagate(mip->Aindex_[i]);
         // propagateflags_[mip->Aindex_[i]] = 1;
         // propagateinds_.push_back(mip->Aindex_[i]);
       }
     } else {
       double deltamin;
-      if (oldbound == HIGHS_CONST_INF) {
+      if (oldbound == kHighsInf) {
         --activitymininf_[mip->Aindex_[i]];
         deltamin = newbound * mip->Avalue_[i];
-      } else if (newbound == HIGHS_CONST_INF) {
+      } else if (newbound == kHighsInf) {
         ++activitymininf_[mip->Aindex_[i]];
         deltamin = -oldbound * mip->Avalue_[i];
       } else {
@@ -722,7 +723,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
       if (deltamin <= 0) continue;
 
-      if (mip->rowUpper_[mip->Aindex_[i]] != HIGHS_CONST_INF &&
+      if (mip->rowUpper_[mip->Aindex_[i]] != kHighsInf &&
           activitymininf_[mip->Aindex_[i]] == 0 &&
           activitymin_[mip->Aindex_[i]] - mip->rowUpper_[mip->Aindex_[i]] >
               mipsolver->mipdata_->feastol) {
@@ -736,7 +737,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
       if (activitymininf_[mip->Aindex_[i]] <= 1 &&
           !propagateflags_[mip->Aindex_[i]] &&
-          mip->rowUpper_[mip->Aindex_[i]] != HIGHS_CONST_INF) {
+          mip->rowUpper_[mip->Aindex_[i]] != kHighsInf) {
         markPropagate(mip->Aindex_[i]);
         // propagateflags_[mip->Aindex_[i]] = 1;
         // propagateinds_.push_back(mip->Aindex_[i]);
@@ -757,10 +758,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     for (HighsInt i = start; i != end; ++i) {
       if (mip->Avalue_[i] > 0) {
         double deltamax;
-        if (oldbound == HIGHS_CONST_INF) {
+        if (oldbound == kHighsInf) {
           --activitymaxinf_[mip->Aindex_[i]];
           deltamax = newbound * mip->Avalue_[i];
-        } else if (newbound == HIGHS_CONST_INF) {
+        } else if (newbound == kHighsInf) {
           ++activitymaxinf_[mip->Aindex_[i]];
           deltamax = -oldbound * mip->Avalue_[i];
         } else {
@@ -769,10 +770,10 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         activitymax_[mip->Aindex_[i]] += deltamax;
       } else {
         double deltamin;
-        if (oldbound == HIGHS_CONST_INF) {
+        if (oldbound == kHighsInf) {
           --activitymininf_[mip->Aindex_[i]];
           deltamin = newbound * mip->Avalue_[i];
-        } else if (newbound == HIGHS_CONST_INF) {
+        } else if (newbound == kHighsInf) {
           ++activitymininf_[mip->Aindex_[i]];
           deltamin = -oldbound * mip->Avalue_[i];
         } else {
@@ -805,12 +806,12 @@ void HighsDomain::markPropagate(HighsInt row) {
   // feastol and only mark in that case
 
   if (!propagateflags_[row]) {
-    bool proplower = mipsolver->rowLower(row) != -HIGHS_CONST_INF &&
+    bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
                      (activitymaxinf_[row] == 1 ||
                       (activitymax_[row] - mipsolver->rowLower(row)) /
                               mipsolver->mipdata_->maxAbsRowCoef[row] <
                           1.0 - mipsolver->mipdata_->feastol);
-    bool propupper = mipsolver->rowUpper(row) != HIGHS_CONST_INF &&
+    bool propupper = mipsolver->rowUpper(row) != kHighsInf &&
                      (activitymininf_[row] == 1 ||
                       (mipsolver->rowUpper(row) - activitymin_[row]) /
                               mipsolver->mipdata_->maxAbsRowCoef[row] <
@@ -842,10 +843,8 @@ void HighsDomain::computeRowActivities() {
                        mipsolver->mipdata_->ARvalue_.data(), activitymaxinf_[i],
                        activitymax_[i]);
 
-    if ((activitymininf_[i] <= 1 &&
-         mipsolver->rowUpper(i) != HIGHS_CONST_INF) ||
-        (activitymaxinf_[i] <= 1 &&
-         mipsolver->rowLower(i) != -HIGHS_CONST_INF)) {
+    if ((activitymininf_[i] <= 1 && mipsolver->rowUpper(i) != kHighsInf) ||
+        (activitymaxinf_[i] <= 1 && mipsolver->rowLower(i) != -kHighsInf)) {
       markPropagate(i);
       // propagateflags_[i] = 1;
       // propagateinds_.push_back(i);
@@ -1064,7 +1063,7 @@ bool HighsDomain::propagate() {
           const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
           HighsInt numchgs = 0;
 
-          if (mipsolver->rowUpper(i) != HIGHS_CONST_INF) {
+          if (mipsolver->rowUpper(i) != kHighsInf) {
             // computeMinActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymininf_[i],
             //           activitymin_[i]);
@@ -1074,7 +1073,7 @@ bool HighsDomain::propagate() {
                 activitymininf_[i], &changedbounds[2 * start]);
           }
 
-          if (mipsolver->rowLower(i) != -HIGHS_CONST_INF) {
+          if (mipsolver->rowLower(i) != -kHighsInf) {
             // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymaxinf_[i],
             //           activitymax_[i]);
@@ -1192,11 +1191,11 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
 
   for (HighsInt i = 0; i != len; ++i) {
     if (vals[i] > 0) {
-      if (colUpper_[inds[i]] == HIGHS_CONST_INF) return;
+      if (colUpper_[inds[i]] == kHighsInf) return;
 
       maxactivity += colUpper_[inds[i]] * vals[i];
     } else {
-      if (colLower_[inds[i]] == -HIGHS_CONST_INF) return;
+      if (colLower_[inds[i]] == -kHighsInf) return;
 
       maxactivity += colLower_[inds[i]] * vals[i];
     }
@@ -1207,7 +1206,7 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
     HighsCDouble upper = rhs;
     HighsInt tightened = 0;
     for (HighsInt i = 0; i != len; ++i) {
-      if (mipsolver->variableType(inds[i]) == HighsVarType::CONTINUOUS)
+      if (mipsolver->variableType(inds[i]) == HighsVarType::kContinuous)
         continue;
       if (vals[i] > maxabscoef) {
         HighsCDouble delta = vals[i] - maxabscoef;
@@ -1242,7 +1241,7 @@ double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
         HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(cut);
         if (start == -1) {
           cutpoolprop.activitycuts_[cut] = 0;
-          return -HIGHS_CONST_INF;
+          return -kHighsInf;
         }
         HighsInt end = cutpoolprop.cutpool->getMatrix().getRowEnd(cut);
         const HighsInt* arindex = cutpoolprop.cutpool->getMatrix().getARindex();
@@ -1253,11 +1252,11 @@ double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
       }
       return cutpoolprop.activitycutsinf_[cut] == 0
                  ? double(cutpoolprop.activitycuts_[cut])
-                 : -HIGHS_CONST_INF;
+                 : -kHighsInf;
     }
   }
 
-  return -HIGHS_CONST_INF;
+  return -kHighsInf;
 }
 
 bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {

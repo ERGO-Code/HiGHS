@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ipm/IpxWrapper.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IPM_IPX_WRAPPER_H_
 #define IPM_IPX_WRAPPER_H_
@@ -48,11 +50,9 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   for (HighsInt row = 0; row < num_row; row++)
     if (lp.rowLower_[row] < lp.rowUpper_[row] &&
-        lp.rowLower_[row] > -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] < HIGHS_CONST_INF)
+        lp.rowLower_[row] > -kHighsInf && lp.rowUpper_[row] < kHighsInf)
       general_bounded_rows.push_back(row);
-    else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
-             lp.rowUpper_[row] >= HIGHS_CONST_INF)
+    else if (lp.rowLower_[row] <= -kHighsInf && lp.rowUpper_[row] >= kHighsInf)
       free_rows.push_back(row);
 
   const HighsInt num_slack = general_bounded_rows.size();
@@ -63,19 +63,18 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   constraint_type.reserve(num_row);
 
   for (int row = 0; row < num_row; row++) {
-    if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] >= HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] > -kHighsInf && lp.rowUpper_[row] >= kHighsInf) {
       rhs.push_back(lp.rowLower_[row]);
       constraint_type.push_back('>');
-    } else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    } else if (lp.rowLower_[row] <= -kHighsInf &&
+               lp.rowUpper_[row] < kHighsInf) {
       rhs.push_back(lp.rowUpper_[row]);
       constraint_type.push_back('<');
     } else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
       rhs.push_back(lp.rowUpper_[row]);
       constraint_type.push_back('=');
-    } else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    } else if (lp.rowLower_[row] > -kHighsInf &&
+               lp.rowUpper_[row] < kHighsInf) {
       // general bounded
       rhs.push_back(0);
       constraint_type.push_back('=');
@@ -106,8 +105,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   for (HighsInt col = 0; col < lp.numCol_; col++)
     for (HighsInt k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
       HighsInt row = lp.Aindex_[k];
-      if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
-          lp.rowUpper_[row] < HIGHS_CONST_INF)
+      if (lp.rowLower_[row] > -kHighsInf || lp.rowUpper_[row] < kHighsInf)
         sizes[col]++;
     }
   // Copy Astart and Aindex to ipx::Int array.
@@ -133,8 +131,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   //  (int)num_col, (int)Ap[num_col]);
   for (HighsInt k = 0; k < nnz; k++) {
     HighsInt row = lp.Aindex_[k];
-    if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
-        lp.rowUpper_[row] < HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] > -kHighsInf || lp.rowUpper_[row] < kHighsInf) {
       Ai.push_back(reduced_rowmap[lp.Aindex_[k]]);
       Ax.push_back(lp.Avalue_[k]);
     }
@@ -149,12 +146,12 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   col_lb.resize(num_col);
   col_ub.resize(num_col);
   for (HighsInt col = 0; col < lp.numCol_; col++) {
-    if (lp.colLower_[col] <= -HIGHS_CONST_INF)
+    if (lp.colLower_[col] <= -kHighsInf)
       col_lb[col] = -INFINITY;
     else
       col_lb[col] = lp.colLower_[col];
 
-    if (lp.colUpper_[col] >= HIGHS_CONST_INF)
+    if (lp.colUpper_[col] >= kHighsInf)
       col_ub[col] = INFINITY;
     else
       col_ub[col] = lp.colUpper_[col];
@@ -190,52 +187,52 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
                                  const ipx::Int solve_status,
                                  const ipx::Int error_flag) {
   if (solve_status == IPX_STATUS_solved) {
-    highsLogUser(options.log_options, HighsLogType::INFO, "Ipx: Solved\n");
-    return HighsStatus::OK;
+    highsLogUser(options.log_options, HighsLogType::kInfo, "Ipx: Solved\n");
+    return HighsStatus::kOk;
   } else if (solve_status == IPX_STATUS_stopped) {
-    highsLogUser(options.log_options, HighsLogType::WARNING, "Ipx: Stopped\n");
-    return HighsStatus::Warning;
+    highsLogUser(options.log_options, HighsLogType::kWarning, "Ipx: Stopped\n");
+    return HighsStatus::kWarning;
   } else if (solve_status == IPX_STATUS_no_model) {
     if (error_flag == IPX_ERROR_argument_null) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - argument_null\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_dimension) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid dimension\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_matrix) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid matrix\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_vector) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid vector\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     } else if (error_flag == IPX_ERROR_invalid_basis) {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - invalid basis\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     } else {
-      highsLogUser(options.log_options, HighsLogType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::kError,
                    "Ipx: Invalid input - unrecognised error\n");
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     }
   } else if (solve_status == IPX_STATUS_out_of_memory) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: Out of memory\n");
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   } else if (solve_status == IPX_STATUS_internal_error) {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: Internal error %" HIGHSINT_FORMAT "\n", (int)error_flag);
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   } else {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: unrecognised solve status = %" HIGHSINT_FORMAT "\n",
                  (int)solve_status);
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
-  return HighsStatus::Error;
+  return HighsStatus::kError;
 }
 
 HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
@@ -247,61 +244,61 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   else
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s not run\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_optimal) {
-    highsLogUser(options.log_options, HighsLogType::INFO, "Ipx: %s optimal\n",
+    highsLogUser(options.log_options, HighsLogType::kInfo, "Ipx: %s optimal\n",
                  method_name.c_str());
-    return HighsStatus::OK;
+    return HighsStatus::kOk;
   } else if (status == IPX_STATUS_imprecise) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s imprecise\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_primal_infeas) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s primal infeasible\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_dual_infeas) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s dual infeasible\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_time_limit) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s reached time limit\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_iter_limit) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s reached iteration limit\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_no_progress) {
-    highsLogUser(options.log_options, HighsLogType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Ipx: %s no progress\n", method_name.c_str());
-    return HighsStatus::Warning;
+    return HighsStatus::kWarning;
   } else if (status == IPX_STATUS_failed) {
-    highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s failed\n",
+    highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s failed\n",
                  method_name.c_str());
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   } else if (status == IPX_STATUS_debug) {
-    highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s debug\n",
+    highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s debug\n",
                  method_name.c_str());
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   } else {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Ipx: %s unrecognised status\n", method_name.c_str());
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   }
-  return HighsStatus::Error;
+  return HighsStatus::kError;
 }
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
                     std::string message, const int value = -1) {
   if (status_error) {
     if (value < 0) {
-      highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s\n",
+      highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s\n",
                    message.c_str());
     } else {
-      highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s %d\n",
+      highsLogUser(options.log_options, HighsLogType::kError, "Ipx: %s %d\n",
                    message.c_str(), value);
     }
     fflush(NULL);
@@ -489,13 +486,13 @@ bool illegalIpxStoppedCrossoverStatus(ipx::Info& ipx_info,
 
 void reportIpmNoProgress(const HighsOptions& options,
                          const ipx::Info& ipx_info) {
-  highsLogUser(options.log_options, HighsLogType::WARNING,
+  highsLogUser(options.log_options, HighsLogType::kWarning,
                "No progress: primal objective value       = %11.4g\n",
                ipx_info.pobjval);
-  highsLogUser(options.log_options, HighsLogType::WARNING,
+  highsLogUser(options.log_options, HighsLogType::kWarning,
                "No progress: max absolute primal residual = %11.4g\n",
                ipx_info.abs_presidual);
-  highsLogUser(options.log_options, HighsLogType::WARNING,
+  highsLogUser(options.log_options, HighsLogType::kWarning,
                "No progress: max absolute   dual residual = %11.4g\n",
                ipx_info.abs_dresidual);
 }
@@ -505,22 +502,22 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
                                  HighsModelStatus& model_status) {
   if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
     // Looks like the LP is infeasible
-    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
-    return HighsStatus::OK;
+    model_status = HighsModelStatus::kPrimalInfeasible;
+    return HighsStatus::kOk;
   } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
     // Looks like the LP is unbounded
-    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
-    return HighsStatus::OK;
-  } else if (ipx_info.pobjval < -HIGHS_CONST_INF) {
+    model_status = HighsModelStatus::kPrimalUnbounded;
+    return HighsStatus::kOk;
+  } else if (ipx_info.pobjval < -kHighsInf) {
     // Looks like the LP is unbounded
-    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
-    return HighsStatus::OK;
+    model_status = HighsModelStatus::kPrimalUnbounded;
+    return HighsStatus::kOk;
   } else {
     // Don't know
-    model_status = HighsModelStatus::SOLVE_ERROR;
-    return HighsStatus::Error;
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
   }
-  return HighsStatus::Warning;
+  return HighsStatus::kWarning;
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
@@ -583,8 +580,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   std::vector<char> constraint_type;
   IpxStatus result = fillInIpxData(lp, num_col, objective, col_lb, col_ub,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
-  if (result != IpxStatus::OK) return HighsStatus::Error;
-  highsLogUser(options.log_options, HighsLogType::INFO,
+  if (result != IpxStatus::OK) return HighsStatus::kError;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
                "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
                " columns and %" HIGHSINT_FORMAT " nonzeros\n",
                num_row, num_col, Ap[num_col]);
@@ -609,9 +606,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     const HighsStatus solve_return_status =
         reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
     // Return error if IPX solve error has occurred
-    if (solve_return_status == HighsStatus::Error) {
-      model_status = HighsModelStatus::SOLVE_ERROR;
-      return HighsStatus::Error;
+    if (solve_return_status == HighsStatus::kError) {
+      model_status = HighsModelStatus::kSolveError;
+      return HighsStatus::kError;
     }
   }
   bool ipm_status = true;
@@ -621,10 +618,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(
       options, ipx_info.status_crossover, ipm_status);
   // Return error if IPX IPM or crossover error has occurred
-  if (ipm_return_status == HighsStatus::Error ||
-      crossover_return_status == HighsStatus::Error) {
-    model_status = HighsModelStatus::SOLVE_ERROR;
-    return HighsStatus::Error;
+  if (ipm_return_status == HighsStatus::kError ||
+      crossover_return_status == HighsStatus::kError) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved or
   // IPX_STATUS_stopped
@@ -633,7 +630,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
               solve_status != IPX_STATUS_stopped,
           options, "solve_status should be solved or stopped here but value is",
           (int)solve_status))
-    return HighsStatus::Error;
+    return HighsStatus::kError;
 
   if (solve_status == IPX_STATUS_stopped) {
     //
@@ -646,11 +643,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     // For crossover
     //==============
     if (illegalIpxStoppedCrossoverStatus(ipx_info, options))
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     // Can stop and reach time limit
     if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::REACHED_TIME_LIMIT;
-      return HighsStatus::Warning;
+      model_status = HighsModelStatus::kReachedTimeLimit;
+      return HighsStatus::kWarning;
     }
     //========
     // For IPM
@@ -660,16 +657,16 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     // primal_infeas or dual_infeas, due to crossover stopping with
     // time limit, and this is why crossover returns are tested first
     if (illegalIpxStoppedIpmStatus(ipx_info, options))
-      return HighsStatus::Error;
+      return HighsStatus::kError;
     // Can stop with time limit
     // Can stop with iter limit
     // Can stop with no progress
     if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::REACHED_TIME_LIMIT;
-      return HighsStatus::Warning;
+      model_status = HighsModelStatus::kReachedTimeLimit;
+      return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
-      model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
-      return HighsStatus::Warning;
+      model_status = HighsModelStatus::kReachedIterationLimit;
+      return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
       reportIpmNoProgress(options, ipx_info);
       return analyseIpmNoProgress(ipx_info, lps.GetParameters(), model_status);
@@ -679,10 +676,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (ipxStatusError(solve_status != IPX_STATUS_solved, options,
                      "solve_status should be solved here but value is",
                      (int)solve_status))
-    return HighsStatus::Error;
+    return HighsStatus::kError;
   // Return error if solved status settings occur that JAJH doesn't
   // think should happen
-  if (illegalIpxSolvedStatus(ipx_info, options)) return HighsStatus::Error;
+  if (illegalIpxSolvedStatus(ipx_info, options)) return HighsStatus::kError;
   //==============
   // For crossover
   //==============
@@ -697,11 +694,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Can solve and be primal_infeas
   // Can solve and be dual_infeas
   if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
-    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
-    return HighsStatus::OK;
+    model_status = HighsModelStatus::kPrimalInfeasible;
+    return HighsStatus::kOk;
   } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
-    return HighsStatus::OK;
+    model_status = HighsModelStatus::kPrimalUnbounded;
+    return HighsStatus::kOk;
   }
 
   // Should only reach here if crossover is not run, optimal or imprecise
@@ -712,7 +709,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                      "crossover status should be not run, optimal or imprecise "
                      "but value is",
                      (int)ipx_info.status_crossover))
-    return HighsStatus::Error;
+    return HighsStatus::kError;
 
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
@@ -759,15 +756,15 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   HighsStatus return_status;
   if (imprecise_solution) {
-    model_status = HighsModelStatus::NOTSET;
-    return_status = HighsStatus::Warning;
+    model_status = HighsModelStatus::kNotset;
+    return_status = HighsStatus::kWarning;
   } else {
-    model_status = HighsModelStatus::OPTIMAL;
-    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    model_status = HighsModelStatus::kOptimal;
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     // Currently only have a dual solution if there is a basic solution
     if (have_basic_solution)
-      solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    return_status = HighsStatus::OK;
+      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+    return_status = HighsStatus::kOk;
   }
   double objective_function_value = lp.offset_;
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)

@@ -2,15 +2,17 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsLinearSumBounds.h
  * @brief Data structure to compute and update bounds on a linear sum of
  * variables with finite or infinite bounds
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_LINEAR_SUM_BOUNDS_H_
@@ -93,40 +95,39 @@ class HighsLinearSumBounds {
 
   double getSumLowerOrig(HighsInt sum) const {
     return numInfSumLowerOrig[sum] == 0 ? double(sumLowerOrig[sum])
-                                        : -HIGHS_CONST_INF;
+                                        : -kHighsInf;
   }
 
   double getSumUpperOrig(HighsInt sum) const {
-    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum])
-                                        : HIGHS_CONST_INF;
+    return numInfSumUpperOrig[sum] == 0 ? double(sumUpperOrig[sum]) : kHighsInf;
   }
 
   double getSumLower(HighsInt sum) const {
-    return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -HIGHS_CONST_INF;
+    return numInfSumLower[sum] == 0 ? double(sumLower[sum]) : -kHighsInf;
   }
 
   double getSumUpper(HighsInt sum) const {
-    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : HIGHS_CONST_INF;
+    return numInfSumUpper[sum] == 0 ? double(sumUpper[sum]) : kHighsInf;
   }
 
   double getSumLower(HighsInt sum, double offset) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -HIGHS_CONST_INF;
+                                    : -kHighsInf;
   }
 
   double getSumUpper(HighsInt sum, double offset) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : HIGHS_CONST_INF;
+                                    : kHighsInf;
   }
 
   double getSumLower(HighsInt sum, HighsCDouble offset) const {
     return numInfSumLower[sum] == 0 ? double(sumLower[sum] + offset)
-                                    : -HIGHS_CONST_INF;
+                                    : -kHighsInf;
   }
 
   double getSumUpper(HighsInt sum, HighsCDouble offset) const {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
-                                    : HIGHS_CONST_INF;
+                                    : kHighsInf;
   }
 
   HighsInt getNumInfSumLower(HighsInt sum) const { return numInfSumLower[sum]; }

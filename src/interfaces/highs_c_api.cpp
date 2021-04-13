@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "highs_c_api.h"
 
@@ -340,18 +343,18 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
   if (num_col > 0) {
     basis.col_status.resize(num_col);
     for (HighsInt i = 0; i < num_col; i++) {
-      if (colstatus[i] == (HighsInt)HighsBasisStatus::LOWER) {
-        basis.col_status[i] = HighsBasisStatus::LOWER;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::BASIC) {
-        basis.col_status[i] = HighsBasisStatus::BASIC;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::UPPER) {
-        basis.col_status[i] = HighsBasisStatus::UPPER;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::ZERO) {
-        basis.col_status[i] = HighsBasisStatus::ZERO;
-      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::NONBASIC) {
-        basis.col_status[i] = HighsBasisStatus::NONBASIC;
+      if (colstatus[i] == (HighsInt)HighsBasisStatus::kLower) {
+        basis.col_status[i] = HighsBasisStatus::kLower;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kBasic) {
+        basis.col_status[i] = HighsBasisStatus::kBasic;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kUpper) {
+        basis.col_status[i] = HighsBasisStatus::kUpper;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kZero) {
+        basis.col_status[i] = HighsBasisStatus::kZero;
+      } else if (colstatus[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
+        basis.col_status[i] = HighsBasisStatus::kNonbasic;
       } else {
-        return (HighsInt)HighsStatus::Error;
+        return (HighsInt)HighsStatus::kError;
       }
     }
   }
@@ -359,18 +362,18 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
   if (num_row > 0) {
     basis.row_status.resize(num_row);
     for (HighsInt i = 0; i < num_row; i++) {
-      if (rowstatus[i] == (HighsInt)HighsBasisStatus::LOWER) {
-        basis.row_status[i] = HighsBasisStatus::LOWER;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::BASIC) {
-        basis.row_status[i] = HighsBasisStatus::BASIC;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::UPPER) {
-        basis.row_status[i] = HighsBasisStatus::UPPER;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::ZERO) {
-        basis.row_status[i] = HighsBasisStatus::ZERO;
-      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::NONBASIC) {
-        basis.row_status[i] = HighsBasisStatus::NONBASIC;
+      if (rowstatus[i] == (HighsInt)HighsBasisStatus::kLower) {
+        basis.row_status[i] = HighsBasisStatus::kLower;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kBasic) {
+        basis.row_status[i] = HighsBasisStatus::kBasic;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kUpper) {
+        basis.row_status[i] = HighsBasisStatus::kUpper;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kZero) {
+        basis.row_status[i] = HighsBasisStatus::kZero;
+      } else if (rowstatus[i] == (HighsInt)HighsBasisStatus::kNonbasic) {
+        basis.row_status[i] = HighsBasisStatus::kNonbasic;
       } else {
-        return (HighsInt)HighsStatus::Error;
+        return (HighsInt)HighsStatus::kError;
       }
     }
   }
@@ -417,8 +420,8 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
-  ObjSense pass_sense = ObjSense::MINIMIZE;
-  if (sense == (HighsInt)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
+  ObjSense pass_sense = ObjSense::kMinimize;
+  if (sense == (HighsInt)ObjSense::kMaximize) pass_sense = ObjSense::kMaximize;
   return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
@@ -679,23 +682,25 @@ HighsInt Highs_getNumNz(void* highs) {
 
 const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
   const char* illegal_model_status = "Model status out of range";
-  if (int_model_status < (HighsInt)HighsModelStatus::HIGHS_MODEL_STATUS_MIN ||
-      int_model_status > (HighsInt)HighsModelStatus::HIGHS_MODEL_STATUS_MAX)
+  if (int_model_status < (HighsInt)HighsModelStatus::kMin ||
+      int_model_status > (HighsInt)HighsModelStatus::kMax)
     return illegal_model_status;
-  return ((Highs*)highs)
-      ->modelStatusToString(static_cast<HighsModelStatus>(int_model_status))
-      .c_str();
+  const std::string string_model_status =
+      ((Highs*)highs)
+          ->modelStatusToString(
+              static_cast<HighsModelStatus>(int_model_status));
+  return string_model_status.c_str();
 }
 
 const char* Highs_primalDualStatusToChar(void* highs,
                                          HighsInt int_primal_dual_status) {
   const char* illegal_primal_dual_status = "Primal/Dual status out of range";
-  if (int_primal_dual_status < PrimalDualStatus::STATUS_MIN ||
-      int_primal_dual_status > PrimalDualStatus::STATUS_MAX)
+  if (int_primal_dual_status < kHighsPrimalDualStatusMin ||
+      int_primal_dual_status > kHighsPrimalDualStatusMax)
     return illegal_primal_dual_status;
-  return ((Highs*)highs)
-      ->primalDualStatusToString(int_primal_dual_status)
-      .c_str();
+  const std::string string_primal_dual_status =
+      ((Highs*)highs)->primalDualStatusToString(int_primal_dual_status);
+  return string_primal_dual_status.c_str();
 }
 
 // *********************

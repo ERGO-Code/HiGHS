@@ -47,8 +47,8 @@ void assessNewBounds(double& lower, double& upper) {
 }
 
 bool modelStatusOk(Highs& highs) {
-  if (highs.getModelStatus() == HighsModelStatus::OPTIMAL) return true;
-  if (highs.getModelStatus(true) == HighsModelStatus::OPTIMAL) return true;
+  if (highs.getModelStatus() == HighsModelStatus::kOptimal) return true;
+  if (highs.getModelStatus(true) == HighsModelStatus::kOptimal) return true;
   return false;
 }
 
@@ -56,15 +56,15 @@ void testRanging(Highs& highs) {
   HighsLp lp;
   double optimal_objective;
 
-  REQUIRE(highs.setBasis() == HighsStatus::OK);
-  //  REQUIRE(quietRun(highs) == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  //  REQUIRE(quietRun(highs) == HighsStatus::kOk);
   highs.run();
 
   REQUIRE(modelStatusOk(highs));
   optimal_objective = highs.getObjectiveValue();
 
   HighsRanging ranging;
-  REQUIRE(highs.getRanging(ranging) == HighsStatus::OK);
+  REQUIRE(highs.getRanging(ranging) == HighsStatus::kOk);
   HighsBasis basis = highs.getBasis();
   assert(basis.valid_);
   HighsSolution solution = highs.getSolution();
@@ -127,7 +127,7 @@ void testRanging(Highs& highs) {
     double solved_dn = 0;
     double error;
     // Col cost up ranging
-    if (col_cost_up_value < HIGHS_CONST_INF) {
+    if (col_cost_up_value < kHighsInf) {
       highs.changeColCost(i, col_cost_up_value);
       highs.setBasis(basis);
       if (test_all_col_cost) {
@@ -157,7 +157,7 @@ void testRanging(Highs& highs) {
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
     // Col cost down ranging
-    if (col_cost_dn_value > -HIGHS_CONST_INF) {
+    if (col_cost_dn_value > -kHighsInf) {
       highs.changeColCost(i, col_cost_dn_value);
       highs.setBasis(basis);
       if (test_all_col_cost) {
@@ -227,17 +227,17 @@ void testRanging(Highs& highs) {
     double solved_dn = 0;
     double error;
     // Col bound up ranging
-    if (col_bound_up_value < HIGHS_CONST_INF) {
+    if (col_bound_up_value < kHighsInf) {
       // Free cols should not have a finite col_bound_up_value
-      assert(col_status[i] != HighsBasisStatus::ZERO);
+      assert(col_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (col_status[i] != HighsBasisStatus::BASIC) {
+      if (col_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = col_bound_up_value;
           new_upper = col_bound_up_value;
-        } else if (col_status[i] == HighsBasisStatus::LOWER) {
+        } else if (col_status[i] == HighsBasisStatus::kLower) {
           new_lower = col_bound_up_value;
         } else {
           new_upper = col_bound_up_value;
@@ -275,17 +275,17 @@ void testRanging(Highs& highs) {
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
     // Col bound down ranging
-    if (col_bound_dn_value > -HIGHS_CONST_INF) {
+    if (col_bound_dn_value > -kHighsInf) {
       // Free cols should not have a finite col_bound_dn_value
-      assert(col_status[i] != HighsBasisStatus::ZERO);
+      assert(col_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (col_status[i] != HighsBasisStatus::BASIC) {
+      if (col_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = col_bound_dn_value;
           new_upper = col_bound_dn_value;
-        } else if (col_status[i] == HighsBasisStatus::LOWER) {
+        } else if (col_status[i] == HighsBasisStatus::kLower) {
           new_lower = col_bound_dn_value;
         } else {
           new_upper = col_bound_dn_value;
@@ -364,17 +364,17 @@ void testRanging(Highs& highs) {
     double solved_dn = 0;
     double error;
     // Row bound up ranging
-    if (row_bound_up_value < HIGHS_CONST_INF) {
+    if (row_bound_up_value < kHighsInf) {
       // Free rows should not have a finite row_bound_up_value
-      assert(row_status[i] != HighsBasisStatus::ZERO);
+      assert(row_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (row_status[i] != HighsBasisStatus::BASIC) {
+      if (row_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = row_bound_up_value;
           new_upper = row_bound_up_value;
-        } else if (row_status[i] == HighsBasisStatus::LOWER) {
+        } else if (row_status[i] == HighsBasisStatus::kLower) {
           new_lower = row_bound_up_value;
         } else {
           new_upper = row_bound_up_value;
@@ -412,17 +412,17 @@ void testRanging(Highs& highs) {
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
     // Row bound down ranging
-    if (row_bound_dn_value > -HIGHS_CONST_INF) {
+    if (row_bound_dn_value > -kHighsInf) {
       // Free rows should not have a finite row_bound_dn_value
-      assert(row_status[i] != HighsBasisStatus::ZERO);
+      assert(row_status[i] != HighsBasisStatus::kZero);
       new_lower = lower;
       new_upper = upper;
-      if (row_status[i] != HighsBasisStatus::BASIC) {
+      if (row_status[i] != HighsBasisStatus::kBasic) {
         // Nonbasic
         if (lower == upper) {
           new_lower = row_bound_dn_value;
           new_upper = row_bound_dn_value;
-        } else if (row_status[i] == HighsBasisStatus::LOWER) {
+        } else if (row_status[i] == HighsBasisStatus::kLower) {
           new_lower = row_bound_dn_value;
         } else {
           new_upper = row_bound_dn_value;
@@ -514,7 +514,7 @@ TEST_CASE("Ranging-min", "[highs_test_ranging]") {
   if (from_file) {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   } else {
     SpecialLps special_lps;
     special_lps.blendingLp(lp, require_model_status, optimal_objective);
@@ -536,8 +536,8 @@ TEST_CASE("Ranging-max", "[highs_test_ranging]") {
   if (from_file) {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
-    REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
-    REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+    REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
   } else {
     SpecialLps special_lps;
     special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);

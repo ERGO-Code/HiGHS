@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsImplications.h"
 
@@ -86,7 +89,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   for (auto i = implications.begin() + implstart; i != binstart; ++i) {
     if (i->boundtype == HighsBoundType::Lower) {
       if (val == 1) {
-        if (globaldomain.colLower_[i->column] != -HIGHS_CONST_INF)
+        if (globaldomain.colLower_[i->column] != -kHighsInf)
           addVLB(i->column, col,
                  i->boundval - globaldomain.colLower_[i->column],
                  globaldomain.colLower_[i->column]);
@@ -98,7 +101,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
                globaldomain.colLower_[i->column] - i->boundval, i->boundval);
     } else {
       if (val == 1) {
-        if (globaldomain.colUpper_[i->column] != HIGHS_CONST_INF)
+        if (globaldomain.colUpper_[i->column] != kHighsInf)
           addVUB(i->column, col,
                  i->boundval - globaldomain.colUpper_[i->column],
                  globaldomain.colUpper_[i->column]);
@@ -413,7 +416,7 @@ void HighsImplications::separateImpliedBounds(
         // printf("added implied bound cut to pool\n");
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
-                           HighsVarType::CONTINUOUS,
+                           HighsVarType::kContinuous,
                        false);
       }
     }
@@ -459,7 +462,7 @@ void HighsImplications::separateImpliedBounds(
         // printf("added implied bound cut to pool\n");
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
-                           HighsVarType::CONTINUOUS,
+                           HighsVarType::kContinuous,
                        false);
       }
     }

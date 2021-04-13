@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file ipm/IpxWrapperEmpty.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IPM_IPX_WRAPPER_EMPTY_H_
 #define IPM_IPX_WRAPPER_EMPTY_H_
@@ -24,8 +26,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsIterationCounts& iteration_counts,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
-  unscaled_model_status = HighsModelStatus::NOTSET;
-  return HighsStatus::Error;
+  unscaled_model_status = HighsModelStatus::kNotset;
+  return HighsStatus::kError;
 }
 
 #endif

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsModelObjectUtil.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHSMODELOBJECTUTILS_H_
 #define LP_DATA_HIGHSMODELOBJECTUTILS_H_
@@ -31,16 +33,16 @@ void report_row_vec_sol(HighsInt nrow, vector<double>& XrowLower,
   if (nrow <= 0) return;
   printf("Row    St      Primal       Lower       Upper        Dual\n");
   for (HighsInt row = 0; row < nrow; row++) {
-    if (XrowStatus[row] == (HighsInt)HighsBasisStatus::BASIC)
+    if (XrowStatus[row] == (HighsInt)HighsBasisStatus::kBasic)
       printf("%6" HIGHSINT_FORMAT " BC", row);
-    else if (XrowStatus[row] == (HighsInt)HighsBasisStatus::ZERO)
+    else if (XrowStatus[row] == (HighsInt)HighsBasisStatus::kZero)
       printf("%6" HIGHSINT_FORMAT " FR", row);
-    else if (XrowStatus[row] == (HighsInt)HighsBasisStatus::LOWER) {
+    else if (XrowStatus[row] == (HighsInt)HighsBasisStatus::kLower) {
       if (XrowLower[row] == XrowUpper[row])
         printf("%6" HIGHSINT_FORMAT " FX", row);
       else
         printf("%6" HIGHSINT_FORMAT " LB", row);
-    } else if (XrowStatus[row] == (HighsInt)HighsBasisStatus::UPPER)
+    } else if (XrowStatus[row] == (HighsInt)HighsBasisStatus::kUpper)
       printf("%6" HIGHSINT_FORMAT " UB", row);
     else
       printf("%6" HIGHSINT_FORMAT " ??", row);
@@ -75,16 +77,16 @@ void report_col_vec_sol(HighsInt ncol, vector<double>& XcolCost,
       "Col    St      Primal       Lower       Upper        Dual        "
       "Cost\n");
   for (HighsInt col = 0; col < ncol; col++) {
-    if (XcolStatus[col] == (HighsInt)HighsBasisStatus::BASIC)
+    if (XcolStatus[col] == (HighsInt)HighsBasisStatus::kBasic)
       printf("%6" HIGHSINT_FORMAT " BC", col);
-    else if (XcolStatus[col] == (HighsInt)HighsBasisStatus::ZERO)
+    else if (XcolStatus[col] == (HighsInt)HighsBasisStatus::kZero)
       printf("%6" HIGHSINT_FORMAT " FR", col);
-    else if (XcolStatus[col] == (HighsInt)HighsBasisStatus::LOWER) {
+    else if (XcolStatus[col] == (HighsInt)HighsBasisStatus::kLower) {
       if (colLower[col] == XcolUpper[col])
         printf("%6" HIGHSINT_FORMAT " FX", col);
       else
         printf("%6" HIGHSINT_FORMAT " LB", col);
-    } else if (XcolStatus[col] == (HighsInt)HighsBasisStatus::UPPER)
+    } else if (XcolStatus[col] == (HighsInt)HighsBasisStatus::kUpper)
       printf("%6" HIGHSINT_FORMAT " UB", col);
     else
       printf("%6" HIGHSINT_FORMAT " ??", col);

@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_CLIQUE_TABLE_H_
 #define HIGHS_CLIQUE_TABLE_H_
@@ -144,7 +147,7 @@ class HighsCliqueTable {
   void propagateAndCleanup(HighsDomain& globaldom);
 
   void doAddClique(const CliqueVar* cliquevars, HighsInt numcliquevars,
-                   bool equality = false, HighsInt origin = HIGHS_CONST_I_INF);
+                   bool equality = false, HighsInt origin = kHighsIInf);
 
  public:
   HighsCliqueTable(HighsInt ncols) {
@@ -159,7 +162,7 @@ class HighsCliqueTable {
 
   void addClique(const HighsMipSolver& mipsolver, CliqueVar* cliquevars,
                  HighsInt numcliquevars, bool equality = false,
-                 HighsInt origin = HIGHS_CONST_I_INF);
+                 HighsInt origin = kHighsIInf);
 
   void removeClique(HighsInt cliqueid);
 

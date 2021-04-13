@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "test/DevKkt.h"
 
@@ -138,8 +140,8 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
       details.checked++;
       double infeas = 0;
       // j not in L or U
-      if (state.colLower[i] <= -HIGHS_CONST_INF &&
-          state.colUpper[i] >= HIGHS_CONST_INF) {
+      if (state.colLower[i] <= -kHighsInf &&
+          state.colUpper[i] >= kHighsInf) {
         if (fabs(state.colDual[i]) > tol) {
           if (dev_print == 1)
             std::cout << "Dual feasibility fail: l=-inf, x[" << i
@@ -258,7 +260,7 @@ void checkComplementarySlackness(const State& state,
     if (state.flagCol[i]) {
       double infeas = 0;
       details.checked++;
-      if (state.colLower[i] > -HIGHS_CONST_INF &&
+      if (state.colLower[i] > -kHighsInf &&
           fabs(state.colValue[i] - state.colLower[i]) > tol) {
         if (fabs(state.colDual[i]) > tol &&
             fabs(state.colValue[i] - state.colUpper[i]) > tol) {
@@ -270,7 +272,7 @@ void checkComplementarySlackness(const State& state,
           infeas = fabs(state.colDual[i]);
         }
       }
-      if (state.colUpper[i] < HIGHS_CONST_INF &&
+      if (state.colUpper[i] < kHighsInf &&
           fabs(state.colUpper[i] - state.colValue[i]) > tol) {
         if (fabs(state.colDual[i]) > tol &&
             fabs(state.colValue[i] - state.colLower[i]) > tol) {
@@ -355,7 +357,7 @@ void checkBasicFeasibleSolution(const State& state,
     if (state.flagCol[j]) {
       details.checked++;
       double infeas = 0;
-      if (state.col_status[j] == HighsBasisStatus::BASIC &&
+      if (state.col_status[j] == HighsBasisStatus::kBasic &&
           fabs(state.colDual[j]) > tol) {
         if (dev_print == 1)
           std::cout << "Col " << j << " is basic but has nonzero dual "
@@ -379,7 +381,7 @@ void checkBasicFeasibleSolution(const State& state,
     if (state.flagRow[i]) {
       details.checked++;
       double infeas = 0;
-      if (state.row_status[i] == HighsBasisStatus::BASIC &&
+      if (state.row_status[i] == HighsBasisStatus::kBasic &&
           fabs(state.rowDual[i]) > tol) {
         if (dev_print == 1)
           std::cout << "Row " << i << " is basic but has nonzero dual: "
@@ -410,12 +412,12 @@ void checkBasicFeasibleSolution(const State& state,
   for (int i = 0; i < state.numRow; i++) {
     if (state.flagRow[i]) current_n_rows++;
 
-    if (state.flagRow[i] && state.row_status[i] == HighsBasisStatus::BASIC)
+    if (state.flagRow[i] && state.row_status[i] == HighsBasisStatus::kBasic)
       current_n_rows_basic++;
   }
 
   for (int i = 0; i < state.numCol; i++) {
-    if (state.flagCol[i] && state.col_status[i] == HighsBasisStatus::BASIC)
+    if (state.flagCol[i] && state.col_status[i] == HighsBasisStatus::kBasic)
       current_n_cols_basic++;
   }
 

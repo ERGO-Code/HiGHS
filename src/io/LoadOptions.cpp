@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "io/LoadOptions.h"
 
@@ -29,7 +32,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
 
       HighsInt equals = line.find_first_of("=");
       if (equals < 0 || equals >= (HighsInt)line.size() - 1) {
-        highsLogUser(options.log_options, HighsLogType::ERROR,
+        highsLogUser(options.log_options, HighsLogType::kError,
                      "Error on line %" HIGHSINT_FORMAT " of options file.\n",
                      line_count);
         return false;
@@ -43,7 +46,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
         return false;
     }
   } else {
-    highsLogUser(options.log_options, HighsLogType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::kError,
                  "Options file not found.\n");
     return false;
   }

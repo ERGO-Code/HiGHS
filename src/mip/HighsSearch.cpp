@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsSearch.h"
 
@@ -28,7 +31,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   lpiterations = 0;
   heurlpiterations = 0;
   sblpiterations = 0;
-  upper_limit = HIGHS_CONST_INF;
+  upper_limit = kHighsInf;
   inheuristic = false;
   inbranching = false;
   childselrule = ChildSelectionRule::Disjunction;
@@ -43,7 +46,7 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
     objval += sol[i] * mipsolver.colCost(i);
     assert(std::isfinite(sol[i]));
 
-    if (!integerfeasible || mipsolver.variableType(i) != HighsVarType::INTEGER)
+    if (!integerfeasible || mipsolver.variableType(i) != HighsVarType::kInteger)
       continue;
 
     double intval = std::floor(sol[i] + 0.5);
@@ -62,7 +65,7 @@ double HighsSearch::getCutoffBound() const {
 void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
                                        const std::vector<double>& relaxsol) {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
+    if (mipsolver.variableType(i) != HighsVarType::kInteger) continue;
     if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
 
     double intval = std::floor(basesol[i] + 0.5);
@@ -81,7 +84,7 @@ void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
 
 void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
+    if (mipsolver.variableType(i) != HighsVarType::kInteger) continue;
     if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
 
     double downval = std::floor(lpsol[i] + mipsolver.mipdata_->feastol);
@@ -118,7 +121,7 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
-  assert(mipsolver.variableType(col) != HighsVarType::CONTINUOUS);
+  assert(mipsolver.variableType(col) != HighsVarType::kContinuous);
 
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
@@ -137,7 +140,7 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
   NodeData& currnode = nodestack.back();
 
   assert(currnode.opensubtrees == 2);
-  assert(mipsolver.variableType(col) != HighsVarType::CONTINUOUS);
+  assert(mipsolver.variableType(col) != HighsVarType::kContinuous);
 
   currnode.opensubtrees = 1;
   currnode.branching_point = branchpoint;
@@ -152,7 +155,7 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
 }
 
 void HighsSearch::addBoundExceedingConflict() {
-  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+  if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     double rhs;
     if (lp->computeDualProof(mipsolver.mipdata_->domain,
                              mipsolver.mipdata_->upper_limit, inds, vals,
@@ -214,8 +217,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
   HighsInt numfrac = lp->getFractionalIntegers().size();
   const auto& fracints = lp->getFractionalIntegers();
 
-  upscore.resize(numfrac, HIGHS_CONST_INF);
-  downscore.resize(numfrac, HIGHS_CONST_INF);
+  upscore.resize(numfrac, kHighsInf);
+  downscore.resize(numfrac, kHighsInf);
 
   upscorereliable.resize(numfrac, 0);
   downscorereliable.resize(numfrac, 0);
@@ -281,10 +284,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
                                     std::min(upscore[k], oldminscore),
                                     std::min(downscore[k], oldminscore));
       else {
-        score = upscore[k] == HIGHS_CONST_INF || downscore[k] == HIGHS_CONST_INF
+        score = upscore[k] == kHighsInf || downscore[k] == kHighsInf
                     ? finalSelection ? pseudocost.getScore(fracints[k].first,
                                                            fracints[k].second)
-                                     : HIGHS_CONST_INF
+                                     : kHighsInf
                     : pseudocost.getScore(fracints[k].first, upscore[k],
                                           downscore[k]);
       }
@@ -658,9 +661,9 @@ void HighsSearch::resetLocalDomain() {
 #ifndef NDEBUG
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
-           mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+           mipsolver.variableType(i) == HighsVarType::kContinuous);
     assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
-           mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+           mipsolver.variableType(i) == HighsVarType::kContinuous);
   }
 #endif
 }
@@ -692,7 +695,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   if (localdom.infeasible()) {
     result = NodeResult::DomainInfeasible;
     localdom.clearChangedCols();
-    if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
+    if (parent != nullptr && parent->lp_objective != -kHighsInf &&
         parent->branching_point != parent->branchingdecision.boundval) {
       HighsInt col = parent->branchingdecision.column;
       bool upbranch =
@@ -705,9 +708,9 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
-             mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+             mipsolver.variableType(i) == HighsVarType::kContinuous);
       assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
-             mipsolver.variableType(i) == HighsVarType::CONTINUOUS);
+             mipsolver.variableType(i) == HighsVarType::kContinuous);
     }
 #endif
     int64_t oldnumiters = lp->getNumLpIterations();
@@ -719,7 +722,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       currnode.estimate = lp->computeBestEstimate(pseudocost);
       currnode.lp_objective = lp->getObjective();
 
-      if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
+      if (parent != nullptr && parent->lp_objective != -kHighsInf &&
           parent->branching_point != parent->branchingdecision.boundval) {
         HighsInt col = parent->branchingdecision.column;
         double delta =
@@ -751,7 +754,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           if (currnode.lower_bound > getCutoffBound()) {
             result = NodeResult::BoundExceeding;
             addBoundExceedingConflict();
-          } else if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+          } else if (mipsolver.mipdata_->upper_limit != kHighsInf) {
             HighsRedcostFixing::propagateRedCost(
                 mipsolver, localdom, lp->getLpSolver().getSolution().col_dual,
                 lp->getObjective());
@@ -778,7 +781,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       result = NodeResult::LpInfeasible;
       addInfeasibleConflict();
-      if (parent != nullptr && parent->lp_objective != -HIGHS_CONST_INF &&
+      if (parent != nullptr && parent->lp_objective != -kHighsInf &&
           parent->branching_point != parent->branchingdecision.boundval) {
         HighsInt col = parent->branchingdecision.column;
         bool upbranch =
@@ -966,9 +969,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
       if (localdom.colUpper_[i] - localdom.colLower_[i] < 0.5) continue;
 
       double fracval;
-      if (localdom.colLower_[i] != -HIGHS_CONST_INF)
+      if (localdom.colLower_[i] != -kHighsInf)
         fracval = localdom.colLower_[i] + 0.5;
-      else if (localdom.colUpper_[i] != HIGHS_CONST_INF)
+      else if (localdom.colUpper_[i] != kHighsInf)
         fracval = localdom.colUpper_[i] - 0.5;
       else
         fracval = 0.5;
@@ -1021,7 +1024,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
         if (result == NodeResult::Open) {
           highsLogUser(mipsolver.options_mip_->log_options,
-                       HighsLogType::WARNING,
+                       HighsLogType::kWarning,
                        "Failed to solve node with all integer columns "
                        "fixed. Declaring node infeasible.\n");
           // LP still not solved, give up and declare as infeasible

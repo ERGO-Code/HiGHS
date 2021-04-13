@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "presolve/HighsLpPropagator.h"
 
@@ -19,11 +22,11 @@
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {
   if (coef < 0) {
-    if (ub == HIGHS_CONST_INF) return -HIGHS_CONST_INF;
+    if (ub == kHighsInf) return -kHighsInf;
 
     return coef * ub;
   } else {
-    if (lb == -HIGHS_CONST_INF) return -HIGHS_CONST_INF;
+    if (lb == -kHighsInf) return -kHighsInf;
 
     return coef * lb;
   }
@@ -32,11 +35,11 @@ static double activityContributionMin(double coef, const double& lb,
 static double activityContributionMax(double coef, const double& lb,
                                       const double& ub) {
   if (coef < 0) {
-    if (lb == -HIGHS_CONST_INF) return HIGHS_CONST_INF;
+    if (lb == -kHighsInf) return kHighsInf;
 
     return coef * lb;
   } else {
-    if (ub == HIGHS_CONST_INF) return HIGHS_CONST_INF;
+    if (ub == kHighsInf) return kHighsInf;
 
     return coef * ub;
   }
@@ -80,7 +83,7 @@ void HighsLpPropagator::computeMinActivity(HighsInt start, HighsInt end,
     double contributionmin =
         activityContributionMin(val, colLower_[col], colUpper_[col]);
 
-    if (contributionmin == -HIGHS_CONST_INF)
+    if (contributionmin == -kHighsInf)
       ++ninfmin;
     else
       activitymin += contributionmin;
@@ -104,7 +107,7 @@ void HighsLpPropagator::computeMaxActivity(HighsInt start, HighsInt end,
     double contributionmin =
         activityContributionMax(val, colLower_[col], colUpper_[col]);
 
-    if (contributionmin == HIGHS_CONST_INF)
+    if (contributionmin == kHighsInf)
       ++ninfmax;
     else
       activitymax += contributionmin;
@@ -127,7 +130,7 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
     double actcontribution = activityContributionMin(
         Rvalue[i], colLower_[Rindex[i]], colUpper_[Rindex[i]]);
     if (ninfmin == 1) {
-      if (actcontribution != -HIGHS_CONST_INF) continue;
+      if (actcontribution != -kHighsInf) continue;
 
       minresact = minactivity;
     } else {
@@ -139,14 +142,14 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
     if (Rvalue[i] > 0) {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::floor(bound + 1e-6);
         if (bound < colUpper_[Rindex[i]])
           accept = true;
         else
           accept = false;
       } else {
-        if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
+        if (colUpper_[Rindex[i]] == kHighsInf)
           accept = true;
         else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
                  (colUpper_[Rindex[i]] - bound) /
@@ -164,14 +167,14 @@ HighsInt HighsLpPropagator::propagateRowUpper(const HighsInt* Rindex,
     } else {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::ceil(bound - 1e-6);
         if (bound > colLower_[Rindex[i]])
           accept = true;
         else
           accept = false;
       } else {
-        if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
+        if (colLower_[Rindex[i]] == -kHighsInf)
           accept = true;
         else if (bound - 1e-3 > colLower_[Rindex[i]] &&
                  (bound - colLower_[Rindex[i]]) /
@@ -205,7 +208,7 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
     double actcontribution = activityContributionMax(
         Rvalue[i], colLower_[Rindex[i]], colUpper_[Rindex[i]]);
     if (ninfmax == 1) {
-      if (actcontribution != HIGHS_CONST_INF) continue;
+      if (actcontribution != kHighsInf) continue;
 
       maxresact = maxactivity;
     } else {
@@ -217,14 +220,14 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
     if (Rvalue[i] < 0) {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::floor(bound + 1e-6);
         if (bound < colUpper_[Rindex[i]])
           accept = true;
         else
           accept = false;
       } else {
-        if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
+        if (colUpper_[Rindex[i]] == kHighsInf)
           accept = true;
         else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
                  (colUpper_[Rindex[i]] - bound) /
@@ -241,14 +244,14 @@ HighsInt HighsLpPropagator::propagateRowLower(const HighsInt* Rindex,
     } else {
       bool accept;
 
-      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+      if (integrality_[Rindex[i]] != HighsVarType::kContinuous) {
         bound = std::ceil(bound - 1e-6);
         if (bound > colLower_[Rindex[i]])
           accept = true;
         else
           accept = false;
       } else {
-        if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
+        if (colLower_[Rindex[i]] == -kHighsInf)
           accept = true;
         else if (bound - 1e-3 > colLower_[Rindex[i]] &&
                  (bound - colLower_[Rindex[i]]) /
@@ -276,7 +279,7 @@ void HighsLpPropagator::updateActivityLbChange(HighsInt col, double oldbound,
     if (!flagRow[Aindex_[i]]) continue;
     if (Avalue_[i] > 0) {
       double deltamin;
-      if (oldbound == -HIGHS_CONST_INF) {
+      if (oldbound == -kHighsInf) {
         --activitymininf_[Aindex_[i]];
         deltamin = newbound * Avalue_[i];
       } else {
@@ -284,22 +287,21 @@ void HighsLpPropagator::updateActivityLbChange(HighsInt col, double oldbound,
       }
       activitymin_[Aindex_[i]] += deltamin;
 
-      if (rowUpper_[Aindex_[i]] != HIGHS_CONST_INF &&
+      if (rowUpper_[Aindex_[i]] != kHighsInf &&
           activitymininf_[Aindex_[i]] == 0 &&
           activitymin_[Aindex_[i]] - rowUpper_[Aindex_[i]] > 1e-6) {
         infeasible_ = Aindex_[i] + 1;
       }
 
       if (deltamin > 0 && activitymininf_[Aindex_[i]] <= 1 &&
-          !propagateflags_[Aindex_[i]] &&
-          rowUpper_[Aindex_[i]] != HIGHS_CONST_INF) {
+          !propagateflags_[Aindex_[i]] && rowUpper_[Aindex_[i]] != kHighsInf) {
         markPropagate(Aindex_[i]);
         // propagateflags_[Aindex_[i]] = 1;
         // propagateinds_.push_back(Aindex_[i]);
       }
     } else {
       double deltamax;
-      if (oldbound == -HIGHS_CONST_INF) {
+      if (oldbound == -kHighsInf) {
         --activitymaxinf_[Aindex_[i]];
         deltamax = newbound * Avalue_[i];
       } else {
@@ -307,15 +309,14 @@ void HighsLpPropagator::updateActivityLbChange(HighsInt col, double oldbound,
       }
       activitymax_[Aindex_[i]] += deltamax;
 
-      if (rowLower_[Aindex_[i]] != -HIGHS_CONST_INF &&
+      if (rowLower_[Aindex_[i]] != -kHighsInf &&
           activitymaxinf_[Aindex_[i]] == 0 &&
           rowLower_[Aindex_[i]] - activitymax_[Aindex_[i]] > 1e-6) {
         infeasible_ = Aindex_[i] + 1;
       }
 
       if (deltamax < 0 && activitymaxinf_[Aindex_[i]] <= 1 &&
-          !propagateflags_[Aindex_[i]] &&
-          rowLower_[Aindex_[i]] != -HIGHS_CONST_INF) {
+          !propagateflags_[Aindex_[i]] && rowLower_[Aindex_[i]] != -kHighsInf) {
         markPropagate(Aindex_[i]);
         // propagateflags_[Aindex_[i]] = 1;
         // propagateinds_.push_back(Aindex_[i]);
@@ -333,7 +334,7 @@ void HighsLpPropagator::updateActivityUbChange(HighsInt col, double oldbound,
     if (!flagRow[Aindex_[i]]) continue;
     if (Avalue_[i] > 0) {
       double deltamax;
-      if (oldbound == HIGHS_CONST_INF) {
+      if (oldbound == kHighsInf) {
         --activitymaxinf_[Aindex_[i]];
         deltamax = newbound * Avalue_[i];
       } else {
@@ -341,22 +342,21 @@ void HighsLpPropagator::updateActivityUbChange(HighsInt col, double oldbound,
       }
       activitymax_[Aindex_[i]] += deltamax;
 
-      if (rowLower_[Aindex_[i]] != -HIGHS_CONST_INF &&
+      if (rowLower_[Aindex_[i]] != -kHighsInf &&
           activitymaxinf_[Aindex_[i]] == 0 &&
           rowLower_[Aindex_[i]] - activitymax_[Aindex_[i]] > 1e-6) {
         infeasible_ = Aindex_[i] + 1;
       }
 
       if (deltamax < 0 && activitymaxinf_[Aindex_[i]] <= 1 &&
-          !propagateflags_[Aindex_[i]] &&
-          rowLower_[Aindex_[i]] != -HIGHS_CONST_INF) {
+          !propagateflags_[Aindex_[i]] && rowLower_[Aindex_[i]] != -kHighsInf) {
         markPropagate(Aindex_[i]);
         // propagateflags_[Aindex_[i]] = 1;
         // propagateinds_.push_back(Aindex_[i]);
       }
     } else {
       double deltamin;
-      if (oldbound == HIGHS_CONST_INF) {
+      if (oldbound == kHighsInf) {
         --activitymininf_[Aindex_[i]];
         deltamin = newbound * Avalue_[i];
       } else {
@@ -365,15 +365,14 @@ void HighsLpPropagator::updateActivityUbChange(HighsInt col, double oldbound,
 
       activitymin_[Aindex_[i]] += deltamin;
 
-      if (rowUpper_[Aindex_[i]] != HIGHS_CONST_INF &&
+      if (rowUpper_[Aindex_[i]] != kHighsInf &&
           activitymininf_[Aindex_[i]] == 0 &&
           activitymin_[Aindex_[i]] - rowUpper_[Aindex_[i]] > 1e-6) {
         infeasible_ = Aindex_[i] + 1;
       }
 
       if (deltamin > 0 && activitymininf_[Aindex_[i]] <= 1 &&
-          !propagateflags_[Aindex_[i]] &&
-          rowUpper_[Aindex_[i]] != HIGHS_CONST_INF) {
+          !propagateflags_[Aindex_[i]] && rowUpper_[Aindex_[i]] != kHighsInf) {
         markPropagate(Aindex_[i]);
         // propagateflags_[Aindex_[i]] = 1;
         // propagateinds_.push_back(Aindex_[i]);
@@ -387,8 +386,8 @@ void HighsLpPropagator::markPropagate(HighsInt row) {
   // feastol and only mark in that case
 
   if (!propagateflags_[row] && flagRow[row]) {
-    bool proplower = rowLower_[row] != -HIGHS_CONST_INF;
-    bool propupper = rowUpper_[row] != HIGHS_CONST_INF;
+    bool proplower = rowLower_[row] != -kHighsInf;
+    bool propupper = rowUpper_[row] != kHighsInf;
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
@@ -417,8 +416,8 @@ void HighsLpPropagator::computeRowActivities() {
     computeMaxActivity(start, end, ARindex_.data(), ARvalue_.data(),
                        activitymaxinf_[i], activitymax_[i]);
 
-    if ((activitymininf_[i] <= 1 && rowUpper_[i] != HIGHS_CONST_INF) ||
-        (activitymaxinf_[i] <= 1 && rowLower_[i] != -HIGHS_CONST_INF)) {
+    if ((activitymininf_[i] <= 1 && rowUpper_[i] != kHighsInf) ||
+        (activitymaxinf_[i] <= 1 && rowLower_[i] != -kHighsInf)) {
       markPropagate(i);
       // propagateflags_[i] = 1;
       // propagateinds_.push_back(i);
@@ -504,7 +503,7 @@ HighsInt HighsLpPropagator::propagate() {
         const double* Rvalue = &ARvalue_[start];
         HighsInt numchgs = 0;
 
-        if (rowUpper_[i] != HIGHS_CONST_INF) {
+        if (rowUpper_[i] != kHighsInf) {
           // computeMinActivity(start, end, mipsolver->ARstart_.data(),
           // mipsolver->ARvalue_.data(), activitymininf_[i],
           //           activitymin_[i]);
@@ -514,7 +513,7 @@ HighsInt HighsLpPropagator::propagate() {
                                       &changedbounds[2 * start]);
         }
 
-        if (rowLower_[i] != -HIGHS_CONST_INF) {
+        if (rowLower_[i] != -kHighsInf) {
           // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
           // mipsolver->ARvalue_.data(), activitymaxinf_[i],
           //           activitymax_[i]);
@@ -554,12 +553,12 @@ HighsInt HighsLpPropagator::tightenCoefficients() {
   HighsInt ntightenedtotal = 0;
   for (HighsInt i = 0; i != numrow; ++i) {
     if (!flagRow[i] ||
-        (rowUpper_[i] != HIGHS_CONST_INF && rowLower_[i] != -HIGHS_CONST_INF))
+        (rowUpper_[i] != kHighsInf && rowLower_[i] != -kHighsInf))
       continue;
 
     HighsInt scale;
 
-    if (rowUpper_[i] != HIGHS_CONST_INF) {
+    if (rowUpper_[i] != kHighsInf) {
       if (activitymaxinf_[i] != 0) continue;
 
       if (activitymax_[i] - rowUpper_[i] <= 1e-6) continue;
@@ -582,7 +581,7 @@ HighsInt HighsLpPropagator::tightenCoefficients() {
 
     for (HighsInt j = start; j != end; ++j) {
       HighsInt col = ARindex_[j];
-      if (!flagCol[col] || integrality_[col] == HighsVarType::CONTINUOUS)
+      if (!flagCol[col] || integrality_[col] == HighsVarType::kContinuous)
         continue;
 
       double val = scale * ARvalue_[j];
@@ -612,8 +611,8 @@ HighsInt HighsLpPropagator::tightenCoefficients() {
       computeMaxActivity(start, end, ARindex_.data(), ARvalue_.data(),
                          activitymaxinf_[i], activitymax_[i]);
 
-      if ((activitymininf_[i] <= 1 && rowUpper_[i] != HIGHS_CONST_INF) ||
-          (activitymaxinf_[i] <= 1 && rowLower_[i] != -HIGHS_CONST_INF)) {
+      if ((activitymininf_[i] <= 1 && rowUpper_[i] != kHighsInf) ||
+          (activitymaxinf_[i] <= 1 && rowLower_[i] != -kHighsInf)) {
         markPropagate(i);
         // propagateflags_[i] = 1;
         // propagateinds_.push_back(i);

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file Highs.h
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef HIGHS_H_
 #define HIGHS_H_
@@ -817,7 +819,7 @@ class Highs {
   std::string primalDualStatusToString(const HighsInt primal_dual_status);
 
   void setMatrixOrientation(const MatrixOrientation& desired_orientation =
-                                MatrixOrientation::COLWISE);
+                                MatrixOrientation::kColwise);
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
@@ -935,8 +937,8 @@ class Highs {
   // can be passed back, regardless of whether there is a HMO, or not,
   // and also to make objective_value and iteration_count independent
   // of whether simplex or IMP is used as a solver.
-  HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   // Each HighsModelObject holds a const ref to its lp_. There are potentially
   // several hmos_ to allow for the solution of several different modified
