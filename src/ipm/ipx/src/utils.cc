@@ -79,11 +79,6 @@ std::vector<Int> InversePerm(const std::vector<Int>& perm) {
     return invperm;
 }
 
-static bool greater_or_equal(const std::pair<double,Int>& a,
-                             const std::pair<double,Int>& b) {
-    return a>=b;
-}
-
 std::vector<Int> Sortperm(Int m, const double* values, bool reverse) {
     std::vector<Int> perm(m);
     for (Int i = 0; i < m; i++) perm[i] = i;
