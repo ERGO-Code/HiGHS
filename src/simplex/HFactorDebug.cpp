@@ -26,13 +26,13 @@ const double inverse_excessive_error = sqrt(inverse_large_error);
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor, const bool force) {
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   if (force)
     highsLogDev(options.log_options, HighsLogType::INFO,
                 "CheckINVERT:   Forcing debug\n");
 
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
-  return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
+  return_status = HighsDebugStatus::kOk;
   const HighsInt numRow = factor.numRow;
   const HighsInt numCol = factor.numCol;
   const HighsInt* Astart = factor.getAstart();
@@ -74,17 +74,17 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   }
   std::string value_adjective;
   HighsLogType report_level;
-  return_status = HighsDebugStatus::OK;
+  return_status = HighsDebugStatus::kOk;
 
   if (solve_error_norm) {
     if (solve_error_norm > solve_excessive_error) {
       value_adjective = "Excessive";
       report_level = HighsLogType::ERROR;
-      return_status = HighsDebugStatus::ERROR;
+      return_status = HighsDebugStatus::kError;
     } else if (solve_error_norm > solve_large_error) {
       value_adjective = "Large";
       report_level = HighsLogType::WARNING;
-      return_status = HighsDebugStatus::WARNING;
+      return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
       report_level = HighsLogType::INFO;
@@ -139,11 +139,11 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
     if (inverse_error_norm > inverse_excessive_error) {
       value_adjective = "Excessive";
       report_level = HighsLogType::ERROR;
-      return_status = HighsDebugStatus::ERROR;
+      return_status = HighsDebugStatus::kError;
     } else if (inverse_error_norm > inverse_large_error) {
       value_adjective = "Large";
       report_level = HighsLogType::WARNING;
-      return_status = HighsDebugStatus::WARNING;
+      return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
       report_level = HighsLogType::INFO;

@@ -36,8 +36,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
       ekk_instance.simplex_lp_status_;
   if (!simplex_lp_status.valid ||
       highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = ekk_instance.options_;
   const HighsLp& lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
@@ -51,7 +51,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "scale size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
@@ -59,14 +59,14 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
       HighsStatus::OK) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "debugSimplexLp: Error scaling check LP\n");
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
 
   if (simplex_lp_status.has_basis) {
@@ -77,7 +77,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
                    "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
+      return_status = HighsDebugStatus::kLogicalError;
     }
   }
 
@@ -89,7 +89,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
           options.log_options, HighsLogType::ERROR,
           "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
+      return_status = HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;
@@ -101,14 +101,14 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // Cheap analysis of a Simplex basis, checking vector sizes, numbers
   // of basic/nonbasic variables and non-repetition of basic variables
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   // Check consistency of nonbasicFlag
   if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "nonbasicFlag inconsistent\n");
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   const bool right_size =
       (HighsInt)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
@@ -117,7 +117,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "basicIndex size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   // Use localNonbasicFlag so that duplicate entries in basicIndex can
   // be spotted
@@ -144,7 +144,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
         assert(flag == -1);
       }
       assert(!flag);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
+      return_status = HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;
@@ -176,7 +176,7 @@ HighsDebugStatus debugDualChuzcFailQuad0(
     const double remainTheta, const bool force) {
   // Non-trivially expensive assessment of CHUZC failure
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
 
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     No change in loop 2 so return error\n");
@@ -191,7 +191,7 @@ HighsDebugStatus debugDualChuzcFailQuad0(
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
               workDataNorm, workDualNorm);
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
 
 HighsDebugStatus debugDualChuzcFailQuad1(
@@ -201,7 +201,7 @@ HighsDebugStatus debugDualChuzcFailQuad1(
     const bool force) {
   // Non-trivially expensive assessment of CHUZC failure
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
 
   highsLogDev(
       options.log_options, HighsLogType::INFO,
@@ -217,7 +217,7 @@ HighsDebugStatus debugDualChuzcFailQuad1(
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
               workDataNorm, workDualNorm);
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
 
 HighsDebugStatus debugDualChuzcFailHeap(
@@ -227,7 +227,7 @@ HighsDebugStatus debugDualChuzcFailHeap(
     const bool force) {
   // Non-trivially expensive assessment of CHUZC failure
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
 
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     No entries in heap so return error\n");
@@ -242,15 +242,15 @@ HighsDebugStatus debugDualChuzcFailHeap(
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
               workDataNorm, workDualNorm);
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
 
 HighsDebugStatus debugNonbasicFlagConsistent(
     const HighsOptions& options, const HighsLp& simplex_lp,
     const SimplexBasis& simplex_basis) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   const bool right_size =
       (HighsInt)simplex_basis.nonbasicFlag_.size() == numTot;
@@ -258,7 +258,7 @@ HighsDebugStatus debugNonbasicFlagConsistent(
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "nonbasicFlag size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   HighsInt num_basic_variables = 0;
   for (HighsInt var = 0; var < numTot; var++) {
@@ -275,7 +275,7 @@ HighsDebugStatus debugNonbasicFlagConsistent(
                  " basic variables\n",
                  num_basic_variables, simplex_lp.numRow_);
     assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -363,8 +363,8 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
       highs_model_object.simplex_lp_status_;
   if (!simplex_lp_status.valid ||
       highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = highs_model_object.options_;
   const HighsLp& lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -378,21 +378,21 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "scale size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "debugSimplexLp: Error scaling check LP\n");
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
 
   if (simplex_lp_status.has_basis) {
@@ -403,7 +403,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
+      return_status = HighsDebugStatus::kLogicalError;
     }
   }
 
@@ -414,7 +414,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
       highsLogUser(options.log_options, HighsLogType::ERROR,
           "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
+      return_status = HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;
@@ -425,14 +425,14 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const SimplexBasis& simplex_basis) {
   // Cheap analysis of a Simplex basis, checking vector sizes
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Simplex basis size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -441,7 +441,7 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
     const HighsModelObject& highs_model_object) {
   // Trivially cheap check of dimensions and sizes
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
 
   const HighsOptions& options = highs_model_object.options_;
   const HighsLp& lp = highs_model_object.lp_;
@@ -452,7 +452,7 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
   HighsInt numCol = lp.numCol_;
   HighsInt numRow = lp.numRow_;
   HighsInt numTot = numCol + numRow;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   bool dimension_ok =
       numCol == simplex_lp.numCol_ && numRow == simplex_lp.numRow_;
   assert(dimension_ok);
@@ -461,7 +461,7 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
         "LP-SimplexLP dimension incompatibility (%" HIGHSINT_FORMAT ", %"
 HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n", numCol,
         simplex_lp.numCol_, numRow, simplex_lp.numRow_);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   bool right_size = true;
   right_size = (HighsInt)simplex_info.workCost_.size() == numTot && right_size;
@@ -475,11 +475,11 @@ HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n", numCol,
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "simplex_info work vector size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
-      HighsDebugStatus::OK)
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+      HighsDebugStatus::kOk)
+    return_status = HighsDebugStatus::kLogicalError;
 
   return return_status;
 }
@@ -488,8 +488,8 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs) {
   // Non-trivially expensive analysis of computed primal values.
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
   const std::vector<double>& primal_value =
       highs_model_object.simplex_info_.baseValue_;
 
@@ -509,7 +509,7 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
 
   std::string value_adjective;
    HighsLogType report_level;
-  return_status = HighsDebugStatus::OK;
+  return_status = HighsDebugStatus::kOk;
   double computed_relative_primal_norm;
   if (primal_rhs_norm) {
     computed_relative_primal_norm =
@@ -521,14 +521,14 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
       computed_absolute_primal_norm > computed_primal_excessive_absolute_norm) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    return_status = HighsDebugStatus::kError;
   } else if (computed_relative_primal_norm >
                  computed_primal_large_relative_norm ||
              computed_absolute_primal_norm >
                  computed_primal_large_absolute_norm) {
     value_adjective = "Large";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "SMALL";
     report_level = HighsLogType::VERBOSE;
@@ -546,8 +546,8 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
                                   const std::vector<double>& row_dual) {
   // Non-trivially expensive analysis of computed dual values.
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
   const std::vector<double>& new_dual =
       highs_model_object.simplex_info_.workDual_;
 
@@ -580,12 +580,12 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
   }
   std::string value_adjective;
    HighsLogType report_level;
-  return_status = HighsDebugStatus::OK;
+  return_status = HighsDebugStatus::kOk;
   // Comment on the norm of the basic costs being zero
   if (have_basic_costs && !basic_costs_norm) {
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::WARNING,
         "ComputeDual:   basic cost norm is = %9.4g\n", basic_costs_norm);
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   }
   // Comment on the norm of the nonbasic duals being zero
   if (!computed_dual_absolute_nonbasic_dual_norm) {
@@ -593,7 +593,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
                     HighsLogType::WARNING,
                     "ComputeDual:   nonbasic dual norm is = %9.4g\n",
                     computed_dual_absolute_nonbasic_dual_norm);
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   }
 
   // Comment on the norm of basic duals (relative to the norm of the
@@ -611,14 +611,14 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
           computed_dual_excessive_absolute_basic_dual_norm) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    return_status = HighsDebugStatus::kError;
   } else if (computed_dual_relative_basic_dual_norm >
                  computed_dual_large_relative_basic_dual_norm ||
              computed_dual_absolute_basic_dual_norm >
                  computed_dual_large_absolute_basic_dual_norm) {
     value_adjective = "Large";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
@@ -643,14 +643,14 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
           computed_dual_excessive_absolute_nonbasic_dual_norm) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    return_status = HighsDebugStatus::kError;
   } else if (computed_dual_relative_nonbasic_dual_norm >
                  computed_dual_large_relative_nonbasic_dual_norm ||
              computed_dual_absolute_nonbasic_dual_norm >
                  computed_dual_large_absolute_nonbasic_dual_norm) {
     value_adjective = "Large";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
@@ -693,14 +693,14 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
             computed_dual_large_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Large";
       report_level = HighsLogType::ERROR;
-      return_status = HighsDebugStatus::WARNING;
+      return_status = HighsDebugStatus::kWarning;
     } else if (computed_dual_relative_nonbasic_dual_change_norm >
                    computed_dual_small_relative_nonbasic_dual_change_norm ||
                computed_dual_absolute_nonbasic_dual_change_norm >
                    computed_dual_small_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Small";
       report_level = HighsLogType::WARNING;
-      return_status = HighsDebugStatus::WARNING;
+      return_status = HighsDebugStatus::kWarning;
     } else {
       change_adjective = "OK";
       report_level = HighsLogType::VERBOSE;
@@ -722,7 +722,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
   if (highs_model_object.options_.highs_debug_level <
           kHighsDebugLevelCostly &&
       !force)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   if (force)
     highsLogDev(highs_model_object.options_.log_options, HighsLogType::INFO,
                       "SmplxDuFeas:   Forcing debug\n");
@@ -765,9 +765,9 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
                       "= %" HIGHSINT_FORMAT " / %g / %g - %s\n",
                       num_dual_infeasibilities, max_dual_infeasibility,
                       sum_dual_infeasibilities, message.c_str());
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
 
 HighsDebugStatus debugUpdatedObjectiveValue(
@@ -778,7 +778,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   if (highs_model_object.options_.highs_debug_level <
           kHighsDebugLevelCostly &&
       !force)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
 
   static bool have_previous_exact_primal_objective_value;
@@ -796,7 +796,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     } else {
       have_previous_exact_dual_objective_value = false;
     }
-    return HighsDebugStatus::OK;
+    return HighsDebugStatus::kOk;
   }
   double exact_objective_value;
   double updated_objective_value;
@@ -872,7 +872,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   }
 
   // Now analyse the error
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   std::string error_adjective;
    HighsLogType report_level;
   bool at_least_small_error =
@@ -886,18 +886,18 @@ HighsDebugStatus debugUpdatedObjectiveValue(
           updated_objective_large_absolute_error) {
     error_adjective = "Large";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::LARGE_ERROR;
+    return_status = HighsDebugStatus::kLargeError;
   } else if (updated_objective_relative_error >
                  updated_objective_small_relative_error ||
              updated_objective_absolute_error >
                  updated_objective_small_absolute_error) {
     error_adjective = "Small";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::SMALL_ERROR;
+    return_status = HighsDebugStatus::kSmallError;
   } else {
     error_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   }
   highsLogDev(highs_model_object.options_.log_options, report_level,
       "UpdateObjVal:  %-9s absolute (%9.4g) or relative (%9.4g) error in "
@@ -917,7 +917,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   // objective value computed directly is correct, so only call after
   // this has been done
   if (highs_model_object.options_.highs_debug_level == kHighsDebugLevelNone)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   std::string algorithm_name = "dual";
   if (algorithm == SimplexAlgorithm::PRIMAL) algorithm_name = "primal";
@@ -939,7 +939,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
       updated_objective_absolute_error / max(1.0, fabs(exact_objective_value));
 
   // Now analyse the error
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   std::string error_adjective;
    HighsLogType report_level;
   if (updated_objective_relative_error >
@@ -948,18 +948,18 @@ HighsDebugStatus debugUpdatedObjectiveValue(
           updated_objective_large_absolute_error) {
     error_adjective = "Large";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::LARGE_ERROR;
+    return_status = HighsDebugStatus::kLargeError;
   } else if (updated_objective_relative_error >
                  updated_objective_small_relative_error ||
              updated_objective_absolute_error >
                  updated_objective_small_absolute_error) {
     error_adjective = "Small";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::SMALL_ERROR;
+    return_status = HighsDebugStatus::kSmallError;
   } else {
     error_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   }
   highsLogDev(highs_model_object.options_.log_options, report_level,
                     "UpdateObjVal:  %-9s large absolute (%9.4g) or relative "
@@ -973,7 +973,7 @@ HighsDebugStatus debugFixedNonbasicMove(
     const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check of nonbasicMove for fixed variables
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -990,16 +990,16 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
     highsLogDev(highs_model_object.options_.log_options, HighsLogType::ERROR,
                       "There are %" HIGHSINT_FORMAT " fixed nonbasicMove
 errors", num_fixed_variable_move_errors); return
-HighsDebugStatus::LOGICAL_ERROR;
+HighsDebugStatus::kLogicalError;
   }
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
 
 HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check of NonbasicMove
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = highs_model_object.options_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1015,7 +1015,7 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "nonbasicMove size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   double lower;
   double upper;
@@ -1080,7 +1080,7 @@ num_free_variable_move_errors, num_lower_bounded_variable_move_errors,
         num_upper_bounded_variable_move_errors, num_boxed_variable_move_errors,
         num_fixed_variable_move_errors);
     assert(num_errors == 0);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -1089,27 +1089,27 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message) {
   // Non-trivially expensive assessment of basis condition
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   double basis_condition = computeBasisCondition(highs_model_object);
   std::string value_adjective;
    HighsLogType report_level;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   if (basis_condition > excessive_basis_condition) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    return_status = HighsDebugStatus::kError;
   } else if (basis_condition > large_basis_condition) {
     value_adjective = "Large";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   } else if (basis_condition > fair_basis_condition) {
     value_adjective = "Fair";
     report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   }
   highsLogDev(highs_model_object.options_.log_options, report_level,
       "BasisCond:     %-9s basis condition estimate (%9.4g) - %s\n",
@@ -1120,7 +1120,7 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
                               const std::vector<double>& original_dual) {
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1149,13 +1149,13 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
       num_dual_sign_change++;
   }
   // Comment on the norm of the nonbasic duals being zero
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   if (!cleanup_absolute_nonbasic_dual_norm) {
     highsLogUser(highs_model_object.options_.log_options,
                     HighsLogType::WARNING,
                     "DualCleanup:   dual norm is = %9.4g\n",
                     cleanup_absolute_nonbasic_dual_norm);
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   }
   // Comment on the norm of the change being zero
   if (!cleanup_absolute_nonbasic_dual_change_norm) {
@@ -1163,7 +1163,7 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
                     HighsLogType::WARNING,
                     "DualCleanup:   dual norm is = %9.4g\n",
                     cleanup_absolute_nonbasic_dual_change_norm);
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   }
   double cleanup_relative_nonbasic_dual_change_norm;
   if (cleanup_absolute_nonbasic_dual_norm) {
@@ -1181,18 +1181,18 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
           cleanup_excessive_relative_nonbasic_dual_change_norm) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    return_status = HighsDebugStatus::kError;
   } else if (cleanup_absolute_nonbasic_dual_change_norm >
                  cleanup_large_absolute_nonbasic_dual_change_norm ||
              cleanup_relative_nonbasic_dual_change_norm >
                  cleanup_large_relative_nonbasic_dual_change_norm) {
     value_adjective = "Large";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   }
   highsLogDev(highs_model_object.options_.log_options, report_level,
       "DualCleanup:   %-9s absolute (%9.4g) or relative (%9.4g) dual change, "
@@ -1205,7 +1205,7 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
 HighsDebugStatus debugFreeListNumEntries(
     const HighsModelObject& highs_model_object, const std::set<HighsInt>&
 freeList) { if (highs_model_object.options_.highs_debug_level <
-kHighsDebugLevelCheap) return HighsDebugStatus::NOT_CHECKED;
+kHighsDebugLevelCheap) return HighsDebugStatus::kNotChecked;
 
   HighsInt freelist_num_entries = 0;
   if (freeList.size() > 0) {
@@ -1220,7 +1220,7 @@ kHighsDebugLevelCheap) return HighsDebugStatus::NOT_CHECKED;
 
   std::string value_adjective;
    HighsLogType report_level;
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
 
   if (pct_freelist_num_entries > freelist_excessive_pct_num_entries) {
     value_adjective = "Excessive";
@@ -1238,7 +1238,7 @@ kHighsDebugLevelCheap) return HighsDebugStatus::NOT_CHECKED;
     } else {
       report_level = HighsLogType::VERBOSE;
     }
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   }
 
   highsLogDev(highs_model_object.options_.log_options, report_level,
@@ -1308,16 +1308,16 @@ std::vector<HighsInt>& workGroup, const std::vector<HighsInt>& alt_workGroup) {
   // Cheap comparison and possible non-trivially expensive reporting
   // of the two sorting methods for BFRT nodes in dual CHUZC
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   const HighsOptions& options = highs_model_object.options_;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   HighsInt workPivot = workData[breakIndex].first;
   HighsInt alt_workPivot = sorted_workData[alt_breakIndex].first;
   if (alt_workPivot != workPivot) {
     highsLogDev(options.log_options, HighsLogType::INFO,
                       "Quad workPivot = %" HIGHSINT_FORMAT "; Heap workPivot =
 %" HIGHSINT_FORMAT "\n", workPivot, alt_workPivot); return_status =
-HighsDebugStatus::WARNING; if (highs_model_object.options_.highs_debug_level <
+HighsDebugStatus::kWarning; if (highs_model_object.options_.highs_debug_level <
         kHighsDebugLevelCostly)
       return return_status;
     debugDualChuzcWorkDataAndGroupReport(highs_model_object, workDelta,
@@ -1335,12 +1335,12 @@ HighsDebugStatus debugSimplexBasicSolution(
   // Non-trivially expensive analysis of a simplex basic solution, starting from
   // solution_params
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
 
   if (highsStatusFromHighsModelStatus(
           highs_model_object.scaled_model_status_) != HighsStatus::OK)
-    return HighsDebugStatus::OK;
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kOk;
+  HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
 
   const HighsLp& lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -1349,7 +1349,7 @@ HighsDebugStatus debugSimplexBasicSolution(
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   return_status = debugSimplexInfoBasisRightSize(highs_model_object);
-  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  if (return_status == HighsDebugStatus::kLogicalError) return return_status;
 
   // Determine a HiGHS basis from the simplex basis. Only basic/nonbasic is
   // needed
@@ -1443,7 +1443,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
     const HighsModelObject& highs_model_object) {
   // Nontrivially expensive check of dimensions and sizes
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
 
   const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
@@ -1452,7 +1452,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   const HighsScale& scale = highs_model_object.scale_;
 
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
 
   // Go through the columns, finding the differences in nonbasic column values
   // and duals
@@ -1536,11 +1536,11 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
                     "\nHiGHS-simplex solution differences\n");
   std::string value_adjective;
    HighsLogType report_level;
-  return_status = HighsDebugStatus::OK;
+  return_status = HighsDebugStatus::kOk;
   if (max_nonbasic_col_value_difference > 0) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
     highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Nonbasic column value difference: %9.4g\n",
         value_adjective.c_str(), max_nonbasic_col_value_difference);
@@ -1548,7 +1548,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_nonbasic_row_value_difference > 0) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
     highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Nonbasic row    value difference: %9.4g\n",
         value_adjective.c_str(), max_nonbasic_row_value_difference);
@@ -1574,7 +1574,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_basic_col_dual_difference > 0) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
     highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Basic    column dual difference: %9.4g\n",
         value_adjective.c_str(), max_basic_col_dual_difference);
@@ -1582,7 +1582,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_basic_row_dual_difference > 0) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
     highsLogDev(options.log_options, report_level,
         "HighsSimplexD: %-9s Basic    row     dual difference: %9.4g\n",
         value_adjective.c_str(), max_basic_row_dual_difference);
@@ -1597,7 +1597,7 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   const double small_difference = 1e-12;
   const double large_difference = 1e-8;
   const double excessive_difference = 1e-4;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   if (difference <= small_difference) return return_status;
   std::string value_adjective;
    HighsLogType report_level;
@@ -1605,11 +1605,11 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   if (difference > excessive_difference) {
     value_adjective = "Excessive";
     report_level = HighsLogType::ERROR;
-    return_status = HighsDebugStatus::ERROR;
+    return_status = HighsDebugStatus::kError;
   } else if (difference > large_difference) {
     value_adjective = "Large";
     report_level = HighsLogType::WARNING;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::kWarning;
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
@@ -1626,28 +1626,28 @@ HighsDebugStatus debugSimplexBasisCorrect(
   // consistency, and then correctness of nonbasicMove
   const HighsOptions& options = highs_model_object.options_;
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const bool consistent =
       debugBasisConsistent(options, simplex_lp, simplex_basis) !=
-      HighsDebugStatus::LOGICAL_ERROR;
+      HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Supposed to be a Simplex basis, but not consistent\n");
     assert(consistent);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   if (options.highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   const bool correct_nonbasicMove =
-      debugNonbasicMove(highs_model_object) != HighsDebugStatus::LOGICAL_ERROR;
+      debugNonbasicMove(highs_model_object) != HighsDebugStatus::kLogicalError;
   if (!correct_nonbasicMove) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
         "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
     assert(correct_nonbasicMove);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -1655,8 +1655,8 @@ HighsDebugStatus debugSimplexBasisCorrect(
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const HighsInt phase) {
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  const HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  const HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
@@ -1695,16 +1695,16 @@ HighsLogType::ERROR, "Not OK to solve since simplex_lp_status.has_invert =
   // Basis and data check
   if (debugBasisConsistent(highs_model_object.options_, simplex_lp,
                            highs_model_object.simplex_basis_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
-    return HighsDebugStatus::LOGICAL_ERROR;
+      HighsDebugStatus::kLogicalError)
+    return HighsDebugStatus::kLogicalError;
   if (!debugWorkArraysOk(highs_model_object, phase))
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (HighsInt var = 0; var < numTot; ++var) {
     if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
       if (!debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var))
-        return HighsDebugStatus::LOGICAL_ERROR;
+        return HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;

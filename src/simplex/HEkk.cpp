@@ -242,7 +242,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   if (debugBasisConsistent(options_, simplex_lp_, basis) ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::Error;
@@ -314,7 +314,7 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
   if (debugBasisConsistent(options_, simplex_lp_, basis) ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     highsLogUser(options_.log_options, HighsLogType::ERROR,
                  "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::Error;

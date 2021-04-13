@@ -38,14 +38,14 @@ enum HighsDebugLevel {
 };
 
 enum class HighsDebugStatus {
-  NOT_CHECKED = -1,
-  OK,
-  SMALL_ERROR,
-  WARNING,
-  LARGE_ERROR,
-  ERROR,
-  EXCESSIVE_ERROR,
-  LOGICAL_ERROR,
+  kNotChecked = -1,
+  kOk,
+  kSmallError,
+  kWarning,
+  kLargeError,
+  kError,
+  kExcessiveError,
+  kLogicalError,
 };
 
 enum HighsAnalysisLevel {

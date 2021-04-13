@@ -2344,14 +2344,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   bool have_basis = basis_.valid_;
   if (have_basis) {
     if (debugBasisRightSize(options_, lp_, basis_) ==
-        HighsDebugStatus::LOGICAL_ERROR)
+        HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::Error;
   }
 
   if (have_solution && have_basis) {
     if (debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
                                 solution_, info_, model_status_) ==
-        HighsDebugStatus::LOGICAL_ERROR)
+        HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::Error;
   }
   return returnFromHighs(return_status);
@@ -2364,7 +2364,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   forceHighsSolutionBasisSize();
 
   const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
-                          HighsDebugStatus::LOGICAL_ERROR;
+                          HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogUser(
         options_.log_options, HighsLogType::ERROR,
@@ -2375,7 +2375,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 
   if (hmos_.size()) {
     bool simplex_lp_ok =
-        ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
+        ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::kLogicalError;
     if (!simplex_lp_ok) {
       highsLogUser(options_.log_options, HighsLogType::ERROR,
                    "returnFromHighs: Simplex LP not OK\n");

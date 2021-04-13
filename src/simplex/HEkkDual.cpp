@@ -57,7 +57,7 @@ HighsStatus HEkkDual::solve() {
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   scaled_model_status = HighsModelStatus::NOTSET;
-  if (debugDualSimplex("Initialise", true) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugDualSimplex("Initialise", true) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
@@ -228,7 +228,7 @@ HighsStatus HEkkDual::solve() {
   solvePhase = dualInfeasCount > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::DUAL, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
+      HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   //
   // The major solving loop
@@ -370,7 +370,7 @@ HighsStatus HEkkDual::solve() {
   }
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::DUAL, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
+      HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   ekk_instance_.computePrimalObjectiveValue();
   return ekk_instance_.returnFromSolve(HighsStatus::OK);
@@ -599,7 +599,7 @@ void HEkkDual::solvePhase1() {
     if (bailoutOnTimeIterations()) break;
     for (;;) {
       if (debugDualSimplex("Before iteration") ==
-          HighsDebugStatus::LOGICAL_ERROR) {
+          HighsDebugStatus::kLogicalError) {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
@@ -704,7 +704,7 @@ void HEkkDual::solvePhase1() {
       scaled_model_status == HighsModelStatus::NOTSET;
   if (!no_debug) {
     if (debugDualSimplex("End of solvePhase1") ==
-        HighsDebugStatus::LOGICAL_ERROR) {
+        HighsDebugStatus::kLogicalError) {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
@@ -795,7 +795,7 @@ void HEkkDual::solvePhase2() {
       // Inner loop of solvePhase2()
       // Performs one iteration in case SIMPLEX_STRATEGY_DUAL_PLAIN:
       if (debugDualSimplex("Before iteration") ==
-          HighsDebugStatus::LOGICAL_ERROR) {
+          HighsDebugStatus::kLogicalError) {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
@@ -899,7 +899,7 @@ void HEkkDual::solvePhase2() {
   // Before primal simplex clean-up there will be dual infeasibilities
   if (solvePhase != SOLVE_PHASE_CLEANUP) {
     if (debugDualSimplex("End of solvePhase2") ==
-        HighsDebugStatus::LOGICAL_ERROR) {
+        HighsDebugStatus::kLogicalError) {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
@@ -2331,7 +2331,7 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
                                             const bool initialise) {
   HighsDebugStatus return_status = ekkDebugSimplex(
       message, ekk_instance_, algorithm, solvePhase, initialise);
-  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }

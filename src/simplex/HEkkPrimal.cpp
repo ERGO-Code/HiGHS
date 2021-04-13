@@ -43,7 +43,7 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
 
-  if (debugPrimalSimplex("Initialise", true) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugPrimalSimplex("Initialise", true) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
   // Get the nonabsic free column set
@@ -86,7 +86,7 @@ HighsStatus HEkkPrimal::solve() {
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
+      HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
   // The major solving loop
@@ -226,7 +226,7 @@ HighsStatus HEkkPrimal::solve() {
     ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
+      HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   return ekk_instance_.returnFromSolve(HighsStatus::OK);
 }
@@ -343,7 +343,7 @@ void HEkkPrimal::solvePhase1() {
   // should check primal feasiblilty and residual information if LP
   // is primal infeasible
   if (debugPrimalSimplex("End of solvePhase1") ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
@@ -413,7 +413,7 @@ void HEkkPrimal::solvePhase2() {
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
   if (debugPrimalSimplex("End of solvePhase2") ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
@@ -640,7 +640,7 @@ void HEkkPrimal::iterate() {
     ekk_instance_.options_.highs_debug_level = kHighsDebugLevelExpensive;
   }
   if (debugPrimalSimplex("Before iteration") ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
@@ -2391,10 +2391,10 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
                                                 const bool initialise) {
   HighsDebugStatus return_status = ekkDebugSimplex(
       message, ekk_instance_, algorithm, solvePhase, initialise);
-  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
   return_status = ekkDebugNonbasicFreeColumnSet(ekk_instance_, num_free_col,
                                                 nonbasic_free_col_set);
-  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
-  return HighsDebugStatus::OK;
+  if (return_status == HighsDebugStatus::kLogicalError) return return_status;
+  return HighsDebugStatus::kOk;
 }

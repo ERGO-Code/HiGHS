@@ -18,16 +18,16 @@
 
 HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status) {
   switch (debug_status) {
-    case HighsDebugStatus::NOT_CHECKED:
-    case HighsDebugStatus::OK:
-    case HighsDebugStatus::SMALL_ERROR:
+    case HighsDebugStatus::kNotChecked:
+    case HighsDebugStatus::kOk:
+    case HighsDebugStatus::kSmallError:
       return HighsStatus::OK;
-    case HighsDebugStatus::WARNING:
-    case HighsDebugStatus::LARGE_ERROR:
+    case HighsDebugStatus::kWarning:
+    case HighsDebugStatus::kLargeError:
       return HighsStatus::Warning;
-    case HighsDebugStatus::ERROR:
-    case HighsDebugStatus::EXCESSIVE_ERROR:
-    case HighsDebugStatus::LOGICAL_ERROR:
+    case HighsDebugStatus::kError:
+    case HighsDebugStatus::kExcessiveError:
+    case HighsDebugStatus::kLogicalError:
       return HighsStatus::Error;
     default:
       return HighsStatus::OK;

@@ -45,7 +45,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const SimplexAlgorithm algorithm,
                                  const HighsInt phase, const bool initialise) {
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   static double max_max_basic_dual;
   static double max_max_primal_residual;
   static double max_max_dual_residual;
@@ -53,9 +53,9 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     max_max_basic_dual = 0;
     max_max_primal_residual = 0;
     max_max_dual_residual = 0;
-    return ::HighsDebugStatus::OK;
+    return ::HighsDebugStatus::kOk;
   }
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
@@ -80,7 +80,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    "nonbasic flag = %" HIGHSINT_FORMAT "\n",
                    message.c_str(), iteration_count, iVar, flag);
       assert(!flag_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   const double primal_feasibility_tolerance =
@@ -136,7 +136,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, iVar, primal_error, lower,
                    value, upper);
       assert(!primal_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
     bool move_error = move != simplex_basis.nonbasicMove_[iVar];
     if (move_error) {
@@ -150,7 +150,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, iVar, move,
                    simplex_basis.nonbasicMove_[iVar], lower, value, upper);
       assert(!move_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   // Check the basic variables
@@ -174,7 +174,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, iVar,
                    simplex_basis.nonbasicFlag_[iVar]);
       assert(!nonbasicFlag_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
     bool nonbasicMove_error = simplex_basis.nonbasicMove_[iVar];
     if (nonbasicMove_error) {
@@ -186,7 +186,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, iVar,
                    simplex_basis.nonbasicMove_[iVar]);
       assert(!nonbasicMove_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
     double workLower = simplex_info.workLower_[iVar];
     double workUpper = simplex_info.workUpper_[iVar];
@@ -207,7 +207,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, iVar, iRow, lower, upper,
                    workLower, workUpper);
       assert(!baseBound_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
     max_basic_dual = max(fabs(dual), max_basic_dual);
     HighsInt bound_violated = 0;
@@ -232,7 +232,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                      message.c_str(), iteration_count, iVar, iRow, cost, lower,
                      value, upper);
         assert(!primal_phase1_cost_error);
-        return HighsDebugStatus::LOGICAL_ERROR;
+        return HighsDebugStatus::kLogicalError;
       }
     }
     if (!bound_violated) continue;
@@ -253,15 +253,15 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   if (max_basic_dual > excessive_basic_dual) {
     value_adjective = "Excessive";
     report_level = HighsLogType::INFO;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
   } else if (max_basic_dual > large_basic_dual) {
     value_adjective = "Large";
     report_level = HighsLogType::DETAILED;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kWarning, return_status);
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kOk, return_status);
   }
   if (max_basic_dual > 2 * max_max_basic_dual) {
     highsLogDev(options.log_options, report_level,
@@ -287,7 +287,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, num_primal_infeasibility,
                    info_num_primal_infeasibility);
       assert(!illegal_num_primal_infeasibility);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   const double info_max_primal_infeasibility =
@@ -304,7 +304,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, max_primal_infeasibility,
                    info_max_primal_infeasibility);
       assert(!illegal_max_primal_infeasibility);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   const double info_sum_primal_infeasibility =
@@ -321,7 +321,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, sum_primal_infeasibility,
                    info_sum_primal_infeasibility);
       assert(!illegal_sum_primal_infeasibility);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   const HighsInt info_num_dual_infeasibility =
@@ -338,7 +338,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, num_dual_infeasibility,
                    info_num_dual_infeasibility);
       assert(!illegal_num_dual_infeasibility);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   const double info_max_dual_infeasibility =
@@ -355,7 +355,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, max_dual_infeasibility,
                    info_max_dual_infeasibility);
       assert(!illegal_max_dual_infeasibility);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   const double info_sum_dual_infeasibility =
@@ -372,7 +372,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                    message.c_str(), iteration_count, sum_dual_infeasibility,
                    info_sum_dual_infeasibility);
       assert(!illegal_sum_dual_infeasibility);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
   // Check any assumed feasibility
@@ -395,7 +395,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                  message.c_str(), iteration_count, num_primal_infeasibility,
                  max_primal_infeasibility, sum_primal_infeasibility);
     assert(!illegal_primal_infeasibility);
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
   bool require_dual_feasible_in_dual_simplex =
       algorithm == SimplexAlgorithm::DUAL &&
@@ -421,7 +421,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         max_dual_infeasibility, sum_dual_infeasibility, phase,
         utilModelStatusToString(ekk_instance.scaled_model_status_).c_str());
     assert(!illegal_dual_infeasibility);
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
 
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
@@ -473,15 +473,15 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   if (max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = HighsLogType::INFO;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
   } else if (max_primal_residual > large_residual_error) {
     value_adjective = "Large";
     report_level = HighsLogType::DETAILED;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kWarning, return_status);
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kOk, return_status);
   }
   if (max_primal_residual > 2 * max_max_primal_residual) {
     highsLogDev(options.log_options, report_level,
@@ -494,15 +494,15 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   if (max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = HighsLogType::INFO;
-    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kError, return_status);
   } else if (max_dual_residual > large_residual_error) {
     value_adjective = "Large";
     report_level = HighsLogType::DETAILED;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kWarning, return_status);
   } else {
     value_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::kOk, return_status);
   }
   if (max_dual_residual > 2 * max_max_dual_residual) {
     highsLogDev(options.log_options, report_level,
@@ -520,25 +520,25 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   // consistency, and then correctness of nonbasicMove
   const HighsOptions& options = ekk_instance.options_;
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const bool consistent =
-      ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::LOGICAL_ERROR;
+      ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "Supposed to be a Simplex basis, but not consistent\n");
     assert(consistent);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   if (options.highs_debug_level < kHighsDebugLevelCostly) return return_status;
   const bool correct_nonbasicMove =
-      ekkDebugNonbasicMove(ekk_instance) != HighsDebugStatus::LOGICAL_ERROR;
+      ekkDebugNonbasicMove(ekk_instance) != HighsDebugStatus::kLogicalError;
   if (!correct_nonbasicMove) {
     highsLogUser(
         options.log_options, HighsLogType::ERROR,
         "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
     assert(correct_nonbasicMove);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -546,8 +546,8 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
 HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
   // Non-trivially expensive check of NonbasicMove
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = ekk_instance.options_;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
@@ -563,7 +563,7 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "nonbasicMove size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   double lower;
   double upper;
@@ -632,7 +632,7 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
         num_upper_bounded_variable_move_errors, num_boxed_variable_move_errors,
         num_fixed_variable_move_errors);
     assert(num_errors == 0);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -641,17 +641,17 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
   // Cheap analysis of a Simplex basis, checking vector sizes, numbers
   // of basic/nonbasic variables and non-repetition of basic variables
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = ekk_instance.options_;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   // Check consistency of nonbasicFlag
   if (ekkDebugNonbasicFlagConsistent(ekk_instance) ==
-      HighsDebugStatus::LOGICAL_ERROR) {
+      HighsDebugStatus::kLogicalError) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "nonbasicFlag inconsistent\n");
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   const bool right_size =
       (HighsInt)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
@@ -660,7 +660,7 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "basicIndex size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   // Use localNonbasicFlag so that duplicate entries in basicIndex can
   // be spotted
@@ -687,7 +687,7 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
         assert(flag == -1);
       }
       assert(!flag);
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
+      return_status = HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;
@@ -695,8 +695,8 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
 
 HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = ekk_instance.options_;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
@@ -707,7 +707,7 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
     highsLogUser(options.log_options, HighsLogType::ERROR,
                  "nonbasicFlag size error\n");
     assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   HighsInt num_basic_variables = 0;
   for (HighsInt var = 0; var < numTot; var++) {
@@ -724,7 +724,7 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
                  " basic variables\n",
                  num_basic_variables, simplex_lp.numRow_);
     assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::kLogicalError;
   }
   return return_status;
 }
@@ -733,8 +733,8 @@ HighsDebugStatus ekkDebugOkForSolve(
     const HEkk& ekk_instance, const SimplexAlgorithm algorithm,
     const HighsInt phase, const HighsModelStatus scaled_model_status) {
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  const HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  const HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexLpStatus& simplex_lp_status =
       ekk_instance.simplex_lp_status_;
@@ -778,19 +778,19 @@ HighsDebugStatus ekkDebugOkForSolve(
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Basis and data check
-  if (ekkDebugBasisConsistent(ekk_instance) == HighsDebugStatus::LOGICAL_ERROR)
-    return HighsDebugStatus::LOGICAL_ERROR;
+  if (ekkDebugBasisConsistent(ekk_instance) == HighsDebugStatus::kLogicalError)
+    return HighsDebugStatus::kLogicalError;
   // Check work cost, lower, upper and range
   if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase,
                             scaled_model_status))
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   // Check nonbasic move against work cost, lower, upper and range
   for (HighsInt var = 0; var < numTot; ++var) {
     if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
       if (!ekkDebugOneNonbasicMoveVsWorkArraysOk(ekk_instance, var))
-        return HighsDebugStatus::LOGICAL_ERROR;
+        return HighsDebugStatus::kLogicalError;
     }
   }
   return return_status;
@@ -1152,8 +1152,8 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
                                      const double updated_dual,
                                      const double computed_dual) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
+    return HighsDebugStatus::kNotChecked;
+  HighsDebugStatus return_status = HighsDebugStatus::kOk;
   std::string error_adjective;
   HighsLogType report_level;
   double updated_dual_absolute_error = fabs(updated_dual - computed_dual);
@@ -1170,20 +1170,20 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
       updated_dual_absolute_error > updated_dual_large_absolute_error) {
     error_adjective = "Large";
     report_level = HighsLogType::INFO;
-    return_status = HighsDebugStatus::LARGE_ERROR;
+    return_status = HighsDebugStatus::kLargeError;
   } else if (updated_dual_relative_error > updated_dual_small_relative_error ||
              updated_dual_absolute_error > updated_dual_small_absolute_error) {
     error_adjective = "Small";
     report_level = HighsLogType::DETAILED;
-    return_status = HighsDebugStatus::SMALL_ERROR;
+    return_status = HighsDebugStatus::kSmallError;
   } else {
     error_adjective = "OK";
     report_level = HighsLogType::VERBOSE;
-    return_status = HighsDebugStatus::OK;
+    return_status = HighsDebugStatus::kOk;
   }
   if (sign_error) {
     report_level = HighsLogType::INFO;
-    return_status = HighsDebugStatus::LARGE_ERROR;
+    return_status = HighsDebugStatus::kLargeError;
   }
   highsLogDev(
       options.log_options, report_level,
@@ -1206,7 +1206,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
     const HSet nonbasic_free_col_set) {
   const HighsOptions& options = ekk_instance.options_;
   if (options.highs_debug_level < kHighsDebugLevelCheap)
-    return HighsDebugStatus::NOT_CHECKED;
+    return HighsDebugStatus::kNotChecked;
   const HighsLp& lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
@@ -1224,15 +1224,15 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
                 "NonbasicFreeColumnData: Number of free columns should be "
                 "%" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT "\n",
                 check_num_free_col, num_free_col);
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
-  if (!num_free_col) return HighsDebugStatus::OK;
+  if (!num_free_col) return HighsDebugStatus::kOk;
   // Debug HSet nonbasic_free_col
   bool nonbasic_free_col_ok = nonbasic_free_col_set.debug();
   if (!nonbasic_free_col_ok) {
     highsLogDev(options.log_options, HighsLogType::INFO,
                 "NonbasicFreeColumnData: HSet error\n");
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
 
   // Check that we have the right number of nonbasic free columns
@@ -1250,7 +1250,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
                 "NonbasicFreeColumnData: Set should have %" HIGHSINT_FORMAT
                 " entries, not %" HIGHSINT_FORMAT "\n",
                 check_num_nonbasic_free_col, num_nonbasic_free_col);
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::kLogicalError;
   }
   // Check that all in the set are nonbasic free columns
   const vector<HighsInt>& nonbasic_free_col_set_entry =
@@ -1269,10 +1269,10 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
                   " and bounds [%g, %g]\n",
                   iVar, simplex_basis.nonbasicFlag_[iVar],
                   simplex_info.workLower_[iVar], simplex_info.workUpper_[iVar]);
-      return HighsDebugStatus::LOGICAL_ERROR;
+      return HighsDebugStatus::kLogicalError;
     }
   }
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
 
 HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
@@ -1298,5 +1298,5 @@ HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
     }
   }
   */
-  return HighsDebugStatus::OK;
+  return HighsDebugStatus::kOk;
 }
