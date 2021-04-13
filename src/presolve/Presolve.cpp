@@ -57,7 +57,7 @@ void Presolve::load(const HighsLp& lp, bool mip) {
 
   colCost = lp.colCost_;
   objShift = lp.offset_;
-  if (lp.sense_ == ObjSense::MAXIMIZE) {
+  if (lp.sense_ == ObjSense::kMaximize) {
     objShift = -objShift;
     for (HighsUInt col = 0; col < lp.colCost_.size(); col++)
       colCost[col] = -colCost[col];

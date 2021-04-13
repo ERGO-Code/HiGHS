@@ -71,7 +71,7 @@ class HMpsFF {
   HighsInt nnz;
   std::string mpsName;
 
-  ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
+  ObjSense objSense = ObjSense::kMinimize;  // Minimization by default
   double objOffset = 0;
 
   std::vector<HighsInt> Astart;

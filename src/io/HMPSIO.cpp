@@ -42,7 +42,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   numRow = 0;
   numCol = 0;
   objOffset = 0;
-  objSense = ObjSense::MINIMIZE;
+  objSense = ObjSense::kMinimize;
 
   // Astart.clear() added since setting Astart.push_back(0) in
   // setup_clearModel() messes up the MPS read
@@ -82,9 +82,9 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     std::string sense(&line[2], &line[2] + 3);
     // the sense must be "MAX" or "MIN"
     if (sense.compare("MAX") == 0) {
-      objSense = ObjSense::MAXIMIZE;
+      objSense = ObjSense::kMaximize;
     } else if (sense.compare("MIN") == 0) {
-      objSense = ObjSense::MINIMIZE;
+      objSense = ObjSense::kMinimize;
     } else {
       return FilereaderRetcode::PARSERERROR;
     }

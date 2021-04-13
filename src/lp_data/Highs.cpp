@@ -262,7 +262,7 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
   }
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
-  lp.orientation_ = MatrixOrientation::COLWISE;
+  lp.orientation_ = MatrixOrientation::kColwise;
   if (num_col > 0 && integrality != NULL) {
     lp.integrality_.resize(num_col);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -1939,7 +1939,8 @@ HighsPostsolveStatus Highs::runPostsolve() {
                                       presolve_.data_.recovered_solution_,
                                       presolve_.data_.recovered_basis_);
 
-  if (lp_.sense_ == ObjSense::MAXIMIZE) presolve_.negateReducedLpColDuals(true);
+  if (lp_.sense_ == ObjSense::kMaximize)
+    presolve_.negateReducedLpColDuals(true);
 
   return HighsPostsolveStatus::SolutionRecovered;
 }
@@ -1960,7 +1961,7 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
 
   HighsModelObject& model = hmos_[model_index];
   // Check that the model isn't row-wise
-  assert(model.lp_.orientation_ != MatrixOrientation::ROWWISE);
+  assert(model.lp_.orientation_ != MatrixOrientation::kRowwise);
 
   // Transfer the LP solver iteration counts to this model
   HighsIterationCounts& iteration_counts = hmos_[model_index].iteration_counts_;
@@ -1982,7 +1983,7 @@ HighsStatus Highs::callSolveMip() {
   // Run the MIP solver
   options_.log_dev_level = LOG_DEV_LEVEL_INFO;
   // Check that the model isn't row-wise
-  assert(lp_.orientation_ != MatrixOrientation::ROWWISE);
+  assert(lp_.orientation_ != MatrixOrientation::kRowwise);
   HighsMipSolver solver(options_, lp_);
   solver.run();
   // Cheating now, but need to set this honestly!

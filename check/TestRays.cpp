@@ -241,7 +241,7 @@ void testInfeasibleMps(const std::string model) {
 }
 
 void testUnboundedMps(const std::string model,
-                      const ObjSense sense = ObjSense::MINIMIZE) {
+                      const ObjSense sense = ObjSense::kMinimize) {
   Highs highs;
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
@@ -372,7 +372,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
 
 TEST_CASE("Rays-gas11", "[highs_test_rays]") { testUnboundedMps("gas11"); }
 TEST_CASE("Rays-adlittlemax", "[highs_test_rays]") {
-  testUnboundedMps("adlittle", ObjSense::MAXIMIZE);
+  testUnboundedMps("adlittle", ObjSense::kMaximize);
 }
 
 TEST_CASE("Rays-galenet", "[highs_test_rays]") { testInfeasibleMps("galenet"); }

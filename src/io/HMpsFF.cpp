@@ -246,11 +246,11 @@ HMpsFF::parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
 
     // Interpret key being MAX or MIN
     if (key == HMpsFF::parsekey::MAX) {
-      objSense = ObjSense::MAXIMIZE;
+      objSense = ObjSense::kMaximize;
       continue;
     }
     if (key == HMpsFF::parsekey::MIN) {
-      objSense = ObjSense::MINIMIZE;
+      objSense = ObjSense::kMinimize;
       continue;
     }
     // start of new section?

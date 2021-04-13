@@ -163,9 +163,9 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   gh->lp->colCost_.resize(numCol);
   gmoGetObjVector(gh->gmo, &gh->lp->colCost_[0], NULL);
   if (gmoSense(gh->gmo) == gmoObj_Min)
-    gh->lp->sense_ = ObjSense::MINIMIZE;
+    gh->lp->sense_ = ObjSense::kMinimize;
   else
-    gh->lp->sense_ = ObjSense::MAXIMIZE;
+    gh->lp->sense_ = ObjSense::kMaximize;
   gh->lp->offset_ = gmoObjConst(gh->gmo);
 
   /* row left- and right-hand-side */

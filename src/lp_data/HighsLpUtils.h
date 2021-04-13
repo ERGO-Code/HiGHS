@@ -280,7 +280,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
 void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation =
-                                     MatrixOrientation::COLWISE);
+                                     MatrixOrientation::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

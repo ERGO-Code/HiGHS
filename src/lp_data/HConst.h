@@ -75,14 +75,8 @@ enum class HighsInfoType { kInt = 1, kDouble };
 enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
 /** SCIP/HiGHS Objective sense */
-enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
-enum class MatrixOrientation { NONE = 0, COLWISE, ROWWISE };
-
-enum SolverOption {
-  SOLVER_OPTION_SIMPLEX = -1,
-  SOLVER_OPTION_CHOOSE,
-  SOLVER_OPTION_IPM
-};
+enum class ObjSense { kMinimize = 1, kMaximize = -1 };
+enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 
 enum PrimalDualStatus {
   STATUS_NOTSET = -1,

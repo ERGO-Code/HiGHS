@@ -52,9 +52,9 @@ void HighsLp::clear() {
   this->rowLower_.clear();
   this->rowUpper_.clear();
 
-  this->sense_ = ObjSense::MINIMIZE;
+  this->sense_ = ObjSense::kMinimize;
   this->offset_ = 0;
-  this->orientation_ = MatrixOrientation::NONE;
+  this->orientation_ = MatrixOrientation::kNone;
 
   this->model_name_ = "";
   this->lp_name_ = "";

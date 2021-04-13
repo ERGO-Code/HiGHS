@@ -33,7 +33,7 @@ HighsStatus issue425() {
   lp.Avalue_.push_back(1);
 
   lp.colLower_.assign(lp.numCol_, 0);
-  lp.colUpper_.assign(lp.numCol_, HIGHS_CONST_INF);
+  lp.colUpper_.assign(lp.numCol_, kHighsConstInf);
   
   std::vector<double> b{1, 2, 2, 4};
   lp.rowLower_ = b;

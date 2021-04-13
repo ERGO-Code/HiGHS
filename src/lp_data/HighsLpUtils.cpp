@@ -46,7 +46,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // If the LP has no columns there is nothing left to test
   if (lp.numCol_ == 0) return HighsStatus::OK;
-  assert(lp.orientation_ == MatrixOrientation::COLWISE);
+  assert(lp.orientation_ == MatrixOrientation::kColwise);
 
   // From here, any LP has lp.numCol_ > 0 and lp.Astart_[lp.numCol_] exists (as
   // the number of nonzeros)
@@ -1062,10 +1062,10 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const HighsInt num_new_col,
   // Check that nonzeros aren't being appended to a matrix with no rows
   if (num_new_nz > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
   // Adding a positive number of columns to a matrix
-  if (lp.orientation_ == MatrixOrientation::NONE) {
+  if (lp.orientation_ == MatrixOrientation::kNone) {
     // LP is currently empty, store the matrix column-wise
     assert(lp.numCol_ == 0 && lp.numRow_ == 0);
-    lp.orientation_ = MatrixOrientation::COLWISE;
+    lp.orientation_ = MatrixOrientation::kColwise;
   } else {
     // Ensure that the matrix is stored column-wise
     setOrientation(lp);
@@ -1122,11 +1122,11 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
   // Adding a positive number of rows to a matrix
   HighsInt current_num_nz = 0;
-  if (lp.orientation_ == MatrixOrientation::NONE) {
+  if (lp.orientation_ == MatrixOrientation::kNone) {
     // LP is currently empty, store the matrix row-wise
     assert(lp.numCol_ == 0 && lp.numRow_ == 0);
-    lp.orientation_ = MatrixOrientation::ROWWISE;
-  } else if (lp.orientation_ == MatrixOrientation::COLWISE) {
+    lp.orientation_ = MatrixOrientation::kRowwise;
+  } else if (lp.orientation_ == MatrixOrientation::kColwise) {
     assert(lp.numCol_ > 0);
     assert((HighsInt)lp.Astart_.size() >= lp.numCol_);
     current_num_nz = lp.Astart_[lp.numCol_];
@@ -1142,16 +1142,16 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
       // However, this allows efficient handling of the (common) case
       // where a modeller defines variables without constraints, and
       // then constraints one-by-one.
-      lp.orientation_ = MatrixOrientation::ROWWISE;
+      lp.orientation_ = MatrixOrientation::kRowwise;
       lp.Astart_.assign(lp.numRow_ + 1, 0);
     }
   }
-  if (lp.orientation_ == MatrixOrientation::ROWWISE) {
+  if (lp.orientation_ == MatrixOrientation::kRowwise) {
     appendToMatrix(lp, lp.numRow_, num_new_row, num_new_nz, XARstart, XARindex,
                    XARvalue);
   } else {
     // Storing the matrix column-wise, so have to insert the new rows
-    assert(lp.orientation_ == MatrixOrientation::COLWISE);
+    assert(lp.orientation_ == MatrixOrientation::kColwise);
     vector<HighsInt> Alength;
     Alength.assign(lp.numCol_, 0);
     for (HighsInt el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
@@ -1776,10 +1776,10 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
 
 // Report the LP objective sense
 void reportLpObjSense(const HighsLogOptions& log_options, const HighsLp& lp) {
-  if (lp.sense_ == ObjSense::MINIMIZE)
+  if (lp.sense_ == ObjSense::kMinimize)
     highsLogDev(log_options, HighsLogType::INFO,
                 "Objective sense is minimize\n");
-  else if (lp.sense_ == ObjSense::MAXIMIZE)
+  else if (lp.sense_ == ObjSense::kMaximize)
     highsLogDev(log_options, HighsLogType::INFO,
                 "Objective sense is maximize\n");
   else
@@ -2303,7 +2303,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
 //        y free, zl >=0, zu >= 0
 HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
   std::vector<double> colCost = lp.colCost_;
-  if (lp.sense_ != ObjSense::MINIMIZE) {
+  if (lp.sense_ != ObjSense::kMinimize) {
     for (HighsInt col = 0; col < lp.numCol_; col++)
       colCost[col] = -colCost[col];
   }
@@ -2388,7 +2388,7 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
     }
   }
 
-  dual.sense_ = ObjSense::MINIMIZE;
+  dual.sense_ = ObjSense::kMinimize;
   for (HighsInt col = 0; col < dual.numCol_; col++) {
     dual.colCost_[col] = -dual.colCost_[col];
   }
@@ -2554,28 +2554,28 @@ void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation) {
     // row/column 0
     lp.Astart_.assign(1, 0);
     lp.orientation_ = desired_orientation;
-  } else if (desired_orientation == MatrixOrientation::COLWISE) {
-    if (lp.orientation_ == MatrixOrientation::NONE) {
+  } else if (desired_orientation == MatrixOrientation::kColwise) {
+    if (lp.orientation_ == MatrixOrientation::kNone) {
       // Assume matrix data are already COLWISE
-      lp.orientation_ = MatrixOrientation::COLWISE;
+      lp.orientation_ = MatrixOrientation::kColwise;
       return;
     }
-    assert(lp.orientation_ == MatrixOrientation::ROWWISE);
+    assert(lp.orientation_ == MatrixOrientation::kRowwise);
     ensureColWise(lp);
   } else {
-    if (lp.orientation_ == MatrixOrientation::NONE) {
+    if (lp.orientation_ == MatrixOrientation::kNone) {
       // Assume matrix data are already ROWWISE
-      lp.orientation_ = MatrixOrientation::ROWWISE;
+      lp.orientation_ = MatrixOrientation::kRowwise;
       return;
     }
-    assert(lp.orientation_ == MatrixOrientation::COLWISE);
+    assert(lp.orientation_ == MatrixOrientation::kColwise);
     ensureRowWise(lp);
   }
 }
 
 void ensureColWise(HighsLp& lp) {
   // Should only call this is orientation is ROWWISE
-  assert(lp.orientation_ == MatrixOrientation::ROWWISE);
+  assert(lp.orientation_ == MatrixOrientation::kRowwise);
   HighsInt num_nz;
   bool empty_matrix = lp.numCol_ == 0 || lp.numRow_ == 0;
   if (!empty_matrix) {
@@ -2634,12 +2634,12 @@ void ensureColWise(HighsLp& lp) {
   assert(num_nz >= 0);
   assert((HighsInt)lp.Aindex_.size() >= num_nz);
   assert((HighsInt)lp.Avalue_.size() >= num_nz);
-  lp.orientation_ = MatrixOrientation::COLWISE;
+  lp.orientation_ = MatrixOrientation::kColwise;
 }
 
 void ensureRowWise(HighsLp& lp) {
   // Should only call this is orientation is COLWISE
-  assert(lp.orientation_ == MatrixOrientation::COLWISE);
+  assert(lp.orientation_ == MatrixOrientation::kColwise);
   HighsInt num_nz;
   bool empty_matrix = lp.numCol_ == 0 || lp.numRow_ == 0;
   if (!empty_matrix) {
@@ -2698,5 +2698,5 @@ void ensureRowWise(HighsLp& lp) {
   assert(num_nz >= 0);
   assert((HighsInt)lp.Aindex_.size() >= num_nz);
   assert((HighsInt)lp.Avalue_.size() >= num_nz);
-  lp.orientation_ = MatrixOrientation::ROWWISE;
+  lp.orientation_ = MatrixOrientation::kRowwise;
 }

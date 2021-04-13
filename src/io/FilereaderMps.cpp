@@ -83,6 +83,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsLp& model) {
-  assert(model.orientation_ != MatrixOrientation::ROWWISE);
+  assert(model.orientation_ != MatrixOrientation::kRowwise);
   return writeLpAsMPS(options, filename, model);
 }

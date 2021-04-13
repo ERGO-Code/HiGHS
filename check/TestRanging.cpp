@@ -537,7 +537,7 @@ TEST_CASE("Ranging-max", "[highs_test_ranging]") {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/afiro.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
-    REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
+    REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
   } else {
     SpecialLps special_lps;
     special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);

@@ -2195,7 +2195,7 @@ bool HEkkDual::bailoutOnDualObjective() {
                HighsModelStatus::REACHED_ITERATION_LIMIT ||
            ekk_instance_.scaled_model_status_ ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
-  } else if (ekk_instance_.simplex_lp_.sense_ == ObjSense::MINIMIZE &&
+  } else if (ekk_instance_.simplex_lp_.sense_ == ObjSense::kMinimize &&
              solvePhase == SOLVE_PHASE_2) {
     if (ekk_instance_.simplex_info_.updated_dual_objective_value >
         ekk_instance_.options_.dual_objective_value_upper_bound)

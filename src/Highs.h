@@ -817,7 +817,7 @@ class Highs {
   std::string primalDualStatusToString(const HighsInt primal_dual_status);
 
   void setMatrixOrientation(const MatrixOrientation& desired_orientation =
-                                MatrixOrientation::COLWISE);
+                                MatrixOrientation::kColwise);
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;

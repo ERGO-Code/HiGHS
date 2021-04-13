@@ -79,7 +79,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
   if (mipsolver == nullptr)
     model->integrality_.assign(model->numCol_, HighsVarType::kContinuous);
 
-  if (model_.orientation_ == MatrixOrientation::ROWWISE)
+  if (model_.orientation_ == MatrixOrientation::kRowwise)
     fromCSR(model->Avalue_, model->Aindex_, model->Astart_);
   else
     fromCSC(model->Avalue_, model->Aindex_, model->Astart_);
@@ -2981,13 +2981,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   //
 
   // convert model to minimization problem
-  if (model->sense_ == ObjSense::MAXIMIZE) {
+  if (model->sense_ == ObjSense::kMaximize) {
     for (HighsInt i = 0; i != model->numCol_; ++i)
       model->colCost_[i] = -model->colCost_[i];
 
     model->offset_ = -model->offset_;
     assert(std::isfinite(model->offset_));
-    model->sense_ = ObjSense::MINIMIZE;
+    model->sense_ = ObjSense::kMinimize;
   }
 
   if (options->presolve != "off") {

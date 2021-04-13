@@ -417,8 +417,8 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
 }
 
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
-  ObjSense pass_sense = ObjSense::MINIMIZE;
-  if (sense == (HighsInt)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
+  ObjSense pass_sense = ObjSense::kMinimize;
+  if (sense == (HighsInt)ObjSense::kMaximize) pass_sense = ObjSense::kMaximize;
   return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
@@ -682,9 +682,11 @@ const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
   if (int_model_status < (HighsInt)HighsModelStatus::HIGHS_MODEL_STATUS_MIN ||
       int_model_status > (HighsInt)HighsModelStatus::HIGHS_MODEL_STATUS_MAX)
     return illegal_model_status;
-  return ((Highs*)highs)
-      ->modelStatusToString(static_cast<HighsModelStatus>(int_model_status))
-      .c_str();
+  const std::string string_model_status =
+      ((Highs*)highs)
+          ->modelStatusToString(
+              static_cast<HighsModelStatus>(int_model_status));
+  return string_model_status.c_str();
 }
 
 const char* Highs_primalDualStatusToChar(void* highs,
@@ -693,9 +695,9 @@ const char* Highs_primalDualStatusToChar(void* highs,
   if (int_primal_dual_status < PrimalDualStatus::STATUS_MIN ||
       int_primal_dual_status > PrimalDualStatus::STATUS_MAX)
     return illegal_primal_dual_status;
-  return ((Highs*)highs)
-      ->primalDualStatusToString(int_primal_dual_status)
-      .c_str();
+  const std::string string_primal_dual_status =
+      ((Highs*)highs)->primalDualStatusToString(int_primal_dual_status);
+  return string_primal_dual_status.c_str();
 }
 
 // *********************

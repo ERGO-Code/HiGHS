@@ -77,8 +77,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     model.Astart_.push_back(nz);
-    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::MINIMIZE
-                                                  : ObjSense::MAXIMIZE;
+    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
+                                                  : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::PARSERERROR;
   }
@@ -109,7 +109,7 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsLp& model) {
-  assert(model.orientation_ != MatrixOrientation::ROWWISE);
+  assert(model.orientation_ != MatrixOrientation::kRowwise);
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -118,7 +118,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
 
   // write objective
   this->writeToFile(file, "%s",
-                    model.sense_ == ObjSense::MINIMIZE ? "min" : "max");
+                    model.sense_ == ObjSense::kMinimize ? "min" : "max");
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (HighsInt i = 0; i < model.numCol_; i++) {

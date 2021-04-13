@@ -270,3 +270,4 @@ TEST_CASE("two-col-sing-doubleton-ineq [presolve-col-sing]") {
   std::string str = HighsStatusToString(status);
   REQUIRE(str == "OK");
 }
+

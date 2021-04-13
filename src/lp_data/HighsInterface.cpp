@@ -352,8 +352,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
         if (return_status == HighsStatus::Error) return return_status;
       }
     }
-  } else if (lp.orientation_ == MatrixOrientation::NONE ||
-             lp.orientation_ == MatrixOrientation::ROWWISE) {
+  } else if (lp.orientation_ == MatrixOrientation::kNone ||
+             lp.orientation_ == MatrixOrientation::kRowwise) {
     // There are no nonzeros, so XARstart/XARindex/XARvalue may be null. Have to
     // set up starts for empty rows
     assert(XnumNewRow > 0);
@@ -757,7 +757,7 @@ HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   HighsModelObject& highs_model_object = hmos_[0];
   assert(&lp_ == &lp_);
   // If the sense doesn't change, just return
-  if ((Xsense == ObjSense::MINIMIZE) == (lp_.sense_ == ObjSense::MINIMIZE))
+  if ((Xsense == ObjSense::kMinimize) == (lp_.sense_ == ObjSense::kMinimize))
     return HighsStatus::OK;
   // Assume that objective sense changes
   // Set the LP objective sense

@@ -88,7 +88,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   // sign, though. Maximization problems are, thus, accommodated by
   // applying the sign multiplier to dual information.
   HighsInt sense = 1;
-  if (highs_model_object.lp_.sense_ == ObjSense::MAXIMIZE) sense = -1;
+  if (highs_model_object.lp_.sense_ == ObjSense::kMaximize) sense = -1;
 
   vector<HighsInt> iWork_(numTotal);
   vector<double> dWork_(numTotal);

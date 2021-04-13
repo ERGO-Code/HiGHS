@@ -380,7 +380,7 @@ double HighsMipSolverData::transformNewIncumbent(
   }
 
   // return the objective value in the transformed space
-  if (mipsolver.orig_model_->sense_ == ObjSense::MAXIMIZE)
+  if (mipsolver.orig_model_->sense_ == ObjSense::kMaximize)
     return -double(obj + mipsolver.model_->offset_);
 
   return double(obj - mipsolver.model_->offset_);
