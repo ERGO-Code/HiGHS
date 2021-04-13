@@ -28,7 +28,7 @@ void HighsInfo::clear() {
 }
 
 std::string infoEntryType2string(const HighsInfoType type) {
-  if (type == HighsInfoType::INT) {
+  if (type == HighsInfoType::kInt) {
     return "int";
   } else {
     return "double";
@@ -66,7 +66,7 @@ InfoStatus checkInfo(const HighsOptions& options,
         error_found = true;
       }
     }
-    if (type == HighsInfoType::INT) {
+    if (type == HighsInfoType::kInt) {
       // Check HighsInt info
       InfoRecordInt& info = ((InfoRecordInt*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
@@ -75,7 +75,7 @@ InfoStatus checkInfo(const HighsOptions& options,
         if (check_index == index) continue;
         InfoRecordInt& check_info =
             ((InfoRecordInt*)info_records[check_index])[0];
-        if (check_info.type == HighsInfoType::INT) {
+        if (check_info.type == HighsInfoType::kInt) {
           if (check_info.value == value_pointer) {
             highsLogUser(options.log_options, HighsLogType::ERROR,
                          "checkInfo: Info %" HIGHSINT_FORMAT
@@ -87,7 +87,7 @@ InfoStatus checkInfo(const HighsOptions& options,
           }
         }
       }
-    } else if (type == HighsInfoType::DOUBLE) {
+    } else if (type == HighsInfoType::kDouble) {
       // Check double info
       InfoRecordDouble& info = ((InfoRecordDouble*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
@@ -96,7 +96,7 @@ InfoStatus checkInfo(const HighsOptions& options,
         if (check_index == index) continue;
         InfoRecordDouble& check_info =
             ((InfoRecordDouble*)info_records[check_index])[0];
-        if (check_info.type == HighsInfoType::DOUBLE) {
+        if (check_info.type == HighsInfoType::kDouble) {
           if (check_info.value == value_pointer) {
             highsLogUser(options.log_options, HighsLogType::ERROR,
                          "checkInfo: Info %" HIGHSINT_FORMAT
@@ -124,7 +124,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
-  if (type != HighsInfoType::INT) {
+  if (type != HighsInfoType::kInt) {
     highsLogUser(
         options.log_options, HighsLogType::ERROR,
         "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
@@ -144,7 +144,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
-  if (type != HighsInfoType::DOUBLE) {
+  if (type != HighsInfoType::kDouble) {
     highsLogUser(
         options.log_options, HighsLogType::ERROR,
         "getInfoValue: Info \"%s\" requires value of type %s, not double\n",
@@ -188,7 +188,7 @@ void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
     HighsInfoType type = info_records[index]->type;
     // Skip the advanced info when creating HTML
     if (html && info_records[index]->advanced) continue;
-    if (type == HighsInfoType::INT) {
+    if (type == HighsInfoType::kInt) {
       reportInfo(file, ((InfoRecordInt*)info_records[index])[0], html);
     } else {
       reportInfo(file, ((InfoRecordDouble*)info_records[index])[0], html);

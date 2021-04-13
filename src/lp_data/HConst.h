@@ -68,9 +68,9 @@ enum class HighsVarType : uint8_t {
   kImplicitInteger = 2,
 };
 
-enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING };
+enum class HighsOptionType { kBool = 0, kInt, kDouble, kString };
 
-enum class HighsInfoType { INT = 1, DOUBLE };
+enum class HighsInfoType { kInt = 1, kDouble };
 
 enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 

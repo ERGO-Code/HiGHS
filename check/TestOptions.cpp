@@ -297,7 +297,7 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status =
       highs.getOptionType("mps_parser_type_free", highs_option_type);
   REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(highs_option_type == HighsOptionType::BOOL);
+  REQUIRE(highs_option_type == HighsOptionType::kBool);
 
   HighsInt get_allowed_simplex_matrix_scale_factor;
   return_status = highs.getOptionValue("allowed_simplex_matrix_scale_factor",
@@ -309,7 +309,7 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.getOptionType("allowed_simplex_matrix_scale_factor",
                                       highs_option_type);
   REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(highs_option_type == HighsOptionType::INT);
+  REQUIRE(highs_option_type == HighsOptionType::kInt);
 
   double get_small_matrix_value;
   return_status =
@@ -319,11 +319,11 @@ TEST_CASE("highs-options", "[highs_options]") {
 
   return_status = highs.getOptionType("small_matrix_value", highs_option_type);
   REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(highs_option_type == HighsOptionType::DOUBLE);
+  REQUIRE(highs_option_type == HighsOptionType::kDouble);
 
   return_status = highs.getOptionType("log_file", highs_option_type);
   REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(highs_option_type == HighsOptionType::STRING);
+  REQUIRE(highs_option_type == HighsOptionType::kString);
 
   HighsOptions options = highs.getOptions();
   REQUIRE(options.small_matrix_value == small_matrix_value);

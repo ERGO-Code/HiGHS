@@ -48,7 +48,7 @@ class InfoRecordInt : public InfoRecord {
   HighsInt default_value;
   InfoRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
                 HighsInt* Xvalue_pointer, HighsInt Xdefault_value)
-      : InfoRecord(HighsInfoType::INT, Xname, Xdescription, Xadvanced) {
+      : InfoRecord(HighsInfoType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
@@ -63,7 +63,7 @@ class InfoRecordDouble : public InfoRecord {
   double default_value;
   InfoRecordDouble(std::string Xname, std::string Xdescription, bool Xadvanced,
                    double* Xvalue_pointer, double Xdefault_value)
-      : InfoRecord(HighsInfoType::DOUBLE, Xname, Xdescription, Xadvanced) {
+      : InfoRecord(HighsInfoType::kDouble, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
