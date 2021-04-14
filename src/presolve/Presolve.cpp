@@ -514,26 +514,26 @@ HighsPresolveStatus Presolve::presolve() {
   HighsPresolveStatus presolve_status = HighsPresolveStatus::kNotReduced;
   HighsInt result = presolve(0);
   switch (result) {
-    case stat::Unbounded:
+    case Stat::kUnbounded:
       presolve_status = HighsPresolveStatus::kUnbounded;
       break;
-    case stat::Infeasible:
+    case Stat::kInfeasible:
       presolve_status = HighsPresolveStatus::kInfeasible;
       break;
-    case stat::Reduced:
+    case Stat::kReduced:
       if (numCol > 0 || numRow > 0)
         presolve_status = HighsPresolveStatus::kReduced;
       else
         presolve_status = HighsPresolveStatus::kReducedToEmpty;
       break;
-    case stat::Empty:
+    case Stat::kEmpty:
       presolve_status = HighsPresolveStatus::kEmpty;
       break;
-    case stat::Optimal:
+    case Stat::kOptimal:
       // reduced problem solution indicated as optimal by
       // the solver.
       break;
-    case stat::Timeout:
+    case Stat::kTimeout:
       presolve_status = HighsPresolveStatus::kTimeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
@@ -777,7 +777,7 @@ void Presolve::caseTwoSingletonsDoubletonInequality(const HighsInt row,
 
 void Presolve::removeDoubletonEquations() {
   if (timer.reachLimit()) {
-    status = stat::Timeout;
+    status = Stat::kTimeout;
     return;
   }
   timer.recordStart(DOUBLETON_EQUATION);
@@ -1493,7 +1493,7 @@ void Presolve::removeFixedCol(HighsInt j) {
 
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
-        if (status == stat::Infeasible) return;
+        if (status == Stat::kInfeasible) return;
         countRemovedRows(FIXED_COL);
       }
     }
@@ -1883,7 +1883,7 @@ void Presolve::removeDominatedColumns() {
   double e, d;
   pair<double, double> p;
   if (timer.reachLimit()) {
-    status = stat::Timeout;
+    status = Stat::kTimeout;
     return;
   }
   for (HighsInt j = 0; j < numCol; ++j)
@@ -2301,7 +2301,7 @@ void Presolve::removeColumnSingletons() {
   list<HighsInt>::iterator it = singCol.begin();
 
   if (timer.reachLimit()) {
-    status = stat::Timeout;
+    status = Stat::kTimeout;
     return;
   }
 
@@ -2803,7 +2803,7 @@ void Presolve::removeForcingConstraints() {
   pair<double, double> implBounds;
 
   if (timer.reachLimit()) {
-    status = stat::Timeout;
+    status = Stat::kTimeout;
     return;
   }
   for (HighsInt i = 0; i < numRow; ++i)
@@ -2853,7 +2853,7 @@ void Presolve::removeForcingConstraints() {
 
 void Presolve::removeRowSingletons() {
   if (timer.reachLimit()) {
-    status = stat::Timeout;
+    status = Stat::kTimeout;
     return;
   }
   timer.recordStart(SING_ROW);
@@ -3076,7 +3076,7 @@ void Presolve::checkForChanges(HighsInt iteration) {
     }
   }
   resizeProblem();
-  status = stat::Reduced;
+  status = Stat::kReduced;
 }
 
 // void Presolve::reportTimes() {
@@ -5257,7 +5257,7 @@ void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
   if (timer.time_limit > 0 &&
       timer.timer_.readRunHighsClock() > timer.time_limit)
-    status = stat::Timeout;
+    status = Stat::kTimeout;
 }
 
 dev_kkt_check::State Presolve::initState(const bool intermediate) {

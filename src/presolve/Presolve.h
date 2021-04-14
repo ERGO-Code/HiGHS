@@ -159,14 +159,14 @@ class Presolve : public HPreData {
 
   PresolveTimer timer;  // holds enum for main presolve rules
 
-  enum stat {
-    Unset = 0,
-    Infeasible = 1,
-    Unbounded = 2,
-    Empty = 3,
-    Optimal = 4,
-    Reduced = 5,
-    Timeout = 6,
+  enum Stat {
+	     //    Unset = 0,
+    kInfeasible = 1,
+    kUnbounded = 2,
+    kEmpty = 3,
+    kOptimal = 4,
+    kReduced = 5,
+    kTimeout = 6,
   };
 
  private:
