@@ -896,21 +896,21 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   auto propagateAndResolve = [&]() {
     if (propdomain.infeasible() || mipdata.domain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return true;
     }
 
     propdomain.propagate();
     if (propdomain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return true;
     }
 
     mipdata.cliquetable.cleanupFixed(mipdata.domain);
     if (mipdata.domain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return true;
     }
@@ -940,7 +940,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   HighsTransformedLp transLp(*lp, mipdata.implications);
   if (mipdata.domain.infeasible()) {
-    status = HighsLpRelaxation::Status::Infeasible;
+    status = HighsLpRelaxation::Status::kInfeasible;
     return 0;
   }
   HighsLpAggregator lpAggregator(*lp);

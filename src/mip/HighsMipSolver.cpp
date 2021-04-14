@@ -310,8 +310,8 @@ restart:
 
       // after separation we store the new basis and proceed with the outer loop
       // to perform a dive from this node
-      if (mipdata_->lp.getStatus() != HighsLpRelaxation::Status::Error &&
-          mipdata_->lp.getStatus() != HighsLpRelaxation::Status::NotSet)
+      if (mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kError &&
+          mipdata_->lp.getStatus() != HighsLpRelaxation::Status::kNotSet)
         mipdata_->lp.storeBasis();
 
       basis = mipdata_->lp.getStoredBasis();

@@ -523,7 +523,7 @@ HighsStatus Highs::run() {
 
     // Run solver.
     switch (presolve_status) {
-      case HighsPresolveStatus::NotPresolved: {
+      case HighsPresolveStatus::kNotPresolved: {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
@@ -536,7 +536,7 @@ HighsStatus Highs::run() {
           return returnFromRun(return_status);
         break;
       }
-      case HighsPresolveStatus::NotReduced: {
+      case HighsPresolveStatus::kNotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
         reportPresolveReductions(hmos_[original_hmo].options_.log_options,
@@ -553,7 +553,7 @@ HighsStatus Highs::run() {
           return returnFromRun(return_status);
         break;
       }
-      case HighsPresolveStatus::Reduced: {
+      case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         // Validate the reduced LP
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
@@ -603,7 +603,7 @@ HighsStatus Highs::run() {
 
         break;
       }
-      case HighsPresolveStatus::ReducedToEmpty: {
+      case HighsPresolveStatus::kReducedToEmpty: {
         reportPresolveReductions(hmos_[original_hmo].options_.log_options,
                                  hmos_[original_hmo].lp_, true);
         hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::kOptimal;
@@ -614,9 +614,9 @@ HighsStatus Highs::run() {
       }
         //	printf("\nHighs::run() 3: presolve status = %" HIGHSINT_FORMAT
         //"\n", (HighsInt)presolve_status);fflush(stdout);
-      case HighsPresolveStatus::Infeasible:
-      case HighsPresolveStatus::Unbounded: {
-        if (presolve_status == HighsPresolveStatus::Infeasible) {
+      case HighsPresolveStatus::kInfeasible:
+      case HighsPresolveStatus::kUnbounded: {
+        if (presolve_status == HighsPresolveStatus::kInfeasible) {
           model_status_ = HighsModelStatus::kPrimalInfeasible;
         } else {
           // If presolve returns (primal) unbounded, the problem may
@@ -644,14 +644,14 @@ HighsStatus Highs::run() {
         return_status = HighsStatus::kOk;
         return returnFromRun(return_status);
       }
-      case HighsPresolveStatus::Timeout: {
+      case HighsPresolveStatus::kTimeout: {
         model_status_ = HighsModelStatus::kPresolveError;
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Presolve reached timeout\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::kWarning;
       }
-      case HighsPresolveStatus::OptionsError: {
+      case HighsPresolveStatus::kOptionsError: {
         model_status_ = HighsModelStatus::kPresolveError;
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Presolve options error.\n");
@@ -659,7 +659,7 @@ HighsStatus Highs::run() {
         return HighsStatus::kWarning;
       }
       default: {
-        // case HighsPresolveStatus::Error
+        // case HighsPresolveStatus::kError
         model_status_ = HighsModelStatus::kPresolveError;
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Presolve failed.\n");
@@ -675,14 +675,14 @@ HighsStatus Highs::run() {
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
     if (hmos_[solved_hmo].scaled_model_status_ == HighsModelStatus::kOptimal) {
-      if (presolve_status == HighsPresolveStatus::Reduced ||
-          presolve_status == HighsPresolveStatus::ReducedToEmpty) {
+      if (presolve_status == HighsPresolveStatus::kReduced ||
+          presolve_status == HighsPresolveStatus::kReducedToEmpty) {
         // If presolve is nontrivial, extract the optimal solution
         // and basis for the presolved problem in order to generate
         // the solution and basis for postsolve to use to generate a
         // solution(?) and basis that is, hopefully, optimal. This is
         // confirmed or corrected by hot-starting the simplex solver
-        if (presolve_status == HighsPresolveStatus::ReducedToEmpty) {
+        if (presolve_status == HighsPresolveStatus::kReducedToEmpty) {
           clearSolutionUtil(hmos_[solved_hmo].solution_);
           clearBasisUtil(hmos_[solved_hmo].basis_);
         }
@@ -700,7 +700,7 @@ HighsStatus Highs::run() {
         this_postsolve_time += -timer_.read(timer_.postsolve_clock);
         presolve_.info_.postsolve_time = this_postsolve_time;
 
-        if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+        if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
           highsLogDev(options_.log_options, HighsLogType::kVerbose,
                       "Postsolve finished\n");
           //
@@ -1864,13 +1864,13 @@ HighsPresolveStatus Highs::runPresolve() {
   presolve_.clear();
   // Exit if the problem is empty or if presolve is set to off.
   if (options_.presolve == kHighsOffString)
-    return HighsPresolveStatus::NotPresolved;
+    return HighsPresolveStatus::kNotPresolved;
 
   // Ensure that the LP is column-wise
   // setOrientation(lp_);
 
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
-    return HighsPresolveStatus::NullError;
+    return HighsPresolveStatus::kNullError;
 
   // Clear info from previous runs if lp_ has been modified.
   double start_presolve = timer_.readRunHighsClock();
@@ -1881,7 +1881,7 @@ HighsPresolveStatus Highs::runPresolve() {
     if (left <= 0) {
       highsLogDev(options_.log_options, HighsLogType::kError,
                   "Time limit reached while reading in matrix\n");
-      return HighsPresolveStatus::Timeout;
+      return HighsPresolveStatus::kTimeout;
     }
 
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -1900,7 +1900,7 @@ HighsPresolveStatus Highs::runPresolve() {
     if (left <= 0) {
       highsLogDev(options_.log_options, HighsLogType::kError,
                   "Time limit reached while copying matrix into presolve.\n");
-      return HighsPresolveStatus::Timeout;
+      return HighsPresolveStatus::kTimeout;
     }
 
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -1913,7 +1913,7 @@ HighsPresolveStatus Highs::runPresolve() {
 
   // Update reduction counts.
   switch (presolve_.presolve_status_) {
-    case HighsPresolveStatus::Reduced: {
+    case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
       presolve_.info_.n_cols_removed = lp_.numCol_ - reduced_lp.numCol_;
       presolve_.info_.n_rows_removed = lp_.numRow_ - reduced_lp.numRow_;
@@ -1921,7 +1921,7 @@ HighsPresolveStatus Highs::runPresolve() {
           (HighsInt)lp_.Avalue_.size() - (HighsInt)reduced_lp.Avalue_.size();
       break;
     }
-    case HighsPresolveStatus::ReducedToEmpty: {
+    case HighsPresolveStatus::kReducedToEmpty: {
       presolve_.info_.n_cols_removed = lp_.numCol_;
       presolve_.info_.n_rows_removed = lp_.numRow_;
       presolve_.info_.n_nnz_removed = (HighsInt)lp_.Avalue_.size();
@@ -1937,7 +1937,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
   // assert(presolve_.has_run_);
   bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
                                          presolve_.data_.recovered_solution_);
-  if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
+  if (!solution_ok) return HighsPostsolveStatus::kReducedSolutionDimenionsError;
 
   presolve_.data_.postSolveStack.undo(options_,
                                       presolve_.data_.recovered_solution_,
@@ -1946,7 +1946,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
   if (lp_.sense_ == ObjSense::kMaximize)
     presolve_.negateReducedLpColDuals(true);
 
-  return HighsPostsolveStatus::SolutionRecovered;
+  return HighsPostsolveStatus::kSolutionRecovered;
 }
 
 // The method below runs calls solveLp to solve the LP associated with

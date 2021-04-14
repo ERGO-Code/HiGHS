@@ -374,7 +374,7 @@ retry:
   // printf("fixing rate is %g\n", fixingrate);
   if (fixingrate < 0.1 ||
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
-    // heur.childselrule = ChildSelectionRule::BestCost;
+    // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
@@ -658,7 +658,7 @@ retry:
   // printf("fixing rate is %g\n", fixingrate);
   fixingrate = getFixingRate();
   if (fixingrate < 0.1) {
-    // heur.childselrule = ChildSelectionRule::BestCost;
+    // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
@@ -712,7 +712,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
-    if (st == HighsLpRelaxation::Status::Infeasible) {
+    if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
       std::vector<double> vals;
       double rhs;
@@ -820,7 +820,7 @@ void HighsPrimalHeuristics::randomizedRounding(
                                            localdom.colUpper_.data());
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
-    if (st == HighsLpRelaxation::Status::Infeasible) {
+    if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
       std::vector<double> vals;
       double rhs;

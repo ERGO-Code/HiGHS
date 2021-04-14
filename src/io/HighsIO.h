@@ -26,6 +26,7 @@ class HighsOptions;
  * @brief IO methods for HiGHS - currently just print/log messages
  */
 enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
+
 const char* const HighsLogTypeTag[] = {"", "",          "",
                                        "", "WARNING: ", "ERROR:   "};
 enum LogDevLevel {

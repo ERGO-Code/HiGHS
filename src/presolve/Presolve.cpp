@@ -511,30 +511,30 @@ HighsInt Presolve::presolve(HighsInt print) {
 
 HighsPresolveStatus Presolve::presolve() {
   timer.recordStart(TOTAL_PRESOLVE_TIME);
-  HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
+  HighsPresolveStatus presolve_status = HighsPresolveStatus::kNotReduced;
   HighsInt result = presolve(0);
   switch (result) {
     case stat::Unbounded:
-      presolve_status = HighsPresolveStatus::Unbounded;
+      presolve_status = HighsPresolveStatus::kUnbounded;
       break;
     case stat::Infeasible:
-      presolve_status = HighsPresolveStatus::Infeasible;
+      presolve_status = HighsPresolveStatus::kInfeasible;
       break;
     case stat::Reduced:
       if (numCol > 0 || numRow > 0)
-        presolve_status = HighsPresolveStatus::Reduced;
+        presolve_status = HighsPresolveStatus::kReduced;
       else
-        presolve_status = HighsPresolveStatus::ReducedToEmpty;
+        presolve_status = HighsPresolveStatus::kReducedToEmpty;
       break;
     case stat::Empty:
-      presolve_status = HighsPresolveStatus::Empty;
+      presolve_status = HighsPresolveStatus::kEmpty;
       break;
     case stat::Optimal:
       // reduced problem solution indicated as optimal by
       // the solver.
       break;
     case stat::Timeout:
-      presolve_status = HighsPresolveStatus::Timeout;
+      presolve_status = HighsPresolveStatus::kTimeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
   if (iPrint > 0) {
@@ -3810,7 +3810,7 @@ HighsPostsolveStatus Presolve::primalPostsolve(
   recovered_solution.col_value = colValue;
   recovered_solution.row_value = rowValue;
 
-  return HighsPostsolveStatus::SolutionRecovered;
+  return HighsPostsolveStatus::kSolutionRecovered;
 }
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
@@ -4427,7 +4427,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
            " = number "
            "of rows\n",
            num_basic_var, numRowOriginal);
-    return HighsPostsolveStatus::BasisError;
+    return HighsPostsolveStatus::kBasisError;
   }
 
   // now recover original model data to pass back to HiGHS
@@ -4477,7 +4477,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   recovered_basis.col_status = col_status;
   recovered_basis.row_status = row_status;
 
-  return HighsPostsolveStatus::SolutionRecovered;
+  return HighsPostsolveStatus::kSolutionRecovered;
 }
 
 void Presolve::checkKkt(bool final) {

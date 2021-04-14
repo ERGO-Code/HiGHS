@@ -287,7 +287,7 @@ bool OsiHiGHSSolverInterface::isProvenOptimal() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::isProvenOptimal()\n");
-  //  return (this->status == HighsStatus::Optimal) ||
+  //  return (this->status == HighsStatus::kOptimal) ||
   //         (this->status == HighsStatus::kOk);
   return false;
 }
@@ -296,7 +296,7 @@ bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::isProvenPrimalInfeasible()\n");
-  //  return this->status == HighsStatus::Infeasible;
+  //  return this->status == HighsStatus::kInfeasible;
   return false;
 }
 

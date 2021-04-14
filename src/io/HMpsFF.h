@@ -122,6 +122,7 @@ class HMpsFF {
   };
 
   enum class Boundtype { kLe, kEq, kGe };  //, kFr };
+
   std::vector<Boundtype> row_type;
   std::vector<HighsInt> integer_column;
 

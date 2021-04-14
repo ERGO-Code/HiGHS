@@ -36,10 +36,10 @@
 
 #define ENABLE_SPARSIFY_FOR_LP 0
 
-#define HPRESOLVE_CHECKED_CALL(presolveCall)                          \
-  do {                                                                \
-    HPresolve::Result __result = presolveCall;                        \
-    if (__result != presolve::HPresolve::Result::Ok) return __result; \
+#define HPRESOLVE_CHECKED_CALL(presolveCall)                           \
+  do {                                                                 \
+    HPresolve::Result __result = presolveCall;                         \
+    if (__result != presolve::HPresolve::Result::kOk) return __result; \
   } while (0)
 
 namespace presolve {
@@ -865,7 +865,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   HighsDomain& domain = mipsolver->mipdata_->domain;
 
   domain.propagate();
-  if (domain.infeasible()) return Result::PrimalInfeasible;
+  if (domain.infeasible()) return Result::kPrimalInfeasible;
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
   bool firstCall = !mipsolver->mipdata_->cliquesExtracted;
@@ -876,7 +876,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   // packing constraints so that the clique merging step can extend/delete them
   if (firstCall) {
     cliquetable.extractCliques(*mipsolver);
-    if (domain.infeasible()) return Result::PrimalInfeasible;
+    if (domain.infeasible()) return Result::kPrimalInfeasible;
 
     // during presolve we keep the objective upper bound without the current
     // offset so we need to update it
@@ -887,15 +887,15 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
       cliquetable.extractObjCliques(*mipsolver);
       mipsolver->mipdata_->upper_limit = tmpLimit;
 
-      if (domain.infeasible()) return Result::PrimalInfeasible;
+      if (domain.infeasible()) return Result::kPrimalInfeasible;
     }
 
     domain.propagate();
-    if (domain.infeasible()) return Result::PrimalInfeasible;
+    if (domain.infeasible()) return Result::kPrimalInfeasible;
   }
 
   cliquetable.cleanupFixed(domain);
-  if (domain.infeasible()) return Result::PrimalInfeasible;
+  if (domain.infeasible()) return Result::kPrimalInfeasible;
 
   // store binary variables in vector with their number of implications on
   // other binaries
@@ -972,7 +972,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         // "\n", nprobed,
         //       cliquetable.numCliques());
         if (domain.infeasible()) {
-          return Result::PrimalInfeasible;
+          return Result::kPrimalInfeasible;
         }
       }
     }
@@ -1398,7 +1398,7 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
 
   cliquetable.getSubstitutions().clear();
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 void HPresolve::storeRow(HighsInt row) {
@@ -1801,11 +1801,11 @@ HPresolve::Result HPresolve::doubletonEq(HighsPostsolveStack& postSolveStack,
       // check integrality conditions
       double roundCoef = std::round(staycoef / substcoef) * substcoef;
       if (std::abs(roundCoef - staycoef) > options->mip_epsilon)
-        return Result::Ok;
+        return Result::kOk;
       staycoef = roundCoef;
       double roundRhs = std::round(rhs / substcoef) * substcoef;
       if (std::abs(rhs - roundRhs) > options->mip_feasibility_tolerance)
-        return Result::PrimalInfeasible;
+        return Result::kPrimalInfeasible;
       rhs = roundRhs;
     } else {
       // one col is integral, substitute the continuous one
@@ -1993,7 +1993,7 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postSolveStack,
   if (ub <= lb + options->primal_feasibility_tolerance) {
     // bounds could be infeasible or equal in tolerances, first check infeasible
     if (ub < lb - options->primal_feasibility_tolerance)
-      return Result::PrimalInfeasible;
+      return Result::kPrimalInfeasible;
 
     // bounds are equal in tolerances, if they have a slight infeasibility below
     // those tolerances or they have a slight numerical distance which changes
@@ -2054,7 +2054,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
   // check for dominated column
   if (colDualLower > options->dual_feasibility_tolerance) {
     if (model->colLower_[col] == -kHighsInf)
-      return Result::DualInfeasible;
+      return Result::kDualInfeasible;
     else
       fixColToLower(postSolveStack, col);
     return checkLimits(postSolveStack);
@@ -2062,7 +2062,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
 
   if (colDualUpper < -options->dual_feasibility_tolerance) {
     if (model->colUpper_[col] == kHighsInf)
-      return Result::DualInfeasible;
+      return Result::kDualInfeasible;
     else
       fixColToUpper(postSolveStack, col);
     return checkLimits(postSolveStack);
@@ -2150,7 +2150,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
   if (isDualImpliedFree(row) && isImpliedFree(col)) {
     if (model->integrality_[col] == HighsVarType::kInteger &&
         !isImpliedIntegral(col))
-      return Result::Ok;
+      return Result::kOk;
     // todo, store which side of an implied free dual variable needs to be used
     // for substitution
     storeRow(row);
@@ -2180,7 +2180,7 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
   }
 
   // todo: check for zero cost singleton and remove
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
@@ -2195,7 +2195,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
       if (model->rowUpper_[row] < -options->primal_feasibility_tolerance ||
           model->rowLower_[row] > options->primal_feasibility_tolerance)
         // model infeasible
-        return Result::PrimalInfeasible;
+        return Result::kPrimalInfeasible;
       postSolveStack.redundantRow(row);
       markRowDeleted(row);
       return checkLimits(postSolveStack);
@@ -2213,7 +2213,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
       impliedRowUpper <
           model->rowLower_[row] - options->primal_feasibility_tolerance) {
     // model infeasible
-    return Result::PrimalInfeasible;
+    return Result::kPrimalInfeasible;
   }
 
   if (impliedRowLower >=
@@ -2525,7 +2525,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
 
               // rounded row proves infeasibility regardless of coefficient
               // values
-              if (roundRhs - roundLhs < -0.5) return Result::PrimalInfeasible;
+              if (roundRhs - roundLhs < -0.5) return Result::kPrimalInfeasible;
 
               if (roundLhs >= intScale * model->rowLower_[row] +
                                   minLhsTightening - options->mip_epsilon &&
@@ -2773,7 +2773,7 @@ HPresolve::Result HPresolve::emptyCol(HighsPostsolveStack& postSolveStack,
     if (std::abs(model->colCost_[col]) <= options->dual_feasibility_tolerance)
       model->colCost_[col] = 0;
     else
-      return Result::DualInfeasible;
+      return Result::kDualInfeasible;
   }
 
   if (model->colCost_[col] > 0)
@@ -2799,7 +2799,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         getMaxAbsColVal(col) * boundDiff <=
             options->primal_feasibility_tolerance) {
       if (boundDiff < -options->primal_feasibility_tolerance)
-        return Result::PrimalInfeasible;
+        return Result::kPrimalInfeasible;
       postSolveStack.removedFixedCol(col, model->colLower_[col],
                                      model->colCost_[col],
                                      getColumnVector(col));
@@ -2825,7 +2825,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
   // check for dominated column
   if (colDualLower > options->dual_feasibility_tolerance) {
     if (model->colLower_[col] == -kHighsInf)
-      return Result::DualInfeasible;
+      return Result::kDualInfeasible;
     else {
       fixColToLower(postSolveStack, col);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
@@ -2835,7 +2835,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
 
   if (colDualUpper < -options->dual_feasibility_tolerance) {
     if (model->colUpper_[col] == kHighsInf)
-      return Result::DualInfeasible;
+      return Result::kDualInfeasible;
     else {
       fixColToUpper(postSolveStack, col);
       HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
@@ -2894,7 +2894,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
   // integer columns cannot be used to tighten bounds on dual multipliers
   if (mipsolver != nullptr) {
     if (model->integrality_[col] == HighsVarType::kInteger)
-      return Result::Ok;
+      return Result::kOk;
     else if (model->integrality_[col] == HighsVarType::kContinuous &&
              isImpliedInteger(col)) {
       model->integrality_[col] = HighsVarType::kImplicitInteger;
@@ -2923,7 +2923,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       updateRowDualImpliedBounds(nonzero.index(), col, nonzero.value());
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
@@ -2963,7 +2963,7 @@ HPresolve::Result HPresolve::fastPresolveLoop(
 
   } while (problemSizeReduction() > 0.01);
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
@@ -3103,7 +3103,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
                  "\nPresolve is switched off\n");
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postSolveStack) {
@@ -3194,8 +3194,8 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postSolveStack) {
   }
 #endif
 
-  return postSolveStack.numReductions() >= reductionLimit ? Result::Stopped
-                                                          : Result::Ok;
+  return postSolveStack.numReductions() >= reductionLimit ? Result::kStopped
+                                                          : Result::kOk;
 }
 
 void HPresolve::storeCurrentProblemSize() {
@@ -3215,12 +3215,12 @@ double HPresolve::problemSizeReduction() {
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
   shrinkProblemEnabled = true;
   switch (presolve(postSolveStack)) {
-    case Result::Stopped:
-    case Result::Ok:
+    case Result::kStopped:
+    case Result::kOk:
       break;
-    case Result::PrimalInfeasible:
+    case Result::kPrimalInfeasible:
       return HighsModelStatus::kPrimalInfeasible;
-    case Result::DualInfeasible:
+    case Result::kDualInfeasible:
       return HighsModelStatus::kDualInfeasible;
   }
 
@@ -3455,7 +3455,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
           [](const std::pair<HighsInt, HighsInt>& p) { return p.first == -1; }),
       substitutionOpportunities.end());
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
@@ -3684,7 +3684,7 @@ HPresolve::Result HPresolve::removeRowSingletons(
 
   singletonRows.clear();
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::presolveColSingletons(
@@ -3700,7 +3700,7 @@ HPresolve::Result HPresolve::presolveColSingletons(
           [&](HighsInt col) { return colDeleted[col] || colsize[col] > 1; }),
       singletonColumns.end());
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::presolveChangedRows(
@@ -3714,7 +3714,7 @@ HPresolve::Result HPresolve::presolveChangedRows(
     changedRowFlag[row] = rowDeleted[row];
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::presolveChangedCols(
@@ -3728,7 +3728,7 @@ HPresolve::Result HPresolve::presolveChangedCols(
     changedColFlag[col] = colDeleted[col];
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HPresolve::Result HPresolve::removeDoubletonEquations(
@@ -3739,7 +3739,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
     assert(!rowDeleted[eqrow]);
     assert(eq->first == rowsize[eqrow]);
     assert(model->rowLower_[eqrow] == model->rowUpper_[eqrow]);
-    if (rowsize[eqrow] > 2) return Result::Ok;
+    if (rowsize[eqrow] > 2) return Result::kOk;
     HPRESOLVE_CHECKED_CALL(rowPresolve(postSolveStack, eqrow));
     if (rowDeleted[eqrow])
       eq = equations.begin();
@@ -3747,7 +3747,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
       ++eq;
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 HighsInt HPresolve::strengthenInequalities() {
@@ -4640,7 +4640,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         if (newUpper < model->rowUpper_[parallelRowCand]) {
           if (newUpper < model->rowLower_[parallelRowCand] -
                              options->primal_feasibility_tolerance)
-            return Result::PrimalInfeasible;
+            return Result::kPrimalInfeasible;
 
           if (newUpper <= model->rowLower_[parallelRowCand] +
                               options->primal_feasibility_tolerance)
@@ -4665,7 +4665,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         if (newLower > model->rowLower_[parallelRowCand]) {
           if (newLower > model->rowUpper_[parallelRowCand] +
                              options->primal_feasibility_tolerance)
-            return Result::PrimalInfeasible;
+            return Result::kPrimalInfeasible;
 
           if (newLower >= model->rowUpper_[parallelRowCand] -
                               options->primal_feasibility_tolerance)
@@ -4808,7 +4808,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
       buckets.emplace_hint(last, rowHashes[i], i);
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 void HPresolve::setRelaxedImpliedBounds() {
@@ -5247,7 +5247,7 @@ HPresolve::Result HPresolve::sparsify(HighsPostsolveStack& postSolveStack) {
     HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
   }
 
-  return Result::Ok;
+  return Result::kOk;
 }
 
 }  // namespace presolve
