@@ -81,14 +81,13 @@ class HighsIntegers {
     return m[3];
   }
 
-  static double integralScale(const std::vector<double>& vals, double deltadown,
-                              double deltaup) {
-    if (vals.empty()) return 0.0;
+  static double integralScale(const double* vals, HighsInt numVals,
+                              double deltadown, double deltaup) {
+    if (numVals == 0) return 0.0;
 
     double minval = *std::min_element(
-        vals.begin(), vals.end(),
+        vals, vals + numVals,
         [](double a, double b) { return std::abs(a) < std::abs(b); });
-    HighsInt numVals = vals.size();
 
     int expshift;
 
@@ -148,6 +147,11 @@ class HighsIntegers {
     }
 
     return denom / (double)currgcd;
+  }
+
+  static double integralScale(const std::vector<double>& vals, double deltadown,
+                              double deltaup) {
+    return integralScale(vals.data(), vals.size(), deltadown, deltaup);
   }
 };
 

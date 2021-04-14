@@ -30,7 +30,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   cover.reserve(rowlen);
 
   for (HighsInt j = 0; j != rowlen; ++j) {
-    if (!lpRelaxation.isColIntegral(inds[j])) continue;
+    if (!isintegral[j]) continue;
 
     if (solval[j] <= feastol) continue;
 
@@ -234,7 +234,7 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
   integralCoefficients = false;
   integralSupport = true;
   for (HighsInt i = 0; i != rowlen; ++i) {
-    if (!lpRelaxation.isColIntegral(inds[i])) {
+    if (!isintegral[i]) {
       if (vals[i] < 0)
         integralSupport = false;
       else
@@ -452,9 +452,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   integralCoefficients = false;
   for (HighsInt i = 0; i != rowlen; ++i) {
     if (vals[i] == 0.0) continue;
-    HighsInt col = inds[i];
-
-    if (!lpRelaxation.isColIntegral(col)) {
+    if (!isintegral[i]) {
       if (vals[i] < 0.0)
         integralSupport = false;
       else
@@ -485,7 +483,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
   complementation.resize(rowlen);
 
   for (HighsInt i = 0; i != rowlen; ++i) {
-    if (lpRelaxation.isColIntegral(inds[i])) {
+    if (isintegral[i]) {
       integerinds.push_back(i);
 
       if (upper[i] < 2 * solval[i]) {
@@ -676,7 +674,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
   integralCoefficients = false;
   for (HighsInt j = 0; j != rowlen; ++j) {
     if (vals[j] == 0.0) continue;
-    if (!lpRelaxation.isColIntegral(inds[j])) {
+    if (!isintegral[j]) {
       if (vals[j] > 0.0)
         vals[j] = 0.0;
       else {
@@ -700,57 +698,71 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
 }
 
 bool HighsCutGeneration::postprocessCut() {
+  if (integralSupport && integralCoefficients) {
+    // if the cut is known to be integral no postprocessing is needed and we
+    // simply remove zero coefficients
+    for (HighsInt i = rowlen - 1; i >= 0; --i) {
+      if (vals[i] == 0.0) {
+        --rowlen;
+        inds[i] = inds[rowlen];
+        vals[i] = vals[rowlen];
+      }
+    }
+    return true;
+  }
+
   HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
-  double maxAbsValue;
+  // determine maximal absolute coefficient
+  double maxAbsValue = 0.0;
+  for (HighsInt i = 0; i != rowlen; ++i)
+    maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
+
+  // determine minimal allowed coefficient
+  double minCoefficientValue = 100 * feastol;
+
+  if (maxAbsValue < 1.0) minCoefficientValue *= std::max(1e-3, maxAbsValue);
+
+  // remove small coefficients and check whether the remaining support is
+  // integral
+  integralSupport = true;
+  for (HighsInt i = rowlen - 1; i >= 0; --i) {
+    if (vals[i] == 0) continue;
+    if (std::abs(vals[i]) <= minCoefficientValue) {
+      if (vals[i] < 0) {
+        double ub = globaldomain.colUpper_[inds[i]];
+        if (ub == kHighsInf)
+          return false;
+        else
+          rhs -= ub * vals[i];
+      } else {
+        double lb = globaldomain.colLower_[inds[i]];
+        if (lb == -kHighsInf)
+          return false;
+        else
+          rhs -= lb * vals[i];
+      }
+
+      vals[i] = 0.0;
+      continue;
+    }
+
+    if (integralSupport && !lpRelaxation.isColIntegral(inds[i]))
+      integralSupport = false;
+  }
+
+  // remove zeros in place
+  for (HighsInt i = rowlen - 1; i >= 0; --i) {
+    if (vals[i] == 0.0) {
+      --rowlen;
+      inds[i] = inds[rowlen];
+      vals[i] = vals[rowlen];
+    }
+  }
+
   if (integralSupport) {
-    if (integralCoefficients) {
-      // remove zeros in place
-      for (HighsInt i = rowlen - 1; i >= 0; --i) {
-        if (vals[i] == 0.0) {
-          --rowlen;
-          inds[i] = inds[rowlen];
-          vals[i] = vals[rowlen];
-        }
-      }
-      return true;
-    }
-
-    // if the support is integral, allow a maximal dynamism of 1e4
-    maxAbsValue = 0.0;
-    for (HighsInt i = 0; i != rowlen; ++i)
-      maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
-
-    double minCoefficientValue = std::max(maxAbsValue * 100 * feastol, epsilon);
-
-    for (HighsInt i = 0; i != rowlen; ++i) {
-      if (vals[i] == 0) continue;
-      if (std::abs(vals[i]) <= minCoefficientValue) {
-        if (vals[i] < 0) {
-          double ub = globaldomain.colUpper_[inds[i]];
-          if (ub == kHighsInf)
-            return false;
-          else
-            rhs -= ub * vals[i];
-        } else {
-          double lb = globaldomain.colLower_[inds[i]];
-          if (lb == -kHighsInf)
-            return false;
-          else
-            rhs -= lb * vals[i];
-        }
-
-        vals[i] = 0.0;
-      }
-    }
-
-    std::vector<double> nonzerovals;
-    nonzerovals.reserve(rowlen);
-
-    for (HighsInt i = 0; i != rowlen; ++i)
-      if (vals[i] != 0) nonzerovals.push_back(vals[i]);
-
+    // integral support -> determine scale to make all coefficients integral
     double intscale =
-        HighsIntegers::integralScale(nonzerovals, feastol, epsilon);
+        HighsIntegers::integralScale(vals, rowlen, feastol, epsilon);
 
     bool scaleSmallestValToOne = true;
 
@@ -766,8 +778,6 @@ bool HighsCutGeneration::postprocessCut() {
       rhs *= intscale;
       maxAbsValue = std::round(maxAbsValue * intscale);
       for (HighsInt i = 0; i != rowlen; ++i) {
-        if (vals[i] == 0.0) continue;
-
         HighsCDouble scaleval = intscale * HighsCDouble(vals[i]);
         HighsCDouble intval = round(scaleval);
         double delta = double(scaleval - intval);
@@ -795,79 +805,40 @@ bool HighsCutGeneration::postprocessCut() {
       // right hand side was weakened, do not weaken the final cut.
       rhs = floor(rhs + epsilon);
 
-      if (intscale * maxAbsValue * feastol <= 1.0) {
+      if (intscale * maxAbsValue * feastol < 0.5) {
+        // integral scale leads to small enough values, accept scale
         scaleSmallestValToOne = false;
         integralCoefficients = true;
       }
     }
 
     if (scaleSmallestValToOne) {
+      // integral scale lead to very large coefficient values. We now shift the
+      // exactly integral values down such that the smallest coefficient is
+      // around 1
       double minAbsValue = kHighsInf;
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (vals[i] == 0.0) continue;
+      for (HighsInt i = 0; i != rowlen; ++i)
         minAbsValue = std::min(std::abs(vals[i]), minAbsValue);
-      }
 
       int expshift;
       std::frexp(minAbsValue - epsilon, &expshift);
       expshift = -expshift;
 
-      maxAbsValue = std::ldexp(maxAbsValue, expshift);
-
       rhs = std::ldexp((double)rhs, expshift);
 
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (vals[i] == 0) continue;
-
+      for (HighsInt i = 0; i != rowlen; ++i)
         vals[i] = std::ldexp(vals[i], expshift);
-      }
     }
   } else {
-    maxAbsValue = 0.0;
-    for (HighsInt i = 0; i != rowlen; ++i)
-      maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
-
+    // the support is not integral, scale cut to have the largest coefficient
+    // around 1.0
     int expshift;
     std::frexp(maxAbsValue, &expshift);
     expshift = -expshift;
-
-    double minCoefficientValue =
-        std::ldexp(maxAbsValue * 100 * feastol, expshift);
     rhs = std::ldexp((double)rhs, expshift);
 
-    // now remove small coefficients and determine the smallest absolute
-    // coefficient of an integral variable
-    for (HighsInt i = 0; i != rowlen; ++i) {
-      if (vals[i] == 0.0) continue;
-
+    for (HighsInt i = 0; i != rowlen; ++i)
       vals[i] = std::ldexp(vals[i], expshift);
-
-      if (std::abs(vals[i]) <= minCoefficientValue) {
-        if (vals[i] < 0) {
-          double ub = globaldomain.colUpper_[inds[i]];
-          if (ub == kHighsInf)
-            return false;
-          else
-            rhs -= ub * vals[i];
-        } else {
-          double lb = globaldomain.colLower_[inds[i]];
-          if (lb == -kHighsInf)
-            return false;
-          else
-            rhs -= lb * vals[i];
-        }
-        vals[i] = 0.0;
-      }
-    }
-  }
-
-  // remove zeros in place
-  for (HighsInt i = rowlen - 1; i >= 0; --i) {
-    if (vals[i] == 0.0) {
-      --rowlen;
-      inds[i] = inds[rowlen];
-      vals[i] = vals[rowlen];
-    }
   }
 
   return true;
@@ -901,27 +872,45 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   rhs *= std::ldexp(1.0, expshift);
   for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
 
+  isintegral.resize(rowlen);
   for (HighsInt i = 0; i != rowlen; ++i) {
-    double checkVal = std::abs(vals[i]);
-    if (inds[i] >= lpRelaxation.numCols()) {
-      double maxContribution = checkVal * lpRelaxation.getMaxAbsRowVal(
-                                              inds[i] - lpRelaxation.numCols());
-      if (maxContribution > 1000 * feastol) checkVal = maxContribution;
-    }
+    // we do not want to have integral variables with small coefficients as this
+    // may lead to numerical instabilities during cut generation
+    // Therefore we relax integral variables with small coefficients to
+    // continuous ones because they still might have a non-negligible
+    // contribution e.g. when they come from integral rows with coefficients on
+    // the larger side. When we relax them to continuous variables they will be
+    // complemented so that their solution value is closest to zero and then
+    // will be relaxed if their value is positive or their maximal contribution
+    // is below feasibility tolerance.
+    isintegral[i] =
+        lpRelaxation.isColIntegral(inds[i]) && std::abs(vals[i]) > 10 * feastol;
 
-    if (checkVal <= 10 * feastol) {
-      if (vals[i] < 0) {
-        if (upper[i] == kHighsInf) return false;
-        rhs -= vals[i] * upper[i];
+    if (!isintegral[i]) {
+      if (upper[i] - solval[i] < solval[i]) {
+        if (complementation.empty()) complementation.resize(rowlen);
+
+        complementation[i] = 1 - complementation[i];
+        rhs -= upper[i] * vals[i];
+        vals[i] = -vals[i];
       }
 
-      ++numZeros;
-      vals[i] = 0.0;
-      continue;
-    }
+      // relax positive continuous variables and those with small contributions
+      if (vals[i] > 0 || std::abs(vals[i]) * upper[i] <= 10 * feastol) {
+        // printf("remove: vals[i] = %g  upper[i] = %g\n", vals[i], upper[i]);
+        if (vals[i] < 0) {
+          if (upper[i] == kHighsInf) return false;
+          rhs -= vals[i] * upper[i];
+        }
 
-    if (!lpRelaxation.isColIntegral(inds[i])) {
+        ++numZeros;
+        vals[i] = 0.0;
+        continue;
+      }
+
       hasContinuous = true;
+      // if (lpRelaxation.isColIntegral(inds[i]))
+      //   printf("vals[i] = %g  upper[i] = %g\n", vals[i], upper[i]);
 
       if (vals[i] > 0) {
         if (upper[i] == kHighsInf)
@@ -985,6 +974,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
           vals[i] = vals[rowlen];
           upper[i] = upper[rowlen];
           solval[i] = solval[rowlen];
+          isintegral[i] = isintegral[rowlen];
           if (--numZeros == 0) break;
         }
       }
@@ -996,6 +986,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
           vals[i] = vals[rowlen];
           upper[i] = upper[rowlen];
           solval[i] = solval[rowlen];
+          isintegral[i] = isintegral[rowlen];
           complementation[i] = complementation[rowlen];
           if (--numZeros == 0) break;
         }
@@ -1098,7 +1089,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     complementation.resize(rowlen);
 
     for (HighsInt i = 0; i != rowlen; ++i) {
-      if (vals[i] > 0 || !lpRelaxation.isColIntegral(inds[i])) continue;
+      if (vals[i] > 0 || !isintegral[i]) continue;
 
       complementation[i] = 1 - complementation[i];
       rhs -= upper[i] * vals[i];

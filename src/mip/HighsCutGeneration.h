@@ -42,6 +42,7 @@ class HighsCutGeneration {
   std::vector<double> upper;
   std::vector<double> solval;
   std::vector<uint8_t> complementation;
+  std::vector<uint8_t> isintegral;
   const double feastol;
   const double epsilon;
 
