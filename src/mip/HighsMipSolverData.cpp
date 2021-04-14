@@ -681,10 +681,10 @@ bool HighsMipSolverData::rootSeparationRound(
   sepa_lp_iterations += tmpLpIters;
 
   if (status == HighsLpRelaxation::Status::kInfeasible) {
-    pruned_treeweight = 1.0;
     lower_bound = std::min(kHighsInf, upper_bound);
-    num_nodes = 1;
-    num_leaves = 1;
+    pruned_treeweight = 1.0;
+    num_nodes += 1;
+    num_leaves += 1;
     return true;
   }
 
@@ -826,8 +826,8 @@ restart:
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
     lower_bound = std::min(kHighsInf, upper_bound);
     pruned_treeweight = 1.0;
-    num_nodes = 1;
-    num_leaves = 1;
+    num_nodes += 1;
+    num_leaves += 1;
     return;
   }
 
@@ -933,8 +933,8 @@ restart:
     if (lower_bound > upper_limit) {
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
       pruned_treeweight = 1.0;
-      num_nodes = 1;
-      num_leaves = 1;
+      num_nodes += 1;
+      num_leaves += 1;
       return;
     }
   } else {
@@ -946,6 +946,23 @@ restart:
       analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
+
+      if (!domain.getChangedCols().empty()) {
+        domain.propagate();
+        if (domain.infeasible())
+          status = HighsLpRelaxation::Status::kInfeasible;
+        else {
+          removeFixedIndices();
+          status = lp.resolveLp(&domain);
+        }
+        if (status == HighsLpRelaxation::Status::kInfeasible) {
+          lower_bound = std::min(kHighsInf, upper_bound);
+          pruned_treeweight = 1.0;
+          num_nodes += 1;
+          num_leaves += 1;
+          return;
+        }
+      }
     }
 
     if (!rootlpsol.empty() &&
@@ -962,6 +979,20 @@ restart:
 
   // if global propagation found bound changes, we update the local domain
   if (!domain.getChangedCols().empty()) {
+    domain.propagate();
+    if (domain.infeasible())
+      status = HighsLpRelaxation::Status::kInfeasible;
+    else {
+      removeFixedIndices();
+      status = lp.resolveLp(&domain);
+    }
+    if (status == HighsLpRelaxation::Status::kInfeasible) {
+      lower_bound = std::min(kHighsInf, upper_bound);
+      pruned_treeweight = 1.0;
+      num_nodes += 1;
+      num_leaves += 1;
+      return;
+    }
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
