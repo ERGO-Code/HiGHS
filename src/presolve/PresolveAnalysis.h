@@ -32,50 +32,50 @@ constexpr double inf = std::numeric_limits<double>::infinity();
 
 enum PresolveRule {
   // Presolve rules.
-  EMPTY_ROW,
-  FIXED_COL,
-  SING_ROW,
-  DOUBLETON_EQUATION,
-  REMOVE_FORCING_CONSTRAINTS,
-  FORCING_ROW,
-  REDUNDANT_ROW,
-  DOMINATED_ROW_BOUNDS,
-  REMOVE_COLUMN_SINGLETONS,
-  FREE_SING_COL,
-  SING_COL_DOUBLETON_INEQ,
-  IMPLIED_FREE_SING_COL,
-  REMOVE_DOMINATED_COLUMNS,
-  MIP_DUAL_FIXING,
-  DOMINATED_COLS,
-  WEAKLY_DOMINATED_COLS,
-  DOMINATED_COL_BOUNDS,
-  EMPTY_COL,
-  AGGREGATOR,
+  kEmptyRow,
+  kFixedCol,
+  kSingRow,
+  kDoubletonEquation,
+  kRemoveForcingConstraints,
+  kForcingRow,
+  kRedundantRow,
+  //  kDominatedRowBounds,
+  kRemoveColumnSingletons,
+  kFreeSingCol,
+  kSingColDoubletonIneq,
+  kImpliedFreeSingCol,
+  kRemoveDominatedColumns,
+  kMipDualFixing,
+  kDominatedCols,
+  kWeaklyDominatedCols,
+  //  kDominatedColBounds,
+  kEmptyCol,
+  kAggregator,
 
   // For timing.
-  MATRIX_COPY,
-  RESIZE_MATRIX,
+  kMatrixCopy,
+  kResizeMatrix,
 
-  RUN_PRESOLVERS,
-  REMOVE_ROW_SINGLETONS,
-  REMOVE_DOUBLETON_EQUATIONS,
-  REMOVE_EMPTY_ROW,
+  kRunPresolvers,
+  kRemoveRowSingletons,
+  kRemoveDoubletonEquations,
+  //  kRemoveEmptyRow,
 
-  TOTAL_PRESOLVE_TIME,
+  kTotalPresolveTime,
   // Number of presolve rules.
-  PRESOLVE_RULES_COUNT,
+  kPresolveRulesCount,
 
   // Items required by postsolve
-  DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE,
-  DOUBLETON_EQUATION_X_ZERO_INITIALLY,
-  DOUBLETON_EQUATION_NEW_X_NONZERO,
-  DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE,
-  DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE,
-  SING_COL_DOUBLETON_INEQ_SECOND_SING_COL,
-  FORCING_ROW_VARIABLE,
-  TWO_COL_SING_TRIVIAL,
-  ZERO_COST_COL_SING,
-  SING_ONLY,
+  kDoubletonEquationRowBoundsUpdate,
+  kDoubletonEquationXZeroInitially,
+  kDoubletonEquationNewXNonzero,
+  kDoubletonEquationNewXZeroArUpdate,
+  kDoubletonEquationNewXZeroAUpdate,
+  kSingColDoubletonIneqSecondSingCol,
+  kForcingRowVariable,
+  kTwoColSingTrivial,
+  //  kZeroCostColSing,
+  //  kSingOnly,
 };
 
 enum presolveNumerics {
@@ -135,29 +135,29 @@ class PresolveTimer {
   std::vector<numericsRecord> presolve_numerics;
 
   void recordStart(PresolveRule rule) {
-    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
+    assert(rule >= 0 && rule < kPresolveRulesCount);
+    assert((HighsInt)rules_.size() == (HighsInt)kPresolveRulesCount);
     timer_.start(rules_[rule].clock_id);
   }
 
   void recordFinish(PresolveRule rule) {
-    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
+    assert(rule >= 0 && rule < kPresolveRulesCount);
+    assert((HighsInt)rules_.size() == (HighsInt)kPresolveRulesCount);
     timer_.stop(rules_[rule].clock_id);
 
-    if (rule == TOTAL_PRESOLVE_TIME)
+    if (rule == kTotalPresolveTime)
       total_time_ = timer_.read(rules_[rule].clock_id);
   }
 
   void addChange(PresolveRule rule) {
-    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
+    assert(rule >= 0 && rule < kPresolveRulesCount);
+    assert((HighsInt)rules_.size() == (HighsInt)kPresolveRulesCount);
     rules_[rule].count_applied++;
   }
 
   void increaseCount(bool row_count, PresolveRule rule) {
-    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
-    assert((HighsInt)rules_.size() == (HighsInt)PRESOLVE_RULES_COUNT);
+    assert(rule >= 0 && rule < kPresolveRulesCount);
+    assert((HighsInt)rules_.size() == (HighsInt)kPresolveRulesCount);
     if (row_count)
       rules_[rule].rows_removed++;
     else
@@ -166,64 +166,64 @@ class PresolveTimer {
 
   void reportClocks() {
     std::vector<HighsInt> clocks;
-    for (HighsInt id = 0; id < PRESOLVE_RULES_COUNT - 1; id++) {
+    for (HighsInt id = 0; id < kPresolveRulesCount - 1; id++) {
       assert(rules_[id].rule_id == id);
-      if (id == RUN_PRESOLVERS) continue;
-      if (id == REMOVE_ROW_SINGLETONS) continue;
-      if (id == REMOVE_DOUBLETON_EQUATIONS) continue;
-      if (id == REMOVE_EMPTY_ROW) continue;
+      if (id == kRunPresolvers) continue;
+      if (id == kRemoveRowSingletons) continue;
+      if (id == kRemoveDoubletonEquations) continue;
+      //      if (id == kRemoveEmptyRow) continue;
       clocks.push_back(rules_[id].clock_id);
     }
     HighsInt ideal_time_rule;
     double ideal_time;
-    ideal_time_rule = TOTAL_PRESOLVE_TIME;
+    ideal_time_rule = kTotalPresolveTime;
     ideal_time = getRuleTime(ideal_time_rule);
     std::cout << std::endl;
     timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
-    clocks.push_back(rules_[RUN_PRESOLVERS].clock_id);
-    clocks.push_back(rules_[RESIZE_MATRIX].clock_id);
+    clocks.push_back(rules_[kRunPresolvers].clock_id);
+    clocks.push_back(rules_[kResizeMatrix].clock_id);
     std::cout << std::endl;
     timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
-    ideal_time_rule = RUN_PRESOLVERS;
+    ideal_time_rule = kRunPresolvers;
     ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[REMOVE_ROW_SINGLETONS].clock_id);
-    clocks.push_back(rules_[REMOVE_FORCING_CONSTRAINTS].clock_id);
-    clocks.push_back(rules_[REMOVE_COLUMN_SINGLETONS].clock_id);
-    clocks.push_back(rules_[REMOVE_DOUBLETON_EQUATIONS].clock_id);
-    clocks.push_back(rules_[REMOVE_DOMINATED_COLUMNS].clock_id);
+    clocks.push_back(rules_[kRemoveRowSingletons].clock_id);
+    clocks.push_back(rules_[kRemoveForcingConstraints].clock_id);
+    clocks.push_back(rules_[kRemoveColumnSingletons].clock_id);
+    clocks.push_back(rules_[kRemoveDoubletonEquations].clock_id);
+    clocks.push_back(rules_[kRemoveDominatedColumns].clock_id);
     timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
-    ideal_time_rule = REMOVE_FORCING_CONSTRAINTS;
+    ideal_time_rule = kRemoveForcingConstraints;
     ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[REMOVE_EMPTY_ROW].clock_id);
-    clocks.push_back(rules_[FORCING_ROW].clock_id);
-    clocks.push_back(rules_[REDUNDANT_ROW].clock_id);
-    clocks.push_back(rules_[DOMINATED_ROW_BOUNDS].clock_id);
+    //    clocks.push_back(rules_[kRemoveEmptyRow].clock_id);
+    clocks.push_back(rules_[kForcingRow].clock_id);
+    clocks.push_back(rules_[kRedundantRow].clock_id);
+    //    clocks.push_back(rules_[kDominatedRowBounds].clock_id);
     timer_.report_tl("grep--RmFrcCs", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
-    ideal_time_rule = REMOVE_COLUMN_SINGLETONS;
+    ideal_time_rule = kRemoveColumnSingletons;
     ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[FREE_SING_COL].clock_id);
-    clocks.push_back(rules_[SING_COL_DOUBLETON_INEQ].clock_id);
-    clocks.push_back(rules_[IMPLIED_FREE_SING_COL].clock_id);
+    clocks.push_back(rules_[kFreeSingCol].clock_id);
+    clocks.push_back(rules_[kSingColDoubletonIneq].clock_id);
+    clocks.push_back(rules_[kImpliedFreeSingCol].clock_id);
     timer_.report_tl("grep-RmColSng", clocks, ideal_time, 0);
     std::cout << std::endl;
 
     clocks.clear();
-    ideal_time_rule = REMOVE_DOMINATED_COLUMNS;
+    ideal_time_rule = kRemoveDominatedColumns;
     ideal_time = getRuleTime(ideal_time_rule);
-    clocks.push_back(rules_[DOMINATED_COLS].clock_id);
-    clocks.push_back(rules_[WEAKLY_DOMINATED_COLS].clock_id);
+    clocks.push_back(rules_[kDominatedCols].clock_id);
+    clocks.push_back(rules_[kWeaklyDominatedCols].clock_id);
     timer_.report_tl("grep-RmDomCol", clocks, ideal_time, 0);
     std::cout << std::endl;
   }
