@@ -870,6 +870,30 @@ restart:
 
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
+    if (!mipsolver.submip && !analyticCenterComputed) {
+      analyticCenterComputed = true;
+      heuristics.centralRounding();
+      heuristics.flushStatistics();
+
+      // if there are new global bound changes we reevaluate the LP and do one
+      // more separation round
+      if (!domain.getChangedCols().empty()) {
+        domain.propagate();
+        if (domain.infeasible())
+          status = HighsLpRelaxation::Status::kInfeasible;
+        else {
+          removeFixedIndices();
+          status = lp.resolveLp(&domain);
+        }
+        if (status == HighsLpRelaxation::Status::kInfeasible) {
+          lower_bound = std::min(kHighsInf, upper_bound);
+          pruned_treeweight = 1.0;
+          num_nodes += 1;
+          num_leaves += 1;
+          return;
+        }
+      }
+    }
 
     HighsCDouble sqrnorm = 0.0;
     const auto& solvals = lp.getSolution().col_value;
