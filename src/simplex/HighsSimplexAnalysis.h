@@ -364,11 +364,11 @@ class HighsSimplexAnalysis {
     HighsInt AnIterTrace_dual_edge_weight_mode;
   };
 
-  enum AnIterTraceMxNumRec { AN_ITER_TRACE_MX_NUM_REC = 20 };
+  enum AnIterTraceMaxNumRec { kAnIterTraceMaxNumRec = 20 };
   enum DUAL_EDGE_WEIGHT_MODE_COUNT { DUAL_EDGE_WEIGHT_MODE_COUNT = 3 };
   HighsInt AnIterTraceNumRec;
   HighsInt AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
+  AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];
 
   HighsInt AnIterNumInvert[REBUILD_REASON_Count];
   HighsInt AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::Count];

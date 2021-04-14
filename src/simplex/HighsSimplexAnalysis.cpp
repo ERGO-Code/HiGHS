@@ -644,8 +644,8 @@ void HighsSimplexAnalysis::iterationRecord() {
   //  if (simplex_iteration_count ==
   //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
   if (simplex_iteration_count == lcAnIter.AnIterTraceIter + AnIterTraceIterDl) {
-    if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
-      for (HighsInt rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
+    if (AnIterTraceNumRec == kAnIterTraceMaxNumRec) {
+      for (HighsInt rec = 1; rec <= kAnIterTraceMaxNumRec / 2; rec++)
         AnIterTrace[rec] = AnIterTrace[2 * rec];
       AnIterTraceNumRec = AnIterTraceNumRec / 2;
       AnIterTraceIterDl = AnIterTraceIterDl * 2;
@@ -927,7 +927,7 @@ void HighsSimplexAnalysis::summaryReport() {
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final
     // iterations: may end up with one more than
-    // AN_ITER_TRACE_MX_NUM_REC records, so ensure that there is
+    // kAnIterTraceMaxNumRec records, so ensure that there is
     // enough space in the arrays
     //
     const bool add_extra_record =
