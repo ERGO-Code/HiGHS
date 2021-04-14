@@ -129,7 +129,8 @@ void Presolve::setNumericalTolerances() {
   // done here, as the tolerances are only known in Presolve.h/cpp so
   // have to be passed in
   timer.presolve_numerics.resize(kPresolveNumericsCount);
-  timer.initialiseNumericsRecord(kNumericsInconsistentBounds, "Inconsistent bounds",
+  timer.initialiseNumericsRecord(kNumericsInconsistentBounds,
+                                 "Inconsistent bounds",
                                  inconsistent_bounds_tolerance);
   timer.initialiseNumericsRecord(kNumericsFixedColumn, "Fixed column",
                                  fixed_column_tolerance);
@@ -139,7 +140,8 @@ void Presolve::setNumericalTolerances() {
   timer.initialiseNumericsRecord(kNumericsDoubletonInequalityBound,
                                  "Doubleton inequality bound",
                                  doubleton_inequality_bound_tolerance);
-  timer.initialiseNumericsRecord(kNumericsSmallMatrixValue, "Small matrix value",
+  timer.initialiseNumericsRecord(kNumericsSmallMatrixValue,
+                                 "Small matrix value",
                                  presolve_small_matrix_value);
   timer.initialiseNumericsRecord(kNumericsEmptyRowBound, "Empty row bounds",
                                  empty_row_bound_tolerance);

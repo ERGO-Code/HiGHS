@@ -49,8 +49,7 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   rules.push_back(PresolveRuleInfo(kResizeMatrix, "Resize matrix", "RSM"));
   //
   rules.push_back(PresolveRuleInfo(kRunPresolvers, "Run Presolvers", "RPr"));
-  rules.push_back(
-      PresolveRuleInfo(kRemoveRowSingletons, "Rm row sing", "RRS"));
+  rules.push_back(PresolveRuleInfo(kRemoveRowSingletons, "Rm row sing", "RRS"));
   rules.push_back(
       PresolveRuleInfo(kRemoveDoubletonEquations, "Rm dbleton eq", "RDE"));
   //
