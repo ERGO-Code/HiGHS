@@ -788,9 +788,15 @@ bool HighsCutGeneration::postprocessCut() {
         // upperbound constraint to make it exactly integral instead and
         // therefore weaken the right hand side
         if (delta < 0.0) {
-          if (upper[i] == kHighsInf) return false;
+          double ub = globaldomain.colUpper_[inds[i]];
+          if (ub == kHighsInf) return false;
 
-          rhs -= delta * upper[i];
+          rhs -= delta * ub;
+        } else {
+          double lb = globaldomain.colLower_[inds[i]];
+          if (lb == -kHighsInf) return false;
+
+          rhs -= delta * lb;
         }
       }
 
@@ -1115,10 +1121,6 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     }
   }
 
-  // apply cut postprocessing including scaling and removal of small
-  // coeffiicents
-  if (!postprocessCut()) return false;
-
   if (!complementation.empty()) {
     // remove the complementation if exists
     for (HighsInt i = 0; i != rowlen; ++i) {
@@ -1129,20 +1131,38 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     }
   }
 
+  // remove zeros in place
+  for (HighsInt i = rowlen - 1; i >= 0; --i) {
+    if (vals[i] == 0.0) {
+      --rowlen;
+      inds[i] = inds[rowlen];
+      vals[i] = vals[rowlen];
+    }
+  }
+
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables
   rhs_ = (double)rhs;
-  bool cutintegral = integralSupport && integralCoefficients;
   vals_.resize(rowlen);
   inds_.resize(rowlen);
-  if (!transLp.untransform(vals_, inds_, rhs_, cutintegral)) return false;
+  if (!transLp.untransform(vals_, inds_, rhs_)) return false;
 
-  // finally check whether the cut is violated
   rowlen = inds_.size();
   inds = inds_.data();
   vals = vals_.data();
+  rhs = rhs_;
+
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(inds, vals,
                                                                rowlen, rhs_);
+  // apply cut postprocessing including scaling and removal of small
+  // coeffiicents
+  if (!postprocessCut()) return false;
+  rhs_ = (double)rhs;
+  vals_.resize(rowlen);
+  inds_.resize(rowlen);
+
+  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
+      inds_.data(), vals_.data(), rowlen, rhs_);
 
   // finally determine the violation of the cut in the original space
   HighsCDouble violation = -rhs_;
@@ -1156,9 +1176,9 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex =
-      cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(), vals_.data(),
-                     inds_.size(), rhs_, cutintegral);
+  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(),
+                                     vals_.data(), inds_.size(), rhs_,
+                                     integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
@@ -1232,10 +1252,6 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
     }
   }
 
-  // apply cut postprocessing including scaling and removal of small
-  // coefficients
-  if (!postprocessCut()) return false;
-
   // remove the complementation
   for (HighsInt i = 0; i != rowlen; ++i) {
     if (complementation[i]) {
@@ -1245,14 +1261,9 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
       rhs += globaldomain.colLower_[inds[i]] * vals[i];
   }
 
-  // remove zeros in place
-  for (HighsInt i = rowlen - 1; i >= 0; --i) {
-    if (vals[i] == 0.0) {
-      --rowlen;
-      proofinds[i] = proofinds[rowlen];
-      proofvals[i] = proofvals[rowlen];
-    }
-  }
+  // apply cut postprocessing including scaling and removal of small
+  // coefficients
+  if (!postprocessCut()) return false;
 
   proofvals.resize(rowlen);
   proofinds.resize(rowlen);
