@@ -947,6 +947,7 @@ restart:
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
+      // if there are new global bound changes we reevaluate the LP and do one more separation round
       if (!domain.getChangedCols().empty()) {
         domain.propagate();
         if (domain.infeasible())
@@ -962,6 +963,12 @@ restart:
           num_leaves += 1;
           return;
         }
+        HighsInt ncuts;
+        if (rootSeparationRound(sepa, ncuts, status)) return;
+
+        if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
+
+        printDisplayLine();
       }
     }
 
@@ -977,7 +984,7 @@ restart:
     }
   }
 
-  // if global propagation found bound changes, we update the local domain
+  // if there are new global bound changes we reevaluate the LP and do one more separation round
   if (!domain.getChangedCols().empty()) {
     domain.propagate();
     if (domain.infeasible())
