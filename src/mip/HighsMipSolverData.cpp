@@ -869,7 +869,7 @@ restart:
 
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
-    if (!mipsolver.submip && !analyticCenterComputed) {
+    if (nseparounds >= 5 && !mipsolver.submip && !analyticCenterComputed) {
       analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
