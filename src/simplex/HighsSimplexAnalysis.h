@@ -364,8 +364,8 @@ class HighsSimplexAnalysis {
     HighsInt AnIterTrace_dual_edge_weight_mode;
   };
 
+  // Has to be an enum, not const HighsInt
   enum AnIterTraceMaxNumRec { kAnIterTraceMaxNumRec = 20 };
-  enum DUAL_EDGE_WEIGHT_MODE_COUNT { DUAL_EDGE_WEIGHT_MODE_COUNT = 3 };
   HighsInt AnIterTraceNumRec;
   HighsInt AnIterTraceIterDl;
   AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];
