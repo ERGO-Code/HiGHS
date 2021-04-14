@@ -37,23 +37,23 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
     FreeFormatParserReturnCode result =
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
-      case FreeFormatParserReturnCode::SUCCESS:
+      case FreeFormatParserReturnCode::kSuccess:
         setOrientation(model);
-        return FilereaderRetcode::OK;
-      case FreeFormatParserReturnCode::PARSERERROR:
-        return FilereaderRetcode::PARSERERROR;
-      case FreeFormatParserReturnCode::FILENOTFOUND:
-        return FilereaderRetcode::FILENOTFOUND;
-      case FreeFormatParserReturnCode::FIXED_FORMAT:
+        return FilereaderRetcode::kOk;
+      case FreeFormatParserReturnCode::kParserError:
+        return FilereaderRetcode::kParserError;
+      case FreeFormatParserReturnCode::kFileNotFound:
+        return FilereaderRetcode::kFileNotFound;
+      case FreeFormatParserReturnCode::kFixedFormat:
         highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Free format reader has detected row/col names with "
                      "spaces: switching to fixed format parser\n");
         break;
-      case FreeFormatParserReturnCode::TIMEOUT:
+      case FreeFormatParserReturnCode::kTimeout:
         highsLogUser(options.log_options, HighsLogType::kWarning,
                      "Free format reader reached time_limit while parsing "
                      "the input file\n");
-        return FilereaderRetcode::TIMEOUT;
+        return FilereaderRetcode::kTimeout;
     }
   }
 
@@ -64,7 +64,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
       model.rowUpper_, model.integrality_, model.col_names_, model.row_names_,
       options.keep_n_rows);
-  if (return_code == FilereaderRetcode::OK) setOrientation(model);
+  if (return_code == FilereaderRetcode::kOk) setOrientation(model);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has column names with spaces\n");

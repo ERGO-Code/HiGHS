@@ -23,7 +23,7 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
          it != lurkingColLower[col].end(); ++it) {
       if (it->second > mipsolver.mipdata_->domain.colLower_[col]) {
         mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::Lower, col, (double)it->second,
+            HighsBoundType::kLower, col, (double)it->second,
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
       }
@@ -34,7 +34,7 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
          it != lurkingColUpper[col].end(); ++it) {
       if (it->second < mipsolver.mipdata_->domain.colUpper_[col]) {
         mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::Upper, col, (double)it->second,
+            HighsBoundType::kUpper, col, (double)it->second,
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
       }
@@ -80,7 +80,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       if (newub >= localdomain.colUpper_[col]) continue;
       assert(newub < localdomain.colUpper_[col]);
 
-      localdomain.changeBound(HighsBoundType::Upper, col, newub,
+      localdomain.changeBound(HighsBoundType::kUpper, col, newub,
                               HighsDomain::Reason::unspecified());
       if (localdomain.infeasible()) return;
     } else if ((localdomain.colLower_[col] == -kHighsInf &&
@@ -95,7 +95,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       if (newlb <= localdomain.colLower_[col]) continue;
       assert(newlb > localdomain.colLower_[col]);
 
-      localdomain.changeBound(HighsBoundType::Lower, col, newlb,
+      localdomain.changeBound(HighsBoundType::kLower, col, newlb,
                               HighsDomain::Reason::unspecified());
       if (localdomain.infeasible()) return;
     }

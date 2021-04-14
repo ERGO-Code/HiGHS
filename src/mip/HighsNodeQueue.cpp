@@ -94,10 +94,10 @@ void HighsNodeQueue::link_domchgs(HighsInt node) {
     double val = nodes[node].domchgstack[i].boundval;
     HighsInt col = nodes[node].domchgstack[i].column;
     switch (nodes[node].domchgstack[i].boundtype) {
-      case HighsBoundType::Lower:
+      case HighsBoundType::kLower:
         nodes[node].domchglinks[i] = colLowerNodes[col].emplace(val, node);
         break;
-      case HighsBoundType::Upper:
+      case HighsBoundType::kUpper:
         nodes[node].domchglinks[i] = colUpperNodes[col].emplace(val, node);
     }
   }
@@ -109,10 +109,10 @@ void HighsNodeQueue::unlink_domchgs(HighsInt node) {
   for (HighsInt i = 0; i != numchgs; ++i) {
     HighsInt col = nodes[node].domchgstack[i].column;
     switch (nodes[node].domchgstack[i].boundtype) {
-      case HighsBoundType::Lower:
+      case HighsBoundType::kLower:
         colLowerNodes[col].erase(nodes[node].domchglinks[i]);
         break;
-      case HighsBoundType::Upper:
+      case HighsBoundType::kUpper:
         colUpperNodes[col].erase(nodes[node].domchglinks[i]);
     }
   }
@@ -182,7 +182,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
       if (colLowerNodes[i].size() == numopennodes) {
         double globallb = colLowerNodes[i].begin()->first;
         if (globallb > globaldomain.colLower_[i]) {
-          globaldomain.changeBound(HighsBoundType::Lower, i, globallb,
+          globaldomain.changeBound(HighsBoundType::kLower, i, globallb,
                                    HighsDomain::Reason::unspecified());
           if (globaldomain.infeasible()) break;
         }
@@ -191,7 +191,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
       if (colUpperNodes[i].size() == numopennodes) {
         double globalub = colUpperNodes[i].rbegin()->first;
         if (globalub < globaldomain.colUpper_[i]) {
-          globaldomain.changeBound(HighsBoundType::Upper, i, globalub,
+          globaldomain.changeBound(HighsBoundType::kUpper, i, globalub,
                                    HighsDomain::Reason::unspecified());
           if (globaldomain.infeasible()) break;
         }

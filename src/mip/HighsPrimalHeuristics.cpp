@@ -374,7 +374,7 @@ retry:
   // printf("fixing rate is %g\n", fixingrate);
   if (fixingrate < 0.1 ||
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
-    // heur.childselrule = ChildSelectionRule::BestCost;
+    // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
@@ -658,7 +658,7 @@ retry:
   // printf("fixing rate is %g\n", fixingrate);
   fixingrate = getFixingRate();
   if (fixingrate < 0.1) {
-    // heur.childselrule = ChildSelectionRule::BestCost;
+    // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
     heur.solveDepthFirst(10);
     lp_iterations += heur.getLocalLpIterations();
@@ -712,7 +712,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
 
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
-    if (st == HighsLpRelaxation::Status::Infeasible) {
+    if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
       std::vector<double> vals;
       double rhs;
@@ -820,7 +820,7 @@ void HighsPrimalHeuristics::randomizedRounding(
                                            localdom.colUpper_.data());
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
-    if (st == HighsLpRelaxation::Status::Infeasible) {
+    if (st == HighsLpRelaxation::Status::kInfeasible) {
       std::vector<HighsInt> inds;
       std::vector<double> vals;
       double rhs;
@@ -985,14 +985,14 @@ void HighsPrimalHeuristics::centralRounding() {
         continue;
       if (sol[i] <=
           mipsolver.model_->colLower_[i] + mipsolver.mipdata_->feastol) {
-        mipsolver.mipdata_->domain.changeBound(HighsBoundType::Upper, i,
+        mipsolver.mipdata_->domain.changeBound(HighsBoundType::kUpper, i,
                                                mipsolver.model_->colLower_[i]);
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
       } else if (sol[i] >=
                  mipsolver.model_->colUpper_[i] - mipsolver.mipdata_->feastol) {
-        mipsolver.mipdata_->domain.changeBound(HighsBoundType::Lower, i,
+        mipsolver.mipdata_->domain.changeBound(HighsBoundType::kLower, i,
                                                mipsolver.model_->colUpper_[i]);
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;

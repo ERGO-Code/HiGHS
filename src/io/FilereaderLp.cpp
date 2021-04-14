@@ -82,10 +82,10 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                   : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
-    return FilereaderRetcode::PARSERERROR;
+    return FilereaderRetcode::kParserError;
   }
   setOrientation(model);
-  return FilereaderRetcode::OK;
+  return FilereaderRetcode::kOk;
 }
 
 void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {

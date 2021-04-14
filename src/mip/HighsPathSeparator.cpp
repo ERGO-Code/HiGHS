@@ -22,10 +22,10 @@
 #include "mip/HighsTransformedLp.h"
 
 enum class RowType : int8_t {
-  Unusuable = -2,
-  Geq = -1,
-  Eq = 0,
-  Leq = 1,
+  kUnusuable = -2,
+  kGeq = -1,
+  kEq = 0,
+  kLeq = 1,
 };
 
 void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
@@ -42,7 +42,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   rowtype.resize(lp.numRow_);
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (lp.rowLower_[i] == lp.rowUpper_[i]) {
-      rowtype[i] = RowType::Eq;
+      rowtype[i] = RowType::kEq;
       continue;
     }
 
@@ -57,11 +57,11 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (lowerslack > mip.mipdata_->feastol &&
         upperslack > mip.mipdata_->feastol)
-      rowtype[i] = RowType::Unusuable;
+      rowtype[i] = RowType::kUnusuable;
     else if (lowerslack < upperslack)
-      rowtype[i] = RowType::Geq;
+      rowtype[i] = RowType::kGeq;
     else
-      rowtype[i] = RowType::Leq;
+      rowtype[i] = RowType::kLeq;
   }
 
   std::vector<HighsInt> numContinuous(lp.numRow_);
@@ -83,7 +83,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   // rows so that we can always substitute such columns away using this equation
   // and block the equation from being used as a start row
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (rowtype[i] == RowType::Eq && numContinuous[i] == 1) {
+    if (rowtype[i] == RowType::kEq && numContinuous[i] == 1) {
       HighsInt len;
       const HighsInt* rowinds;
       const double* rowvals;
@@ -108,7 +108,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       colSubstitutions[col].first = i;
       colSubstitutions[col].second = val;
-      rowtype[i] = RowType::Unusuable;
+      rowtype[i] = RowType::kUnusuable;
     }
   }
 
@@ -139,16 +139,16 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     colOutArcs[col].first = outArcRows.size();
     for (HighsInt i = lp.Astart_[col]; i != lp.Astart_[col + 1]; ++i) {
       switch (rowtype[lp.Aindex_[i]]) {
-        case RowType::Unusuable:
+        case RowType::kUnusuable:
           continue;
-        case RowType::Leq:
+        case RowType::kLeq:
           if (lp.Avalue_[i] < 0)
             inArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
           else
             outArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
           break;
-        case RowType::Geq:
-        case RowType::Eq:
+        case RowType::kGeq:
+        case RowType::kEq:
           if (lp.Avalue_[i] > 0)
             inArcRows.emplace_back(lp.Aindex_[i], lp.Avalue_[i]);
           else
@@ -168,9 +168,9 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     switch (rowtype[i]) {
-      case RowType::Unusuable:
+      case RowType::kUnusuable:
         continue;
-      case RowType::Leq:
+      case RowType::kLeq:
         lpAggregator.addRow(i, -1.0);
         break;
       default:

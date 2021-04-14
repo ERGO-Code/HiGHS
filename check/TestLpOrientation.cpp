@@ -46,7 +46,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   } else {
-    highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
+    highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
   }
   const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();

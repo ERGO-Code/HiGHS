@@ -16,7 +16,7 @@
 
 #include "util/HighsInt.h"
 
-enum class HighsBoundType { Lower, Upper };
+enum class HighsBoundType { kLower, kUpper };
 
 struct HighsDomainChange {
   HighsBoundType boundtype;

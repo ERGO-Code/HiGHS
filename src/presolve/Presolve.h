@@ -36,26 +36,26 @@ using std::list;
 using std::string;
 
 enum class HighsPostsolveStatus {
-  NotPresolved = -1,
-  ReducedSolutionEmpty,
-  ReducedSolutionDimenionsError,
-  SolutionRecovered,
-  LpOrPresolveObjectMissing,
-  BasisError,
-  NoPostsolve
+  kNotPresolved = -1,
+  //  ReducedSolutionEmpty,
+  kReducedSolutionDimenionsError,
+  kSolutionRecovered,
+  //  LpOrPresolveObjectMissing,
+  kBasisError
+  //  NoPostsolve
 };
 
 enum class HighsPresolveStatus {
-  NotPresolved = -1,
-  NotReduced,
-  Infeasible,
-  Unbounded,
-  Empty,
-  Reduced,
-  ReducedToEmpty,
-  Timeout,
-  NullError,
-  OptionsError,
+  kNotPresolved = -1,
+  kNotReduced,
+  kInfeasible,
+  kUnbounded,
+  kEmpty,
+  kReduced,
+  kReducedToEmpty,
+  kTimeout,
+  kNullError,
+  kOptionsError,
 };
 
 namespace presolve {

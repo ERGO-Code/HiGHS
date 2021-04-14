@@ -680,7 +680,7 @@ bool HighsMipSolverData::rootSeparationRound(
   total_lp_iterations += tmpLpIters;
   sepa_lp_iterations += tmpLpIters;
 
-  if (status == HighsLpRelaxation::Status::Infeasible) {
+  if (status == HighsLpRelaxation::Status::kInfeasible) {
     pruned_treeweight = 1.0;
     lower_bound = std::min(kHighsInf, upper_bound);
     num_nodes = 1;
@@ -712,7 +712,7 @@ bool HighsMipSolverData::rootSeparationRound(
       redcostfixing.propagateRootRedcost(mipsolver);
 
       if (domain.infeasible())
-        status = HighsLpRelaxation::Status::Infeasible;
+        status = HighsLpRelaxation::Status::kInfeasible;
       else if (!domain.getChangedCols().empty()) {
         tmpLpIters = -lp.getNumLpIterations();
         status = lp.resolveLp(&domain);
@@ -722,7 +722,7 @@ bool HighsMipSolverData::rootSeparationRound(
         sepa_lp_iterations += tmpLpIters;
       }
 
-      if (status == HighsLpRelaxation::Status::Infeasible) {
+      if (status == HighsLpRelaxation::Status::kInfeasible) {
         pruned_treeweight = 1.0;
         lower_bound = std::min(kHighsInf, upper_bound);
         num_nodes = 1;
@@ -770,7 +770,7 @@ restart:
 
   lp.getLpSolver().setOptionValue("output_flag",
                                   mipsolver.options_mip_->output_flag);
-  //  lp.getLpSolver().setOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
+  //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
   int64_t lpIters = -lp.getNumLpIterations();
@@ -821,7 +821,7 @@ restart:
 
   domain.propagate();
 
-  if (status == HighsLpRelaxation::Status::Infeasible ||
+  if (status == HighsLpRelaxation::Status::kInfeasible ||
       mipsolver.mipdata_->domain.infeasible() ||
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
     lower_bound = std::min(kHighsInf, upper_bound);
@@ -926,7 +926,7 @@ restart:
   lpIters += lp.getNumLpIterations();
   total_lp_iterations += lpIters;
 
-  if (status == HighsLpRelaxation::Status::Optimal &&
+  if (status == HighsLpRelaxation::Status::kOptimal &&
       lp.getFractionalIntegers().empty()) {
     addIncumbent(lp.getLpSolver().getSolution().col_value, lp.getObjective(),
                  'T');

@@ -113,7 +113,7 @@ class AggregationHeuristic {
     rowusable.resize(lp.numRow_);
     for (HighsInt i = 0; i != lp.numRow_; ++i) {
       if (lp.rowLower_[i] == lp.rowUpper_[i]) {
-        rowtype[i] = RowType::Eq;
+        rowtype[i] = RowType::kEq;
         rowusable[i] = true;
         continue;
       }
@@ -129,13 +129,13 @@ class AggregationHeuristic {
 
       if (lowerslack > mip.mipdata_->feastol &&
           upperslack > mip.mipdata_->feastol)
-        rowtype[i] = RowType::Unusuable;
+        rowtype[i] = RowType::kUnusuable;
       else if (lowerslack < upperslack)
-        rowtype[i] = RowType::Geq;
+        rowtype[i] = RowType::kGeq;
       else
-        rowtype[i] = RowType::Leq;
+        rowtype[i] = RowType::kLeq;
 
-      rowusable[i] = rowtype[i] != RowType::Unusuable;
+      rowusable[i] = rowtype[i] != RowType::kUnusuable;
     }
   }
 
@@ -176,9 +176,9 @@ class AggregationHeuristic {
         HighsInt rowlen = lprelaxation.getRowLen(row);
         if (rowlen != 2) continue;
         switch (rowtype[row]) {
-          case RowType::Unusuable:
+          case RowType::kUnusuable:
             break;
-          case RowType::Leq:
+          case RowType::kLeq:
             if (lp.Avalue_[j] < 0 && rowlen < lblen) {
               lblen = rowlen;
               collbtype[i] = row;
@@ -189,7 +189,7 @@ class AggregationHeuristic {
               colubscale[i] = lp.Avalue_[j];
             }
             break;
-          case RowType::Geq:
+          case RowType::kGeq:
             if (lp.Avalue_[j] > 0 && rowlen < lblen) {
               lblen = rowlen;
               collbtype[i] = row;
@@ -200,7 +200,7 @@ class AggregationHeuristic {
               colubscale[i] = lp.Avalue_[j];
             }
             break;
-          case RowType::Eq:
+          case RowType::kEq:
             if (rowlen < ublen) {
               ublen = rowlen;
               colubtype[i] = row;
@@ -274,7 +274,7 @@ class AggregationHeuristic {
 
     baseinds.insert(baseinds.end(), Rindex, Rindex + Rlen);
 
-    if (rowtype[row] == RowType::Leq) {
+    if (rowtype[row] == RowType::kLeq) {
       baserhs = lp.rowUpper_[row];
       basevals.insert(basevals.end(), Rvalue, Rvalue + Rlen);
       currpathweights[0] = 1.0;
@@ -303,7 +303,7 @@ class AggregationHeuristic {
 
     if (negate) {
       for (HighsInt i = 0; i < currpathlen; ++i) {
-        if (rowtype[currpath[i]] == RowType::Eq) continue;
+        if (rowtype[currpath[i]] == RowType::kEq) continue;
         // add a slack variable for the rows in the path if they are not
         // equations
         inds.push_back(lp.numCol_ + currpath[i]);
@@ -673,10 +673,10 @@ class AggregationHeuristic {
           HighsInt Rlen;
           double Rside;
 
-          assert(rowtype[row] == RowType::Leq || rowtype[row] == RowType::Geq);
+          assert(rowtype[row] == RowType::kLeq || rowtype[row] == RowType::kGeq);
 
           lprelaxation.getRow(row, Rlen, Rindex, Rvalue);
-          if (rowtype[row] == RowType::Leq)
+          if (rowtype[row] == RowType::kLeq)
             Rside = lp.rowUpper_[row];
           else
             Rside = -lp.rowLower_[row];
@@ -771,7 +771,7 @@ class AggregationHeuristic {
           nextaggscale = HighsCDouble(-basevals[pos]) / lp.Avalue_[j];
           nextaggrow = row;
           naggbounddist = numcontinuous[row];
-          if (numcontinuous[row] == 1 && rowtype[row] == RowType::Eq) break;
+          if (numcontinuous[row] == 1 && rowtype[row] == RowType::kEq) break;
         }
       }
 
@@ -784,11 +784,11 @@ class AggregationHeuristic {
     const double* nextRvalue;
     HighsInt nextRlen;
 
-    if (rowtype[nextaggrow] == RowType::Geq) {
+    if (rowtype[nextaggrow] == RowType::kGeq) {
       baserhs += nextaggscale * lp.rowLower_[nextaggrow];
       assert(nextaggscale < 0);
     } else {
-      assert(rowtype[nextaggrow] == RowType::Eq || nextaggscale > 0);
+      assert(rowtype[nextaggrow] == RowType::kEq || nextaggscale > 0);
       baserhs += nextaggscale * lp.rowUpper_[nextaggrow];
     }
 
@@ -896,21 +896,21 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   auto propagateAndResolve = [&]() {
     if (propdomain.infeasible() || mipdata.domain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return true;
     }
 
     propdomain.propagate();
     if (propdomain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return true;
     }
 
     mipdata.cliquetable.cleanupFixed(mipdata.domain);
     if (mipdata.domain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
       return true;
     }
@@ -940,7 +940,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
   HighsTransformedLp transLp(*lp, mipdata.implications);
   if (mipdata.domain.infeasible()) {
-    status = HighsLpRelaxation::Status::Infeasible;
+    status = HighsLpRelaxation::Status::kInfeasible;
     return 0;
   }
   HighsLpAggregator lpAggregator(*lp);

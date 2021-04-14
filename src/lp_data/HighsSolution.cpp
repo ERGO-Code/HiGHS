@@ -27,7 +27,6 @@
 #include "util/HighsUtils.h"
 
 #ifdef IPX_ON
-#include "ipm/IpxStatus.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
 #endif

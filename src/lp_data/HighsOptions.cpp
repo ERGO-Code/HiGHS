@@ -71,10 +71,10 @@ OptionStatus getOptionIndex(const HighsLogOptions& log_options,
                             HighsInt& index) {
   HighsInt num_options = option_records.size();
   for (index = 0; index < num_options; index++)
-    if (option_records[index]->name == name) return OptionStatus::OK;
+    if (option_records[index]->name == name) return OptionStatus::kOk;
   highsLogUser(log_options, HighsLogType::kError,
                "getOptionIndex: Option \"%s\" is unknown\n", name.c_str());
-  return OptionStatus::UNKNOWN_OPTION;
+  return OptionStatus::kUnknownOption;
 }
 
 OptionStatus checkOptions(const HighsLogOptions& log_options,
@@ -122,7 +122,7 @@ OptionStatus checkOptions(const HighsLogOptions& log_options,
     } else if (type == HighsOptionType::kInt) {
       // Check HighsInt option
       OptionRecordInt& option = ((OptionRecordInt*)option_records[index])[0];
-      if (checkOption(log_options, option) != OptionStatus::OK)
+      if (checkOption(log_options, option) != OptionStatus::kOk)
         error_found = true;
       // Check that there are no other options with the same value pointers
       HighsInt* value_pointer = option.value;
@@ -147,7 +147,7 @@ OptionStatus checkOptions(const HighsLogOptions& log_options,
       // Check double option
       OptionRecordDouble& option =
           ((OptionRecordDouble*)option_records[index])[0];
-      if (checkOption(log_options, option) != OptionStatus::OK)
+      if (checkOption(log_options, option) != OptionStatus::kOk)
         error_found = true;
       // Check that there are no other options with the same value pointers
       double* value_pointer = option.value;
@@ -193,10 +193,10 @@ OptionStatus checkOptions(const HighsLogOptions& log_options,
       }
     }
   }
-  if (error_found) return OptionStatus::ILLEGAL_VALUE;
+  if (error_found) return OptionStatus::kIllegalValue;
   highsLogUser(log_options, HighsLogType::kInfo,
                "checkOptions: Options are OK\n");
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus checkOption(const HighsLogOptions& log_options,
@@ -207,7 +207,7 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
         "checkOption: Option \"%s\" has inconsistent bounds [%" HIGHSINT_FORMAT
         ", %" HIGHSINT_FORMAT "]\n",
         option.name.c_str(), option.lower_bound, option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   if (option.default_value < option.lower_bound ||
       option.default_value > option.upper_bound) {
@@ -219,7 +219,7 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
         "]\n",
         option.name.c_str(), option.default_value, option.lower_bound,
         option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   HighsInt value = *option.value;
   if (value < option.lower_bound || value > option.upper_bound) {
@@ -229,9 +229,9 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
                  "bounds [%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT "]\n",
                  option.name.c_str(), value, option.lower_bound,
                  option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus checkOption(const HighsLogOptions& log_options,
@@ -241,7 +241,7 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
         log_options, HighsLogType::kError,
         "checkOption: Option \"%s\" has inconsistent bounds [%g, %g]\n",
         option.name.c_str(), option.lower_bound, option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   if (option.default_value < option.lower_bound ||
       option.default_value > option.upper_bound) {
@@ -250,7 +250,7 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
                  "inconsistent with bounds [%g, %g]\n",
                  option.name.c_str(), option.default_value, option.lower_bound,
                  option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   double value = *option.value;
   if (value < option.lower_bound || value > option.upper_bound) {
@@ -259,9 +259,9 @@ OptionStatus checkOption(const HighsLogOptions& log_options,
                  "bounds [%g, %g]\n",
                  option.name.c_str(), value, option.lower_bound,
                  option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus checkOptionValue(const HighsLogOptions& log_options,
@@ -272,16 +272,16 @@ OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                  " for option \"%s\" is below "
                  "lower bound of %" HIGHSINT_FORMAT "\n",
                  value, option.name.c_str(), option.lower_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   } else if (value > option.upper_bound) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "checkOptionValue: Value %" HIGHSINT_FORMAT
                  " for option \"%s\" is above "
                  "upper bound of %" HIGHSINT_FORMAT "\n",
                  value, option.name.c_str(), option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus checkOptionValue(const HighsLogOptions& log_options,
@@ -291,15 +291,15 @@ OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                  "checkOptionValue: Value %g for option \"%s\" is below "
                  "lower bound of %g\n",
                  value, option.name.c_str(), option.lower_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   } else if (value > option.upper_bound) {
     highsLogUser(log_options, HighsLogType::kWarning,
                  "checkOptionValue: Value %g for option \"%s\" is above "
                  "upper bound of %g\n",
                  value, option.name.c_str(), option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus checkOptionValue(const HighsLogOptions& log_options,
@@ -309,15 +309,15 @@ OptionStatus checkOptionValue(const HighsLogOptions& log_options,
   // are permitted, so check them
   if (option.name == presolve_string) {
     if (!commandLineOffChooseOnOk(log_options, value) && value != "mip")
-      return OptionStatus::ILLEGAL_VALUE;
+      return OptionStatus::kIllegalValue;
   } else if (option.name == solver_string) {
     if (!commandLineSolverOk(log_options, value))
-      return OptionStatus::ILLEGAL_VALUE;
+      return OptionStatus::kIllegalValue;
   } else if (option.name == parallel_string) {
     if (!commandLineOffChooseOnOk(log_options, value))
-      return OptionStatus::ILLEGAL_VALUE;
+      return OptionStatus::kIllegalValue;
   }
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
@@ -329,14 +329,14 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
   //  name.c_str(), value);
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kBool) {
     highsLogUser(
         log_options, HighsLogType::kError,
         "setLocalOptionValue: Option \"%s\" cannot be assigned a bool\n",
         name.c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   return setLocalOptionValue(((OptionRecordBool*)option_records[index])[0],
                              value);
@@ -351,14 +351,14 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
   //  name.c_str(), value);
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kInt) {
     highsLogUser(
         log_options, HighsLogType::kError,
         "setLocalOptionValue: Option \"%s\" cannot be assigned an int\n",
         name.c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   return setLocalOptionValue(
       log_options, ((OptionRecordInt*)option_records[index])[0], value);
@@ -373,14 +373,14 @@ OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
   //  value);
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kDouble) {
     highsLogUser(
         log_options, HighsLogType::kError,
         "setLocalOptionValue: Option \"%s\" cannot be assigned a double\n",
         name.c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   return setLocalOptionValue(
       log_options, ((OptionRecordDouble*)option_records[index])[0], value);
@@ -393,7 +393,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type == HighsOptionType::kBool) {
     bool value_bool;
@@ -403,7 +403,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
           log_options, HighsLogType::kError,
           "setLocalOptionValue: Value \"%s\" cannot be interpreted as a bool\n",
           value.c_str());
-      return OptionStatus::ILLEGAL_VALUE;
+      return OptionStatus::kIllegalValue;
     }
     return setLocalOptionValue(((OptionRecordBool*)option_records[index])[0],
                                value_bool);
@@ -422,7 +422,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
                   "by scanning %" HIGHSINT_FORMAT " of %" HIGHSINT_FORMAT
                   " characters\n",
                   value.c_str(), value_int, scanned_num_char, value_num_char);
-      return OptionStatus::ILLEGAL_VALUE;
+      return OptionStatus::kIllegalValue;
     }
     return setLocalOptionValue(
         log_options, ((OptionRecordInt*)option_records[index])[0], value_int);
@@ -463,7 +463,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
       // option so that reading of run-time options works
       highsLogUser(log_options, HighsLogType::kError,
                    "setLocalOptionValue: model filename cannot be set\n");
-      return OptionStatus::UNKNOWN_OPTION;
+      return OptionStatus::kUnknownOption;
     } else {
       return setLocalOptionValue(
           log_options, ((OptionRecordString*)option_records[index])[0], value);
@@ -483,34 +483,34 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
 
 OptionStatus setLocalOptionValue(OptionRecordBool& option, const bool value) {
   option.assignvalue(value);
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
                                  OptionRecordInt& option,
                                  const HighsInt value) {
   OptionStatus return_status = checkOptionValue(log_options, option, value);
-  if (return_status != OptionStatus::OK) return return_status;
+  if (return_status != OptionStatus::kOk) return return_status;
   option.assignvalue(value);
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
                                  OptionRecordDouble& option,
                                  const double value) {
   OptionStatus return_status = checkOptionValue(log_options, option, value);
-  if (return_status != OptionStatus::OK) return return_status;
+  if (return_status != OptionStatus::kOk) return return_status;
   option.assignvalue(value);
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus setLocalOptionValue(const HighsLogOptions& log_options,
                                  OptionRecordString& option,
                                  const std::string value) {
   OptionStatus return_status = checkOptionValue(log_options, option, value);
-  if (return_status != OptionStatus::OK) return return_status;
+  if (return_status != OptionStatus::kOk) return return_status;
   option.assignvalue(value);
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus passLocalOptions(const HighsLogOptions& log_options,
@@ -529,21 +529,21 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
           *(((OptionRecordInt*)from_options.records[index])[0].value);
       return_status = checkOptionValue(
           log_options, ((OptionRecordInt*)to_options.records[index])[0], value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kDouble) {
       double value =
           *(((OptionRecordDouble*)from_options.records[index])[0].value);
       return_status = checkOptionValue(
           log_options, ((OptionRecordDouble*)to_options.records[index])[0],
           value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kString) {
       std::string value =
           *(((OptionRecordString*)from_options.records[index])[0].value);
       return_status = checkOptionValue(
           log_options, ((OptionRecordString*)to_options.records[index])[0],
           value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     }
   }
   // Checked from_options and found it to be OK, so set all the values
@@ -553,30 +553,30 @@ OptionStatus passLocalOptions(const HighsLogOptions& log_options,
       bool value = *(((OptionRecordBool*)from_options.records[index])[0].value);
       return_status = setLocalOptionValue(
           ((OptionRecordBool*)to_options.records[index])[0], value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kInt) {
       HighsInt value =
           *(((OptionRecordInt*)from_options.records[index])[0].value);
       return_status = setLocalOptionValue(
           log_options, ((OptionRecordInt*)to_options.records[index])[0], value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     } else if (type == HighsOptionType::kDouble) {
       double value =
           *(((OptionRecordDouble*)from_options.records[index])[0].value);
       return_status = setLocalOptionValue(
           log_options, ((OptionRecordDouble*)to_options.records[index])[0],
           value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     } else {
       std::string value =
           *(((OptionRecordString*)from_options.records[index])[0].value);
       return_status = setLocalOptionValue(
           log_options, ((OptionRecordString*)to_options.records[index])[0],
           value);
-      if (return_status != OptionStatus::OK) return return_status;
+      if (return_status != OptionStatus::kOk) return return_status;
     }
   }
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValue(
@@ -585,18 +585,18 @@ OptionStatus getLocalOptionValue(
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kBool) {
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not bool\n",
                  name.c_str(), optionEntryType2string(type).c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   OptionRecordBool option = ((OptionRecordBool*)option_records[index])[0];
   value = *option.value;
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValue(
@@ -605,18 +605,18 @@ OptionStatus getLocalOptionValue(
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kInt) {
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not int\n",
                  name.c_str(), optionEntryType2string(type).c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   OptionRecordInt option = ((OptionRecordInt*)option_records[index])[0];
   value = *option.value;
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValue(
@@ -625,18 +625,18 @@ OptionStatus getLocalOptionValue(
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kDouble) {
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not double\n",
                  name.c_str(), optionEntryType2string(type).c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   OptionRecordDouble option = ((OptionRecordDouble*)option_records[index])[0];
   value = *option.value;
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionValue(
@@ -645,18 +645,18 @@ OptionStatus getLocalOptionValue(
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::kString) {
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not string\n",
                  name.c_str(), optionEntryType2string(type).c_str());
-    return OptionStatus::ILLEGAL_VALUE;
+    return OptionStatus::kIllegalValue;
   }
   OptionRecordString option = ((OptionRecordString*)option_records[index])[0];
   value = *option.value;
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 OptionStatus getLocalOptionType(
@@ -665,9 +665,9 @@ OptionStatus getLocalOptionType(
   HighsInt index;
   OptionStatus status =
       getOptionIndex(log_options, name, option_records, index);
-  if (status != OptionStatus::OK) return status;
+  if (status != OptionStatus::kOk) return status;
   type = option_records[index]->type;
-  return OptionStatus::OK;
+  return OptionStatus::kOk;
 }
 
 void resetLocalOptions(std::vector<OptionRecord*>& option_records) {

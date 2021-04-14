@@ -113,7 +113,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   lpsolver.setOptionValue(
       "dual_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance * 0.1);
-  status = Status::NotSet;
+  status = Status::kNotSet;
   numlpiters = 0;
   avgSolveIters = 0;
   numSolved = 0;
@@ -189,7 +189,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
          (HighsInt)lpsolver.getLp().rowLower_.size());
   assert(lpsolver.getLp().numRow_ == (HighsInt)lprows.size());
   if (numcuts > 0) {
-    status = Status::NotSet;
+    status = Status::kNotSet;
     currentbasisstored = false;
     basischeckpoint.reset();
 
@@ -710,23 +710,23 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
     recoverBasis();
 
-    return Status::Error;
+    return Status::kError;
   }
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   switch (scaledmodelstatus) {
     case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       storeDualUBProof();
-      if (checkDualProof()) return Status::Infeasible;
+      if (checkDualProof()) return Status::kInfeasible;
 
-      return Status::Error;
+      return Status::kError;
     case HighsModelStatus::kPrimalDualInfeasible:
     case HighsModelStatus::kPrimalInfeasible: {
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
 
       storeDualInfProof();
-      if (checkDualProof()) return Status::Infeasible;
+      if (checkDualProof()) return Status::kInfeasible;
       hasdualproof = false;
 
       HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
@@ -747,7 +747,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       // trust the primal simplex result without scaling
       if (lpsolver.getModelStatus() == HighsModelStatus::kPrimalInfeasible)
-        return Status::Infeasible;
+        return Status::kInfeasible;
 
       // highsLogUser(mipsolver.options_mip_->log_options,
       //                 HighsLogType::kWarning,
@@ -758,7 +758,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // %" HIGHSINT_FORMAT ")\n",
       //        (HighsInt)lpsolver.getModelStatus(),
       //        (HighsInt)lpsolver.getModelStatus(true));
-      return Status::Error;
+      return Status::kError;
     }
     case HighsModelStatus::kOptimal:
       assert(info.max_primal_infeasibility >= 0);
@@ -767,7 +767,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
-        return Status::Optimal;
+        return Status::kOptimal;
 
       if (resolve_on_error) {
         // printf(
@@ -788,12 +788,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
 
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol)
-        return Status::UnscaledPrimalFeasible;
+        return Status::kUnscaledPrimalFeasible;
 
       if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
-        return Status::UnscaledDualFeasible;
+        return Status::kUnscaledDualFeasible;
 
-      return Status::UnscaledInfeasible;
+      return Status::kUnscaledInfeasible;
     case HighsModelStatus::kReachedIterationLimit: {
       if (resolve_on_error) {
         // printf(
@@ -813,15 +813,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
 
       // printf("error: lpsolver reached iteration limit\n");
-      return Status::Error;
+      return Status::kError;
     }
     // case HighsModelStatus::kPrimalDualInfeasible:
     // case HighsModelStatus::kPrimalInfeasible:
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
-    //    return Status::Infeasible;
-    //  return Status::Error;
+    //    return Status::kInfeasible;
+    //  return Status::kError;
     case HighsModelStatus::kReachedTimeLimit:
-      return Status::Error;
+      return Status::kError;
     default:
       // printf("error: lpsolver stopped with unexpected status %"
       // HIGHSINT_FORMAT "\n",
@@ -829,7 +829,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
                    "LP solved to unexpected status (%" HIGHSINT_FORMAT ")\n",
                    (HighsInt)scaledmodelstatus);
-      return Status::Error;
+      return Status::kError;
   }
 }
 
@@ -843,10 +843,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
     status = run();
 
     switch (status) {
-      case Status::UnscaledInfeasible:
-      case Status::UnscaledDualFeasible:
-      case Status::UnscaledPrimalFeasible:
-      case Status::Optimal: {
+      case Status::kUnscaledInfeasible:
+      case Status::kUnscaledDualFeasible:
+      case Status::kUnscaledPrimalFeasible:
+      case Status::kOptimal: {
         HighsHashTable<HighsInt, std::pair<double, int>> fracints(
             maxNumFractional);
         const HighsSolution& sol = lpsolver.getSolution();
@@ -943,7 +943,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         objective = double(objsum);
         break;
       }
-      case Status::Infeasible:
+      case Status::kInfeasible:
         objective = kHighsInf;
         break;
       default:

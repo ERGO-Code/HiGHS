@@ -12,7 +12,7 @@ TEST_CASE("internal-options", "[highs_options]") {
   options.output_flag = false;
   OptionStatus return_status =
       checkOptions(options.log_options, options.records);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   options.options_file = std::string(HIGHS_DIR) + "/check/sample_options_file";
 
@@ -25,59 +25,59 @@ TEST_CASE("internal-options", "[highs_options]") {
   if (dev_run) reportOptions(stdout, options.records, true);
 
   return_status = checkOptions(options.log_options, options.records);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   // Check setting boolean options
   std::string setting_string = "fixed";
   return_status =
       setLocalOptionValue(options.log_options, "mps_parser_type_free",
                           options.records, setting_string);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(
       options.log_options, "mps_parser_type_free", options.records, "fixed");
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(
       options.log_options, "mps_parser_type_free", options.records, "False");
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   return_status = setLocalOptionValue(
       options.log_options, "mps_parser_type_free", options.records, "F");
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   bool mps_parser_type_free = false;
   return_status =
       setLocalOptionValue(options.log_options, "mps_parser_type_free",
                           options.records, mps_parser_type_free);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   return_status = setLocalOptionValue(options.log_options, "mps_parser_type",
                                       options.records, true);
-  REQUIRE(return_status == OptionStatus::UNKNOWN_OPTION);
+  REQUIRE(return_status == OptionStatus::kUnknownOption);
 
   // Check setting HighsInt options
 
   return_status = setLocalOptionValue(options.log_options,
                                       "allowed_simplex_matrix_scale_factor",
                                       options.records, -1);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(options.log_options,
                                       "allowed_simplex_matrix_scale_factor",
                                       options.records, 25);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   std::string allowed_simplex_matrix_scale_factor_string = "1e-7";
   return_status = setLocalOptionValue(
       options.log_options, "allowed_simplex_matrix_scale_factor",
       options.records, allowed_simplex_matrix_scale_factor_string);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(options.log_options,
                                       "allowed_simplex_matrix_scale_factor",
                                       options.records, "3.14159");
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   if (dev_run) {
     printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
@@ -88,13 +88,13 @@ TEST_CASE("internal-options", "[highs_options]") {
   return_status = setLocalOptionValue(
       options.log_options, "allowed_simplex_matrix_scale_factor",
       options.records, allowed_simplex_matrix_scale_factor_double);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   HighsInt allowed_simplex_matrix_scale_factor = 12;
   return_status = setLocalOptionValue(
       options.log_options, "allowed_simplex_matrix_scale_factor",
       options.records, allowed_simplex_matrix_scale_factor);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   if (dev_run) {
     printf("\nAfter testing HighsInt options\n");
@@ -105,48 +105,48 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   return_status = setLocalOptionValue(options.log_options, "large_matrix_value",
                                       options.records, -1);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(options.log_options, "large_matrix_value",
                                       options.records, "1");
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   return_status = setLocalOptionValue(options.log_options, "small_matrix_value",
                                       options.records, -1);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(options.log_options, "small_matrix_value",
                                       options.records, "1e-6");
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   double small_matrix_value = 1e-7;
   return_status = setLocalOptionValue(options.log_options, "small_matrix_value",
                                       options.records, small_matrix_value);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   // Check setting string options
 
   return_status = setLocalOptionValue(options.log_options, presolve_string,
                                       options.records, "ml.mps");
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   std::string model_file = "ml.mps";
   return_status = setLocalOptionValue(options.log_options, presolve_string,
                                       options.records, model_file);
-  REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
+  REQUIRE(return_status == OptionStatus::kIllegalValue);
 
   return_status = setLocalOptionValue(options.log_options, presolve_string,
                                       options.records, "off");
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   std::string presolve = "choose";
   return_status = setLocalOptionValue(options.log_options, presolve_string,
                                       options.records, presolve);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 
   return_status = setLocalOptionValue(options.log_options, model_file_string,
                                       options.records, model_file);
-  REQUIRE(return_status == OptionStatus::UNKNOWN_OPTION);
+  REQUIRE(return_status == OptionStatus::kUnknownOption);
 
   if (dev_run) reportOptions(stdout, options.records);
 
@@ -154,25 +154,25 @@ TEST_CASE("internal-options", "[highs_options]") {
   return_status =
       getLocalOptionValue(options.log_options, "mps_parser_type_free",
                           options.records, get_mps_parser_type_free);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_mps_parser_type_free == false);
 
   HighsInt get_allowed_simplex_matrix_scale_factor;
   return_status = getLocalOptionValue(
       options.log_options, "allowed_simplex_matrix_scale_factor",
       options.records, get_allowed_simplex_matrix_scale_factor);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_allowed_simplex_matrix_scale_factor ==
           allowed_simplex_matrix_scale_factor);
 
   double get_small_matrix_value;
   return_status = getLocalOptionValue(options.log_options, "small_matrix_value",
                                       options.records, get_small_matrix_value);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
   return_status = checkOptions(options.log_options, options.records);
-  REQUIRE(return_status == OptionStatus::OK);
+  REQUIRE(return_status == OptionStatus::kOk);
 }
 
 TEST_CASE("highs-options", "[highs_options]") {

@@ -48,22 +48,22 @@ class HighsSearch {
 
  public:
   enum class ChildSelectionRule {
-    Up,
-    Down,
-    RootSol,
-    Obj,
-    Random,
-    BestCost,
-    WorstCost,
-    Disjunction,
+    kUp,
+    kDown,
+    kRootSol,
+    kObj,
+    kRandom,
+    kBestCost,
+    kWorstCost,
+    kDisjunction,
   };
 
   enum class NodeResult {
-    BoundExceeding,
-    DomainInfeasible,
-    LpInfeasible,
-    Branched,
-    Open,
+    kBoundExceeding,
+    kDomainInfeasible,
+    kLpInfeasible,
+    kBranched,
+    kOpen,
   };
 
  private:

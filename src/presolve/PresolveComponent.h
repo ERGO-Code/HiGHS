@@ -100,8 +100,8 @@ class PresolveComponent : public HighsComponent {
   PresolveComponentData data_;
   const HighsOptions* options_;
 
-  HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
-  HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;
+  HighsPresolveStatus presolve_status_ = HighsPresolveStatus::kNotPresolved;
+  HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::kNotPresolved;
 
   virtual ~PresolveComponent() = default;
 };

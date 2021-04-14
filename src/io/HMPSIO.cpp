@@ -57,7 +57,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
 #ifdef HiGHSDEV
     printf("readMPS: Not opened file OK\n");
 #endif
-    return FilereaderRetcode::FILENOTFOUND;
+    return FilereaderRetcode::kFileNotFound;
   }
 #ifdef HiGHSDEV
   printf("readMPS: Opened file  OK\n");
@@ -88,7 +88,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     } else if (sense.compare("MIN") == 0) {
       objSense = ObjSense::kMinimize;
     } else {
-      return FilereaderRetcode::PARSERERROR;
+      return FilereaderRetcode::kParserError;
     }
 #ifdef HiGHSDEV
     printf("readMPS: Read OBJSENSE OK\n");
@@ -109,7 +109,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
       if (objName == 0) objName = data[1];
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow)
-        return FilereaderRetcode::PARSERERROR;
+        return FilereaderRetcode::kParserError;
       rowType.push_back(flag[0]);
       // rowIndex is used to get the row index from a row name in the
       // COLUMNS, RHS and RANGES section. However, if this contains a
@@ -141,7 +141,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     if (iRow >= 0) name = row_names[iRow];
     if (lastName != data[1]) {  // New column
       if (mxNumCol > 0 && numCol >= mxNumCol)
-        return FilereaderRetcode::PARSERERROR;
+        return FilereaderRetcode::kParserError;
       lastName = data[1];
       // colIndex is used to get the column index from a column name
       // in the BOUNDS section. However, if this contains a reference
@@ -399,7 +399,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
 #endif
   // Load ENDATA and close file
   fclose(file);
-  return FilereaderRetcode::OK;
+  return FilereaderRetcode::kOk;
 }
 
 bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,

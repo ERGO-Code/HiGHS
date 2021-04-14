@@ -24,7 +24,7 @@ TEST_CASE("msgcb", "[highs_io]") {
   int dummydata = 42;
   bool output_flag = true;
   bool log_to_console = false;
-  HighsInt log_dev_level = LOG_DEV_LEVEL_INFO;
+  HighsInt log_dev_level = kHighsLogDevLevelInfo;
   HighsLogOptions log_options;
   log_options.log_file_stream = stdout;
   log_options.output_flag = &output_flag;
@@ -37,7 +37,7 @@ TEST_CASE("msgcb", "[highs_io]") {
   REQUIRE(receiveddata == &dummydata);
 
   // Check that nothing is printed if the type is VERBOSE when
-  // log_dev_level is LOG_DEV_LEVEL_INFO;
+  // log_dev_level is kHighsLogDevLevelInfo;
   *printedmsg = '\0';
   highsLogDev(log_options, HighsLogType::kVerbose, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');

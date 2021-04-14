@@ -217,7 +217,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
 }
 
 HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
-  use_options.log_dev_level = LOG_DEV_LEVEL_INFO;
+  use_options.log_dev_level = kHighsLogDevLevelInfo;
   HighsMipSolver solver(use_options, lp);
   solver.run();
 

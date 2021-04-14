@@ -337,7 +337,7 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   HighsInt log_dev_level;
   output_flag = dev_run;
   log_to_console = true;
-  log_dev_level = LOG_DEV_LEVEL_VERBOSE;
+  log_dev_level = kHighsLogDevLevelVerbose;
   log_options.output_flag = &output_flag;
   log_options.log_file_stream = NULL;
   log_options.log_to_console = &log_to_console;
@@ -353,7 +353,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
   HighsLogOptions log_options;
   bool output_flag = true;
   bool log_to_console = false;
-  HighsInt log_dev_level = LOG_DEV_LEVEL_INFO;
+  HighsInt log_dev_level = kHighsLogDevLevelInfo;
   log_options.log_file_stream = stdout;
   log_options.output_flag = &output_flag;
   log_options.log_to_console = &log_to_console;
@@ -369,7 +369,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   testAllDeleteKeep(10);
 
   HighsOptions options;
-  options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
+  options.log_dev_level = kHighsLogDevLevelVerbose;
 
   Avgas avgas;
   const HighsInt avgas_num_col = 8;
@@ -1099,7 +1099,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
 
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("log_to_console", true);
-  highs.setOptionValue("log_dev_level", LOG_DEV_LEVEL_VERBOSE);
+  highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
 
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";

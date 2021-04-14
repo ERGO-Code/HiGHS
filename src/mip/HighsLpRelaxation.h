@@ -26,13 +26,13 @@ class HighsPseudocost;
 class HighsLpRelaxation {
  public:
   enum class Status {
-    NotSet,
-    Optimal,
-    Infeasible,
-    UnscaledDualFeasible,
-    UnscaledPrimalFeasible,
-    UnscaledInfeasible,
-    Error,
+    kNotSet,
+    kOptimal,
+    kInfeasible,
+    kUnscaledDualFeasible,
+    kUnscaledPrimalFeasible,
+    kUnscaledInfeasible,
+    kError,
   };
 
  private:
@@ -162,8 +162,8 @@ class HighsLpRelaxation {
   int64_t getNumLpIterations() const { return numlpiters; }
 
   bool integerFeasible() const {
-    if ((status == Status::Optimal ||
-         status == Status::UnscaledPrimalFeasible) &&
+    if ((status == Status::kOptimal ||
+         status == Status::kUnscaledPrimalFeasible) &&
         fractionalints.empty())
       return true;
 
@@ -174,10 +174,10 @@ class HighsLpRelaxation {
 
   static bool scaledOptimal(Status status) {
     switch (status) {
-      case Status::Optimal:
-      case Status::UnscaledDualFeasible:
-      case Status::UnscaledPrimalFeasible:
-      case Status::UnscaledInfeasible:
+      case Status::kOptimal:
+      case Status::kUnscaledDualFeasible:
+      case Status::kUnscaledPrimalFeasible:
+      case Status::kUnscaledInfeasible:
         return true;
       default:
         return false;
@@ -186,8 +186,8 @@ class HighsLpRelaxation {
 
   static bool unscaledPrimalFeasible(Status status) {
     switch (status) {
-      case Status::Optimal:
-      case Status::UnscaledPrimalFeasible:
+      case Status::kOptimal:
+      case Status::kUnscaledPrimalFeasible:
         return true;
       default:
         return false;
@@ -196,8 +196,8 @@ class HighsLpRelaxation {
 
   static bool unscaledDualFeasible(Status status) {
     switch (status) {
-      case Status::Optimal:
-      case Status::UnscaledDualFeasible:
+      case Status::kOptimal:
+      case Status::kUnscaledDualFeasible:
         return true;
       default:
         return false;

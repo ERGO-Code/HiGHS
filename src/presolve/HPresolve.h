@@ -125,10 +125,10 @@ class HPresolve {
   HighsInt oldNumRow;
 
   enum class Result {
-    Ok,
-    PrimalInfeasible,
-    DualInfeasible,
-    Stopped,
+    kOk,
+    kPrimalInfeasible,
+    kDualInfeasible,
+    kStopped,
   };
 
   // private functions for different shared functionality and matrix
