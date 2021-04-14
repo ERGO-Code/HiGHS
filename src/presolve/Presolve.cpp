@@ -552,7 +552,7 @@ void Presolve::checkBoundsAreConsistent() {
                                  colLower[col] - colUpper[col]);
       roundIntegerBounds(col);
       if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
-        status = Infeasible;
+        status = kInfeasible;
         return;
       }
     }
@@ -564,7 +564,7 @@ void Presolve::checkBoundsAreConsistent() {
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  rowLower[row] - rowUpper[row]);
       if (rowLower[row] - rowUpper[row] > inconsistent_bounds_tolerance) {
-        status = Infeasible;
+        status = kInfeasible;
         return;
       }
     }
@@ -1094,7 +1094,7 @@ void Presolve::resizeProblem() {
   chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 
   if (nR + nC == 0) {
-    status = Empty;
+    status = kEmpty;
     return;
   }
 
@@ -1378,7 +1378,7 @@ void Presolve::runPropagator() {
       nboundchgs = propagator.propagate();
 
       if (propagator.infeasible()) {
-        status = Infeasible;
+        status = kInfeasible;
         return;
       }
       // if no further bounds where changed we can stop
@@ -1716,7 +1716,7 @@ void Presolve::removeEmptyRow(HighsInt i) {
     addChange(EMPTY_ROW, i, 0);
   } else {
     if (iPrint > 0) cout << "PR: Problem infeasible." << endl;
-    status = Infeasible;
+    status = kInfeasible;
     return;
   }
 }
@@ -1728,7 +1728,7 @@ void Presolve::removeEmptyColumn(HighsInt j) {
   if ((colCost.at(j) < 0 && colUpper.at(j) >= kHighsInf) ||
       (colCost.at(j) > 0 && colLower.at(j) <= -kHighsInf)) {
     if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-    status = Unbounded;
+    status = kUnbounded;
     return;
   }
 
@@ -1903,7 +1903,7 @@ void Presolve::removeDominatedColumns() {
       if (colCost.at(j) - d > tol) {
         if (colLower.at(j) <= -kHighsInf) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-          status = Unbounded;
+          status = kUnbounded;
           return;
         }
         setPrimalValue(j, colLower.at(j));
@@ -1915,7 +1915,7 @@ void Presolve::removeDominatedColumns() {
       } else if (colCost.at(j) - e < -tol) {
         if (colUpper.at(j) >= kHighsInf) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-          status = Unbounded;
+          status = kUnbounded;
           return;
         }
         setPrimalValue(j, colUpper.at(j));
@@ -2026,14 +2026,14 @@ void Presolve::removeIfWeaklyDominated(const HighsInt j, const double d,
 }
 
 void Presolve::setProblemStatus(const HighsInt s) {
-  if (s == Infeasible)
+  if (s == kInfeasible)
     cout << "NOT-OPT status = 1, returned from solver after presolve: Problem "
             "infeasible.\n";
-  else if (s == Unbounded)
+  else if (s == kUnbounded)
     cout << "NOT-OPT status = 2, returned from solver after presolve: Problem "
             "unbounded.\n";
   else if (s == 0) {
-    status = Optimal;
+    status = kOptimal;
     return;
   } else
     cout << "unknown problem status returned from solver after presolve: " << s
@@ -2255,14 +2255,14 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const HighsInt j,
   if (colCost.at(j) > 0) {
     if (colLower.at(j) <= -kHighsInf) {
       if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-      status = Unbounded;
+      status = kUnbounded;
       return;
     }
     value = colLower.at(j);
   } else if (colCost.at(j) < 0) {
     if (colUpper.at(j) >= kHighsInf) {
       if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-      status = Unbounded;
+      status = kUnbounded;
       return;
     }
     value = colUpper.at(j);
@@ -2826,7 +2826,7 @@ void Presolve::removeForcingConstraints() {
       // Infeasible row
       if (g > rowUpper.at(i) || h < rowLower.at(i)) {
         if (iPrint > 0) cout << "PR: Problem infeasible." << endl;
-        status = Infeasible;
+        status = kInfeasible;
         return;
       }
       // Forcing row
@@ -2948,7 +2948,7 @@ void Presolve::removeRowSingletons() {
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  colLower.at(j) - colUpper.at(j));
       if (colLower.at(j) - colUpper.at(j) > inconsistent_bounds_tolerance) {
-        status = Infeasible;
+        status = kInfeasible;
         timer.recordFinish(SING_ROW);
         return;
       }
@@ -3038,11 +3038,11 @@ void Presolve::setPrimalValue(const HighsInt j, const double value) {
 
         if (nzRow.at(row) == 0) {
           if (rowLower[row] - rowUpper[row] > tol) {
-            status = Infeasible;
+            status = kInfeasible;
             return;
           }
           if (rowLower[row] > tol || rowUpper[row] < -tol) {
-            status = Infeasible;
+            status = kInfeasible;
             return;
           }
 
