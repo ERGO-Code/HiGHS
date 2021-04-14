@@ -19,18 +19,18 @@
 #include "lp_data/HighsModelObject.h"
 
 enum class LpAction {
-  SCALE = 0,
-  NEW_COSTS,
-  NEW_BOUNDS,
-  NEW_BASIS,
-  NEW_COLS,
-  NEW_ROWS,
-  DEL_COLS,
-  DEL_ROWS,
-  DEL_ROWS_BASIS_OK,
-  SCALED_COL,
-  SCALED_ROW,
-  BACKTRACKING
+  kScale = 0,
+  kNewCosts,
+  kNewBounds,
+  kNewBasis,
+  kNewCols,
+  kNewRows,
+  kDelCols,
+  kDelRows,
+  kDelRowsBasisOk,
+  kScaledCol,
+  kScaledRow,
+  kBacktracking
 };
 
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);

@@ -233,10 +233,8 @@ void HCrash::bixby() {
     HighsInt cz_c_n = bixby_vr_in_r[r_n];
     HighsInt variable_in = cz_c_n;
     HighsInt variable_out = numCol + r_n;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
-        NONBASIC_FLAG_FALSE;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
-        NONBASIC_FLAG_TRUE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
 #ifdef HiGHSDEV
     HighsInt cz_r_n = r_n;
     HighsInt vr_ty = crsh_r_ty[cz_r_n];
@@ -662,9 +660,9 @@ void HCrash::ltssf_iterate() {
       HighsInt variable_in = cz_c_n;
       HighsInt variable_out = numCol + cz_r_n;
       ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
-          NONBASIC_FLAG_FALSE;
+          kNonbasicFlagFalse;
       ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
-          NONBASIC_FLAG_TRUE;
+          kNonbasicFlagTrue;
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       HighsInt vr_ty = crsh_r_ty[cz_r_n];
@@ -936,9 +934,9 @@ void HCrash::ltssf_iz_da() {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
     for (HighsInt iCol = 0; iCol < numCol; iCol++)
-      simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      simplex_basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     for (HighsInt iRow = 0; iRow < numRow; iRow++)
-      simplex_basis.nonbasicFlag_[numCol + iRow] = NONBASIC_FLAG_FALSE;
+      simplex_basis.nonbasicFlag_[numCol + iRow] = kNonbasicFlagFalse;
   }
   mx_r_pri = crsh_mn_pri_v;
   for (HighsInt r_n = 0; r_n < numRow; r_n++) {
@@ -1261,10 +1259,8 @@ void HCrash::tsSing() {
     HighsInt r_n = c_n;
     HighsInt variable_in = c_n;
     HighsInt variable_out = numCol + r_n;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
-        NONBASIC_FLAG_FALSE;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
-        NONBASIC_FLAG_TRUE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
     nBcVr++;
     if (nBcVr == numRow) break;
   }
@@ -1381,13 +1377,13 @@ void HCrash::crsh_iz_vr_ty() {
   crsh_c_ty.resize(numCol);
   if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC) {
     for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-      if (nonbasicFlag[numCol + r_n] == NONBASIC_FLAG_TRUE)
+      if (nonbasicFlag[numCol + r_n] == kNonbasicFlagTrue)
         crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
       else
         crsh_r_ty[r_n] = crsh_vr_ty_bc;
     }
     for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-      if (nonbasicFlag[c_n] == NONBASIC_FLAG_TRUE)
+      if (nonbasicFlag[c_n] == kNonbasicFlagTrue)
         crsh_c_ty[c_n] = crsh_vr_ty_non_bc;
       else
         crsh_c_ty[c_n] = crsh_vr_ty_bc;

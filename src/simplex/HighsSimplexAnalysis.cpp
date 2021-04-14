@@ -225,7 +225,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     num_row_price = 0;
     num_row_price_with_switch = 0;
     HighsInt last_dual_edge_weight_mode =
-        (HighsInt)DualEdgeWeightMode::STEEPEST_EDGE;
+        (HighsInt)DualEdgeWeightMode::kSteepestEdge;
     for (HighsInt k = 0; k <= last_dual_edge_weight_mode; k++)
       AnIterNumEdWtIt[k] = 0;
     AnIterTraceNumRec = 0;
@@ -668,7 +668,7 @@ void HighsSimplexAnalysis::iterationRecord() {
           row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] =
           col_aq_density;
-      if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] =
             row_DSE_density;
         lcAnIter.AnIterTraceCostlyDse = AnIterCostlyDseMeasure;
@@ -777,17 +777,17 @@ void HighsSimplexAnalysis::summaryReport() {
          AnIterNumIter, AnIterIt0 + 1, simplex_iteration_count);
   if (AnIterNumIter <= 0) return;
   HighsInt lc_EdWtNumIter;
-  lc_EdWtNumIter = AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::STEEPEST_EDGE];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kSteepestEdge];
   if (lc_EdWtNumIter > 0)
     printf("DSE for %12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
            "%%) iterations\n",
            lc_EdWtNumIter, (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::DEVEX];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kDevex];
   if (lc_EdWtNumIter > 0)
     printf("Dvx for %12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
            "%%) iterations\n",
            lc_EdWtNumIter, (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::DANTZIG];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kDantzig];
   if (lc_EdWtNumIter > 0)
     printf("Dan for %12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
            "%%) iterations\n",
@@ -887,7 +887,7 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("\nDevex summary\n");
     printf("%12" HIGHSINT_FORMAT " Devex frameworks\n", num_devex_framework);
     printf("%12" HIGHSINT_FORMAT " average number of iterations\n",
-           AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::DEVEX] /
+           AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kDevex] /
                num_devex_framework);
   }
   // Look for any PAMI data to summarise
@@ -952,7 +952,7 @@ void HighsSimplexAnalysis::summaryReport() {
           row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] =
           col_aq_density;
-      if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] =
             row_DSE_density;
         lcAnIter.AnIterTraceCostlyDse = AnIterCostlyDseMeasure;
@@ -1004,12 +1004,12 @@ void HighsSimplexAnalysis::summaryReport() {
           lcAnIter.AnIterTrace_dual_edge_weight_mode;
       std::string str_dual_edge_weight_mode;
       if (lc_dual_edge_weight_mode ==
-          (HighsInt)DualEdgeWeightMode::STEEPEST_EDGE)
+          (HighsInt)DualEdgeWeightMode::kSteepestEdge)
         str_dual_edge_weight_mode = "DSE";
-      else if (lc_dual_edge_weight_mode == (HighsInt)DualEdgeWeightMode::DEVEX)
+      else if (lc_dual_edge_weight_mode == (HighsInt)DualEdgeWeightMode::kDevex)
         str_dual_edge_weight_mode = "Dvx";
       else if (lc_dual_edge_weight_mode ==
-               (HighsInt)DualEdgeWeightMode::DANTZIG)
+               (HighsInt)DualEdgeWeightMode::kDantzig)
         str_dual_edge_weight_mode = "Dan";
       else
         str_dual_edge_weight_mode = "XXX";
@@ -1030,7 +1030,7 @@ void HighsSimplexAnalysis::summaryReport() {
       double use_row_DSE_density;
       if (rp_dual_steepest_edge) {
         if (lc_dual_edge_weight_mode ==
-            (HighsInt)DualEdgeWeightMode::STEEPEST_EDGE) {
+            (HighsInt)DualEdgeWeightMode::kSteepestEdge) {
           use_row_DSE_density =
               lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE];
         } else {
@@ -1043,7 +1043,7 @@ void HighsSimplexAnalysis::summaryReport() {
         double use_costly_dse;
         printf("|     ");
         if (lc_dual_edge_weight_mode ==
-            (HighsInt)DualEdgeWeightMode::STEEPEST_EDGE) {
+            (HighsInt)DualEdgeWeightMode::kSteepestEdge) {
           use_costly_dse = lcAnIter.AnIterTraceCostlyDse;
         } else {
           use_costly_dse = 0;
@@ -1296,7 +1296,7 @@ void HighsSimplexAnalysis::printOneDensity(const double density) {
 void HighsSimplexAnalysis::reportDensity(const bool header) {
   assert(analyse_simplex_data);
   const bool rp_dual_steepest_edge =
-      edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
+      edge_weight_mode == DualEdgeWeightMode::kSteepestEdge;
   if (header) {
     analysis_log << highsFormatToString(" C_Aq R_Ep R_Ap");
     if (rp_dual_steepest_edge) {

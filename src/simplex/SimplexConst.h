@@ -137,27 +137,25 @@ enum RebuildReason {
   REBUILD_REASON_Count
 };
 
-enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
+enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
-enum class PriceMode { ROW = 0, COL };
-
-const HighsInt PARALLEL_THREADS_DEFAULT = 8;
-const HighsInt DUAL_TASKS_MIN_THREADS = 3;
-const HighsInt DUAL_MULTI_MIN_THREADS = 1;  // 2;
+const HighsInt kDualTasksMinThreads = 3;
+const HighsInt kDualMultiMinThreads = 1;  // 2;
 
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
     class since they are used as HighsInt to replace conditional statements
     by multiplication */
-const HighsInt NONBASIC_FLAG_TRUE = 1;   // Nonbasic
-const HighsInt NONBASIC_FLAG_FALSE = 0;  // Basic
+const HighsInt kNonbasicFlagTrue = 1;   // Nonbasic
+const HighsInt kNonbasicFlagFalse = 0;  // Basic
 
 /** Simplex nonbasicMove status for columns and rows. Don't use enum
     class since they are used in conditional statements */
-const HighsInt NONBASIC_MOVE_UP = 1;   // Free to move (only) up
-const HighsInt NONBASIC_MOVE_DN = -1;  // Free to move (only) down
-const HighsInt NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
-const HighsInt illegal_move_value =
+const HighsInt kNonbasicMoveUp = 1;   // Free to move (only) up
+const HighsInt kNonbasicMoveDn = -1;  // Free to move (only) down
+const HighsInt kNonbasicMoveZe = 0;   // Fixed or free to move up and down
+const HighsInt kIllegalMoveValue =
     -99;  // Used to see whether valid move value has been set
+
 //
 // Relation between HiGHS basis and Simplex basis
 //
@@ -185,7 +183,7 @@ const HighsInt illegal_move_value =
 //
 // <=>
 //
-// Simplex: nonbasicFlag value of NONBASIC_FLAG_FALSE
+// Simplex: nonbasicFlag value of kNonbasicFlagFalse
 //
 // Nonbasic variables
 // ==================
@@ -200,27 +198,27 @@ const HighsInt illegal_move_value =
 //
 // Highs: col_status value of LOWER - at lower bound
 // <=>
-// Simplex: nonbasicMove value of NONBASIC_MOVE_UP - [l, Inf] column free to
+// Simplex: nonbasicMove value of kNonbasicMoveUp - [l, Inf] column free to
 // move up and negative dual
 //
 // Highs: col_status value of ZERO - at zero
 // =>
-// Simplex: nonbasicMove value of NONBASIC_MOVE_ZE - free variable treated
+// Simplex: nonbasicMove value of kNonbasicMoveZe - free variable treated
 // specially in simplex
 //
 // Highs: col_status value of UPPER - at upper bound
 // =>
 // Simplex: Either
-// * nonbasicMove value of NONBASIC_MOVE_DN - [-Inf, u] column free to move down
+// * nonbasicMove value of kNonbasicMoveDn - [-Inf, u] column free to move down
 // and positive dual
-// * nonbasicMove value of NONBASIC_MOVE_ZE - [   l, u] column ?? and free dual
+// * nonbasicMove value of kNonbasicMoveZe - [   l, u] column ?? and free dual
 //
-// Simplex: nonbasicMove value of NONBASIC_MOVE_DN - [-Inf, u] column free to
+// Simplex: nonbasicMove value of kNonbasicMoveDn - [-Inf, u] column free to
 // move down and positive dual
 // =>
 // Highs: col_status value of UPPER - at upper bound
 //
-// Simplex: nonbasicMove value of NONBASIC_MOVE_ZE - [l, u] column ?? and free
+// Simplex: nonbasicMove value of kNonbasicMoveZe - [l, u] column ?? and free
 // dual
 // =>
 // Highs: Either

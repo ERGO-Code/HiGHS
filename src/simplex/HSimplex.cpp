@@ -121,36 +121,35 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
         basis.nonbasicMove_[lp.numCol_ + iRow];
   }
   // Make any new columns nonbasic
-  const HighsInt illegal_move_value = -99;
   for (HighsInt iCol = lp.numCol_; iCol < newNumCol; iCol++) {
-    basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+    basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
-    HighsInt move = illegal_move_value;
+    HighsInt move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
-      move = NONBASIC_MOVE_ZE;
+      move = kNonbasicMoveZe;
     } else if (!highs_isInfinity(-lower)) {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
         // Finite upper bound so boxed
         if (fabs(lower) < fabs(upper)) {
-          move = NONBASIC_MOVE_UP;
+          move = kNonbasicMoveUp;
         } else {
-          move = NONBASIC_MOVE_DN;
+          move = kNonbasicMoveDn;
         }
       } else {
         // Lower (since upper bound is infinite)
-        move = NONBASIC_MOVE_UP;
+        move = kNonbasicMoveUp;
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
-      move = NONBASIC_MOVE_DN;
+      move = kNonbasicMoveDn;
     } else {
       // FREE
-      move = NONBASIC_MOVE_ZE;
+      move = kNonbasicMoveZe;
     }
-    assert(move != illegal_move_value);
+    assert(move != kIllegalMoveValue);
     basis.nonbasicMove_[iCol] = move;
   }
 }
@@ -183,7 +182,7 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
   basis.basicIndex_.resize(newNumRow);
   // Make the new rows basic
   for (HighsInt iRow = lp.numRow_; iRow < newNumRow; iRow++) {
-    basis.nonbasicFlag_[lp.numCol_ + iRow] = NONBASIC_FLAG_FALSE;
+    basis.nonbasicFlag_[lp.numCol_ + iRow] = kNonbasicFlagFalse;
     basis.nonbasicMove_[lp.numCol_ + iRow] = 0;
     basis.basicIndex_[iRow] = lp.numCol_ + iRow;
   }
@@ -226,82 +225,82 @@ void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
 void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
                            LpAction action) {
   switch (action) {
-    case LpAction::SCALE:
+    case LpAction::kScale:
 #ifdef HIGHSDEV
-      printf(" LpAction::SCALE\n");
+      printf(" LpAction::kScale\n");
 #endif
       simplex_lp_status.scaling_tried = true;
       invalidateSimplexLpBasis(simplex_lp_status);
       break;
-    case LpAction::NEW_COSTS:
+    case LpAction::kNewCosts:
 #ifdef HIGHSDEV
-      printf(" LpAction::NEW_COSTS\n");
+      printf(" LpAction::kNewCosts\n");
 #endif
       simplex_lp_status.has_nonbasic_dual_values = false;
       simplex_lp_status.has_fresh_rebuild = false;
       simplex_lp_status.has_dual_objective_value = false;
       simplex_lp_status.has_primal_objective_value = false;
       break;
-    case LpAction::NEW_BOUNDS:
+    case LpAction::kNewBounds:
 #ifdef HIGHSDEV
-      printf(" LpAction::NEW_BOUNDS\n");
+      printf(" LpAction::kNewBounds\n");
 #endif
       simplex_lp_status.has_basic_primal_values = false;
       simplex_lp_status.has_fresh_rebuild = false;
       simplex_lp_status.has_dual_objective_value = false;
       simplex_lp_status.has_primal_objective_value = false;
       break;
-    case LpAction::NEW_BASIS:
+    case LpAction::kNewBasis:
 #ifdef HIGHSDEV
-      printf(" LpAction::NEW_BASIS\n");
+      printf(" LpAction::kNewBasis\n");
 #endif
       invalidateSimplexLpBasis(simplex_lp_status);
       break;
-    case LpAction::NEW_COLS:
+    case LpAction::kNewCols:
 #ifdef HIGHSDEV
-      printf(" LpAction::NEW_COLS\n");
+      printf(" LpAction::kNewCols\n");
 #endif
       invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
-    case LpAction::NEW_ROWS:
+    case LpAction::kNewRows:
 #ifdef HIGHSDEV
-      printf(" LpAction::NEW_ROWS\n");
+      printf(" LpAction::kNewRows\n");
 #endif
       invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
-    case LpAction::DEL_COLS:
+    case LpAction::kDelCols:
 #ifdef HIGHSDEV
-      printf(" LpAction::DEL_COLS\n");
+      printf(" LpAction::kDelCols\n");
 #endif
       invalidateSimplexLpBasis(simplex_lp_status);
       break;
-    case LpAction::DEL_ROWS:
+    case LpAction::kDelRows:
 #ifdef HIGHSDEV
-      printf(" LpAction::DEL_ROWS\n");
+      printf(" LpAction::kDelRows\n");
 #endif
       invalidateSimplexLpBasis(simplex_lp_status);
       break;
-    case LpAction::DEL_ROWS_BASIS_OK:
+    case LpAction::kDelRowsBasisOk:
 #ifdef HIGHSDEV
-      printf(" LpAction::DEL_ROWS_BASIS_OK\n");
+      printf(" LpAction::kDelRowsBasisOk\n");
 #endif
       //      simplex_info.simplex_lp_ = true;
       break;
-    case LpAction::SCALED_COL:
+    case LpAction::kScaledCol:
 #ifdef HIGHSDEV
-      printf(" LpAction::SCALED_COL\n");
+      printf(" LpAction::kScaledCol\n");
 #endif
       invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
-    case LpAction::SCALED_ROW:
+    case LpAction::kScaledRow:
 #ifdef HIGHSDEV
-      printf(" LpAction::SCALED_ROW\n");
+      printf(" LpAction::kScaledRow\n");
 #endif
       invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
-    case LpAction::BACKTRACKING:
+    case LpAction::kBacktracking:
 #ifdef HIGHSDEV
-      printf(" LpAction::BACKTRACKING\n");
+      printf(" LpAction::kBacktracking\n");
 #endif
       simplex_lp_status.has_matrix = false;
       simplex_lp_status.has_nonbasic_dual_values = false;
@@ -421,7 +420,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
   assert(int(scale.row_.size()) == lp.numRow_);
   for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
-    if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+    if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasiblity for fixed rows and columns
     if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar])
       continue;

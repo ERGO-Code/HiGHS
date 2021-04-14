@@ -131,7 +131,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
     localNonbasicFlag[iCol] = -1;
     if (flag) {
       // Nonzero value for localNonbasicFlag entry means that column is either
-      if (flag == NONBASIC_FLAG_TRUE) {
+      if (flag == kNonbasicFlagTrue) {
         // Nonbasic...
         highsLogUser(options.log_options, HighsLogType::kError,
                      "Entry basicIndex_[%" HIGHSINT_FORMAT
@@ -264,10 +264,10 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   }
   HighsInt num_basic_variables = 0;
   for (HighsInt var = 0; var < numTot; var++) {
-    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
+    if (simplex_basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
       num_basic_variables++;
     } else {
-      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
+      assert(simplex_basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
     }
   }
   bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
@@ -1042,14 +1042,14 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
         }
       } else {
         // Only lower bounded
-        if (simplex_basis.nonbasicMove_[iVar] != NONBASIC_MOVE_UP) {
+        if (simplex_basis.nonbasicMove_[iVar] != kNonbasicMoveUp) {
           num_lower_bounded_variable_move_errors++;
         }
       }
     } else {
       if (highs_isInfinity(-lower)) {
         // Only upper bounded
-        if (simplex_basis.nonbasicMove_[iVar] != NONBASIC_MOVE_DN) {
+        if (simplex_basis.nonbasicMove_[iVar] != kNonbasicMoveDn) {
           num_upper_bounded_variable_move_errors++;
         }
       } else {
@@ -1362,14 +1362,14 @@ HighsDebugStatus debugSimplexBasicSolution(
   for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     if (iVar < lp.numCol_) {
       HighsInt iCol = iVar;
-      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+      if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
         basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
       } else {
         basis.col_status[iCol] = HighsBasisStatus::kBasic;
       }
     } else {
       HighsInt iRow = iVar - lp.numCol_;
-      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+      if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
         basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
       } else {
         basis.row_status[iRow] = HighsBasisStatus::kBasic;
@@ -1462,7 +1462,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   double max_nonbasic_col_dual_difference = 0;
   for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
     HighsInt iVar = iCol;
-    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+    if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
       // Consider this nonbasic column
       double local_col_value = simplex_info.workValue_[iVar] * scale.col_[iCol];
       double local_col_dual = (HighsInt)simplex_lp.sense_ *
@@ -1490,7 +1490,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   for (HighsInt ix = 0; ix < simplex_lp.numRow_; ix++) {
     HighsInt iRow = ix;
     HighsInt iVar = simplex_lp.numCol_ + iRow;
-    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+    if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
       // Consider this nonbasic row
       double local_row_value =
           -simplex_info.workValue_[iVar] / scale.row_[iRow];
@@ -1824,7 +1824,7 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // are equal
       if (simplex_info.workLower_[var] == simplex_info.workUpper_[var]) {
         // Fixed variable
-        ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
+        ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveZe;
         if (!ok) {
           highsLogUser(options.log_options, HighsLogType::kError,
               "Fixed variable %" HIGHSINT_FORMAT " (simplex_lp.numCol_ = %"
@@ -1846,8 +1846,8 @@ simplex_info.workLower_[var], simplex_info.workValue_[var]); return ok;
         }
       } else {
         // Boxed variable
-        ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
-             (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
+        ok = (simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp) ||
+             (simplex_basis.nonbasicMove_[var] == kNonbasicMoveDn);
         if (!ok) {
           highsLogUser(options.log_options, HighsLogType::kError,
               "Boxed variable %" HIGHSINT_FORMAT " (simplex_lp.numCol_ = %"
@@ -1860,12 +1860,12 @@ HIGHSINT_FORMAT ") [%11g, %11g, \n"
               simplex_basis.nonbasicMove_[var]);
           return ok;
         }
-        if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+        if (simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp) {
           ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
           if (!ok) {
             highsLogUser(options.log_options, HighsLogType::kError,
                             "Boxed variable %" HIGHSINT_FORMAT "
-(simplex_lp.numCol_ = %" HIGHSINT_FORMAT ") with \n" "NONBASIC_MOVE_UP so work "
+(simplex_lp.numCol_ = %" HIGHSINT_FORMAT ") with \n" "kNonbasicMoveUp so work "
 "value should be %g but is %g", var, simplex_lp.numCol_,
 simplex_info.workLower_[var], simplex_info.workValue_[var]); return ok;
           }
@@ -1874,7 +1874,7 @@ simplex_info.workLower_[var], simplex_info.workValue_[var]); return ok;
           if (!ok) {
             highsLogUser(options.log_options, HighsLogType::kError,
                             "Boxed variable %" HIGHSINT_FORMAT "
-(simplex_lp.numCol_ = %" HIGHSINT_FORMAT ") with \n" "NONBASIC_MOVE_DN so work "
+(simplex_lp.numCol_ = %" HIGHSINT_FORMAT ") with \n" "kNonbasicMoveDn so work "
 "value should be %g but is %g", var, simplex_lp.numCol_,
 simplex_info.workUpper_[var], simplex_info.workValue_[var]); return ok;
           }
@@ -1882,7 +1882,7 @@ simplex_info.workUpper_[var], simplex_info.workValue_[var]); return ok;
       }
     } else {
       // Infinite upper bound
-      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
+      ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp;
       if (!ok) {
         highsLogUser(options.log_options, HighsLogType::kError,
             "Finite lower bound and infinite upper bound variable %"
@@ -1893,7 +1893,7 @@ up=%2" HIGHSINT_FORMAT " but is  "
             "%" HIGHSINT_FORMAT "",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
             simplex_info.workValue_[var], simplex_info.workUpper_[var],
-            NONBASIC_MOVE_UP, simplex_basis.nonbasicMove_[var]);
+            kNonbasicMoveUp, simplex_basis.nonbasicMove_[var]);
         return ok;
       }
       ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
@@ -1911,7 +1911,7 @@ HIGHSINT_FORMAT " \n"
   } else {
     // Infinite lower bound
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
+      ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveDn;
       if (!ok) {
         highsLogUser(options.log_options, HighsLogType::kError,
             "Finite upper bound and infinite lower bound variable %"
@@ -1938,7 +1938,7 @@ HIGHSINT_FORMAT " \n"
       }
     } else {
       // Infinite upper bound
-      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
+      ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveZe;
       if (!ok) {
         highsLogUser(options.log_options, HighsLogType::kError,
             "Free variable %" HIGHSINT_FORMAT " (simplex_lp.numCol_ = %"

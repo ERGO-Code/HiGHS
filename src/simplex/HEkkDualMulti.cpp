@@ -134,7 +134,7 @@ void HEkkDual::majorChooseRow() {
       }
     }
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // 6. Check updated and computed weight - just for dual steepest edge
       HighsInt countWrongEdWt = 0;
       for (HighsInt i = 0; i < multi_num; i++) {
@@ -215,7 +215,7 @@ void HEkkDual::majorChooseRowBtran() {
         analysis->getThreadFactorTimerClockPointer();
     factor->btran(*work_ep, analysis->row_ep_density,
                   factor_timer_clock_pointer);
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // For Dual steepest edge we know the exact weight as the 2-norm of
       // work_ep
       multi_EdWt[i] = work_ep->norm2();
@@ -379,7 +379,7 @@ void HEkkDual::minorUpdatePrimal() {
   }
   finish->theta_primal = theta_primal;
 
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
       !new_devex_framework) {
     assert(row_out >= 0);
     if (row_out < 0)
@@ -416,7 +416,7 @@ void HEkkDual::minorUpdatePrimal() {
       if (value > upper + Tp) infeas = value - upper;
       infeas *= infeas;
       multi_choice[ich].infeasValue = infeas;
-      if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
         // Update the other Devex weights
         const double new_pivotal_edge_weight = finish->EdWt;
         double aa_iRow = dot;
@@ -430,7 +430,7 @@ void HEkkDual::minorUpdatePrimal() {
 void HEkkDual::minorUpdatePivots() {
   MFinish* finish = &multi_finish[multi_nFinish];
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     // Transform the edge weight of the pivotal row according to the
     // simplex update
     finish->EdWt /= (alpha_row * alpha_row);
@@ -484,13 +484,13 @@ void HEkkDual::minorUpdateRows() {
       const double xpivot = multi_xpivot[i];
       nextEp->saxpy(xpivot, Row);
       nextEp->tight();
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         multi_xpivot[i] = nextEp->norm2();
       }
     }
 
     // Put weight back
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       for (HighsInt i = 0; i < multi_nTasks; i++)
         multi_choice[multi_iwhich[i]].infeasEdWt = multi_xpivot[i];
     }
@@ -503,7 +503,7 @@ void HEkkDual::minorUpdateRows() {
         if (fabs(pivotX) < kHighsTiny) continue;
         next_ep->saxpy(-pivotX / alpha_row, Row);
         next_ep->tight();
-        if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+        if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
           multi_choice[ich].infeasEdWt = next_ep->norm2();
         }
       }
@@ -614,7 +614,7 @@ void HEkkDual::majorUpdateFtranParallel() {
   multi_density[multi_ntasks] = analysis->col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     // Then DSE
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       if (analysis->analyse_simplex_data)
@@ -671,7 +671,7 @@ void HEkkDual::majorUpdateFtranParallel() {
         local_col_aq_density, ekk_instance_.simplex_info_.col_aq_density);
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       const double local_row_DSE_density = (double)Row->count / solver_num_row;
       analysis->updateOperationResultDensity(local_row_DSE_density,
                                              analysis->row_DSE_density);
@@ -767,8 +767,8 @@ void HEkkDual::majorUpdatePrimal() {
         local_work_infeasibility[iRow] = fabs(infeas);
     }
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE ||
-        (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge ||
+        (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
          !new_devex_framework)) {
       // Dense update of any edge weights (except weights for pivotal rows)
       for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -777,7 +777,7 @@ void HEkkDual::majorUpdatePrimal() {
         const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
         const double* colArray = &multi_finish[iFn].col_aq->array[0];
         double* EdWt = &dualRHS.workEdWt[0];
-        if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+        if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
           // Update steepest edge weights
           const double* dseArray = &multi_finish[iFn].row_ep->array[0];
           const double Kai = -2 / multi_finish[iFn].alpha_row;
@@ -813,13 +813,13 @@ void HEkkDual::majorUpdatePrimal() {
       MFinish* finish = &multi_finish[iFn];
       HVector* Col = finish->col_aq;
       const double new_pivotal_edge_weight = finish->EdWt;
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         // Update steepest edge weights
         HVector* Row = finish->row_ep;
         double Kai = -2 / finish->alpha_row;
         dualRHS.updateWeightDualSteepestEdge(Col, new_pivotal_edge_weight, Kai,
                                              &Row->array[0]);
-      } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+      } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
                  !new_devex_framework) {
         // Update Devex weights
         dualRHS.updateWeightDevex(Col, new_pivotal_edge_weight);
@@ -837,8 +837,8 @@ void HEkkDual::majorUpdatePrimal() {
   }
 
   // Update any edge weights for the rows pivotal in this set of MI.
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE ||
-      (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge ||
+      (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
        !new_devex_framework)) {
     // Update weights for the pivots using the computed values.
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -847,7 +847,7 @@ void HEkkDual::majorUpdatePrimal() {
       const double* colArray = &multi_finish[iFn].col_aq->array[0];
       // The weight for this pivot is known, but weights for rows
       // pivotal earlier need to be updated
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         const double* dseArray = &multi_finish[iFn].row_ep->array[0];
         double Kai = -2 / multi_finish[iFn].alpha_row;
         for (HighsInt jFn = 0; jFn < iFn; jFn++) {
@@ -939,7 +939,7 @@ void HEkkDual::majorRollback() {
 
 bool HEkkDual::checkNonUnitWeightError(std::string message) {
   bool error_found = false;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DANTZIG) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kDantzig) {
     double unit_wt_error = 0;
     for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
       unit_wt_error += fabs(dualRHS.workEdWt[iRow] - 1.0);
@@ -979,11 +979,11 @@ void HEkkDual::iterationAnalysisMajorData() {
 void HEkkDual::iterationAnalysisMajor() {
   iterationAnalysisMajorData();
   // Possibly switch from DSE to Devex
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     bool switch_to_devex = false;
     switch_to_devex = analysis->switchToDevex();
     if (switch_to_devex) {
-      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
+      dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
       // Set up the Devex framework
       ekk_instance_.simplex_info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();

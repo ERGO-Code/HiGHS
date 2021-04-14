@@ -202,7 +202,7 @@ class HighsSimplexAnalysis {
 
   // Local copies of simplex data for reporting
   HighsInt simplex_strategy = 0;
-  DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
+  DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
   HighsInt solve_phase = 0;
   HighsInt simplex_iteration_count = 0;
   HighsInt devex_iteration_count = 0;
@@ -371,7 +371,7 @@ class HighsSimplexAnalysis {
   AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];
 
   HighsInt AnIterNumInvert[REBUILD_REASON_Count];
-  HighsInt AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::Count];
+  HighsInt AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kCount];
 
   HighsValueDistribution primal_step_distribution;
   HighsValueDistribution dual_step_distribution;

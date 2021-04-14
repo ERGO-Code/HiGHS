@@ -194,7 +194,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_COLS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::kNewCols);
 
   // Increase the number of columns in the LPs
   lp.numCol_ += XnumNewCol;
@@ -374,7 +374,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::kNewRows);
 
   // Increase the number of rows in the LPs
   lp.numRow_ += XnumNewRow;
@@ -857,7 +857,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::NEW_COSTS);
+  updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::kNewCosts);
   return HighsStatus::kOk;
 }
 
@@ -931,7 +931,7 @@ HighsStatus Highs::changeColBoundsInterface(
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::kNewBounds);
   return HighsStatus::kOk;
 }
 
@@ -1004,7 +1004,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  updateSimplexLpStatus(ekk_instance.simplex_lp_status_, LpAction::kNewBounds);
   return HighsStatus::kOk;
 }
 
@@ -1042,7 +1042,7 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::kNewRows);
   return HighsStatus::kOk;
 }
 
@@ -1084,10 +1084,10 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
     if (return_status == HighsStatus::kError) return return_status;
     if (scaleval < 0 && simplex_lp_status.has_basis) {
       // Negative, so flip any nonbasic status
-      if (simplex_basis.nonbasicMove_[col] == NONBASIC_MOVE_UP) {
-        simplex_basis.nonbasicMove_[col] = NONBASIC_MOVE_DN;
-      } else if (simplex_basis.nonbasicMove_[col] == NONBASIC_MOVE_DN) {
-        simplex_basis.nonbasicMove_[col] = NONBASIC_MOVE_UP;
+      if (simplex_basis.nonbasicMove_[col] == kNonbasicMoveUp) {
+        simplex_basis.nonbasicMove_[col] = kNonbasicMoveDn;
+      } else if (simplex_basis.nonbasicMove_[col] == kNonbasicMoveDn) {
+        simplex_basis.nonbasicMove_[col] = kNonbasicMoveUp;
       }
     }
   }
@@ -1096,7 +1096,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(simplex_lp_status, LpAction::SCALED_COL);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::kScaledCol);
   return HighsStatus::kOk;
 }
 
@@ -1139,10 +1139,10 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
     if (scaleval < 0 && simplex_lp_status.has_basis) {
       // Negative, so flip any nonbasic status
       const HighsInt var = simplex_lp.numCol_ + row;
-      if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
-      } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
-        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+      if (simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp) {
+        simplex_basis.nonbasicMove_[var] = kNonbasicMoveDn;
+      } else if (simplex_basis.nonbasicMove_[var] == kNonbasicMoveDn) {
+        simplex_basis.nonbasicMove_[var] = kNonbasicMoveUp;
       }
     }
   }
@@ -1151,7 +1151,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
-  updateSimplexLpStatus(simplex_lp_status, LpAction::SCALED_ROW);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::kScaledRow);
   return HighsStatus::kOk;
 }
 
@@ -1201,7 +1201,6 @@ HighsStatus Highs::setNonbasicStatusInterface(
   HighsInt ignore_from_ix;
   HighsInt ignore_to_ix = -1;
   HighsInt current_set_entry = 0;
-  const HighsInt illegal_move_value = -99;
   for (HighsInt k = from_k; k <= to_k; k++) {
     updateIndexCollectionOutInIndex(index_collection, set_from_ix, set_to_ix,
                                     ignore_from_ix, ignore_to_ix,
@@ -1223,31 +1222,31 @@ HighsStatus Highs::setNonbasicStatusInterface(
         }
         if (has_simplex_basis) {
           // todo @ Julian this assert fails on glass4
-          assert(simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_TRUE);
-          HighsInt move = illegal_move_value;
+          assert(simplex_basis.nonbasicFlag_[iCol] == kNonbasicFlagTrue);
+          HighsInt move = kIllegalMoveValue;
           if (lower == upper) {
-            move = NONBASIC_MOVE_ZE;
+            move = kNonbasicMoveZe;
           } else if (!highs_isInfinity(-lower)) {
             // Finite lower bound so boxed or lower
             if (!highs_isInfinity(upper)) {
               // Finite upper bound so boxed
               if (fabs(lower) < fabs(upper)) {
-                move = NONBASIC_MOVE_UP;
+                move = kNonbasicMoveUp;
               } else {
-                move = NONBASIC_MOVE_DN;
+                move = kNonbasicMoveDn;
               }
             } else {
               // Lower (since upper bound is infinite)
-              move = NONBASIC_MOVE_UP;
+              move = kNonbasicMoveUp;
             }
           } else if (!highs_isInfinity(upper)) {
             // Upper
-            move = NONBASIC_MOVE_DN;
+            move = kNonbasicMoveDn;
           } else {
             // FREE
-            move = NONBASIC_MOVE_ZE;
+            move = kNonbasicMoveZe;
           }
-          assert(move != illegal_move_value);
+          assert(move != kIllegalMoveValue);
           simplex_basis.nonbasicMove_[iCol] = move;
         }
       }
@@ -1266,31 +1265,31 @@ HighsStatus Highs::setNonbasicStatusInterface(
         }
         if (has_simplex_basis) {
           assert(simplex_basis.nonbasicFlag_[lp.numCol_ + iRow] ==
-                 NONBASIC_FLAG_TRUE);
-          HighsInt move = illegal_move_value;
+                 kNonbasicFlagTrue);
+          HighsInt move = kIllegalMoveValue;
           if (lower == upper) {
-            move = NONBASIC_MOVE_ZE;
+            move = kNonbasicMoveZe;
           } else if (!highs_isInfinity(-lower)) {
             // Finite lower bound so boxed or lower
             if (!highs_isInfinity(upper)) {
               // Finite upper bound so boxed
               if (fabs(lower) < fabs(upper)) {
-                move = NONBASIC_MOVE_DN;
+                move = kNonbasicMoveDn;
               } else {
-                move = NONBASIC_MOVE_UP;
+                move = kNonbasicMoveUp;
               }
             } else {
               // Lower (since upper bound is infinite)
-              move = NONBASIC_MOVE_DN;
+              move = kNonbasicMoveDn;
             }
           } else if (!highs_isInfinity(upper)) {
             // Upper
-            move = NONBASIC_MOVE_UP;
+            move = kNonbasicMoveUp;
           } else {
             // FREE
-            move = NONBASIC_MOVE_ZE;
+            move = kNonbasicMoveZe;
           }
-          assert(move != illegal_move_value);
+          assert(move != kIllegalMoveValue);
           simplex_basis.nonbasicMove_[lp.numCol_ + iRow] = move;
         }
       }
@@ -1303,7 +1302,7 @@ HighsStatus Highs::setNonbasicStatusInterface(
 void Highs::clearBasisInterface() {
   HighsModelObject& highs_model_object = hmos_[0];
   updateSimplexLpStatus(highs_model_object.ekk_instance_.simplex_lp_status_,
-                        LpAction::NEW_BASIS);
+                        LpAction::kNewBasis);
 }
 
 // Get the basic variables, performing INVERT if necessary
@@ -1531,8 +1530,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   has_primal_ray = ekk_instance.simplex_lp_status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
     HighsInt col = ekk_instance.simplex_info_.primal_ray_col_;
-    assert(ekk_instance.simplex_basis_.nonbasicFlag_[col] ==
-           NONBASIC_FLAG_TRUE);
+    assert(ekk_instance.simplex_basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
     // Get this pivotal column
     vector<double> rhs;
     vector<double> column;

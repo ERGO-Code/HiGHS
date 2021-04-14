@@ -1322,7 +1322,7 @@ void HEkkPrimal::hyperChooseColumn() {
   if (num_hyper_chuzc_candidates) {
     for (HighsInt iEntry = 1; iEntry <= num_hyper_chuzc_candidates; iEntry++) {
       HighsInt iCol = hyper_chuzc_candidate[iEntry];
-      if (nonbasicFlag[iCol] == NONBASIC_FLAG_FALSE) {
+      if (nonbasicFlag[iCol] == kNonbasicFlagFalse) {
         assert(!nonbasicMove[iCol]);
         continue;
       }
@@ -2124,7 +2124,7 @@ void HEkkPrimal::updateVerify() {
 void HEkkPrimal::iterationAnalysisData() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
-  analysis->edge_weight_mode = DualEdgeWeightMode::DEVEX;
+  analysis->edge_weight_mode = DualEdgeWeightMode::kDevex;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;
   analysis->devex_iteration_count = num_devex_iterations;
@@ -2146,7 +2146,7 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->num_dual_infeasibility = simplex_info.num_dual_infeasibility;
   analysis->sum_primal_infeasibility = simplex_info.sum_primal_infeasibility;
   analysis->sum_dual_infeasibility = simplex_info.sum_dual_infeasibility;
-  if ((analysis->edge_weight_mode == DualEdgeWeightMode::DEVEX) &&
+  if ((analysis->edge_weight_mode == DualEdgeWeightMode::kDevex) &&
       (num_devex_iterations == 0))
     analysis->num_devex_framework++;
 }
@@ -2188,7 +2188,7 @@ void HEkkPrimal::localReportIter(const bool header) {
       double lower = simplex_info.workLower_[check_column];
       double upper = simplex_info.workUpper_[check_column];
       double value;
-      if (flag == NONBASIC_FLAG_TRUE) {
+      if (flag == kNonbasicFlagTrue) {
         value = simplex_info.workValue_[check_column];
       } else {
         HighsInt iRow;
@@ -2202,7 +2202,7 @@ void HEkkPrimal::localReportIter(const bool header) {
       printf(": Var %2" HIGHSINT_FORMAT " (%1" HIGHSINT_FORMAT
              ", %2" HIGHSINT_FORMAT ") [%9.4g, %9.4g, %9.4g]",
              check_column, flag, move, lower, value, upper);
-      if (flag == NONBASIC_FLAG_TRUE) {
+      if (flag == kNonbasicFlagTrue) {
         double dual = simplex_info.workDual_[check_column];
         double weight = devex_weight[check_column];
         double infeasibility = -move * dual;
@@ -2233,7 +2233,7 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
   nonbasic_free_col_set.clear();
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     bool nonbasic_free =
-        simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_TRUE &&
+        simplex_basis.nonbasicFlag_[iCol] == kNonbasicFlagTrue &&
         simplex_info.workLower_[iCol] <= -kHighsInf &&
         simplex_info.workUpper_[iCol] >= kHighsInf;
     if (nonbasic_free) nonbasic_free_col_set.add(iCol);
