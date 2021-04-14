@@ -947,7 +947,8 @@ restart:
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
-      // if there are new global bound changes we reevaluate the LP and do one more separation round
+      // if there are new global bound changes we reevaluate the LP and do one
+      // more separation round
       if (!domain.getChangedCols().empty()) {
         domain.propagate();
         if (domain.infeasible())
@@ -984,7 +985,8 @@ restart:
     }
   }
 
-  // if there are new global bound changes we reevaluate the LP and do one more separation round
+  // if there are new global bound changes we reevaluate the LP and do one more
+  // separation round
   if (!domain.getChangedCols().empty()) {
     domain.propagate();
     if (domain.infeasible())
