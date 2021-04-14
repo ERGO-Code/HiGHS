@@ -30,7 +30,6 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
       PresolveRuleInfo(kRemoveForcingConstraints, "Rm forcing cs", "RFC"));
   rules.push_back(PresolveRuleInfo(kForcingRow, "Forcing row", "FRR"));
   rules.push_back(PresolveRuleInfo(kRedundantRow, "Redundant row", "RDR"));
-  //  rules.push_back(PresolveRuleInfo(kDominatedRowBounds, "Dom row bounds", "DRB"));
   rules.push_back(
       PresolveRuleInfo(kRemoveColumnSingletons, "Remove col sing", "RCS"));
   rules.push_back(PresolveRuleInfo(kFreeSingCol, "Free sing col", "FSC"));
@@ -44,10 +43,8 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   rules.push_back(PresolveRuleInfo(kDominatedCols, "Dominated col", "DMC"));
   rules.push_back(
       PresolveRuleInfo(kWeaklyDominatedCols, "Weakly dom col", "WDC"));
-  //  rules.push_back(PresolveRuleInfo(kDominatedColBounds, "Dom col bounds", "DCB"));
   rules.push_back(PresolveRuleInfo(kEmptyCol, "Empty col", "EMC"));
   rules.push_back(PresolveRuleInfo(kAggregator, "Aggregator", "AGG"));
-  // rules.push_back(PresolveRuleInfo(KNAPSACK, "Knapsack", "KNP"));
   rules.push_back(PresolveRuleInfo(kMatrixCopy, "Initialize matrix", "INM"));
   rules.push_back(PresolveRuleInfo(kResizeMatrix, "Resize matrix", "RSM"));
   //
@@ -56,7 +53,6 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
       PresolveRuleInfo(kRemoveRowSingletons, "Rm row sing", "RRS"));
   rules.push_back(
       PresolveRuleInfo(kRemoveDoubletonEquations, "Rm dbleton eq", "RDE"));
-  //  rules.push_back(PresolveRuleInfo(kRemoveEmptyRow, "Rm empty row", "RER"));
   //
   rules.push_back(
       PresolveRuleInfo(kTotalPresolveTime, "Total presolve time", "TPT"));

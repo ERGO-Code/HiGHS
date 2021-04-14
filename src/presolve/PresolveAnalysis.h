@@ -39,7 +39,6 @@ enum PresolveRule {
   kRemoveForcingConstraints,
   kForcingRow,
   kRedundantRow,
-  //  kDominatedRowBounds,
   kRemoveColumnSingletons,
   kFreeSingCol,
   kSingColDoubletonIneq,
@@ -48,7 +47,6 @@ enum PresolveRule {
   kMipDualFixing,
   kDominatedCols,
   kWeaklyDominatedCols,
-  //  kDominatedColBounds,
   kEmptyCol,
   kAggregator,
 
@@ -59,7 +57,6 @@ enum PresolveRule {
   kRunPresolvers,
   kRemoveRowSingletons,
   kRemoveDoubletonEquations,
-  //  kRemoveEmptyRow,
 
   kTotalPresolveTime,
   // Number of presolve rules.
@@ -74,20 +71,18 @@ enum PresolveRule {
   kSingColDoubletonIneqSecondSingCol,
   kForcingRowVariable,
   kTwoColSingTrivial,
-  //  kZeroCostColSing,
-  //  kSingOnly,
 };
 
 enum presolveNumerics {
-  INCONSISTENT_BOUNDS,
-  FIXED_COLUMN,
-  DOUBLETON_EQUATION_BOUND,
-  DOUBLETON_INEQUALITY_BOUND,
-  SMALL_MATRIX_VALUE,
-  EMPTY_ROW_BOUND,
-  DOMINATED_COLUMN,
-  WEAKLY_DOMINATED_COLUMN,
-  PRESOLVE_NUMERICS_COUNT
+  kNumericsInconsistentBounds,
+  kNumericsFixedColumn,
+  kNumericsDoubletonEquationBound,
+  kNumericsDoubletonInequalityBound,
+  kNumericsSmallMatrixValue,
+  kNumericsEmptyRowBound,
+  kNumericsDominatedColumn,
+  kNumericsWeaklyDominatedColumn,
+  kPresolveNumericsCount
 };
 
 struct PresolveRuleInfo {
@@ -171,7 +166,6 @@ class PresolveTimer {
       if (id == kRunPresolvers) continue;
       if (id == kRemoveRowSingletons) continue;
       if (id == kRemoveDoubletonEquations) continue;
-      //      if (id == kRemoveEmptyRow) continue;
       clocks.push_back(rules_[id].clock_id);
     }
     HighsInt ideal_time_rule;
@@ -203,10 +197,8 @@ class PresolveTimer {
     clocks.clear();
     ideal_time_rule = kRemoveForcingConstraints;
     ideal_time = getRuleTime(ideal_time_rule);
-    //    clocks.push_back(rules_[kRemoveEmptyRow].clock_id);
     clocks.push_back(rules_[kForcingRow].clock_id);
     clocks.push_back(rules_[kRedundantRow].clock_id);
-    //    clocks.push_back(rules_[kDominatedRowBounds].clock_id);
     timer_.report_tl("grep--RmFrcCs", clocks, ideal_time, 0);
     std::cout << std::endl;
 
@@ -283,13 +275,13 @@ class PresolveTimer {
   }
 
   void reportNumericsRecords() {
-    assert((HighsInt)presolve_numerics.size() == PRESOLVE_NUMERICS_COUNT);
-    if (presolve_numerics.size() < PRESOLVE_NUMERICS_COUNT) return;
+    assert((HighsInt)presolve_numerics.size() == kPresolveNumericsCount);
+    if (presolve_numerics.size() < kPresolveNumericsCount) return;
     printf("Presolve numerics analysis for %s:\n\n", model_name.c_str());
-    for (HighsInt record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
+    for (HighsInt record = 0; record < kPresolveNumericsCount; record++)
       reportNumericsRecord(presolve_numerics[record]);
     printf("grep_presolveNumerics:,%s", model_name.c_str());
-    for (HighsInt record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
+    for (HighsInt record = 0; record < kPresolveNumericsCount; record++)
       reportNumericsCsvRecord(presolve_numerics[record]);
     printf("\n\n");
   }
