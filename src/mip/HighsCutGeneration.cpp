@@ -718,9 +718,7 @@ bool HighsCutGeneration::postprocessCut() {
     maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
 
   // determine minimal allowed coefficient
-  double minCoefficientValue = 100 * feastol;
-
-  if (maxAbsValue < 1.0) minCoefficientValue *= std::max(1e-3, maxAbsValue);
+  double minCoefficientValue = 100 * feastol * std::max(maxAbsValue, 1e-3);
 
   // remove small coefficients and check whether the remaining support is
   // integral
