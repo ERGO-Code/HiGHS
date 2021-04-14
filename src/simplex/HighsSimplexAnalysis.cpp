@@ -318,7 +318,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
   analysis_log = std::stringstream();
   reportAlgorithmPhaseIterationObjective(header);
   if (analyse_simplex_data) {
-    if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+    if (simplex_strategy == kSimplexStrategyDualMulti) {
       // Report on threads and PAMI
       reportThreads(header);
       reportMulti(header);
@@ -714,9 +714,8 @@ void HighsSimplexAnalysis::iterationRecordMajor() {
   if (average_num_threads < 0) {
     average_num_threads = num_threads;
   } else {
-    average_num_threads =
-        kRunningAverageMultiplier * num_threads +
-        (1 - kRunningAverageMultiplier) * average_num_threads;
+    average_num_threads = kRunningAverageMultiplier * num_threads +
+                          (1 - kRunningAverageMultiplier) * average_num_threads;
   }
 }
 
@@ -1374,7 +1373,7 @@ HighsInt HighsSimplexAnalysis::intLog10(const double v) {
 }
 
 bool HighsSimplexAnalysis::dualAlgorithm() {
-  return (simplex_strategy == SIMPLEX_STRATEGY_DUAL ||
-          simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS ||
-          simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI);
+  return (simplex_strategy == kSimplexStrategyDual ||
+          simplex_strategy == kSimplexStrategyDualTasks ||
+          simplex_strategy == kSimplexStrategyDualMulti);
 }

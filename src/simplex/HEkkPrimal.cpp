@@ -2123,7 +2123,7 @@ void HEkkPrimal::updateVerify() {
 
 void HEkkPrimal::iterationAnalysisData() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+  analysis->simplex_strategy = kSimplexStrategyPrimal;
   analysis->edge_weight_mode = DualEdgeWeightMode::kDevex;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;

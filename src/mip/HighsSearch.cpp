@@ -1012,10 +1012,10 @@ HighsSearch::NodeResult HighsSearch::branch() {
       // LP still not solved, reevaluate with primal simplex
       lp->getLpSolver().clearSolver();
       lp->getLpSolver().setOptionValue("simplex_strategy",
-                                       SIMPLEX_STRATEGY_PRIMAL);
+                                       kSimplexStrategyPrimal);
       result = evaluateNode();
       lp->getLpSolver().setOptionValue("simplex_strategy",
-                                       SIMPLEX_STRATEGY_DUAL);
+                                       kSimplexStrategyDual);
       if (result == NodeResult::kOpen) {
         // LP still not solved, reevaluate with IPM instead of simplex
         lp->getLpSolver().clearSolver();

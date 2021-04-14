@@ -344,30 +344,27 @@ HighsStatus HEkkDual::solve() {
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     ekk_instance_.computePrimalObjectiveValue();
-    if (options.dual_simplex_cleanup_strategy ==
-        DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
+    if (options.dual_simplex_cleanup) {
+      // Use primal to clean up
+      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
+      // Cleanup with primal code
+      // Switch off any bound perturbation
+      double save_primal_simplex_bound_perturbation_multiplier =
+          simplex_info.primal_simplex_bound_perturbation_multiplier;
+      simplex_info.primal_simplex_bound_perturbation_multiplier = 0;
+      HEkkPrimal hEkkPrimal(ekk_instance_);
+      hEkkPrimal.solve();
+      // Restore any bound perturbation
+      simplex_info.primal_simplex_bound_perturbation_multiplier =
+          save_primal_simplex_bound_perturbation_multiplier;
+      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+    } else {
       // No clean up. Dual simplex was optimal with perturbed costs,
       // so say that the scaled LP has been solved
       // optimally. Optimality (unlikely) for the unscaled LP will
       // still be assessed honestly, so leave it to the user to
       // deceide whether the solution can be accepted.
       scaled_model_status = HighsModelStatus::kOptimal;
-    } else {
-      // Use primal to clean up
-      if (options.dual_simplex_cleanup_strategy) {
-        analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-        // Cleanup with primal code
-        // Switch off any bound perturbation
-        double save_primal_simplex_bound_perturbation_multiplier =
-            simplex_info.primal_simplex_bound_perturbation_multiplier;
-        simplex_info.primal_simplex_bound_perturbation_multiplier = 0;
-        HEkkPrimal hEkkPrimal(ekk_instance_);
-        hEkkPrimal.solve();
-        // Restore any bound perturbation
-        simplex_info.primal_simplex_bound_perturbation_multiplier =
-            save_primal_simplex_bound_perturbation_multiplier;
-        analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-      }
     }
   }
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solvePhase,
@@ -439,7 +436,7 @@ void HEkkDual::initParallel() {
 
   // Initialize for tasks
   if (ekk_instance_.simplex_info_.simplex_strategy ==
-      SIMPLEX_STRATEGY_DUAL_TASKS) {
+      kSimplexStrategyDualTasks) {
     const HighsInt pass_num_slice = num_threads - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
@@ -455,7 +452,7 @@ void HEkkDual::initParallel() {
 
   // Initialize for multi
   if (ekk_instance_.simplex_info_.simplex_strategy ==
-      SIMPLEX_STRATEGY_DUAL_MULTI) {
+      kSimplexStrategyDualMulti) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
     if (multi_num > kHighsThreadLimit) multi_num = kHighsThreadLimit;
@@ -607,13 +604,13 @@ void HEkkDual::solvePhase1() {
       }
       switch (simplex_info.simplex_strategy) {
         default:
-        case SIMPLEX_STRATEGY_DUAL_PLAIN:
+        case kSimplexStrategyDualPlain:
           iterate();
           break;
-        case SIMPLEX_STRATEGY_DUAL_TASKS:
+        case kSimplexStrategyDualTasks:
           iterateTasks();
           break;
-        case SIMPLEX_STRATEGY_DUAL_MULTI:
+        case kSimplexStrategyDualMulti:
           iterateMulti();
           break;
       }
@@ -795,7 +792,7 @@ void HEkkDual::solvePhase2() {
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solvePhase2()
-      // Performs one iteration in case SIMPLEX_STRATEGY_DUAL_PLAIN:
+      // Performs one iteration in case kSimplexStrategyDualPlain:
       if (debugDualSimplex("Before iteration") ==
           HighsDebugStatus::kLogicalError) {
         solvePhase = SOLVE_PHASE_ERROR;
@@ -803,13 +800,13 @@ void HEkkDual::solvePhase2() {
       }
       switch (simplex_info.simplex_strategy) {
         default:
-        case SIMPLEX_STRATEGY_DUAL_PLAIN:
+        case kSimplexStrategyDualPlain:
           iterate();
           break;
-        case SIMPLEX_STRATEGY_DUAL_TASKS:
+        case kSimplexStrategyDualTasks:
           iterateTasks();
           break;
-        case SIMPLEX_STRATEGY_DUAL_MULTI:
+        case kSimplexStrategyDualMulti:
           iterateMulti();
           break;
       }
@@ -1733,7 +1730,7 @@ void HEkkDual::updateDual() {
     //    "Before calling dualRow.updateDual");
     dualRow.updateDual(theta_dual);
     if (ekk_instance_.simplex_info_.simplex_strategy !=
-            SIMPLEX_STRATEGY_DUAL_PLAIN &&
+            kSimplexStrategyDualPlain &&
         slice_PRICE) {
       // Update the slice-by-slice copy of dual variables
       for (HighsInt i = 0; i < slice_num; i++)

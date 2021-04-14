@@ -269,7 +269,6 @@ void HighsMipSolverData::runSetup() {
   domain.clearChangedCols();
 
   lp.getLpSolver().setOptionValue("presolve", "off");
-  // lp.getLpSolver().setOptionValue("dual_simplex_cleanup_strategy", 0);
   // lp.getLpSolver().setOptionValue("dual_simplex_cost_perturbation_multiplier",
   // 0.0); lp.getLpSolver().setOptionValue("parallel", "on");
   lp.getLpSolver().setOptionValue("simplex_initial_condition_check", false);

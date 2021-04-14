@@ -29,8 +29,7 @@ void testSolver(Highs& highs, const std::string solver,
   if (use_simplex) {
     SimplexStrategy simplex_strategy =
         static_cast<SimplexStrategy>(int_simplex_strategy);
-    if (simplex_strategy == SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS)
-      return;
+    if (simplex_strategy == SimplexStrategy::kSimplexStrategyDualTasks) return;
     if (dev_run)
       printf("Simplex strategy %" HIGHSINT_FORMAT "\n", int_simplex_strategy);
     return_status = highs.setOptionValue("simplex_strategy", simplex_strategy);
@@ -188,15 +187,15 @@ void testSolversSetup(const std::string model,
                       vector<HighsInt>& simplex_strategy_iteration_count) {
   if (model.compare("adlittle") == 0) {
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_CHOOSE] = 75;
+        int)SimplexStrategy::kSimplexStrategyChoose] = 75;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_PLAIN] = 75;
+        int)SimplexStrategy::kSimplexStrategyDualPlain] = 75;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS] = 72;
+        int)SimplexStrategy::kSimplexStrategyDualTasks] = 72;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI] = 73;
+        int)SimplexStrategy::kSimplexStrategyDualMulti] = 73;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL] = 94;
+        int)SimplexStrategy::kSimplexStrategyPrimal] = 94;
     model_iteration_count.ipm = 19;
     model_iteration_count.crossover = 3;
   }
@@ -209,18 +208,18 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
   have_omp = true;
 #endif
   /*
-  HighsInt i = (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL;
+  HighsInt i = (HighsInt)SimplexStrategy::kSimplexStrategyPrimal;
   model_iteration_count.simplex = simplex_strategy_iteration_count[i];
   testSolver(highs, "simplex", model_iteration_count, i);
   */
 
-  HighsInt from_i = (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
-  HighsInt to_i = (HighsInt)
-      SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI;  // PRIMAL;  // NUM;
+  HighsInt from_i = (HighsInt)SimplexStrategy::kSimplexStrategyMin;
+  HighsInt to_i =
+      (HighsInt)SimplexStrategy::kSimplexStrategyDualMulti;  // PRIMAL;  // NUM;
   for (HighsInt i = from_i; i < to_i; i++) {
     if (!have_omp) {
-      if (i == (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS) continue;
-      if (i == (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI) continue;
+      if (i == (HighsInt)SimplexStrategy::kSimplexStrategyDualTasks) continue;
+      if (i == (HighsInt)SimplexStrategy::kSimplexStrategyDualMulti) continue;
     }
     model_iteration_count.simplex = simplex_strategy_iteration_count[i];
     testSolver(highs, "simplex", model_iteration_count, i);
@@ -235,7 +234,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   IterationCount model_iteration_count;
   vector<HighsInt> simplex_strategy_iteration_count;
   simplex_strategy_iteration_count.resize(
-      (HighsInt)SimplexStrategy::SIMPLEX_STRATEGY_NUM);
+      (HighsInt)SimplexStrategy::kSimplexStrategyNum);
 
   HighsLp lp;
   //  HighsStatus run_status;

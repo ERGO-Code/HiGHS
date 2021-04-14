@@ -867,7 +867,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
   }
 
   lprelax.getLpSolver().setOptionValue("simplex_strategy",
-                                       SIMPLEX_STRATEGY_PRIMAL);
+                                       kSimplexStrategyPrimal);
   lprelax.getLpSolver().setOptionValue(
       "primal_simplex_bound_perturbation_multiplier", 0.0);
 

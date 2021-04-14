@@ -81,7 +81,7 @@ HighsStatus HEkk::solve() {
   HighsInt& simplex_strategy = simplex_info_.simplex_strategy;
 
   // Initial solve according to strategy
-  if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+  if (simplex_strategy == kSimplexStrategyPrimal) {
     algorithm = "primal";
     reportSimplexPhaseIterations(options_.log_options, iteration_count_,
                                  simplex_info_, true);
@@ -101,13 +101,13 @@ HighsStatus HEkk::solve() {
     dual_solver.options();
     //
     // Solve, depending on the particular strategy
-    if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+    if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(
           options_.log_options, HighsLogType::kInfo,
           "Using EKK parallel dual simplex solver - SIP with %" HIGHSINT_FORMAT
           " threads\n",
           simplex_info_.num_threads);
-    } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+    } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(
           options_.log_options, HighsLogType::kInfo,
           "Using EKK parallel dual simplex solver - PAMI with %" HIGHSINT_FORMAT
@@ -159,7 +159,7 @@ HighsStatus HEkk::cleanup() {
     // Primal infeasibilities, so should be just dual phase 2
     assert(!simplex_info_.num_dual_infeasibility);
     // Use dual simplex (phase 2) with Devex pricing and no perturbation
-    simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    simplex_info_.simplex_strategy = kSimplexStrategyDual;
     simplex_info_.dual_simplex_cost_perturbation_multiplier = 0;
     simplex_info_.dual_edge_weight_strategy =
         SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
@@ -175,7 +175,7 @@ HighsStatus HEkk::cleanup() {
     // Dual infeasibilities, so should be just primal phase 2
     assert(!simplex_info_.num_primal_infeasibility);
     // Use primal simplex (phase 2) with no perturbation
-    simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+    simplex_info_.simplex_strategy = kSimplexStrategyPrimal;
     simplex_info_.primal_simplex_bound_perturbation_multiplier = 0;
     HEkkPrimal primal_solver(*this);
     workEdWt_ = NULL;
@@ -604,17 +604,17 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // simplex
   HighsInt& simplex_strategy = simplex_info.simplex_strategy;
   // By default, use the HighsOptions strategy. If this is
-  // SIMPLEX_STRATEGY_CHOOSE, then the strategy used will depend on
+  // kSimplexStrategyChoose, then the strategy used will depend on
   // whether the current basis is primal feasible.
   simplex_strategy = options.simplex_strategy;
-  if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
+  if (simplex_strategy == kSimplexStrategyChoose) {
     // HiGHS is left to choose the simplex strategy
     if (simplex_info.num_primal_infeasibility > 0) {
       // Not primal feasible, so use dual simplex
-      simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+      simplex_strategy = kSimplexStrategyDual;
     } else {
       // Primal feasible. so use primal simplex
-      simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+      simplex_strategy = kSimplexStrategyPrimal;
     }
   }
   // Set min/max_threads to correspond to serial code. They will be
@@ -629,11 +629,11 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   omp_max_threads = omp_get_max_threads();
 #endif
   if (options.parallel == kHighsOnString &&
-      simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
+      simplex_strategy == kSimplexStrategyDual) {
     // The parallel strategy is on and the simplex strategy is dual so use
     // PAMI if there are enough OMP threads
     if (omp_max_threads >= kDualMultiMinThreads)
-      simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
+      simplex_strategy = kSimplexStrategyDualMulti;
   }
   //
   // If parallel stratgies are used, the minimum number of HiGHS threads used
@@ -642,10 +642,10 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // All this is independent of the number of OMP threads available,
   // since code with multiple HiGHS threads can be run in serial.
 #ifdef OPENMP
-  if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+  if (simplex_strategy == kSimplexStrategyDualTasks) {
     simplex_info.min_threads = max(kDualTasksMinThreads, highs_min_threads);
     simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
-  } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+  } else if (simplex_strategy == kSimplexStrategyDualMulti) {
     simplex_info.min_threads = max(kDualMultiMinThreads, highs_min_threads);
     simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
   }

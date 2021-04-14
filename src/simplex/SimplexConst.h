@@ -19,15 +19,15 @@
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
 
 enum SimplexStrategy {
-  SIMPLEX_STRATEGY_MIN = 0,
-  SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,       // 0
-  SIMPLEX_STRATEGY_DUAL,                                // 1
-  SIMPLEX_STRATEGY_DUAL_PLAIN = SIMPLEX_STRATEGY_DUAL,  // 1
-  SIMPLEX_STRATEGY_DUAL_TASKS,                          // 2
-  SIMPLEX_STRATEGY_DUAL_MULTI,                          // 3
-  SIMPLEX_STRATEGY_PRIMAL,                              // 4
-  SIMPLEX_STRATEGY_MAX = SIMPLEX_STRATEGY_PRIMAL,
-  SIMPLEX_STRATEGY_NUM
+  kSimplexStrategyMin = 0,
+  kSimplexStrategyChoose = kSimplexStrategyMin,      // 0
+  kSimplexStrategyDual,                              // 1
+  kSimplexStrategyDualPlain = kSimplexStrategyDual,  // 1
+  kSimplexStrategyDualTasks,                         // 2
+  kSimplexStrategyDualMulti,                         // 3
+  kSimplexStrategyPrimal,                            // 4
+  kSimplexStrategyMax = kSimplexStrategyPrimal,
+  kSimplexStrategyNum
 };
 
 enum SimplexSolvePhase {
@@ -40,14 +40,6 @@ enum SimplexSolvePhase {
   SOLVE_PHASE_2,                        // 2
   SOLVE_PHASE_CLEANUP = 4,
   SOLVE_PHASE_MAX = SOLVE_PHASE_CLEANUP
-};
-
-enum DualSimplexCleanupStrategy {
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN = 0,
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE = DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_HEKK,
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX = DUAL_SIMPLEX_CLEANUP_STRATEGY_HEKK
 };
 
 enum SimplexScaleStrategy {
@@ -142,19 +134,22 @@ enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 const HighsInt kDualTasksMinThreads = 3;
 const HighsInt kDualMultiMinThreads = 1;  // 2;
 
-/** Simplex nonbasicFlag status for columns and rows. Don't use enum
-    class since they are used as HighsInt to replace conditional statements
-    by multiplication */
+// Simplex nonbasicFlag status for columns and rows. Don't use enum
+// class since they are used as HighsInt to replace conditional
+// statements by multiplication
 const HighsInt kNonbasicFlagTrue = 1;   // Nonbasic
 const HighsInt kNonbasicFlagFalse = 0;  // Basic
 
-/** Simplex nonbasicMove status for columns and rows. Don't use enum
-    class since they are used in conditional statements */
+// Simplex nonbasicMove status for columns and rows. Don't use enum
+// class since they are used in conditional statements
 const HighsInt kNonbasicMoveUp = 1;   // Free to move (only) up
 const HighsInt kNonbasicMoveDn = -1;  // Free to move (only) down
 const HighsInt kNonbasicMoveZe = 0;   // Fixed or free to move up and down
 const HighsInt kIllegalMoveValue =
     -99;  // Used to see whether valid move value has been set
+
+// Threshold for accepting updated DSE weight
+const double kAcceptDseWeightThreshold = 0.25;
 
 //
 // Relation between HiGHS basis and Simplex basis
@@ -228,13 +223,4 @@ const HighsInt kIllegalMoveValue =
 // Nonbasic rows
 // =============
 //
-// Threshold for accepting updated DSE weight
-const double kAcceptDseWeightThreshold = 0.25;
-
-// Parameters controlling switch from DSE to Devex on cost
-const double kCostlyDseMeasureLimit = 1000.0;
-const double kCostlyDseMinimumDensity = 0.01;
-const double kCostlyDseFractionNumTotalIterationBeforeSwitch = 0.1;
-const double kCostlyDseFractionNumCostlyDseIterationBeforeSwitch = 0.05;
-
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

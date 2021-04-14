@@ -72,6 +72,11 @@ void HEkk::assessDSEWeightError(const double computed_edge_weight,
 }
 
 bool HEkk::switchToDevex() {
+  // Parameters controlling switch from DSE to Devex on cost
+  const double kCostlyDseMeasureLimit = 1000.0;
+  const double kCostlyDseMinimumDensity = 0.01;
+  const double kCostlyDseFractionNumTotalIterationBeforeSwitch = 0.1;
+  const double kCostlyDseFractionNumCostlyDseIterationBeforeSwitch = 0.05;
   bool switch_to_devex = false;
   // Firstly consider switching on the basis of NLA cost
   double costly_DSE_measure;

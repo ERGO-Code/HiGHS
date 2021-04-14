@@ -688,11 +688,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     lpsolver.clearSolver();
 #if 0
     // first try to use the primal simplex solver starting from the last basis
-    if (lpsolver.getOptions().simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
-      lpsolver.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_PRIMAL);
+    if (lpsolver.getOptions().simplex_strategy == kSimplexStrategyDual) {
+      lpsolver.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
       recoverBasis();
       auto retval = run(resolve_on_error);
-      lpsolver.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
+      lpsolver.setOptionValue("simplex_strategy", kSimplexStrategyDual);
 
       return retval;
     }
@@ -700,7 +700,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
     if (resolve_on_error) {
       // still an error: now try to solve with presolve from scratch
-      lpsolver.setOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
+      lpsolver.setOptionValue("simplex_strategy", kSimplexStrategyDual);
       lpsolver.setOptionValue("presolve", "on");
       auto retval = run(false);
       lpsolver.setOptionValue("presolve", "off");

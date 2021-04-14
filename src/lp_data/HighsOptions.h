@@ -303,7 +303,7 @@ struct HighsOptionsStruct {
   HighsInt allowed_simplex_cost_scale_factor;
   HighsInt simplex_dualise_strategy;
   HighsInt simplex_permute_strategy;
-  HighsInt dual_simplex_cleanup_strategy;
+  bool dual_simplex_cleanup;
   HighsInt simplex_price_strategy;
   HighsInt dual_chuzc_sort_strategy;
   HighsInt presolve_substitution_maxfillin;
@@ -496,8 +496,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int =
         new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
-                            advanced, &simplex_strategy, SIMPLEX_STRATEGY_MIN,
-                            SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
+                            advanced, &simplex_strategy, kSimplexStrategyMin,
+                            kSimplexStrategyDual, kSimplexStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -714,15 +714,10 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsOptionOn);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("dual_simplex_cleanup_strategy",
-                            "Strategy for cleanup in dual simplex solver: none "
-                            "/ HPrimal / HEkk (0/1/2)",
-                            advanced, &dual_simplex_cleanup_strategy,
-                            DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
-                            DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
-                            DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX);
-    records.push_back(record_int);
+    record_bool = new OptionRecordBool("dual_simplex_cleanup",
+                                       "Perform dual simplex cleanup", advanced,
+                                       &dual_simplex_cleanup, true);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,
