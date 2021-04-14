@@ -3254,7 +3254,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
             *mipsolver, cutinds.data(), cutvals.data(), cutinds.size(),
             model->rowUpper_[i],
             rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
-                rowCoefficientsIntegral(i, 1.0));
+                rowCoefficientsIntegral(i, 1.0),
+            false);
 
         markRowDeleted(i);
         for (HighsInt j : rowpositions) unlink(j);
