@@ -64,7 +64,6 @@ struct TranStageAnalysis {
   HighsInt num_wrong_new_hyper_decision_;
 };
 
-// const double running_average_multiplier = 0.05;
 const double max_regression_density = 0.2;
 const double max_hyper_density = 0.1;
 
@@ -294,7 +293,6 @@ class HighsSimplexAnalysis {
   const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
   double AnIterCostlyDseMeasure;
 
-  const double accept_weight_threshold = 0.25;
   const double weight_error_threshold = 4.0;
 
   HighsInt num_dual_steepest_edge_weight_check = 0;

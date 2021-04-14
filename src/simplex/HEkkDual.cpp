@@ -1324,9 +1324,8 @@ void HEkkDual::chooseRow() {
 bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   // Accept the updated weight if it is at least a quarter of the
   // computed weight. Excessively large updated weights don't matter!
-  const double accept_weight_threshold = 0.25;
   const bool accept_weight =
-      updated_edge_weight >= accept_weight_threshold * computed_edge_weight;
+      updated_edge_weight >= kAcceptDseWeightThreshold * computed_edge_weight;
   //  if (analysis->analyse_simplex_data)
   ekk_instance_.assessDSEWeightError(computed_edge_weight, updated_edge_weight);
   analysis->dualSteepestEdgeWeightError(computed_edge_weight,

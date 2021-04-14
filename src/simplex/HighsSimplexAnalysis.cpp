@@ -285,8 +285,8 @@ void HighsSimplexAnalysis::messaging(const HighsLogOptions& log_options_) {
 
 void HighsSimplexAnalysis::updateOperationResultDensity(
     const double local_density, double& density) {
-  density = (1 - running_average_multiplier) * density +
-            running_average_multiplier * local_density;
+  density = (1 - kRunningAverageMultiplier) * density +
+            kRunningAverageMultiplier * local_density;
 }
 
 void HighsSimplexAnalysis::iterationReport() {
@@ -336,7 +336,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
     const double computed_edge_weight, const double updated_edge_weight) {
   const bool accept_weight =
-      updated_edge_weight >= accept_weight_threshold * computed_edge_weight;
+      updated_edge_weight >= kAcceptDseWeightThreshold * computed_edge_weight;
   HighsInt low_weight_error = 0;
   HighsInt high_weight_error = 0;
   double weight_error;
@@ -432,10 +432,10 @@ bool HighsSimplexAnalysis::switchToDevex() {
   }
   bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
                      row_DSE_density > AnIterCostlyDseMnDensity;
-  AnIterCostlyDseFq = (1 - running_average_multiplier) * AnIterCostlyDseFq;
+  AnIterCostlyDseFq = (1 - kRunningAverageMultiplier) * AnIterCostlyDseFq;
   if (CostlyDseIt) {
     AnIterNumCostlyDseIt++;
-    AnIterCostlyDseFq += running_average_multiplier * 1.0;
+    AnIterCostlyDseFq += kRunningAverageMultiplier * 1.0;
     HighsInt lcNumIter = simplex_iteration_count - AnIterIt0;
     // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations
     // have been costly
@@ -706,17 +706,17 @@ void HighsSimplexAnalysis::iterationRecordMajor() {
         fraction_of_possible_minor_iterations_performed;
   } else {
     average_fraction_of_possible_minor_iterations_performed =
-        running_average_multiplier *
+        kRunningAverageMultiplier *
             fraction_of_possible_minor_iterations_performed +
-        (1 - running_average_multiplier) *
+        (1 - kRunningAverageMultiplier) *
             average_fraction_of_possible_minor_iterations_performed;
   }
   if (average_num_threads < 0) {
     average_num_threads = num_threads;
   } else {
     average_num_threads =
-        running_average_multiplier * num_threads +
-        (1 - running_average_multiplier) * average_num_threads;
+        kRunningAverageMultiplier * num_threads +
+        (1 - kRunningAverageMultiplier) * average_num_threads;
   }
 }
 

@@ -228,17 +228,13 @@ const HighsInt kIllegalMoveValue =
 // Nonbasic rows
 // =============
 //
-
-// Multiplier for computing most running averages
-const double running_average_multiplier = 0.05;
-
 // Threshold for accepting updated DSE weight
-const double accept_weight_threshold = 0.25;
+const double kAcceptDseWeightThreshold = 0.25;
 
 // Parameters controlling switch from DSE to Devex on cost
-const double costly_DSE_measure_limit = 1000.0;
-const double costly_DSE_minimum_density = 0.01;
-const double costly_DSE_fraction_num_total_iteration_before_switch = 0.1;
-const double costly_DSE_fraction_num_costly_DSE_iteration_before_switch = 0.05;
+const double kCostlyDseMeasureLimit = 1000.0;
+const double kCostlyDseMinimumDensity = 0.01;
+const double kCostlyDseFractionNumTotalIterationBeforeSwitch = 0.1;
+const double kCostlyDseFractionNumCostlyDseIterationBeforeSwitch = 0.05;
 
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

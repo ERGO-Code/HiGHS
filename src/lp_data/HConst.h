@@ -29,6 +29,7 @@ const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
 const HighsInt kHighsThreadLimit = 8;  // 32;
+const double kRunningAverageMultiplier = 0.05;
 
 enum HighsDebugLevel {
   kHighsDebugLevelMin = 0,

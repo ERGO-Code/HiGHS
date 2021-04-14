@@ -54,11 +54,6 @@ const double minRlvNumberDevexIterations = 1e-2;
 const double maxAllowedDevexWeightRatio = 3.0;
 
 /**
- * Multiplier used in running average calculations
- */
-const double runningAverageMu = 0.05;
-
-/**
  * Candidate persistence cut-off in PAMI
  */
 const double pami_cutoff = 0.95;
