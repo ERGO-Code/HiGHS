@@ -513,15 +513,14 @@ class HighsOptions : public HighsOptionsStruct {
         kSimplexCrashStrategyOff, kSimplexCrashStrategyMax);
     records.push_back(record_int);
 
-    record_int =
-        new OptionRecordInt("simplex_dual_edge_weight_strategy",
-                            "Strategy for simplex dual edge weights: Choose / "
-                            "Dantzig / Devex / Steepest "
-                            "Edge (-1/0/1/2)",
-                            advanced, &simplex_dual_edge_weight_strategy,
-                            kSimplexDualEdgeWeightStrategyMin,
-                            kSimplexDualEdgeWeightStrategyChoose,
-                            kSimplexDualEdgeWeightStrategyMax);
+    record_int = new OptionRecordInt(
+        "simplex_dual_edge_weight_strategy",
+        "Strategy for simplex dual edge weights: Choose / "
+        "Dantzig / Devex / Steepest "
+        "Edge (-1/0/1/2)",
+        advanced, &simplex_dual_edge_weight_strategy,
+        kSimplexDualEdgeWeightStrategyMin, kSimplexDualEdgeWeightStrategyChoose,
+        kSimplexDualEdgeWeightStrategyMax);
     records.push_back(record_int);
 
     record_int =
@@ -721,8 +720,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,
         &simplex_price_strategy, kSimplexPriceStrategyMin,
-        kSimplexPriceStrategyRowSwitchColSwitch,
-        kSimplexPriceStrategyMax);
+        kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
     record_bool =

@@ -76,8 +76,8 @@ HighsStatus HEkkPrimal::solve() {
                 "Near-optimal, so don't use bound perturbation\n");
   if (perturb_bounds &&
       simplex_info.primal_simplex_bound_perturbation_multiplier) {
-    ekk_instance_.initialiseBound(SimplexAlgorithm::kPrimal,
-                                  kSolvePhaseUnknown, perturb_bounds);
+    ekk_instance_.initialiseBound(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown,
+                                  perturb_bounds);
     ekk_instance_.initialiseNonbasicValueAndMove();
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
@@ -204,7 +204,7 @@ HighsStatus HEkkPrimal::solve() {
       break;
     }
     if (solvePhase == kSolvePhase1 && ekk_instance_.scaled_model_status_ ==
-                                           HighsModelStatus::kDualInfeasible) {
+                                          HighsModelStatus::kDualInfeasible) {
       // Dual infeasibilities after phase 2 for a problem known to be dual
       // infeasible.
       break;
@@ -1130,8 +1130,7 @@ void HEkkPrimal::considerBoundSwap() {
     // becoming feasible - moves up to lower (down to upper) - or
     // remaining feasible - moves down to lower (up to upper) - so
     // can't be set so easily as in phase 2
-    if (solvePhase == kSolvePhase2)
-      move_out = alpha_col * move_in > 0 ? -1 : 1;
+    if (solvePhase == kSolvePhase2) move_out = alpha_col * move_in > 0 ? -1 : 1;
     theta_primal = 0;
     if (move_out == 1) {
       theta_primal = (baseValue[row_out] - baseUpper[row_out]) / alpha_col;
@@ -1726,8 +1725,8 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   // ignored. If they aren't ignored, then violations lead to either
   // identification of infeasiblilities (and return to Phase 1) or
   // shifting of bounds to accommodate them.
-  const bool ignore_bounds = primal_correction_strategy ==
-                             kSimplexPrimalCorrectionStrategyInRebuild;
+  const bool ignore_bounds =
+      primal_correction_strategy == kSimplexPrimalCorrectionStrategyInRebuild;
   HighsInt to_entry;
   const bool use_col_indices =
       ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry);

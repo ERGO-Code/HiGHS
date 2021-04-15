@@ -64,8 +64,8 @@ struct TranStageAnalysis {
   HighsInt num_wrong_new_hyper_decision_;
 };
 
-const double max_regression_density = 0.2;
-const double max_hyper_density = 0.1;
+const HighsInt kAnIterTraceMaxNumRec = 20;
+const HighsLogType kIterationReportLogType = HighsLogType::kVerbose;
 
 /**
  * @brief Analyse simplex iterations, both for run-time control and data
@@ -287,13 +287,7 @@ class HighsSimplexAnalysis {
 
   HighsInt AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
   double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
-  const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
-  const double AnIterCostlyDseMnDensity = 0.01;       //!<
-  const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
-  const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
   double AnIterCostlyDseMeasure;
-
-  const double weight_error_threshold = 4.0;
 
   HighsInt num_dual_steepest_edge_weight_check = 0;
   HighsInt num_dual_steepest_edge_weight_reject = 0;
@@ -310,8 +304,6 @@ class HighsSimplexAnalysis {
   double max_average_log_high_dual_steepest_edge_weight_error = 0;
   double max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
 
-  const HighsLogType iteration_report_log_type = HighsLogType::kVerbose;
-  const HighsLogType invert_report_log_type = HighsLogType::kInfo;
   HighsInt num_invert_report_since_last_header = -1;
   HighsInt num_iteration_report_since_last_header = -1;
 
@@ -324,7 +316,6 @@ class HighsSimplexAnalysis {
   HighsInt num_invert = 0;
   HighsInt num_kernel = 0;
   HighsInt num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshold = 0.1;
   double max_kernel_dim = 0;
   double sum_kernel_dim = 0;
   double running_average_kernel_dim = 0;
@@ -362,8 +353,6 @@ class HighsSimplexAnalysis {
     HighsInt AnIterTrace_dual_edge_weight_mode;
   };
 
-  // Has to be an enum, not const HighsInt
-  enum AnIterTraceMaxNumRec { kAnIterTraceMaxNumRec = 20 };
   HighsInt AnIterTraceNumRec;
   HighsInt AnIterTraceIterDl;
   AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];

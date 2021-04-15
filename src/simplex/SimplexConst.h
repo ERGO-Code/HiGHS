@@ -33,22 +33,22 @@ enum SimplexStrategy {
 enum SimplexSolvePhase {
   kSolvePhaseMin = -3,
   kSolvePhaseError = kSolvePhaseMin,  // -3
-  kSolvePhaseExit,                     // -2,
-  kSolvePhaseUnknown,                  // -1
-  kSolvePhaseOptimal,                  // 0
-  kSolvePhase1,                        // 1
-  kSolvePhase2,                        // 2
+  kSolvePhaseExit,                    // -2,
+  kSolvePhaseUnknown,                 // -1
+  kSolvePhaseOptimal,                 // 0
+  kSolvePhase1,                       // 1
+  kSolvePhase2,                       // 2
   kSolvePhaseCleanup = 4,
   kSolvePhaseMax = kSolvePhaseCleanup
 };
 
 enum SimplexScaleStrategy {
   kSimplexScaleStrategyMin = 0,
-  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin, // 0
-  kSimplexScaleStrategyHighs,                          // 1
-  kSimplexScaleStrategyHighsForced,                    // 2
-  kSimplexScaleStrategy015,                            // 3
-  kSimplexScaleStrategy0157,                           // 4
+  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
+  kSimplexScaleStrategyHighs,                           // 1
+  kSimplexScaleStrategyHighsForced,                     // 2
+  kSimplexScaleStrategy015,                             // 3
+  kSimplexScaleStrategy0157,                            // 4
   kSimplexScaleStrategyMax = kSimplexScaleStrategy0157
 };
 
@@ -70,8 +70,7 @@ enum SimplexCrashStrategy {
 
 enum SimplexDualEdgeWeightStrategy {
   kSimplexDualEdgeWeightStrategyMin = -1,
-  kSimplexDualEdgeWeightStrategyChoose =
-      kSimplexDualEdgeWeightStrategyMin,
+  kSimplexDualEdgeWeightStrategyChoose = kSimplexDualEdgeWeightStrategyMin,
   kSimplexDualEdgeWeightStrategyDantzig,
   kSimplexDualEdgeWeightStrategyDevex,
   kSimplexDualEdgeWeightStrategySteepestEdge,
@@ -82,12 +81,10 @@ enum SimplexDualEdgeWeightStrategy {
 
 enum SimplexPrimalEdgeWeightStrategy {
   kSimplexPrimalEdgeWeightStrategyMin = -1,
-  kSimplexPrimalEdgeWeightStrategyChoose =
-      kSimplexPrimalEdgeWeightStrategyMin,
+  kSimplexPrimalEdgeWeightStrategyChoose = kSimplexPrimalEdgeWeightStrategyMin,
   kSimplexPrimalEdgeWeightStrategyDantzig,
   kSimplexPrimalEdgeWeightStrategyDevex,
-  kSimplexPrimalEdgeWeightStrategyMax =
-      kSimplexPrimalEdgeWeightStrategyDevex
+  kSimplexPrimalEdgeWeightStrategyMax = kSimplexPrimalEdgeWeightStrategyDevex
 };
 
 enum SimplexPriceStrategy {

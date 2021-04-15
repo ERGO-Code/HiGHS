@@ -32,9 +32,8 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
   // Possibly scale the LP
-  bool scale_lp =
-      options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
-      highs_model_object.lp_.numCol_ > 0;
+  bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
+                  highs_model_object.lp_.numCol_ > 0;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
@@ -68,10 +67,9 @@ void choosePriceTechnique(const HighsInt price_strategy,
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
-  use_col_price =
-      (price_strategy == kSimplexPriceStrategyCol) ||
-      (price_strategy == kSimplexPriceStrategyRowSwitchColSwitch &&
-       row_ep_density > density_for_column_price_switch);
+  use_col_price = (price_strategy == kSimplexPriceStrategyCol) ||
+                  (price_strategy == kSimplexPriceStrategyRowSwitchColSwitch &&
+                   row_ep_density > density_for_column_price_switch);
   use_row_price_w_switch =
       price_strategy == kSimplexPriceStrategyRowSwitch ||
       price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;

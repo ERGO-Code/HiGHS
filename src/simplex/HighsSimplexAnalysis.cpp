@@ -134,8 +134,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   const HighsInt dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
   if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
-      dual_edge_weight_strategy ==
-          kSimplexDualEdgeWeightStrategySteepestEdge ||
+      dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategySteepestEdge ||
       dual_edge_weight_strategy ==
           kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
     // Initialise the measures used to analyse accuracy of steepest edge weights
@@ -290,7 +289,7 @@ void HighsSimplexAnalysis::updateOperationResultDensity(
 }
 
 void HighsSimplexAnalysis::iterationReport() {
-  if ((HighsInt)iteration_report_log_type > *log_options.log_dev_level) return;
+  if ((HighsInt)kIterationReportLogType > *log_options.log_dev_level) return;
   const bool header = (num_iteration_report_since_last_header < 0) ||
                       (num_iteration_report_since_last_header > 49);
   if (header) {
@@ -328,13 +327,14 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
     //  reportCondition(header);
   }
   reportInfeasibility(header);
-  highsLogUser(log_options, invert_report_log_type, "%s\n",
+  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                analysis_log.str().c_str());
   if (!header) num_invert_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
     const double computed_edge_weight, const double updated_edge_weight) {
+  const double kWeightErrorThreshold = 4.0;
   const bool accept_weight =
       updated_edge_weight >= kAcceptDseWeightThreshold * computed_edge_weight;
   HighsInt low_weight_error = 0;
@@ -346,7 +346,7 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
   if (updated_edge_weight < computed_edge_weight) {
     // Updated weight is low
     weight_error = computed_edge_weight / updated_edge_weight;
-    if (weight_error > weight_error_threshold) {
+    if (weight_error > kWeightErrorThreshold) {
       low_weight_error = 1;
       error_type = " Low";
     }
@@ -356,7 +356,7 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
   } else {
     // Updated weight is correct or high
     weight_error = updated_edge_weight / computed_edge_weight;
-    if (weight_error > weight_error_threshold) {
+    if (weight_error > kWeightErrorThreshold) {
       high_weight_error = 1;
       error_type = "High";
     }
@@ -392,7 +392,7 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
               average_log_high_dual_steepest_edge_weight_error);
   if (analyse_simplex_data) {
     const bool report_weight_error = false;
-    if (report_weight_error && weight_error > 0.5 * weight_error_threshold) {
+    if (report_weight_error && weight_error > 0.5 * kWeightErrorThreshold) {
       printf(
           "DSE Wt Ck |%8" HIGHSINT_FORMAT "| OK = %1d (%4" HIGHSINT_FORMAT
           " / %6" HIGHSINT_FORMAT
@@ -421,6 +421,10 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
 bool HighsSimplexAnalysis::switchToDevex() {
   bool switch_to_devex = false;
   // Firstly consider switching on the basis of NLA cost
+  const double kAnIterCostlyDseMeasureLimit = 1000.0;
+  const double kAnIterCostlyDseMnDensity = 0.01;
+  const double kAnIterFracNumTotItBfSw = 0.1;
+  const double kAnIterFracNumCostlyDseItbfSw = 0.05;
   double AnIterCostlyDseMeasureDen;
   AnIterCostlyDseMeasureDen =
       max(max(row_ep_density, col_aq_density), row_ap_density);
@@ -430,8 +434,8 @@ bool HighsSimplexAnalysis::switchToDevex() {
   } else {
     AnIterCostlyDseMeasure = 0;
   }
-  bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-                     row_DSE_density > AnIterCostlyDseMnDensity;
+  bool CostlyDseIt = AnIterCostlyDseMeasure > kAnIterCostlyDseMeasureLimit &&
+                     row_DSE_density > kAnIterCostlyDseMnDensity;
   AnIterCostlyDseFq = (1 - kRunningAverageMultiplier) * AnIterCostlyDseFq;
   if (CostlyDseIt) {
     AnIterNumCostlyDseIt++;
@@ -441,8 +445,8 @@ bool HighsSimplexAnalysis::switchToDevex() {
     // have been costly
     switch_to_devex =
         allow_dual_steepest_edge_to_devex_switch &&
-        (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-        (lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
+        (AnIterNumCostlyDseIt > lcNumIter * kAnIterFracNumCostlyDseItbfSw) &&
+        (lcNumIter > kAnIterFracNumTotItBfSw * numTot);
     if (switch_to_devex) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex after %" HIGHSINT_FORMAT
@@ -488,9 +492,11 @@ void HighsSimplexAnalysis::afterTranStage(
     const bool use_solve_sparse_new_HFactor_logic) {
   TranStageAnalysis& stage = tran_stage[tran_stage_type];
   const double rp = false;
+  const double kMaxHyperDensity = 0.1;
+
   if (predicted_end_density > 0) {
     stage.num_decision_++;
-    if (end_density <= max_hyper_density) {
+    if (end_density <= kMaxHyperDensity) {
       // Should have done hyper-sparse TRAN
       if (use_solve_sparse_original_HFactor_logic) {
         // Original logic makes wrong decision to use sparse TRAN
@@ -1156,7 +1162,8 @@ void HighsSimplexAnalysis::updateInvertFormData(const HFactor& factor) {
     running_average_kernel_fill_factor =
         0.95 * running_average_kernel_fill_factor + 0.05 * kernel_fill_factor;
     if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
-    if (kernel_relative_dim > major_kernel_relative_dim_threshold) {
+    const double kMajorKernelRelativeDimThreshold = 0.1;
+    if (kernel_relative_dim > kMajorKernelRelativeDimThreshold) {
       num_major_kernel++;
       sum_major_kernel_fill_factor += kernel_fill_factor;
       running_average_major_kernel_fill_factor =
@@ -1200,7 +1207,7 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
     reportDensity(header);
     reportIterationData(header);
   }
-  highsLogDev(log_options, iteration_report_log_type, "%s\n",
+  highsLogDev(log_options, kIterationReportLogType, "%s\n",
               analysis_log.str().c_str());
   if (!header) num_iteration_report_since_last_header++;
 }

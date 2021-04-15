@@ -1429,10 +1429,9 @@ void HEkk::choosePriceTechnique(const HighsInt price_strategy,
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
-  use_col_price =
-      (price_strategy == kSimplexPriceStrategyCol) ||
-      (price_strategy == kSimplexPriceStrategyRowSwitchColSwitch &&
-       row_ep_density > density_for_column_price_switch);
+  use_col_price = (price_strategy == kSimplexPriceStrategyCol) ||
+                  (price_strategy == kSimplexPriceStrategyRowSwitchColSwitch &&
+                   row_ep_density > density_for_column_price_switch);
   use_row_price_w_switch =
       price_strategy == kSimplexPriceStrategyRowSwitch ||
       price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;

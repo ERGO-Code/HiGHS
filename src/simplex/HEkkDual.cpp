@@ -1945,8 +1945,7 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
   } else if (dual_edge_weight_strategy ==
              kSimplexDualEdgeWeightStrategyDantzig) {
     dual_edge_weight_mode = DualEdgeWeightMode::kDantzig;
-  } else if (dual_edge_weight_strategy ==
-             kSimplexDualEdgeWeightStrategyDevex) {
+  } else if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyDevex) {
     dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
   } else if (dual_edge_weight_strategy ==
              kSimplexDualEdgeWeightStrategySteepestEdge) {
@@ -2071,8 +2070,7 @@ void HEkkDual::exitPhase1ResetDuals() {
     } else {
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
                   "Re-perturbing costs when optimal in phase 1\n");
-      ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2,
-                                   true);
+      ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2, true);
       ekk_instance_.computeDual();
     }
   }
