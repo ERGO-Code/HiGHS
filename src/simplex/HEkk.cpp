@@ -504,8 +504,8 @@ HighsStatus HEkk::initialiseForSolve() {
   updateSimplexOptions();
   initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
-  initialiseCost(SimplexAlgorithm::kPrimal, SOLVE_PHASE_UNKNOWN, false);
-  initialiseBound(SimplexAlgorithm::kPrimal, SOLVE_PHASE_UNKNOWN, false);
+  initialiseCost(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
+  initialiseBound(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
   initialiseNonbasicValueAndMove();
   computePrimal();                // Timed
   computeDual();                  // Timed
@@ -712,7 +712,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!simplex_info_.phase1_backtracking_test_done &&
-        solve_phase == SOLVE_PHASE_1) {
+        solve_phase == kSolvePhase1) {
       // Claim rank deficiency to test backtracking
       printf("Phase1 (Iter %" HIGHSINT_FORMAT
              ") Claiming rank deficiency to test backtracking\n",
@@ -720,7 +720,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
       rank_deficiency = 1;
       simplex_info_.phase1_backtracking_test_done = true;
     } else if (!simplex_info_.phase2_backtracking_test_done &&
-               solve_phase == SOLVE_PHASE_2) {
+               solve_phase == kSolvePhase2) {
       // Claim rank deficiency to test backtracking
       printf("Phase2 (Iter %" HIGHSINT_FORMAT
              ") Claiming rank deficiency to test backtracking\n",
@@ -1244,7 +1244,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or set to special values in phase
   // 1
   assert(algorithm == SimplexAlgorithm::kDual);
-  if (solve_phase == SOLVE_PHASE_2) return;
+  if (solve_phase == kSolvePhase2) return;
 
   // The dual objective is the sum of products of primal and dual
   // values for nonbasic variables. For dual simplex phase 1, the

@@ -31,25 +31,25 @@ enum SimplexStrategy {
 };
 
 enum SimplexSolvePhase {
-  SOLVE_PHASE_MIN = -3,
-  SOLVE_PHASE_ERROR = SOLVE_PHASE_MIN,  // -3
-  SOLVE_PHASE_EXIT,                     // -2,
-  SOLVE_PHASE_UNKNOWN,                  // -1
-  SOLVE_PHASE_OPTIMAL,                  // 0
-  SOLVE_PHASE_1,                        // 1
-  SOLVE_PHASE_2,                        // 2
-  SOLVE_PHASE_CLEANUP = 4,
-  SOLVE_PHASE_MAX = SOLVE_PHASE_CLEANUP
+  kSolvePhaseMin = -3,
+  kSolvePhaseError = kSolvePhaseMin,  // -3
+  kSolvePhaseExit,                     // -2,
+  kSolvePhaseUnknown,                  // -1
+  kSolvePhaseOptimal,                  // 0
+  kSolvePhase1,                        // 1
+  kSolvePhase2,                        // 2
+  kSolvePhaseCleanup = 4,
+  kSolvePhaseMax = kSolvePhaseCleanup
 };
 
 enum SimplexScaleStrategy {
-  SIMPLEX_SCALE_STRATEGY_MIN = 0,
-  SIMPLEX_SCALE_STRATEGY_OFF = SIMPLEX_SCALE_STRATEGY_MIN,  // 0
-  SIMPLEX_SCALE_STRATEGY_HIGHS,                             // 1
-  SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED,                      // 2
-  SIMPLEX_SCALE_STRATEGY_015,                               // 3
-  SIMPLEX_SCALE_STRATEGY_0157,                              // 4
-  SIMPLEX_SCALE_STRATEGY_MAX = SIMPLEX_SCALE_STRATEGY_0157
+  kSimplexScaleStrategyMin = 0,
+  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin, // 0
+  kSimplexScaleStrategyHighs,                          // 1
+  kSimplexScaleStrategyHighsForced,                    // 2
+  kSimplexScaleStrategy015,                            // 3
+  kSimplexScaleStrategy0157,                           // 4
+  kSimplexScaleStrategyMax = kSimplexScaleStrategy0157
 };
 
 enum SimplexCrashStrategy {

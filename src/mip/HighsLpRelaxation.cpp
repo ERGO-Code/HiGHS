@@ -730,9 +730,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       hasdualproof = false;
 
       HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
-      if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
+      if (scalestrategy != kSimplexScaleStrategyOff) {
         lpsolver.setOptionValue("simplex_scale_strategy",
-                                SIMPLEX_SCALE_STRATEGY_OFF);
+                                kSimplexScaleStrategyOff);
         HighsBasis basis = lpsolver.getBasis();
         lpsolver.clearSolver();
         lpsolver.setBasis(basis);
@@ -775,9 +775,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "dual:%g)\n",
         //     info.max_primal_infeasibility, info.max_dual_infeasibility);
         HighsInt scalestrategy = lpsolver.getOptions().simplex_scale_strategy;
-        if (scalestrategy != SIMPLEX_SCALE_STRATEGY_OFF) {
+        if (scalestrategy != kSimplexScaleStrategyOff) {
           lpsolver.setOptionValue("simplex_scale_strategy",
-                                  SIMPLEX_SCALE_STRATEGY_OFF);
+                                  kSimplexScaleStrategyOff);
           HighsBasis basis = lpsolver.getBasis();
           lpsolver.clearSolver();
           lpsolver.setBasis(basis);

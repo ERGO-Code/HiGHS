@@ -33,7 +33,7 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   HighsOptions& options = highs_model_object.options_;
   // Possibly scale the LP
   bool scale_lp =
-      options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
+      options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
       highs_model_object.lp_.numCol_ > 0;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
@@ -605,8 +605,8 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
                    no_scaling_original_matrix_max_value);
   } else {
     const bool equilibration_scaling =
-        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
-        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
+        simplex_scale_strategy == kSimplexScaleStrategyHighs ||
+        simplex_scale_strategy == kSimplexScaleStrategyHighsForced;
     if (equilibration_scaling) {
       scaled_matrix = equilibrationScaleSimplexMatrix(options, lp, scale);
     } else {
@@ -925,7 +925,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                  matrix_value_ratio_improvement);
   }
   const bool possibly_abandon_scaling =
-      simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
+      simplex_scale_strategy != kSimplexScaleStrategyHighsForced;
   const double improvement_factor = extreme_equilibration_improvement *
                                     mean_equilibration_improvement *
                                     matrix_value_ratio_improvement;
@@ -995,8 +995,8 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   vector<HighsInt>& Aindex = lp.Aindex_;
   vector<double>& Avalue = lp.Avalue_;
 
-  assert(options.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_015 ||
-         options.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_0157);
+  assert(options.simplex_scale_strategy == kSimplexScaleStrategy015 ||
+         options.simplex_scale_strategy == kSimplexScaleStrategy0157);
   const double log2 = log(2.0);
   const double max_allow_scale =
       pow(2.0, options.allowed_simplex_matrix_scale_factor);
