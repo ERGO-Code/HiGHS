@@ -20,7 +20,7 @@ void HEkk::initialiseControl() {
   // Copy tolerances from options
   simplex_info_.allow_dual_steepest_edge_to_devex_switch =
       options_.simplex_dual_edge_weight_strategy ==
-      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE;
+      kSimplexDualEdgeWeightStrategyChoose;
   simplex_info_.dual_steepest_edge_weight_log_error_threshold =
       options_.dual_steepest_edge_weight_log_error_threshold;
   // Initialise the iteration count when control started. Need to

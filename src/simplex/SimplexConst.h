@@ -53,31 +53,31 @@ enum SimplexScaleStrategy {
 };
 
 enum SimplexCrashStrategy {
-  SIMPLEX_CRASH_STRATEGY_MIN = 0,
-  SIMPLEX_CRASH_STRATEGY_OFF = SIMPLEX_CRASH_STRATEGY_MIN,
-  SIMPLEX_CRASH_STRATEGY_LTSSF_K,
-  SIMPLEX_CRASH_STRATEGY_LTSSF = SIMPLEX_CRASH_STRATEGY_LTSSF_K,
-  SIMPLEX_CRASH_STRATEGY_BIXBY,
-  SIMPLEX_CRASH_STRATEGY_LTSSF_PRI,
-  SIMPLEX_CRASH_STRATEGY_LTSF_K,
-  SIMPLEX_CRASH_STRATEGY_LTSF_PRI,
-  SIMPLEX_CRASH_STRATEGY_LTSF,
-  SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS,
-  SIMPLEX_CRASH_STRATEGY_BASIC,
-  SIMPLEX_CRASH_STRATEGY_TEST_SING,
-  SIMPLEX_CRASH_STRATEGY_MAX = SIMPLEX_CRASH_STRATEGY_TEST_SING
+  kSimplexCrashStrategyMin = 0,
+  kSimplexCrashStrategyOff = kSimplexCrashStrategyMin,
+  kSimplexCrashStrategyLtssfK,
+  kSimplexCrashStrategyLtssf = kSimplexCrashStrategyLtssfK,
+  kSimplexCrashStrategyBixby,
+  kSimplexCrashStrategyLtssfPri,
+  kSimplexCrashStrategyLtsfK,
+  kSimplexCrashStrategyLtsfPri,
+  kSimplexCrashStrategyLtsf,
+  kSimplexCrashStrategyBixbyNoNonzeroColCosts,
+  kSimplexCrashStrategyBasic,
+  kSimplexCrashStrategyTestSing,
+  kSimplexCrashStrategyMax = kSimplexCrashStrategyTestSing
 };
 
 enum SimplexDualEdgeWeightStrategy {
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN = -1,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE =
-      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX =
-      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL
+  kSimplexDualEdgeWeightStrategyMin = -1,
+  kSimplexDualEdgeWeightStrategyChoose =
+      kSimplexDualEdgeWeightStrategyMin,
+  kSimplexDualEdgeWeightStrategyDantzig,
+  kSimplexDualEdgeWeightStrategyDevex,
+  kSimplexDualEdgeWeightStrategySteepestEdge,
+  kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial,
+  kSimplexDualEdgeWeightStrategyMax =
+      kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial
 };
 
 enum SimplexPrimalEdgeWeightStrategy {

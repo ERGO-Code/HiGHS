@@ -510,8 +510,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "simplex_crash_strategy",
         "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)", advanced,
-        &simplex_crash_strategy, SIMPLEX_CRASH_STRATEGY_MIN,
-        SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
+        &simplex_crash_strategy, kSimplexCrashStrategyMin,
+        kSimplexCrashStrategyOff, kSimplexCrashStrategyMax);
     records.push_back(record_int);
 
     record_int =
@@ -520,9 +520,9 @@ class HighsOptions : public HighsOptionsStruct {
                             "Dantzig / Devex / Steepest "
                             "Edge (-1/0/1/2)",
                             advanced, &simplex_dual_edge_weight_strategy,
-                            SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
-                            SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE,
-                            SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
+                            kSimplexDualEdgeWeightStrategyMin,
+                            kSimplexDualEdgeWeightStrategyChoose,
+                            kSimplexDualEdgeWeightStrategyMax);
     records.push_back(record_int);
 
     record_int =

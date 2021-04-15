@@ -1926,23 +1926,23 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
 
 void HEkkDual::interpretDualEdgeWeightStrategy(
     const HighsInt dual_edge_weight_strategy) {
-  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE) {
+  if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose) {
     dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
   } else if (dual_edge_weight_strategy ==
-             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
+             kSimplexDualEdgeWeightStrategyDantzig) {
     dual_edge_weight_mode = DualEdgeWeightMode::kDantzig;
   } else if (dual_edge_weight_strategy ==
-             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX) {
+             kSimplexDualEdgeWeightStrategyDevex) {
     dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
   } else if (dual_edge_weight_strategy ==
-             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE) {
+             kSimplexDualEdgeWeightStrategySteepestEdge) {
     dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else if (dual_edge_weight_strategy ==
-             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
+             kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
     dual_edge_weight_mode = DualEdgeWeightMode::kSteepestEdge;
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;

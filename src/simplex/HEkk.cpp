@@ -162,7 +162,7 @@ HighsStatus HEkk::cleanup() {
     simplex_info_.simplex_strategy = kSimplexStrategyDual;
     simplex_info_.dual_simplex_cost_perturbation_multiplier = 0;
     simplex_info_.dual_edge_weight_strategy =
-        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
+        kSimplexDualEdgeWeightStrategyDevex;
     HEkkDual dual_solver(*this);
     dual_solver.options();
     workEdWt_ = dual_solver.getWorkEdWt();

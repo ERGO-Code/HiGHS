@@ -71,7 +71,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   // Copy tolerances from options
   allow_dual_steepest_edge_to_devex_switch =
       options.simplex_dual_edge_weight_strategy ==
-      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE;
+      kSimplexDualEdgeWeightStrategyChoose;
   dual_steepest_edge_weight_log_error_threshold =
       options.dual_steepest_edge_weight_log_error_threshold;
   //
@@ -133,11 +133,11 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   //
   const HighsInt dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
-  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE ||
+  if (dual_edge_weight_strategy == kSimplexDualEdgeWeightStrategyChoose ||
       dual_edge_weight_strategy ==
-          SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
+          kSimplexDualEdgeWeightStrategySteepestEdge ||
       dual_edge_weight_strategy ==
-          SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
+          kSimplexDualEdgeWeightStrategySteepestEdgeUnitInitial) {
     // Initialise the measures used to analyse accuracy of steepest edge weights
     num_dual_steepest_edge_weight_check = 0;
     num_dual_steepest_edge_weight_reject = 0;
