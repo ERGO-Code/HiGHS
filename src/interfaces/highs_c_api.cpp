@@ -72,6 +72,10 @@ int Highs_writeSolution(void* highs, const char* filename) {
   return (int)((Highs*)highs)->writeSolution(std::string(filename));
 }
 
+int Highs_writeSolutionPretty(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->writeSolution(std::string(filename), true);
+}
+
 int Highs_passLp(void* highs, const int numcol, const int numrow,
                  const int numnz, const double* colcost, const double* collower,
                  const double* colupper, const double* rowlower,
