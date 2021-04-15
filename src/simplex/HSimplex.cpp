@@ -69,12 +69,12 @@ void choosePriceTechnique(const HighsInt price_strategy,
   // density
   const double density_for_column_price_switch = 0.75;
   use_col_price =
-      (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
-      (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
+      (price_strategy == kSimplexPriceStrategyCol) ||
+      (price_strategy == kSimplexPriceStrategyRowSwitchColSwitch &&
        row_ep_density > density_for_column_price_switch);
   use_row_price_w_switch =
-      price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
-      price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+      price_strategy == kSimplexPriceStrategyRowSwitch ||
+      price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;
 }
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis,

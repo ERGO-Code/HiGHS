@@ -81,52 +81,43 @@ enum SimplexDualEdgeWeightStrategy {
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN = -1,
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_CHOOSE =
-      SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DEVEX,
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX =
-      SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DEVEX
+  kSimplexPrimalEdgeWeightStrategyMin = -1,
+  kSimplexPrimalEdgeWeightStrategyChoose =
+      kSimplexPrimalEdgeWeightStrategyMin,
+  kSimplexPrimalEdgeWeightStrategyDantzig,
+  kSimplexPrimalEdgeWeightStrategyDevex,
+  kSimplexPrimalEdgeWeightStrategyMax =
+      kSimplexPrimalEdgeWeightStrategyDevex
 };
 
 enum SimplexPriceStrategy {
-  SIMPLEX_PRICE_STRATEGY_MIN = 0,
-  SIMPLEX_PRICE_STRATEGY_COL = SIMPLEX_PRICE_STRATEGY_MIN,
-  SIMPLEX_PRICE_STRATEGY_ROW,
-  SIMPLEX_PRICE_STRATEGY_ROW_SWITCH,
-  SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
-  SIMPLEX_PRICE_STRATEGY_MAX = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH
-};
-
-enum SimplexDualChuzcStrategy {
-  SIMPLEX_DUAL_CHUZC_STRATEGY_MIN = 0,
-  SIMPLEX_DUAL_CHUZC_STRATEGY_CHOOSE = SIMPLEX_DUAL_CHUZC_STRATEGY_MIN,
-  SIMPLEX_DUAL_CHUZC_STRATEGY_QUAD,
-  SIMPLEX_DUAL_CHUZC_STRATEGY_HEAP,
-  SIMPLEX_DUAL_CHUZC_STRATEGY_BOTH,
-  SIMPLEX_DUAL_CHUZC_STRATEGY_MAX = SIMPLEX_DUAL_CHUZC_STRATEGY_BOTH
+  kSimplexPriceStrategyMin = 0,
+  kSimplexPriceStrategyCol = kSimplexPriceStrategyMin,
+  kSimplexPriceStrategyRow,
+  kSimplexPriceStrategyRowSwitch,
+  kSimplexPriceStrategyRowSwitchColSwitch,
+  kSimplexPriceStrategyMax = kSimplexPriceStrategyRowSwitchColSwitch
 };
 
 enum SimplexPrimalCorrectionStrategy {
-  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE = 0,
-  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_IN_REBUILD,
-  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_ALWAYS,
-  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_REFINED
+  kSimplexPrimalCorrectionStrategyNone = 0,
+  kSimplexPrimalCorrectionStrategyInRebuild,
+  kSimplexPrimalCorrectionStrategyAlways,
+  //  kSimplexPrimalCorrectionStrategyRefined
 };
 
 // Not an enum class since rebuild_reason is used in so many places
 enum RebuildReason {
-  REBUILD_REASON_NO = 0,
-  REBUILD_REASON_UPDATE_LIMIT_REACHED,                 // 1
-  REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT,          // 2
-  REBUILD_REASON_POSSIBLY_OPTIMAL,                     // 3
-  REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED,            // 4
-  REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED,              // 5
-  REBUILD_REASON_POSSIBLY_SINGULAR_BASIS,              // 6
-  REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX,  // 7
-  REBUILD_REASON_CHOOSE_COLUMN_FAIL,                   // 8
-  REBUILD_REASON_Count
+  kRebuildReasonNo = 0,
+  kRebuildReasonUpdateLimitReached,               // 1
+  kRebuildReasonSyntheticClockSaysInvert,         // 2
+  kRebuildReasonPossiblyOptimal,                  // 3
+  kRebuildReasonPossiblyPrimalUnbounded,          // 4
+  kRebuildReasonPossiblyDualUnbounded,            // 5
+  kRebuildReasonPossiblySingularBasis,            // 6
+  kRebuildReasonPrimalInfeasibleInPrimalSimplex,  // 7
+  kRebuildReasonChooseColumnFail,                 // 8
+  kRebuildReasonCount
 };
 
 enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };

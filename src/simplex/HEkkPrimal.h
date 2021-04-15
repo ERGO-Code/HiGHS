@@ -157,7 +157,7 @@ class HEkkPrimal {
   HVector row_basic_feasibility_change;
 
   const HighsInt primal_correction_strategy =
-      SIMPLEX_PRIMAL_CORRECTION_STRATEGY_ALWAYS;
+      kSimplexPrimalCorrectionStrategyAlways;
 
   const HighsInt check_iter = 9999999;
   const HighsInt check_column = -2133;

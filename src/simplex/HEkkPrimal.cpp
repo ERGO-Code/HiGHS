@@ -246,7 +246,7 @@ void HEkkPrimal::initialise() {
   dual_feasibility_tolerance =
       ekk_instance_.options_.dual_feasibility_tolerance;
 
-  rebuild_reason = REBUILD_REASON_NO;
+  rebuild_reason = kRebuildReasonNo;
 
   ekk_instance_.simplex_lp_status_.has_primal_objective_value = false;
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
@@ -544,7 +544,7 @@ void HEkkPrimal::rebuild() {
 
   // Rebuild ekk_instance_.factor_ - only if we got updates
   HighsInt reason_for_rebuild = rebuild_reason;
-  rebuild_reason = REBUILD_REASON_NO;
+  rebuild_reason = kRebuildReasonNo;
   // Possibly Rebuild factor
   bool reInvert = simplex_info.update_count > 0;
   if (reInvert) {
@@ -651,18 +651,18 @@ void HEkkPrimal::iterate() {
   //
   chuzc();
   if (variable_in == -1) {
-    rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+    rebuild_reason = kRebuildReasonPossiblyOptimal;
     return;
   }
 
   // Perform FTRAN - and dual value cross-check to decide whether to use the
   // variable
   //
-  // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set if
+  // rebuild_reason = kRebuildReasonPossiblySingularBasis is set if
   // numerical trouble is detected
   if (!useVariableIn()) {
     if (rebuild_reason)
-      assert(rebuild_reason == REBUILD_REASON_POSSIBLY_SINGULAR_BASIS);
+      assert(rebuild_reason == kRebuildReasonPossiblySingularBasis);
     return;
   }
   assert(!rebuild_reason);
@@ -685,49 +685,49 @@ void HEkkPrimal::iterate() {
   // shorter than the pivoting step or, in the case of Phase 1,
   // because it's cheaper than pivoting - which may be questionable
   //
-  // rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED is set
+  // rebuild_reason = kRebuildReasonPossiblyPrimalUnbounded is set
   // in phase 2 if there's no pivot or bound swap. In phase 1 there is
   // always a pivot at this stage since row_out < 0 is trapped (above)
   // as an error.
   considerBoundSwap();
-  if (rebuild_reason == REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED) return;
+  if (rebuild_reason == kRebuildReasonPossiblyPrimalUnbounded) return;
   assert(!rebuild_reason);
 
   if (row_out >= 0) {
     // Perform unit BTRAN and PRICE to get pivotal row - and do a
     // numerical check.
     //
-    // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set
+    // rebuild_reason = kRebuildReasonPossiblySingularBasis is set
     // if numerical trouble is detected
     assessPivot();
     if (rebuild_reason) {
-      assert(rebuild_reason == REBUILD_REASON_POSSIBLY_SINGULAR_BASIS);
+      assert(rebuild_reason == kRebuildReasonPossiblySingularBasis);
       return;
     }
   }
   // Any pivoting is numerically acceptable, so perform update.
   //
   // rebuild_reason =
-  // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set if a
+  // kRebuildReasonPrimalInfeasibleInPrimalSimplex is set if a
   // primal infeasiblility is found in phase 2
   //
-  // rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED is set in
+  // rebuild_reason = kRebuildReasonUpdateLimitReached is set in
   // phase 1 if the number of primal infeasiblilities is reduced to
   // zero, or in either phase if the update count reaches the limit!
   //
-  // rebuild_reason = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT is
+  // rebuild_reason = kRebuildReasonSyntheticClockSaysInvert is
   // set in updateFactor() if it is considered to be more efficient to
   // reinvert.
   update();
   // Crude way to force rebuild if there are no infeasibilities in phase 1
   if (!ekk_instance_.simplex_info_.num_primal_infeasibility &&
       solvePhase == kSolvePhase1)
-    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+    rebuild_reason = kRebuildReasonUpdateLimitReached;
 
-  assert(rebuild_reason == REBUILD_REASON_NO ||
-         rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX ||
-         rebuild_reason == REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT ||
-         rebuild_reason == REBUILD_REASON_UPDATE_LIMIT_REACHED);
+  assert(rebuild_reason == kRebuildReasonNo ||
+         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex ||
+         rebuild_reason == kRebuildReasonSyntheticClockSaysInvert ||
+         rebuild_reason == kRebuildReasonUpdateLimitReached);
   assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2);
 }
 
@@ -859,7 +859,7 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
 }
 
 bool HEkkPrimal::useVariableIn() {
-  // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set if
+  // rebuild_reason = kRebuildReasonPossiblySingularBasis is set if
   // numerical trouble is detected
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   vector<double>& workDual = simplex_info.workDual_;
@@ -910,7 +910,7 @@ bool HEkkPrimal::useVariableIn() {
                 theta_dual_sign.c_str());
     // If a significant computed dual has sign error, consider reinverting
     if (!theta_dual_small && simplex_info.update_count > 0)
-      rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
+      rebuild_reason = kRebuildReasonPossiblySingularBasis;
     hyperChooseColumnClear();
     return false;
   }
@@ -1165,7 +1165,7 @@ void HEkkPrimal::considerBoundSwap() {
   if (solvePhase == kSolvePhase2) {
     // Check for possible unboundedness
     if (!pivot_or_flipped) {
-      rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
+      rebuild_reason = kRebuildReasonPossiblyPrimalUnbounded;
       return;
     }
   }
@@ -1194,7 +1194,7 @@ void HEkkPrimal::assessPivot() {
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
   //
-  // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set if
+  // rebuild_reason = kRebuildReasonPossiblySingularBasis is set if
   // numerical trouble is detected
   updateVerify();
 }
@@ -1233,13 +1233,13 @@ void HEkkPrimal::update() {
     // Update primal values, and identify any infeasibilities
     //
     // rebuild_reason =
-    // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set if a
+    // kRebuildReasonPrimalInfeasibleInPrimalSimplex is set if a
     // primal infeasiblility is found
     phase2UpdatePrimal();
   }
 
-  assert(rebuild_reason == REBUILD_REASON_NO ||
-         rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX);
+  assert(rebuild_reason == kRebuildReasonNo ||
+         rebuild_reason == kRebuildReasonPrimalInfeasibleInPrimalSimplex);
 
   if (flipped) {
     simplex_info.primal_bound_swap++;
@@ -1259,7 +1259,7 @@ void HEkkPrimal::update() {
   // action
   //
   // rebuild_reason =
-  // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set in
+  // kRebuildReasonPrimalInfeasibleInPrimalSimplex is set in
   // phase 2 if a primal infeasiblility is found
   considerInfeasibleValueIn();
 
@@ -1282,7 +1282,7 @@ void HEkkPrimal::update() {
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   ekk_instance_.updateMatrix(variable_in, variable_out);
   if (simplex_info.update_count >= simplex_info.update_limit)
-    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+    rebuild_reason = kRebuildReasonUpdateLimitReached;
 
   // Update the iteration count
   ekk_instance_.iteration_count_++;
@@ -1676,7 +1676,7 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     simplex_info.workCost_[variable_in] = cost;
     simplex_info.workDual_[variable_in] += cost;
   } else if (primal_correction_strategy ==
-             SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE) {
+             kSimplexPrimalCorrectionStrategyNone) {
     // @primal_infeasibility calculation
     double primal_infeasibility;
     if (bound_violated < 0) {
@@ -1688,7 +1688,7 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     printf(
         "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
         primal_infeasibility, lower, value_in, upper);
-    rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+    rebuild_reason = kRebuildReasonPrimalInfeasibleInPrimalSimplex;
   } else {
     double bound_shift;
     if (bound_violated > 0) {
@@ -1727,7 +1727,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   // identification of infeasiblilities (and return to Phase 1) or
   // shifting of bounds to accommodate them.
   const bool ignore_bounds = primal_correction_strategy ==
-                             SIMPLEX_PRIMAL_CORRECTION_STRATEGY_IN_REBUILD;
+                             kSimplexPrimalCorrectionStrategyInRebuild;
   HighsInt to_entry;
   const bool use_col_indices =
       ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry);
@@ -1752,7 +1752,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
     }
     if (!bound_violated) continue;
     // A bound is violated
-    if (primal_correction_strategy == SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE) {
+    if (primal_correction_strategy == kSimplexPrimalCorrectionStrategyNone) {
       // @primal_infeasibility calculation
       double primal_infeasibility;
       if (bound_violated < 0) {
@@ -1796,7 +1796,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
     }
   }
   if (primal_infeasible) {
-    rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+    rebuild_reason = kRebuildReasonPrimalInfeasibleInPrimalSimplex;
     if (max_local_primal_infeasibility >
         max_max_local_primal_infeasibility * 2) {
       max_max_local_primal_infeasibility = max_local_primal_infeasibility;
@@ -1817,7 +1817,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
 }
 
 void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
-  if (primal_correction_strategy == SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE)
+  if (primal_correction_strategy == kSimplexPrimalCorrectionStrategyNone)
     return;
   static double max_max_primal_correction;
   if (initialise) {
@@ -2118,7 +2118,7 @@ void HEkkPrimal::updateVerify() {
   // performed
   //
   if (numericalTrouble > 1e-7 && simplex_info.update_count > 0)
-    rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
+    rebuild_reason = kRebuildReasonPossiblySingularBasis;
 }
 
 void HEkkPrimal::iterationAnalysisData() {

@@ -305,7 +305,6 @@ struct HighsOptionsStruct {
   HighsInt simplex_permute_strategy;
   bool dual_simplex_cleanup;
   HighsInt simplex_price_strategy;
-  HighsInt dual_chuzc_sort_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
@@ -530,9 +529,9 @@ class HighsOptions : public HighsOptionsStruct {
                             "Strategy for simplex primal edge weights: Choose "
                             "/ Dantzig / Devex (-1/0/1)",
                             advanced, &simplex_primal_edge_weight_strategy,
-                            SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
-                            SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_CHOOSE,
-                            SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
+                            kSimplexPrimalEdgeWeightStrategyMin,
+                            kSimplexPrimalEdgeWeightStrategyChoose,
+                            kSimplexPrimalEdgeWeightStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -721,15 +720,9 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,
-        &simplex_price_strategy, SIMPLEX_PRICE_STRATEGY_MIN,
-        SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
-        SIMPLEX_PRICE_STRATEGY_MAX);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "dual_chuzc_sort_strategy", "Strategy for CHUZC sort in dual simplex",
-        advanced, &dual_chuzc_sort_strategy, SIMPLEX_DUAL_CHUZC_STRATEGY_MIN,
-        SIMPLEX_DUAL_CHUZC_STRATEGY_CHOOSE, SIMPLEX_DUAL_CHUZC_STRATEGY_MAX);
+        &simplex_price_strategy, kSimplexPriceStrategyMin,
+        kSimplexPriceStrategyRowSwitchColSwitch,
+        kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
     record_bool =

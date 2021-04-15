@@ -219,7 +219,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
       initialiseValueDistribution("", "density ", 1e-8, 1.0, 10.0,
                                   AnIter->AnIterOp_density);
     }
-    HighsInt last_rebuild_reason = REBUILD_REASON_Count - 1;
+    HighsInt last_rebuild_reason = kRebuildReasonCount - 1;
     for (HighsInt k = 1; k <= last_rebuild_reason; k++) AnIterNumInvert[k] = 0;
     num_col_price = 0;
     num_row_price = 0;
@@ -820,7 +820,7 @@ void HighsSimplexAnalysis::summaryReport() {
   }
   HighsInt NumInvert = 0;
 
-  HighsInt last_rebuild_reason = REBUILD_REASON_Count - 1;
+  HighsInt last_rebuild_reason = kRebuildReasonCount - 1;
   for (HighsInt k = 1; k <= last_rebuild_reason; k++)
     NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
@@ -828,38 +828,38 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("\nInvert    performed %" HIGHSINT_FORMAT
            " times: average frequency = %" HIGHSINT_FORMAT "\n",
            NumInvert, AnIterNumIter / NumInvert);
-    lcNumInvert = AnIterNumInvert[REBUILD_REASON_UPDATE_LIMIT_REACHED];
+    lcNumInvert = AnIterNumInvert[kRebuildReasonUpdateLimitReached];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to update limit reached\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT];
+    lcNumInvert = AnIterNumInvert[kRebuildReasonSyntheticClockSaysInvert];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to pseudo-clock\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_OPTIMAL];
+    lcNumInvert = AnIterNumInvert[kRebuildReasonPossiblyOptimal];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to possibly optimal\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED];
+    lcNumInvert = AnIterNumInvert[kRebuildReasonPossiblyPrimalUnbounded];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to possibly primal unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED];
+    lcNumInvert = AnIterNumInvert[kRebuildReasonPossiblyDualUnbounded];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to possibly dual unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_SINGULAR_BASIS];
+    lcNumInvert = AnIterNumInvert[kRebuildReasonPossiblySingularBasis];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to possibly singular basis\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert =
-        AnIterNumInvert[REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX];
+        AnIterNumInvert[kRebuildReasonPrimalInfeasibleInPrimalSimplex];
     if (lcNumInvert > 0)
       printf("%12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
              "%%) Invert operations due to primal infeasible in primal "

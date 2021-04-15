@@ -368,7 +368,7 @@ class HighsSimplexAnalysis {
   HighsInt AnIterTraceIterDl;
   AnIterTraceRec AnIterTrace[1 + kAnIterTraceMaxNumRec + 1];
 
-  HighsInt AnIterNumInvert[REBUILD_REASON_Count];
+  HighsInt AnIterNumInvert[kRebuildReasonCount];
   HighsInt AnIterNumEdWtIt[(HighsInt)DualEdgeWeightMode::kCount];
 
   HighsValueDistribution primal_step_distribution;

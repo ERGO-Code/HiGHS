@@ -36,7 +36,7 @@ void HEkkDual::iterateMulti() {
   majorChooseRow();
   minorChooseRow();
   if (row_out == -1) {
-    rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+    rebuild_reason = kRebuildReasonPossiblyOptimal;
     return;
   }
 
@@ -158,7 +158,7 @@ void HEkkDual::majorChooseRow() {
 
   // 6. Take other info associated with choices
   multi_chosen = 0;
-  double pami_cutoff = 0.95;
+  const double kPamiCutoff = 0.95;
   for (HighsInt i = 0; i < multi_num; i++) {
     const HighsInt iRow = multi_choice[i].row_out;
     if (iRow < 0) continue;
@@ -171,7 +171,7 @@ void HEkkDual::majorChooseRow() {
     multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit =
         dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow];
-    multi_choice[i].infeasLimit *= pami_cutoff;
+    multi_choice[i].infeasLimit *= kPamiCutoff;
   }
 
   // 6. Finish count
@@ -544,7 +544,7 @@ void HEkkDual::majorUpdate() {
             iFinish->alpha_row, multi_numerical_trouble_tolerance)) {
       // HighsInt startUpdate = ekk_instance_.simplex_info_.update_count -
       // multi_nFinish;
-      rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
+      rebuild_reason = kRebuildReasonPossiblySingularBasis;
       // if (startUpdate > 0) {
       majorRollback();
       return;
@@ -901,7 +901,7 @@ void HEkkDual::majorUpdateFactor() {
       ekk_instance_.simplex_info_.update_count >=
       multi_synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
-    rebuild_reason = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT;
+    rebuild_reason = kRebuildReasonSyntheticClockSaysInvert;
 
   delete[] iRows;
 }

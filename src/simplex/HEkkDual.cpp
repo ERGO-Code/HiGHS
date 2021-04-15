@@ -73,7 +73,7 @@ HighsStatus HEkkDual::solve() {
     assert(positive_num_row);
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
-  rebuild_reason = REBUILD_REASON_NO;
+  rebuild_reason = kRebuildReasonNo;
 
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
@@ -485,15 +485,15 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   // Number of slices
   slice_num = initial_num_slice;
   if (slice_num < 1) slice_num = 1;
-  assert(slice_num <= HIGHS_SLICED_LIMIT);
-  if (slice_num > HIGHS_SLICED_LIMIT) {
+  assert(slice_num <= kHighsSlicedLimit);
+  if (slice_num > kHighsSlicedLimit) {
     highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                  "WARNING: %" HIGHSINT_FORMAT
-                 " = slice_num > HIGHS_SLICED_LIMIT = %" HIGHSINT_FORMAT
+                 " = slice_num > kHighsSlicedLimit = %" HIGHSINT_FORMAT
                  " so truncating "
                  "slice_num\n",
-                 slice_num, HIGHS_SLICED_LIMIT);
-    slice_num = HIGHS_SLICED_LIMIT;
+                 slice_num, kHighsSlicedLimit);
+    slice_num = kHighsSlicedLimit;
   }
 
   // Alias to the matrix
@@ -562,7 +562,7 @@ void HEkkDual::solvePhase1() {
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
-  rebuild_reason = REBUILD_REASON_NO;
+  rebuild_reason = kRebuildReasonNo;
   // Set solvePhase = kSolvePhase1 and solve_bailout = false so they are set if
   // solvePhase1() is called directly
   solvePhase = kSolvePhase1;
@@ -660,7 +660,7 @@ void HEkkDual::solvePhase1() {
       // tolerance. Plus there may be cost perturbations to remove
       assessPhase1Optimality();
     }
-  } else if (rebuild_reason == REBUILD_REASON_CHOOSE_COLUMN_FAIL) {
+  } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = kSolvePhaseError;
@@ -753,7 +753,7 @@ void HEkkDual::solvePhase2() {
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
-  rebuild_reason = REBUILD_REASON_NO;
+  rebuild_reason = kRebuildReasonNo;
   // Set solvePhase = kSolvePhase2 and solve_bailout = false so they are set if
   // solvePhase2() is called directly
   solvePhase = kSolvePhase2;
@@ -853,7 +853,7 @@ void HEkkDual::solvePhase2() {
                   "problem-optimal\n");
       scaled_model_status = HighsModelStatus::kOptimal;
     }
-  } else if (rebuild_reason == REBUILD_REASON_CHOOSE_COLUMN_FAIL) {
+  } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = kSolvePhaseError;
@@ -914,7 +914,7 @@ void HEkkDual::rebuild() {
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
   const HighsInt reason_for_rebuild = rebuild_reason;
-  rebuild_reason = REBUILD_REASON_NO;
+  rebuild_reason = kRebuildReasonNo;
   // Possibly Rebuild ekk_instance_.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (reInvert) {
@@ -1249,7 +1249,7 @@ void HEkkDual::chooseRow() {
     dualRHS.chooseNormal(&row_out);
     if (row_out == -1) {
       // No index found so may be dual optimal.
-      rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+      rebuild_reason = kRebuildReasonPossiblyOptimal;
       return;
     }
     // Compute pi_p = B^{-T}e_p in row_ep
@@ -1333,14 +1333,26 @@ bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
 bool HEkkDual::newDevexFramework(const double updated_edge_weight) {
   // Analyse the Devex weight to determine whether a new framework
   // should be set up
+  //
+  // There is a new Devex framework if either
+  //
+  // 1) The weight inaccuracy ratio exceeds kMaxAllowedDevexWeightRatio
+  //
+  // 2) There have been max(kMinAbsNumberDevexIterations,
+  // numRow/kMinRlvNumberDevexIterations) Devex iterations
+  //
+  const HighsInt kMinAbsNumberDevexIterations = 25;
+  const double kMinRlvNumberDevexIterations = 1e-2;
+  const double kMaxAllowedDevexWeightRatio = 3.0;
+
   double devex_ratio = max(updated_edge_weight / computed_edge_weight,
                            computed_edge_weight / updated_edge_weight);
-  HighsInt i_te = solver_num_row / minRlvNumberDevexIterations;
-  i_te = max(minAbsNumberDevexIterations, i_te);
-  // Square maxAllowedDevexWeightRatio due to keeping squared
+  HighsInt i_te = solver_num_row / kMinRlvNumberDevexIterations;
+  i_te = max(kMinAbsNumberDevexIterations, i_te);
+  // Square kMaxAllowedDevexWeightRatio due to keeping squared
   // weights
   const double accept_ratio_threshold =
-      maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
+      kMaxAllowedDevexWeightRatio * kMaxAllowedDevexWeightRatio;
   const bool accept_ratio = devex_ratio <= accept_ratio_threshold;
   const bool accept_it = num_devex_iterations <= i_te;
   bool return_new_devex_framework;
@@ -1394,7 +1406,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   // there are no candidates for CHUZC
   variable_in = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    rebuild_reason = REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED;
+    rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
     return;
   }
   //
@@ -1402,7 +1414,7 @@ void HEkkDual::chooseColumn(HVector* row_ep) {
   // fail if the dual values are excessively large
   bool chooseColumnFail = dualRow.chooseFinal();
   if (chooseColumnFail) {
-    rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
+    rebuild_reason = kRebuildReasonChooseColumnFail;
     return;
   }
   //
@@ -1548,7 +1560,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   // Infeasible we created before
   variable_in = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    rebuild_reason = REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED;
+    rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
     return;
   }
 
@@ -1556,9 +1568,9 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   HighsInt return_code = dualRow.chooseFinal();
   if (return_code) {
     if (return_code < 0) {
-      rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
+      rebuild_reason = kRebuildReasonChooseColumnFail;
     } else {
-      rebuild_reason = REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED;
+      rebuild_reason = kRebuildReasonPossiblyDualUnbounded;
     }
     return;
   }
@@ -1706,7 +1718,7 @@ void HEkkDual::updateVerify() {
   if (ekk_instance_.reinvertOnNumericalTrouble(
           "HEkkDual::updateVerify", numericalTrouble, alpha_col, alpha_row,
           numerical_trouble_tolerance)) {
-    rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
+    rebuild_reason = kRebuildReasonPossiblySingularBasis;
   }
 }
 
@@ -1889,7 +1901,7 @@ void HEkkDual::updatePivots() {
       ekk_instance_.simplex_info_.update_count >=
       synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
-    rebuild_reason = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT;
+    rebuild_reason = kRebuildReasonSyntheticClockSaysInvert;
   */
 }
 

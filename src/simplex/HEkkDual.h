@@ -31,32 +31,10 @@
 
 class HFactor;
 
-/**
- * Limit on the number of column slices for parallel calculations. SIP uses
- * num_threads-2 slices; PAMI uses num_threads-1 slices
- */
-const HighsInt HIGHS_SLICED_LIMIT =
-    kHighsThreadLimit;  // Was 100, but can't see why this should be higher
-                        // than kHighsThreadLimit;
-
-/**
- * Parameters controlling number of Devex iterations.
- *
- * There is a new Devex framework if either
- *
- * 1) The weight inaccuracy ratio exceeds maxAllowedDevexWeightRatio
- *
- * 2) There have been max(minAbsNumberDevexIterations,
- * numRow/minRlvNumberDevexIterations) Devex iterations
- */
-const HighsInt minAbsNumberDevexIterations = 25;
-const double minRlvNumberDevexIterations = 1e-2;
-const double maxAllowedDevexWeightRatio = 3.0;
-
-/**
- * Candidate persistence cut-off in PAMI
- */
-const double pami_cutoff = 0.95;
+// Limit on the number of column slices for parallel calculations. SIP
+// uses num_threads-2 slices; PAMI uses num_threads-1 slices
+const HighsInt kHighsSlicedLimit = kHighsThreadLimit;
+// Was 100, but can't see why this should be higher than kHighsThreadLimit;
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -66,7 +44,7 @@ class HEkkDual {
   HEkkDual(HEkk& simplex)
       : ekk_instance_(simplex), dualRow(simplex), dualRHS(simplex) {
     dualRow.setup();
-    for (HighsInt i = 0; i < HIGHS_SLICED_LIMIT; i++)
+    for (HighsInt i = 0; i < kHighsSlicedLimit; i++)
       slice_dualRow.push_back(HEkkDualRow(simplex));
     dualRHS.setup();
   }
@@ -477,9 +455,9 @@ class HEkkDual {
   // Partitioned coefficient matrix
   HighsInt slice_num;
   HighsInt slice_PRICE;
-  HighsInt slice_start[HIGHS_SLICED_LIMIT + 1];
-  HMatrix slice_matrix[HIGHS_SLICED_LIMIT];
-  HVector slice_row_ap[HIGHS_SLICED_LIMIT];
+  HighsInt slice_start[kHighsSlicedLimit + 1];
+  HMatrix slice_matrix[kHighsSlicedLimit];
+  HVector slice_row_ap[kHighsSlicedLimit];
   std::vector<HEkkDualRow> slice_dualRow;
 
   /**

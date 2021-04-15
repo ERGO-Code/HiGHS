@@ -1430,12 +1430,12 @@ void HEkk::choosePriceTechnique(const HighsInt price_strategy,
   // density
   const double density_for_column_price_switch = 0.75;
   use_col_price =
-      (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
-      (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
+      (price_strategy == kSimplexPriceStrategyCol) ||
+      (price_strategy == kSimplexPriceStrategyRowSwitchColSwitch &&
        row_ep_density > density_for_column_price_switch);
   use_row_price_w_switch =
-      price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
-      price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+      price_strategy == kSimplexPriceStrategyRowSwitch ||
+      price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;
 }
 
 void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
@@ -1815,14 +1815,14 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   // Now have a representation of B^{-1}, but it is not fresh
   simplex_lp_status_.has_invert = true;
   if (simplex_info_.update_count >= simplex_info_.update_limit)
-    *hint = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+    *hint = kRebuildReasonUpdateLimitReached;
 
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick_ >= build_syntheticTick_;
   const bool performed_min_updates =
       simplex_info_.update_count >= synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
-    *hint = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT;
+    *hint = kRebuildReasonSyntheticClockSaysInvert;
 
   analysis_.simplexTimerStop(UpdateFactorClock);
 }
