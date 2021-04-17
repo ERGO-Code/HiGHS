@@ -188,7 +188,18 @@ bool callCrossover(const HighsLp& lp, ICrashInfo& result) {
   // todo: specify primal values coming from icrash
 
   // run crossover 
-  lps.RunCrossover_();
+  // lps.RunCrossover_();
+
+  const double* x = &result.x_values[0];
+  const std::vector<double> zs(num_col,0);
+  const std::vector<double> zsy(num_row,0);
+
+  const double* z = &zs[0];
+  const double* y = &zs[0];
+
+  lps.LoadIPMStartingPoint(x,z,z,nullptr,y,y,y);
+  lps.RunCrossover_X();
+
   return true;
 }
 
