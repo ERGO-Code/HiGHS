@@ -236,6 +236,7 @@ endif()
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
+    set(ipx_sources ${ipx_sources} ipm/IpxWrapper.cpp)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     target_link_libraries(libipx libbasiclu)
@@ -598,7 +599,7 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
 
 if (IPX_ON)
-    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
+    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
     target_include_directories(libhighs PUBLIC ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)

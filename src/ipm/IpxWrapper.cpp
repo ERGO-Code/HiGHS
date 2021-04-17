@@ -13,6 +13,8 @@
  */
 #include "ipm/IpxWrapper.h"
 
+#include "lp_data/HighsOptions.h"
+
 IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
                         std::vector<double>& obj, std::vector<double>& col_lb,
                         std::vector<double>& col_ub, ipx::Int& num_row,
@@ -279,7 +281,7 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
 }
 
 bool ipxStatusError(const bool status_error, const HighsOptions& options,
-                    std::string message, const int value = -1) {
+                    std::string message, const int value ) {
   if (status_error) {
     if (value < 0) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s",
@@ -766,4 +768,3 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                  unscaled_solution_params);
   return return_status;
 }
-#endif
