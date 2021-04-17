@@ -147,7 +147,15 @@ public:
     // Returns -1 if no basis was available and 0 otherwise.
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
 
-    void RunCrossover_() {RunCrossover();}
+    void RunCrossover_() {
+        iterate_.reset(new Iterate(model_));
+
+        if (control_.crossover())
+            iterate_->crossover_start(control_.crossover_start());
+        BuildStartingBasis();
+
+        RunCrossover();
+    }
 
 private:
     void ClearSolution();
