@@ -147,6 +147,8 @@ public:
     // Returns -1 if no basis was available and 0 otherwise.
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
 
+    void RunCrossover_() {RunCrossover();}
+
 private:
     void ClearSolution();
     void InteriorPointSolve();

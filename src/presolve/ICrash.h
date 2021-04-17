@@ -114,4 +114,6 @@ void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
                       const int iteration);
 void reportOptions(const ICrashOptions& options);
 
+bool callCrossover(const HighsLp& lp, ICrashInfo& result);
+
 #endif

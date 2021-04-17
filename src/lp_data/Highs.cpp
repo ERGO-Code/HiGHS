@@ -523,6 +523,18 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
     // todo: timing. some strange compile issue.
     HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
+
+    if (icrash_status != HighsStatus::OK)
+      return icrash_status;
+
+#ifdef IPX_ON
+    bool x_status = callCrossover(lp_, icrash_info_);
+    if (!x_status)
+      return HighsStatus::Error;
+    // todo: if crossover OK start solver
+
+#endif
+
     return icrash_status;
   }
 

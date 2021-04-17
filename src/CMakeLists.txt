@@ -110,6 +110,7 @@ set(sources
     mip/HighsImplications.cpp
     mip/HighsNodeQueue.cpp
     presolve/ICrash.cpp
+    presolve/ICrashX.cpp
     presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
@@ -452,6 +453,7 @@ target_sources(libhighs PRIVATE
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     presolve/ICrash.cpp
+    presolve/ICrashX.cpp
     presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
