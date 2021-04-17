@@ -191,13 +191,23 @@ bool callCrossover(const HighsLp& lp, ICrashInfo& result) {
   // lps.RunCrossover_();
 
   const double* x = &result.x_values[0];
-  const std::vector<double> zs(num_col,0);
-  const std::vector<double> zsy(num_row,0);
 
-  const double* z = &zs[0];
-  const double* y = &zs[0];
+  std::vector<double> collb(num_col,0);
+  std::vector<double> colub(num_col,0);
+  std::vector<double> zsy(num_row,0);
 
-  lps.LoadIPMStartingPoint(x,z,z,nullptr,y,y,y);
+  for (int i=0; i<num_col; i++) {
+    if (col_lb[i] == -INFINITY)
+      collb[i] = INFINITY;
+    if (col_ub[i] == INFINITY)
+      colub[i] = INFINITY;
+  }
+
+  const double* zl = &collb[0];
+  const double* zu = &colub[0];
+  const double* y = &zsy[0];
+
+  lps.LoadIPMStartingPoint(x,zl,zu,y,y,y,y);
   lps.RunCrossover_X();
 
   return true;
