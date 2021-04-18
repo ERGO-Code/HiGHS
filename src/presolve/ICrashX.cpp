@@ -2,11 +2,12 @@
 
 #include <iostream>
 
-#include "ipm/IpxWrapper.h"
 
 #ifndef IPX_ON
 bool callCrossover(const HighsLp& lp, ICrashInfo& result) {return false;}
 #else
+
+#include "ipm/IpxWrapper.h"
 
 bool callCrossover(const HighsLp& lp, ICrashInfo& result) {
   std::cout << "Calling ipx crossover after icrash...";

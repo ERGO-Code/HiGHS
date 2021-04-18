@@ -236,7 +236,7 @@ endif()
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
-    set(ipx_sources ${ipx_sources} ipm/IpxWrapper.cpp)
+    set(sources ${sources} ipm/IpxWrapper.cpp)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     target_link_libraries(libipx libbasiclu)
