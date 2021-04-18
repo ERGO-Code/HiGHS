@@ -174,8 +174,8 @@ HighsDebugStatus debugHighsBasicSolution(
     return HighsDebugStatus::kOk;
 
   // No basis to test if model status is primal infeasible or unbounded
-  if (model_status == HighsModelStatus::kPrimalInfeasible ||
-      model_status == HighsModelStatus::kPrimalUnbounded)
+  if (model_status == HighsModelStatus::kInfeasible ||
+      model_status == HighsModelStatus::kUnbounded)
     return HighsDebugStatus::kOk;
 
   // Check that there is a solution and valid basis to use

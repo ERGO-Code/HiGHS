@@ -109,15 +109,15 @@ bool HighsPrimalHeuristics::solveSubMip(
           size_t{1}, size_t(adjustmentfactor * submipsolver.node_count_));
   }
 
-  if (submipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible) {
+  if (submipsolver.modelstatus_ == HighsModelStatus::kInfeasible) {
     infeasObservations += fixingRate;
     ++numInfeasObservations;
   }
   if (submipsolver.node_count_ <= 1 &&
-      submipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible)
+      submipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
     return false;
   HighsInt oldNumImprovingSols = mipsolver.mipdata_->numImprovingSols;
-  if (submipsolver.modelstatus_ != HighsModelStatus::kPrimalInfeasible &&
+  if (submipsolver.modelstatus_ != HighsModelStatus::kInfeasible &&
       !submipsolver.solution_.empty()) {
     mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
   }

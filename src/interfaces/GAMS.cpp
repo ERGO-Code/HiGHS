@@ -283,7 +283,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
-    case HighsModelStatus::kPrimalInfeasible:
+    case HighsModelStatus::kInfeasible:
       // TODO is there an infeasible solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleGlobal :
       // gmoModelStat_InfeasibleNoSolution);
@@ -291,7 +291,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
-    case HighsModelStatus::kPrimalUnbounded:
+    case HighsModelStatus::kUnbounded:
       // TODO is there a (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_Unbounded :
       // gmoModelStat_UnboundedNoSolution);

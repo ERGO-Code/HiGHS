@@ -222,7 +222,7 @@ void testInfeasibleMps(const std::string model) {
 
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  require_model_status = HighsModelStatus::kPrimalInfeasible;
+  require_model_status = HighsModelStatus::kInfeasible;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   lp = highs.getLp();
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
@@ -258,7 +258,7 @@ void testUnboundedMps(const std::string model,
 
   // Test dual ray for unbounded LP
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  require_model_status = HighsModelStatus::kPrimalUnbounded;
+  require_model_status = HighsModelStatus::kUnbounded;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(highs.changeObjectiveSense(sense));
   lp = highs.getLp();
@@ -413,7 +413,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
   highs.setOptionValue("presolve", "off");
   highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kPrimalUnbounded);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
   bool has_ray = false;
   vector<double> ray_value;
   ray_value.assign(2, NAN);
@@ -443,7 +443,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   highs.addRow(0.0, 0.0, 2, aindex, avalue);
   highs.setOptionValue("presolve", "off");
   highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kPrimalUnbounded);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
   bool has_ray = false;
   vector<double> ray_value;
   ray_value.assign(2, NAN);

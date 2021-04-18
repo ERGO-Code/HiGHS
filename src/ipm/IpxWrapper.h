@@ -499,15 +499,15 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
                                  HighsModelStatus& model_status) {
   if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
     // Looks like the LP is infeasible
-    model_status = HighsModelStatus::kPrimalInfeasible;
+    model_status = HighsModelStatus::kInfeasible;
     return HighsStatus::kOk;
   } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
     // Looks like the LP is unbounded
-    model_status = HighsModelStatus::kPrimalUnbounded;
+    model_status = HighsModelStatus::kUnbounded;
     return HighsStatus::kOk;
   } else if (ipx_info.pobjval < -kHighsInf) {
     // Looks like the LP is unbounded
-    model_status = HighsModelStatus::kPrimalUnbounded;
+    model_status = HighsModelStatus::kUnbounded;
     return HighsStatus::kOk;
   } else {
     // Don't know
@@ -690,10 +690,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Can solve and be primal_infeas
   // Can solve and be dual_infeas
   if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
-    model_status = HighsModelStatus::kPrimalInfeasible;
+    model_status = HighsModelStatus::kInfeasible;
     return HighsStatus::kOk;
   } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    model_status = HighsModelStatus::kPrimalUnbounded;
+    model_status = HighsModelStatus::kUnbounded;
     return HighsStatus::kOk;
   }
 

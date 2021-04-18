@@ -294,7 +294,7 @@ HighsStatus HEkkDual::solve() {
     if (solvePhase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
       assert(scaled_model_status == HighsModelStatus::kPrimalDualInfeasible ||
-             scaled_model_status == HighsModelStatus::kPrimalInfeasible);
+             scaled_model_status == HighsModelStatus::kInfeasible);
       break;
     }
     if (solvePhase == kSolvePhase1 &&
@@ -338,7 +338,7 @@ HighsStatus HEkkDual::solve() {
     //      }
     //    } else {
     //      // Should only be primal unbounded
-    //      assert(scaled_model_status == HighsModelStatus::kPrimalUnbounded);
+    //      assert(scaled_model_status == HighsModelStatus::kUnbounded);
     //    }
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
@@ -891,7 +891,7 @@ void HEkkDual::solvePhase2() {
         assert(scaled_model_status == HighsModelStatus::kNotset);
         highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                     "problem-primal-infeasible\n");
-        scaled_model_status = HighsModelStatus::kPrimalInfeasible;
+        scaled_model_status = HighsModelStatus::kInfeasible;
       }
     }
   }

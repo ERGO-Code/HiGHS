@@ -30,7 +30,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 void mpsGas11(Highs& highs) {
   // Lots of trouble is caused by gas11
   const HighsModelStatus require_model_status =
-      HighsModelStatus::kPrimalUnbounded;
+      HighsModelStatus::kUnbounded;
 
   std::string model = "gas11";
   std::string model_file;

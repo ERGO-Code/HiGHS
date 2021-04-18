@@ -516,8 +516,8 @@ HighsPresolveStatus Presolve::presolve() {
   HighsPresolveStatus presolve_status = HighsPresolveStatus::kNotReduced;
   HighsInt result = presolve(0);
   switch (result) {
-    case Stat::kUnbounded:
-      presolve_status = HighsPresolveStatus::kUnbounded;
+    case Stat::kUnboundedOrInfeasible:
+      presolve_status = HighsPresolveStatus::kUnboundedOrInfeasible;
       break;
     case Stat::kInfeasible:
       presolve_status = HighsPresolveStatus::kInfeasible;
@@ -1730,7 +1730,7 @@ void Presolve::removeEmptyColumn(HighsInt j) {
   if ((colCost.at(j) < 0 && colUpper.at(j) >= kHighsInf) ||
       (colCost.at(j) > 0 && colLower.at(j) <= -kHighsInf)) {
     if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-    status = kUnbounded;
+    status = kUnboundedOrInfeasible;
     return;
   }
 
@@ -1905,7 +1905,7 @@ void Presolve::removeDominatedColumns() {
       if (colCost.at(j) - d > tol) {
         if (colLower.at(j) <= -kHighsInf) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-          status = kUnbounded;
+          status = kUnboundedOrInfeasible;
           return;
         }
         setPrimalValue(j, colLower.at(j));
@@ -1917,7 +1917,7 @@ void Presolve::removeDominatedColumns() {
       } else if (colCost.at(j) - e < -tol) {
         if (colUpper.at(j) >= kHighsInf) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-          status = kUnbounded;
+          status = kUnboundedOrInfeasible;
           return;
         }
         setPrimalValue(j, colUpper.at(j));
@@ -2031,7 +2031,7 @@ void Presolve::setProblemStatus(const HighsInt s) {
   if (s == kInfeasible)
     cout << "NOT-OPT status = 1, returned from solver after presolve: Problem "
             "infeasible.\n";
-  else if (s == kUnbounded)
+  else if (s == kUnboundedOrInfeasible)
     cout << "NOT-OPT status = 2, returned from solver after presolve: Problem "
             "unbounded.\n";
   else if (s == 0) {
@@ -2257,14 +2257,14 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const HighsInt j,
   if (colCost.at(j) > 0) {
     if (colLower.at(j) <= -kHighsInf) {
       if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-      status = kUnbounded;
+      status = kUnboundedOrInfeasible;
       return;
     }
     value = colLower.at(j);
   } else if (colCost.at(j) < 0) {
     if (colUpper.at(j) >= kHighsInf) {
       if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
-      status = kUnbounded;
+      status = kUnboundedOrInfeasible;
       return;
     }
     value = colUpper.at(j);

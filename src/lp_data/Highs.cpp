@@ -612,19 +612,12 @@ HighsStatus Highs::run() {
         // Proceed to postsolve.
         break;
       }
-        //	printf("\nHighs::run() 3: presolve status = %" HIGHSINT_FORMAT
-        //"\n", (HighsInt)presolve_status);fflush(stdout);
       case HighsPresolveStatus::kInfeasible:
-      case HighsPresolveStatus::kUnbounded: {
+      case HighsPresolveStatus::kUnboundedOrInfeasible: {
         if (presolve_status == HighsPresolveStatus::kInfeasible) {
-          model_status_ = HighsModelStatus::kPrimalInfeasible;
+          model_status_ = HighsModelStatus::kInfeasible;
         } else {
-          // If presolve returns (primal) unbounded, the problem may
-          // not be feasible, in which case
-          // HighsModelStatus::kPrimalInfeasibleOrUnbounded rather
-          // than HighsModelStatus::kPrimalUnbounded should be
-          // returned
-          model_status_ = HighsModelStatus::kPrimalInfeasibleOrUnbounded;
+          model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
         }
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Problem status detected on presolve: %s\n",
@@ -2283,7 +2276,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::kOk);
         break;
 
-      case HighsModelStatus::kPrimalInfeasible:
+      case HighsModelStatus::kInfeasible:
         clearSolution();
         // May have a basis, according to whether infeasibility was
         // detected in presolve or solve
@@ -2291,7 +2284,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::kOk);
         break;
 
-      case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
+      case HighsModelStatus::kUnboundedOrInfeasible:
         clearSolution();
         // May have a basis, according to whether infeasibility was
         // detected in presolve or solve
@@ -2300,7 +2293,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::kOk);
         break;
 
-      case HighsModelStatus::kPrimalUnbounded:
+      case HighsModelStatus::kUnbounded:
         clearSolution();
         // May have a basis, according to whether infeasibility was
         // detected in presolve or solve

@@ -93,7 +93,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::kPrimalInfeasible;
+    require_model_status = HighsModelStatus::kInfeasible;
   }
 
   void issue295Lp(HighsLp& lp, HighsModelStatus& require_model_status,
@@ -150,7 +150,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::kPrimalInfeasible;
+    require_model_status = HighsModelStatus::kInfeasible;
   }
 
   void primalDualInfeasible1Lp(HighsLp& lp,
@@ -203,7 +203,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::kPrimalUnbounded;
+    require_model_status = HighsModelStatus::kUnbounded;
   }
 
   void scipLpi3Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
@@ -220,7 +220,7 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::kPrimalInfeasible;
+    require_model_status = HighsModelStatus::kInfeasible;
   }
 
   void distillationLp(HighsLp& lp, HighsModelStatus& require_model_status,

@@ -323,11 +323,11 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kModelEmpty:
       return "Model empty";
       break;
-    case HighsModelStatus::kPrimalInfeasible:
-      return "Infeasible";  //"Primal infeasible";
+    case HighsModelStatus::kInfeasible:
+      return "Infeasible";
       break;
-    case HighsModelStatus::kPrimalUnbounded:
-      return "Unbounded";  //"Primal unbounded";
+    case HighsModelStatus::kUnbounded:
+      return "Unbounded";
       break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
@@ -344,7 +344,7 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kPrimalDualInfeasible:
       return "Primal and dual infeasible";
       break;
-    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
+    case HighsModelStatus::kUnboundedOrInfeasible:
       return "Primal infeasible or unbounded";
       break;
     case HighsModelStatus::kDualInfeasible:
@@ -408,11 +408,11 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::kOk;
     case HighsModelStatus::kOptimal:
       return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalInfeasible:
+    case HighsModelStatus::kInfeasible:
       return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
+    case HighsModelStatus::kUnboundedOrInfeasible:
       return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalUnbounded:
+    case HighsModelStatus::kUnbounded:
       return HighsStatus::kOk;
     case HighsModelStatus::kPrimalDualInfeasible:
       return HighsStatus::kOk;

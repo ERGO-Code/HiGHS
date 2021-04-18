@@ -250,7 +250,7 @@ void HighsMipSolverData::runSetup() {
   domain.computeRowActivities();
   domain.propagate();
   if (domain.infeasible()) {
-    mipsolver.modelstatus_ = HighsModelStatus::kPrimalInfeasible;
+    mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
     lower_bound = kHighsInf;
     pruned_treeweight = 1.0;
     return;
@@ -447,7 +447,7 @@ void HighsMipSolverData::performRestart() {
 
   if (mipsolver.modelstatus_ != HighsModelStatus::kNotset) {
     if (mipsolver.solution_objective_ != kHighsInf &&
-        mipsolver.modelstatus_ == HighsModelStatus::kPrimalInfeasible)
+        mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
     return;
   }

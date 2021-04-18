@@ -884,7 +884,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
   // primal phase 1, if the LP is primal infeasible, or if the costs
   // have been perturbed
   if (!(primal_phase1 ||
-        scaled_model_status == HighsModelStatus::kPrimalInfeasible ||
+        scaled_model_status == HighsModelStatus::kInfeasible ||
         simplex_info.costs_perturbed)) {
     for (HighsInt col = 0; col < simplex_lp.numCol_; ++col) {
       HighsInt var = col;
