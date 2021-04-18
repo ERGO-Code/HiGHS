@@ -160,10 +160,11 @@ public:
     void RunCrossover_X() {
         iterate_.reset(new Iterate(model_));
 
+        if (control_.crossover())
+            iterate_->crossover_start(control_.crossover_start());
+
         iterate_->Initialize(x_start_, xl_start_, xu_start_,
                              y_start_, zl_start_, zu_start_);
-        // if (control_.crossover())
-        //     iterate_->crossover_start(control_.crossover_start());
         BuildStartingBasis();
 
         RunCrossover();
