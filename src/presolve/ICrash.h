@@ -1,4 +1,4 @@
- /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
@@ -16,9 +16,9 @@
 
 #include <vector>
 
+#include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
-#include "lp_data/HStruct.h"
 
 enum class ICrashStrategy {
   kPenalty,
@@ -114,6 +114,7 @@ void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
                       const int iteration);
 void reportOptions(const ICrashOptions& options);
 
-bool callCrossover(const HighsLp& lp, ICrashInfo& result);
+bool callCrossover(const HighsLp& lp, const std::vector<double>& x_values,
+                   HighsSolution& solution, HighsBasis& basis);
 
 #endif
