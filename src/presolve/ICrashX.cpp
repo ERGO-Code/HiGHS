@@ -44,6 +44,7 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
 
   std::vector<double> collb(num_col, 0);
   std::vector<double> colub(num_col, 0);
+  std::vector<double> zsx(num_col, 0);
   std::vector<double> zsy(num_row, 0);
 
   for (int i = 0; i < num_col; i++) {
@@ -54,8 +55,9 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   const double* zl = &collb[0];
   const double* zu = &colub[0];
   const double* y = &zsy[0];
+  const double* zx = &zsx[0];
 
-  const int flag = lps.LoadIPMStartingPoint(x, zl, zu, y, y, y, y);
+  const int flag = lps.LoadIPMStartingPoint(x, zl, zu, y, y, zx, zx);
   if (flag) {
     std::cout << "Error loading ipm crossover starting point: " << flag << std::endl;
     return false;
