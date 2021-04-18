@@ -528,14 +528,18 @@ basis_.valid_, hmos_[0].basis_.valid_);
       return icrash_status;
 
 #ifdef IPX_ON
-    bool x_status = callCrossover(lp_, options_, icrash_info_.x_values, solution_, basis_);
+    HighsBasis basis;
+    bool x_status = callCrossover(lp_, options_, icrash_info_.x_values, solution_, basis);
     if (!x_status)
       return HighsStatus::Error;
     // todo: if crossover OK start solver
-
-#endif
-
+     
+    setBasis(basis);
+    // and continue with run() now that we have set the basis.
+#else 
+    // No IPX available so end here at approximate solve.
     return icrash_status;
+#endif
   }
 
   if (!basis_.valid_ && options_.presolve != off_string) {
