@@ -56,8 +56,11 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   const double* y = &zsy[0];
 
   const int flag = lps.LoadIPMStartingPoint(x, zl, zu, y, y, y, y);
-  if (flag)
+  if (flag) {
+    std::cout << "Error loading ipm crossover starting point: " << flag << std::endl;
     return false;
+  }
+
   lps.RunCrossover_X();
 
   // get basis
