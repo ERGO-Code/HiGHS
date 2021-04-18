@@ -528,7 +528,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
       return icrash_status;
 
 #ifdef IPX_ON
-    bool x_status = callCrossover(lp_, icrash_info_.x_values, solution_, basis_);
+    bool x_status = callCrossover(lp_, options_, icrash_info_.x_values, solution_, basis_);
     if (!x_status)
       return HighsStatus::Error;
     // todo: if crossover OK start solver

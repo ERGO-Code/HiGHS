@@ -1,9 +1,10 @@
 #include <iostream>
 
 #include "presolve/ICrash.h"
+#include "HConfig.h"
 
 #ifndef IPX_ON
-bool callCrossover(const HighsLp& lp, const std::vector<double>& x_values,
+bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::vector<double>& x_values,
                    HighsSolution& solution, HighsBasis& highs_basis) {
   return false;
 }
@@ -11,7 +12,7 @@ bool callCrossover(const HighsLp& lp, const std::vector<double>& x_values,
 
 #include "ipm/IpxWrapper.h"
 
-bool callCrossover(const HighsLp& lp, const std::vector<double>& x_values,
+bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::vector<double>& x_values,
                    HighsSolution& solution, HighsBasis& basis) {
   std::cout << "Calling ipx crossover after icrash...";
 
@@ -75,7 +76,10 @@ bool callCrossover(const HighsLp& lp, const std::vector<double>& x_values,
   // Convert the IPX basic solution to a HiGHS basic solution
   ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
                                        constraint_type, ipx_solution,
-                                       highs_basis, highs_solution);
+                                       basis, solution);
+
+  std::cout << "Crossover basic solution >>>" << std::endl;
+
   return true;
 }
 

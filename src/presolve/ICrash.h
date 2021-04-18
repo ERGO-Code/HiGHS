@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "HighsOptions.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
@@ -114,7 +115,8 @@ void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
                       const int iteration);
 void reportOptions(const ICrashOptions& options);
 
-bool callCrossover(const HighsLp& lp, const std::vector<double>& x_values,
-                   HighsSolution& solution, HighsBasis& basis);
+bool callCrossover(const HighsLp& lp, const HighsOptions& options,
+                   const std::vector<double>& x_values, HighsSolution& solution,
+                   HighsBasis& basis);
 
 #endif
