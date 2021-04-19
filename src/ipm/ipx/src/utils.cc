@@ -79,27 +79,20 @@ std::vector<Int> InversePerm(const std::vector<Int>& perm) {
     return invperm;
 }
 
-static bool greater_or_equal(const std::pair<double,Int>& a,
-                             const std::pair<double,Int>& b) {
-    return a>=b;
-}
-
 std::vector<Int> Sortperm(Int m, const double* values, bool reverse) {
     std::vector<Int> perm(m);
-    if (!values) {
-        for (Int i = 0; i < m; i++)
-            perm[i] = i;
-        return perm;
-    }
-    std::vector<std::pair<double,Int>> value_index(m);
-    for (Int i = 0; i < m; i++)
-        value_index[i] = std::make_pair(values[i], i);
+    for (Int i = 0; i < m; i++) perm[i] = i;
+    if (!values) return perm;
+
     if (reverse)
-        std::sort(value_index.begin(), value_index.end(), greater_or_equal);
+        std::sort(perm.begin(), perm.end(), [&](Int i, Int j) {
+            return std::make_pair(values[i], i) > std::make_pair(values[j], j);
+        });
     else
-        std::sort(value_index.begin(), value_index.end());
-    for (Int i = 0; i < m; i++)
-        perm[i] = value_index[i].second;
+        std::sort(perm.begin(), perm.end(), [&](Int i, Int j) {
+            return std::make_pair(values[i], i) < std::make_pair(values[j], j);
+        });
+
     return perm;
 }
 

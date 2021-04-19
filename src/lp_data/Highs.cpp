@@ -30,6 +30,8 @@
 #include "simplex/HighsSimplexInterface.h"
 #include "util/HighsMatrixPic.h"
 
+#include "presolve/ICrashX.h"
+
 #ifdef OPENMP
 #include "omp.h"
 #endif
@@ -500,6 +502,27 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // Keep track of the hmo that is the most recently solved. By default it's the
   // original LP
   int solved_hmo = original_hmo;
+
+  const bool test_call_crossover = true;
+  if (test_call_crossover) {
+#ifdef IPX_ON
+    HighsBasis basis;
+    // std::vector<double> x_values(lp_.num_col_, 0);
+    // std::vector<double> x_values(lp_.num_col_, 1);
+    std::vector<double> x_values(lp_.numCol_, 100);
+
+    bool x_status = callCrossover(lp_, options_, x_values, solution_, basis);
+    if (!x_status)
+      return HighsStatus::Error;
+    // todo: if crossover OK start solver
+     
+    setBasis(basis);
+    // and continue with run() now that we have set the basis.
+#else 
+    // No IPX available so end here at approximate solve.
+    return 1;
+#endif
+  }
 
   if (!basis_.valid_ && options_.presolve != off_string) {
     // No HiGHS basis so consider presolve

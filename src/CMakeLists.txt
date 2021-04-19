@@ -109,6 +109,7 @@ set(sources
     mip/HighsCliqueTable.cpp
     mip/HighsImplications.cpp
     mip/HighsNodeQueue.cpp
+    presolve/ICrashX.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -202,6 +203,7 @@ set(headers
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
+    presolve/ICrashX.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
@@ -231,6 +233,7 @@ endif()
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
+    set(sources ${sources} ipm/IpxWrapper.cpp)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     target_link_libraries(libipx libbasiclu)
@@ -447,6 +450,7 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    presolve/ICrashX.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -539,6 +543,7 @@ set(headers_fast_build_
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
+    presolve/ICrashX.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
@@ -588,7 +593,7 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
 
 if (IPX_ON)
-    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
+    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
     target_include_directories(libhighs PUBLIC ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
