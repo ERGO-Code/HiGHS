@@ -40,15 +40,25 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   // lps.RunCrossover_();
 
   // specify primal values coming from icrash
-  const double* x = &x_values[0];
+  //const double* x = &x_values[0];
+
+  std::vector<double> test_values(num_col, 100);
+  const double* x = &test_values[0];
 
   std::vector<double> collb(num_col, 0);
   std::vector<double> colub(num_col, 0);
   std::vector<double> zsx(num_col, 0);
   std::vector<double> zsy(num_row, 0);
 
+  // for (int i = 0; i < num_col; i++) {
+  //   if (col_lb[i] == -INFINITY) collb[i] = INFINITY;
+  //   if (col_ub[i] == INFINITY) colub[i] = INFINITY;
+  // }
+
   for (int i = 0; i < num_col; i++) {
+    collb[i] = fabs(col_lb[i]);
     if (col_lb[i] == -INFINITY) collb[i] = INFINITY;
+    colub[i] = fabs(col_ub[i]);
     if (col_ub[i] == INFINITY) colub[i] = INFINITY;
   }
 
