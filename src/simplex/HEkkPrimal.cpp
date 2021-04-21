@@ -195,12 +195,11 @@ HighsStatus HEkkPrimal::solve() {
     }
     if (solvePhase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
-      assert(ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kPrimalDualInfeasible ||
-             ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kInfeasible ||
-             ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kUnbounded);
+      assert(
+          ekk_instance_.scaled_model_status_ ==
+              HighsModelStatus::kPrimalDualInfeasible ||
+          ekk_instance_.scaled_model_status_ == HighsModelStatus::kInfeasible ||
+          ekk_instance_.scaled_model_status_ == HighsModelStatus::kUnbounded);
       break;
     }
     if (solvePhase == kSolvePhaseCleanup) {
@@ -362,9 +361,8 @@ void HEkkPrimal::solvePhase1() {
     // It may have been prevented to avoid cleanup-perturbation loops
     if (!simplex_info.allow_bound_perturbation)
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
-		  "Moving to phase 2, but not allowing bound perturbation\n");
+                  "Moving to phase 2, but not allowing bound perturbation\n");
   }
-  
 }
 
 void HEkkPrimal::solvePhase2() {
@@ -455,7 +453,7 @@ void HEkkPrimal::solvePhase2() {
       cleanup();
       // If there are primal infeasiblities, go back to phase 1
       if (ekk_instance_.simplex_info_.num_primal_infeasibility > 0)
-	solvePhase = kSolvePhase1;
+        solvePhase = kSolvePhase1;
     } else {
       // The bounds have not been perturbed, so primal unbounded
       solvePhase = kSolvePhaseExit;
@@ -464,7 +462,7 @@ void HEkkPrimal::solvePhase2() {
       // Model status should be unset
       assert(scaled_model_status == HighsModelStatus::kNotset);
       highsLogDev(options.log_options, HighsLogType::kInfo,
-		  "problem-primal-unbounded\n");
+                  "problem-primal-unbounded\n");
       scaled_model_status = HighsModelStatus::kUnbounded;
     }
   }
@@ -1842,36 +1840,36 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
       HighsInt iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
       double bound_shift;
       if (bound_violated > 0) {
-	if (simplex_info.allow_bound_perturbation) {
-	  // Perturb the upper bound to accommodate the infeasiblilty
-	  shiftBound(false, iCol, simplex_info.baseValue_[iRow],
-		     simplex_info.numTotRandomValue_[iCol],
-		     simplex_info.workUpper_[iCol], bound_shift, true);
-	  simplex_info.baseUpper_[iRow] = simplex_info.workUpper_[iCol];
-	  simplex_info.workUpperShift_[iCol] += bound_shift;
-	} else {
-	  // Perturb the lower bound to accommodate the infeasiblilty
-	  shiftBound(true, iCol, simplex_info.baseValue_[iRow],
-		     simplex_info.numTotRandomValue_[iCol],
-		     simplex_info.workLower_[iCol], bound_shift, true);
-	  simplex_info.baseLower_[iRow] = simplex_info.workLower_[iCol];
-	  simplex_info.workLowerShift_[iCol] += bound_shift;
-	}
-	assert(bound_shift > 0);
-	num_primal_correction++;
-	max_primal_correction = max(bound_shift, max_primal_correction);
-	sum_primal_correction += bound_shift;
-	simplex_info.bounds_perturbed = true;
+        if (simplex_info.allow_bound_perturbation) {
+          // Perturb the upper bound to accommodate the infeasiblilty
+          shiftBound(false, iCol, simplex_info.baseValue_[iRow],
+                     simplex_info.numTotRandomValue_[iCol],
+                     simplex_info.workUpper_[iCol], bound_shift, true);
+          simplex_info.baseUpper_[iRow] = simplex_info.workUpper_[iCol];
+          simplex_info.workUpperShift_[iCol] += bound_shift;
+        } else {
+          // Perturb the lower bound to accommodate the infeasiblilty
+          shiftBound(true, iCol, simplex_info.baseValue_[iRow],
+                     simplex_info.numTotRandomValue_[iCol],
+                     simplex_info.workLower_[iCol], bound_shift, true);
+          simplex_info.baseLower_[iRow] = simplex_info.workLower_[iCol];
+          simplex_info.workLowerShift_[iCol] += bound_shift;
+        }
+        assert(bound_shift > 0);
+        num_primal_correction++;
+        max_primal_correction = max(bound_shift, max_primal_correction);
+        sum_primal_correction += bound_shift;
+        simplex_info.bounds_perturbed = true;
       } else {
-	// Bound perturbation is not permitted
-	num_primal_correction_skipped++;
+        // Bound perturbation is not permitted
+        num_primal_correction_skipped++;
       }
     }
   }
   if (num_primal_correction_skipped) {
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
-		 "correctPrimal: Missed %d bound shifts\n",
-		 num_primal_correction_skipped);
+                "correctPrimal: Missed %d bound shifts\n",
+                num_primal_correction_skipped);
     assert(!num_primal_correction_skipped);
     return false;
   }

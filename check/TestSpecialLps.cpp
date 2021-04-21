@@ -23,8 +23,8 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 
   if (dev_run)
     printf("Solved %s with presolve: status = %s\n",
-	   highs.getLp().model_name_.c_str(),
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+           highs.getLp().model_name_.c_str(),
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs status hasn't been identified, so solve with primal simplex
     int simplex_strategy;
@@ -33,13 +33,13 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     highs.run();
     if (dev_run)
       printf("Solved %s with presolve: status = %s\n",
-	     highs.getLp().model_name_.c_str(),
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+             highs.getLp().model_name_.c_str(),
+             highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == require_model_status);
     // Restore simplex strategy
-    highs.setOptionValue("simplex_strategy", simplex_strategy); 
+    highs.setOptionValue("simplex_strategy", simplex_strategy);
   }
-  
+
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::kOptimal) {
@@ -222,8 +222,7 @@ void issue425(Highs& highs) {
 void mpsGalenet(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportLpName("mpsGalenet", dev_run);
-  const HighsModelStatus require_model_status =
-      HighsModelStatus::kInfeasible;
+  const HighsModelStatus require_model_status = HighsModelStatus::kInfeasible;
 
   std::string model = "galenet";
   std::string model_file;
@@ -277,8 +276,7 @@ void mpsUnbounded(Highs& highs) {
   // being negative] resulted in the problem being declared infeasible
   //
   // Resulted in fixes being added to hsol dual
-  const HighsModelStatus require_model_status =
-      HighsModelStatus::kUnbounded;
+  const HighsModelStatus require_model_status = HighsModelStatus::kUnbounded;
 
   // Unit test fails for IPX with adlittle solved as maximization
   std::string model = "adlittle";
@@ -299,8 +297,7 @@ void mpsGas11(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportLpName("mpsGas11", dev_run);
   // Lots of trouble is caused by gas11
-  const HighsModelStatus require_model_status =
-      HighsModelStatus::kUnbounded;
+  const HighsModelStatus require_model_status = HighsModelStatus::kUnbounded;
 
   std::string model = "gas11";
   std::string model_file;
@@ -321,8 +318,7 @@ void almostNotUnbounded(Highs& highs) {
   //
   // No
   HighsLp lp;
-  const HighsModelStatus require_model_status0 =
-      HighsModelStatus::kUnbounded;
+  const HighsModelStatus require_model_status0 = HighsModelStatus::kUnbounded;
   const HighsModelStatus require_model_status1 = HighsModelStatus::kOptimal;
   const HighsModelStatus require_model_status2 = HighsModelStatus::kOptimal;
   const double optimal_objective1 = -1;

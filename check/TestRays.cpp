@@ -265,23 +265,22 @@ void testUnboundedMps(const std::string model,
   REQUIRE(highs.run() == HighsStatus::kOk);
 
   if (dev_run)
-    printf("Solved %s with presolve: status = %s\n",
-	   lp.model_name_.c_str(),
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+    printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+    // The LPs unboundedness hasn't been identified, so solve with primal
+    // simplex
     int simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
     if (dev_run)
-      printf("Solved %s with presolve: status = %s\n",
-	     lp.model_name_.c_str(),
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+      printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
+             highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == require_model_status);
     REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
     // Restore simplex strategy
-    highs.setOptionValue("simplex_strategy", simplex_strategy); 
+    highs.setOptionValue("simplex_strategy", simplex_strategy);
   }
   REQUIRE(highs.getModelStatus() == require_model_status);
   // Check that there is no dual ray
@@ -321,10 +320,9 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
 
   if (dev_run)
-    printf("Solved %s with presolve off: status = %s\n",
-	   lp.model_name_.c_str(),
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
-  
+    printf("Solved %s with presolve off: status = %s\n", lp.model_name_.c_str(),
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
+
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is a dual ray
@@ -366,26 +364,25 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   // LP is unbounded, but have to accept kUnboundedOrInfeasible
   if (dev_run)
-    printf("Solved %s with presolve: status = %s\n",
-	   lp.model_name_.c_str(),
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
-  
+    printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
+
   if (dev_run) highs.writeSolution("", true);
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+    // The LPs unboundedness hasn't been identified, so solve with primal
+    // simplex
     int simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
     if (dev_run)
-      printf("Solved %s with presolve: status = %s\n",
-	     lp.model_name_.c_str(),
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+      printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
+             highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == require_model_status);
     REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
     // Restore simplex strategy
-    highs.setOptionValue("simplex_strategy", simplex_strategy); 
- }
+    highs.setOptionValue("simplex_strategy", simplex_strategy);
+  }
   // Check that there is no dual ray
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
@@ -413,20 +410,18 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   if (dev_run)
-    printf("Solved %s with presolve: status = %s\n",
-	   lp.model_name_.c_str(),
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
-  if (highs.getModelStatus() == 
-  HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+    printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
+  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
+    // The LPs unboundedness hasn't been identified, so solve with primal
+    // simplex
     int simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
     if (dev_run)
-      printf("Solved %s with presolve: status = %s\n",
-	     lp.model_name_.c_str(),
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+      printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
+             highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == require_model_status);
     REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
     // Restore simplex strategy
@@ -486,18 +481,18 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   highs.run();
   if (dev_run)
     printf("Solved 464a without presolve: status = %s\n",
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
   bool has_ray = false;
-  if (highs.getModelStatus() == 
-  HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
+    // The LPs unboundedness hasn't been identified, so solve with primal
+    // simplex
     int simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
     if (dev_run)
       printf("Solved 464a without presolve: status = %s\n",
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+             highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
     REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
     // Restore simplex strategy
@@ -535,18 +530,18 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   highs.run();
   if (dev_run)
     printf("Solved 464b without presolve: status = %s\n",
-	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+           highs.modelStatusToString(highs.getModelStatus()).c_str());
   bool has_ray = false;
-  if (highs.getModelStatus() == 
-  HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
+    // The LPs unboundedness hasn't been identified, so solve with primal
+    // simplex
     int simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
     if (dev_run)
       printf("Solved 464a without presolve: status = %s\n",
-	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+             highs.modelStatusToString(highs.getModelStatus()).c_str());
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
     REQUIRE(highs.getPrimalRay(has_ray) == HighsStatus::kOk);
     // Restore simplex strategy

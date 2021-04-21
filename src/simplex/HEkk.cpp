@@ -1698,57 +1698,56 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
           num_flip++;
           sum_flip += fabs(flip);
         } else {
-	  if (simplex_info_.allow_cost_perturbation) {
-	    // Other variable = shift
-	    simplex_info_.costs_perturbed = 1;
-	    std::string direction;
-	    double shift;
-	    if (simplex_basis_.nonbasicMove_[i] == 1) {
-	      direction = "  up";
-	      double dual = (1 + random_.fraction()) * tau_d;
-	      shift = dual - simplex_info_.workDual_[i];
-	      simplex_info_.workDual_[i] = dual;
-	      simplex_info_.workCost_[i] = simplex_info_.workCost_[i] + shift;
-	    } else {
-	      direction = "down";
-	      double dual = -(1 + random_.fraction()) * tau_d;
-	      shift = dual - simplex_info_.workDual_[i];
-	      simplex_info_.workDual_[i] = dual;
-	      simplex_info_.workCost_[i] = simplex_info_.workCost_[i] + shift;
-	    }
-	    double local_dual_objective_change =
-              shift * simplex_info_.workValue_[i];
-	    local_dual_objective_change *= cost_scale_;
-	    shift_dual_objective_value_change += local_dual_objective_change;
-	    num_shift++;
-	    sum_shift += fabs(shift);
-	    highsLogDev(options_.log_options, HighsLogType::kVerbose,
-			"Move %s: cost shift = %g; objective change = %g\n",
-			direction.c_str(), shift, local_dual_objective_change);
-	  } else {
-	    // Shifting not permitted
-	    //
-	    // Before 07/01/20, these shifts were always done, but
-	    // doing it after cost perturbation has been removed can
-	    // lead to cycling when dual unboundedness (=> primal
-	    // infeasibility) has been detecteed in Phase 2, since the
-	    // shift removes dual infeasibilities, which are then
-	    // reinstated after the dual values are recomputed.
-	    //
-	    // ToDo: Not shifting leads to dual infeasibilities when an
-	    // LP is declared to be infeasible. Should go to
-	    // phase 1 primal simplex to "prove" infeasibility.
-	    //
-	    num_shift_skipped++;
-	  }
+          if (simplex_info_.allow_cost_perturbation) {
+            // Other variable = shift
+            simplex_info_.costs_perturbed = 1;
+            std::string direction;
+            double shift;
+            if (simplex_basis_.nonbasicMove_[i] == 1) {
+              direction = "  up";
+              double dual = (1 + random_.fraction()) * tau_d;
+              shift = dual - simplex_info_.workDual_[i];
+              simplex_info_.workDual_[i] = dual;
+              simplex_info_.workCost_[i] = simplex_info_.workCost_[i] + shift;
+            } else {
+              direction = "down";
+              double dual = -(1 + random_.fraction()) * tau_d;
+              shift = dual - simplex_info_.workDual_[i];
+              simplex_info_.workDual_[i] = dual;
+              simplex_info_.workCost_[i] = simplex_info_.workCost_[i] + shift;
+            }
+            double local_dual_objective_change =
+                shift * simplex_info_.workValue_[i];
+            local_dual_objective_change *= cost_scale_;
+            shift_dual_objective_value_change += local_dual_objective_change;
+            num_shift++;
+            sum_shift += fabs(shift);
+            highsLogDev(options_.log_options, HighsLogType::kVerbose,
+                        "Move %s: cost shift = %g; objective change = %g\n",
+                        direction.c_str(), shift, local_dual_objective_change);
+          } else {
+            // Shifting not permitted
+            //
+            // Before 07/01/20, these shifts were always done, but
+            // doing it after cost perturbation has been removed can
+            // lead to cycling when dual unboundedness (=> primal
+            // infeasibility) has been detecteed in Phase 2, since the
+            // shift removes dual infeasibilities, which are then
+            // reinstated after the dual values are recomputed.
+            //
+            // ToDo: Not shifting leads to dual infeasibilities when an
+            // LP is declared to be infeasible. Should go to
+            // phase 1 primal simplex to "prove" infeasibility.
+            //
+            num_shift_skipped++;
+          }
         }
       }
     }
   }
   if (num_shift_skipped) {
     highsLogDev(options_.log_options, HighsLogType::kError,
-		 "correctDual: Missed %d cost shifts\n",
-		 num_shift_skipped);
+                "correctDual: Missed %d cost shifts\n", num_shift_skipped);
     assert(!num_shift_skipped);
     return false;
   }
