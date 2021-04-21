@@ -507,9 +507,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
   if (test_call_crossover) {
 #ifdef IPX_ON
     HighsBasis basis;
-    // std::vector<double> x_values(lp_.num_col_, 0);
-    // std::vector<double> x_values(lp_.num_col_, 1);
-    std::vector<double> x_values(lp_.numCol_, 100);
+    std::vector<double> x_values(lp_.numCol_, 0);
+    // std::vector<double> x_values(lp_.numCol_, 1);
+    // std::vector<double> x_values(lp_.numCol_, 100);
 
     bool x_status = callCrossover(lp_, options_, x_values, solution_, basis);
     if (!x_status)
@@ -520,7 +520,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // and continue with run() now that we have set the basis.
 #else 
     // No IPX available so end here at approximate solve.
-    return 1;
+    return HighsStatus::Error;
 #endif
   }
 

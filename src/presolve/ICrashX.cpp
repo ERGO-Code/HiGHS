@@ -40,10 +40,7 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   // lps.RunCrossover_();
 
   // specify primal values coming from icrash
-  //const double* x = &x_values[0];
-
-  std::vector<double> test_values(num_col, 100);
-  const double* x = &test_values[0];
+  const double* x = &x_values[0];
 
   std::vector<double> collb(num_col, 0);
   std::vector<double> colub(num_col, 0);
