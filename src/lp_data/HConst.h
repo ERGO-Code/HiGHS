@@ -149,8 +149,7 @@ enum class HighsModelStatus {
   kReachedTimeLimit,
   kReachedIterationLimit,
   kPrimalDualInfeasible,
-  kDualInfeasible,
-  kMax = kDualInfeasible
+  kMax = kPrimalDualInfeasible
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

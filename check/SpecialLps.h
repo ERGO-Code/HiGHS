@@ -24,6 +24,7 @@ class SpecialLps {
  public:
   void issue272Lp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
+    lp.model_name_ = "issue272";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {3, 2};
@@ -43,6 +44,7 @@ class SpecialLps {
 
   void issue280Lp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
+    lp.model_name_ = "issue280";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {-1, 1};
@@ -62,6 +64,7 @@ class SpecialLps {
 
   void issue282Lp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
+    lp.model_name_ = "issue282";
     lp.numCol_ = 2;
     lp.numRow_ = 3;
     lp.colCost_ = {-3, -2};
@@ -80,6 +83,7 @@ class SpecialLps {
   }
 
   void issue285Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.model_name_ = "issue285";
     lp.numCol_ = 2;
     lp.numRow_ = 3;
     lp.colCost_ = {-4, 1};
@@ -98,6 +102,7 @@ class SpecialLps {
 
   void issue295Lp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
+    lp.model_name_ = "issue295";
     lp.numCol_ = 5;
     lp.numRow_ = 2;
     lp.colCost_ = {0, 0, 0, 1, -1};
@@ -117,6 +122,7 @@ class SpecialLps {
 
   void issue306Lp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
+    lp.model_name_ = "issue30";
     lp.numCol_ = 10;
     lp.numRow_ = 6;
     lp.colCost_ = {-1.64, 0.7, 1.8, -1.06, -1.16, 0.26, 2.13, 1.53, 0.66, 0.28};
@@ -137,6 +143,7 @@ class SpecialLps {
   }
 
   void issue425Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.model_name_ = "issue425";
     lp.numCol_ = 4;
     lp.numRow_ = 4;
     lp.colCost_ = {1, 1, 1, 2};
@@ -155,6 +162,7 @@ class SpecialLps {
 
   void primalDualInfeasible1Lp(HighsLp& lp,
                                HighsModelStatus& require_model_status) {
+    lp.model_name_ = "primalDualInfeasible1";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {-2, 1};
@@ -168,11 +176,12 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::kPrimalDualInfeasible;
+    require_model_status = HighsModelStatus::kInfeasible;
   }
 
   void primalDualInfeasible2Lp(HighsLp& lp,
                                HighsModelStatus& require_model_status) {
+    lp.model_name_ = "primalDualInfeasible2";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {1, 1};
@@ -186,10 +195,11 @@ class SpecialLps {
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.orientation_ = MatrixOrientation::kColwise;
-    require_model_status = HighsModelStatus::kPrimalDualInfeasible;
+    require_model_status = HighsModelStatus::kInfeasible;
   }
 
   void scipLpi2Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.model_name_ = "scipLpi2";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {3, 1};
@@ -207,6 +217,7 @@ class SpecialLps {
   }
 
   void scipLpi3Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.model_name_ = "scipLpi3";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {10, 15};
@@ -225,6 +236,7 @@ class SpecialLps {
 
   void distillationLp(HighsLp& lp, HighsModelStatus& require_model_status,
                       double& optimal_objective) {
+    lp.model_name_ = "distillation";
     lp.numCol_ = 2;
     lp.numRow_ = 3;
     lp.colCost_ = {8, 10};
@@ -244,6 +256,7 @@ class SpecialLps {
 
   void blendingLp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
+    lp.model_name_ = "blending";
     lp.numCol_ = 2;
     lp.numRow_ = 2;
     lp.colCost_ = {-8, -10};
@@ -264,6 +277,7 @@ class SpecialLps {
   void blendingMaxLp(HighsLp& lp, HighsModelStatus& require_model_status,
                      double& optimal_objective) {
     blendingLp(lp, require_model_status, optimal_objective);
+    lp.model_name_ = "blendingMax";
     for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
       lp.colCost_[iCol] = -lp.colCost_[iCol];
     lp.sense_ = ObjSense::kMaximize;

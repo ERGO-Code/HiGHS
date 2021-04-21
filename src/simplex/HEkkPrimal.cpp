@@ -203,12 +203,6 @@ HighsStatus HEkkPrimal::solve() {
                  HighsModelStatus::kUnbounded);
       break;
     }
-    if (solvePhase == kSolvePhase1 && ekk_instance_.scaled_model_status_ ==
-                                          HighsModelStatus::kDualInfeasible) {
-      // Dual infeasibilities after phase 2 for a problem known to be dual
-      // infeasible.
-      break;
-    }
     if (solvePhase == kSolvePhaseCleanup) {
       // Primal infeasibilities after phase 2 for a problem not known
       // to be primal infeasible. Dual feasible with primal

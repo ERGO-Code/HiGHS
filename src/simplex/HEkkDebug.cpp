@@ -403,7 +403,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       algorithm == SimplexAlgorithm::kDual &&
       ekk_instance.simplex_lp_status_.has_fresh_rebuild &&
       ekk_instance.simplex_info_.allow_cost_perturbation &&
-      ekk_instance.scaled_model_status_ != HighsModelStatus::kDualInfeasible &&
       ekk_instance.scaled_model_status_ !=
           HighsModelStatus::kPrimalDualInfeasible;
 

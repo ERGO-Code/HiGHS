@@ -347,9 +347,6 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kUnboundedOrInfeasible:
       return "Primal infeasible or unbounded";
       break;
-    case HighsModelStatus::kDualInfeasible:
-      return "Dual infeasible";
-      break;
     default:
 #ifdef HiGHSDEV
       printf("HiGHS model status %" HIGHSINT_FORMAT " not recognised\n",
@@ -421,8 +418,6 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     case HighsModelStatus::kReachedTimeLimit:
       return HighsStatus::kWarning;
     case HighsModelStatus::kReachedIterationLimit:
-      return HighsStatus::kWarning;
-    case HighsModelStatus::kDualInfeasible:
       return HighsStatus::kWarning;
     default:
       return HighsStatus::kError;

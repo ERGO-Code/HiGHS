@@ -3221,7 +3221,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
     case Result::kPrimalInfeasible:
       return HighsModelStatus::kInfeasible;
     case Result::kDualInfeasible:
-      return HighsModelStatus::kDualInfeasible;
+      return HighsModelStatus::kUnboundedOrInfeasible;
   }
 
   shrinkProblem(postSolveStack);

@@ -49,7 +49,7 @@ HighsPresolveStatus PresolveComponent::run() {
   switch (status) {
     case HighsModelStatus::kInfeasible:
       return HighsPresolveStatus::kInfeasible;
-    case HighsModelStatus::kDualInfeasible:
+    case HighsModelStatus::kUnboundedOrInfeasible:
       return HighsPresolveStatus::kUnboundedOrInfeasible;
     case HighsModelStatus::kOptimal:
       return HighsPresolveStatus::kReducedToEmpty;

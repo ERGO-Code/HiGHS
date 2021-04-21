@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-8;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
@@ -214,9 +214,7 @@ void testInfeasibleMps(const std::string model) {
   vector<double> primal_ray_value;
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
 
@@ -300,6 +298,12 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
+
+  if (dev_run)
+    printf("Solved %s with presolve: status = %s\n",
+	   lp.model_name_.c_str(),
+	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+  
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is a dual ray
@@ -337,15 +341,37 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   special_lps.scipLpi2Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == require_model_status);
+  // LP is unbounded, but have to accept kUnboundedOrInfeasible
+  if (dev_run)
+    printf("Solved %s with presolve: status = %s\n",
+	   lp.model_name_.c_str(),
+	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+  
+  REQUIRE((highs.getModelStatus() == require_model_status ||
+	   highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible));
   if (dev_run) highs.writeSolution("", true);
-
+  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
+    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+    int simplex_strategy;
+    highs.getOptionValue("simplex_strategy", simplex_strategy);
+    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+    highs.run();
+    if (dev_run)
+      printf("Solved %s with presolve: status = %s\n",
+	     lp.model_name_.c_str(),
+	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
+    // Restore simplex strategy
+    highs.setOptionValue("simplex_strategy", simplex_strategy); 
+ }
   // Check that there is no dual ray
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
 
-  // Check that there is a primal ray
+  // Check that a primal ray can be obtained
   primal_ray_value.resize(lp.numCol_);
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
@@ -367,7 +393,33 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
+  if (dev_run)
+    printf("Solved %s with presolve: status = %s\n",
+	   lp.model_name_.c_str(),
+	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+  if (highs.getModelStatus() == 
+  HighsModelStatus::kUnboundedOrInfeasible) {
+    // The LPs unboundedness hasn't been identified, so solve with primal simplex
+    int simplex_strategy;
+    highs.getOptionValue("simplex_strategy", simplex_strategy);
+    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+    highs.run();
+    if (dev_run)
+      printf("Solved %s with presolve: status = %s\n",
+	     lp.model_name_.c_str(),
+	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
+    // Restore simplex strategy
+    highs.setOptionValue("simplex_strategy", simplex_strategy);
+  }
   REQUIRE(highs.getModelStatus() == require_model_status);
+  // Check that there is no dual ray
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
+  REQUIRE(has_dual_ray == false);
+  // Check that there is no primal ray
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
+  REQUIRE(has_primal_ray == false);
 }
 
 TEST_CASE("Rays-gas11", "[highs_test_rays]") { testUnboundedMps("gas11"); }
