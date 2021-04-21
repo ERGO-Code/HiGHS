@@ -17,8 +17,6 @@
 
 #include <vector>
 
-#include "HConfig.h"
-
 class HVector;
 
 /**
@@ -102,9 +100,10 @@ class HMatrix {
    * to columns coming in and out of the set of indices of basic
    * variables
    */
-  void update(
-      int columnIn,  //!< Column entering the set of indices of basic variables
-      int columnOut  //!< Column leaving the set of indices of basic variables
+  void update(int variable_in,  //!< Column entering the set of indices of basic
+                                //!< variables
+              int variable_out  //!< Column leaving the set of indices of basic
+                                //!< variables
   );
   /**
    * @brief Compute the dot product between a vector and particular
@@ -134,12 +133,6 @@ class HMatrix {
    * @brief Get the pointer to the values of the column-wise matrix
    */
   const double* getAvalue() const { return &Avalue[0]; }
-
-#ifdef HiGHSDEV
-  bool debugRowMatrix(const int* nonbasicFlag);
-  bool debugPriceResult(HVector& row_ap, const HVector& row_ep) const;
-  bool debugPriceResultCore(HVector& row_ap, const HVector& row_ep) const;
-#endif
 
   /**
    * @brief Density of result at which it is not worth maintaing

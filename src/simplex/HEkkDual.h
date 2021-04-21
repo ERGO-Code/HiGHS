@@ -7,22 +7,23 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HDual.h
+/**@file simplex/HEkkDual.h
  * @brief Dual simplex solver for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HDUAL_H_
-#define SIMPLEX_HDUAL_H_
+#ifndef SIMPLEX_HEKKDUAL_H_
+#define SIMPLEX_HEKKDUAL_H_
 
 #include <set>
 #include <string>
 #include <vector>
 
 #include "HConfig.h"
-#include "lp_data/HighsModelObject.h"
+//#include "lp_data/HighsModelObject.h"
 #include "simplex/HCrash.h"
-#include "simplex/HDualRHS.h"
-#include "simplex/HDualRow.h"
+#include "simplex/HEkk.h"
+#include "simplex/HEkkDualRHS.h"
+#include "simplex/HEkkDualRow.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HVector.h"
 
@@ -63,13 +64,13 @@ const double pami_cutoff = 0.95;
 /**
  * @brief Dual simplex solver for HiGHS
  */
-class HDual {
+class HEkkDual {
  public:
-  HDual(HighsModelObject& model_object)
-      : workHMO(model_object), dualRow(model_object), dualRHS(model_object) {
+  HEkkDual(HEkk& simplex)
+      : ekk_instance_(simplex), dualRow(simplex), dualRHS(simplex) {
     dualRow.setup();
     for (int i = 0; i < HIGHS_SLICED_LIMIT; i++)
-      slice_dualRow.push_back(HDualRow(model_object));
+      slice_dualRow.push_back(HEkkDualRow(simplex));
     dualRHS.setup();
   }
 
@@ -142,8 +143,8 @@ class HDual {
   /**
    * @brief Perform a single serial dual simplex iteration
    *
-   * All the methods it calls have as their first line "if (invertHint)
-   * return;", where invertHint is, for example, set to 1 when CHUZR
+   * All the methods it calls have as their first line "if (rebuild_reason)
+   * return;", where rebuild_reason is, for example, set to 1 when CHUZR
    * finds no candidate. This causes a break from the inner loop of
    * solve_phase% and, hence, a call to rebuild().
    */
@@ -156,9 +157,9 @@ class HDual {
 
   /**
    * @brief Perform a single PAMI dual simplex iteration - source code in
-   * HDualMulti.cpp
+   * HEkkDualMulti.cpp
    */
-  void iterateMulti();  // in HDualMulti.cpp
+  void iterateMulti();  // in HEkkDualMulti.cpp
 
   /**
    * @brief Pass the data for the serial iteration analysis, report and rebuild
@@ -195,7 +196,7 @@ class HDual {
   /**
    * @brief Single line report after rebuild
    */
-  void reportRebuild(const int rebuild_invert_hint = -1);
+  void reportRebuild(const int reason_for_rebuild = -1);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -271,6 +272,9 @@ class HDual {
    * clock
    */
   void updatePivots();
+
+  void shiftCost(const int iCol, const double amount);
+  void shiftBack(const int iCol);
 
   /**
    * @brief Initialise a Devex framework: reference set is all basic
@@ -377,14 +381,7 @@ class HDual {
   void majorRollback();
 
   // private:
-  HighsStatus returnFromSolve(const HighsStatus return_status);
   void saveDualRay();
-  bool getNonsingularInverse();
-  bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
-  void putBacktrackingBasis();
-  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
-                            const vector<double>& scattered_edge_weights);
-
   void assessPhase1Optimality();
   void exitPhase1ResetDuals();
   void reportOnPossibleLpDualInfeasibility();
@@ -394,6 +391,10 @@ class HDual {
   bool bailoutReturn();
   bool bailoutOnTimeIterations();
   bool bailoutOnDualObjective();
+  HighsDebugStatus debugDualSimplex(const std::string message,
+                                    const bool initialise = false);
+  double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
+  double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
 
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function
@@ -405,8 +406,10 @@ class HDual {
   bool minor_new_devex_framework =
       false;  //!< Set a new Devex framework in PAMI minor iterations
 
+  // References:
+  HEkk& ekk_instance_;
+
   // Model
-  HighsModelObject& workHMO;
   int solver_num_row;
   int solver_num_col;
   int solver_num_tot;
@@ -443,7 +446,7 @@ class HDual {
   double dual_objective_value_upper_bound;
 
   int solvePhase;
-  int invertHint;
+  int rebuild_reason;
 
   HVector row_ep;
   HVector row_ap;
@@ -451,23 +454,23 @@ class HDual {
   HVector col_BFRT;
   HVector col_DSE;
 
-  HDualRow dualRow;
+  HEkkDualRow dualRow;
 
   // Solving related buffers
   int dualInfeasCount;
 
-  HDualRHS dualRHS;
+  HEkkDualRHS dualRHS;
 
   // Simplex pivotal information
-  int rowOut;
-  int columnOut;
-  int sourceOut;  // -1 from small to lower, +1 to upper
-  int columnIn;
-  double deltaPrimal;
-  double thetaDual;
-  double thetaPrimal;
-  double alpha;
-  double alphaRow;
+  int row_out;
+  int variable_out;
+  int move_out;  // -1 from small to lower, +1 to upper
+  int variable_in;
+  double delta_primal;
+  double theta_dual;
+  double theta_primal;
+  double alpha_col;
+  double alpha_row;
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
@@ -480,13 +483,13 @@ class HDual {
   int slice_start[HIGHS_SLICED_LIMIT + 1];
   HMatrix slice_matrix[HIGHS_SLICED_LIMIT];
   HVector slice_row_ap[HIGHS_SLICED_LIMIT];
-  std::vector<HDualRow> slice_dualRow;
+  std::vector<HEkkDualRow> slice_dualRow;
 
   /**
    * @brief Multiple CHUZR data
    */
   struct MChoice {
-    int rowOut;
+    int row_out;
     double baseValue;
     double baseLower;
     double baseUpper;
@@ -502,15 +505,15 @@ class HDual {
    * @brief Multiple minor iteration data
    */
   struct MFinish {
-    int moveIn;
+    int move_in;
     double shiftOut;
     std::vector<int> flipList;
 
-    int rowOut;
-    int columnOut;
-    int columnIn;
-    double alphaRow;
-    double thetaPrimal;
+    int row_out;
+    int variable_out;
+    int variable_in;
+    double alpha_row;
+    double theta_primal;
     double basicBound;
     double basicValue;
     double EdWt;
@@ -528,26 +531,8 @@ class HDual {
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
-#ifdef HiGHSDEV
-  const bool rp_reinvert_syntheticClock = false;  // true;//
-  const bool rp_numericalTrouble = false;         // true;//
-#endif
-  const double original_multi_build_syntheticTick_mu = 1.5;
-  const double multi_build_syntheticTick_mu = 1.0;
-  // original_multi_build_syntheticTick_mu;//
-  const double numerical_trouble_tolerance = 1e-7;
-  const double original_multi_numerical_trouble_tolerance = 1e-8;
-  const double multi_numerical_trouble_tolerance = 1e-7;
-  // original_multi_numerical_trouble_tolerance;
-
-  const int synthetic_tick_reinversion_min_update_count = 50;
-  const int original_multi_synthetic_tick_reinversion_min_update_count = 201;
-  const int multi_synthetic_tick_reinversion_min_update_count =
-      synthetic_tick_reinversion_min_update_count;
-  // original_multi_synthetic_tick_reinversion_min_update_count;
-
-  double build_syntheticTick;
-  double total_syntheticTick;
+  //  double build_syntheticTick;
+  //  double total_syntheticTick;
 };
 
-#endif /* SIMPLEX_HDUAL_H_ */
+#endif /* SIMPLEX_HEKKDUAL_H_ */

@@ -213,9 +213,9 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   MRcountb4.resize(numRow);
   MRindex.resize(BlimitX * 2);
 
-  McolumnMark.assign(numRow, 0);
-  McolumnIndex.resize(numRow);
-  McolumnArray.assign(numRow, 0);
+  mwz_column_mark.assign(numRow, 0);
+  mwz_column_index.resize(numRow);
+  mwz_column_array.assign(numRow, 0);
 
   // Allocate space for count-link-list
   clinkFirst.assign(numRow + 1, -1);
@@ -725,13 +725,13 @@ int HFactor::buildKernel() {
     // 2.2. Store active pivot column to L
     int start_A = MCstart[jColPivot];
     int end_A = start_A + MCcountA[jColPivot];
-    int McolumnCount = 0;
+    int mwz_column_count = 0;
     for (int k = start_A; k < end_A; k++) {
       const int iRow = MCindex[k];
       const double value = MCvalue[k] / pivotX;
-      McolumnIndex[McolumnCount++] = iRow;
-      McolumnArray[iRow] = value;
-      McolumnMark[iRow] = 1;
+      mwz_column_index[mwz_column_count++] = iRow;
+      mwz_column_array[iRow] = value;
+      mwz_column_mark[iRow] = 1;
       Lindex.push_back(iRow);
       Lvalue.push_back(value);
       MRcountb4[iRow] = MRcount[iRow];
@@ -765,15 +765,15 @@ int HFactor::buildKernel() {
       colStoreN(iCol, iRowPivot, my_pivot);
 
       // 2.4.2. Elimination on the overlapping part
-      int nFillin = McolumnCount;
+      int nFillin = mwz_column_count;
       int nCancel = 0;
       for (int my_k = my_start; my_k < my_end; my_k++) {
         int iRow = MCindex[my_k];
         double value = MCvalue[my_k];
-        if (McolumnMark[iRow]) {
-          McolumnMark[iRow] = 0;
+        if (mwz_column_mark[iRow]) {
+          mwz_column_mark[iRow] = 0;
           nFillin--;
-          value -= my_pivot * McolumnArray[iRow];
+          value -= my_pivot * mwz_column_array[iRow];
           if (fabs(value) < HIGHS_CONST_TINY) {
             value = 0;
             nCancel++;
@@ -781,7 +781,7 @@ int HFactor::buildKernel() {
           MCvalue[my_k] = value;
         }
       }
-      fake_eliminate += McolumnCount;
+      fake_eliminate += mwz_column_count;
       fake_eliminate += nFillin * 2;
 
       // 2.4.3. Remove cancellation gaps
@@ -819,16 +819,16 @@ int HFactor::buildKernel() {
         }
 
         // 2.4.4.2 Fill into column copy
-        for (int i = 0; i < McolumnCount; i++) {
-          int iRow = McolumnIndex[i];
-          if (McolumnMark[iRow])
-            colInsert(iCol, iRow, -my_pivot * McolumnArray[iRow]);
+        for (int i = 0; i < mwz_column_count; i++) {
+          int iRow = mwz_column_index[i];
+          if (mwz_column_mark[iRow])
+            colInsert(iCol, iRow, -my_pivot * mwz_column_array[iRow]);
         }
 
         // 2.4.4.3 Fill into the row copy
-        for (int i = 0; i < McolumnCount; i++) {
-          int iRow = McolumnIndex[i];
-          if (McolumnMark[iRow]) {
+        for (int i = 0; i < mwz_column_count; i++) {
+          int iRow = mwz_column_index[i];
+          if (mwz_column_mark[iRow]) {
             // Expand row space
             if (MRcount[iRow] == MRspace[iRow]) {
               int p1 = MRstart[iRow];
@@ -844,7 +844,8 @@ int HFactor::buildKernel() {
       }
 
       // 2.4.5. Reset pivot column mark
-      for (int i = 0; i < McolumnCount; i++) McolumnMark[McolumnIndex[i]] = 1;
+      for (int i = 0; i < mwz_column_count; i++)
+        mwz_column_mark[mwz_column_index[i]] = 1;
 
       // 2.4.6. Fix max value and link list
       colFixMax(iCol);
@@ -855,7 +856,8 @@ int HFactor::buildKernel() {
     }
 
     // 2.5. Clear pivot column buffer
-    for (int i = 0; i < McolumnCount; i++) McolumnMark[McolumnIndex[i]] = 0;
+    for (int i = 0; i < mwz_column_count; i++)
+      mwz_column_mark[mwz_column_index[i]] = 0;
 
     // 2.6. Correct row links for the remain active part
     for (int i = start_A; i < end_A; i++) {
@@ -951,8 +953,8 @@ void HFactor::buildMarkSingC() {
 }
 
 void HFactor::buildFinish() {
-  debugPivotValueAnalysis(highs_debug_level, output, message_level, numRow,
-                          UpivotValue);
+  //  debugPivotValueAnalysis(highs_debug_level, output, message_level, numRow,
+  //  UpivotValue);
   // The look up table
   for (int i = 0; i < numRow; i++) UpivotLookup[UpivotIndex[i]] = i;
   LpivotIndex = UpivotIndex;
@@ -1924,12 +1926,12 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
 void HFactor::updatePF(HVector* aq, int iRow, int* hint) {
   // Check space
   const int columnCount = aq->packCount;
-  const int* columnIndex = &aq->packIndex[0];
+  const int* variable_index = &aq->packIndex[0];
   const double* columnArray = &aq->packValue[0];
 
   // Copy the pivotal column
   for (int i = 0; i < columnCount; i++) {
-    int index = columnIndex[i];
+    int index = variable_index[i];
     double value = columnArray[i];
     if (index != iRow) {
       PFindex.push_back(index);
@@ -1987,12 +1989,12 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow
     PFvalue.push_back(aq->packValue[i]);
   }
 
-  int columnOut = baseIndex[iRow];
-  if (columnOut >= numCol) {
-    PFindex.push_back(columnOut - numCol);
+  int variable_out = baseIndex[iRow];
+  if (variable_out >= numCol) {
+    PFindex.push_back(variable_out - numCol);
     PFvalue.push_back(-1);
   } else {
-    for (int k = Astart[columnOut]; k < Astart[columnOut + 1]; k++) {
+    for (int k = Astart[variable_out]; k < Astart[variable_out + 1]; k++) {
       PFindex.push_back(Aindex[k]);
       PFvalue.push_back(-Avalue[k]);
     }

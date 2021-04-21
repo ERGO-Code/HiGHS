@@ -51,6 +51,7 @@ buildDebug/
 [Bb]in/
 [Oo]bj/
 test/
+Test/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/

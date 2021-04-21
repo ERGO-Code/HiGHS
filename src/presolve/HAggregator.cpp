@@ -1073,7 +1073,7 @@ void HAggregator::substitute(int substcol, int staycol, double offset,
 }
 
 void HAggregator::removeFixedCol(int col) {
-  assert(colLower[col] == colUpper[col]);
+  assert(std::abs(colLower[col] - colUpper[col]) <= drop_tolerance);
   double fixval = colLower[col];
 
   for (int coliter = colhead[col]; coliter != -1;) {
@@ -1131,6 +1131,226 @@ void HAggregator::removeRedundantRows(std::vector<uint8_t>& rowdeleted) {
     rowdeleted[row] = true;
     removeRow(row);
   }
+}
+
+int HAggregator::strengthenInequalities() {
+  int numrow = rowLower.size();
+
+  std::vector<int8_t> complementation;
+  std::vector<double> reducedcost;
+  std::vector<double> upper;
+  std::vector<int> indices;
+  std::vector<int> positions;
+  std::vector<int> stack;
+  std::vector<double> coefs;
+  std::vector<int> cover;
+
+  int numstrenghtened = 0;
+
+  for (int row = 0; row != numrow; ++row) {
+    if (rowsize[row] <= 1) continue;
+    if (rowLower[row] != -HIGHS_CONST_INF && rowUpper[row] != HIGHS_CONST_INF)
+      continue;
+
+    // printf("strengthening knapsack of %d vars\n", rowsize[row]);
+
+    HighsCDouble maxviolation;
+    HighsCDouble continuouscontribution = 0.0;
+    double scale;
+
+    if (rowLower[row] != -HIGHS_CONST_INF) {
+      maxviolation = rowLower[row];
+      scale = -1.0;
+    } else {
+      maxviolation = -rowUpper[row];
+      scale = 1.0;
+    }
+
+    complementation.clear();
+    reducedcost.clear();
+    upper.clear();
+    indices.clear();
+    positions.clear();
+    complementation.reserve(rowsize[row]);
+    reducedcost.reserve(rowsize[row]);
+    upper.reserve(rowsize[row]);
+    indices.reserve(rowsize[row]);
+    stack.reserve(rowsize[row]);
+    stack.push_back(rowroot[row]);
+
+    bool skiprow = false;
+
+    while (!stack.empty()) {
+      int pos = stack.back();
+      stack.pop_back();
+
+      if (ARright[pos] != -1) stack.push_back(ARright[pos]);
+      if (ARleft[pos] != -1) stack.push_back(ARleft[pos]);
+
+      int8_t comp;
+      double weight;
+      double ub;
+      weight = Avalue[pos] * scale;
+      int col = Acol[pos];
+      ub = colUpper[col] - colLower[col];
+
+      if (ub == HIGHS_CONST_INF) {
+        skiprow = true;
+        break;
+      }
+
+      if (weight > 0) {
+        if (colUpper[col] == HIGHS_CONST_INF) {
+          skiprow = true;
+          break;
+        }
+
+        comp = 1;
+        maxviolation += colUpper[col] * weight;
+      } else {
+        if (colLower[col] == -HIGHS_CONST_INF) {
+          skiprow = true;
+          break;
+        }
+        comp = -1;
+        maxviolation += colLower[col] * weight;
+        weight = -weight;
+      }
+
+      if (ub <= bound_tolerance || weight <= bound_tolerance) continue;
+
+      if (integrality[col] == HighsVarType::CONTINUOUS) {
+        continuouscontribution += weight * ub;
+        continue;
+      }
+
+      indices.push_back(reducedcost.size());
+      positions.push_back(pos);
+      reducedcost.push_back(weight);
+      complementation.push_back(comp);
+      upper.push_back(ub);
+    }
+
+    if (skiprow) {
+      stack.clear();
+      continue;
+    }
+
+    while (true) {
+      if (maxviolation <= continuouscontribution + bound_tolerance ||
+          indices.empty())
+        break;
+
+      std::sort(indices.begin(), indices.end(), [&](int i1, int i2) {
+        return reducedcost[i1] > reducedcost[i2];
+      });
+
+      HighsCDouble lambda = maxviolation - continuouscontribution;
+
+      cover.clear();
+      cover.reserve(indices.size());
+
+      for (int i = indices.size() - 1; i >= 0; --i) {
+        double delta = upper[indices[i]] * reducedcost[indices[i]];
+
+        if (lambda <= delta + bound_tolerance)
+          cover.push_back(indices[i]);
+        else
+          lambda -= delta;
+      }
+
+      if (cover.empty()) break;
+
+      int alpos = *std::min_element(
+          cover.begin(), cover.end(),
+          [&](int i1, int i2) { return reducedcost[i1] < reducedcost[i2]; });
+
+      int coverend = cover.size();
+
+      double al = reducedcost[alpos];
+      coefs.resize(coverend);
+      double coverrhs =
+          std::max(std::ceil(double(lambda / al - bound_tolerance)), 1.0);
+      HighsCDouble slackupper = -coverrhs;
+
+      double step = HIGHS_CONST_INF;
+      for (int i = 0; i != coverend; ++i) {
+        coefs[i] =
+            std::ceil(std::min(reducedcost[cover[i]], double(lambda)) / al -
+                      drop_tolerance);
+        slackupper += upper[cover[i]] * coefs[i];
+        step = std::min(step, reducedcost[cover[i]] / coefs[i]);
+      }
+      step = std::min(step, double(maxviolation / coverrhs));
+      maxviolation -= step * coverrhs;
+
+      int slackind = reducedcost.size();
+      reducedcost.push_back(step);
+      upper.push_back(double(slackupper));
+
+      for (int i = 0; i != coverend; ++i)
+        reducedcost[cover[i]] -= step * coefs[i];
+
+      indices.erase(std::remove_if(indices.begin(), indices.end(),
+                                   [&](int i) {
+                                     return reducedcost[i] <= bound_tolerance;
+                                   }),
+                    indices.end());
+      indices.push_back(slackind);
+    }
+
+    double threshold = double(maxviolation + bound_tolerance);
+
+    indices.erase(std::remove_if(indices.begin(), indices.end(),
+                                 [&](int i) {
+                                   return i >= (int)positions.size() ||
+                                          std::abs(reducedcost[i]) <= threshold;
+                                 }),
+                  indices.end());
+    if (indices.empty()) continue;
+
+    if (scale == -1.0) {
+      HighsCDouble lhs = rowLower[row];
+      for (int i : indices) {
+        double coefdelta = double(reducedcost[i] - maxviolation);
+        int pos = positions[i];
+
+        if (complementation[i] == -1) {
+          lhs -= coefdelta * colLower[Acol[pos]];
+          Avalue[pos] -= coefdelta;
+        } else {
+          lhs += coefdelta * colUpper[Acol[pos]];
+          Avalue[pos] += coefdelta;
+        }
+
+        dropIfZero(pos);
+      }
+
+      rowLower[row] = double(lhs);
+    } else {
+      HighsCDouble rhs = rowUpper[row];
+      for (int i : indices) {
+        double coefdelta = double(reducedcost[i] - maxviolation);
+        int pos = positions[i];
+
+        if (complementation[i] == -1) {
+          rhs += coefdelta * colLower[Acol[pos]];
+          Avalue[pos] += coefdelta;
+        } else {
+          rhs -= coefdelta * colUpper[Acol[pos]];
+          Avalue[pos] -= coefdelta;
+        }
+
+        dropIfZero(pos);
+      }
+
+      rowUpper[row] = double(rhs);
+    }
+
+    numstrenghtened += indices.size();
+  }
+
+  return numstrenghtened;
 }
 
 }  // namespace presolve

@@ -31,7 +31,7 @@ using std::vector;
 
 void HCrash::crash(const int pass_crash_strategy) {
   crash_strategy = pass_crash_strategy;
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   if (simplex_lp.numRow_ == 0) return;
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;
@@ -78,7 +78,7 @@ void HCrash::crash(const int pass_crash_strategy) {
 }
 
 void HCrash::bixby() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
 
   const int* Astart = &simplex_lp.Astart_[0];
   const int* Aindex = &simplex_lp.Aindex_[0];
@@ -91,7 +91,7 @@ void HCrash::bixby() {
   bool perform_crash = bixby_iz_da();
   if (!perform_crash) return;
 
-  // bixby_rp_mrt(workHMO);
+  // bixby_rp_mrt(ekk_instance);
 
   // These multipliers are in Step 2(a) and Step 2(b) of the paper: default
   // values 0.99 and 0.01
@@ -223,10 +223,12 @@ void HCrash::bixby() {
     if (bixby_vr_in_r[r_n] == no_ix) continue;
     if (bixby_vr_in_r[r_n] == numCol + r_n) continue;
     int cz_c_n = bixby_vr_in_r[r_n];
-    int columnIn = cz_c_n;
-    int columnOut = numCol + r_n;
-    workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-    workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+    int variable_in = cz_c_n;
+    int variable_out = numCol + r_n;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
+        NONBASIC_FLAG_FALSE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
+        NONBASIC_FLAG_TRUE;
 #ifdef HiGHSDEV
     int cz_r_n = r_n;
     int vr_ty = crsh_r_ty[cz_r_n];
@@ -238,14 +240,33 @@ void HCrash::bixby() {
 #ifdef HiGHSDEV
   // Analyse the row and column status after Crash
   // basicIndex is only required for this analysis, so set it here.
-  workHMO.simplex_basis_.basicIndex_.resize(numRow);
-  initialise_basic_index(workHMO);
+  ekk_instance.simplex_basis_.basicIndex_.resize(numRow);
+  initialise_basic_index();
   crsh_an_r_c_st_af();
 #endif
 }
 
+#ifdef HiGHSDEV
+// Only used to analyse the row and column status after Crash
+void HCrash::initialise_basic_index() {
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+
+  int num_basic_variables = 0;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) {
+      assert(num_basic_variables < simplex_lp.numRow_);
+      simplex_basis.basicIndex_[num_basic_variables] = iVar;
+      num_basic_variables++;
+    }
+  }
+  assert(num_basic_variables == simplex_lp.numRow_);
+}
+#endif
+
 bool HCrash::bixby_iz_da() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const int* Astart = &simplex_lp.Astart_[0];
   const double* Avalue = &simplex_lp.Avalue_[0];
   const int objSense = (int)simplex_lp.sense_;
@@ -427,7 +448,7 @@ bool HCrash::bixby_iz_da() {
 }
 
 void HCrash::bixby_rp_mrt() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
   const double* colLower = &simplex_lp.colLower_[0];
@@ -479,7 +500,7 @@ void HCrash::bixby_rp_mrt() {
 }
 
 void HCrash::ltssf() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   if (crash_strategy == SIMPLEX_CRASH_STRATEGY_LTSSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
@@ -582,8 +603,8 @@ void HCrash::ltssf() {
       tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
   // Analyse the row and column status after Crash
   // basicIndex is only required for this analysis, so set it here.
-  workHMO.simplex_basis_.basicIndex_.resize(numRow);
-  initialise_basic_index(workHMO);
+  ekk_instance.simplex_basis_.basicIndex_.resize(numRow);
+  initialise_basic_index();
   crsh_an_r_c_st_af();
 #endif
 }
@@ -617,10 +638,12 @@ void HCrash::ltssf_iterate() {
       double rlv_pv_v = abs_pv_v / crsh_mtx_c_mx_abs_v[cz_c_n];
       mn_abs_pv_v = min(abs_pv_v, mn_abs_pv_v);
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
-      int columnIn = cz_c_n;
-      int columnOut = numCol + cz_r_n;
-      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+      int variable_in = cz_c_n;
+      int variable_out = numCol + cz_r_n;
+      ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
+          NONBASIC_FLAG_FALSE;
+      ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
+          NONBASIC_FLAG_TRUE;
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -682,7 +705,7 @@ void HCrash::ltssf_u_da() {
 }
 
 void HCrash::ltssf_u_da_af_bs_cg() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const int* Astart = &simplex_lp.Astart_[0];
   const int* Aindex = &simplex_lp.Aindex_[0];
   // ltssf_rp_r_k();
@@ -823,8 +846,8 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
 }
 
 void HCrash::ltssf_iz_da() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
-  SimplexBasis& simplex_basis = workHMO.simplex_basis_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
   const int* Astart = &simplex_lp.Astart_[0];
@@ -1114,7 +1137,7 @@ void HCrash::ltssf_cz_r() {
 }
 
 void HCrash::ltssf_cz_c() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
 
@@ -1198,10 +1221,12 @@ void HCrash::tsSing() {
   // of basic variables reaches numRow
   for (int c_n = 0; c_n < numTot; c_n++) {
     int r_n = c_n;
-    int columnIn = c_n;
-    int columnOut = numCol + r_n;
-    workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-    workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+    int variable_in = c_n;
+    int variable_out = numCol + r_n;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
+        NONBASIC_FLAG_FALSE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
+        NONBASIC_FLAG_TRUE;
     nBcVr++;
     if (nBcVr == numRow) break;
   }
@@ -1302,12 +1327,12 @@ void HCrash::ltssf_rp_pri_k_da() {
 #endif
 
 void HCrash::crsh_iz_vr_ty() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const double* colLower = &simplex_lp.colLower_[0];
   const double* colUpper = &simplex_lp.colUpper_[0];
   const double* rowLower = &simplex_lp.rowLower_[0];
   const double* rowUpper = &simplex_lp.rowUpper_[0];
-  const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  const int* nonbasicFlag = &ekk_instance.simplex_basis_.nonbasicFlag_[0];
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
@@ -1392,7 +1417,7 @@ void HCrash::crsh_iz_vr_ty() {
 
 #ifdef HiGHSDEV
 void HCrash::crsh_an_c_co() {
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
   const double* colLower = &simplex_lp.colLower_[0];
@@ -1541,9 +1566,9 @@ void HCrash::crsh_rp_r_c_st(const int mode) {
   }
 }
 void HCrash::crsh_an_r_c_st_af() {
-  const int* Astart = &workHMO.simplex_lp_.Astart_[0];
+  const int* Astart = &ekk_instance.simplex_lp_.Astart_[0];
   for (int k = 0; k < numRow; k++) {
-    int vr_n = workHMO.simplex_basis_.basicIndex_[k];
+    int vr_n = ekk_instance.simplex_basis_.basicIndex_[k];
     if (vr_n < numCol) {
       int c_n = vr_n;
       crsh_bs_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
@@ -1554,7 +1579,7 @@ void HCrash::crsh_an_r_c_st_af() {
   }
 
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (workHMO.simplex_basis_.nonbasicFlag_[vr_n] == 0) continue;
+    if (ekk_instance.simplex_basis_.nonbasicFlag_[vr_n] == 0) continue;
     if (vr_n < numCol) {
       int c_n = vr_n;
       crsh_nonbc_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
@@ -1565,7 +1590,7 @@ void HCrash::crsh_an_r_c_st_af() {
   }
   int bs_mtx_n_struc_el = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
+    int vr_n = ekk_instance.simplex_basis_.basicIndex_[r_n];
     if (vr_n < numCol) {
       int c_n_el = Astart[vr_n + 1] - Astart[vr_n];
       bs_mtx_n_struc_el += c_n_el;

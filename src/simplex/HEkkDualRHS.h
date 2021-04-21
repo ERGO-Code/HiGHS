@@ -7,12 +7,12 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HDualRHS.h
+/**@file simplex/HEkkDualRHS.h
  * @brief Dual simplex optimality test for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HDUALRHS_H_
-#define SIMPLEX_HDUALRHS_H_
+#ifndef SIMPLEX_HEKKDUALRHS_H_
+#define SIMPLEX_HEKKDUALRHS_H_
 
 #include <vector>
 
@@ -25,9 +25,9 @@ class HVector;
  *
  * Performs the optimality test and some update primal/weight tasks
  */
-class HDualRHS {
+class HEkkDualRHS {
  public:
-  HDualRHS(HighsModelObject& hmo) : workHMO(hmo) {}
+  HEkkDualRHS(HEkk& simplex) : ekk_instance_(simplex) {}
 
   /**
    * @brief Defines space for Mark, Index and Array, EdWt and EdWtFull
@@ -87,17 +87,17 @@ class HDualRHS {
    * @brief Update the DSE weights
    */
   void updateWeightDualSteepestEdge(
-      HVector* column,            //!< Pivotal column
-      const double rowOutWeight,  //!< (Edge weight of leaving row)/alpha^2
-      double Kai,                 //!< -2/alpha
-      double* dse                 //!< DSE std::vector
+      HVector* column,             //!< Pivotal column
+      const double row_outWeight,  //!< (Edge weight of leaving row)/alpha^2
+      double Kai,                  //!< -2/alpha
+      double* dse                  //!< DSE std::vector
   );
   /**
    * @brief Update the Devex weights
    */
-  void updateWeightDevex(HVector* column,           //!< Pivotal column
-                         const double rowOutWeight  //!< max(1, (Edge weight of
-                                                    //!< leaving row)/alpha^2)
+  void updateWeightDevex(HVector* column,            //!< Pivotal column
+                         const double row_outWeight  //!< max(1, (Edge weight of
+                                                     //!< leaving row)/alpha^2)
   );
   /**
    * @brief Update the primal value for the row where the basis change has
@@ -125,7 +125,8 @@ class HDualRHS {
    */
   void createArrayOfPrimalInfeasibilities();
 
-  HighsModelObject& workHMO;  //!< Local copy of pointer to model
+  // References:
+  HEkk& ekk_instance_;
 
   double workCutoff;  //!< Limit for row to be in list with greatest primal
                       //!< infeasibilities
@@ -151,4 +152,4 @@ class HDualRHS {
   HighsSimplexAnalysis* analysis;
 };
 
-#endif /* SIMPLEX_HDUALRHS_H_ */
+#endif /* SIMPLEX_HEKKDUALRHS_H_ */

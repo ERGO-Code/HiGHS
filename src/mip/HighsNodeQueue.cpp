@@ -13,14 +13,20 @@
 #include <tuple>
 
 #include "lp_data/HConst.h"
-#include "util/HighsCDouble.h"
+#include "mip/HighsDomain.h"
+#include "mip/HighsMipSolverData.h"
 #include "util/HighsSplay.h"
+
+#define ESTIMATE_WEIGHT .5
+#define LOWERBOUND_WEIGHT .5
 
 void HighsNodeQueue::link_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
+    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+                               ESTIMATE_WEIGHT * nodes[n].estimate,
+                           -int(nodes[n].domchgstack.size()), n);
   };
 
   assert(node != -1);
@@ -32,7 +38,9 @@ void HighsNodeQueue::unlink_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
+    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+                               ESTIMATE_WEIGHT * nodes[n].estimate,
+                           -int(nodes[n].domchgstack.size()), n);
   };
 
   assert(estimroot != -1);
@@ -44,7 +52,9 @@ void HighsNodeQueue::unlink_estim(int node) {
 void HighsNodeQueue::link_lower(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftlower; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightlower; };
-  auto get_key = [&](int n) { return std::make_pair(nodes[n].lower_bound, n); };
+  auto get_key = [&](int n) {
+    return std::make_tuple(nodes[n].lower_bound, nodes[n].lp_objective, n);
+  };
 
   assert(node != -1);
 
@@ -54,12 +64,132 @@ void HighsNodeQueue::link_lower(int node) {
 void HighsNodeQueue::unlink_lower(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftlower; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightlower; };
-  auto get_key = [&](int n) { return std::make_pair(nodes[n].lower_bound, n); };
+  auto get_key = [&](int n) {
+    return std::make_tuple(nodes[n].lower_bound, nodes[n].lp_objective, n);
+  };
 
   assert(lowerroot != -1);
   assert(node != -1);
 
   highs_splay_unlink(node, lowerroot, get_left, get_right, get_key);
+}
+
+void HighsNodeQueue::link_domchgs(int node) {
+  int numchgs = nodes[node].domchgstack.size();
+  nodes[node].domchglinks.resize(numchgs);
+
+  for (int i = 0; i != numchgs; ++i) {
+    double val = nodes[node].domchgstack[i].boundval;
+    int col = nodes[node].domchgstack[i].column;
+    switch (nodes[node].domchgstack[i].boundtype) {
+      case HighsBoundType::Lower:
+        nodes[node].domchglinks[i] = colLowerNodes[col].emplace(val, node);
+        break;
+      case HighsBoundType::Upper:
+        nodes[node].domchglinks[i] = colUpperNodes[col].emplace(val, node);
+    }
+  }
+}
+
+void HighsNodeQueue::unlink_domchgs(int node) {
+  int numchgs = nodes[node].domchgstack.size();
+
+  for (int i = 0; i != numchgs; ++i) {
+    int col = nodes[node].domchgstack[i].column;
+    switch (nodes[node].domchgstack[i].boundtype) {
+      case HighsBoundType::Lower:
+        colLowerNodes[col].erase(nodes[node].domchglinks[i]);
+        break;
+      case HighsBoundType::Upper:
+        colUpperNodes[col].erase(nodes[node].domchglinks[i]);
+    }
+  }
+
+  nodes[node].domchglinks.clear();
+  nodes[node].domchglinks.shrink_to_fit();
+}
+
+void HighsNodeQueue::link(int node) {
+  link_estim(node);
+  link_lower(node);
+  link_domchgs(node);
+}
+
+void HighsNodeQueue::unlink(int node) {
+  unlink_estim(node);
+  unlink_lower(node);
+  unlink_domchgs(node);
+  freeslots.push(node);
+}
+
+void HighsNodeQueue::setNumCol(int numcol) {
+  colLowerNodes.resize(numcol);
+  colUpperNodes.resize(numcol);
+}
+
+void HighsNodeQueue::checkGlobalBounds(int col, double lb, double ub,
+                                       double feastol,
+                                       HighsCDouble& treeweight) {
+  std::set<int> delnodes;
+  auto prunestart = colLowerNodes[col].lower_bound(ub + feastol);
+  for (auto it = prunestart; it != colLowerNodes[col].end(); ++it)
+    delnodes.insert(it->second);
+
+  auto pruneend = colUpperNodes[col].upper_bound(lb - feastol);
+  for (auto it = colUpperNodes[col].begin(); it != pruneend; ++it)
+    delnodes.insert(it->second);
+
+  for (int delnode : delnodes) {
+    treeweight += std::pow(0.5, nodes[delnode].depth - 1);
+    unlink(delnode);
+  }
+}
+
+double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
+                                            double feastol) {
+  size_t numchgs;
+
+  HighsCDouble treeweight = 0.0;
+
+  do {
+    if (globaldomain.infeasible()) break;
+
+    numchgs = globaldomain.getDomainChangeStack().size();
+
+    assert(colLowerNodes.size() == globaldomain.colLower_.size());
+    int numcol = colLowerNodes.size();
+    for (int i = 0; i != numcol; ++i) {
+      checkGlobalBounds(i, globaldomain.colLower_[i], globaldomain.colUpper_[i],
+                        feastol, treeweight);
+    }
+
+    size_t numopennodes = numNodes();
+    if (numopennodes == 0) break;
+
+    for (int i = 0; i != numcol; ++i) {
+      if (colLowerNodes[i].size() == numopennodes) {
+        double globallb = colLowerNodes[i].begin()->first;
+        if (globallb > globaldomain.colLower_[i]) {
+          globaldomain.changeBound(HighsBoundType::Lower, i, globallb,
+                                   HighsDomain::Reason::unspecified());
+          if (globaldomain.infeasible()) break;
+        }
+      }
+
+      if (colUpperNodes[i].size() == numopennodes) {
+        double globalub = colUpperNodes[i].rbegin()->first;
+        if (globalub < globaldomain.colUpper_[i]) {
+          globaldomain.changeBound(HighsBoundType::Upper, i, globalub,
+                                   HighsDomain::Reason::unspecified());
+          if (globaldomain.infeasible()) break;
+        }
+      }
+    }
+
+    globaldomain.propagate();
+  } while (numchgs != globaldomain.getDomainChangeStack().size());
+
+  return double(treeweight);
 }
 
 double HighsNodeQueue::performBounding(double upper_limit) {
@@ -69,11 +199,13 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 
   auto get_left = [&](int n) -> int& { return nodes[n].leftlower; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightlower; };
-  auto get_key = [&](int n) { return std::make_pair(nodes[n].lower_bound, n); };
+  auto get_key = [&](int n) {
+    return std::make_tuple(nodes[n].lower_bound, nodes[n].lp_objective, n);
+  };
 
   // split the lower bound tree along the bounding value
-  lowerroot = highs_splay(std::make_pair(upper_limit, 0), lowerroot, get_left,
-                          get_right, get_key);
+  lowerroot = highs_splay(std::make_tuple(upper_limit, -HIGHS_CONST_INF, 0),
+                          lowerroot, get_left, get_right, get_key);
   int delroot;
 
   if (nodes[lowerroot].lower_bound < upper_limit) {
@@ -100,6 +232,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
       // unlink the node from the best estimate tree
       // and add up the tree weight
       unlink_estim(delroot);
+      unlink_domchgs(delroot);
       treeweight += std::pow(0.5, nodes[delroot].depth - 1);
 
       // put the nodes children on the stack for subsequent processing
@@ -119,55 +252,62 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 }
 
 void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
-                                 double lower_bound, double estimate,
-                                 int depth) {
+                                 double lower_bound, double lp_objective,
+                                 double estimate, int depth) {
   int pos;
 
   if (freeslots.empty()) {
     pos = nodes.size();
-    nodes.emplace_back(std::move(domchgs), lower_bound, estimate, depth);
+    nodes.emplace_back(std::move(domchgs), lower_bound, lp_objective, estimate,
+                       depth);
   } else {
     pos = freeslots.top();
     freeslots.pop();
-    nodes[pos] = OpenNode(std::move(domchgs), lower_bound, estimate, depth);
+    nodes[pos] = OpenNode(std::move(domchgs), lower_bound, lp_objective,
+                          estimate, depth);
   }
 
   assert(nodes[pos].lower_bound == lower_bound);
+  assert(nodes[pos].lp_objective == lp_objective);
   assert(nodes[pos].estimate == estimate);
   assert(nodes[pos].depth == depth);
 
-  link_estim(pos);
-  link_lower(pos);
+  link(pos);
 }
 
 HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
+    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lp_objective +
+                               ESTIMATE_WEIGHT * nodes[n].estimate,
+                           -int(nodes[n].domchgstack.size()), n);
   };
 
   estimroot =
-      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_INF, 0),
+      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_I_INF, 0),
                   estimroot, get_left, get_right, get_key);
   int bestestimnode = estimroot;
-  unlink_estim(bestestimnode);
-  unlink_lower(bestestimnode);
-  freeslots.push(bestestimnode);
+
+  unlink(bestestimnode);
+
   return std::move(nodes[bestestimnode]);
 }
 
 HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
   auto get_left = [&](int n) -> int& { return nodes[n].leftlower; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightlower; };
-  auto get_key = [&](int n) { return std::make_pair(nodes[n].lower_bound, n); };
+  auto get_key = [&](int n) {
+    return std::make_tuple(nodes[n].lower_bound, nodes[n].lp_objective, n);
+  };
 
-  lowerroot = highs_splay(std::make_pair(-HIGHS_CONST_INF, 0), lowerroot,
-                          get_left, get_right, get_key);
+  lowerroot =
+      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_INF, 0),
+                  lowerroot, get_left, get_right, get_key);
   int bestboundnode = lowerroot;
-  unlink_estim(bestboundnode);
-  unlink_lower(bestboundnode);
-  freeslots.push(bestboundnode);
+
+  unlink(bestboundnode);
+
   return std::move(nodes[bestboundnode]);
 }
 
@@ -176,9 +316,12 @@ double HighsNodeQueue::getBestLowerBound() {
 
   auto get_left = [&](int n) -> int& { return nodes[n].leftlower; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightlower; };
-  auto get_key = [&](int n) { return std::make_pair(nodes[n].lower_bound, n); };
+  auto get_key = [&](int n) {
+    return std::make_tuple(nodes[n].lower_bound, nodes[n].lp_objective, n);
+  };
 
-  lowerroot = highs_splay(std::make_pair(-HIGHS_CONST_INF, 0), lowerroot,
-                          get_left, get_right, get_key);
+  lowerroot =
+      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_INF, 0),
+                  lowerroot, get_left, get_right, get_key);
   return nodes[lowerroot].lower_bound;
 }

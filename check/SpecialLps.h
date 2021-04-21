@@ -131,6 +131,22 @@ class SpecialLps {
     optimal_objective = -1.191;
   }
 
+  void issue425Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.numCol_ = 4;
+    lp.numRow_ = 4;
+    lp.colCost_ = {1, 1, 1, 2};
+    lp.colLower_ = {0, 0, 0, 0};
+    lp.colUpper_ = {inf, inf, inf, inf};
+    lp.rowLower_ = {1, 2, 2, 4};
+    lp.rowUpper_ = {1, 2, 2, 4};
+    lp.Astart_ = {0, 3, 5, 6, 7};
+    lp.Aindex_ = {0, 2, 3, 1, 3, 3, 3};
+    lp.Avalue_ = {1, 1, 1, 2, 1, 1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
+    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+  }
+
   void primalDualInfeasible1Lp(HighsLp& lp,
                                HighsModelStatus& require_model_status) {
     lp.numCol_ = 2;
@@ -197,6 +213,24 @@ class SpecialLps {
     require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
 
+  void distillationLp(HighsLp& lp, HighsModelStatus& require_model_status,
+                      double& optimal_objective) {
+    lp.numCol_ = 2;
+    lp.numRow_ = 3;
+    lp.colCost_ = {8, 10};
+    lp.colLower_ = {0, 0};
+    lp.colUpper_ = {inf, inf};
+    lp.rowLower_ = {7, 12, 6};
+    lp.rowUpper_ = {inf, inf, inf};
+    lp.Astart_ = {0, 3, 6};
+    lp.Aindex_ = {0, 1, 2, 0, 1, 2};
+    lp.Avalue_ = {2, 3, 2, 2, 4, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
+    require_model_status = HighsModelStatus::OPTIMAL;
+    optimal_objective = 31.2;
+  }
+
   void blendingLp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
     lp.numCol_ = 2;
@@ -223,6 +257,52 @@ class SpecialLps {
     lp.sense_ = ObjSense::MAXIMIZE;
     optimal_objective = -optimal_objective;
   }
-};
 
+  void reportIssue(const int issue, const bool dev_run = false) {
+    if (dev_run)
+      printf("\n *************\n * Issue %3d *\n *************\n", issue);
+  }
+
+  void reportLpName(const std::string lp_name, const bool dev_run = false) {
+    if (dev_run) {
+      int lp_name_length = lp_name.length();
+      printf("\n **");
+      for (int i = 0; i < lp_name_length; i++) printf("*");
+      printf("**\n * %s *\n **", lp_name.c_str());
+      for (int i = 0; i < lp_name_length; i++) printf("*");
+      printf("**\n");
+    }
+  }
+
+  bool objectiveOk(const double optimal_objective,
+                   const double require_optimal_objective,
+                   const bool dev_run = false) {
+    double error = std::fabs(optimal_objective - require_optimal_objective) /
+                   std::max(1.0, std::fabs(require_optimal_objective));
+    bool error_ok = error < 1e-10;
+    if (!error_ok && dev_run)
+      printf("Objective is %g but require %g (error %g)\n", optimal_objective,
+             require_optimal_objective, error);
+    return error_ok;
+  }
+
+  void reportSolution(Highs& highs, const bool dev_run = false) {
+    if (!dev_run) return;
+    const HighsInfo& info = highs.getHighsInfo();
+    if (info.primal_status == PrimalDualStatus::STATUS_FEASIBLE_POINT) {
+      const HighsSolution& solution = highs.getSolution();
+      printf("Solution\n");
+      printf("Col       Value        Dual\n");
+      for (int iCol = 0; iCol < highs.getLp().numCol_; iCol++)
+        printf("%3d %11.4g %11.4g\n", iCol, solution.col_value[iCol],
+               solution.col_dual[iCol]);
+      printf("Row       Value        Dual\n");
+      for (int iRow = 0; iRow < highs.getLp().numRow_; iRow++)
+        printf("%3d %11.4g %11.4g\n", iRow, solution.row_value[iRow],
+               solution.row_dual[iRow]);
+    } else {
+      printf("info.primal_status = %d\n", info.primal_status);
+    }
+  }
+};
 #endif /* SIMPLEX_SPECIALPS_H_ */

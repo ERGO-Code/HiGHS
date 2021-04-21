@@ -236,6 +236,8 @@ class HAggregator {
   void removeRow(int row);
 
   void removeRedundantRows(std::vector<uint8_t>& rowdeleted);
+
+  int strengthenInequalities();
 };
 
 }  // namespace presolve

@@ -6,44 +6,119 @@
 #include "util/HighsRandom.h"
 #include "util/HighsSort.h"
 
+using std::vector;
+
 const bool dev_run = false;
 
 // No commas in test case name.
+void getRandomValues(const int num_values, vector<double>& values,
+                     vector<int>& indices) {
+  // Set up a vector of random number and their corresponding indices
+  HighsRandom random;
+  for (int ix = 0; ix < num_values; ix++) {
+    values[1 + ix] = random.fraction();
+    indices[1 + ix] = ix;
+  }
+}
+
+void doFullSort(const int num_values, vector<double>& values,
+                vector<int>& indices) {
+  // Sort the vector of random number and their corresponding indices
+  maxheapsort(&values[0], &indices[0], num_values);
+}
+
+void doAddSort(int& num_values_sorted, const int& max_num_values_sorted,
+               vector<double>& best_double_values, vector<int>& best_indices,
+               const int num_values, const vector<double>& values,
+               const vector<int>& indices) {
+  num_values_sorted = 0;
+  for (int ix = 1; ix <= num_values; ix++) {
+    addToDecreasingHeap(num_values_sorted, max_num_values_sorted,
+                        best_double_values, best_indices, values[ix],
+                        indices[ix]);
+  }
+  sortDecreasingHeap(num_values_sorted, best_double_values, best_indices);
+}
+
+void reportValuesIndices(const int num_values, const vector<double>& values,
+                         const vector<int>& indices) {
+  if (!dev_run) return;
+  printf("\n  Ix      Value Index\n");
+  for (int ix = 1; ix <= num_values; ix++) {
+    printf("%4d %10.8f  %4d\n", ix, values[ix], indices[ix]);
+  }
+}
+
+void checkIncreasingSort(const int num_sorted, const vector<double>& values,
+                         const vector<int>& indices,
+                         const vector<double>& original_values) {
+  // Check that the random numbers are ascending and that the indices
+  // point from the original values to their new positions
+  bool error0 = false;
+  bool error1 = false;
+  double previous = -HIGHS_CONST_INF;
+  for (int ix = 0; ix < num_sorted; ix++) {
+    if (values[1 + ix] < previous) {
+      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
+             previous);
+      error0 = true;
+    }
+    previous = values[1 + ix];
+    if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
+      printf("Values[%2d] = %f5.4 != %f5.4 = original_values[indices[%2d]]\n",
+             1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
+      error1 = true;
+    }
+  }
+
+  REQUIRE(error0 == false);
+  REQUIRE(error1 == false);
+}
+
+void checkDecreasingSort(const int num_sorted, const vector<double>& values,
+                         const vector<int>& indices,
+                         const vector<double>& original_values) {
+  // Check that the random numbers are ascending and that the indices
+  // point from the original values to their new positions
+  bool error0 = false;
+  bool error1 = false;
+  double previous = HIGHS_CONST_INF;
+  for (int ix = 0; ix < num_sorted; ix++) {
+    if (values[1 + ix] > previous) {
+      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
+             previous);
+      error0 = true;
+    }
+    previous = values[1 + ix];
+    if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
+      printf("Values[%2d] = %f5.4 != %f5.4 = original_values[indices[%2d]]\n",
+             1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
+      error1 = true;
+    }
+  }
+
+  REQUIRE(error0 == false);
+  REQUIRE(error1 == false);
+}
+
 TEST_CASE("HiGHS_sort", "[highs_data]") {
   int num_values = 10;
-  std::vector<int> indices;
-  std::vector<int> int_values;
-  std::vector<double> double_values;
-  std::vector<double> original_double_values;
+  vector<int> indices;
+  vector<int> int_values;
+  vector<double> double_values;
+  vector<double> original_double_values;
   indices.resize(1 + num_values);
   int_values.resize(num_values);
   double_values.resize(1 + num_values);
   original_double_values.resize(1 + num_values);
 
-  // Set up a vector of random number and their corresponding indices
-  HighsRandom random;
-  for (int ix = 0; ix < num_values; ix++) {
-    double_values[1 + ix] = random.fraction();
-    original_double_values[1 + ix] = double_values[1 + ix];
-    indices[1 + ix] = ix;
-  }
-  // Sort the vector of random number and their corresponding indices
-  maxheapsort(&double_values[0], &indices[0], num_values);
-
-  // Check that the random numbers are ascending and that the indices
-  // point from the original values to their new positions
-  bool error0 = false;
-  bool error1 = false;
-  double previous_double = -1e200;
-  for (int ix = 0; ix < num_values; ix++) {
-    error0 = error0 || double_values[1 + ix] < previous_double;
-    previous_double = double_values[1 + ix];
-    error1 = error1 ||
-             double_values[1 + ix] == original_double_values[indices[1 + ix]];
-  }
-
-  REQUIRE(error0 == false);
-  REQUIRE(error1 == false);
+  getRandomValues(num_values, double_values, indices);
+  reportValuesIndices(num_values, double_values, indices);
+  original_double_values = double_values;
+  doFullSort(num_values, double_values, indices);
+  reportValuesIndices(num_values, double_values, indices);
+  checkIncreasingSort(num_values, double_values, indices,
+                      original_double_values);
 
   // Use the indices of the previous sort as a vector of integers to sort
   for (int ix = 0; ix < num_values; ix++) {
@@ -66,9 +141,9 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   REQUIRE(ok == true);
 
   num_values = 14;
-  std::vector<int> set;
-  std::vector<double> lb;
-  std::vector<double> ub;
+  vector<int> set;
+  vector<double> lb;
+  vector<double> ub;
   set.resize(num_values);
   lb.resize(num_values);
   ub.resize(num_values);
@@ -116,9 +191,9 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   lb[13] = 600;
   ub[13] = 1200;
 
-  std::vector<int> sorted_set = set;
-  std::vector<double> sorted_lb;
-  std::vector<double> sorted_ub;
+  vector<int> sorted_set = set;
+  vector<double> sorted_lb;
+  vector<double> sorted_ub;
   sorted_lb.resize(num_values);
   sorted_ub.resize(num_values);
 
@@ -140,4 +215,21 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
     REQUIRE(sorted_lb[k0] == lb[k1]);
     REQUIRE(sorted_ub[k0] == ub[k1]);
   }
+
+  num_values = 10;
+  int max_num_values_sorted = 5;
+  vector<int> best_indices;
+  vector<double> best_double_values;
+  indices.assign(1 + num_values, 0);
+  double_values.assign(1 + num_values, 0);
+  best_indices.assign(1 + max_num_values_sorted, 0);
+  best_double_values.assign(1 + max_num_values_sorted, 0);
+  int num_values_sorted;
+  getRandomValues(num_values, double_values, indices);
+  reportValuesIndices(num_values, double_values, indices);
+  doAddSort(num_values_sorted, max_num_values_sorted, best_double_values,
+            best_indices, num_values, double_values, indices);
+  reportValuesIndices(num_values_sorted, best_double_values, best_indices);
+  checkDecreasingSort(num_values_sorted, best_double_values, best_indices,
+                      double_values);
 }

@@ -31,12 +31,12 @@ enum class SimplexAlgorithm { PRIMAL = 0, DUAL };
 
 enum SimplexStrategy {
   SIMPLEX_STRATEGY_MIN = 0,
-  SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,
-  SIMPLEX_STRATEGY_DUAL,
-  SIMPLEX_STRATEGY_DUAL_PLAIN = SIMPLEX_STRATEGY_DUAL,
-  SIMPLEX_STRATEGY_DUAL_TASKS,
-  SIMPLEX_STRATEGY_DUAL_MULTI,
-  SIMPLEX_STRATEGY_PRIMAL,
+  SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,       // 0
+  SIMPLEX_STRATEGY_DUAL,                                // 1
+  SIMPLEX_STRATEGY_DUAL_PLAIN = SIMPLEX_STRATEGY_DUAL,  // 1
+  SIMPLEX_STRATEGY_DUAL_TASKS,                          // 2
+  SIMPLEX_STRATEGY_DUAL_MULTI,                          // 3
+  SIMPLEX_STRATEGY_PRIMAL,                              // 4
   SIMPLEX_STRATEGY_MAX = SIMPLEX_STRATEGY_PRIMAL,
   SIMPLEX_STRATEGY_NUM
 };
@@ -57,17 +57,17 @@ enum DualSimplexCleanupStrategy {
   DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN = 0,
   DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE = DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
   DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_HQPRIMAL,
-  DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX = DUAL_SIMPLEX_CLEANUP_STRATEGY_HQPRIMAL
+  DUAL_SIMPLEX_CLEANUP_STRATEGY_HEKK,
+  DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX = DUAL_SIMPLEX_CLEANUP_STRATEGY_HEKK
 };
 
 enum SimplexScaleStrategy {
   SIMPLEX_SCALE_STRATEGY_MIN = 0,
-  SIMPLEX_SCALE_STRATEGY_OFF = SIMPLEX_SCALE_STRATEGY_MIN,
-  SIMPLEX_SCALE_STRATEGY_HIGHS,
-  SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED,
-  SIMPLEX_SCALE_STRATEGY_015,
-  SIMPLEX_SCALE_STRATEGY_0157,
+  SIMPLEX_SCALE_STRATEGY_OFF = SIMPLEX_SCALE_STRATEGY_MIN,  // 0
+  SIMPLEX_SCALE_STRATEGY_HIGHS,                             // 1
+  SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED,                      // 2
+  SIMPLEX_SCALE_STRATEGY_015,                               // 3
+  SIMPLEX_SCALE_STRATEGY_0157,                              // 4
   SIMPLEX_SCALE_STRATEGY_MAX = SIMPLEX_SCALE_STRATEGY_0157
 };
 
@@ -127,18 +127,25 @@ enum SimplexDualChuzcStrategy {
   SIMPLEX_DUAL_CHUZC_STRATEGY_MAX = SIMPLEX_DUAL_CHUZC_STRATEGY_BOTH
 };
 
-// Not an enum class since invert_hint is used in so many places
-enum InvertHint {
-  INVERT_HINT_NO = 0,
-  INVERT_HINT_UPDATE_LIMIT_REACHED,
-  INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT,
-  INVERT_HINT_POSSIBLY_OPTIMAL,
-  INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED,
-  INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED,
-  INVERT_HINT_POSSIBLY_SINGULAR_BASIS,
-  INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX,
-  INVERT_HINT_CHOOSE_COLUMN_FAIL,
-  INVERT_HINT_Count
+enum SimplexPrimalCorrectionStrategy {
+  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE = 0,
+  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_IN_REBUILD,
+  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_ALWAYS,
+  SIMPLEX_PRIMAL_CORRECTION_STRATEGY_REFINED
+};
+
+// Not an enum class since rebuild_reason is used in so many places
+enum RebuildReason {
+  REBUILD_REASON_NO = 0,
+  REBUILD_REASON_UPDATE_LIMIT_REACHED,                 // 1
+  REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT,          // 2
+  REBUILD_REASON_POSSIBLY_OPTIMAL,                     // 3
+  REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED,            // 4
+  REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED,              // 5
+  REBUILD_REASON_POSSIBLY_SINGULAR_BASIS,              // 6
+  REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX,  // 7
+  REBUILD_REASON_CHOOSE_COLUMN_FAIL,                   // 8
+  REBUILD_REASON_Count
 };
 
 enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
@@ -148,11 +155,6 @@ enum class PriceMode { ROW = 0, COL };
 const int PARALLEL_THREADS_DEFAULT = 8;
 const int DUAL_TASKS_MIN_THREADS = 3;
 const int DUAL_MULTI_MIN_THREADS = 1;  // 2;
-
-// TODO: Set this false tactically to make mip interface more
-// efficient by preventing reinversion on optimality in phase 1 or
-// phase 2
-const bool invert_if_row_out_negative = true;
 
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
     class since they are used as int to replace conditional statements
@@ -165,6 +167,8 @@ const int NONBASIC_FLAG_FALSE = 0;  // Basic
 const int NONBASIC_MOVE_UP = 1;   // Free to move (only) up
 const int NONBASIC_MOVE_DN = -1;  // Free to move (only) down
 const int NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
+const int illegal_move_value =
+    -99;  // Used to see whether valid move value has been set
 //
 // Relation between HiGHS basis and Simplex basis
 //
@@ -237,4 +241,17 @@ const int NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
 // Nonbasic rows
 // =============
 //
+
+// Multiplier for computing most running averages
+const double running_average_multiplier = 0.05;
+
+// Threshold for accepting updated DSE weight
+const double accept_weight_threshold = 0.25;
+
+// Parameters controlling switch from DSE to Devex on cost
+const double costly_DSE_measure_limit = 1000.0;
+const double costly_DSE_minimum_density = 0.01;
+const double costly_DSE_fraction_num_total_iteration_before_switch = 0.1;
+const double costly_DSE_fraction_num_costly_DSE_iteration_before_switch = 0.05;
+
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

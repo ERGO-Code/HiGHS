@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "lp_data/HighsModelObject.h"
+#include "simplex/HEkk.h"
 
 class HMatrix;
 
@@ -56,7 +56,7 @@ const bool reportBixbyPass = false;
  */
 class HCrash {
  public:
-  HCrash(HighsModelObject& model_object) : workHMO(model_object) {}
+  HCrash(HEkk& ekk) : ekk_instance(ekk) {}
   /**
    * @brief Determine a particular crash basis for a given model instance
    */
@@ -96,8 +96,13 @@ class HCrash {
   std::string crsh_nm_o_crsh_vr_ty(const int vr_ty);
 #endif
 
-  // Model to be crashed
-  HighsModelObject& workHMO;
+#ifdef HiGHSDEV
+  // Only used to analyse the row and column status after Crash
+  void initialise_basic_index();
+#endif
+
+  // Ekk instance to be crashed
+  HEkk& ekk_instance;
 
   // Crash strategy to be used
   int crash_strategy;

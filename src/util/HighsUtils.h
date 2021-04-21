@@ -40,7 +40,6 @@ struct HighsIndexCollection {
   int* mask_ = NULL;
 };
 
-#ifdef HiGHSDEV
 struct HighsValueDistribution {
   std::string distribution_name_;
   std::string value_name_;
@@ -53,7 +52,6 @@ struct HighsValueDistribution {
   std::vector<int> count_;
   int sum_count_;
 };
-#endif
 
 struct HighsScatterData {
   int max_num_point_;
@@ -113,7 +111,6 @@ bool highs_isInfinity(double val  //!< Value being tested against +Infinity
  */
 double highsRelativeDifference(const double v0, const double v1);
 
-#ifdef HiGHSDEV
 /**
  * @brief Analyse the values of a vector, assessing how many are in
  * each power of ten, and possibly analyse the distribution of
@@ -153,8 +150,6 @@ double doublePercentage(const int of, const int in);
 
 bool printValueDistribution(const HighsValueDistribution& value_distribution,
                             const int mu = 0);
-#endif
-
 bool initialiseScatterData(const int max_num_point,
                            HighsScatterData& scatter_data);
 bool updateScatterData(const double value0, const double value1,

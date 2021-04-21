@@ -297,8 +297,6 @@ int Highs_setBasis(void* highs, const int* colstatus, const int* rowstatus) {
       basis.col_status[i] = HighsBasisStatus::ZERO;
     } else if (colstatus[i] == (int)HighsBasisStatus::NONBASIC) {
       basis.col_status[i] = HighsBasisStatus::NONBASIC;
-    } else if (colstatus[i] == (int)HighsBasisStatus::SUPER) {
-      basis.col_status[i] = HighsBasisStatus::SUPER;
     } else {
       return (int)HighsStatus::Error;
     }
@@ -316,8 +314,6 @@ int Highs_setBasis(void* highs, const int* colstatus, const int* rowstatus) {
       basis.row_status[i] = HighsBasisStatus::ZERO;
     } else if (rowstatus[i] == (int)HighsBasisStatus::NONBASIC) {
       basis.row_status[i] = HighsBasisStatus::NONBASIC;
-    } else if (rowstatus[i] == (int)HighsBasisStatus::SUPER) {
-      basis.row_status[i] = HighsBasisStatus::SUPER;
     } else {
       return (int)HighsStatus::Error;
     }

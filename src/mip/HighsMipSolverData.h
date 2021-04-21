@@ -15,18 +15,17 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
+#include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsNodeQueue.h"
+#include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "util/HighsTimer.h"
-
-#ifdef HIGHS_DEBUGSOL
-extern std::vector<double> highsDebugSolution;
-#endif
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -36,6 +35,9 @@ struct HighsMipSolverData {
   HighsPseudocost pseudocost;
   HighsCliqueTable cliquetable;
   HighsImplications implications;
+  HighsPrimalHeuristics heuristics;
+  HighsRedcostFixing redcostfixing;
+
   struct Substitution {
     int substcol;
     int staycol;
@@ -69,6 +71,12 @@ struct HighsMipSolverData {
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
   std::vector<uint8_t> rowintegral;
+  std::vector<int> uplocks;
+  std::vector<int> downlocks;
+  std::vector<int> integer_cols;
+  std::vector<int> implint_cols;
+  std::vector<int> integral_cols;
+  std::vector<int> continuous_cols;
   double objintscale;
 
   double feastol;
@@ -83,6 +91,7 @@ struct HighsMipSolverData {
 
   HighsCDouble pruned_treeweight;
   size_t maxrootlpiters;
+  size_t firstrootlpiters;
   size_t num_nodes;
   size_t last_displeave;
   size_t num_leaves;
@@ -99,21 +108,32 @@ struct HighsMipSolverData {
 
   HighsNodeQueue nodequeue;
 
+  HighsDebugSol debugSolution;
+
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
-        cutpool(mipsolver.numCol(), 10),
-        domain(mipsolver, cutpool),
+        cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
+                mipsolver.options_mip_->mip_pool_soft_limit),
+        domain(mipsolver),
         lp(mipsolver),
         pseudocost(mipsolver.numCol()),
         cliquetable(mipsolver.numCol()),
-        implications(domain, cliquetable) {}
+        implications(mipsolver),
+        heuristics(mipsolver),
+        debugSolution(mipsolver) {
+    domain.addCutpool(cutpool);
+  }
 
+  void removeFixedIndices();
   void init();
   void basisTransfer();
   void checkObjIntegrality();
   void cliqueExtraction();
   void runSetup();
   void runProbing();
+  bool trySolution(const std::vector<double>& solution, char source = ' ');
+  bool rootSeparationRound(HighsSeparation& sepa, int& ncuts,
+                           HighsLpRelaxation::Status& status);
   void evaluateRootNode();
   void addIncumbent(const std::vector<double>& sol, double solobj, char source);
 

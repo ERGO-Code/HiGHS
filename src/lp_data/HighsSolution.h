@@ -32,11 +32,8 @@ using std::string;
 void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params);
-
-#ifdef HiGHSDEV
-void analyseSimplexAndHighsSolutionDifferences(
-    const HighsModelObject& highs_model_object);
-#endif
+void refineBasis(const HighsLp& lp, const HighsSolution& solution,
+                 HighsBasis& basis);
 
 #ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(

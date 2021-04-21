@@ -339,13 +339,13 @@ void debugPivotValueAnalysis(const int highs_debug_level, FILE* output,
   for (int iRow = 0; iRow < numRow; iRow++) {
     double abs_pivot = fabs(UpivotValue[iRow]);
     min_pivot = min(abs_pivot, min_pivot);
-    max_pivot = min(abs_pivot, max_pivot);
+    max_pivot = max(abs_pivot, max_pivot);
     mean_pivot += log(abs_pivot);
   }
   mean_pivot = exp(mean_pivot / numRow);
   if (highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP || min_pivot < 1e-8)
     HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "InvertPivotAnalysis: %d pivots: Min %g in row %d; Mean "
-                      "%g; Max %g in row %d\n",
+                      "InvertPivotAnalysis: %d pivots: Min %g; Mean "
+                      "%g; Max %g\n",
                       numRow, min_pivot, mean_pivot, max_pivot);
 }

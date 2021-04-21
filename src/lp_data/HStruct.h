@@ -52,11 +52,11 @@ struct HighsSolutionParams {
   int dual_status = PrimalDualStatus::STATUS_NOTSET;
   // Output from solution analysis method
   double objective_function_value;
-  int num_primal_infeasibilities;
-  double sum_primal_infeasibilities;
+  int num_primal_infeasibility;
+  double sum_primal_infeasibility;
   double max_primal_infeasibility;
-  int num_dual_infeasibilities;
-  double sum_dual_infeasibilities;
+  int num_dual_infeasibility;
+  double sum_dual_infeasibility;
   double max_dual_infeasibility;
 };
 

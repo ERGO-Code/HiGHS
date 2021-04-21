@@ -7,12 +7,12 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HDualRow.h
+/**@file simplex/HEkkDualRow.h
  * @brief Dual simplex ratio test for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HDUALROW_H_
-#define SIMPLEX_HDUALROW_H_
+#ifndef SIMPLEX_HEKKDUALROW_H_
+#define SIMPLEX_HEKKDUALROW_H_
 
 #include <set>
 #include <vector>
@@ -30,9 +30,9 @@ const double max_select_theta = 1e18;
  * Performs the dual bound-flipping ratio test and some update
  * dual/flip tasks
  */
-class HDualRow {
+class HEkkDualRow {
  public:
-  HDualRow(HighsModelObject& hmo) : workHMO(hmo) {}
+  HEkkDualRow(HEkk& simplex) : ekk_instance_(simplex) {}
 
   /**
    * @brief Calls setupSlice to set up the packed indices and values for
@@ -43,8 +43,8 @@ class HDualRow {
   /**
    * @brief Set up the packed indices and values for the dual ratio test
    *
-   * Done either for the whole pivotal row (see HDualRow::setup), or
-   * just for a slice (see HDual::initSlice)
+   * Done either for the whole pivotal row (see HEkkDualRow::setup), or
+   * just for a slice (see HEkkDual::initSlice)
    */
   void setupSlice(int size  //!< Dimension of slice
   );
@@ -72,7 +72,8 @@ class HDualRow {
    * @brief Join pack of possible candidates in this row with possible
    * candidates in otherRow
    */
-  void chooseJoinpack(const HDualRow* otherRow  //!< Other row to join with this
+  void chooseJoinpack(
+      const HEkkDualRow* otherRow  //!< Other row to join with this
   );
   /**
    * @brief Chooses the entering variable via BFRT and EXPAND
@@ -112,7 +113,7 @@ class HDualRow {
    */
   void updateDual(
       double theta  //!< Multiple of pivotal row to add int to duals
-                    //      int columnOut  //!< Index of leaving column
+                    //      int variable_out  //!< Index of leaving column
   );
   /**
    * @brief Create a list of nonbasic free columns
@@ -142,15 +143,21 @@ class HDualRow {
    */
   void computeDevexWeight(const int slice = -1);
 
-  HighsModelObject& workHMO;  //!< Local copy of pointer to model
-  int workSize = -1;  //!< Size of the HDualRow slice: Initialise it here to
+  // References:
+  HEkk& ekk_instance_;
+
+  int workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it here to
                       //!< avoid compiler warning
-  const int* workNumTotPermutation;  //!< Pointer to model->numTotPermutation();
-  const int* workMove;     //!< Pointer to workHMO.simplex_basis_.nonbasicMove_;
-  const double* workDual;  //!< Pointer to workHMO.simplex_info_.workDual_;
-  const double* workRange;  //!< Pointer to workHMO.simplex_info_.workRange_;
   const int*
-      work_devex_index;  //!< Pointer to workHMO.simplex_info_.devex_index;
+      workNumTotPermutation;  //!< Pointer to ekk_instance_.numTotPermutation();
+  const int*
+      workMove;  //!< Pointer to ekk_instance_.simplex_basis_.nonbasicMove_;
+  const double*
+      workDual;  //!< Pointer to ekk_instance_.simplex_info_.workDual_;
+  const double*
+      workRange;  //!< Pointer to ekk_instance_.simplex_info_.workRange_;
+  const int* work_devex_index;  //!< Pointer to
+                                //!< ekk_instance_.simplex_info_.devex_index_;
 
   // Freelist:
   std::set<int> freeList;  //!< Freelist itself
@@ -163,7 +170,7 @@ class HDualRow {
   // (Local) value of computed weight
   double computed_edge_weight;
 
-  double workDelta;  //!< Local copy of dual.deltaPrimal
+  double workDelta;  //!< Local copy of dual.delta_primal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
   double workTheta;  //!< Original copy of dual step workDual[workPivot] /
                      //!< workAlpha;
@@ -184,4 +191,4 @@ class HDualRow {
   HighsSimplexAnalysis* analysis;
 };
 
-#endif /* SIMPLEX_HDUALROW_H_ */
+#endif /* SIMPLEX_HEKKDUALROW_H_ */

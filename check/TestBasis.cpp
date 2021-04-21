@@ -127,7 +127,6 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
-
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

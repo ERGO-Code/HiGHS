@@ -24,6 +24,9 @@ class HighsPseudocost {
   std::vector<double> pseudocostdown;
   std::vector<int> nsamplesup;
   std::vector<int> nsamplesdown;
+
+  double cost_total;
+  size_t nsamplestotal;
   int minreliable;
   unsigned seed;
 
@@ -33,6 +36,8 @@ class HighsPseudocost {
         pseudocostdown(ncols),
         nsamplesup(ncols),
         nsamplesdown(ncols),
+        cost_total(0),
+        nsamplestotal(0),
         minreliable(8),
         seed(seed) {}
 
@@ -63,8 +68,12 @@ class HighsPseudocost {
     if (delta > 0.0) {
       pseudocostup[col] += objdelta / delta;
       nsamplesup[col] += 1;
+      cost_total += objdelta / delta;
+      ++nsamplestotal;
     } else {
       pseudocostdown[col] -= objdelta / delta;
+      cost_total -= objdelta / delta;
+      ++nsamplestotal;
       nsamplesdown[col] += 1;
     }
   }
@@ -79,44 +88,69 @@ class HighsPseudocost {
     return nsamplesdown[col] >= minreliable;
   }
 
-  double getPseudocostUp(int col, double frac) const {
-    if (nsamplesup[col] == 0) return 0;
+  double getAvgPseudocost() const {
+    return nsamplestotal == 0 ? 0 : cost_total / nsamplestotal;
+  }
 
+  double getPseudocostUp(int col, double frac, double offset) const {
     double up = std::ceil(frac) - frac;
+    double cost;
+
+    if (nsamplesup[col] == 0 || nsamplesup[col] < minreliable) {
+      double weightPs = nsamplesup[col] == 0 ? 0
+                                             : 0.75 + 0.25 * nsamplesup[col] /
+                                                          (double)minreliable;
+      cost = nsamplesup[col] == 0
+                 ? 0
+                 : weightPs * pseudocostup[col] / nsamplesup[col];
+      cost += (1.0 - weightPs) * getAvgPseudocost();
+    } else
+      cost = pseudocostup[col] / nsamplesup[col];
+    return up * (offset + cost);
+  }
+
+  double getPseudocostDown(int col, double frac, double offset) const {
+    double down = frac - std::floor(frac);
+    double cost;
+
+    if (nsamplesdown[col] == 0 || nsamplesdown[col] < minreliable) {
+      double weightPs =
+          nsamplesdown[col] == 0
+              ? 0
+              : 0.75 + 0.25 * nsamplesdown[col] / (double)minreliable;
+      cost = nsamplesdown[col] == 0
+                 ? 0
+                 : weightPs * pseudocostdown[col] / nsamplesdown[col];
+      cost += (1.0 - weightPs) * getAvgPseudocost();
+    } else
+      cost = pseudocostdown[col] / nsamplesdown[col];
+
+    return down * (offset + cost);
+  }
+
+  double getPseudocostUp(int col, double frac) const {
+    double up = std::ceil(frac) - frac;
+    if (nsamplesup[col] == 0)
+      return nsamplestotal == 0 ? 0 : up * cost_total / nsamplestotal;
     return up * pseudocostup[col] / nsamplesup[col];
   }
 
   double getPseudocostDown(int col, double frac) const {
-    if (nsamplesdown[col] == 0) return 0;
-
     double down = frac - std::floor(frac);
+    if (nsamplesdown[col] == 0)
+      return nsamplestotal == 0 ? 0 : down * cost_total / nsamplestotal;
     return down * pseudocostdown[col] / nsamplesdown[col];
   }
 
   double getScore(int col, double upcost, double downcost) const {
-    // each column is assigned a random hash based on the seed
-    // for which we compute a random number in [0,1e-5]
-    // This number is then added to the final score for random tie breaking
-    unsigned hash = (unsigned(col) + seed) * 0x9e3779b9u;
-    double randomval =
-        1e-5 * hash / (double)std::numeric_limits<unsigned>::max();
-    return randomval + upcost * downcost;
+    return upcost * downcost;
   }
 
   double getScore(int col, double frac) const {
-    // each column is assigned a random hash based on the seed
-    // for which we compute a random number in [0,1e-5]
-    // This number is then added to the final score for random tie breaking
-    unsigned hash = (unsigned(col) + seed) * 0x9e3779b9u;
-    double randomval =
-        1e-5 * hash / (double)std::numeric_limits<unsigned>::max();
+    double upcost = getPseudocostUp(col, frac);
+    double downcost = getPseudocostDown(col, frac);
 
-    if (nsamplesup[col] == 0 || nsamplesdown[col] == 0) return randomval;
-
-    double up = std::ceil(frac) - frac;
-    double down = frac - std::floor(frac);
-    return randomval + (up * pseudocostup[col] / nsamplesup[col]) *
-                           (down * pseudocostdown[col] / nsamplesdown[col]);
+    return upcost * downcost;
   }
 };
 

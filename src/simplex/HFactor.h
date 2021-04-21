@@ -65,6 +65,24 @@ const double hyperCANCEL = 0.05;
  * hyper-sparse - only for reporting
  */
 const double hyperRESULT = 0.10;
+
+/**
+ * Parameters for reinversion on synthetic clock
+ */
+const double original_multi_build_syntheticTick_mu = 1.5;
+const double multi_build_syntheticTick_mu = 1.0;
+// original_multi_build_syntheticTick_mu;//
+const double numerical_trouble_tolerance = 1e-7;
+const double original_multi_numerical_trouble_tolerance = 1e-8;
+const double multi_numerical_trouble_tolerance = 1e-7;
+// original_multi_numerical_trouble_tolerance;
+
+const int synthetic_tick_reinversion_min_update_count = 50;
+const int original_multi_synthetic_tick_reinversion_min_update_count = 201;
+const int multi_synthetic_tick_reinversion_min_update_count =
+    synthetic_tick_reinversion_min_update_count;
+// original_multi_synthetic_tick_reinversion_min_update_count;
+
 /**
  * @brief Basis matrix factorization, update and solves for HiGHS
  *
@@ -284,9 +302,9 @@ class HFactor {
   vector<int> MRindex;
 
   // Kernel column buffer
-  vector<int> McolumnIndex;
-  vector<char> McolumnMark;
-  vector<double> McolumnArray;
+  vector<int> mwz_column_index;
+  vector<char> mwz_column_mark;
+  vector<double> mwz_column_array;
 
   // Count link list
   vector<int> clinkFirst;

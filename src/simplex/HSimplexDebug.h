@@ -20,6 +20,25 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 
+// Methods for Ekk
+
+HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object);
+
+HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
+                                      const HighsLp& simplex_lp,
+                                      const SimplexBasis& simplex_basis);
+HighsDebugStatus debugDualChuzcFail(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const double* workDual,
+    const double selectTheta, const double remainTheta);
+
+HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
+                                             const HighsLp& simplex_lp,
+                                             const SimplexBasis& simplex_basis);
+
+// Methods for HMO
+
+/*
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugSimplexBasisCorrect(
@@ -66,11 +85,6 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
 HighsDebugStatus debugFreeListNumEntries(
     const HighsModelObject& highs_model_object, const std::set<int>& freeList);
 
-HighsDebugStatus debugDualChuzcFail(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const double* workDual,
-    const double selectTheta, const double remainTheta);
-
 void debugDualChuzcWorkDataAndGroupReport(
     const HighsModelObject& highs_model_object, const double workDelta,
     const double workTheta, const std::string message,
@@ -95,10 +109,6 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
                                                    const std::string type,
                                                    const double difference);
 
-HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
-                                             const HighsLp& simplex_lp,
-                                             const SimplexBasis& simplex_basis);
-
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase);
 
@@ -118,4 +128,5 @@ void debugReportReinvertOnNumericalTrouble(
     const double numerical_trouble_measure, const double alpha_from_col,
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert);
+*/
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_
