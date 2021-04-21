@@ -27,7 +27,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            highs.modelStatusToString(highs.getModelStatus()).c_str());
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs status hasn't been identified, so solve with primal simplex
-    int simplex_strategy;
+    HighsInt simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();

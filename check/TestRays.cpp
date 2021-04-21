@@ -270,7 +270,7 @@ void testUnboundedMps(const std::string model,
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs unboundedness hasn't been identified, so solve with primal
     // simplex
-    int simplex_strategy;
+    HighsInt simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
@@ -371,7 +371,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs unboundedness hasn't been identified, so solve with primal
     // simplex
-    int simplex_strategy;
+    HighsInt simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
@@ -415,7 +415,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs unboundedness hasn't been identified, so solve with primal
     // simplex
-    int simplex_strategy;
+    HighsInt simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
@@ -486,7 +486,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs unboundedness hasn't been identified, so solve with primal
     // simplex
-    int simplex_strategy;
+    HighsInt simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
@@ -535,7 +535,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
     // The LPs unboundedness hasn't been identified, so solve with primal
     // simplex
-    int simplex_strategy;
+    HighsInt simplex_strategy;
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
