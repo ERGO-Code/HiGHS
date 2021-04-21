@@ -241,9 +241,9 @@ void testInfeasibleMps(const std::string model) {
 void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::kMinimize) {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
 
   std::string model_file;
   HighsLp lp;

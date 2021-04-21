@@ -2014,8 +2014,8 @@ void HEkkDual::assessPhase1Optimality() {
       }
     } else {
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-		  "LP is not dual feasible wrt Phase 1 bounds after removing cost perturbations "
-		  "so return to phase 1\n");
+		  "LP has %d dual feasibilities wrt Phase 1 bounds after removing cost perturbations "
+		  "so return to phase 1\n", dualInfeasCount);
       assert(solvePhase == kSolvePhase1);
     }
   } else {
