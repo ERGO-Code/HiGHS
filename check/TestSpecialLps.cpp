@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -21,6 +21,25 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 
   REQUIRE(highs.run() == HighsStatus::kOk);
 
+  if (dev_run)
+    printf("Solved %s with presolve: status = %s\n",
+	   highs.getLp().model_name_.c_str(),
+	   highs.modelStatusToString(highs.getModelStatus()).c_str());
+  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
+    // The LPs status hasn't been identified, so solve with primal simplex
+    int simplex_strategy;
+    highs.getOptionValue("simplex_strategy", simplex_strategy);
+    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
+    highs.run();
+    if (dev_run)
+      printf("Solved %s with presolve: status = %s\n",
+	     highs.getLp().model_name_.c_str(),
+	     highs.modelStatusToString(highs.getModelStatus()).c_str());
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    // Restore simplex strategy
+    highs.setOptionValue("simplex_strategy", simplex_strategy); 
+  }
+  
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::kOptimal) {

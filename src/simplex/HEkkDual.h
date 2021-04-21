@@ -358,6 +358,7 @@ class HEkkDual {
   // private:
   void saveDualRay();
   void assessPhase1Optimality();
+  void assessPhase1OptimalityUnperturbed();
   void exitPhase1ResetDuals();
   void reportOnPossibleLpDualInfeasibility();
 
