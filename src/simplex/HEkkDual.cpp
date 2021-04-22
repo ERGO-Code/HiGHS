@@ -293,8 +293,7 @@ HighsStatus HEkkDual::solve() {
     }
     if (solvePhase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
-      assert(scaled_model_status == HighsModelStatus::kPrimalDualInfeasible ||
-             scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+      assert(scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
              scaled_model_status == HighsModelStatus::kInfeasible);
       break;
     }

@@ -2302,15 +2302,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::kOk);
         break;
 
-      case HighsModelStatus::kPrimalDualInfeasible:
-        clearSolution();
-        // May have a basis, according to whether infeasibility was
-        // detected in presolve or solve
-        clearInfo();
-        assert(model_status_ == scaled_model_status_);
-        assert(return_status == HighsStatus::kOk);
-        break;
-
       case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
         clearSolution();
         clearBasis();

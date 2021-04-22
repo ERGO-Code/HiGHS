@@ -341,9 +341,6 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kReachedIterationLimit:
       return "Reached iteration limit";
       break;
-    case HighsModelStatus::kPrimalDualInfeasible:
-      return "Primal and dual infeasible";
-      break;
     case HighsModelStatus::kUnboundedOrInfeasible:
       return "Primal infeasible or unbounded";
       break;
@@ -410,8 +407,6 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     case HighsModelStatus::kUnboundedOrInfeasible:
       return HighsStatus::kOk;
     case HighsModelStatus::kUnbounded:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalDualInfeasible:
       return HighsStatus::kOk;
     case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       return HighsStatus::kOk;

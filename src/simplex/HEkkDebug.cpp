@@ -402,9 +402,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   bool require_dual_feasible_in_dual_simplex =
       algorithm == SimplexAlgorithm::kDual &&
       ekk_instance.simplex_lp_status_.has_fresh_rebuild &&
-      ekk_instance.simplex_info_.allow_cost_perturbation &&
-      ekk_instance.scaled_model_status_ !=
-          HighsModelStatus::kPrimalDualInfeasible;
+      ekk_instance.simplex_info_.allow_cost_perturbation;
 
   bool illegal_dual_infeasibility =
       (require_dual_feasible_in_dual_simplex || phase == 0) &&

@@ -196,8 +196,6 @@ HighsStatus HEkkPrimal::solve() {
     if (solvePhase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
       assert(
-          ekk_instance_.scaled_model_status_ ==
-              HighsModelStatus::kPrimalDualInfeasible ||
           ekk_instance_.scaled_model_status_ == HighsModelStatus::kInfeasible ||
           ekk_instance_.scaled_model_status_ == HighsModelStatus::kUnbounded);
       break;
