@@ -424,13 +424,21 @@ HighsStatus Highs::run() {
   hmos_[0].unscaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = hmos_[0].scaled_model_status_;
   scaled_model_status_ = hmos_[0].unscaled_model_status_;
-  // Return immediately if the LP has no columns
+  // Return immediately if the model has no columns
   if (!lp_.numCol_) {
     model_status_ = HighsModelStatus::kModelEmpty;
     scaled_model_status_ = model_status_;
     hmos_[0].unscaled_model_status_ = model_status_;
     hmos_[0].scaled_model_status_ = model_status_;
     return_status = highsStatusFromHighsModelStatus(model_status_);
+    return returnFromRun(return_status);
+  }
+  // Return immediately if the model is infeasible due to inconsistent bounds
+  if (isBoundInfeasible(options_.log_options, lp_)) {
+    model_status_ = HighsModelStatus::kInfeasible;
+    scaled_model_status_ = model_status_;
+    hmos_[0].unscaled_model_status_ = model_status_;
+    hmos_[0].scaled_model_status_ = model_status_;
     return returnFromRun(return_status);
   }
 

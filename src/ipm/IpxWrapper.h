@@ -693,7 +693,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     model_status = HighsModelStatus::kInfeasible;
     return HighsStatus::kOk;
   } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    model_status = HighsModelStatus::kUnbounded;
+    model_status = HighsModelStatus::kUnboundedOrInfeasible;
     return HighsStatus::kOk;
   }
 

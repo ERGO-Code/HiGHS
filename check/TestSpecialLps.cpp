@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -26,8 +26,11 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            highs.getLp().model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
   if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs status hasn't been identified, so solve with primal simplex
+    // The LPs status hasn't been identified, so solve with no
+    // presolve and primal simplex
     HighsInt simplex_strategy;
+    highs.setOptionValue("presolve", "off");
+    highs.setOptionValue("solver", "simplex");
     highs.getOptionValue("simplex_strategy", simplex_strategy);
     highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
     highs.run();
@@ -35,8 +38,9 @@ void solve(Highs& highs, std::string presolve, std::string solver,
       printf("Solved %s with presolve: status = %s\n",
              highs.getLp().model_name_.c_str(),
              highs.modelStatusToString(highs.getModelStatus()).c_str());
-    REQUIRE(highs.getModelStatus() == require_model_status);
-    // Restore simplex strategy
+    // Restore presolve and simplex strategy
+    highs.setOptionValue("presolve", presolve);
+    highs.setOptionValue("solver", solver);
     highs.setOptionValue("simplex_strategy", simplex_strategy);
   }
 
@@ -286,8 +290,7 @@ void mpsUnbounded(Highs& highs) {
 
   REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
 
-  // Presolve identifies HighsModelStatus::kUnboundedOrInfeasible
-  solve(highs, "on", "simplex", HighsModelStatus::kUnboundedOrInfeasible);
+  solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
   //  solve(highs, "off", "ipm", require_model_status);
@@ -559,13 +562,14 @@ TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
 }
 
 // for some reason hangs on IPX with presolve off: add to doctest
-// TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
-//   Highs highs;
-//   if (!dev_run) {
-//     highs.setOptionValue("output_flag", false);
-//   }
-//   mpsGas11(highs);
-// }
+TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+  }
+  mpsGas11(highs);
+}
+
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {

@@ -51,7 +51,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     return_status =
         interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-    // Set the scaled model status and solution params for completeness
+    // Set the scaled model status for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
   } else if (options.solver == ipm_string) {
     // Use IPM

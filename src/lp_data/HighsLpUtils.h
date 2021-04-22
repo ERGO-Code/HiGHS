@@ -260,7 +260,8 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
-double calculateObjective(const HighsLp& lp, HighsSolution& solution);
+
+bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp);
 
 bool isColDataNull(const HighsLogOptions& log_options,
                    const double* usr_col_cost, const double* usr_col_lower,
