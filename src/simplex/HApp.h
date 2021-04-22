@@ -30,6 +30,7 @@
 #include "lp_data/HighsSolve.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HEkk.h"
+#include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/SimplexConst.h"

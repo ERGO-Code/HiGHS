@@ -515,6 +515,8 @@ void HEkkDual::solvePhase1() {
   //
   // kSolvePhaseError => Solver error
   //
+  // kSolvePhaseExit => LP identified as dual infeasible
+  //
   // kSolvePhaseUnknown => Back-tracking due to singularity
   //
   // kSolvePhase1 => Dual infeasibility suspected, but have to go out
@@ -682,15 +684,22 @@ void HEkkDual::solvePhase1() {
     }
   }
 
-  if (solvePhase == kSolvePhase2) {
-    // Moving to phase 2 so comment if cost perturbation is not permitted
-    //
-    // It may have been prevented to avoid cleanup-perturbation loops
-    if (!simplex_info.allow_cost_perturbation)
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
-                  "Moving to phase 2, but not allowing cost perturbation\n");
-    ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solvePhase, true);
+  assert(solvePhase == kSolvePhase1 ||
+	 solvePhase == kSolvePhase2 ||
+	 solvePhase == kSolvePhaseExit);
+  if (solvePhase == kSolvePhase2 || solvePhase == kSolvePhaseExit) {
+    // Moving to phase 2 or exiting, so make sure that the simplex
+    // bounds and nonbasic value/move correspond to the LP
+    ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
     ekk_instance_.initialiseNonbasicValueAndMove();
+    if (solvePhase == kSolvePhase2) {
+      // Moving to phase 2 so comment if cost perturbation is not permitted
+      //
+      // It may have been prevented to avoid cleanup-perturbation loops
+      if (!simplex_info.allow_cost_perturbation)
+	highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+		    "Moving to phase 2, but not allowing cost perturbation\n");
+    }
   }
   return;
 }

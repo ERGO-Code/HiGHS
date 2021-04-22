@@ -297,6 +297,7 @@ struct HighsOptionsStruct {
   // Advanced options
   HighsInt log_dev_level;
   bool run_crossover;
+  bool allow_unbounded_or_infeasible;
   bool mps_parser_type_free;
   HighsInt keep_n_rows;
   HighsInt allowed_simplex_matrix_scale_factor;
@@ -672,6 +673,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool("run_crossover",
                                        "Run the crossover routine for IPX",
                                        advanced, &run_crossover, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("allow_unbounded_or_infeasible",
+                                       "Allow ModelStatus::kUnboundedOrInfeasible",
+                                       advanced, &allow_unbounded_or_infeasible, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("mps_parser_type_free",
