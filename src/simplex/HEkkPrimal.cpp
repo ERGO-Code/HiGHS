@@ -1835,10 +1835,10 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
       bound_violated = 1;
     }
     if (bound_violated) {
-      HighsInt iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
-      double bound_shift;
-      if (bound_violated > 0) {
-        if (simplex_info.allow_bound_perturbation) {
+      if (simplex_info.allow_bound_perturbation) {
+	HighsInt iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
+	double bound_shift;
+	if (bound_violated > 0) {
           // Perturb the upper bound to accommodate the infeasiblilty
           shiftBound(false, iCol, simplex_info.baseValue_[iRow],
                      simplex_info.numTotRandomValue_[iCol],
