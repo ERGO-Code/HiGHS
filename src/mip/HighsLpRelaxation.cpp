@@ -418,7 +418,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 }
 
 void HighsLpRelaxation::storeDualInfProof() {
-  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kPrimalInfeasible);
+  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kInfeasible);
 
   HighsInt numrow = lpsolver.getNumRows();
   hasdualproof = false;
@@ -720,8 +720,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (checkDualProof()) return Status::kInfeasible;
 
       return Status::kError;
-    case HighsModelStatus::kPrimalDualInfeasible:
-    case HighsModelStatus::kPrimalInfeasible: {
+    case HighsModelStatus::kInfeasible: {
       ++numSolved;
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
 
@@ -746,7 +745,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
 
       // trust the primal simplex result without scaling
-      if (lpsolver.getModelStatus() == HighsModelStatus::kPrimalInfeasible)
+      if (lpsolver.getModelStatus() == HighsModelStatus::kInfeasible)
         return Status::kInfeasible;
 
       // highsLogUser(mipsolver.options_mip_->log_options,
@@ -815,8 +814,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // printf("error: lpsolver reached iteration limit\n");
       return Status::kError;
     }
-    // case HighsModelStatus::kPrimalDualInfeasible:
-    // case HighsModelStatus::kPrimalInfeasible:
+    // case HighsModelStatus::kUnboundedOrInfeasible:
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
     //    return Status::kInfeasible;
     //  return Status::kError;
@@ -827,8 +825,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // HIGHSINT_FORMAT "\n",
       //        (HighsInt)scaledmodelstatus);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-                   "LP solved to unexpected status (%" HIGHSINT_FORMAT ")\n",
-                   (HighsInt)scaledmodelstatus);
+                   "LP solved to unexpected status: %s\n",
+                   lpsolver.modelStatusToString(scaledmodelstatus).c_str());
       return Status::kError;
   }
 }

@@ -2151,13 +2151,18 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   return HighsStatus::kOk;
 }
 
-double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
-  assert(isSolutionRightSize(lp, solution));
-  double sum = 0;
-  for (HighsInt col = 0; col < lp.numCol_; col++)
-    sum += lp.colCost_[col] * solution.col_value[col];
-
-  return sum;
+bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
+  HighsInt num_bound_infeasible = 0;
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
+    if (lp.colUpper_[iCol] < lp.colLower_[iCol]) num_bound_infeasible++;
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
+    if (lp.rowUpper_[iRow] < lp.rowLower_[iRow]) num_bound_infeasible++;
+  if (num_bound_infeasible > 0)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Model infeasible due to %" HIGHSINT_FORMAT
+                 " inconsistent bound(s)\n",
+                 num_bound_infeasible);
+  return num_bound_infeasible > 0;
 }
 
 bool isColDataNull(const HighsLogOptions& log_options,

@@ -342,7 +342,7 @@ void HighsMipSolver::cleanupSolve() {
     if (havesolution)
       modelstatus_ = HighsModelStatus::kOptimal;
     else
-      modelstatus_ = HighsModelStatus::kPrimalInfeasible;
+      modelstatus_ = HighsModelStatus::kInfeasible;
   }
 
   model_ = orig_model_;

@@ -323,11 +323,11 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kModelEmpty:
       return "Model empty";
       break;
-    case HighsModelStatus::kPrimalInfeasible:
-      return "Infeasible";  //"Primal infeasible";
+    case HighsModelStatus::kInfeasible:
+      return "Infeasible";
       break;
-    case HighsModelStatus::kPrimalUnbounded:
-      return "Unbounded";  //"Primal unbounded";
+    case HighsModelStatus::kUnbounded:
+      return "Unbounded";
       break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
@@ -341,14 +341,8 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kReachedIterationLimit:
       return "Reached iteration limit";
       break;
-    case HighsModelStatus::kPrimalDualInfeasible:
-      return "Primal and dual infeasible";
-      break;
-    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
+    case HighsModelStatus::kUnboundedOrInfeasible:
       return "Primal infeasible or unbounded";
-      break;
-    case HighsModelStatus::kDualInfeasible:
-      return "Dual infeasible";
       break;
     default:
 #ifdef HiGHSDEV
@@ -408,21 +402,17 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::kOk;
     case HighsModelStatus::kOptimal:
       return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalInfeasible:
+    case HighsModelStatus::kInfeasible:
       return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalInfeasibleOrUnbounded:
+    case HighsModelStatus::kUnboundedOrInfeasible:
       return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalUnbounded:
-      return HighsStatus::kOk;
-    case HighsModelStatus::kPrimalDualInfeasible:
+    case HighsModelStatus::kUnbounded:
       return HighsStatus::kOk;
     case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
       return HighsStatus::kOk;
     case HighsModelStatus::kReachedTimeLimit:
       return HighsStatus::kWarning;
     case HighsModelStatus::kReachedIterationLimit:
-      return HighsStatus::kWarning;
-    case HighsModelStatus::kDualInfeasible:
       return HighsStatus::kWarning;
     default:
       return HighsStatus::kError;

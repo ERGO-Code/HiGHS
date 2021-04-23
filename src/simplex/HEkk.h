@@ -133,7 +133,7 @@ class HEkk {
   void computeDualInfeasibleWithFlips();
   double computeDualForTableauColumn(const HighsInt iVar,
                                      const HVector& tableau_column);
-  void correctDual(HighsInt* free_infeasibility_count);
+  bool correctDual(HighsInt* free_infeasibility_count);
   bool reinvertOnNumericalTrouble(const std::string method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,

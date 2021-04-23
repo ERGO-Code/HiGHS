@@ -51,7 +51,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     return_status =
         interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
-    // Set the scaled model status and solution params for completeness
+    // Set the scaled model status for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
   } else if (options.solver == ipm_string) {
     // Use IPM
@@ -238,13 +238,13 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   basis.valid_ = true;
 
   if (infeasible) {
-    model_status = HighsModelStatus::kPrimalInfeasible;
+    model_status = HighsModelStatus::kInfeasible;
     solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
     solution_params.dual_status = kHighsPrimalDualStatusUnknown;
   } else {
     solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
     if (unbounded) {
-      model_status = HighsModelStatus::kPrimalUnbounded;
+      model_status = HighsModelStatus::kUnbounded;
       solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
     } else {
       model_status = HighsModelStatus::kOptimal;

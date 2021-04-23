@@ -98,7 +98,7 @@ HighsStatus HEkkPrimal::solve() {
   //  iterationAnalysisInitialise();
 
   localReportIter(true);
-  phase2CorrectPrimal(true);
+  correctPrimal(true);
   while (solvePhase) {
     HighsInt it0 = ekk_instance_.iteration_count_;
     // When starting a new phase the (updated) primal objective function
@@ -135,7 +135,7 @@ HighsStatus HEkkPrimal::solve() {
       //
       // solvePhase = kSolvePhaseExit if primal infeasiblilty is
       // detected, in which case scaled_model_status_ =
-      // HighsModelStatus::kPrimalInfeasible is set
+      // HighsModelStatus::kInfeasible is set
       //
       // solvePhase = kSolvePhaseError is set if an error occurs
       solvePhase1();
@@ -164,7 +164,7 @@ HighsStatus HEkkPrimal::solve() {
       //
       // solvePhase = kSolvePhaseExit if primal unboundedness is
       // detected, in which case scaled_model_status_ =
-      // HighsModelStatus::kPrimalUnbounded is set
+      // HighsModelStatus::kUnbounded is set
       //
       // solvePhase = kSolvePhaseError is set if an error occurs
       solvePhase2();
@@ -174,7 +174,7 @@ HighsStatus HEkkPrimal::solve() {
              solvePhase == kSolvePhaseExit || solvePhase == kSolvePhaseError);
       assert(solvePhase != kSolvePhaseExit ||
              ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kPrimalUnbounded);
+                 HighsModelStatus::kUnbounded);
       simplex_info.primal_phase2_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else {
@@ -195,18 +195,9 @@ HighsStatus HEkkPrimal::solve() {
     }
     if (solvePhase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
-      assert(ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kPrimalDualInfeasible ||
-             ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kPrimalInfeasible ||
-             ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::kPrimalUnbounded);
-      break;
-    }
-    if (solvePhase == kSolvePhase1 && ekk_instance_.scaled_model_status_ ==
-                                          HighsModelStatus::kDualInfeasible) {
-      // Dual infeasibilities after phase 2 for a problem known to be dual
-      // infeasible.
+      assert(
+          ekk_instance_.scaled_model_status_ == HighsModelStatus::kInfeasible ||
+          ekk_instance_.scaled_model_status_ == HighsModelStatus::kUnbounded);
       break;
     }
     if (solvePhase == kSolvePhaseCleanup) {
@@ -295,6 +286,7 @@ void HEkkPrimal::initialise() {
 }
 
 void HEkkPrimal::solvePhase1() {
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
@@ -308,7 +300,7 @@ void HEkkPrimal::solvePhase1() {
               "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
-  if (!ekk_instance_.simplex_info_.valid_backtracking_basis_)
+  if (!simplex_info.valid_backtracking_basis_)
     ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
@@ -356,10 +348,18 @@ void HEkkPrimal::solvePhase1() {
     // Determine whether primal infeasiblility has been identified
     if (variable_in < 0) {
       // Optimal in phase 1, so should have primal infeasiblilities
-      assert(ekk_instance_.simplex_info_.num_primal_infeasibility > 0);
-      ekk_instance_.scaled_model_status_ = HighsModelStatus::kPrimalInfeasible;
+      assert(simplex_info.num_primal_infeasibility > 0);
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::kInfeasible;
       solvePhase = kSolvePhaseExit;
     }
+  }
+  if (solvePhase == kSolvePhase2) {
+    // Moving to phase 2 so comment if bound perturbation is not permitted
+    //
+    // It may have been prevented to avoid cleanup-perturbation loops
+    if (!simplex_info.allow_bound_perturbation)
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+                  "Moving to phase 2, but not allowing bound perturbation\n");
   }
 }
 
@@ -449,29 +449,20 @@ void HEkkPrimal::solvePhase2() {
     if (ekk_instance_.simplex_info_.bounds_perturbed) {
       // If the bounds have been perturbed, clean up and return
       cleanup();
+      // If there are primal infeasiblities, go back to phase 1
+      if (ekk_instance_.simplex_info_.num_primal_infeasibility > 0)
+        solvePhase = kSolvePhase1;
     } else {
-      // If the bounds have not been perturbed, so primal unbounded---and hence
-      // dual infeasible (and possibly also primal infeasible)????
+      // The bounds have not been perturbed, so primal unbounded
       solvePhase = kSolvePhaseExit;
-      if (scaled_model_status == HighsModelStatus::kPrimalInfeasible) {
-        assert(1 == 0);
-        highsLogDev(options.log_options, HighsLogType::kInfo,
-                    "problem-primal-dual-infeasible\n");
-        scaled_model_status = HighsModelStatus::kPrimalDualInfeasible;
-      } else {
-        // Primal unbounded, so save primal ray
-        savePrimalRay();
-        // Model status should be unset
-        assert(scaled_model_status == HighsModelStatus::kNotset);
-        highsLogDev(options.log_options, HighsLogType::kInfo,
-                    "problem-primal-unbounded\n");
-        scaled_model_status = HighsModelStatus::kPrimalUnbounded;
-      }
+      // Primal unbounded, so save primal ray
+      savePrimalRay();
+      // Model status should be unset
+      assert(scaled_model_status == HighsModelStatus::kNotset);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "problem-primal-unbounded\n");
+      scaled_model_status = HighsModelStatus::kUnbounded;
     }
-    // Wrong to set this here since it's not properly deduced until
-    // bound perturbations have been removed.
-    //
-    //    scaled_model_status = HighsModelStatus::kPrimalUnbounded;
   }
 }
 
@@ -480,9 +471,10 @@ void HEkkPrimal::cleanup() {
   if (!simplex_info.bounds_perturbed) return;
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "primal-cleanup-shift\n");
-  // Remove perturbation
+  // Remove perturbation and don't permit further perturbation
   ekk_instance_.initialiseBound(SimplexAlgorithm::kPrimal, solvePhase, false);
   ekk_instance_.initialiseNonbasicValueAndMove();
+  simplex_info.allow_bound_perturbation = false;
   // Possibly take a copy of the original duals before recomputing them
   /*
   vector<double> original_baseValue;
@@ -578,7 +570,10 @@ void HEkkPrimal::rebuild() {
   }
 
   ekk_instance_.computePrimal();
-  if (solvePhase == kSolvePhase2) phase2CorrectPrimal();
+  if (solvePhase == kSolvePhase2) {
+    bool correct_primal_ok = correctPrimal();
+    assert(correct_primal_ok);
+  }
   getBasicPrimalInfeasibility();
   if (simplex_info.num_primal_infeasibility > 0) {
     // Primal infeasibilities so should be in phase 1
@@ -1815,19 +1810,20 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
-void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
+bool HEkkPrimal::correctPrimal(const bool initialise) {
   if (primal_correction_strategy == kSimplexPrimalCorrectionStrategyNone)
-    return;
+    return true;
   static double max_max_primal_correction;
   if (initialise) {
     max_max_primal_correction = 0;
-    return;
+    return true;
   }
   assert(solvePhase == kSolvePhase2);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsInt num_primal_correction = 0;
   double max_primal_correction = 0;
   double sum_primal_correction = 0;
+  HighsInt num_primal_correction_skipped = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     double lower = simplex_info.baseLower_[iRow];
     double upper = simplex_info.baseUpper_[iRow];
@@ -1842,26 +1838,38 @@ void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
       HighsInt iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
       double bound_shift;
       if (bound_violated > 0) {
-        // Perturb the upper bound to accommodate the infeasiblilty
-        shiftBound(false, iCol, simplex_info.baseValue_[iRow],
-                   simplex_info.numTotRandomValue_[iCol],
-                   simplex_info.workUpper_[iCol], bound_shift, true);
-        simplex_info.baseUpper_[iRow] = simplex_info.workUpper_[iCol];
-        simplex_info.workUpperShift_[iCol] += bound_shift;
+        if (simplex_info.allow_bound_perturbation) {
+          // Perturb the upper bound to accommodate the infeasiblilty
+          shiftBound(false, iCol, simplex_info.baseValue_[iRow],
+                     simplex_info.numTotRandomValue_[iCol],
+                     simplex_info.workUpper_[iCol], bound_shift, true);
+          simplex_info.baseUpper_[iRow] = simplex_info.workUpper_[iCol];
+          simplex_info.workUpperShift_[iCol] += bound_shift;
+        } else {
+          // Perturb the lower bound to accommodate the infeasiblilty
+          shiftBound(true, iCol, simplex_info.baseValue_[iRow],
+                     simplex_info.numTotRandomValue_[iCol],
+                     simplex_info.workLower_[iCol], bound_shift, true);
+          simplex_info.baseLower_[iRow] = simplex_info.workLower_[iCol];
+          simplex_info.workLowerShift_[iCol] += bound_shift;
+        }
+        assert(bound_shift > 0);
+        num_primal_correction++;
+        max_primal_correction = max(bound_shift, max_primal_correction);
+        sum_primal_correction += bound_shift;
+        simplex_info.bounds_perturbed = true;
       } else {
-        // Perturb the lower bound to accommodate the infeasiblilty
-        shiftBound(true, iCol, simplex_info.baseValue_[iRow],
-                   simplex_info.numTotRandomValue_[iCol],
-                   simplex_info.workLower_[iCol], bound_shift, true);
-        simplex_info.baseLower_[iRow] = simplex_info.workLower_[iCol];
-        simplex_info.workLowerShift_[iCol] += bound_shift;
+        // Bound perturbation is not permitted
+        num_primal_correction_skipped++;
       }
-      assert(bound_shift > 0);
-      num_primal_correction++;
-      max_primal_correction = max(bound_shift, max_primal_correction);
-      sum_primal_correction += bound_shift;
-      simplex_info.bounds_perturbed = true;
     }
+  }
+  if (num_primal_correction_skipped) {
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
+                "correctPrimal: Missed %d bound shifts\n",
+                num_primal_correction_skipped);
+    assert(!num_primal_correction_skipped);
+    return false;
   }
   if (max_primal_correction > 2 * max_max_primal_correction) {
     printf(
@@ -1872,6 +1880,7 @@ void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
         num_primal_correction, max_primal_correction, sum_primal_correction);
     max_max_primal_correction = max_primal_correction;
   }
+  return true;
 }
 
 void HEkkPrimal::basicFeasibilityChangeUpdateDual() {

@@ -185,6 +185,7 @@ struct HighsSimplexInfo {
 
   // Simplex runtime information
   bool allow_cost_perturbation = true;
+  bool allow_bound_perturbation = true;
   bool costs_perturbed = false;
   bool bounds_perturbed = false;
 

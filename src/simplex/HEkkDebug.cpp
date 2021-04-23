@@ -402,10 +402,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   bool require_dual_feasible_in_dual_simplex =
       algorithm == SimplexAlgorithm::kDual &&
       ekk_instance.simplex_lp_status_.has_fresh_rebuild &&
-      ekk_instance.simplex_info_.allow_cost_perturbation &&
-      ekk_instance.scaled_model_status_ != HighsModelStatus::kDualInfeasible &&
-      ekk_instance.scaled_model_status_ !=
-          HighsModelStatus::kPrimalDualInfeasible;
+      ekk_instance.simplex_info_.allow_cost_perturbation;
 
   bool illegal_dual_infeasibility =
       (require_dual_feasible_in_dual_simplex || phase == 0) &&
@@ -883,8 +880,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
   // Don't check costs against the LP, when using primal simplex in
   // primal phase 1, if the LP is primal infeasible, or if the costs
   // have been perturbed
-  if (!(primal_phase1 ||
-        scaled_model_status == HighsModelStatus::kPrimalInfeasible ||
+  if (!(primal_phase1 || scaled_model_status == HighsModelStatus::kInfeasible ||
         simplex_info.costs_perturbed)) {
     for (HighsInt col = 0; col < simplex_lp.numCol_; ++col) {
       HighsInt var = col;

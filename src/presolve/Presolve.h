@@ -46,7 +46,7 @@ enum class HighsPresolveStatus {
   kNotPresolved = -1,
   kNotReduced,
   kInfeasible,
-  kUnbounded,
+  kUnboundedOrInfeasible,
   kEmpty,
   kReduced,
   kReducedToEmpty,
@@ -159,7 +159,7 @@ class Presolve : public HPreData {
   enum Stat {
     kUnset = 0,
     kInfeasible = 1,
-    kUnbounded = 2,
+    kUnboundedOrInfeasible = 2,
     kEmpty = 3,
     kOptimal = 4,
     kReduced = 5,

@@ -73,7 +73,6 @@ class HEkkPrimal {
   void basicFeasibilityChangeUpdateDual();
 
   void phase2UpdatePrimal(const bool initialise = false);
-  void phase2CorrectPrimal(const bool initialise = false);
 
   void considerInfeasibleValueIn();
 
@@ -90,6 +89,7 @@ class HEkkPrimal {
   void removeNonbasicFreeColumn();
   void adjustPerturbedEquationOut();
   void getBasicPrimalInfeasibility();
+  bool correctPrimal(const bool initialise = false);
   void shiftBound(const bool lower, const HighsInt iVar, const double value,
                   const double random_value, double& bound, double& shift,
                   const bool report = false);

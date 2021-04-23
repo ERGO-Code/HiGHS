@@ -293,14 +293,8 @@ HighsStatus HEkkDual::solve() {
     }
     if (solvePhase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
-      assert(scaled_model_status == HighsModelStatus::kPrimalDualInfeasible ||
-             scaled_model_status == HighsModelStatus::kPrimalInfeasible);
-      break;
-    }
-    if (solvePhase == kSolvePhase1 &&
-        scaled_model_status == HighsModelStatus::kDualInfeasible) {
-      // Dual infeasibilities after phase 2 for a problem known to be dual
-      // infeasible.
+      assert(scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+             scaled_model_status == HighsModelStatus::kInfeasible);
       break;
     }
     if (solvePhase == kSolvePhaseCleanup) {
@@ -316,32 +310,9 @@ HighsStatus HEkkDual::solve() {
   assert(!solve_bailout);
   // Should only have these cases
   assert(solvePhase == kSolvePhaseExit || solvePhase == kSolvePhaseUnknown ||
-         solvePhase == kSolvePhaseOptimal || solvePhase == kSolvePhase1 ||
-         solvePhase == kSolvePhaseCleanup);
-  if (solvePhase == kSolvePhase1) {
-    assert(scaled_model_status == HighsModelStatus::kDualInfeasible);
-    // Resolve case of LP that is dual infeasible (and not primal
-    // feasible since that would yield solvePhase ==
-    // kSolvePhaseCleanup Looking to identify primal infeasiblilty or
-    // primal unboundedness Cleanup with phase 1 for new primal code
-    ekk_instance_.computePrimalObjectiveValue();
-
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Primal simplex solver unavailable\n");
-    //    if (scaled_model_status == HighsModelStatus::kOptimal) {
-    //      if
-    //      (ekk_instance_.simplex_info_..num_primal_infeasibility) {
-    //        // Optimal with primal infeasibilities => primal infeasible
-    //        assert(ekk_instance_.simplex_info_.num_primal_infeasibility
-    //        > 0); scaled_model_status =
-    //        HighsModelStatus::kPrimalDualInfeasible;
-    //      }
-    //    } else {
-    //      // Should only be primal unbounded
-    //      assert(scaled_model_status == HighsModelStatus::kPrimalUnbounded);
-    //    }
-    return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  }
+         solvePhase == kSolvePhaseOptimal || solvePhase == kSolvePhaseCleanup);
+  // Can't be solvePhase == kSolvePhase1 since this requires simplex
+  // solver to have continued after identifying dual infeasiblility.
   if (solvePhase == kSolvePhaseCleanup) {
     ekk_instance_.computePrimalObjectiveValue();
     if (options.dual_simplex_cleanup) {
@@ -362,8 +333,8 @@ HighsStatus HEkkDual::solve() {
       // No clean up. Dual simplex was optimal with perturbed costs,
       // so say that the scaled LP has been solved
       // optimally. Optimality (unlikely) for the unscaled LP will
-      // still be assessed honestly, so leave it to the user to
-      // deceide whether the solution can be accepted.
+      // still be assessed honestly, so leave it to the user to decide
+      // whether the solution can be accepted.
       scaled_model_status = HighsModelStatus::kOptimal;
     }
   }
@@ -658,6 +629,8 @@ void HEkkDual::solvePhase1() {
       // enough. However, if it's small, it could be the sum of
       // values, all of which are smaller than the dual deasibility
       // tolerance. Plus there may be cost perturbations to remove
+      // before reliable conclusions on dual infeasibility of the
+      // (scaled) LP being solved can be drawn.
       assessPhase1Optimality();
     }
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
@@ -710,10 +683,12 @@ void HEkkDual::solvePhase1() {
   }
 
   if (solvePhase == kSolvePhase2) {
-    // Moving to phase 2 so allow cost perturbation. It may have been
-    // prevented to avoid cleanup-perturbation loops when optimal in
-    // phase 1
-    simplex_info.allow_cost_perturbation = true;
+    // Moving to phase 2 so comment if cost perturbation is not permitted
+    //
+    // It may have been prevented to avoid cleanup-perturbation loops
+    if (!simplex_info.allow_cost_perturbation)
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+                  "Moving to phase 2, but not allowing cost perturbation\n");
     ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solvePhase, true);
     ekk_instance_.initialiseNonbasicValueAndMove();
   }
@@ -871,28 +846,13 @@ void HEkkDual::solvePhase2() {
       // The costs have not been perturbed, so dual unbounded---and
       // hence primal infeasible.
       solvePhase = kSolvePhaseExit;
-      if (scaled_model_status == HighsModelStatus::kDualInfeasible) {
-        // LP has already been shown to be dual infeasible, so a cost
-        // shift was necessary to achieve dual feasibility in phase
-        // 2. In this case dual unboundedness (hopefully) implies
-        // primal and dual infeasiblility. Without a primal simplex
-        // solver, this is the only way to identify primal
-        // infeasiblilty for and LP that's also dual infeasible. With
-        // a primal simplex solver, once dual infeasiblility has been
-        // identified, use primal phase 1 to identify primal
-        // infeasiblilty.
-        highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                    "problem-primal-dual-infeasible\n");
-        scaled_model_status = HighsModelStatus::kPrimalDualInfeasible;
-      } else {
-        // Dual feasible and dual unbounded, so save dual ray
-        saveDualRay();
-        // Model status should be unset?
-        assert(scaled_model_status == HighsModelStatus::kNotset);
-        highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                    "problem-primal-infeasible\n");
-        scaled_model_status = HighsModelStatus::kPrimalInfeasible;
-      }
+      // Dual feasible and dual unbounded, so save dual ray
+      saveDualRay();
+      // Model status should be unset?
+      assert(scaled_model_status == HighsModelStatus::kNotset);
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                  "problem-primal-infeasible\n");
+      scaled_model_status = HighsModelStatus::kInfeasible;
     }
   }
   // Before primal simplex clean-up there will be dual infeasibilities
@@ -968,8 +928,14 @@ void HEkkDual::rebuild() {
     return;
   }
   analysis->simplexTimerStart(CorrectDualClock);
-  ekk_instance_.correctDual(&dualInfeasCount);
+  const bool correct_dual_ok = ekk_instance_.correctDual(&dualInfeasCount);
   analysis->simplexTimerStop(CorrectDualClock);
+
+  if (!correct_dual_ok) {
+    // Bail out if dual infeasibilities cannot be corrected
+    solvePhase = kSolvePhaseError;
+    return;
+  }
 
   // Recompute primal solution
   ekk_instance_.computePrimal();
@@ -1977,83 +1943,120 @@ void HEkkDual::saveDualRay() {
 }
 
 void HEkkDual::assessPhase1Optimality() {
-  // Should only be called when optimal in phase 1 (row_out == -1) with negative
-  // dual activity
+  // Should only be called when optimal in phase 1 (row_out == -1)
+  // with nonzero dual activity, and after a fresh rebuild - so
+  // "final" decisions can be made.
   assert(solvePhase == kSolvePhase1);
   assert(row_out == -1);
-  //  assert(ekk_instance_.simplex_info_.dual_objective_value < 0);
+  assert(ekk_instance_.simplex_info_.dual_objective_value);
+  assert(ekk_instance_.simplex_lp_status_.has_fresh_rebuild);
+
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  double& dual_objective_value = simplex_info.dual_objective_value;
+  bool& costs_perturbed = simplex_info.costs_perturbed;
+  //
   // We still have dual infeasibilities, so clean up any perturbations
   // before concluding dual infeasibility
   //
-  // What if the dual objective is positive but tiny?
-  if (fabs(simplex_info.dual_objective_value) <= primal_feasibility_tolerance)
-    highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                 "Optimal in phase 1 but not jumping to phase 2 since "
-                 "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
-                 "\n",
-                 simplex_info.dual_objective_value,
-                 ekk_instance_.simplex_info_.costs_perturbed);
+  // Interesting for Devs to know if this method is called at all,
+  // particularly if the dual objective is positive
+  HighsLogType log_type;
+  if (dual_objective_value > 0) {
+    log_type = HighsLogType::kWarning;
+  } else {
+    log_type = HighsLogType::kInfo;
+  }
+  highsLogDev(
+      ekk_instance_.options_.log_options, log_type,
+      "Optimal in phase 1 but not jumping to phase 2 since "
+      "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT "\n",
+      dual_objective_value, ekk_instance_.simplex_info_.costs_perturbed);
+  if (dual_objective_value > 0) {
+    // Can this happen, and what does it mean?
+    fflush(stdout);
+    assert(dual_objective_value < 0);
+  }
+
   if (ekk_instance_.simplex_info_.costs_perturbed) {
     // Clean up perturbation
     cleanup();
-    // If there are now dual infeasibilities with respect to phase 1
-    // bounds, have to got back to rebuild()
-    if (dualInfeasCount == 0) {
-      // No dual infeasibilities with respect to phase 1 bounds.
-      if (simplex_info.dual_objective_value == 0) {
-        // No dual infeasibilities (with respect to phase 2 bounds) so
-        // go to phase 2
-        highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                     "LP is dual feasible after removing cost perturbations "
-                     "so go to phase 2\n");
+    assessPhase1OptimalityUnperturbed();
+  } else {
+    assert(dualInfeasCount == 0);
+    assert(dual_objective_value != 0);
+    assessPhase1OptimalityUnperturbed();
+  }
+  if (dualInfeasCount > 0) {
+    // Must still be solvePhase = kSolvePhase1 since dual
+    // infeasibilities with respect to phase 1 bounds mean that primal
+    // values must change, so primal feasibility is unknown
+    assert(solvePhase == kSolvePhase1);
+  } else {
+    // Optimal in dual phase 1, so either dual feasible wrt Phase 2
+    // bounds and going to phase 2, or identified dual infeasibility and exiting
+    assert(solvePhase == kSolvePhase2 ||
+           (solvePhase == kSolvePhaseExit &&
+            scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible));
+    if (solvePhase == kSolvePhase2) {
+      // Reset the duals, if necessary shifting costs of free variables
+      // so that their duals are zero
+      exitPhase1ResetDuals();
+    }
+  }
+}
+
+void HEkkDual::assessPhase1OptimalityUnperturbed() {
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  double& dual_objective_value = simplex_info.dual_objective_value;
+  assert(!simplex_info.costs_perturbed);
+  if (dualInfeasCount == 0) {
+    // No dual infeasibilities with respect to phase 1 bounds.
+    if (dual_objective_value == 0) {
+      // No dual infeasibilities with respect to phase 2 bounds so
+      // go to phase 2
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                  "LP is dual feasible wrt Phase 2 bounds after removing cost "
+                  "perturbations "
+                  "so go to phase 2\n");
+      solvePhase = kSolvePhase2;
+    } else {
+      // Nonzero dual objective value
+      HighsLogType log_type;
+      if (dual_objective_value > 0) {
+        log_type = HighsLogType::kWarning;
+      } else {
+        log_type = HighsLogType::kInfo;
+      }
+      highsLogDev(ekk_instance_.options_.log_options, log_type,
+                  "LP is dual feasible wrt Phase 1 bounds after removing cost "
+                  "perturbations: "
+                  "dual objective is %10.4g\n",
+                  dual_objective_value);
+      if (dual_objective_value > 0) {
+        // This hasn't been considered in the code before, but could it happen
+        // and what does it mean?
+        assert(dual_objective_value < 0);
       } else {
         // LP is dual infeasible if the dual objective is sufficiently
-        // positive, so no conclusions on the primal LP can be deduced
+        // negative, so no conclusions on the primal LP can be deduced
         // - could be primal unbounded or primal infeasible.
-        //
-        // Shift any dual infeasibilities and go to dual phase 2. If a
-        // primal feasible point is found then the shifts are removed
-        // and primal phase 2 will identify whether the LP is primal
-        // unbounded. If dual unboundedness is found, then no
-        // conclusion can be drawn. Have to use primal phase 1 (and
-        // possibly phase 2) to determine whether the LP is primal
-        // infeasible or unbounded.
-        //
-        // What's important is that the solver doesn't go back to dual
-        // phase 1, otherwise it can fail to terminate
         //
         // Indicate the conclusion of dual infeasiblility by setting
         // the scaled model status
         reportOnPossibleLpDualInfeasibility();
-        scaled_model_status = HighsModelStatus::kDualInfeasible;
+        scaled_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+        solvePhase = kSolvePhaseExit;
       }
-      solvePhase = kSolvePhase2;
     }
   } else {
-    // Phase 1 problem is optimal with original costs and negative
-    // dual objective. In this case, hsol deduces dual infeasibility
-    // and returns UNBOUNDED as a status, but this is wrong if the LP
-    // is primal infeasible. As discussed above, this can only be
-    // determined by going to dual phase 2, and then primal phase 1,
-    // if necessary.
-    //
-    reportOnPossibleLpDualInfeasibility();
-    scaled_model_status = HighsModelStatus::kDualInfeasible;
-    solvePhase = kSolvePhase2;
-  }
-  if (dualInfeasCount > 0) {
-    // Must still be solvePhase = kSolvePhase1 since dual infeasibilities with
-    // respect to phase 1 bounds mean that primal values must
-    // change, so primal feasibility is unknown
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                "LP has %d dual feasibilities wrt Phase 1 bounds after "
+                "removing cost perturbations "
+                "so return to phase 1\n",
+                dualInfeasCount);
     assert(solvePhase == kSolvePhase1);
-  } else {
-    // Optimal in dual phase 1, so must go to phase 2
-    assert(solvePhase == kSolvePhase2);
-    // Reset the duals, if necessary shifting costs of free variable
-    // so that their duals are zero
-    exitPhase1ResetDuals();
   }
 }
 
@@ -2061,18 +2064,16 @@ void HEkkDual::exitPhase1ResetDuals() {
   const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
   const SimplexBasis& simplex_basis = ekk_instance_.simplex_basis_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  bool& costs_perturbed = simplex_info.costs_perturbed;
 
-  const bool reperturb_costs = true;
-  if (reperturb_costs) {
-    if (simplex_info.costs_perturbed) {
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                  "Costs are already perturbed in exitPhase1ResetDuals\n");
-    } else {
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
-                  "Re-perturbing costs when optimal in phase 1\n");
-      ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2, true);
-      ekk_instance_.computeDual();
-    }
+  if (costs_perturbed) {
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                "Costs are already perturbed in exitPhase1ResetDuals\n");
+  } else {
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
+                "Re-perturbing costs when optimal in phase 1\n");
+    ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2, true);
+    ekk_instance_.computeDual();
   }
 
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
