@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double zero_ray_value_tolerance = 1e-8;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
@@ -267,21 +267,6 @@ void testUnboundedMps(const std::string model,
   if (dev_run)
     printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
-  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs unboundedness hasn't been identified, so solve with primal
-    // simplex
-    HighsInt simplex_strategy;
-    highs.getOptionValue("simplex_strategy", simplex_strategy);
-    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
-    highs.run();
-    if (dev_run)
-      printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
-             highs.modelStatusToString(highs.getModelStatus()).c_str());
-    REQUIRE(highs.getModelStatus() == require_model_status);
-    REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
-    // Restore simplex strategy
-    highs.setOptionValue("simplex_strategy", simplex_strategy);
-  }
   REQUIRE(highs.getModelStatus() == require_model_status);
   // Check that there is no dual ray
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
@@ -362,7 +347,6 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   if (dev_run) highs.setOptionValue("log_dev_level", 1);
   REQUIRE(highs.run() == HighsStatus::kOk);
-  // LP is unbounded, but have to accept kUnboundedOrInfeasible
   if (dev_run)
     printf("Solved %s with presolve: status = %s\n", lp.model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());

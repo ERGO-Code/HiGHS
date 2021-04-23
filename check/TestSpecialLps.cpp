@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
@@ -25,25 +25,6 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     printf("Solved %s with presolve: status = %s\n",
            highs.getLp().model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
-  if (highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible) {
-    // The LPs status hasn't been identified, so solve with no
-    // presolve and primal simplex
-    HighsInt simplex_strategy;
-    highs.setOptionValue("presolve", "off");
-    highs.setOptionValue("solver", "simplex");
-    highs.getOptionValue("simplex_strategy", simplex_strategy);
-    highs.setOptionValue("simplex_strategy", kSimplexStrategyPrimal);
-    highs.run();
-    if (dev_run)
-      printf("Solved %s with presolve: status = %s\n",
-             highs.getLp().model_name_.c_str(),
-             highs.modelStatusToString(highs.getModelStatus()).c_str());
-    // Restore presolve and simplex strategy
-    highs.setOptionValue("presolve", presolve);
-    highs.setOptionValue("solver", solver);
-    highs.setOptionValue("simplex_strategy", simplex_strategy);
-  }
-
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::kOptimal) {

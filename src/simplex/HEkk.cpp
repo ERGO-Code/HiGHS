@@ -77,6 +77,11 @@ HighsStatus HEkk::solve() {
   simplex_lp_status_.has_dual_ray = false;
   simplex_lp_status_.has_primal_ray = false;
 
+  // Allow primal and dual perturbations in case a block on them is
+  // hanging over from a previous call
+  simplex_info_.allow_cost_perturbation = true;
+  simplex_info_.allow_bound_perturbation = true;
+
   chooseSimplexStrategyThreads(options_, simplex_info_);
   HighsInt& simplex_strategy = simplex_info_.simplex_strategy;
 
