@@ -898,30 +898,32 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     if (propdomain.infeasible() || mipdata.domain.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
-      return true;
+      return -1;
     }
 
     propdomain.propagate();
     if (propdomain.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
-      return true;
+      return -1;
     }
 
     mipdata.cliquetable.cleanupFixed(mipdata.domain);
     if (mipdata.domain.infeasible()) {
       status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
-      return true;
+      return -1;
     }
+
+    int numBoundChgs = (int)propdomain.getChangedCols().size();
 
     if (!propdomain.getChangedCols().empty()) {
       status = lp->resolveLp(&propdomain);
 
-      if (!lp->scaledOptimal(status)) return true;
+      if (!lp->scaledOptimal(status)) return -1;
     }
 
-    return false;
+    return numBoundChgs;
   };
 
   lp->getMipSolver().timer_.start(implBoundClock);
@@ -929,14 +931,23 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
                                              mipdata.cutpool, mipdata.feastol);
   lp->getMipSolver().timer_.stop(implBoundClock);
 
-  if (propagateAndResolve()) return 0;
+  HighsInt ncuts = 0;
+  HighsInt numboundchgs = propagateAndResolve();
+  if (numboundchgs == -1)
+    return 0;
+  else
+    ncuts += numboundchgs;
 
   lp->getMipSolver().timer_.start(cliqueClock);
   mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
                                       mipdata.cutpool, mipdata.feastol);
   lp->getMipSolver().timer_.stop(cliqueClock);
 
-  if (propagateAndResolve()) return 0;
+  numboundchgs = propagateAndResolve();
+  if (numboundchgs == -1)
+    return 0;
+  else
+    ncuts += numboundchgs;
 
   HighsTransformedLp transLp(*lp, mipdata.implications);
   if (mipdata.domain.infeasible()) {
@@ -948,17 +959,21 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   for (const std::unique_ptr<HighsSeparator>& separator : separators)
     separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
 
-  if (propagateAndResolve()) return 0;
+  numboundchgs = propagateAndResolve();
+  if (numboundchgs == -1)
+    return 0;
+  else
+    ncuts += numboundchgs;
 
   mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol);
 
-  HighsInt ncuts = cutset.numCuts();
-
-  if (ncuts > 0) {
+  if (cutset.numCuts() > 0) {
+    ncuts += cutset.numCuts();
     lp->addCuts(cutset);
     status = lp->resolveLp(&propdomain);
     lp->performAging();
   }
+
   return ncuts;
 }
 
