@@ -675,9 +675,10 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &run_crossover, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("allow_unbounded_or_infeasible",
-                                       "Allow ModelStatus::kUnboundedOrInfeasible",
-                                       advanced, &allow_unbounded_or_infeasible, false);
+    record_bool =
+        new OptionRecordBool("allow_unbounded_or_infeasible",
+                             "Allow ModelStatus::kUnboundedOrInfeasible",
+                             advanced, &allow_unbounded_or_infeasible, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("mps_parser_type_free",

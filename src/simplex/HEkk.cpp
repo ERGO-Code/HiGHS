@@ -131,13 +131,15 @@ HighsStatus HEkk::solve() {
     // Dual simplex solver may set model_status to be
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
     // be returned, so use primal simplex to distinguish
-    printf("EkkDual::solve() returns scaled model status: %s\n", utilModelStatusToString(scaled_model_status_).c_str());
+    printf("EkkDual::solve() returns scaled model status: %s\n",
+           utilModelStatusToString(scaled_model_status_).c_str());
     if (scaled_model_status_ == HighsModelStatus::kUnboundedOrInfeasible) {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
       return_status =
-        interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
-      printf("EkkPrimal::solve() returns scaled model status: %s\n", utilModelStatusToString(scaled_model_status_).c_str());
+          interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
+      printf("EkkPrimal::solve() returns scaled model status: %s\n",
+             utilModelStatusToString(scaled_model_status_).c_str());
     }
   }
   reportSimplexPhaseIterations(options_.log_options, iteration_count_,
@@ -1258,7 +1260,8 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
     simplex_info_.bounds_perturbed = 1;
     return;
   }
-  // Dual simplex bounds are either from the LP or set to special values in phase
+  // Dual simplex bounds are either from the LP or set to special values in
+  // phase
   // 1
   assert(algorithm == SimplexAlgorithm::kDual);
   if (solve_phase == kSolvePhase2) return;

@@ -684,9 +684,8 @@ void HEkkDual::solvePhase1() {
     }
   }
 
-  assert(solvePhase == kSolvePhase1 ||
-	 solvePhase == kSolvePhase2 ||
-	 solvePhase == kSolvePhaseExit);
+  assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2 ||
+         solvePhase == kSolvePhaseExit);
   if (solvePhase == kSolvePhase2 || solvePhase == kSolvePhaseExit) {
     // Moving to phase 2 or exiting, so make sure that the simplex
     // bounds and nonbasic value/move correspond to the LP
@@ -697,8 +696,8 @@ void HEkkDual::solvePhase1() {
       //
       // It may have been prevented to avoid cleanup-perturbation loops
       if (!simplex_info.allow_cost_perturbation)
-	highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
-		    "Moving to phase 2, but not allowing cost perturbation\n");
+        highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+                    "Moving to phase 2, but not allowing cost perturbation\n");
     }
   }
   return;

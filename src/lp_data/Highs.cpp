@@ -627,45 +627,47 @@ HighsStatus Highs::run() {
         } else {
           model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
         }
-	highsLogUser(options_.log_options, HighsLogType::kInfo,
-		     "Problem status detected on presolve: %s\n",
-		     modelStatusToString(model_status_).c_str());
-	if (model_status_ == HighsModelStatus::kInfeasible ||
-	    (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
-	     options_.allow_unbounded_or_infeasible)) {
-	  // Return with this model status
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-	  // Transfer the model status to the scaled model status and original
-	  // HMO statuses;
-	  scaled_model_status_ = model_status_;
-	  hmos_[original_hmo].unscaled_model_status_ = model_status_;
-	  hmos_[original_hmo].scaled_model_status_ = model_status_;
-	  return_status = HighsStatus::kOk;
-	  return returnFromRun(return_status);
-	}
-	// Presolve has returned kUnboundedOrInfeasible, but HiGHS
-	// can't reurn this. Use primal simplex solver on the original
-	// LP
-	std::string solver = options_.solver;
-	HighsInt simplex_strategy = options_.simplex_strategy;
-	options_.solver = "simplex";
-	options_.simplex_strategy = kSimplexStrategyPrimal;
+        highsLogUser(options_.log_options, HighsLogType::kInfo,
+                     "Problem status detected on presolve: %s\n",
+                     modelStatusToString(model_status_).c_str());
+        if (model_status_ == HighsModelStatus::kInfeasible ||
+            (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
+             options_.allow_unbounded_or_infeasible)) {
+          // Return with this model status
+          if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+          // Transfer the model status to the scaled model status and original
+          // HMO statuses;
+          scaled_model_status_ = model_status_;
+          hmos_[original_hmo].unscaled_model_status_ = model_status_;
+          hmos_[original_hmo].scaled_model_status_ = model_status_;
+          return_status = HighsStatus::kOk;
+          return returnFromRun(return_status);
+        }
+        // Presolve has returned kUnboundedOrInfeasible, but HiGHS
+        // can't reurn this. Use primal simplex solver on the original
+        // LP
+        std::string solver = options_.solver;
+        HighsInt simplex_strategy = options_.simplex_strategy;
+        options_.solver = "simplex";
+        options_.simplex_strategy = kSimplexStrategyPrimal;
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status = callSolveLp(original_hmo, "Solving the original LP with primal simplex to determine infeasible or unbounded");
+        call_status = callSolveLp(original_hmo,
+                                  "Solving the original LP with primal simplex "
+                                  "to determine infeasible or unbounded");
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
-	if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-	model_status_ = hmos_[original_hmo].unscaled_model_status_;
-	assert(model_status_ == HighsModelStatus::kInfeasible ||
-	       model_status_ == HighsModelStatus::kUnbounded);
-	// Transfer the model status to the scaled model status and original
-	// HMO statuses;
-	scaled_model_status_ = model_status_;
-	hmos_[original_hmo].unscaled_model_status_ = model_status_;
-	hmos_[original_hmo].scaled_model_status_ = model_status_;
-	return_status = HighsStatus::kOk;
-	return returnFromRun(return_status);
+        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        model_status_ = hmos_[original_hmo].unscaled_model_status_;
+        assert(model_status_ == HighsModelStatus::kInfeasible ||
+               model_status_ == HighsModelStatus::kUnbounded);
+        // Transfer the model status to the scaled model status and original
+        // HMO statuses;
+        scaled_model_status_ = model_status_;
+        hmos_[original_hmo].unscaled_model_status_ = model_status_;
+        hmos_[original_hmo].scaled_model_status_ = model_status_;
+        return_status = HighsStatus::kOk;
+        return returnFromRun(return_status);
       }
       case HighsPresolveStatus::kTimeout: {
         model_status_ = HighsModelStatus::kPresolveError;
@@ -2262,7 +2264,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     // basis and info associated with any previous model are cleared
     clearSolver();
     return returnFromHighs(return_status);
-  } 
+  }
   // A model has been loaded: remove any additional HMO created when solving
   if (hmos_.size() > 1) hmos_.pop_back();
   // There should be only one entry in hmos_
@@ -2274,89 +2276,91 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   reportModelStatusSolutionBasis("returnFromRun(HMO_0)", 0);
 #endif
   switch (scaled_model_status_) {
-    // First consider the error returns
-  case HighsModelStatus::kNotset:
-  case HighsModelStatus::kLoadError:
-  case HighsModelStatus::kModelError:
-  case HighsModelStatus::kPresolveError:
-  case HighsModelStatus::kSolveError:
-  case HighsModelStatus::kPostsolveError:
-    clearSolver();
-    assert(return_status == HighsStatus::kError);
-    break;
-    
-    // Then consider the OK returns
-  case HighsModelStatus::kModelEmpty:
-    clearSolution();
-    clearBasis();
-    clearInfo();
-    assert(model_status_ == scaled_model_status_);
-    assert(return_status == HighsStatus::kOk);
-    break;
-    
-  case HighsModelStatus::kOptimal:
-    have_solution = true;
-    // The following is an aspiration
-    //        assert(info_.primal_status ==
-    //                   (HighsInt)kHighsPrimalDualStatusFeasiblePoint);
-    //        assert(info_.dual_status ==
-    //                   (HighsInt)kHighsPrimalDualStatusFeasiblePoint);
-    assert(model_status_ == HighsModelStatus::kNotset ||
-	   model_status_ == HighsModelStatus::kOptimal);
-    assert(return_status == HighsStatus::kOk);
-    break;
-    
-  case HighsModelStatus::kInfeasible:
-    clearSolution();
-    // May have a basis, according to whether infeasibility was
-    // detected in presolve or solve
-    assert(model_status_ == scaled_model_status_);
-    assert(return_status == HighsStatus::kOk);
-    break;
-    
-  case HighsModelStatus::kUnboundedOrInfeasible:
-    if (options_.allow_unbounded_or_infeasible) {
+      // First consider the error returns
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
+      clearSolver();
+      assert(return_status == HighsStatus::kError);
+      break;
+
+      // Then consider the OK returns
+    case HighsModelStatus::kModelEmpty:
+      clearSolution();
+      clearBasis();
+      clearInfo();
+      assert(model_status_ == scaled_model_status_);
+      assert(return_status == HighsStatus::kOk);
+      break;
+
+    case HighsModelStatus::kOptimal:
+      have_solution = true;
+      // The following is an aspiration
+      //        assert(info_.primal_status ==
+      //                   (HighsInt)kHighsPrimalDualStatusFeasiblePoint);
+      //        assert(info_.dual_status ==
+      //                   (HighsInt)kHighsPrimalDualStatusFeasiblePoint);
+      assert(model_status_ == HighsModelStatus::kNotset ||
+             model_status_ == HighsModelStatus::kOptimal);
+      assert(return_status == HighsStatus::kOk);
+      break;
+
+    case HighsModelStatus::kInfeasible:
+      clearSolution();
+      // May have a basis, according to whether infeasibility was
+      // detected in presolve or solve
+      assert(model_status_ == scaled_model_status_);
+      assert(return_status == HighsStatus::kOk);
+      break;
+
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      if (options_.allow_unbounded_or_infeasible) {
+        clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        clearInfo();
+        assert(model_status_ == scaled_model_status_);
+        assert(return_status == HighsStatus::kOk);
+      } else {
+        // This model status is not permitted
+        highsLogUser(
+            options_.log_options, HighsLogType::kError,
+            "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "
+            "permitted\n");
+        assert(options_.allow_unbounded_or_infeasible);
+        return_status = HighsStatus::kError;
+      }
+      break;
+
+    case HighsModelStatus::kUnbounded:
       clearSolution();
       // May have a basis, according to whether infeasibility was
       // detected in presolve or solve
       clearInfo();
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kOk);
-    } else {
-      // This model status is not permitted
-      highsLogUser(options_.log_options, HighsLogType::kError,
-		   "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not permitted\n");
-      assert(options_.allow_unbounded_or_infeasible);
-      return_status = HighsStatus::kError;
-    }
-    break;
-    
-  case HighsModelStatus::kUnbounded:
-    clearSolution();
-    // May have a basis, according to whether infeasibility was
-    // detected in presolve or solve
-    clearInfo();
-    assert(model_status_ == scaled_model_status_);
-    assert(return_status == HighsStatus::kOk);
-    break;
-    
-  case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
-    clearSolution();
-    clearBasis();
-    clearInfo();
-    assert(model_status_ == scaled_model_status_);
-    assert(return_status == HighsStatus::kOk);
-    break;
-    
-    // Finally consider the warning returns
-  case HighsModelStatus::kReachedTimeLimit:
-  case HighsModelStatus::kReachedIterationLimit:
-    clearSolution();
-    clearBasis();
-    clearInfo();
-    assert(model_status_ == scaled_model_status_);
-    assert(return_status == HighsStatus::kWarning);
-    break;
+      break;
+
+    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+      clearSolution();
+      clearBasis();
+      clearInfo();
+      assert(model_status_ == scaled_model_status_);
+      assert(return_status == HighsStatus::kOk);
+      break;
+
+      // Finally consider the warning returns
+    case HighsModelStatus::kReachedTimeLimit:
+    case HighsModelStatus::kReachedIterationLimit:
+      clearSolution();
+      clearBasis();
+      clearInfo();
+      assert(model_status_ == scaled_model_status_);
+      assert(return_status == HighsStatus::kWarning);
+      break;
   }
   if (have_solution) debugSolutionRightSize(options_, lp_, solution_);
   bool have_basis = basis_.valid_;

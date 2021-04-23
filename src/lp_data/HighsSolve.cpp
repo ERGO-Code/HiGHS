@@ -85,6 +85,31 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         return HighsStatus::kError;
       }
     } else {
+      if (model.unscaled_model_status_ ==
+              HighsModelStatus::kUnboundedOrInfeasible &&
+          !options.allow_unbounded_or_infeasible) {
+        // Model status of kUnboundedOrInfeasible is not permitted, so
+        // use primal simplex without presolve
+        //
+        //	std::string solver = options.solver; options.solver = "simplex";
+        // Set simplex strategy to primal
+        std::string presolve = options.presolve;
+        options.presolve = kHighsOffString;
+        HighsInt simplex_strategy = options.simplex_strategy;
+        options.simplex_strategy = kSimplexStrategyPrimal;
+        call_status = solveLpSimplex(model);
+        return_status =
+            interpretCallStatus(call_status, return_status, "solveLpSimplex");
+        // Restore presolve and simplex strategy
+        options.presolve = presolve;
+        options.simplex_strategy = simplex_strategy;
+        if (return_status == HighsStatus::kError) return return_status;
+        if (!isSolutionRightSize(model.lp_, model.solution_)) {
+          highsLogUser(options.log_options, HighsLogType::kError,
+                       "Inconsistent solution returned from solver\n");
+          return HighsStatus::kError;
+        }
+      }
       // Set the scaled model status and solution params for completeness
       model.scaled_model_status_ = model.unscaled_model_status_;
     }
