@@ -515,6 +515,18 @@ void HEkk::initialiseForNewLp() {
   simplex_lp_status_.initialised = true;
 }
 
+bool HEkk::isUnconstrainedLp() {
+  bool is_unconstrained_lp = simplex_lp_.numRow_ <= 0;
+  if (is_unconstrained_lp) highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
+        ") "
+        "number of constraints\n",
+        simplex_lp_.numRow_);
+  assert(!is_unconstrained_lp);
+  return is_unconstrained_lp;
+}
+
 HighsStatus HEkk::initialiseForSolve() {
   const HighsInt error_return = initialiseSimplexLpBasisAndFactor();
   assert(!error_return);

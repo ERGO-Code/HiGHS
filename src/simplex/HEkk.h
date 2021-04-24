@@ -96,6 +96,7 @@ class HEkk {
 
  private:
   void initialiseForNewLp();
+  bool isUnconstrainedLp();
   HighsStatus initialiseForSolve();
   void setSimplexOptions();
   void updateSimplexOptions();

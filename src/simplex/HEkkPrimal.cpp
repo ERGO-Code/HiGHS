@@ -24,17 +24,9 @@ HighsStatus HEkkPrimal::solve() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
   // Assumes that the LP has a positive number of rows
-  bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
-  if (!positive_num_row) {
-    highsLogUser(
-        options.log_options, HighsLogType::kError,
-        "HEkkPrimal::solve called for LP with non-positive (%" HIGHSINT_FORMAT
-        ") "
-        "number of constraints\n",
-        ekk_instance_.simplex_lp_.numRow_);
-    assert(positive_num_row);
+  if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  }
+  // Check whether the time/iteration limit has been reached
   if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 

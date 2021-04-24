@@ -66,21 +66,13 @@ HighsStatus HEkkDual::solve() {
   if (debugDualSimplex("Initialise", true) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   // Assumes that the LP has a positive number of rows
-  bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
-  if (!positive_num_row) {
-    highsLogUser(
-        options.log_options, HighsLogType::kError,
-        "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
-        ") "
-        "number of constraints\n",
-        ekk_instance_.simplex_lp_.numRow_);
-    assert(positive_num_row);
+  if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  }
-  rebuild_reason = kRebuildReasonNo;
-
+  // Check whether the time/iteration limit has been reached
   if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+
+  rebuild_reason = kRebuildReasonNo;
 
   // Initialise working environment.
   init();
