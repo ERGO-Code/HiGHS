@@ -149,7 +149,7 @@ HighsStatus HEkkDual::solve() {
         // structurals
         bool logical_basis = true;
         for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
-          if (ekk_instance_.simplex_basis_.basicIndex_[iRow] < solver_num_col) {
+          if (ekk_instance_.basis_.basicIndex_[iRow] < solver_num_col) {
             logical_basis = false;
             break;
           }
@@ -387,7 +387,7 @@ void HEkkDual::init() {
   analysis = &ekk_instance_.analysis_;
 
   // Copy pointers
-  jMove = &ekk_instance_.simplex_basis_.nonbasicMove_[0];
+  jMove = &ekk_instance_.basis_.nonbasicMove_[0];
   workDual = &ekk_instance_.info_.workDual_[0];
   workValue = &ekk_instance_.info_.workValue_[0];
   workRange = &ekk_instance_.info_.workRange_[0];
@@ -914,7 +914,7 @@ void HEkkDual::rebuild() {
     ekk_instance_.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_,
                                 &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
                                 &simplex_lp.Avalue_[0],
-                                &ekk_instance_.simplex_basis_.nonbasicFlag_[0]);
+                                &ekk_instance_.basis_.nonbasicFlag_[0]);
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
   }
@@ -1279,7 +1279,7 @@ void HEkkDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  variable_out = ekk_instance_.simplex_basis_.basicIndex_[row_out];
+  variable_out = ekk_instance_.basis_.basicIndex_[row_out];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[row_out] < baseLower[row_out]) {
@@ -1739,7 +1739,7 @@ void HEkkDual::updateDual() {
   const double variable_in_delta_dual = workDual[variable_in];
   const double variable_in_value = workValue[variable_in];
   const HighsInt variable_in_nonbasicFlag =
-      ekk_instance_.simplex_basis_.nonbasicFlag_[variable_in];
+      ekk_instance_.basis_.nonbasicFlag_[variable_in];
   dual_objective_value_change =
       variable_in_nonbasicFlag * (-variable_in_value * variable_in_delta_dual);
   dual_objective_value_change *= ekk_instance_.cost_scale_;
@@ -1748,7 +1748,7 @@ void HEkkDual::updateDual() {
   // Surely variable_out_nonbasicFlag is always 0 since it's basic - so there's
   // no dual objective change
   const HighsInt variable_out_nonbasicFlag =
-      ekk_instance_.simplex_basis_.nonbasicFlag_[variable_out];
+      ekk_instance_.basis_.nonbasicFlag_[variable_out];
   assert(variable_out_nonbasicFlag == 0);
   if (variable_out_nonbasicFlag) {
     const double variable_out_delta_dual = workDual[variable_out] - theta_dual;
@@ -1894,7 +1894,7 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
   // variables
   analysis->simplexTimerStart(DevexIzClock);
   const vector<int8_t>& nonbasicFlag =
-      ekk_instance_.simplex_basis_.nonbasicFlag_;
+      ekk_instance_.basis_.nonbasicFlag_;
   // Initialise the devex framework. The devex reference set is
   // initialise to be the current set of basic variables - and never
   // changes until a new framework is set up. In a simplex iteration,
@@ -2079,7 +2079,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
 
 void HEkkDual::exitPhase1ResetDuals() {
   const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
-  const SimplexBasis& simplex_basis = ekk_instance_.simplex_basis_;
+  const SimplexBasis& basis = ekk_instance_.basis_;
   HighsSimplexInfo& info = ekk_instance_.info_;
   bool& costs_perturbed = info.costs_perturbed;
 
@@ -2097,7 +2097,7 @@ void HEkkDual::exitPhase1ResetDuals() {
   HighsInt num_shift = 0;
   double sum_shift = 0;
   for (HighsInt iVar = 0; iVar < numTot; iVar++) {
-    if (simplex_basis.nonbasicFlag_[iVar]) {
+    if (basis.nonbasicFlag_[iVar]) {
       double lp_lower;
       double lp_upper;
       if (iVar < simplex_lp.numCol_) {
@@ -2250,7 +2250,7 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
 
 double HEkkDual::computeExactDualObjectiveValue() {
   const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
-  const SimplexBasis& simplex_basis = ekk_instance_.simplex_basis_;
+  const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
   HMatrix& matrix = ekk_instance_.matrix_;
   HFactor& factor = ekk_instance_.factor_;
@@ -2259,7 +2259,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   dual_col.setup(simplex_lp.numRow_);
   dual_col.clear();
   for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    HighsInt iVar = simplex_basis.basicIndex_[iRow];
+    HighsInt iVar = basis.basicIndex_[iRow];
     if (iVar < simplex_lp.numCol_) {
       const double value = simplex_lp.colCost_[iVar];
       if (value) {
@@ -2282,7 +2282,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   double norm_dual = 0;
   double norm_delta_dual = 0;
   for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-    if (!simplex_basis.nonbasicFlag_[iCol]) continue;
+    if (!basis.nonbasicFlag_[iCol]) continue;
     double exact_dual = simplex_lp.colCost_[iCol] - dual_row.array[iCol];
     double residual = fabs(exact_dual - info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
@@ -2296,7 +2296,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
     dual_objective += info.workValue_[iCol] * exact_dual;
   }
   for (HighsInt iVar = simplex_lp.numCol_; iVar < numTot; iVar++) {
-    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    if (!basis.nonbasicFlag_[iVar]) continue;
     HighsInt iRow = iVar - simplex_lp.numCol_;
     double exact_dual = -dual_col.array[iRow];
     double residual = fabs(exact_dual - info.workDual_[iVar]);

@@ -44,7 +44,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   HighsScale& scale = highs_model_object.scale_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
   HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   bool& valid_basis = basis.valid_;
   bool& valid_simplex_lp = simplex_status.valid;
@@ -234,7 +234,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   HighsScale& scale = highs_model_object.scale_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
   HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Query: should simplex_status.valid be simplex_status.valid_?
   bool& valid_basis = basis.valid_;
@@ -1056,7 +1056,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
   HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
@@ -1110,7 +1110,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
   HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
@@ -1163,7 +1163,7 @@ HighsStatus Highs::setNonbasicStatusInterface(
   HighsStatus call_status;
   HighsLp& lp = lp_;
   HighsBasis& basis = highs_model_object.basis_;
-  SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  SimplexBasis& simplex_basis = ekk_instance.basis_;
   HighsOptions& options = highs_model_object.options_;
 
   assert(basis.valid_);
@@ -1356,7 +1356,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsInt numCol = lp.numCol_;
   assert(numRow == ekk_instance.simplex_lp_.numRow_);
   for (HighsInt row = 0; row < numRow; row++) {
-    HighsInt var = ekk_instance.simplex_basis_.basicIndex_[row];
+    HighsInt var = ekk_instance.basis_.basicIndex_[row];
     if (var < numCol) {
       basic_variables[row] = var;
     } else {
@@ -1388,7 +1388,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
       if (rhs[row]) {
         solve_vector.index[rhs_num_nz++] = row;
         double rhs_value = rhs[row];
-        HighsInt col = ekk_instance.simplex_basis_.basicIndex_[row];
+        HighsInt col = ekk_instance.basis_.basicIndex_[row];
         if (col < numCol) {
           rhs_value *= scale.col_[col];
         } else {
@@ -1478,7 +1478,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     if (solve_vector.count > numRow) {
       // Solution nonzeros not known
       for (HighsInt row = 0; row < numRow; row++) {
-        HighsInt col = ekk_instance.simplex_basis_.basicIndex_[row];
+        HighsInt col = ekk_instance.basis_.basicIndex_[row];
         if (col < numCol) {
           solution_vector[row] *= scale.col_[col];
         } else {
@@ -1489,7 +1489,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     } else {
       for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
         HighsInt row = solve_vector.index[ix];
-        HighsInt col = ekk_instance.simplex_basis_.basicIndex_[row];
+        HighsInt col = ekk_instance.basis_.basicIndex_[row];
         if (col < numCol) {
           solution_vector[row] *= scale.col_[col];
         } else {
@@ -1530,7 +1530,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   has_primal_ray = ekk_instance.status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
     HighsInt col = ekk_instance.info_.primal_ray_col_;
-    assert(ekk_instance.simplex_basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
+    assert(ekk_instance.basis_.nonbasicFlag_[col] == kNonbasicFlagTrue);
     // Get this pivotal column
     vector<double> rhs;
     vector<double> column;
@@ -1551,7 +1551,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     // the basic variables.
     for (HighsInt iCol = 0; iCol < numCol; iCol++) primal_ray_value[iCol] = 0;
     for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-      HighsInt iCol = ekk_instance.simplex_basis_.basicIndex_[iRow];
+      HighsInt iCol = ekk_instance.basis_.basicIndex_[iRow];
       if (iCol < numCol) primal_ray_value[iCol] = column[iRow];
     }
     if (col < numCol) primal_ray_value[col] = -primal_ray_sign;

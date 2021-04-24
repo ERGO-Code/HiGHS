@@ -56,7 +56,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   }
   // Aliases
   const HighsSimplexInfo& simplex_info = ekk_instance.info_;
-  const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  const SimplexBasis& simplex_basis = ekk_instance.basis_;
   const vector<double>& col_scale = highs_model_object.scale_.col_;
   const vector<double>& row_scale = highs_model_object.scale_.row_;
   const vector<double>& value_ = simplex_info.workValue_;

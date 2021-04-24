@@ -104,7 +104,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //  HighsSolutionParams solution_;
   getUnscaledInfeasibilitiesAndNewTolerances(
       ekk_instance.options_, ekk_instance.simplex_lp_,
-      ekk_instance.scaled_model_status_, ekk_instance.simplex_basis_,
+      ekk_instance.scaled_model_status_, ekk_instance.basis_,
       ekk_instance.info_, highs_model_object.scale_, solution_params,
       new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
 

@@ -72,13 +72,13 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (status.has_basis) {
-    const bool simplex_basis_correct =
+    const bool basis_correct =
         debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
         HighsStatus::kError;
-    if (!simplex_basis_correct) {
+    if (!basis_correct) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Supposed to be a Simplex basis, but incorrect\n");
-      assert(simplex_basis_correct);
+      assert(basis_correct);
       return_status = HighsDebugStatus::kLogicalError;
     }
   }
@@ -99,21 +99,21 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp& simplex_lp,
-                                      const SimplexBasis& simplex_basis) {
+                                      const SimplexBasis& basis) {
   // Cheap analysis of a Simplex basis, checking vector sizes, numbers
   // of basic/nonbasic variables and non-repetition of basic variables
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   // Check consistency of nonbasicFlag
-  if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
+  if (debugNonbasicFlagConsistent(options, simplex_lp, basis) ==
       HighsDebugStatus::kLogicalError) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "nonbasicFlag inconsistent\n");
     return_status = HighsDebugStatus::kLogicalError;
   }
   const bool right_size =
-      (HighsInt)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
+      (HighsInt)basis.basicIndex_.size() == simplex_lp.numRow_;
   // Check consistency of basicIndex
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
@@ -123,9 +123,9 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   }
   // Use localNonbasicFlag so that duplicate entries in basicIndex can
   // be spotted
-  vector<int8_t> localNonbasicFlag = simplex_basis.nonbasicFlag_;
+  vector<int8_t> localNonbasicFlag = basis.nonbasicFlag_;
   for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    HighsInt iCol = simplex_basis.basicIndex_[iRow];
+    HighsInt iCol = basis.basicIndex_[iRow];
     HighsInt flag = localNonbasicFlag[iCol];
     // Indicate that this column has been found in basicIndex
     localNonbasicFlag[iCol] = -1;
@@ -249,13 +249,13 @@ HighsDebugStatus debugDualChuzcFailHeap(
 
 HighsDebugStatus debugNonbasicFlagConsistent(
     const HighsOptions& options, const HighsLp& simplex_lp,
-    const SimplexBasis& simplex_basis) {
+    const SimplexBasis& basis) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   const bool right_size =
-      (HighsInt)simplex_basis.nonbasicFlag_.size() == numTot;
+      (HighsInt)basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "nonbasicFlag size error\n");
@@ -264,10 +264,10 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   }
   HighsInt num_basic_variables = 0;
   for (HighsInt var = 0; var < numTot; var++) {
-    if (simplex_basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
+    if (basis.nonbasicFlag_[var] == kNonbasicFlagFalse) {
       num_basic_variables++;
     } else {
-      assert(simplex_basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
+      assert(basis.nonbasicFlag_[var] == kNonbasicFlagTrue);
     }
   }
   bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
@@ -398,13 +398,13 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (status.has_basis) {
-    const bool simplex_basis_correct =
+    const bool basis_correct =
         debugDebugToHighsStatus(debugSimplexBasisCorrect(highs_model_object)) !=
         HighsStatus::kError;
-    if (!simplex_basis_correct) {
+    if (!basis_correct) {
       highsLogUser(options.log_options, HighsLogType::kError,
                       "Supposed to be a Simplex basis, but incorrect\n");
-      assert(simplex_basis_correct);
+      assert(basis_correct);
       return_status = HighsDebugStatus::kLogicalError;
     }
   }
@@ -424,12 +424,12 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
 
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp& simplex_lp,
-                                     const SimplexBasis& simplex_basis) {
+                                     const SimplexBasis& basis) {
   // Cheap analysis of a Simplex basis, checking vector sizes
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
+  bool right_size = isBasisRightSize(simplex_lp, basis);
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
                     "Simplex basis size error\n");
@@ -449,7 +449,7 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
   const HighsLp& lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
 
   HighsInt numCol = lp.numCol_;
   HighsInt numRow = lp.numRow_;
@@ -479,7 +479,7 @@ HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n", numCol,
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
   }
-  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
+  if (debugBasisRightSize(options, simplex_lp, basis) !=
       HighsDebugStatus::kOk)
     return_status = HighsDebugStatus::kLogicalError;
 
@@ -574,7 +574,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
   double computed_dual_absolute_basic_dual_norm = 0;
   double computed_dual_absolute_nonbasic_dual_norm = 0;
   for (HighsInt iVar = 0; iVar < num_row + num_col; iVar++) {
-    if (!highs_model_object.simplex_basis_.nonbasicFlag_[iVar]) {
+    if (!highs_model_object.basis_.nonbasicFlag_[iVar]) {
       computed_dual_absolute_basic_dual_norm += fabs(new_dual[iVar]);
       continue;
     }
@@ -677,7 +677,7 @@ basic_costs_norm); return_status = HighsDebugStatus::kWarning;
     std::string change_adjective;
     double computed_dual_absolute_nonbasic_dual_change_norm = 0;
     for (HighsInt iVar = 0; iVar < num_row + num_col; iVar++) {
-      if (!highs_model_object.simplex_basis_.nonbasicFlag_[iVar]) continue;
+      if (!highs_model_object.basis_.nonbasicFlag_[iVar]) continue;
       computed_dual_absolute_nonbasic_dual_change_norm +=
           fabs(new_dual[iVar] - previous_dual[iVar]);
     }
@@ -731,7 +731,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
 
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   double scaled_dual_feasibility_tolerance =
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
 
@@ -739,7 +739,7 @@ HighsDebugStatus debugSimplexDualFeasibility(
   double sum_dual_infeasibilities = 0;
   double max_dual_infeasibility = 0;
   for (HighsInt iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_;
-iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+iVar++) { if (!basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
     const double dual = info.workDual_[iVar];
     const double lower = info.workLower_[iVar];
@@ -751,7 +751,7 @@ iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
     } else {
       // Not free: any dual infeasibility is given by the dual value
       // signed by nonbasicMove
-      dual_infeasibility = -simplex_basis.nonbasicMove_[iVar] * dual;
+      dual_infeasibility = -basis.nonbasicMove_[iVar] * dual;
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
@@ -978,13 +978,13 @@ HighsDebugStatus debugFixedNonbasicMove(
     return HighsDebugStatus::kNotChecked;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   HighsInt num_fixed_variable_move_errors = 0;
   for (HighsInt iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_;
-iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+iVar++) { if (!basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
     if (info.workLower_[iVar] == info.workUpper_[iVar] &&
-        simplex_basis.nonbasicMove_[iVar])
+        basis.nonbasicMove_[iVar])
       num_fixed_variable_move_errors++;
   }
   assert(num_fixed_variable_move_errors == 0);
@@ -1004,14 +1004,14 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsOptions& options = highs_model_object.options_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   HighsInt num_free_variable_move_errors = 0;
   HighsInt num_lower_bounded_variable_move_errors = 0;
   HighsInt num_upper_bounded_variable_move_errors = 0;
   HighsInt num_boxed_variable_move_errors = 0;
   HighsInt num_fixed_variable_move_errors = 0;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  bool right_size = (HighsInt)simplex_basis.nonbasicMove_.size() == numTot;
+  bool right_size = (HighsInt)basis.nonbasicMove_.size() == numTot;
   // Check consistency of nonbasicMove
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
@@ -1023,7 +1023,7 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   double upper;
 
   for (HighsInt iVar = 0; iVar < numTot; iVar++) {
-    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    if (!basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic variable
     if (iVar < simplex_lp.numCol_) {
       lower = simplex_lp.colLower_[iVar];
@@ -1037,31 +1037,31 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
     if (highs_isInfinity(upper)) {
       if (highs_isInfinity(-lower)) {
         // Free
-        if (simplex_basis.nonbasicMove_[iVar]) {
+        if (basis.nonbasicMove_[iVar]) {
           num_free_variable_move_errors++;
         }
       } else {
         // Only lower bounded
-        if (simplex_basis.nonbasicMove_[iVar] != kNonbasicMoveUp) {
+        if (basis.nonbasicMove_[iVar] != kNonbasicMoveUp) {
           num_lower_bounded_variable_move_errors++;
         }
       }
     } else {
       if (highs_isInfinity(-lower)) {
         // Only upper bounded
-        if (simplex_basis.nonbasicMove_[iVar] != kNonbasicMoveDn) {
+        if (basis.nonbasicMove_[iVar] != kNonbasicMoveDn) {
           num_upper_bounded_variable_move_errors++;
         }
       } else {
         // Boxed or fixed
         if (lower != upper) {
           // Boxed
-          if (!simplex_basis.nonbasicMove_[iVar]) {
+          if (!basis.nonbasicMove_[iVar]) {
             num_boxed_variable_move_errors++;
           }
         } else {
           // Fixed
-          if (simplex_basis.nonbasicMove_[iVar]) {
+          if (basis.nonbasicMove_[iVar]) {
             num_fixed_variable_move_errors++;
           }
         }
@@ -1125,7 +1125,7 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
     return HighsDebugStatus::kNotChecked;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   // Make sure that the original_dual has been set up
   assert((HighsInt)original_dual.size() == simplex_lp.numCol_ +
 simplex_lp.numRow_); const std::vector<double>& new_dual =
@@ -1137,7 +1137,7 @@ info.workDual_;
   double cleanup_absolute_nonbasic_dual_change_norm = 0;
   double cleanup_absolute_nonbasic_dual_norm = 0;
   for (HighsInt iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_;
-iVar++) { if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+iVar++) { if (!basis.nonbasicFlag_[iVar]) continue;
     cleanup_absolute_nonbasic_dual_norm += std::fabs(new_dual[iVar]);
 #ifdef HiGHSDEV
     const double nonbasic_dual_change =
@@ -1258,7 +1258,7 @@ void debugDualChuzcWorkDataAndGroupReport(
     const std::vector<HighsInt>& report_workGroup) {
   const HighsOptions& options = highs_model_object.options_;
   const std::vector<HighsInt>& workMove =
-      highs_model_object.simplex_basis_.nonbasicMove_;
+      highs_model_object.basis_.nonbasicMove_;
   const std::vector<double>& workDual =
       highs_model_object.info_.workDual_;
   const std::vector<double>& workRange =
@@ -1348,7 +1348,7 @@ HighsDebugStatus debugSimplexBasicSolution(
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsScale& scale = highs_model_object.scale_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
 
   return_status = debugSimplexInfoBasisRightSize(highs_model_object);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
@@ -1362,14 +1362,14 @@ HighsDebugStatus debugSimplexBasicSolution(
   for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     if (iVar < lp.numCol_) {
       HighsInt iCol = iVar;
-      if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
+      if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
         basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
       } else {
         basis.col_status[iCol] = HighsBasisStatus::kBasic;
       }
     } else {
       HighsInt iRow = iVar - lp.numCol_;
-      if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
+      if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
         basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
       } else {
         basis.row_status[iRow] = HighsBasisStatus::kBasic;
@@ -1400,7 +1400,7 @@ HighsDebugStatus debugSimplexBasicSolution(
   }
   // Now insert the basic values
   for (HighsInt ix = 0; ix < lp.numRow_; ix++) {
-    HighsInt iVar = simplex_basis.basicIndex_[ix];
+    HighsInt iVar = basis.basicIndex_[ix];
     if (iVar < lp.numCol_) {
       solution.col_value[iVar] = info.baseValue_[ix];
       solution.col_dual[iVar] = 0;
@@ -1451,7 +1451,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   const HighsSolution& solution = highs_model_object.solution_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   const HighsScale& scale = highs_model_object.scale_;
 
   HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
@@ -1462,7 +1462,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   double max_nonbasic_col_dual_difference = 0;
   for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
     HighsInt iVar = iCol;
-    if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
+    if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
       // Consider this nonbasic column
       double local_col_value = info.workValue_[iVar] * scale.col_[iCol];
       double local_col_dual = (HighsInt)simplex_lp.sense_ *
@@ -1490,7 +1490,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   for (HighsInt ix = 0; ix < simplex_lp.numRow_; ix++) {
     HighsInt iRow = ix;
     HighsInt iVar = simplex_lp.numCol_ + iRow;
-    if (simplex_basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
+    if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
       // Consider this nonbasic row
       double local_row_value =
           -info.workValue_[iVar] / scale.row_[iRow];
@@ -1506,7 +1506,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
           std::max(dual_difference, max_nonbasic_row_dual_difference);
     }
     // Consider the basic variable associated with this row index
-    iVar = simplex_basis.basicIndex_[ix];
+    iVar = basis.basicIndex_[ix];
     if (iVar < simplex_lp.numCol_) {
       // Consider this basic column
       HighsInt iCol = iVar;
@@ -1630,10 +1630,10 @@ HighsDebugStatus debugSimplexBasisCorrect(
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const bool consistent =
-      debugBasisConsistent(options, simplex_lp, simplex_basis) !=
+      debugBasisConsistent(options, simplex_lp, basis) !=
       HighsDebugStatus::kLogicalError;
   if (!consistent) {
     highsLogUser(options.log_options, HighsLogType::kError,
@@ -1662,7 +1662,7 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexStatus& status =
       highs_model_object.status_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   const HighsOptions& options = highs_model_object.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
@@ -1696,14 +1696,14 @@ HighsLogType::kError, "Not OK to solve since status.has_invert =
     return return_status;
   // Basis and data check
   if (debugBasisConsistent(highs_model_object.options_, simplex_lp,
-                           highs_model_object.simplex_basis_) ==
+                           highs_model_object.basis_) ==
       HighsDebugStatus::kLogicalError)
     return HighsDebugStatus::kLogicalError;
   if (!debugWorkArraysOk(highs_model_object, phase))
     return HighsDebugStatus::kLogicalError;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (HighsInt var = 0; var < numTot; ++var) {
-    if (simplex_basis.nonbasicFlag_[var]) {
+    if (basis.nonbasicFlag_[var]) {
       // Nonbasic variable
       if (!debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var))
         return HighsDebugStatus::kLogicalError;
@@ -1811,12 +1811,12 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
     const HighsModelObject& highs_model_object, const HighsInt var) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   const HighsOptions& options = highs_model_object.options_;
   assert(var >= 0);
   assert(var < simplex_lp.numCol_ + simplex_lp.numRow_);
   // Make sure we're not checking a basic variable
-  if (!simplex_basis.nonbasicFlag_[var]) return true;
+  if (!basis.nonbasicFlag_[var]) return true;
   bool ok;
   if (!highs_isInfinity(-info.workLower_[var])) {
     if (!highs_isInfinity(info.workUpper_[var])) {
@@ -1824,7 +1824,7 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // are equal
       if (info.workLower_[var] == info.workUpper_[var]) {
         // Fixed variable
-        ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveZe;
+        ok = basis.nonbasicMove_[var] == kNonbasicMoveZe;
         if (!ok) {
           highsLogUser(options.log_options, HighsLogType::kError,
               "Fixed variable %" HIGHSINT_FORMAT " (simplex_lp.numCol_ = %"
@@ -1833,7 +1833,7 @@ HIGHSINT_FORMAT ") [%11g, %11g, \n"
               "move should be zero but is %" HIGHSINT_FORMAT "",
               var, simplex_lp.numCol_, info.workLower_[var],
               info.workValue_[var], info.workUpper_[var],
-              simplex_basis.nonbasicMove_[var]);
+              basis.nonbasicMove_[var]);
           return ok;
         }
         ok = info.workValue_[var] == info.workLower_[var];
@@ -1846,8 +1846,8 @@ info.workLower_[var], info.workValue_[var]); return ok;
         }
       } else {
         // Boxed variable
-        ok = (simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp) ||
-             (simplex_basis.nonbasicMove_[var] == kNonbasicMoveDn);
+        ok = (basis.nonbasicMove_[var] == kNonbasicMoveUp) ||
+             (basis.nonbasicMove_[var] == kNonbasicMoveDn);
         if (!ok) {
           highsLogUser(options.log_options, HighsLogType::kError,
               "Boxed variable %" HIGHSINT_FORMAT " (simplex_lp.numCol_ = %"
@@ -1857,10 +1857,10 @@ HIGHSINT_FORMAT ") [%11g, %11g, \n"
               var, simplex_lp.numCol_, info.workLower_[var],
               info.workValue_[var], info.workUpper_[var],
               info.workUpper_[var] - info.workLower_[var],
-              simplex_basis.nonbasicMove_[var]);
+              basis.nonbasicMove_[var]);
           return ok;
         }
-        if (simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp) {
+        if (basis.nonbasicMove_[var] == kNonbasicMoveUp) {
           ok = info.workValue_[var] == info.workLower_[var];
           if (!ok) {
             highsLogUser(options.log_options, HighsLogType::kError,
@@ -1882,7 +1882,7 @@ info.workUpper_[var], info.workValue_[var]); return ok;
       }
     } else {
       // Infinite upper bound
-      ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveUp;
+      ok = basis.nonbasicMove_[var] == kNonbasicMoveUp;
       if (!ok) {
         highsLogUser(options.log_options, HighsLogType::kError,
             "Finite lower bound and infinite upper bound variable %"
@@ -1893,7 +1893,7 @@ up=%2" HIGHSINT_FORMAT " but is  "
             "%" HIGHSINT_FORMAT "",
             var, simplex_lp.numCol_, info.workLower_[var],
             info.workValue_[var], info.workUpper_[var],
-            kNonbasicMoveUp, simplex_basis.nonbasicMove_[var]);
+            kNonbasicMoveUp, basis.nonbasicMove_[var]);
         return ok;
       }
       ok = info.workValue_[var] == info.workLower_[var];
@@ -1911,7 +1911,7 @@ HIGHSINT_FORMAT " \n"
   } else {
     // Infinite lower bound
     if (!highs_isInfinity(info.workUpper_[var])) {
-      ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveDn;
+      ok = basis.nonbasicMove_[var] == kNonbasicMoveDn;
       if (!ok) {
         highsLogUser(options.log_options, HighsLogType::kError,
             "Finite upper bound and infinite lower bound variable %"
@@ -1922,7 +1922,7 @@ down but is  "
             "%" HIGHSINT_FORMAT "",
             var, simplex_lp.numCol_, info.workLower_[var],
             info.workValue_[var], info.workUpper_[var],
-            simplex_basis.nonbasicMove_[var]);
+            basis.nonbasicMove_[var]);
         return ok;
       }
       ok = info.workValue_[var] == info.workUpper_[var];
@@ -1938,14 +1938,14 @@ HIGHSINT_FORMAT " \n"
       }
     } else {
       // Infinite upper bound
-      ok = simplex_basis.nonbasicMove_[var] == kNonbasicMoveZe;
+      ok = basis.nonbasicMove_[var] == kNonbasicMoveZe;
       if (!ok) {
         highsLogUser(options.log_options, HighsLogType::kError,
             "Free variable %" HIGHSINT_FORMAT " (simplex_lp.numCol_ = %"
 HIGHSINT_FORMAT ") [%11g, %11g, %11g] \n" "so nonbasic " "move should be zero
 but is  %" HIGHSINT_FORMAT "", var, simplex_lp.numCol_,
 info.workLower_[var], info.workValue_[var],
-info.workUpper_[var], simplex_basis.nonbasicMove_[var]); return ok;
+info.workUpper_[var], basis.nonbasicMove_[var]); return ok;
       }
       ok = info.workValue_[var] == 0.0;
       if (!ok) {
@@ -1965,17 +1965,17 @@ bool debugAllNonbasicMoveVsWorkArraysOk(
     const HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   //    HighsSimplexInfo &info = highs_model_object.info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const SimplexBasis& basis = highs_model_object.basis_;
   const HighsOptions& options = highs_model_object.options_;
   bool ok;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (HighsInt var = 0; var < numTot; ++var) {
     highsLogUser(options.log_options, HighsLogType::kError,
         "NonbasicMoveVsWorkArrays: var = %2" HIGHSINT_FORMAT ";
-simplex_basis.nonbasicFlag_[var] \n"
+basis.nonbasicFlag_[var] \n"
         "= %2" HIGHSINT_FORMAT "",
-        var, simplex_basis.nonbasicFlag_[var]);
-    if (!simplex_basis.nonbasicFlag_[var]) continue;
+        var, basis.nonbasicFlag_[var]);
+    if (!basis.nonbasicFlag_[var]) continue;
     ok = debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var);
     if (!ok) {
       highsLogUser(options.log_options, HighsLogType::kError,

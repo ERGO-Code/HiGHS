@@ -46,7 +46,7 @@ class HEkk {
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis();
-  const SimplexBasis& getSimplexBasis() { return simplex_basis_; }
+  const SimplexBasis& getSimplexBasis() { return basis_; }
 
   HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
@@ -80,7 +80,7 @@ class HEkk {
   HighsSimplexStatus status_;
   HighsSimplexInfo info_;
   HighsModelStatus scaled_model_status_;
-  SimplexBasis simplex_basis_;
+  SimplexBasis basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight

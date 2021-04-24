@@ -266,7 +266,7 @@ void HEkkDual::minorChooseRow() {
 
     // Assign useful variables
     row_out = workChoice->row_out;
-    variable_out = ekk_instance_.simplex_basis_.basicIndex_[row_out];
+    variable_out = ekk_instance_.basis_.basicIndex_[row_out];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
@@ -291,7 +291,7 @@ void HEkkDual::minorChooseRow() {
 void HEkkDual::minorUpdate() {
   // Minor update - store roll back data
   MFinish* finish = &multi_finish[multi_nFinish];
-  finish->move_in = ekk_instance_.simplex_basis_.nonbasicMove_[variable_in];
+  finish->move_in = ekk_instance_.basis_.nonbasicMove_[variable_in];
   finish->shiftOut = ekk_instance_.info_.workShift_[variable_out];
   finish->flipList.clear();
   for (HighsInt i = 0; i < dualRow.workCount; i++)
@@ -911,12 +911,12 @@ void HEkkDual::majorRollback() {
     MFinish* finish = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    ekk_instance_.simplex_basis_.nonbasicMove_[finish->variable_in] =
+    ekk_instance_.basis_.nonbasicMove_[finish->variable_in] =
         finish->move_in;
-    ekk_instance_.simplex_basis_.nonbasicFlag_[finish->variable_in] = 1;
-    ekk_instance_.simplex_basis_.nonbasicMove_[finish->variable_out] = 0;
-    ekk_instance_.simplex_basis_.nonbasicFlag_[finish->variable_out] = 0;
-    ekk_instance_.simplex_basis_.basicIndex_[finish->row_out] =
+    ekk_instance_.basis_.nonbasicFlag_[finish->variable_in] = 1;
+    ekk_instance_.basis_.nonbasicMove_[finish->variable_out] = 0;
+    ekk_instance_.basis_.nonbasicFlag_[finish->variable_out] = 0;
+    ekk_instance_.basis_.basicIndex_[finish->row_out] =
         finish->variable_out;
 
     // 2. Roll back matrix

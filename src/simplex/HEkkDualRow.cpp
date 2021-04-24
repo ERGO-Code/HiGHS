@@ -32,7 +32,7 @@ using std::set;
 
 void HEkkDualRow::setupSlice(HighsInt size) {
   workSize = size;
-  workMove = &ekk_instance_.simplex_basis_.nonbasicMove_[0];
+  workMove = &ekk_instance_.basis_.nonbasicMove_[0];
   workDual = &ekk_instance_.info_.workDual_[0];
   workRange = &ekk_instance_.info_.workRange_[0];
   work_devex_index = &ekk_instance_.info_.devex_index_[0];
@@ -463,7 +463,7 @@ void HEkkDualRow::updateDual(double theta) {
     const double delta_dual = theta * packValue[i];
     const double local_value = ekk_instance_.info_.workValue_[iCol];
     double local_dual_objective_change =
-        ekk_instance_.simplex_basis_.nonbasicFlag_[iCol] *
+        ekk_instance_.basis_.nonbasicFlag_[iCol] *
         (-local_value * delta_dual);
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
@@ -478,7 +478,7 @@ void HEkkDualRow::createFreelist() {
   for (HighsInt i = 0; i < ekk_instance_.simplex_lp_.numCol_ +
                                ekk_instance_.simplex_lp_.numRow_;
        i++) {
-    if (ekk_instance_.simplex_basis_.nonbasicFlag_[i] &&
+    if (ekk_instance_.basis_.nonbasicFlag_[i] &&
         highs_isInfinity(-ekk_instance_.info_.workLower_[i]) &&
         highs_isInfinity(ekk_instance_.info_.workUpper_[i]))
       freeList.insert(i);
@@ -501,9 +501,9 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
       double alpha = ekk_instance_.matrix_.compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * move_out > 0)
-          ekk_instance_.simplex_basis_.nonbasicMove_[iCol] = 1;
+          ekk_instance_.basis_.nonbasicMove_[iCol] = 1;
         else
-          ekk_instance_.simplex_basis_.nonbasicMove_[iCol] = -1;
+          ekk_instance_.basis_.nonbasicMove_[iCol] = -1;
       }
     }
   }
@@ -514,7 +514,7 @@ void HEkkDualRow::deleteFreemove() {
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       HighsInt iCol = *sit;
       assert(iCol < ekk_instance_.simplex_lp_.numCol_);
-      ekk_instance_.simplex_basis_.nonbasicMove_[iCol] = 0;
+      ekk_instance_.basis_.nonbasicMove_[iCol] = 0;
     }
   }
 }
@@ -530,7 +530,7 @@ void HEkkDualRow::computeDevexWeight(const HighsInt slice) {
   computed_edge_weight = 0;
   for (HighsInt el_n = 0; el_n < packCount; el_n++) {
     HighsInt vr_n = packIndex[el_n];
-    if (!ekk_instance_.simplex_basis_.nonbasicFlag_[vr_n]) {
+    if (!ekk_instance_.basis_.nonbasicFlag_[vr_n]) {
       //      printf("Basic variable %" HIGHSINT_FORMAT " in packIndex is
       //      skipped\n", vr_n);
       continue;

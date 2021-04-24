@@ -1111,7 +1111,7 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   info.dual_objective_value = 0;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (HighsInt i = 0; i < numTot; i++) {
-    if (highs_model_object.simplex_basis_.nonbasicFlag_[i]) {
+    if (highs_model_object.basis_.nonbasicFlag_[i]) {
       const double term =
           info.workValue_[i] * info.workDual_[i];
       if (term) {
@@ -1137,19 +1137,19 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& info = highs_model_object.info_;
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis& basis = highs_model_object.basis_;
   HighsSimplexStatus& status =
       highs_model_object.status_;
   info.primal_objective_value = 0;
   for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    HighsInt iVar = simplex_basis.basicIndex_[iRow];
+    HighsInt iVar = basis.basicIndex_[iRow];
     if (iVar < simplex_lp.numCol_) {
       info.primal_objective_value +=
           info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
     }
   }
   for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-    if (simplex_basis.nonbasicFlag_[iCol])
+    if (basis.nonbasicFlag_[iCol])
       info.primal_objective_value +=
           info.workValue_[iCol] * simplex_lp.colCost_[iCol];
   }
@@ -1243,7 +1243,7 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   }
   double norm_B = 0.0;
   for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
-    HighsInt vr_n = highs_model_object.simplex_basis_.basicIndex_[r_n];
+    HighsInt vr_n = highs_model_object.basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < solver_num_col)
       for (HighsInt el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
