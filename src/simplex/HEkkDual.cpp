@@ -74,9 +74,8 @@ HighsStatus HEkkDual::solve() {
 
   rebuild_reason = kRebuildReasonNo;
 
-  // Initialise working environment.
-  init();
-  initParallel();
+  // Initialise working environment - now done in constructor
+  //  init(); initParallel();
 
   bool dual_info_ok = dualInfoOk(ekk_instance_.simplex_lp_);
   if (!dual_info_ok) {

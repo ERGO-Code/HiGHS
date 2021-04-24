@@ -51,8 +51,6 @@ class HEkk {
   HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
-  // This will go when only using HEkk
-  HighsSolutionParams getSolutionParams();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,

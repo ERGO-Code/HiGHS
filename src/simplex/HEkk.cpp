@@ -478,34 +478,6 @@ void HEkk::handleRankDeficiency() {
   simplex_lp_status_.has_matrix = false;
 }
 
-HighsSolutionParams HEkk::getSolutionParams() {
-  HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance =
-      options_.dual_feasibility_tolerance;
-  if (scaled_model_status_ == HighsModelStatus::kOptimal) {
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
-    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
-  } else {
-    solution_params.primal_status = kHighsPrimalDualStatusNotset;
-    solution_params.dual_status = kHighsPrimalDualStatusNotset;
-  }
-  // Output from solution analysis method
-  solution_params.objective_function_value =
-      simplex_info_.primal_objective_value;
-  solution_params.num_primal_infeasibility =
-      simplex_info_.num_primal_infeasibility;
-  solution_params.max_primal_infeasibility =
-      simplex_info_.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibility =
-      simplex_info_.sum_primal_infeasibility;
-  solution_params.num_dual_infeasibility = simplex_info_.num_dual_infeasibility;
-  solution_params.max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibility = simplex_info_.sum_dual_infeasibility;
-  return solution_params;
-}
-
 // Private methods
 
 void HEkk::initialiseForNewLp() {
@@ -520,8 +492,7 @@ bool HEkk::isUnconstrainedLp() {
   if (is_unconstrained_lp) highsLogUser(
         options_.log_options, HighsLogType::kError,
         "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
-        ") "
-        "number of constraints\n",
+        ") number of constraints\n",
         simplex_lp_.numRow_);
   assert(!is_unconstrained_lp);
   return is_unconstrained_lp;

@@ -43,10 +43,15 @@ class HEkkDual {
  public:
   HEkkDual(HEkk& simplex)
       : ekk_instance_(simplex), dualRow(simplex), dualRHS(simplex) {
+    init();
     dualRow.setup();
-    for (HighsInt i = 0; i < kHighsSlicedLimit; i++)
-      slice_dualRow.push_back(HEkkDualRow(simplex));
     dualRHS.setup();
+    if (!(ekk_instance_.simplex_info_.simplex_strategy ==
+	  kSimplexStrategyDualPlain)) {
+      initParallel();
+      for (HighsInt i = 0; i < kHighsSlicedLimit; i++)
+	slice_dualRow.push_back(HEkkDualRow(simplex));
+    }
   }
 
   /**
