@@ -76,7 +76,7 @@ class HEkk {
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;
   bool solve_bailout_ = false;
-  bool called_exit_simplex_ = false;
+  bool called_return_from_solve_ = false;
 
   HighsLp simplex_lp_;
   HighsSimplexLpStatus simplex_lp_status_;
@@ -160,8 +160,7 @@ class HEkk {
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
-  bool bailoutReturn(const SimplexAlgorithm algorithm, const HighsInt solvePhase);
-  bool bailoutOnTimeIterations(const SimplexAlgorithm algorithm, const HighsInt solvePhase);
+  bool bailoutOnTimeIterations();
   HighsStatus returnFromSolve(const HighsStatus return_status);
 
   double computeBasisCondition();

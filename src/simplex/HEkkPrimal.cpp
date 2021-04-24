@@ -35,7 +35,7 @@ HighsStatus HEkkPrimal::solve() {
     assert(positive_num_row);
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
-  if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kPrimal, solvePhase))
+  if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   if (!simplex_lp_status.has_invert) {
@@ -243,7 +243,7 @@ void HEkkPrimal::initialise() {
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
-  ekk_instance_.called_exit_simplex_ = false;
+  ekk_instance_.called_return_from_solve_ = false;
 
   // Setup local vectors
   col_aq.setup(num_row);
@@ -296,7 +296,7 @@ void HEkkPrimal::solvePhase1() {
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
-  if (ekk_instance_.bailoutReturn(SimplexAlgorithm::kPrimal, solvePhase)) return;
+  if (ekk_instance_.bailoutOnTimeIterations()) return;
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
@@ -313,7 +313,7 @@ void HEkkPrimal::solvePhase1() {
     rebuild();
     if (solvePhase == kSolvePhaseError) return;
     if (solvePhase == kSolvePhaseUnknown) return;
-    if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kPrimal, solvePhase)) return;
+    if (ekk_instance_.bailoutOnTimeIterations()) return;
     assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2);
     //
     // solvePhase = kSolvePhase2 is set if no primal infeasibilities
@@ -322,7 +322,7 @@ void HEkkPrimal::solvePhase1() {
 
     for (;;) {
       iterate();
-      if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kPrimal, solvePhase)) return;
+      if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solvePhase == kSolvePhaseError) return;
       assert(solvePhase == kSolvePhase1);
       if (rebuild_reason) break;
@@ -375,7 +375,7 @@ void HEkkPrimal::solvePhase2() {
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
-  if (ekk_instance_.bailoutReturn(SimplexAlgorithm::kPrimal, solvePhase)) return;
+  if (ekk_instance_.bailoutOnTimeIterations()) return;
   highsLogDev(options.log_options, HighsLogType::kDetailed,
               "primal-phase2-start\n");
   phase2UpdatePrimal(true);
@@ -394,7 +394,7 @@ void HEkkPrimal::solvePhase2() {
     rebuild();
     if (solvePhase == kSolvePhaseError) return;
     if (solvePhase == kSolvePhaseUnknown) return;
-    if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kPrimal, solvePhase)) return;
+    if (ekk_instance_.bailoutOnTimeIterations()) return;
     assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2);
     //
     // solvePhase = kSolvePhase1 is set if primal infeasibilities
@@ -403,7 +403,7 @@ void HEkkPrimal::solvePhase2() {
 
     for (;;) {
       iterate();
-      if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kPrimal, solvePhase)) return;
+      if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solvePhase == kSolvePhaseError) return;
       assert(solvePhase == kSolvePhase2);
       if (rebuild_reason) break;
@@ -1873,12 +1873,13 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
     return false;
   }
   if (max_primal_correction > 2 * max_max_primal_correction) {
-    printf(
-        "phase2CorrectPrimal: num / max / sum primal corrections = "
-        "%" HIGHSINT_FORMAT
-        " / %g / "
-        "%g\n",
-        num_primal_correction, max_primal_correction, sum_primal_correction);
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                "phase2CorrectPrimal: num / max / sum primal corrections = "
+                "%" HIGHSINT_FORMAT
+                " / %g / "
+                "%g\n",
+                num_primal_correction, max_primal_correction,
+                sum_primal_correction);
     max_max_primal_correction = max_primal_correction;
   }
   return true;

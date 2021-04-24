@@ -65,9 +65,9 @@ class HEkkDual {
    * @brief Initialise a dual simplex instance
    *
    * Copy dimensions and pointers to matrix, factor and solver-related
-   * model data, plus tolerances. Sets up local std::vectors (columnDSE,
-   * columnBFRT, column, row_ep and row_ap), scalars for their average
-   * density and buffers for dualRow and dualRHS.
+   * model data, plus tolerances. Sets up local std::vectors
+   * (columnDSE, columnBFRT, column, row_ep and row_ap), and buffers
+   * for dualRow and dualRHS.
    */
   void init();
 

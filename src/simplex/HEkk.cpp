@@ -96,7 +96,7 @@ HighsStatus HEkk::solve() {
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
-    assert(called_exit_simplex_);
+    assert(called_return_from_solve_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
@@ -126,23 +126,19 @@ HighsStatus HEkk::solve() {
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
-    assert(called_exit_simplex_);
+    assert(called_return_from_solve_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
 
     // Dual simplex solver may set model_status to be
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
     // be returned, so use primal simplex to distinguish
-    printf("EkkDual::solve() returns scaled model status: %s\n",
-           utilModelStatusToString(scaled_model_status_).c_str());
     if (scaled_model_status_ == HighsModelStatus::kUnboundedOrInfeasible) {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
-      assert(called_exit_simplex_);
+      assert(called_return_from_solve_);
       return_status =
           interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
-      printf("EkkPrimal::solve() returns scaled model status: %s\n",
-             utilModelStatusToString(scaled_model_status_).c_str());
     }
   }
   reportSimplexPhaseIterations(options_.log_options, iteration_count_,
@@ -190,7 +186,7 @@ HighsStatus HEkk::cleanup() {
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
-    assert(called_exit_simplex_);
+    assert(called_return_from_solve_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
     if (return_status == HighsStatus::kError) return return_status;
@@ -204,7 +200,7 @@ HighsStatus HEkk::cleanup() {
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
-    assert(called_exit_simplex_);
+    assert(called_return_from_solve_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
     if (return_status == HighsStatus::kError) return return_status;
@@ -2145,19 +2141,7 @@ void HEkk::invalidateDualInfeasibilityRecord() {
   invalidateDualMaxSumInfeasibilityRecord();
 }
 
-bool HEkk::bailoutReturn(const SimplexAlgorithm algorithm, const HighsInt solvePhase) {
-  if (solve_bailout_) {
-    // If bailout has already been decided: check that it's for one of
-    // these reasons
-    assert(scaled_model_status_ == HighsModelStatus::kReachedTimeLimit ||
-           scaled_model_status_ == HighsModelStatus::kReachedIterationLimit ||
-           scaled_model_status_ ==
-               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
-  }
-  return solve_bailout_;
-}
-
-bool HEkk::bailoutOnTimeIterations(const SimplexAlgorithm algorithm, const HighsInt solvePhase) {
+bool HEkk::bailoutOnTimeIterations() {
   if (solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
@@ -2177,10 +2161,18 @@ bool HEkk::bailoutOnTimeIterations(const SimplexAlgorithm algorithm, const Highs
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   // Always called before returning from HEkkPrimal/Dual::solve()
-  if (!called_exit_simplex_) {
-    // Exit simplex has not been called
-    called_exit_simplex_ = true;
+  if (solve_bailout_) {
+    // If bailout has already been decided: check that it's for one of
+    // these reasons
+    assert(scaled_model_status_ == HighsModelStatus::kReachedTimeLimit ||
+           scaled_model_status_ == HighsModelStatus::kReachedIterationLimit ||
+           scaled_model_status_ ==
+               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
   }
+  // Chaeck that returnFromSolve has not already been solved: it
+  // should be called exactly once per solve
+  assert(!called_return_from_solve_);
+  called_return_from_solve_ = true;
   simplex_info_.valid_backtracking_basis_ = false;
   return return_status;
 }

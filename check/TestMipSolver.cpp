@@ -103,6 +103,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
 
   Highs highs;
   highs.readModel(filename);
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.run();
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
@@ -135,9 +136,9 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   } else {
     highs.setOptionValue("output_flag", false);
   }
-  highs.writeModel("");
+  if (dev_run) highs.writeModel("");
   highs.run();
-  highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", true);
   double optimal_objective = info.objective_function_value;
   if (dev_run) printf("Objective = %g\n", optimal_objective);
 
@@ -146,9 +147,9 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   highs.readModel(filename);
   REQUIRE(
       highs.changeColsIntegrality(num_set_entries, &set[0], &integrality[0]));
-  highs.writeModel("");
+  if (dev_run) highs.writeModel("");
   highs.run();
-  highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
 
   integrality.assign(lp.numCol_, HighsVarType::kContinuous);
@@ -161,8 +162,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);
   REQUIRE(highs.changeColsIntegrality(&mask[0], &integrality[0]));
-  highs.writeModel("");
+  if (dev_run) highs.writeModel("");
   highs.run();
-  highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
 }
