@@ -54,7 +54,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //  HighsStatus call_status;
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
-  HighsSimplexLpStatus& lp_status = ekk_instance.lp_status_;
+  HighsSimplexStatus& status = ekk_instance.status_;
 
   // Reset the model status and solution parameters for the unscaled
   // LP in case of premature return
@@ -75,10 +75,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   }
 
   // If the simplex LP isn't initialised, scale and pass the current LP
-  if (!lp_status.initialised) scaleAndPassLpToEkk(highs_model_object);
+  if (!status.initialised) scaleAndPassLpToEkk(highs_model_object);
 
   // If there is no simplex basis, use the HiGHS basis
-  if (!lp_status.has_basis && highs_model_object.basis_.valid_) {
+  if (!status.has_basis && highs_model_object.basis_.valid_) {
     return_status = ekk_instance.setBasis(highs_model_object.basis_);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
@@ -91,7 +91,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   HighsSolutionParams& solution_params = highs_model_object.solution_params_;
   highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
   solution_params.objective_function_value =
-      ekk_instance.simplex_info_.primal_objective_value;
+      ekk_instance.info_.primal_objective_value;
   highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
   highs_model_object.solution_ = ekk_instance.getSolution();
   if (highs_model_object.scale_.is_scaled_)
@@ -105,7 +105,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   getUnscaledInfeasibilitiesAndNewTolerances(
       ekk_instance.options_, ekk_instance.simplex_lp_,
       ekk_instance.scaled_model_status_, ekk_instance.simplex_basis_,
-      ekk_instance.simplex_info_, highs_model_object.scale_, solution_params,
+      ekk_instance.info_, highs_model_object.scale_, solution_params,
       new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
 
   // Handle non-optimal status

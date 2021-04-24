@@ -49,13 +49,13 @@ HighsStatus getRangingData(HighsRanging& ranging,
     return HighsStatus::kError;
   }
   const HEkk& ekk_instance = highs_model_object.ekk_instance_;
-  if (!ekk_instance.lp_status_.valid) {
+  if (!ekk_instance.status_.valid) {
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without a valid Simplex LP\n");
     return HighsStatus::kError;
   }
   // Aliases
-  const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
+  const HighsSimplexInfo& simplex_info = ekk_instance.info_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   const vector<double>& col_scale = highs_model_object.scale_.col_;
   const vector<double>& row_scale = highs_model_object.scale_.row_;

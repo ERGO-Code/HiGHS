@@ -187,125 +187,125 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
 }
 
 void invalidateSimplexLpBasisArtifacts(
-    HighsSimplexLpStatus& lp_status) {
+    HighsSimplexStatus& status) {
   // Invalidate the artifacts of the basis of the simplex LP
-  lp_status.has_matrix = false;
+  status.has_matrix = false;
   // has_factor_arrays shouldn't be set false unless model dimension
   // changes, but invalidateSimplexLpBasisArtifacts is all that's
   // called when rows or columns are added, so can't change this now.
-  lp_status.has_factor_arrays = false;
-  lp_status.has_dual_steepest_edge_weights = false;
-  lp_status.has_nonbasic_dual_values = false;
-  lp_status.has_basic_primal_values = false;
-  lp_status.has_invert = false;
-  lp_status.has_fresh_invert = false;
-  lp_status.has_fresh_rebuild = false;
-  lp_status.has_dual_objective_value = false;
-  lp_status.has_primal_objective_value = false;
-  lp_status.has_dual_ray = false;
-  lp_status.has_primal_ray = false;
+  status.has_factor_arrays = false;
+  status.has_dual_steepest_edge_weights = false;
+  status.has_nonbasic_dual_values = false;
+  status.has_basic_primal_values = false;
+  status.has_invert = false;
+  status.has_fresh_invert = false;
+  status.has_fresh_rebuild = false;
+  status.has_dual_objective_value = false;
+  status.has_primal_objective_value = false;
+  status.has_dual_ray = false;
+  status.has_primal_ray = false;
 }
 
-void invalidateSimplexLpBasis(HighsSimplexLpStatus& lp_status) {
+void invalidateSimplexLpBasis(HighsSimplexStatus& status) {
   // Invalidate the basis of the simplex LP, and all its other
   // properties - since they are basis-related
-  lp_status.has_basis = false;
-  invalidateSimplexLpBasisArtifacts(lp_status);
+  status.has_basis = false;
+  invalidateSimplexLpBasisArtifacts(status);
 }
 
-void invalidateSimplexLp(HighsSimplexLpStatus& lp_status) {
-  lp_status.initialised = false;
-  lp_status.valid = false;
-  lp_status.scaling_tried = false;
-  invalidateSimplexLpBasis(lp_status);
+void invalidateSimplexLp(HighsSimplexStatus& status) {
+  status.initialised = false;
+  status.valid = false;
+  status.scaling_tried = false;
+  invalidateSimplexLpBasis(status);
 }
 
-void updateSimplexLpStatus(HighsSimplexLpStatus& lp_status,
+void updateSimplexLpStatus(HighsSimplexStatus& status,
                            LpAction action) {
   switch (action) {
     case LpAction::kScale:
 #ifdef HIGHSDEV
       printf(" LpAction::kScale\n");
 #endif
-      lp_status.scaling_tried = true;
-      invalidateSimplexLpBasis(lp_status);
+      status.scaling_tried = true;
+      invalidateSimplexLpBasis(status);
       break;
     case LpAction::kNewCosts:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewCosts\n");
 #endif
-      lp_status.has_nonbasic_dual_values = false;
-      lp_status.has_fresh_rebuild = false;
-      lp_status.has_dual_objective_value = false;
-      lp_status.has_primal_objective_value = false;
+      status.has_nonbasic_dual_values = false;
+      status.has_fresh_rebuild = false;
+      status.has_dual_objective_value = false;
+      status.has_primal_objective_value = false;
       break;
     case LpAction::kNewBounds:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewBounds\n");
 #endif
-      lp_status.has_basic_primal_values = false;
-      lp_status.has_fresh_rebuild = false;
-      lp_status.has_dual_objective_value = false;
-      lp_status.has_primal_objective_value = false;
+      status.has_basic_primal_values = false;
+      status.has_fresh_rebuild = false;
+      status.has_dual_objective_value = false;
+      status.has_primal_objective_value = false;
       break;
     case LpAction::kNewBasis:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewBasis\n");
 #endif
-      invalidateSimplexLpBasis(lp_status);
+      invalidateSimplexLpBasis(status);
       break;
     case LpAction::kNewCols:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewCols\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(lp_status);
+      invalidateSimplexLpBasisArtifacts(status);
       break;
     case LpAction::kNewRows:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewRows\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(lp_status);
+      invalidateSimplexLpBasisArtifacts(status);
       break;
     case LpAction::kDelCols:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelCols\n");
 #endif
-      invalidateSimplexLpBasis(lp_status);
+      invalidateSimplexLpBasis(status);
       break;
     case LpAction::kDelRows:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelRows\n");
 #endif
-      invalidateSimplexLpBasis(lp_status);
+      invalidateSimplexLpBasis(status);
       break;
     case LpAction::kDelRowsBasisOk:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelRowsBasisOk\n");
 #endif
-      //      simplex_info.simplex_lp_ = true;
+      //      info.simplex_lp_ = true;
       break;
     case LpAction::kScaledCol:
 #ifdef HIGHSDEV
       printf(" LpAction::kScaledCol\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(lp_status);
+      invalidateSimplexLpBasisArtifacts(status);
       break;
     case LpAction::kScaledRow:
 #ifdef HIGHSDEV
       printf(" LpAction::kScaledRow\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(lp_status);
+      invalidateSimplexLpBasisArtifacts(status);
       break;
     case LpAction::kBacktracking:
 #ifdef HIGHSDEV
       printf(" LpAction::kBacktracking\n");
 #endif
-      lp_status.has_matrix = false;
-      lp_status.has_nonbasic_dual_values = false;
-      lp_status.has_basic_primal_values = false;
-      lp_status.has_fresh_rebuild = false;
-      lp_status.has_dual_objective_value = false;
-      lp_status.has_primal_objective_value = false;
+      status.has_matrix = false;
+      status.has_nonbasic_dual_values = false;
+      status.has_basic_primal_values = false;
+      status.has_fresh_rebuild = false;
+      status.has_dual_objective_value = false;
+      status.has_primal_objective_value = false;
       break;
     default:
 #ifdef HIGHSDEV
@@ -380,7 +380,7 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
 void getUnscaledInfeasibilitiesAndNewTolerances(
     const HighsOptions& options, const HighsLp& lp,
     const HighsModelStatus model_status, const SimplexBasis& basis,
-    const HighsSimplexInfo& simplex_info, const HighsScale& scale,
+    const HighsSimplexInfo& info, const HighsScale& scale,
     HighsSolutionParams& solution_params,
     double& new_primal_feasibility_tolerance,
     double& new_dual_feasibility_tolerance) {
@@ -420,7 +420,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasiblity for fixed rows and columns
-    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar])
+    if (info.workLower_[iVar] == info.workUpper_[iVar])
       continue;
     bool col = iVar < lp.numCol_;
     double scale_mu;
@@ -435,9 +435,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       assert(int(scale.row_.size()) > iRow);
       scale_mu = scale.row_[iRow] * scale.cost_;
     }
-    const double scaled_dual = simplex_info.workDual_[iVar];
-    const double scaled_lower = simplex_info.workLower_[iVar];
-    const double scaled_upper = simplex_info.workUpper_[iVar];
+    const double scaled_dual = info.workDual_[iVar];
+    const double scaled_lower = info.workLower_[iVar];
+    const double scaled_upper = info.workUpper_[iVar];
     const double dual = scaled_dual * scale_mu;
 
     //    double scaled_dual_infeasibility;
@@ -456,7 +456,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
         num_dual_infeasibility++;
         if (get_new_scaled_feasibility_tolerances) {
           double multiplier = dual_feasibility_tolerance / scale_mu;
-          //          double scaled_value = simplex_info.workValue_[iVar];
+          //          double scaled_value = info.workValue_[iVar];
           //          highsLogUser(options.log_options, HighsLogType::kInfo,
           //                          "Var %6" HIGHSINT_FORMAT " (%6"
           //                          HIGHSINT_FORMAT ", %6" HIGHSINT_FORMAT "):
@@ -495,9 +495,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     double scaled_value;
     double scaled_primal_infeasibility;
     if (report) {
-      scaled_lower = simplex_info.baseLower_[ix];
-      scaled_upper = simplex_info.baseUpper_[ix];
-      scaled_value = simplex_info.baseValue_[ix];
+      scaled_lower = info.baseLower_[ix];
+      scaled_upper = info.baseUpper_[ix];
+      scaled_value = info.baseValue_[ix];
       // @primal_infeasibility calculation
       scaled_primal_infeasibility = 0;
       if (scaled_value < scaled_lower - primal_feasibility_tolerance) {
@@ -506,9 +506,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
         scaled_primal_infeasibility = scaled_value - scaled_upper;
       }
     }
-    double lower = simplex_info.baseLower_[ix] * scale_mu;
-    double value = simplex_info.baseValue_[ix] * scale_mu;
-    double upper = simplex_info.baseUpper_[ix] * scale_mu;
+    double lower = info.baseLower_[ix] * scale_mu;
+    double value = info.baseValue_[ix] * scale_mu;
+    double upper = info.baseUpper_[ix] * scale_mu;
     // @primal_infeasibility calculation
     double primal_infeasibility = 0;
     if (value < lower - primal_feasibility_tolerance) {
@@ -1104,61 +1104,61 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                HighsInt phase) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus& lp_status =
-      highs_model_object.lp_status_;
+  HighsSimplexInfo& info = highs_model_object.info_;
+  HighsSimplexStatus& status =
+      highs_model_object.status_;
 
-  simplex_info.dual_objective_value = 0;
+  info.dual_objective_value = 0;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (HighsInt i = 0; i < numTot; i++) {
     if (highs_model_object.simplex_basis_.nonbasicFlag_[i]) {
       const double term =
-          simplex_info.workValue_[i] * simplex_info.workDual_[i];
+          info.workValue_[i] * info.workDual_[i];
       if (term) {
-        simplex_info.dual_objective_value +=
-            simplex_info.workValue_[i] * simplex_info.workDual_[i];
+        info.dual_objective_value +=
+            info.workValue_[i] * info.workDual_[i];
       }
     }
   }
-  simplex_info.dual_objective_value *= highs_model_object.scale_.cost_;
+  info.dual_objective_value *= highs_model_object.scale_.cost_;
   if (phase != 1) {
     // In phase 1 the dual objective has no objective
     // shift. Otherwise, if minimizing the shift is added. If
     // maximizing, workCost (and hence workDual) are negated, so the
     // shift is subtracted. Hence the shift is added according to the
     // sign implied by sense_
-    simplex_info.dual_objective_value +=
+    info.dual_objective_value +=
         ((HighsInt)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
-  lp_status.has_dual_objective_value = true;
+  status.has_dual_objective_value = true;
 }
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexInfo& info = highs_model_object.info_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexLpStatus& lp_status =
-      highs_model_object.lp_status_;
-  simplex_info.primal_objective_value = 0;
+  HighsSimplexStatus& status =
+      highs_model_object.status_;
+  info.primal_objective_value = 0;
   for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     HighsInt iVar = simplex_basis.basicIndex_[iRow];
     if (iVar < simplex_lp.numCol_) {
-      simplex_info.primal_objective_value +=
-          simplex_info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
+      info.primal_objective_value +=
+          info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
     }
   }
   for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
     if (simplex_basis.nonbasicFlag_[iCol])
-      simplex_info.primal_objective_value +=
-          simplex_info.workValue_[iCol] * simplex_lp.colCost_[iCol];
+      info.primal_objective_value +=
+          info.workValue_[iCol] * simplex_lp.colCost_[iCol];
   }
-  simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
+  info.primal_objective_value *= highs_model_object.scale_.cost_;
   // Objective value calculation is done using primal values and
   // original costs so offset is vanilla
-  simplex_info.primal_objective_value += simplex_lp.offset_;
+  info.primal_objective_value += simplex_lp.offset_;
   // Now have primal objective value
-  lp_status.has_primal_objective_value = true;
+  status.has_primal_objective_value = true;
 }
 
 double computeBasisCondition(const HighsModelObject& highs_model_object) {

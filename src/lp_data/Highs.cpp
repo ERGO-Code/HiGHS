@@ -444,7 +444,7 @@ HighsStatus Highs::run() {
 
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   setOrientation(lp_);
-  if (hmos_[0].ekk_instance_.lp_status_.valid)
+  if (hmos_[0].ekk_instance_.status_.valid)
     setOrientation(hmos_[0].ekk_instance_.simplex_lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -594,12 +594,12 @@ HighsStatus Highs::run() {
         call_status = callSolveLp(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
-        if (hmos_[solved_hmo].ekk_instance_.lp_status_.valid) {
+        if (hmos_[solved_hmo].ekk_instance_.status_.valid) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
           factor_pivot_threshold =
               hmos_[solved_hmo]
-                  .ekk_instance_.simplex_info_.factor_pivot_threshold;
+                  .ekk_instance_.info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =
@@ -980,7 +980,7 @@ HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
                  row, numRow - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = hmos_[0].ekk_instance_.lp_status_.has_invert;
+  bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
   if (!has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "No invertible representation for getBasisInverseRow\n");
@@ -1014,7 +1014,7 @@ HighsStatus Highs::getBasisInverseCol(const HighsInt col, double* col_vector,
                  col, numRow - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = hmos_[0].ekk_instance_.lp_status_.has_invert;
+  bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
   if (!has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "No invertible representation for getBasisInverseCol\n");
@@ -1044,7 +1044,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  bool has_invert = hmos_[0].ekk_instance_.lp_status_.has_invert;
+  bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
   if (!has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "No invertible representation for getBasisSolve\n");
@@ -1076,7 +1076,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  bool has_invert = hmos_[0].ekk_instance_.lp_status_.has_invert;
+  bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
   if (!has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "No invertible representation for getBasisTransposeSolve\n");
@@ -1113,7 +1113,7 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                  row, lp.numRow_ - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = hmos_[0].ekk_instance_.lp_status_.has_invert;
+  bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
   if (!has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "No invertible representation for getReducedRow\n");
@@ -1171,7 +1171,7 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                  col, lp.numCol_ - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = hmos_[0].ekk_instance_.lp_status_.has_invert;
+  bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
   if (!has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "No invertible representation for getReducedColumn\n");

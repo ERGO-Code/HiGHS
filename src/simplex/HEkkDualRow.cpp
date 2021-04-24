@@ -33,9 +33,9 @@ using std::set;
 void HEkkDualRow::setupSlice(HighsInt size) {
   workSize = size;
   workMove = &ekk_instance_.simplex_basis_.nonbasicMove_[0];
-  workDual = &ekk_instance_.simplex_info_.workDual_[0];
-  workRange = &ekk_instance_.simplex_info_.workRange_[0];
-  work_devex_index = &ekk_instance_.simplex_info_.devex_index_[0];
+  workDual = &ekk_instance_.info_.workDual_[0];
+  workRange = &ekk_instance_.info_.workRange_[0];
+  work_devex_index = &ekk_instance_.info_.devex_index_[0];
 
   // Allocate spaces
   packCount = 0;
@@ -52,7 +52,7 @@ void HEkkDualRow::setup() {
   const HighsInt numTot =
       ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
   setupSlice(numTot);
-  workNumTotPermutation = &ekk_instance_.simplex_info_.numTotPermutation_[0];
+  workNumTotPermutation = &ekk_instance_.info_.numTotPermutation_[0];
 
   // deleteFreelist() is being called in Phase 1 and Phase 2 since
   // it's in updatePivots(), but create_Freelist() is only called in
@@ -90,9 +90,9 @@ void HEkkDualRow::choosePossible() {
    * TODO: Check with Qi what this is doing
    */
   const double Ta =
-      ekk_instance_.simplex_info_.update_count < 10
+      ekk_instance_.info_.update_count < 10
           ? 1e-9
-          : ekk_instance_.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
+          : ekk_instance_.info_.update_count < 20 ? 3e-8 : 1e-6;
   const double Td = ekk_instance_.options_.dual_feasibility_tolerance;
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   workTheta = kHighsInf;
@@ -436,7 +436,7 @@ void HEkkDualRow::chooseFinalLargeAlpha(
 }
 
 void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
-  double* workDual = &ekk_instance_.simplex_info_.workDual_[0];
+  double* workDual = &ekk_instance_.info_.workDual_[0];
   double dual_objective_value_change = 0;
   bfrtColumn->clear();
   for (HighsInt i = 0; i < workCount; i++) {
@@ -448,27 +448,27 @@ void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
     ekk_instance_.flipBound(iCol);
     ekk_instance_.matrix_.collect_aj(*bfrtColumn, iCol, change);
   }
-  ekk_instance_.simplex_info_.updated_dual_objective_value +=
+  ekk_instance_.info_.updated_dual_objective_value +=
       dual_objective_value_change;
 }
 
 void HEkkDualRow::updateDual(double theta) {
   analysis->simplexTimerStart(UpdateDualClock);
-  double* workDual = &ekk_instance_.simplex_info_.workDual_[0];
+  double* workDual = &ekk_instance_.info_.workDual_[0];
   double dual_objective_value_change = 0;
   for (HighsInt i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
     HighsInt iCol = packIndex[i];
     const double delta_dual = theta * packValue[i];
-    const double local_value = ekk_instance_.simplex_info_.workValue_[iCol];
+    const double local_value = ekk_instance_.info_.workValue_[iCol];
     double local_dual_objective_change =
         ekk_instance_.simplex_basis_.nonbasicFlag_[iCol] *
         (-local_value * delta_dual);
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
   }
-  ekk_instance_.simplex_info_.updated_dual_objective_value +=
+  ekk_instance_.info_.updated_dual_objective_value +=
       dual_objective_value_change;
   analysis->simplexTimerStop(UpdateDualClock);
 }
@@ -479,8 +479,8 @@ void HEkkDualRow::createFreelist() {
                                ekk_instance_.simplex_lp_.numRow_;
        i++) {
     if (ekk_instance_.simplex_basis_.nonbasicFlag_[i] &&
-        highs_isInfinity(-ekk_instance_.simplex_info_.workLower_[i]) &&
-        highs_isInfinity(ekk_instance_.simplex_info_.workUpper_[i]))
+        highs_isInfinity(-ekk_instance_.info_.workLower_[i]) &&
+        highs_isInfinity(ekk_instance_.info_.workUpper_[i]))
       freeList.insert(i);
   }
   //  debugFreeListNumEntries(ekk_instance_, freeList);
@@ -490,9 +490,9 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
     double Ta =
-        ekk_instance_.simplex_info_.update_count < 10
+        ekk_instance_.info_.update_count < 10
             ? 1e-9
-            : ekk_instance_.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
+            : ekk_instance_.info_.update_count < 20 ? 3e-8 : 1e-6;
     HighsInt move_out = workDelta < 0 ? -1 : 1;
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {

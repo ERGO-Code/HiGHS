@@ -46,7 +46,7 @@ class HEkkDual {
     init();
     dualRow.setup();
     dualRHS.setup();
-    if (!(ekk_instance_.simplex_info_.simplex_strategy ==
+    if (!(ekk_instance_.info_.simplex_strategy ==
 	  kSimplexStrategyDualPlain)) {
       initParallel();
       for (HighsInt i = 0; i < kHighsSlicedLimit; i++)

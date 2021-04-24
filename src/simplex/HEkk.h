@@ -69,7 +69,7 @@ class HEkk {
 
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
-                                    HighsSimplexInfo& simplex_info);
+                                    HighsSimplexInfo& info);
 
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;
@@ -77,8 +77,8 @@ class HEkk {
   bool called_return_from_solve_ = false;
 
   HighsLp simplex_lp_;
-  HighsSimplexLpStatus lp_status_;
-  HighsSimplexInfo simplex_info_;
+  HighsSimplexStatus status_;
+  HighsSimplexInfo info_;
   HighsModelStatus scaled_model_status_;
   SimplexBasis simplex_basis_;
   HighsRandom random_;

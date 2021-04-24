@@ -74,7 +74,7 @@ void HEkkDual::majorChooseRow() {
   /**
    * 0. Initial check to see if we need to do it again
    */
-  if (ekk_instance_.simplex_info_.update_count == 0) multi_chooseAgain = 1;
+  if (ekk_instance_.info_.update_count == 0) multi_chooseAgain = 1;
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
@@ -130,7 +130,7 @@ void HEkkDual::majorChooseRow() {
         analysis->updateOperationResultDensity(local_row_ep_density,
                                                analysis->row_ep_density);
         ekk_instance_.updateOperationResultDensity(
-            local_row_ep_density, ekk_instance_.simplex_info_.row_ep_density);
+            local_row_ep_density, ekk_instance_.info_.row_ep_density);
       }
     }
 
@@ -292,7 +292,7 @@ void HEkkDual::minorUpdate() {
   // Minor update - store roll back data
   MFinish* finish = &multi_finish[multi_nFinish];
   finish->move_in = ekk_instance_.simplex_basis_.nonbasicMove_[variable_in];
-  finish->shiftOut = ekk_instance_.simplex_info_.workShift_[variable_out];
+  finish->shiftOut = ekk_instance_.info_.workShift_[variable_out];
   finish->flipList.clear();
   for (HighsInt i = 0; i < dualRow.workCount; i++)
     finish->flipList.push_back(dualRow.workData[i].first);
@@ -436,7 +436,7 @@ void HEkkDual::minorUpdatePivots() {
     finish->EdWt /= (alpha_row * alpha_row);
   }
   finish->basicValue =
-      ekk_instance_.simplex_info_.workValue_[variable_in] + theta_primal;
+      ekk_instance_.info_.workValue_[variable_in] + theta_primal;
   ekk_instance_.updateMatrix(variable_in, variable_out);
   finish->variable_in = variable_in;
   finish->alpha_row = alpha_row;
@@ -542,7 +542,7 @@ void HEkkDual::majorUpdate() {
     if (ekk_instance_.reinvertOnNumericalTrouble(
             "HEkkDual::majorUpdate", numericalTrouble, iColumn->array[iRow_Out],
             iFinish->alpha_row, multi_numerical_trouble_tolerance)) {
-      // HighsInt startUpdate = ekk_instance_.simplex_info_.update_count -
+      // HighsInt startUpdate = ekk_instance_.info_.update_count -
       // multi_nFinish;
       rebuild_reason = kRebuildReasonPossiblySingularBasis;
       // if (startUpdate > 0) {
@@ -668,7 +668,7 @@ void HEkkDual::majorUpdateFtranParallel() {
     analysis->updateOperationResultDensity(local_col_aq_density,
                                            analysis->col_aq_density);
     ekk_instance_.updateOperationResultDensity(
-        local_col_aq_density, ekk_instance_.simplex_info_.col_aq_density);
+        local_col_aq_density, ekk_instance_.info_.col_aq_density);
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
@@ -676,7 +676,7 @@ void HEkkDual::majorUpdateFtranParallel() {
       analysis->updateOperationResultDensity(local_row_DSE_density,
                                              analysis->row_DSE_density);
       ekk_instance_.updateOperationResultDensity(
-          local_row_DSE_density, ekk_instance_.simplex_info_.row_DSE_density);
+          local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
       if (analysis->analyse_simplex_data)
         analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                        Row->count);
@@ -761,7 +761,7 @@ void HEkkDual::majorUpdatePrimal() {
       const double less = baseLower[iRow] - value;
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      if (ekk_instance_.simplex_info_.store_squared_primal_infeasibility)
+      if (ekk_instance_.info_.store_squared_primal_infeasibility)
         local_work_infeasibility[iRow] = infeas * infeas;
       else
         local_work_infeasibility[iRow] = fabs(infeas);
@@ -898,7 +898,7 @@ void HEkkDual::majorUpdateFactor() {
   const bool reinvert_syntheticClock =
       ekk_instance_.total_syntheticTick_ >= use_build_syntheticTick;
   const bool performed_min_updates =
-      ekk_instance_.simplex_info_.update_count >=
+      ekk_instance_.info_.update_count >=
       multi_synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
     rebuild_reason = kRebuildReasonSyntheticClockSaysInvert;
@@ -928,8 +928,8 @@ void HEkkDual::majorRollback() {
     }
 
     // 4. Roll back cost
-    ekk_instance_.simplex_info_.workShift_[finish->variable_in] = 0;
-    ekk_instance_.simplex_info_.workShift_[finish->variable_out] =
+    ekk_instance_.info_.workShift_[finish->variable_in] = 0;
+    ekk_instance_.info_.workShift_[finish->variable_out] =
         finish->shiftOut;
 
     // 5. The iteration count
@@ -969,11 +969,11 @@ void HEkkDual::iterationAnalysisMinor() {
 }
 
 void HEkkDual::iterationAnalysisMajorData() {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->min_threads = simplex_info.min_threads;
-  analysis->num_threads = simplex_info.num_threads;
-  analysis->max_threads = simplex_info.max_threads;
+  analysis->min_threads = info.min_threads;
+  analysis->num_threads = info.num_threads;
+  analysis->max_threads = info.max_threads;
 }
 
 void HEkkDual::iterationAnalysisMajor() {
@@ -985,7 +985,7 @@ void HEkkDual::iterationAnalysisMajor() {
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
       // Set up the Devex framework
-      ekk_instance_.simplex_info_.devex_index_.assign(solver_num_tot, 0);
+      ekk_instance_.info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
   }

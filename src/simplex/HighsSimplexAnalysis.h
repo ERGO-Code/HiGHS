@@ -186,7 +186,7 @@ class HighsSimplexAnalysis {
   bool analyse_factor_data;
   bool analyse_factor_time;
 
-  // Control parameters moving to simplex_info
+  // Control parameters moving to info
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;

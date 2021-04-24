@@ -156,12 +156,12 @@ class HEkkDualRow {
   const int8_t*
       workMove;  //!< Pointer to ekk_instance_.simplex_basis_.nonbasicMove_;
   const double*
-      workDual;  //!< Pointer to ekk_instance_.simplex_info_.workDual_;
+      workDual;  //!< Pointer to ekk_instance_.info_.workDual_;
   const double*
-      workRange;  //!< Pointer to ekk_instance_.simplex_info_.workRange_;
+      workRange;  //!< Pointer to ekk_instance_.info_.workRange_;
   const HighsInt*
       work_devex_index;  //!< Pointer to
-                         //!< ekk_instance_.simplex_info_.devex_index_;
+                         //!< ekk_instance_.info_.devex_index_;
 
   // Freelist:
   std::set<HighsInt> freeList;  //!< Freelist itself

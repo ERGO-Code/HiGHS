@@ -50,24 +50,24 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
                             HighsInt XnumNewRow);
 
 void invalidateSimplexLpBasisArtifacts(
-    HighsSimplexLpStatus&
-        lp_status  // !< Status of simplex LP whose
+    HighsSimplexStatus&
+        status  // !< Status of simplex LP whose
                            // basis artifacts are to be invalidated
 );
 
 void invalidateSimplexLpBasis(
-    HighsSimplexLpStatus& lp_status  // !< Status of simplex LP whose
+    HighsSimplexStatus& status  // !< Status of simplex LP whose
                                              // basis is to be invalidated
 );
 
 void invalidateSimplexLp(
-    HighsSimplexLpStatus&
-        lp_status  // !< Status of simplex LP to be invalidated
+    HighsSimplexStatus&
+        status  // !< Status of simplex LP to be invalidated
 );
 
 void updateSimplexLpStatus(
-    HighsSimplexLpStatus&
-        lp_status,  // !< Status of simplex LP to be updated
+    HighsSimplexStatus&
+        status,  // !< Status of simplex LP to be updated
     LpAction action         // !< Action prompting update
 );
 
@@ -80,7 +80,7 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
 void getUnscaledInfeasibilitiesAndNewTolerances(
     const HighsOptions& options, const HighsLp& lp,
     const HighsModelStatus model_status, const SimplexBasis& basis,
-    const HighsSimplexInfo& simplex_info, const HighsScale& scale,
+    const HighsSimplexInfo& info, const HighsScale& scale,
     HighsSolutionParams& solution_params,
     double& new_primal_feasibility_tolerance,
     double& new_dual_feasibility_tolerance);
