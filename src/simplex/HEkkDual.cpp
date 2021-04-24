@@ -56,7 +56,7 @@ HighsStatus HEkkDual::solve() {
   assert(kSolvePhaseCleanup == 4);
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   // Initialise model and run status values
   scaled_model_status = HighsModelStatus::kNotset;
@@ -121,8 +121,8 @@ HighsStatus HEkkDual::solve() {
                 "Near-optimal, so don't use cost perturbation\n");
   ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown,
                                perturb_costs);
-  assert(simplex_lp_status.has_invert);
-  if (!simplex_lp_status.has_invert) {
+  assert(lp_status.has_invert);
+  if (!lp_status.has_invert) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "HPrimalDual:: Should enter solve with INVERT\n");
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
@@ -133,7 +133,7 @@ HighsStatus HEkkDual::solve() {
   // dualRHS.setup(ekk_instance_) so that CHUZR is well defined, even for
   // Dantzig pricing
   //
-  if (!simplex_lp_status.has_dual_steepest_edge_weights) {
+  if (!lp_status.has_dual_steepest_edge_weights) {
     // Edge weights are not known
     // Set up edge weights according to dual_edge_weight_mode and
     // initialise_dual_steepest_edge_weights
@@ -209,7 +209,7 @@ HighsStatus HEkkDual::solve() {
       }
     }
     // Indicate that edge weights are known
-    simplex_lp_status.has_dual_steepest_edge_weights = true;
+    lp_status.has_dual_steepest_edge_weights = true;
   }
   // Resize the copy of scattered edge weights for backtracking
   simplex_info.backtracking_basis_edge_weights_.resize(solver_num_tot);
@@ -233,7 +233,7 @@ HighsStatus HEkkDual::solve() {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in rebuild() isn't checked against the
     // the updated value
-    simplex_lp_status.has_dual_objective_value = false;
+    lp_status.has_dual_objective_value = false;
     if (solvePhase == kSolvePhaseUnknown) {
       // Reset the phase 2 bounds so that true number of dual
       // infeasibilities can be determined
@@ -535,14 +535,14 @@ void HEkkDual::solvePhase1() {
   // kSolvePhase2 => Continue with dual phase 2 iterations
 
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
   // value
-  simplex_lp_status.has_primal_objective_value = false;
-  simplex_lp_status.has_dual_objective_value = false;
+  lp_status.has_primal_objective_value = false;
+  lp_status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
   rebuild_reason = kRebuildReasonNo;
   // Use to set solvePhase = kSolvePhase1 and ekk_instance_.solve_bailout_ =
@@ -603,7 +603,7 @@ void HEkkDual::solvePhase1() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_lp_status.has_fresh_rebuild) break;
+    if (lp_status.has_fresh_rebuild) break;
   }
 
   analysis->simplexTimerStop(IterateClock);
@@ -736,14 +736,14 @@ void HEkkDual::solvePhase2() {
   // kSolvePhaseCleanup => Contrinue with primal phase 2 iterations to clean up
   // dual infeasibilities
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
   // value
-  simplex_lp_status.has_primal_objective_value = false;
-  simplex_lp_status.has_dual_objective_value = false;
+  lp_status.has_primal_objective_value = false;
+  lp_status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
   rebuild_reason = kRebuildReasonNo;
   // Set solvePhase = kSolvePhase2 and ekk_instance_.solve_bailout_ = false so
@@ -810,7 +810,7 @@ void HEkkDual::solvePhase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_lp_status.has_fresh_rebuild) break;
+    if (lp_status.has_fresh_rebuild) break;
   }
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
@@ -885,7 +885,7 @@ void HEkkDual::solvePhase2() {
 
 void HEkkDual::rebuild() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   // Save history information
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
@@ -905,7 +905,7 @@ void HEkkDual::rebuild() {
     }
   }
 
-  if (!ekk_instance_.simplex_lp_status_.has_matrix) {
+  if (!ekk_instance_.lp_status_.has_matrix) {
     // Don't have the matrix either row-wise or col-wise, so
     // reinitialise it
     assert(simplex_info.backtracking_);
@@ -915,7 +915,7 @@ void HEkkDual::rebuild() {
                                 &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
                                 &simplex_lp.Avalue_[0],
                                 &ekk_instance_.simplex_basis_.nonbasicFlag_[0]);
-    simplex_lp_status.has_matrix = true;
+    lp_status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
   }
   // Record whether the update objective value should be tested. If
@@ -926,7 +926,7 @@ void HEkkDual::rebuild() {
   // Note that computePrimalObjectiveValue sets
   // has_primal_objective_value
   const bool check_updated_objective_value =
-      simplex_lp_status.has_dual_objective_value;
+      lp_status.has_dual_objective_value;
   double previous_dual_objective_value;
   if (check_updated_objective_value) {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
@@ -1004,7 +1004,7 @@ void HEkkDual::rebuild() {
   ekk_instance_.invalidateDualInfeasibilityRecord();
 
   // Data are fresh from rebuild
-  simplex_lp_status.has_fresh_rebuild = true;
+  lp_status.has_fresh_rebuild = true;
 }
 
 void HEkkDual::cleanup() {
@@ -1092,7 +1092,7 @@ void HEkkDual::iterate() {
   updatePrimal(&row_ep);
   analysis->simplexTimerStop(IteratePrimalClock);
   // After primal update in dual simplex the primal objective value is not known
-  ekk_instance_.simplex_lp_status_.has_primal_objective_value = false;
+  ekk_instance_.lp_status_.has_primal_objective_value = false;
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "After
   //  updatePrimal");
 
@@ -1954,7 +1954,7 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
 }
 
 void HEkkDual::saveDualRay() {
-  ekk_instance_.simplex_lp_status_.has_dual_ray = true;
+  ekk_instance_.lp_status_.has_dual_ray = true;
   ekk_instance_.simplex_info_.dual_ray_row_ = row_out;
   ekk_instance_.simplex_info_.dual_ray_sign_ = move_out;
 }
@@ -1966,7 +1966,7 @@ void HEkkDual::assessPhase1Optimality() {
   assert(solvePhase == kSolvePhase1);
   assert(row_out == -1);
   assert(ekk_instance_.simplex_info_.dual_objective_value);
-  assert(ekk_instance_.simplex_lp_status_.has_fresh_rebuild);
+  assert(ekk_instance_.lp_status_.has_fresh_rebuild);
 
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;

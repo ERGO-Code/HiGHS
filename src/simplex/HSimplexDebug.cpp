@@ -34,9 +34,9 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
   // according to .scale
   const HEkk& ekk_instance = highs_model_object.ekk_instance_;
-  const HighsSimplexLpStatus& simplex_lp_status =
-      ekk_instance.simplex_lp_status_;
-  if (!simplex_lp_status.valid ||
+  const HighsSimplexLpStatus& lp_status =
+      ekk_instance.lp_status_;
+  if (!lp_status.valid ||
       highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -71,7 +71,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     return_status = HighsDebugStatus::kLogicalError;
   }
 
-  if (simplex_lp_status.has_basis) {
+  if (lp_status.has_basis) {
     const bool simplex_basis_correct =
         debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
         HighsStatus::kError;
@@ -83,7 +83,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     }
   }
 
-  if (simplex_lp_status.has_invert) {
+  if (lp_status.has_invert) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::kError;
     if (!invert_ok) {
@@ -361,9 +361,9 @@ const double freelist_fair_pct_num_entries = 1.0;
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
   // according to .scale
-  const HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-  if (!simplex_lp_status.valid ||
+  const HighsSimplexLpStatus& lp_status =
+      highs_model_object.lp_status_;
+  if (!lp_status.valid ||
       highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -397,7 +397,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
     return_status = HighsDebugStatus::kLogicalError;
   }
 
-  if (simplex_lp_status.has_basis) {
+  if (lp_status.has_basis) {
     const bool simplex_basis_correct =
         debugDebugToHighsStatus(debugSimplexBasisCorrect(highs_model_object)) !=
         HighsStatus::kError;
@@ -409,7 +409,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
     }
   }
 
-  if (simplex_lp_status.has_invert) {
+  if (lp_status.has_invert) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::kError;
     if (!invert_ok) {
@@ -926,11 +926,11 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   double exact_objective_value;
   double updated_objective_value;
   if (algorithm == SimplexAlgorithm::kPrimal) {
-    assert(highs_model_object.simplex_lp_status_.has_primal_objective_value);
+    assert(highs_model_object.lp_status_.has_primal_objective_value);
     exact_objective_value = simplex_info.primal_objective_value;
     updated_objective_value = simplex_info.updated_primal_objective_value;
   } else {
-    assert(highs_model_object.simplex_lp_status_.has_dual_objective_value);
+    assert(highs_model_object.lp_status_.has_dual_objective_value);
     exact_objective_value = simplex_info.dual_objective_value;
     updated_objective_value = simplex_info.updated_dual_objective_value;
   }
@@ -1660,37 +1660,37 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  const HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
+  const HighsSimplexLpStatus& lp_status =
+      highs_model_object.lp_status_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   const HighsOptions& options = highs_model_object.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix &&
-       simplex_lp_status.has_factor_arrays &&
-       simplex_lp_status.has_dual_steepest_edge_weights &&
-       simplex_lp_status.has_invert;
+  ok = lp_status.has_basis && lp_status.has_matrix &&
+       lp_status.has_factor_arrays &&
+       lp_status.has_dual_steepest_edge_weights &&
+       lp_status.has_invert;
   if (!ok) {
-    if (!simplex_lp_status.has_basis)
+    if (!lp_status.has_basis)
       highsLogUser(options.log_options, HighsLogType::kError,
-                      "Not OK to solve since simplex_lp_status.has_basis =
-%" HIGHSINT_FORMAT "\n", simplex_lp_status.has_basis); if
-(!simplex_lp_status.has_matrix) highsLogUser(options.log_options,
-HighsLogType::kError, "Not OK to solve since simplex_lp_status.has_matrix =
-%" HIGHSINT_FORMAT "\n", simplex_lp_status.has_matrix);
-    //    if (!simplex_lp_status.has_factor_arrays)
+                      "Not OK to solve since lp_status.has_basis =
+%" HIGHSINT_FORMAT "\n", lp_status.has_basis); if
+(!lp_status.has_matrix) highsLogUser(options.log_options,
+HighsLogType::kError, "Not OK to solve since lp_status.has_matrix =
+%" HIGHSINT_FORMAT "\n", lp_status.has_matrix);
+    //    if (!lp_status.has_factor_arrays)
     //      highsLogUser(options.log_options, HighsLogType::kError,
     //                  "Not OK to solve since
-    //      simplex_lp_status.has_factor_arrays = %" HIGHSINT_FORMAT "\n",
-    //             simplex_lp_status.has_factor_arrays);
-    if (!simplex_lp_status.has_dual_steepest_edge_weights)
+    //      lp_status.has_factor_arrays = %" HIGHSINT_FORMAT "\n",
+    //             lp_status.has_factor_arrays);
+    if (!lp_status.has_dual_steepest_edge_weights)
       highsLogUser(options.log_options, HighsLogType::kError,
                       "Not OK to solve since \n"
-                      "simplex_lp_status.has_dual_steepest_edge_weights = %"
-HIGHSINT_FORMAT "", simplex_lp_status.has_dual_steepest_edge_weights); if
-(!simplex_lp_status.has_invert) highsLogUser(options.log_options,
-HighsLogType::kError, "Not OK to solve since simplex_lp_status.has_invert =
-%" HIGHSINT_FORMAT "\n", simplex_lp_status.has_invert);
+                      "lp_status.has_dual_steepest_edge_weights = %"
+HIGHSINT_FORMAT "", lp_status.has_dual_steepest_edge_weights); if
+(!lp_status.has_invert) highsLogUser(options.log_options,
+HighsLogType::kError, "Not OK to solve since lp_status.has_invert =
+%" HIGHSINT_FORMAT "\n", lp_status.has_invert);
   }
   if (highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return return_status;

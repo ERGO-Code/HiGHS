@@ -22,7 +22,7 @@
 HighsStatus HEkkPrimal::solve() {
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   // Assumes that the LP has a positive number of rows
   if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
@@ -30,10 +30,10 @@ HighsStatus HEkkPrimal::solve() {
   if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
-  if (!simplex_lp_status.has_invert) {
+  if (!lp_status.has_invert) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "HEkkPrimal::solve called without INVERT\n");
-    assert(simplex_lp_status.has_fresh_invert);
+    assert(lp_status.has_fresh_invert);
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
 
@@ -97,7 +97,7 @@ HighsStatus HEkkPrimal::solve() {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in rebuild() isn't checked against the the
     // updated value
-    simplex_lp_status.has_primal_objective_value = false;
+    lp_status.has_primal_objective_value = false;
     if (solvePhase == kSolvePhaseUnknown) {
       // Determine the number of primal infeasibilities, and hence the solve
       // phase
@@ -231,8 +231,8 @@ void HEkkPrimal::initialise() {
 
   rebuild_reason = kRebuildReasonNo;
 
-  ekk_instance_.simplex_lp_status_.has_primal_objective_value = false;
-  ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
+  ekk_instance_.lp_status_.has_primal_objective_value = false;
+  ekk_instance_.lp_status_.has_dual_objective_value = false;
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
@@ -280,13 +280,13 @@ void HEkkPrimal::initialise() {
 
 void HEkkPrimal::solvePhase1() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
   // computed from scratch in build() isn't checked against the the
   // updated value
-  simplex_lp_status.has_primal_objective_value = false;
-  simplex_lp_status.has_dual_objective_value = false;
+  lp_status.has_primal_objective_value = false;
+  lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutOnTimeIterations()) return;
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
@@ -321,7 +321,7 @@ void HEkkPrimal::solvePhase1() {
     }
     // If the data are fresh from rebuild() and no flips have
     // occurred, break out of the outer loop to see what's ocurred
-    if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
+    if (lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
   // If bailing out, should have returned already
@@ -358,14 +358,14 @@ void HEkkPrimal::solvePhase1() {
 
 void HEkkPrimal::solvePhase2() {
   HighsOptions& options = ekk_instance_.options_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
   // computed from scratch in build() isn't checked against the the
   // updated value
-  simplex_lp_status.has_primal_objective_value = false;
-  simplex_lp_status.has_dual_objective_value = false;
+  lp_status.has_primal_objective_value = false;
+  lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutOnTimeIterations()) return;
   highsLogDev(options.log_options, HighsLogType::kDetailed,
@@ -402,7 +402,7 @@ void HEkkPrimal::solvePhase2() {
     }
     // If the data are fresh from rebuild() and no flips have
     // occurred, break out of the outer loop to see what's ocurred
-    if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
+    if (lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
   // If bailing out, should have returned already
@@ -501,7 +501,7 @@ void HEkkPrimal::cleanup() {
 
 void HEkkPrimal::rebuild() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance_.lp_status_;
 
   // Record whether the update objective value should be tested. If
   // the objective value is known, then the updated objective value
@@ -515,7 +515,7 @@ void HEkkPrimal::rebuild() {
   // basic variables, and baseValue only corresponds to the new
   // ordering once computePrimal has been called
   const bool check_updated_objective_value =
-      simplex_lp_status.has_primal_objective_value;
+      lp_status.has_primal_objective_value;
   double previous_primal_objective_value;
   if (check_updated_objective_value) {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
@@ -542,7 +542,7 @@ void HEkkPrimal::rebuild() {
       return;
     }
   }
-  if (!ekk_instance_.simplex_lp_status_.has_matrix) {
+  if (!ekk_instance_.lp_status_.has_matrix) {
     // Don't have the matrix either row-wise or col-wise, so
     // reinitialise it
     assert(simplex_info.backtracking_);
@@ -552,7 +552,7 @@ void HEkkPrimal::rebuild() {
                                 &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
                                 &simplex_lp.Avalue_[0],
                                 &ekk_instance_.simplex_basis_.nonbasicFlag_[0]);
-    simplex_lp_status.has_matrix = true;
+    lp_status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
   }
 
@@ -619,7 +619,7 @@ void HEkkPrimal::rebuild() {
 
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
-  simplex_lp_status.has_fresh_rebuild = true;
+  lp_status.has_fresh_rebuild = true;
   assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2);
 }
 
@@ -1530,7 +1530,7 @@ void HEkkPrimal::updateDual() {
 
   ekk_instance_.invalidateDualInfeasibilityRecord();
   // After dual update in primal simplex the dual objective value is not known
-  ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
+  ekk_instance_.lp_status_.has_dual_objective_value = false;
   analysis->simplexTimerStop(UpdateDualClock);
 }
 
@@ -2386,7 +2386,7 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
 }
 
 void HEkkPrimal::savePrimalRay() {
-  ekk_instance_.simplex_lp_status_.has_primal_ray = true;
+  ekk_instance_.lp_status_.has_primal_ray = true;
   ekk_instance_.simplex_info_.primal_ray_col_ = variable_in;
   ekk_instance_.simplex_info_.primal_ray_sign_ = -move_in;
 }

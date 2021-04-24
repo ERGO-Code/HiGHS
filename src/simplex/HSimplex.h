@@ -51,23 +51,23 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
 
 void invalidateSimplexLpBasisArtifacts(
     HighsSimplexLpStatus&
-        simplex_lp_status  // !< Status of simplex LP whose
+        lp_status  // !< Status of simplex LP whose
                            // basis artifacts are to be invalidated
 );
 
 void invalidateSimplexLpBasis(
-    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
+    HighsSimplexLpStatus& lp_status  // !< Status of simplex LP whose
                                              // basis is to be invalidated
 );
 
 void invalidateSimplexLp(
     HighsSimplexLpStatus&
-        simplex_lp_status  // !< Status of simplex LP to be invalidated
+        lp_status  // !< Status of simplex LP to be invalidated
 );
 
 void updateSimplexLpStatus(
     HighsSimplexLpStatus&
-        simplex_lp_status,  // !< Status of simplex LP to be updated
+        lp_status,  // !< Status of simplex LP to be updated
     LpAction action         // !< Action prompting update
 );
 

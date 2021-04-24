@@ -54,7 +54,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //  HighsStatus call_status;
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
-  HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status = ekk_instance.lp_status_;
 
   // Reset the model status and solution parameters for the unscaled
   // LP in case of premature return
@@ -75,10 +75,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   }
 
   // If the simplex LP isn't initialised, scale and pass the current LP
-  if (!simplex_lp_status.initialised) scaleAndPassLpToEkk(highs_model_object);
+  if (!lp_status.initialised) scaleAndPassLpToEkk(highs_model_object);
 
   // If there is no simplex basis, use the HiGHS basis
-  if (!simplex_lp_status.has_basis && highs_model_object.basis_.valid_) {
+  if (!lp_status.has_basis && highs_model_object.basis_.valid_) {
     return_status = ekk_instance.setBasis(highs_model_object.basis_);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }

@@ -401,7 +401,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   bool require_dual_feasible_in_dual_simplex =
       algorithm == SimplexAlgorithm::kDual &&
-      ekk_instance.simplex_lp_status_.has_fresh_rebuild &&
+      ekk_instance.lp_status_.has_fresh_rebuild &&
       ekk_instance.simplex_info_.allow_cost_perturbation;
 
   bool illegal_dual_infeasibility =
@@ -735,44 +735,44 @@ HighsDebugStatus ekkDebugOkForSolve(
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  const HighsSimplexLpStatus& simplex_lp_status =
-      ekk_instance.simplex_lp_status_;
+  const HighsSimplexLpStatus& lp_status =
+      ekk_instance.lp_status_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   const HighsOptions& options = ekk_instance.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix &&
-       simplex_lp_status.has_factor_arrays &&
-       //       simplex_lp_status.has_dual_steepest_edge_weights &&
-       simplex_lp_status.has_invert;
+  ok = lp_status.has_basis && lp_status.has_matrix &&
+       lp_status.has_factor_arrays &&
+       //       lp_status.has_dual_steepest_edge_weights &&
+       lp_status.has_invert;
   if (!ok) {
-    if (!simplex_lp_status.has_basis)
+    if (!lp_status.has_basis)
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "Not OK to solve since simplex_lp_status.has_basis = "
+                   "Not OK to solve since lp_status.has_basis = "
                    "%" HIGHSINT_FORMAT "\n",
-                   simplex_lp_status.has_basis);
-    if (!simplex_lp_status.has_matrix)
+                   lp_status.has_basis);
+    if (!lp_status.has_matrix)
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "Not OK to solve since simplex_lp_status.has_matrix = "
+                   "Not OK to solve since lp_status.has_matrix = "
                    "%" HIGHSINT_FORMAT "\n",
-                   simplex_lp_status.has_matrix);
-    if (!simplex_lp_status.has_factor_arrays)
+                   lp_status.has_matrix);
+    if (!lp_status.has_factor_arrays)
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "Not OK to solve since simplex_lp_status.has_factor_arrays "
+                   "Not OK to solve since lp_status.has_factor_arrays "
                    "= %" HIGHSINT_FORMAT "\n",
-                   simplex_lp_status.has_factor_arrays);
-    if (!simplex_lp_status.has_dual_steepest_edge_weights)
+                   lp_status.has_factor_arrays);
+    if (!lp_status.has_dual_steepest_edge_weights)
       highsLogUser(
           options.log_options, HighsLogType::kError,
           "Not OK to solve since "
-          "simplex_lp_status.has_dual_steepest_edge_weights = %" HIGHSINT_FORMAT
+          "lp_status.has_dual_steepest_edge_weights = %" HIGHSINT_FORMAT
           "\n",
-          simplex_lp_status.has_dual_steepest_edge_weights);
-    if (!simplex_lp_status.has_invert)
+          lp_status.has_dual_steepest_edge_weights);
+    if (!lp_status.has_invert)
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "Not OK to solve since simplex_lp_status.has_invert = "
+                   "Not OK to solve since lp_status.has_invert = "
                    "%" HIGHSINT_FORMAT "\n",
-                   simplex_lp_status.has_invert);
+                   lp_status.has_invert);
   }
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCostly)
     return return_status;

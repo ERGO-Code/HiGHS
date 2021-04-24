@@ -63,9 +63,9 @@ HighsStatus HEkk::solve() {
   iteration_count_ = 0;
   if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
 
-  assert(simplex_lp_status_.has_basis);
-  assert(simplex_lp_status_.has_invert);
-  assert(simplex_lp_status_.valid);
+  assert(lp_status_.has_basis);
+  assert(lp_status_.has_invert);
+  assert(lp_status_.valid);
   if (scaled_model_status_ == HighsModelStatus::kOptimal)
     return HighsStatus::kOk;
 
@@ -74,8 +74,8 @@ HighsStatus HEkk::solve() {
   std::string algorithm;
 
   // Indicate that dual and primal rays are not known
-  simplex_lp_status_.has_dual_ray = false;
-  simplex_lp_status_.has_primal_ray = false;
+  lp_status_.has_dual_ray = false;
+  lp_status_.has_primal_ray = false;
 
   // Allow primal and dual perturbations in case a block on them is
   // hanging over from a previous call
@@ -256,7 +256,7 @@ HighsStatus HEkk::setBasis() {
     simplex_basis_.basicIndex_[iRow] = iVar;
   }
   simplex_info_.num_basic_logicals = num_row;
-  simplex_lp_status_.has_basis = true;
+  lp_status_.has_basis = true;
   return HighsStatus::kOk;
 }
 
@@ -328,7 +328,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
       }
     }
   }
-  simplex_lp_status_.has_basis = true;
+  lp_status_.has_basis = true;
   return HighsStatus::kOk;
 }
 
@@ -345,7 +345,7 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   simplex_basis_.nonbasicFlag_ = basis.nonbasicFlag_;
   simplex_basis_.nonbasicMove_ = basis.nonbasicMove_;
   simplex_basis_.basicIndex_ = basis.basicIndex_;
-  simplex_lp_status_.has_basis = true;
+  lp_status_.has_basis = true;
   return HighsStatus::kOk;
 }
 
@@ -386,7 +386,7 @@ HighsBasis HEkk::getHighsBasis() {
   HighsBasis basis;
   basis.col_status.resize(num_col);
   basis.row_status.resize(num_row);
-  assert(simplex_lp_status_.has_basis);
+  assert(lp_status_.has_basis);
   basis.valid_ = false;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
@@ -436,7 +436,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     const bool only_from_known_basis) {
   // If there's no basis, return error if the basis has to be known,
   // otherwise set a logical basis
-  if (!simplex_lp_status_.has_basis) {
+  if (!lp_status_.has_basis) {
     if (only_from_known_basis) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "Simplex basis should be known but isn't\n");
@@ -455,13 +455,13 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     }
     // Account for rank deficiency by correcing nonbasicFlag
     handleRankDeficiency();
-    updateSimplexLpStatus(simplex_lp_status_, LpAction::kNewBasis);
+    updateSimplexLpStatus(lp_status_, LpAction::kNewBasis);
     setNonbasicMove();
-    simplex_lp_status_.has_basis = true;
-    simplex_lp_status_.has_invert = true;
-    simplex_lp_status_.has_fresh_invert = true;
+    lp_status_.has_basis = true;
+    lp_status_.has_invert = true;
+    lp_status_.has_fresh_invert = true;
   }
-  assert(simplex_lp_status_.has_invert);
+  assert(lp_status_.has_invert);
   return 0;
 }
 
@@ -475,7 +475,7 @@ void HEkk::handleRankDeficiency() {
     simplex_basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     simplex_basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
   }
-  simplex_lp_status_.has_matrix = false;
+  lp_status_.has_matrix = false;
 }
 
 // Private methods
@@ -484,7 +484,7 @@ void HEkk::initialiseForNewLp() {
   setSimplexOptions();
   initialiseControl();
   initialiseSimplexLpRandomVectors();
-  simplex_lp_status_.initialised = true;
+  lp_status_.initialised = true;
 }
 
 bool HEkk::isUnconstrainedLp() {
@@ -502,7 +502,7 @@ HighsStatus HEkk::initialiseForSolve() {
   const HighsInt error_return = initialiseSimplexLpBasisAndFactor();
   assert(!error_return);
   if (error_return) return HighsStatus::kError;
-  assert(simplex_lp_status_.has_basis);
+  assert(lp_status_.has_basis);
 
   updateSimplexOptions();
   initialiseMatrix();  // Timed
@@ -515,7 +515,7 @@ HighsStatus HEkk::initialiseForSolve() {
   computeSimplexInfeasible();     // Timed
   computeDualObjectiveValue();    // Timed
   computePrimalObjectiveValue();  // Timed
-  simplex_lp_status_.valid = true;
+  lp_status_.valid = true;
 
   bool primal_feasible = simplex_info_.num_primal_infeasibility == 0;
   bool dual_feasible = simplex_info_.num_dual_infeasibility == 0;
@@ -688,7 +688,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
 }
 
 bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
-  assert(simplex_lp_status_.has_basis);
+  assert(lp_status_.has_basis);
   const vector<HighsInt>& basicIndex = simplex_basis_.basicIndex_;
   // Take a copy of basicIndex from before INVERT to be used as the
   // saved ordering of basic variables - so reinvert will run
@@ -739,7 +739,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     if (!getBacktrackingBasis(workEdWtFull_)) return false;
     // Record that backtracking is taking place
     simplex_info_.backtracking_ = true;
-    updateSimplexLpStatus(simplex_lp_status_, LpAction::kBacktracking);
+    updateSimplexLpStatus(lp_status_, LpAction::kBacktracking);
     HighsInt backtrack_rank_deficiency = computeFactor();
     // This basis has previously been inverted successfully, so it shouldn't be
     // singular
@@ -845,7 +845,7 @@ void HEkk::computePrimalObjectiveValue() {
   // original costs so offset is vanilla
   simplex_info_.primal_objective_value += simplex_lp_.offset_;
   // Now have primal objective value
-  simplex_lp_status_.has_primal_objective_value = true;
+  lp_status_.has_primal_objective_value = true;
   analysis_.simplexTimerStop(ComputePrObjClock);
 }
 
@@ -874,12 +874,12 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
         ((HighsInt)simplex_lp_.sense_) * simplex_lp_.offset_;
   }
   // Now have dual objective value
-  simplex_lp_status_.has_dual_objective_value = true;
+  lp_status_.has_dual_objective_value = true;
   analysis_.simplexTimerStop(ComputeDuObjClock);
 }
 
 HighsInt HEkk::computeFactor() {
-  if (!simplex_lp_status_.has_factor_arrays) {
+  if (!lp_status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(simplex_info_.factor_pivot_threshold >=
            options_.factor_pivot_threshold);
@@ -890,7 +890,7 @@ HighsInt HEkk::computeFactor() {
                   options_.factor_pivot_tolerance, options_.highs_debug_level,
                   options_.output_flag, options_.log_file_stream,
                   options_.log_to_console, options_.log_dev_level);
-    simplex_lp_status_.has_factor_arrays = true;
+    lp_status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
   HighsTimerClock* factor_timer_clock_pointer = NULL;
@@ -912,12 +912,12 @@ HighsInt HEkk::computeFactor() {
     // Have an invertible representation, but of B with column(s)
     // replacements due to singularity. So no (fresh) representation of
     // B^{-1}
-    simplex_lp_status_.has_invert = false;
-    simplex_lp_status_.has_fresh_invert = false;
+    lp_status_.has_invert = false;
+    lp_status_.has_fresh_invert = false;
   } else {
     // Now have a representation of B^{-1}, and it is fresh!
-    simplex_lp_status_.has_invert = true;
-    simplex_lp_status_.has_fresh_invert = true;
+    lp_status_.has_invert = true;
+    lp_status_.has_fresh_invert = true;
   }
   // Set the update count to zero since the corrected invertible
   // representation may be used for an initial basis. In any case the
@@ -929,12 +929,12 @@ HighsInt HEkk::computeFactor() {
 }
 
 void HEkk::initialiseMatrix() {
-  if (!simplex_lp_status_.has_matrix) {
+  if (!lp_status_.has_matrix) {
     analysis_.simplexTimerStart(matrixSetupClock);
     matrix_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
                   &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
                   &simplex_lp_.Avalue_[0], &simplex_basis_.nonbasicFlag_[0]);
-    simplex_lp_status_.has_matrix = true;
+    lp_status_.has_matrix = true;
     analysis_.simplexTimerStop(matrixSetupClock);
   }
 }
@@ -1553,7 +1553,7 @@ void HEkk::computePrimal() {
   simplex_info_.sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
 
   // Now have basic primals
-  simplex_lp_status_.has_basic_primal_values = true;
+  lp_status_.has_basic_primal_values = true;
   analysis_.simplexTimerStop(ComputePrimalClock);
 }
 
@@ -1594,7 +1594,7 @@ void HEkk::computeDual() {
   simplex_info_.sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
 
   // Now have nonbasic duals
-  simplex_lp_status_.has_nonbasic_dual_values = true;
+  lp_status_.has_nonbasic_dual_values = true;
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 
@@ -1830,7 +1830,7 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   analysis_.simplexTimerStart(UpdateFactorClock);
   factor_.update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
-  simplex_lp_status_.has_invert = true;
+  lp_status_.has_invert = true;
   if (simplex_info_.update_count >= simplex_info_.update_limit)
     *hint = kRebuildReasonUpdateLimitReached;
 
@@ -1883,10 +1883,10 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
   if (variable_in < simplex_lp_.numCol_) simplex_info_.num_basic_logicals--;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
-  simplex_lp_status_.has_invert = false;
-  simplex_lp_status_.has_fresh_invert = false;
+  lp_status_.has_invert = false;
+  lp_status_.has_fresh_invert = false;
   // Data are no longer fresh from rebuild
-  simplex_lp_status_.has_fresh_rebuild = false;
+  lp_status_.has_fresh_rebuild = false;
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 

@@ -187,96 +187,96 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
 }
 
 void invalidateSimplexLpBasisArtifacts(
-    HighsSimplexLpStatus& simplex_lp_status) {
+    HighsSimplexLpStatus& lp_status) {
   // Invalidate the artifacts of the basis of the simplex LP
-  simplex_lp_status.has_matrix = false;
+  lp_status.has_matrix = false;
   // has_factor_arrays shouldn't be set false unless model dimension
   // changes, but invalidateSimplexLpBasisArtifacts is all that's
   // called when rows or columns are added, so can't change this now.
-  simplex_lp_status.has_factor_arrays = false;
-  simplex_lp_status.has_dual_steepest_edge_weights = false;
-  simplex_lp_status.has_nonbasic_dual_values = false;
-  simplex_lp_status.has_basic_primal_values = false;
-  simplex_lp_status.has_invert = false;
-  simplex_lp_status.has_fresh_invert = false;
-  simplex_lp_status.has_fresh_rebuild = false;
-  simplex_lp_status.has_dual_objective_value = false;
-  simplex_lp_status.has_primal_objective_value = false;
-  simplex_lp_status.has_dual_ray = false;
-  simplex_lp_status.has_primal_ray = false;
+  lp_status.has_factor_arrays = false;
+  lp_status.has_dual_steepest_edge_weights = false;
+  lp_status.has_nonbasic_dual_values = false;
+  lp_status.has_basic_primal_values = false;
+  lp_status.has_invert = false;
+  lp_status.has_fresh_invert = false;
+  lp_status.has_fresh_rebuild = false;
+  lp_status.has_dual_objective_value = false;
+  lp_status.has_primal_objective_value = false;
+  lp_status.has_dual_ray = false;
+  lp_status.has_primal_ray = false;
 }
 
-void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {
+void invalidateSimplexLpBasis(HighsSimplexLpStatus& lp_status) {
   // Invalidate the basis of the simplex LP, and all its other
   // properties - since they are basis-related
-  simplex_lp_status.has_basis = false;
-  invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+  lp_status.has_basis = false;
+  invalidateSimplexLpBasisArtifacts(lp_status);
 }
 
-void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
-  simplex_lp_status.initialised = false;
-  simplex_lp_status.valid = false;
-  simplex_lp_status.scaling_tried = false;
-  invalidateSimplexLpBasis(simplex_lp_status);
+void invalidateSimplexLp(HighsSimplexLpStatus& lp_status) {
+  lp_status.initialised = false;
+  lp_status.valid = false;
+  lp_status.scaling_tried = false;
+  invalidateSimplexLpBasis(lp_status);
 }
 
-void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
+void updateSimplexLpStatus(HighsSimplexLpStatus& lp_status,
                            LpAction action) {
   switch (action) {
     case LpAction::kScale:
 #ifdef HIGHSDEV
       printf(" LpAction::kScale\n");
 #endif
-      simplex_lp_status.scaling_tried = true;
-      invalidateSimplexLpBasis(simplex_lp_status);
+      lp_status.scaling_tried = true;
+      invalidateSimplexLpBasis(lp_status);
       break;
     case LpAction::kNewCosts:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewCosts\n");
 #endif
-      simplex_lp_status.has_nonbasic_dual_values = false;
-      simplex_lp_status.has_fresh_rebuild = false;
-      simplex_lp_status.has_dual_objective_value = false;
-      simplex_lp_status.has_primal_objective_value = false;
+      lp_status.has_nonbasic_dual_values = false;
+      lp_status.has_fresh_rebuild = false;
+      lp_status.has_dual_objective_value = false;
+      lp_status.has_primal_objective_value = false;
       break;
     case LpAction::kNewBounds:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewBounds\n");
 #endif
-      simplex_lp_status.has_basic_primal_values = false;
-      simplex_lp_status.has_fresh_rebuild = false;
-      simplex_lp_status.has_dual_objective_value = false;
-      simplex_lp_status.has_primal_objective_value = false;
+      lp_status.has_basic_primal_values = false;
+      lp_status.has_fresh_rebuild = false;
+      lp_status.has_dual_objective_value = false;
+      lp_status.has_primal_objective_value = false;
       break;
     case LpAction::kNewBasis:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewBasis\n");
 #endif
-      invalidateSimplexLpBasis(simplex_lp_status);
+      invalidateSimplexLpBasis(lp_status);
       break;
     case LpAction::kNewCols:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewCols\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      invalidateSimplexLpBasisArtifacts(lp_status);
       break;
     case LpAction::kNewRows:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewRows\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      invalidateSimplexLpBasisArtifacts(lp_status);
       break;
     case LpAction::kDelCols:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelCols\n");
 #endif
-      invalidateSimplexLpBasis(simplex_lp_status);
+      invalidateSimplexLpBasis(lp_status);
       break;
     case LpAction::kDelRows:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelRows\n");
 #endif
-      invalidateSimplexLpBasis(simplex_lp_status);
+      invalidateSimplexLpBasis(lp_status);
       break;
     case LpAction::kDelRowsBasisOk:
 #ifdef HIGHSDEV
@@ -288,24 +288,24 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::kScaledCol\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      invalidateSimplexLpBasisArtifacts(lp_status);
       break;
     case LpAction::kScaledRow:
 #ifdef HIGHSDEV
       printf(" LpAction::kScaledRow\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      invalidateSimplexLpBasisArtifacts(lp_status);
       break;
     case LpAction::kBacktracking:
 #ifdef HIGHSDEV
       printf(" LpAction::kBacktracking\n");
 #endif
-      simplex_lp_status.has_matrix = false;
-      simplex_lp_status.has_nonbasic_dual_values = false;
-      simplex_lp_status.has_basic_primal_values = false;
-      simplex_lp_status.has_fresh_rebuild = false;
-      simplex_lp_status.has_dual_objective_value = false;
-      simplex_lp_status.has_primal_objective_value = false;
+      lp_status.has_matrix = false;
+      lp_status.has_nonbasic_dual_values = false;
+      lp_status.has_basic_primal_values = false;
+      lp_status.has_fresh_rebuild = false;
+      lp_status.has_dual_objective_value = false;
+      lp_status.has_primal_objective_value = false;
       break;
     default:
 #ifdef HIGHSDEV
@@ -1105,8 +1105,8 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                HighsInt phase) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status =
+      highs_model_object.lp_status_;
 
   simplex_info.dual_objective_value = 0;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -1131,15 +1131,15 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
         ((HighsInt)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
-  simplex_lp_status.has_dual_objective_value = true;
+  lp_status.has_dual_objective_value = true;
 }
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
+  HighsSimplexLpStatus& lp_status =
+      highs_model_object.lp_status_;
   simplex_info.primal_objective_value = 0;
   for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     HighsInt iVar = simplex_basis.basicIndex_[iRow];
@@ -1158,7 +1158,7 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   // original costs so offset is vanilla
   simplex_info.primal_objective_value += simplex_lp.offset_;
   // Now have primal objective value
-  simplex_lp_status.has_primal_objective_value = true;
+  lp_status.has_primal_objective_value = true;
 }
 
 double computeBasisCondition(const HighsModelObject& highs_model_object) {
