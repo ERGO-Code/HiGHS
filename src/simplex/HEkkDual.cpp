@@ -78,7 +78,8 @@ HighsStatus HEkkDual::solve() {
   // Set ekk_instance_.solve_bailout_ to be true if control is to be returned immediately to
   // calling function
   ekk_instance_.solve_bailout_ = false;
-  if (ekk_instance_.bailoutOnTimeIterations())
+  ekk_instance_.called_exit_simplex_ = false;
+  if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase))
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   // Initialise working environment.
@@ -540,7 +541,7 @@ void HEkkDual::solvePhase1() {
   // solvePhase1() is called directly
   solvePhase = kSolvePhase1;
   ekk_instance_.solve_bailout_ = false;
-  if (ekk_instance_.bailoutOnTimeIterations()) return;
+  if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase)) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "dual-phase-1-start\n");
@@ -568,7 +569,7 @@ void HEkkDual::solvePhase1() {
       analysis->simplexTimerStop(IterateClock);
       return;
     }
-    if (ekk_instance_.bailoutOnTimeIterations()) break;
+    if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase)) break;
     for (;;) {
       if (debugDualSimplex("Before iteration") ==
           HighsDebugStatus::kLogicalError) {
@@ -587,7 +588,7 @@ void HEkkDual::solvePhase1() {
           iterateMulti();
           break;
       }
-      if (ekk_instance_.bailoutOnTimeIterations()) break;
+      if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase)) break;
       if (rebuild_reason) break;
     }
     if (ekk_instance_.solve_bailout_) break;
@@ -600,7 +601,7 @@ void HEkkDual::solvePhase1() {
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
   // IterateClock
-  if (ekk_instance_.bailoutReturn()) return;
+  if (ekk_instance_.bailoutReturn(SimplexAlgorithm::kDual, solvePhase)) return;
 
   // If bailing out, should have done so already
   assert(!ekk_instance_.solve_bailout_);
@@ -741,7 +742,7 @@ void HEkkDual::solvePhase2() {
   // solvePhase2() is called directly
   solvePhase = kSolvePhase2;
   ekk_instance_.solve_bailout_ = false;
-  if (ekk_instance_.bailoutOnTimeIterations()) return;
+  if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase)) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "dual-phase-2-start\n");
@@ -770,7 +771,7 @@ void HEkkDual::solvePhase2() {
       analysis->simplexTimerStop(IterateClock);
       return;
     }
-    if (ekk_instance_.bailoutOnTimeIterations()) break;
+    if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase)) break;
     if (bailoutOnDualObjective()) break;
     if (dualInfeasCount > 0) break;
     for (;;) {
@@ -793,7 +794,7 @@ void HEkkDual::solvePhase2() {
           iterateMulti();
           break;
       }
-      if (ekk_instance_.bailoutOnTimeIterations()) break;
+      if (ekk_instance_.bailoutOnTimeIterations(SimplexAlgorithm::kDual, solvePhase)) break;
       if (bailoutOnDualObjective()) break;
       if (rebuild_reason) break;
     }
@@ -806,7 +807,7 @@ void HEkkDual::solvePhase2() {
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
   // IterateClock
-  if (ekk_instance_.bailoutReturn()) return;
+  if (ekk_instance_.bailoutReturn(SimplexAlgorithm::kDual, solvePhase)) return;
 
   // If bailing out, should have done so already
   assert(!ekk_instance_.solve_bailout_);

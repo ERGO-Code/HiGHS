@@ -96,6 +96,7 @@ HighsStatus HEkk::solve() {
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
+    assert(called_exit_simplex_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
@@ -125,6 +126,7 @@ HighsStatus HEkk::solve() {
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
+    assert(called_exit_simplex_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
 
@@ -136,6 +138,7 @@ HighsStatus HEkk::solve() {
     if (scaled_model_status_ == HighsModelStatus::kUnboundedOrInfeasible) {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
+      assert(called_exit_simplex_);
       return_status =
           interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
       printf("EkkPrimal::solve() returns scaled model status: %s\n",
@@ -187,6 +190,7 @@ HighsStatus HEkk::cleanup() {
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
+    assert(called_exit_simplex_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
     if (return_status == HighsStatus::kError) return return_status;
@@ -200,6 +204,7 @@ HighsStatus HEkk::cleanup() {
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
+    assert(called_exit_simplex_);
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
     if (return_status == HighsStatus::kError) return return_status;
@@ -2140,7 +2145,7 @@ void HEkk::invalidateDualInfeasibilityRecord() {
   invalidateDualMaxSumInfeasibilityRecord();
 }
 
-bool HEkk::bailoutReturn() {
+bool HEkk::bailoutReturn(const SimplexAlgorithm algorithm, const HighsInt solvePhase) {
   if (solve_bailout_) {
     // If bailout has already been decided: check that it's for one of
     // these reasons
@@ -2152,7 +2157,7 @@ bool HEkk::bailoutReturn() {
   return solve_bailout_;
 }
 
-bool HEkk::bailoutOnTimeIterations() {
+bool HEkk::bailoutOnTimeIterations(const SimplexAlgorithm algorithm, const HighsInt solvePhase) {
   if (solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
@@ -2171,6 +2176,11 @@ bool HEkk::bailoutOnTimeIterations() {
 }
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
+  // Always called before returning from HEkkPrimal/Dual::solve()
+  if (!called_exit_simplex_) {
+    // Exit simplex has not been called
+    called_exit_simplex_ = true;
+  }
   simplex_info_.valid_backtracking_basis_ = false;
   return return_status;
 }
