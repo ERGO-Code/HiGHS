@@ -364,16 +364,11 @@ class HEkkDual {
 
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
-  bool bailoutReturn();
-  bool bailoutOnTimeIterations();
   bool bailoutOnDualObjective();
   HighsDebugStatus debugDualSimplex(const std::string message,
                                     const bool initialise = false);
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
-
-  bool solve_bailout;  //!< Set true if control is to be returned immediately to
-                       //!< calling function
 
   // Devex scalars
   HighsInt num_devex_iterations =

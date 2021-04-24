@@ -75,10 +75,10 @@ HighsStatus HEkkDual::solve() {
   }
   rebuild_reason = kRebuildReasonNo;
 
-  // Set solve_bailout to be true if control is to be returned immediately to
+  // Set ekk_instance_.solve_bailout_ to be true if control is to be returned immediately to
   // calling function
-  solve_bailout = false;
-  if (bailoutOnTimeIterations())
+  ekk_instance_.solve_bailout_ = false;
+  if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   // Initialise working environment.
@@ -281,7 +281,7 @@ HighsStatus HEkkDual::solve() {
       return ekk_instance_.returnFromSolve(HighsStatus::kError);
     }
     // Return if bailing out from solve
-    if (solve_bailout)
+    if (ekk_instance_.solve_bailout_)
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
     // Can have all possible cases of solvePhase
     assert(solvePhase >= kSolvePhaseMin && solvePhase <= kSolvePhaseMax);
@@ -307,7 +307,7 @@ HighsStatus HEkkDual::solve() {
     // loop ends naturally since solvePhase is false
   }
   // If bailing out, should have returned already
-  assert(!solve_bailout);
+  assert(!ekk_instance_.solve_bailout_);
   // Should only have these cases
   assert(solvePhase == kSolvePhaseExit || solvePhase == kSolvePhaseUnknown ||
          solvePhase == kSolvePhaseOptimal || solvePhase == kSolvePhaseCleanup);
@@ -536,11 +536,11 @@ void HEkkDual::solvePhase1() {
   simplex_lp_status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
   rebuild_reason = kRebuildReasonNo;
-  // Set solvePhase = kSolvePhase1 and solve_bailout = false so they are set if
+  // Set solvePhase = kSolvePhase1 and ekk_instance_.solve_bailout_ = false so they are set if
   // solvePhase1() is called directly
   solvePhase = kSolvePhase1;
-  solve_bailout = false;
-  if (bailoutOnTimeIterations()) return;
+  ekk_instance_.solve_bailout_ = false;
+  if (ekk_instance_.bailoutOnTimeIterations()) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "dual-phase-1-start\n");
@@ -568,7 +568,7 @@ void HEkkDual::solvePhase1() {
       analysis->simplexTimerStop(IterateClock);
       return;
     }
-    if (bailoutOnTimeIterations()) break;
+    if (ekk_instance_.bailoutOnTimeIterations()) break;
     for (;;) {
       if (debugDualSimplex("Before iteration") ==
           HighsDebugStatus::kLogicalError) {
@@ -587,10 +587,10 @@ void HEkkDual::solvePhase1() {
           iterateMulti();
           break;
       }
-      if (bailoutOnTimeIterations()) break;
+      if (ekk_instance_.bailoutOnTimeIterations()) break;
       if (rebuild_reason) break;
     }
-    if (solve_bailout) break;
+    if (ekk_instance_.solve_bailout_) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
@@ -600,10 +600,10 @@ void HEkkDual::solvePhase1() {
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
   // IterateClock
-  if (bailoutReturn()) return;
+  if (ekk_instance_.bailoutReturn()) return;
 
   // If bailing out, should have done so already
-  assert(!solve_bailout);
+  assert(!ekk_instance_.solve_bailout_);
   // Assess outcome of dual phase 1
   if (row_out == -1) {
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
@@ -737,11 +737,11 @@ void HEkkDual::solvePhase2() {
   simplex_lp_status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
   rebuild_reason = kRebuildReasonNo;
-  // Set solvePhase = kSolvePhase2 and solve_bailout = false so they are set if
+  // Set solvePhase = kSolvePhase2 and ekk_instance_.solve_bailout_ = false so they are set if
   // solvePhase2() is called directly
   solvePhase = kSolvePhase2;
-  solve_bailout = false;
-  if (bailoutOnTimeIterations()) return;
+  ekk_instance_.solve_bailout_ = false;
+  if (ekk_instance_.bailoutOnTimeIterations()) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "dual-phase-2-start\n");
@@ -770,7 +770,7 @@ void HEkkDual::solvePhase2() {
       analysis->simplexTimerStop(IterateClock);
       return;
     }
-    if (bailoutOnTimeIterations()) break;
+    if (ekk_instance_.bailoutOnTimeIterations()) break;
     if (bailoutOnDualObjective()) break;
     if (dualInfeasCount > 0) break;
     for (;;) {
@@ -793,11 +793,11 @@ void HEkkDual::solvePhase2() {
           iterateMulti();
           break;
       }
-      if (bailoutOnTimeIterations()) break;
+      if (ekk_instance_.bailoutOnTimeIterations()) break;
       if (bailoutOnDualObjective()) break;
       if (rebuild_reason) break;
     }
-    if (solve_bailout) break;
+    if (ekk_instance_.solve_bailout_) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
@@ -806,10 +806,10 @@ void HEkkDual::solvePhase2() {
   analysis->simplexTimerStop(IterateClock);
   // Possibly return due to bailing out, having now stopped
   // IterateClock
-  if (bailoutReturn()) return;
+  if (ekk_instance_.bailoutReturn()) return;
 
   // If bailing out, should have done so already
-  assert(!solve_bailout);
+  assert(!ekk_instance_.solve_bailout_);
   // Assess outcome of dual phase 2
   if (dualInfeasCount > 0) {
     // There are dual infeasiblities so possibly switch to Phase 1 and
@@ -2168,43 +2168,8 @@ bool HEkkDual::dualInfoOk(const HighsLp& lp) {
   return true;
 }
 
-bool HEkkDual::bailoutReturn() {
-  if (solve_bailout) {
-    // If bailout has already been decided: check that it's for one of
-    // these reasons
-    assert(ekk_instance_.scaled_model_status_ ==
-               HighsModelStatus::kReachedTimeLimit ||
-           ekk_instance_.scaled_model_status_ ==
-               HighsModelStatus::kReachedIterationLimit ||
-           ekk_instance_.scaled_model_status_ ==
-               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
-  }
-  return solve_bailout;
-}
-
-bool HEkkDual::bailoutOnTimeIterations() {
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
-  if (solve_bailout) {
-    // Bailout has already been decided: check that it's for one of these
-    // reasons
-    assert(scaled_model_status == HighsModelStatus::kReachedTimeLimit ||
-           scaled_model_status == HighsModelStatus::kReachedIterationLimit ||
-           scaled_model_status ==
-               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
-  } else if (ekk_instance_.timer_.readRunHighsClock() >
-             ekk_instance_.options_.time_limit) {
-    solve_bailout = true;
-    scaled_model_status = HighsModelStatus::kReachedTimeLimit;
-  } else if (ekk_instance_.iteration_count_ >=
-             ekk_instance_.options_.simplex_iteration_limit) {
-    solve_bailout = true;
-    scaled_model_status = HighsModelStatus::kReachedIterationLimit;
-  }
-  return solve_bailout;
-}
-
 bool HEkkDual::bailoutOnDualObjective() {
-  if (solve_bailout) {
+  if (ekk_instance_.solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
     assert(ekk_instance_.scaled_model_status_ ==
@@ -2217,9 +2182,9 @@ bool HEkkDual::bailoutOnDualObjective() {
              solvePhase == kSolvePhase2) {
     if (ekk_instance_.simplex_info_.updated_dual_objective_value >
         ekk_instance_.options_.dual_objective_value_upper_bound)
-      solve_bailout = reachedExactDualObjectiveValueUpperBound();
+      ekk_instance_.solve_bailout_ = reachedExactDualObjectiveValueUpperBound();
   }
-  return solve_bailout;
+  return ekk_instance_.solve_bailout_;
 }
 
 bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {

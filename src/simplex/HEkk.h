@@ -76,6 +76,7 @@ class HEkk {
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;
   bool solve_bailout_ = false;
+  bool called_exit_simplex = false;
 
   HighsLp simplex_lp_;
   HighsSimplexLpStatus simplex_lp_status_;
