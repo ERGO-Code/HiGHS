@@ -49,16 +49,15 @@ HighsStatus HEkkPrimal::solve() {
   // and the sum of dual infeasiblilities will be very much larger for
   // non-trivial LPs that are primal feasible for a logical or crash
   // basis.
-  const bool near_optimal = info.num_primal_infeasibility == 0 &&
-                            info.sum_dual_infeasibility < 1;
+  const bool near_optimal =
+      info.num_primal_infeasibility == 0 && info.sum_dual_infeasibility < 1;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Primal feasible and num / max / sum dual infeasibilities are "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
-                info.num_dual_infeasibility,
-                info.max_dual_infeasibility,
+                info.num_dual_infeasibility, info.max_dual_infeasibility,
                 info.sum_dual_infeasibility);
 
   // Perturb bounds according to whether the solution is near-optimnal
@@ -66,8 +65,7 @@ HighsStatus HEkkPrimal::solve() {
   if (!perturb_bounds)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Near-optimal, so don't use bound perturbation\n");
-  if (perturb_bounds &&
-      info.primal_simplex_bound_perturbation_multiplier) {
+  if (perturb_bounds && info.primal_simplex_bound_perturbation_multiplier) {
     ekk_instance_.initialiseBound(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown,
                                   perturb_bounds);
     ekk_instance_.initialiseNonbasicValueAndMove();
@@ -102,8 +100,7 @@ HighsStatus HEkkPrimal::solve() {
       // Determine the number of primal infeasibilities, and hence the solve
       // phase
       ekk_instance_.computeSimplexPrimalInfeasible();
-      num_primal_infeasibility =
-          ekk_instance_.info_.num_primal_infeasibility;
+      num_primal_infeasibility = ekk_instance_.info_.num_primal_infeasibility;
       solvePhase = num_primal_infeasibility > 0 ? kSolvePhase1 : kSolvePhase2;
       if (info.backtracking_) {
         // Backtracking
@@ -293,8 +290,7 @@ void HEkkPrimal::solvePhase1() {
               "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
-  if (!info.valid_backtracking_basis_)
-    ekk_instance_.putBacktrackingBasis();
+  if (!info.valid_backtracking_basis_) ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
   for (;;) {
@@ -321,8 +317,7 @@ void HEkkPrimal::solvePhase1() {
     }
     // If the data are fresh from rebuild() and no flips have
     // occurred, break out of the outer loop to see what's ocurred
-    if (status.has_fresh_rebuild && num_flip_since_rebuild == 0)
-      break;
+    if (status.has_fresh_rebuild && num_flip_since_rebuild == 0) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
@@ -402,8 +397,7 @@ void HEkkPrimal::solvePhase2() {
     }
     // If the data are fresh from rebuild() and no flips have
     // occurred, break out of the outer loop to see what's ocurred
-    if (status.has_fresh_rebuild && num_flip_since_rebuild == 0)
-      break;
+    if (status.has_fresh_rebuild && num_flip_since_rebuild == 0) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
@@ -485,8 +479,7 @@ void HEkkPrimal::cleanup() {
   ekk_instance_.computePrimalObjectiveValue();
   // Now that there's a new primal_objective_value, reset the updated
   // value
-  info.updated_primal_objective_value =
-      info.primal_objective_value;
+  info.updated_primal_objective_value = info.primal_objective_value;
 
   //  if (!info.run_quiet) {
   // Report the dual infeasiblities
@@ -514,14 +507,12 @@ void HEkkPrimal::rebuild() {
   // Have to do this before INVERT, as this permutes the indices of
   // basic variables, and baseValue only corresponds to the new
   // ordering once computePrimal has been called
-  const bool check_updated_objective_value =
-      status.has_primal_objective_value;
+  const bool check_updated_objective_value = status.has_primal_objective_value;
   double previous_primal_objective_value;
   if (check_updated_objective_value) {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
     //    "Before INVERT");
-    previous_primal_objective_value =
-        info.updated_primal_objective_value;
+    previous_primal_objective_value = info.updated_primal_objective_value;
   } else {
     // Reset the knowledge of previous objective values
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, -1, "");
@@ -593,14 +584,12 @@ void HEkkPrimal::rebuild() {
     // values from scratch.
     const double primal_objective_value_correction =
         info.primal_objective_value - previous_primal_objective_value;
-    info.updated_primal_objective_value +=
-        primal_objective_value_correction;
+    info.updated_primal_objective_value += primal_objective_value_correction;
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm);
   }
   // Now that there's a new dual_objective_value, reset the updated
   // value
-  info.updated_primal_objective_value =
-      info.primal_objective_value;
+  info.updated_primal_objective_value = info.primal_objective_value;
 
   reportRebuild(reason_for_rebuild);
 
@@ -756,8 +745,7 @@ void HEkkPrimal::chuzc() {
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
   assert(!hyper_sparse || !done_next_chuzc);
-  const vector<int8_t>& nonbasicMove =
-      ekk_instance_.basis_.nonbasicMove_;
+  const vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
   const vector<double>& workDual = ekk_instance_.info_.workDual_;
   double best_measure = 0;
   variable_in = -1;
@@ -851,8 +839,7 @@ bool HEkkPrimal::useVariableIn() {
   // numerical trouble is detected
   HighsSimplexInfo& info = ekk_instance_.info_;
   vector<double>& workDual = info.workDual_;
-  const vector<int8_t>& nonbasicMove =
-      ekk_instance_.basis_.nonbasicMove_;
+  const vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
   const double updated_theta_dual = workDual[variable_in];
   // Determine the move direction - can't use nonbasicMove_[variable_in]
   // due to free columns
@@ -892,10 +879,9 @@ bool HEkkPrimal::useVariableIn() {
                 " (Iter = %" HIGHSINT_FORMAT "; Update = %" HIGHSINT_FORMAT
                 ") has computed "
                 "(updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
-                variable_in, ekk_instance_.iteration_count_,
-                info.update_count, computed_theta_dual,
-                updated_theta_dual, theta_dual_size.c_str(),
-                theta_dual_sign.c_str());
+                variable_in, ekk_instance_.iteration_count_, info.update_count,
+                computed_theta_dual, updated_theta_dual,
+                theta_dual_size.c_str(), theta_dual_sign.c_str());
     // If a significant computed dual has sign error, consider reinverting
     if (!theta_dual_small && info.update_count > 0)
       rebuild_reason = kRebuildReasonPossiblySingularBasis;
@@ -914,9 +900,8 @@ void HEkkPrimal::phase1ChooseRow() {
   // Collect phase 1 theta lists
   //
 
-  const double dPivotTol = info.update_count < 10
-                               ? 1e-9
-                               : info.update_count < 20 ? 1e-8 : 1e-7;
+  const double dPivotTol =
+      info.update_count < 10 ? 1e-9 : info.update_count < 20 ? 1e-8 : 1e-7;
   ph1SorterR.clear();
   ph1SorterT.clear();
   for (HighsInt i = 0; i < col_aq.count; i++) {
@@ -1045,9 +1030,8 @@ void HEkkPrimal::chooseRow() {
   row_out = -1;
 
   // Choose row pass 1
-  double alphaTol = info.update_count < 10
-                        ? 1e-9
-                        : info.update_count < 20 ? 1e-8 : 1e-7;
+  double alphaTol =
+      info.update_count < 10 ? 1e-9 : info.update_count < 20 ? 1e-8 : 1e-7;
 
   double relaxTheta = 1e100;
   double relaxSpace;
@@ -1293,10 +1277,8 @@ void HEkkPrimal::hyperChooseColumn() {
   if (!use_hyper_chuzc) return;
   if (initialise_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperClock);
-  const vector<int8_t>& nonbasicMove =
-      ekk_instance_.basis_.nonbasicMove_;
-  const vector<int8_t>& nonbasicFlag =
-      ekk_instance_.basis_.nonbasicFlag_;
+  const vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
+  const vector<int8_t>& nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_;
   const vector<double>& workDual = ekk_instance_.info_.workDual_;
   if (report_hyper_chuzc)
     printf(
@@ -1384,8 +1366,7 @@ void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
   if (!use_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperBasicFeasibilityChangeClock);
   const vector<double>& workDual = ekk_instance_.info_.workDual_;
-  const vector<int8_t>& nonbasicMove =
-      ekk_instance_.basis_.nonbasicMove_;
+  const vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
   HighsInt to_entry;
   const bool use_row_indices = ekk_instance_.sparseLoopStyle(
       row_basic_feasibility_change.count, num_col, to_entry);
@@ -1435,8 +1416,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
   if (!use_hyper_chuzc) return;
   analysis->simplexTimerStart(ChuzcHyperDualClock);
   const vector<double>& workDual = ekk_instance_.info_.workDual_;
-  const vector<int8_t>& nonbasicMove =
-      ekk_instance_.basis_.nonbasicMove_;
+  const vector<int8_t>& nonbasicMove = ekk_instance_.basis_.nonbasicMove_;
   HighsInt to_entry;
   // Look at changes in the columns and assess any dual infeasibility
   const bool use_row_indices =
@@ -1536,8 +1516,7 @@ void HEkkPrimal::updateDual() {
 
 void HEkkPrimal::phase1ComputeDual() {
   HighsSimplexInfo& info = ekk_instance_.info_;
-  const vector<int8_t>& nonbasicFlag =
-      ekk_instance_.basis_.nonbasicFlag_;
+  const vector<int8_t>& nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_;
 
   HVector buffer;
   buffer.setup(num_row);
@@ -1572,8 +1551,7 @@ void HEkkPrimal::phase1ComputeDual() {
     return;
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++)
-    info.workCost_[ekk_instance_.basis_.basicIndex_[iRow]] =
-        buffer.array[iRow];
+    info.workCost_[ekk_instance_.basis_.basicIndex_[iRow]] = buffer.array[iRow];
   //
   // Full BTRAN
   //
@@ -1767,15 +1745,15 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
       if (bound_violated > 0) {
         // Perturb the upper bound to accommodate the infeasiblilty
         shiftBound(false, iCol, info.baseValue_[iRow],
-                   info.numTotRandomValue_[iCol],
-                   info.workUpper_[iCol], bound_shift, true);
+                   info.numTotRandomValue_[iCol], info.workUpper_[iCol],
+                   bound_shift, true);
         info.baseUpper_[iRow] = info.workUpper_[iCol];
         info.workUpperShift_[iCol] += bound_shift;
       } else {
         // Perturb the lower bound to accommodate the infeasiblilty
         shiftBound(true, iCol, info.baseValue_[iRow],
-                   info.numTotRandomValue_[iCol],
-                   info.workLower_[iCol], bound_shift, true);
+                   info.numTotRandomValue_[iCol], info.workLower_[iCol],
+                   bound_shift, true);
         info.baseLower_[iRow] = info.workLower_[iCol];
         info.workLowerShift_[iCol] += bound_shift;
       }
@@ -1834,15 +1812,15 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
         if (bound_violated > 0) {
           // Perturb the upper bound to accommodate the infeasiblilty
           shiftBound(false, iCol, info.baseValue_[iRow],
-                     info.numTotRandomValue_[iCol],
-                     info.workUpper_[iCol], bound_shift, true);
+                     info.numTotRandomValue_[iCol], info.workUpper_[iCol],
+                     bound_shift, true);
           info.baseUpper_[iRow] = info.workUpper_[iCol];
           info.workUpperShift_[iCol] += bound_shift;
         } else {
           // Perturb the lower bound to accommodate the infeasiblilty
           shiftBound(true, iCol, info.baseValue_[iRow],
-                     info.numTotRandomValue_[iCol],
-                     info.workLower_[iCol], bound_shift, true);
+                     info.numTotRandomValue_[iCol], info.workLower_[iCol],
+                     bound_shift, true);
           info.baseLower_[iRow] = info.workLower_[iCol];
           info.workLowerShift_[iCol] += bound_shift;
         }
@@ -2025,8 +2003,7 @@ void HEkkPrimal::resetDevex() {
   devex_weight.assign(num_tot, 1.0);
   devex_index.assign(num_tot, 0);
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
-    const HighsInt nonbasicFlag =
-        ekk_instance_.basis_.nonbasicFlag_[iCol];
+    const HighsInt nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_[iCol];
     devex_index[iCol] = nonbasicFlag * nonbasicFlag;
   }
   num_devex_iterations = 0;
@@ -2195,8 +2172,7 @@ void HEkkPrimal::localReportIter(const bool header) {
       } else {
         HighsInt iRow;
         for (iRow = 0; iRow < num_row; iRow++) {
-          if (ekk_instance_.basis_.basicIndex_[iRow] == check_column)
-            break;
+          if (ekk_instance_.basis_.basicIndex_[iRow] == check_column) break;
         }
         assert(iRow < num_row);
         value = info.baseValue_[iRow];
@@ -2234,10 +2210,9 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
   const SimplexBasis& basis = ekk_instance_.basis_;
   nonbasic_free_col_set.clear();
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
-    bool nonbasic_free =
-        basis.nonbasicFlag_[iCol] == kNonbasicFlagTrue &&
-        info.workLower_[iCol] <= -kHighsInf &&
-        info.workUpper_[iCol] >= kHighsInf;
+    bool nonbasic_free = basis.nonbasicFlag_[iCol] == kNonbasicFlagTrue &&
+                         info.workLower_[iCol] <= -kHighsInf &&
+                         info.workUpper_[iCol] >= kHighsInf;
     if (nonbasic_free) nonbasic_free_col_set.add(iCol);
   }
   //  nonbasic_free_col_set.print();
@@ -2277,8 +2252,7 @@ void HEkkPrimal::adjustPerturbedEquationOut() {
   //  double save_theta_primal = theta_primal;
   double true_fixed_value = lp_lower;
   // Modify theta_primal so that variable leaves at true fixed value
-  theta_primal =
-      (info.baseValue_[row_out] - true_fixed_value) / alpha_col;
+  theta_primal = (info.baseValue_[row_out] - true_fixed_value) / alpha_col;
   /*
     printf("For equation %4" HIGHSINT_FORMAT " to be nonbasic at RHS %10.4g
     requires theta_primal to change by %10.4g from %10.4g to %10.4g\n",

@@ -75,24 +75,24 @@ void choosePriceTechnique(const HighsInt price_strategy,
       price_strategy == kSimplexPriceStrategyRowSwitchColSwitch;
 }
 
-void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis,
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol) {
-  assert(basis.valid_);
-  if (!basis.valid_) {
+  assert(highs_basis.valid_);
+  if (!highs_basis.valid_) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
   }
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
   HighsInt newNumCol = lp.numCol_ + XnumNewCol;
-  basis.col_status.resize(newNumCol);
+  highs_basis.col_status.resize(newNumCol);
   // Make any new columns nonbasic
   for (HighsInt iCol = lp.numCol_; iCol < newNumCol; iCol++) {
     if (!highs_isInfinity(-lp.colLower_[iCol])) {
-      basis.col_status[iCol] = HighsBasisStatus::kLower;
+      highs_basis.col_status[iCol] = HighsBasisStatus::kLower;
     } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
-      basis.col_status[iCol] = HighsBasisStatus::kUpper;
+      highs_basis.col_status[iCol] = HighsBasisStatus::kUpper;
     } else {
-      basis.col_status[iCol] = HighsBasisStatus::kZero;
+      highs_basis.col_status[iCol] = HighsBasisStatus::kZero;
     }
   }
 }
@@ -152,19 +152,19 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis,
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                             HighsInt XnumNewRow) {
-  assert(basis.valid_);
-  if (!basis.valid_) {
+  assert(highs_basis.valid_);
+  if (!highs_basis.valid_) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
   }
   // Add basic logicals
   if (XnumNewRow == 0) return;
   HighsInt newNumRow = lp.numRow_ + XnumNewRow;
-  basis.row_status.resize(newNumRow);
+  highs_basis.row_status.resize(newNumRow);
   // Make the new rows basic
   for (HighsInt iRow = lp.numRow_; iRow < newNumRow; iRow++) {
-    basis.row_status[iRow] = HighsBasisStatus::kBasic;
+    highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
   }
 }
 
@@ -186,8 +186,7 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void invalidateSimplexLpBasisArtifacts(
-    HighsSimplexStatus& status) {
+void invalidateSimplexLpBasisArtifacts(HighsSimplexStatus& status) {
   // Invalidate the artifacts of the basis of the simplex LP
   status.has_matrix = false;
   // has_factor_arrays shouldn't be set false unless model dimension
@@ -220,8 +219,7 @@ void invalidateSimplexLp(HighsSimplexStatus& status) {
   invalidateSimplexLpBasis(status);
 }
 
-void updateSimplexLpStatus(HighsSimplexStatus& status,
-                           LpAction action) {
+void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
   switch (action) {
     case LpAction::kScale:
 #ifdef HIGHSDEV
@@ -420,8 +418,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasiblity for fixed rows and columns
-    if (info.workLower_[iVar] == info.workUpper_[iVar])
-      continue;
+    if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
     bool col = iVar < lp.numCol_;
     double scale_mu;
     HighsInt iCol = 0;

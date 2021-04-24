@@ -153,15 +153,11 @@ class HEkkDualRow {
                            //!< here to avoid compiler warning
   const HighsInt*
       workNumTotPermutation;  //!< Pointer to ekk_instance_.numTotPermutation();
-  const int8_t*
-      workMove;  //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
-  const double*
-      workDual;  //!< Pointer to ekk_instance_.info_.workDual_;
-  const double*
-      workRange;  //!< Pointer to ekk_instance_.info_.workRange_;
-  const HighsInt*
-      work_devex_index;  //!< Pointer to
-                         //!< ekk_instance_.info_.devex_index_;
+  const int8_t* workMove;   //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
+  const double* workDual;   //!< Pointer to ekk_instance_.info_.workDual_;
+  const double* workRange;  //!< Pointer to ekk_instance_.info_.workRange_;
+  const HighsInt* work_devex_index;  //!< Pointer to
+                                     //!< ekk_instance_.info_.devex_index_;
 
   // Freelist:
   std::set<HighsInt> freeList;  //!< Freelist itself

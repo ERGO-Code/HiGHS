@@ -88,8 +88,8 @@ HighsStatus HEkk::solve() {
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
     algorithm = "primal";
-    reportSimplexPhaseIterations(options_.log_options, iteration_count_,
-                                 info_, true);
+    reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_,
+                                 true);
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Using EKK primal simplex solver\n");
     HEkkPrimal primal_solver(*this);
@@ -101,8 +101,8 @@ HighsStatus HEkk::solve() {
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
     algorithm = "dual";
-    reportSimplexPhaseIterations(options_.log_options, iteration_count_,
-                                 info_, true);
+    reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_,
+                                 true);
     HEkkDual dual_solver(*this);
     dual_solver.options();
     //
@@ -141,8 +141,7 @@ HighsStatus HEkk::solve() {
           interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
     }
   }
-  reportSimplexPhaseIterations(options_.log_options, iteration_count_,
-                               info_);
+  reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
   highsLogDev(options_.log_options, HighsLogType::kInfo,
               "EKK %s simplex solver returns %" HIGHSINT_FORMAT
@@ -179,8 +178,7 @@ HighsStatus HEkk::cleanup() {
     // Use dual simplex (phase 2) with Devex pricing and no perturbation
     info_.simplex_strategy = kSimplexStrategyDual;
     info_.dual_simplex_cost_perturbation_multiplier = 0;
-    info_.dual_edge_weight_strategy =
-        kSimplexDualEdgeWeightStrategyDevex;
+    info_.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
     HEkkDual dual_solver(*this);
     dual_solver.options();
     workEdWt_ = dual_solver.getWorkEdWt();
@@ -260,11 +258,11 @@ HighsStatus HEkk::setBasis() {
   return HighsStatus::kOk;
 }
 
-HighsStatus HEkk::setBasis(const HighsBasis& basis) {
+HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // Shouldn't have to check the incoming basis since this is an
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
-  if (debugBasisConsistent(options_, simplex_lp_, basis) ==
+  if (debugBasisConsistent(options_, simplex_lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Supposed to be a Highs basis, but not valid\n");
@@ -284,22 +282,22 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
 
     const double lower = simplex_lp_.colLower_[iCol];
     const double upper = simplex_lp_.colUpper_[iCol];
-    if (basis.col_status[iCol] == HighsBasisStatus::kBasic) {
+    if (highs_basis.col_status[iCol] == HighsBasisStatus::kBasic) {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
       basis_.nonbasicMove_[iVar] = 0;
       basis_.basicIndex_[num_basic_variables++] = iVar;
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
-      if (basis.col_status[iCol] == HighsBasisStatus::kLower) {
+      if (highs_basis.col_status[iCol] == HighsBasisStatus::kLower) {
         if (lower == upper) {
           basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
         } else {
           basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
         }
-      } else if (basis.col_status[iCol] == HighsBasisStatus::kUpper) {
+      } else if (highs_basis.col_status[iCol] == HighsBasisStatus::kUpper) {
         basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
       } else {
-        assert(basis.col_status[iCol] == HighsBasisStatus::kZero);
+        assert(highs_basis.col_status[iCol] == HighsBasisStatus::kZero);
         basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
       }
     }
@@ -308,22 +306,22 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
     HighsInt iVar = num_col + iRow;
     const double lower = simplex_lp_.rowLower_[iRow];
     const double upper = simplex_lp_.rowUpper_[iRow];
-    if (basis.row_status[iRow] == HighsBasisStatus::kBasic) {
+    if (highs_basis.row_status[iRow] == HighsBasisStatus::kBasic) {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
       basis_.nonbasicMove_[iVar] = 0;
       basis_.basicIndex_[num_basic_variables++] = iVar;
     } else {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagTrue;
-      if (basis.row_status[iRow] == HighsBasisStatus::kLower) {
+      if (highs_basis.row_status[iRow] == HighsBasisStatus::kLower) {
         if (lower == upper) {
           basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
         } else {
           basis_.nonbasicMove_[iVar] = kNonbasicMoveDn;
         }
-      } else if (basis.row_status[iRow] == HighsBasisStatus::kUpper) {
+      } else if (highs_basis.row_status[iRow] == HighsBasisStatus::kUpper) {
         basis_.nonbasicMove_[iVar] = kNonbasicMoveUp;
       } else {
-        assert(basis.row_status[iRow] == HighsBasisStatus::kZero);
+        assert(highs_basis.row_status[iRow] == HighsBasisStatus::kZero);
         basis_.nonbasicMove_[iVar] = kNonbasicMoveZe;
       }
     }
@@ -353,8 +351,7 @@ HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values
   for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
-    info_.workValue_[basis_.basicIndex_[iRow]] =
-        info_.baseValue_[iRow];
+    info_.workValue_[basis_.basicIndex_[iRow]] = info_.baseValue_[iRow];
   // Zero the basic dual values
   for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
     info_.workDual_[basis_.basicIndex_[iRow]] = 0;
@@ -371,11 +368,9 @@ HighsSolution HEkk::getSolution() {
         (HighsInt)simplex_lp_.sense_ * info_.workDual_[iCol];
   }
   for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    solution.row_value[iRow] =
-        -info_.workValue_[simplex_lp_.numCol_ + iRow];
-    solution.row_dual[iRow] =
-        (HighsInt)simplex_lp_.sense_ *
-        info_.workDual_[simplex_lp_.numCol_ + iRow];
+    solution.row_value[iRow] = -info_.workValue_[simplex_lp_.numCol_ + iRow];
+    solution.row_dual[iRow] = (HighsInt)simplex_lp_.sense_ *
+                              info_.workDual_[simplex_lp_.numCol_ + iRow];
   }
   return solution;
 }
@@ -383,11 +378,11 @@ HighsSolution HEkk::getSolution() {
 HighsBasis HEkk::getHighsBasis() {
   HighsInt num_col = simplex_lp_.numCol_;
   HighsInt num_row = simplex_lp_.numRow_;
-  HighsBasis basis;
-  basis.col_status.resize(num_col);
-  basis.row_status.resize(num_row);
+  HighsBasis highs_basis;
+  highs_basis.col_status.resize(num_col);
+  highs_basis.row_status.resize(num_row);
   assert(status_.has_basis);
-  basis.valid_ = false;
+  highs_basis.valid_ = false;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
     const double lower = simplex_lp_.colLower_[iCol];
@@ -406,7 +401,7 @@ HighsBasis HEkk::getHighsBasis() {
         basis_status = HighsBasisStatus::kZero;
       }
     }
-    basis.col_status[iCol] = basis_status;
+    highs_basis.col_status[iCol] = basis_status;
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
@@ -426,10 +421,10 @@ HighsBasis HEkk::getHighsBasis() {
         basis_status = HighsBasisStatus::kZero;
       }
     }
-    basis.row_status[iRow] = basis_status;
+    highs_basis.row_status[iRow] = basis_status;
   }
-  basis.valid_ = true;
-  return basis;
+  highs_basis.valid_ = true;
+  return highs_basis;
 }
 
 HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
@@ -489,7 +484,8 @@ void HEkk::initialiseForNewLp() {
 
 bool HEkk::isUnconstrainedLp() {
   bool is_unconstrained_lp = simplex_lp_.numRow_ <= 0;
-  if (is_unconstrained_lp) highsLogUser(
+  if (is_unconstrained_lp)
+    highsLogUser(
         options_.log_options, HighsLogType::kError,
         "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
         ") number of constraints\n",
@@ -533,8 +529,7 @@ void HEkk::setSimplexOptions() {
   //
   // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
   //
-  info_.dual_edge_weight_strategy =
-      options_.simplex_dual_edge_weight_strategy;
+  info_.dual_edge_weight_strategy = options_.simplex_dual_edge_weight_strategy;
   info_.price_strategy = options_.simplex_price_strategy;
   info_.dual_simplex_cost_perturbation_multiplier =
       options_.dual_simplex_cost_perturbation_multiplier;
@@ -601,8 +596,7 @@ void HEkk::initialiseSimplexLpRandomVectors() {
 void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
                                         HighsSimplexInfo& info) {
   // Ensure that this is not called with an optimal basis
-  assert(info.num_dual_infeasibility > 0 ||
-         info.num_primal_infeasibility > 0);
+  assert(info.num_dual_infeasibility > 0 || info.num_primal_infeasibility > 0);
   // Set the internal simplex strategy and number of threads for dual
   // simplex
   HighsInt& simplex_strategy = info.simplex_strategy;
@@ -714,8 +708,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   HighsInt rank_deficiency = computeFactor();
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
-    if (!info_.phase1_backtracking_test_done &&
-        solve_phase == kSolvePhase1) {
+    if (!info_.phase1_backtracking_test_done && solve_phase == kSolvePhase1) {
       // Claim rank deficiency to test backtracking
       printf("Phase1 (Iter %" HIGHSINT_FORMAT
              ") Claiming rank deficiency to test backtracking\n",
@@ -781,8 +774,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
 bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
   if (!info_.valid_backtracking_basis_) return false;
   basis_ = info_.backtracking_basis_;
-  info_.costs_perturbed =
-      info_.backtracking_basis_costs_perturbed_;
+  info_.costs_perturbed = info_.backtracking_basis_costs_perturbed_;
   info_.workShift_ = info_.backtracking_basis_workShift_;
   const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
@@ -811,10 +803,8 @@ void HEkk::putBacktrackingBasis(
     double* scattered_edge_weights) {
   info_.valid_backtracking_basis_ = true;
   info_.backtracking_basis_ = basis_;
-  info_.backtracking_basis_.basicIndex_ =
-      basicIndex_before_compute_factor;
-  info_.backtracking_basis_costs_perturbed_ =
-      info_.costs_perturbed;
+  info_.backtracking_basis_.basicIndex_ = basicIndex_before_compute_factor;
+  info_.backtracking_basis_costs_perturbed_ = info_.costs_perturbed;
   info_.backtracking_basis_workShift_ = info_.workShift_;
   const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
@@ -855,8 +845,7 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
   const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
     if (basis_.nonbasicFlag_[iCol]) {
-      const double term =
-          info_.workValue_[iCol] * info_.workDual_[iCol];
+      const double term = info_.workValue_[iCol] * info_.workDual_[iCol];
       if (term) {
         info_.dual_objective_value +=
             info_.workValue_[iCol] * info_.workDual_[iCol];
@@ -881,15 +870,14 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
-    assert(info_.factor_pivot_threshold >=
-           options_.factor_pivot_threshold);
+    assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
     factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
                   &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
                   &simplex_lp_.Avalue_[0], &basis_.basicIndex_[0],
-                  info_.factor_pivot_threshold,
-                  options_.factor_pivot_tolerance, options_.highs_debug_level,
-                  options_.output_flag, options_.log_file_stream,
-                  options_.log_to_console, options_.log_dev_level);
+                  info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
+                  options_.highs_debug_level, options_.output_flag,
+                  options_.log_file_stream, options_.log_to_console,
+                  options_.log_dev_level);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
@@ -1037,8 +1025,7 @@ void HEkk::initialiseLpColBound() {
   for (HighsInt iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     info_.workLower_[iCol] = simplex_lp_.colLower_[iCol];
     info_.workUpper_[iCol] = simplex_lp_.colUpper_[iCol];
-    info_.workRange_[iCol] =
-        info_.workUpper_[iCol] - info_.workLower_[iCol];
+    info_.workRange_[iCol] = info_.workUpper_[iCol] - info_.workLower_[iCol];
     info_.workLowerShift_[iCol] = 0;
     info_.workUpperShift_[iCol] = 0;
   }
@@ -1049,8 +1036,7 @@ void HEkk::initialiseLpRowBound() {
     HighsInt iCol = simplex_lp_.numCol_ + iRow;
     info_.workLower_[iCol] = -simplex_lp_.rowUpper_[iRow];
     info_.workUpper_[iCol] = -simplex_lp_.rowLower_[iRow];
-    info_.workRange_[iCol] =
-        info_.workUpper_[iCol] - info_.workLower_[iCol];
+    info_.workRange_[iCol] = info_.workUpper_[iCol] - info_.workLower_[iCol];
     info_.workLowerShift_[iCol] = 0;
     info_.workUpperShift_[iCol] = 0;
   }
@@ -1065,8 +1051,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Primal simplex costs are either from the LP or set specially in phase 1
   if (algorithm == SimplexAlgorithm::kPrimal) return;
   // Dual simplex costs are either from the LP or perturbed
-  if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0)
-    return;
+  if (!perturb || info_.dual_simplex_cost_perturbation_multiplier == 0) return;
   // Perturb the original costs, scale down if is too big
   HighsInt num_original_nonzero_cost = 0;
   if (analysis_.analyse_simplex_data)
@@ -1133,23 +1118,21 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else if (lower <= -kHighsInf) {  // Upper
       info_.workCost_[i] += -xpert;
     } else if (lower != upper) {  // Boxed
-      info_.workCost_[i] +=
-          (info_.workCost_[i] >= 0) ? xpert : -xpert;
+      info_.workCost_[i] += (info_.workCost_[i] >= 0) ? xpert : -xpert;
     } else {
       // Fixed - no perturb
     }
     if (analysis_.analyse_simplex_data) {
-      const double perturbation1 =
-          fabs(info_.workCost_[i] - previous_cost);
+      const double perturbation1 = fabs(info_.workCost_[i] - previous_cost);
       if (perturbation1)
         updateValueDistribution(perturbation1,
                                 analysis_.cost_perturbation1_distribution);
     }
   }
   for (HighsInt i = simplex_lp_.numCol_; i < num_tot; i++) {
-    double perturbation2 =
-        (0.5 - info_.numTotRandomValue_[i]) *
-        info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
+    double perturbation2 = (0.5 - info_.numTotRandomValue_[i]) *
+                           info_.dual_simplex_cost_perturbation_multiplier *
+                           1e-12;
     info_.workCost_[i] += perturbation2;
     if (analysis_.analyse_simplex_data) {
       perturbation2 = fabs(perturbation2);
@@ -1167,8 +1150,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   info_.bounds_perturbed = 0;
   // Primal simplex bounds are either from the LP or perturbed
   if (algorithm == SimplexAlgorithm::kPrimal) {
-    if (!perturb ||
-        info_.primal_simplex_bound_perturbation_multiplier == 0)
+    if (!perturb || info_.primal_simplex_bound_perturbation_multiplier == 0)
       return;
     // Perturb the bounds
     // Determine the smallest and largest finite lower/upper bounds
@@ -1203,8 +1185,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
       double upper = info_.workUpper_[iVar];
       const bool fixed = lower == upper;
       // Don't perturb bounds of nonbasic fixed variables as they stay nonbasic
-      if (basis_.nonbasicFlag_[iVar] == kNonbasicFlagTrue && fixed)
-        continue;
+      if (basis_.nonbasicFlag_[iVar] == kNonbasicFlagTrue && fixed) continue;
       double random_value = info_.numTotRandomValue_[iVar];
       if (lower > -kHighsInf) {
         if (lower < -1) {
@@ -1226,8 +1207,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
         }
         info_.workUpper_[iVar] = upper;
       }
-      info_.workRange_[iVar] =
-          info_.workUpper_[iVar] - info_.workLower_[iVar];
+      info_.workRange_[iVar] = info_.workUpper_[iVar] - info_.workLower_[iVar];
       if (basis_.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
       // Set values of nonbasic variables
       if (basis_.nonbasicMove_[iVar] > 0) {
@@ -1261,8 +1241,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   const double inf = kHighsInf;
   const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
-    if (info_.workLower_[iCol] == -inf &&
-        info_.workUpper_[iCol] == inf) {
+    if (info_.workLower_[iCol] == -inf && info_.workUpper_[iCol] == inf) {
       // Don't change for row variables: they should never become
       // nonbasic when starting from a logical basis, and no crash
       // should make a free row nonbasic, but could an advanced basis
@@ -1281,8 +1260,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
       info_.workLower_[iCol] = 0,
       info_.workUpper_[iCol] = 0;  // BOXED or FIXED
     }
-    info_.workRange_[iCol] =
-        info_.workUpper_[iCol] - info_.workLower_[iCol];
+    info_.workRange_[iCol] = info_.workUpper_[iCol] - info_.workLower_[iCol];
   }
 }
 
@@ -1376,8 +1354,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   const double local_col_aq_density = (double)col_aq.count / num_row;
   analysis_.updateOperationResultDensity(local_col_aq_density,
                                          analysis_.col_aq_density);
-  updateOperationResultDensity(local_col_aq_density,
-                               info_.col_aq_density);
+  updateOperationResultDensity(local_col_aq_density, info_.col_aq_density);
   analysis_.simplexTimerStop(FtranClock);
 }
 
@@ -1399,8 +1376,7 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   const double local_row_ep_density = (double)row_ep.count / num_row;
   analysis_.updateOperationResultDensity(local_row_ep_density,
                                          analysis_.row_ep_density);
-  updateOperationResultDensity(local_row_ep_density,
-                               info_.row_ep_density);
+  updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
   analysis_.simplexTimerStop(BtranClock);
 }
 
@@ -1421,8 +1397,7 @@ void HEkk::fullBtran(HVector& buffer) {
       (double)buffer.count / simplex_lp_.numRow_;
   analysis_.updateOperationResultDensity(local_dual_col_density,
                                          analysis_.dual_col_density);
-  updateOperationResultDensity(local_dual_col_density,
-                               info_.dual_col_density);
+  updateOperationResultDensity(local_dual_col_density, info_.dual_col_density);
   analysis_.simplexTimerStop(BtranFullClock);
 }
 
@@ -1448,8 +1423,8 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   const double local_density = 1.0 * row_ep.count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
-  choosePriceTechnique(info_.price_strategy, local_density,
-                       use_col_price, use_row_price_w_switch);
+  choosePriceTechnique(info_.price_strategy, local_density, use_col_price,
+                       use_row_price_w_switch);
   if (analysis_.analyse_simplex_data) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
@@ -1493,8 +1468,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis_.updateOperationResultDensity(local_row_ap_density,
                                          analysis_.row_ap_density);
-  updateOperationResultDensity(local_row_ap_density,
-                               info_.row_ap_density);
+  updateOperationResultDensity(local_row_ap_density, info_.row_ap_density);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
   analysis_.simplexTimerStop(PriceClock);
@@ -1564,9 +1538,8 @@ void HEkk::computeDual() {
   dual_col.setup(simplex_lp_.numRow_);
   dual_col.clear();
   for (HighsInt iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    const double value =
-        info_.workCost_[basis_.basicIndex_[iRow]] +
-        info_.workShift_[basis_.basicIndex_[iRow]];
+    const double value = info_.workCost_[basis_.basicIndex_[iRow]] +
+                         info_.workShift_[basis_.basicIndex_[iRow]];
     if (value) {
       dual_col.index[dual_col.count++] = iRow;
       dual_col.array[iRow] = value;
@@ -1675,19 +1648,15 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
   const HighsInt num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   for (HighsInt i = 0; i < num_tot; i++) {
     if (basis_.nonbasicFlag_[i]) {
-      if (info_.workLower_[i] == -inf &&
-          info_.workUpper_[i] == inf) {
+      if (info_.workLower_[i] == -inf && info_.workUpper_[i] == inf) {
         // FREE variable
         workCount += (fabs(info_.workDual_[i]) >= tau_d);
-      } else if (basis_.nonbasicMove_[i] * info_.workDual_[i] <=
-                 -tau_d) {
-        if (info_.workLower_[i] != -inf &&
-            info_.workUpper_[i] != inf) {
+      } else if (basis_.nonbasicMove_[i] * info_.workDual_[i] <= -tau_d) {
+        if (info_.workLower_[i] != -inf && info_.workUpper_[i] != inf) {
           // Boxed variable = flip
           const HighsInt move = basis_.nonbasicMove_[i];
           flipBound(i);
-          double flip =
-              info_.workUpper_[i] - info_.workLower_[i];
+          double flip = info_.workUpper_[i] - info_.workLower_[i];
           // Negative dual at lower bound (move=1): flip to upper
           // bound so objective contribution is change in value (flip)
           // times dual, being move*flip*dual
@@ -1695,8 +1664,7 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
           // Positive dual at upper bound (move=-1): flip to lower
           // bound so objective contribution is change in value
           // (-flip) times dual, being move*flip*dual
-          double local_dual_objective_change =
-              move * flip * info_.workDual_[i];
+          double local_dual_objective_change = move * flip * info_.workDual_[i];
           local_dual_objective_change *= cost_scale_;
           flip_dual_objective_value_change += local_dual_objective_change;
           num_flip++;
@@ -1720,8 +1688,7 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
               info_.workDual_[i] = dual;
               info_.workCost_[i] = info_.workCost_[i] + shift;
             }
-            double local_dual_objective_change =
-                shift * info_.workValue_[i];
+            double local_dual_objective_change = shift * info_.workValue_[i];
             local_dual_objective_change *= cost_scale_;
             shift_dual_objective_value_change += local_dual_objective_change;
             num_shift++;
@@ -1772,8 +1739,8 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
 void HEkk::flipBound(const HighsInt iCol) {
   int8_t* nonbasicMove = &basis_.nonbasicMove_[0];
   const int8_t move = nonbasicMove[iCol] = -nonbasicMove[iCol];
-  info_.workValue_[iCol] = move == 1 ? info_.workLower_[iCol]
-                                             : info_.workUpper_[iCol];
+  info_.workValue_[iCol] =
+      move == 1 ? info_.workLower_[iCol] : info_.workUpper_[iCol];
 }
 
 bool HEkk::reinvertOnNumericalTrouble(
@@ -1858,18 +1825,14 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 
   // Outgoing variable
   basis_.nonbasicFlag_[variable_out] = 1;
-  if (info_.workLower_[variable_out] ==
-      info_.workUpper_[variable_out]) {
-    info_.workValue_[variable_out] =
-        info_.workLower_[variable_out];
+  if (info_.workLower_[variable_out] == info_.workUpper_[variable_out]) {
+    info_.workValue_[variable_out] = info_.workLower_[variable_out];
     basis_.nonbasicMove_[variable_out] = 0;
   } else if (move_out == -1) {
-    info_.workValue_[variable_out] =
-        info_.workLower_[variable_out];
+    info_.workValue_[variable_out] = info_.workLower_[variable_out];
     basis_.nonbasicMove_[variable_out] = 1;
   } else {
-    info_.workValue_[variable_out] =
-        info_.workUpper_[variable_out];
+    info_.workValue_[variable_out] = info_.workUpper_[variable_out];
     basis_.nonbasicMove_[variable_out] = -1;
   }
   // Update the dual objective value

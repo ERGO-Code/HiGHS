@@ -44,11 +44,9 @@ void reportSimplexPhaseIterations(const HighsLogOptions& log_options,
   const HighsInt delta_dual_phase2_iteration_count =
       info.dual_phase2_iteration_count - dual_phase2_iteration_count0;
   const HighsInt delta_primal_phase1_iteration_count =
-      info.primal_phase1_iteration_count -
-      primal_phase1_iteration_count0;
+      info.primal_phase1_iteration_count - primal_phase1_iteration_count0;
   const HighsInt delta_primal_phase2_iteration_count =
-      info.primal_phase2_iteration_count -
-      primal_phase2_iteration_count0;
+      info.primal_phase2_iteration_count - primal_phase2_iteration_count0;
   const HighsInt delta_primal_bound_swap =
       info.primal_bound_swap - primal_bound_swap0;
 

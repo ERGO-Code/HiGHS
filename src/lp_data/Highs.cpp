@@ -598,8 +598,7 @@ HighsStatus Highs::run() {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
           factor_pivot_threshold =
-              hmos_[solved_hmo]
-                  .ekk_instance_.info_.factor_pivot_threshold;
+              hmos_[solved_hmo].ekk_instance_.info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =

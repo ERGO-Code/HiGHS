@@ -41,7 +41,7 @@ class HEkk {
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
-  HighsStatus setBasis(const HighsBasis& basis);
+  HighsStatus setBasis(const HighsBasis& highs_basis);
   HighsStatus setBasis(const SimplexBasis& basis);
 
   HighsSolution getSolution();

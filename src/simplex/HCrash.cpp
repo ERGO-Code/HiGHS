@@ -659,10 +659,8 @@ void HCrash::ltssf_iterate() {
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
       HighsInt variable_in = cz_c_n;
       HighsInt variable_out = numCol + cz_r_n;
-      ekk_instance.basis_.nonbasicFlag_[variable_in] =
-          kNonbasicFlagFalse;
-      ekk_instance.basis_.nonbasicFlag_[variable_out] =
-          kNonbasicFlagTrue;
+      ekk_instance.basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
+      ekk_instance.basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       HighsInt vr_ty = crsh_r_ty[cz_r_n];

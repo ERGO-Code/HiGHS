@@ -34,8 +34,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
   // according to .scale
   const HEkk& ekk_instance = highs_model_object.ekk_instance_;
-  const HighsSimplexStatus& status =
-      ekk_instance.status_;
+  const HighsSimplexStatus& status = ekk_instance.status_;
   if (!status.valid ||
       highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
@@ -247,15 +246,14 @@ HighsDebugStatus debugDualChuzcFailHeap(
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus debugNonbasicFlagConsistent(
-    const HighsOptions& options, const HighsLp& simplex_lp,
-    const SimplexBasis& basis) {
+HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
+                                             const HighsLp& simplex_lp,
+                                             const SimplexBasis& basis) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  const bool right_size =
-      (HighsInt)basis.nonbasicFlag_.size() == numTot;
+  const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "nonbasicFlag size error\n");
@@ -1355,28 +1353,28 @@ HighsDebugStatus debugSimplexBasicSolution(
 
   // Determine a HiGHS basis from the simplex basis. Only basic/nonbasic is
   // needed
-  HighsBasis basis;
-  basis.col_status.resize(lp.numCol_);
-  basis.row_status.resize(lp.numRow_);
+  HighsBasis highs_basis;
+  highs_basis.col_status.resize(lp.numCol_);
+  highs_basis.row_status.resize(lp.numRow_);
   // Now scatter the indices of basic variables
   for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     if (iVar < lp.numCol_) {
       HighsInt iCol = iVar;
       if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
-        basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
+        highs_basis.col_status[iCol] = HighsBasisStatus::kNonbasic;
       } else {
-        basis.col_status[iCol] = HighsBasisStatus::kBasic;
+        highs_basis.col_status[iCol] = HighsBasisStatus::kBasic;
       }
     } else {
       HighsInt iRow = iVar - lp.numCol_;
       if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
-        basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
+        highs_basis.row_status[iRow] = HighsBasisStatus::kNonbasic;
       } else {
-        basis.row_status[iRow] = HighsBasisStatus::kBasic;
+        highs_basis.row_status[iRow] = HighsBasisStatus::kBasic;
       }
     }
   }
-  basis.valid_ = true;
+  highs_basis.valid_ = true;
   // Possibly scaled model
   // Determine a HiGHS solution simplex solution
   HighsSolution solution;

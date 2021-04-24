@@ -81,19 +81,16 @@ bool HEkk::switchToDevex() {
   // Firstly consider switching on the basis of NLA cost
   double costly_DSE_measure;
   double costly_DSE_measure_denominator;
-  costly_DSE_measure_denominator =
-      max(max(info_.row_ep_density, info_.col_aq_density),
-          info_.row_ap_density);
+  costly_DSE_measure_denominator = max(
+      max(info_.row_ep_density, info_.col_aq_density), info_.row_ap_density);
   if (costly_DSE_measure_denominator > 0) {
-    costly_DSE_measure =
-        info_.row_DSE_density / costly_DSE_measure_denominator;
+    costly_DSE_measure = info_.row_DSE_density / costly_DSE_measure_denominator;
     costly_DSE_measure = costly_DSE_measure * costly_DSE_measure;
   } else {
     costly_DSE_measure = 0;
   }
-  bool costly_DSE_iteration =
-      costly_DSE_measure > kCostlyDseMeasureLimit &&
-      info_.row_DSE_density > kCostlyDseMinimumDensity;
+  bool costly_DSE_iteration = costly_DSE_measure > kCostlyDseMeasureLimit &&
+                              info_.row_DSE_density > kCostlyDseMinimumDensity;
   info_.costly_DSE_frequency =
       (1 - kRunningAverageMultiplier) * info_.costly_DSE_frequency;
   if (costly_DSE_iteration) {
@@ -120,10 +117,9 @@ bool HEkk::switchToDevex() {
                    " with "
                    "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
                    "%11.4g; DSE = %11.4g\n",
-                   info_.num_costly_DSE_iteration,
-                   local_iteration_count, info_.col_aq_density,
-                   info_.row_ep_density, info_.row_ap_density,
-                   info_.row_DSE_density);
+                   info_.num_costly_DSE_iteration, local_iteration_count,
+                   info_.col_aq_density, info_.row_ep_density,
+                   info_.row_ap_density, info_.row_DSE_density);
     }
   }
   if (!switch_to_devex) {

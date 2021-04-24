@@ -165,8 +165,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     // that nonbasicMove is zero, that baseLower/Upper are correct,
     // that the dual is zero and, in primal phase 1, that the cost is
     // correct. Determine primal infeasibilities
-    bool nonbasicFlag_error =
-        basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue;
+    bool nonbasicFlag_error = basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue;
     if (nonbasicFlag_error) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
@@ -220,8 +219,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
     if (algorithm == SimplexAlgorithm::kPrimal && phase == 1) {
       double primal_phase1_cost = bound_violated;
-      if (base)
-        primal_phase1_cost *= 1 + base * info.numTotRandomValue_[iRow];
+      if (base) primal_phase1_cost *= 1 + base * info.numTotRandomValue_[iRow];
       bool primal_phase1_cost_error = fabs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
         highsLogUser(options.log_options, HighsLogType::kError,
@@ -700,8 +698,7 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const SimplexBasis& basis = ekk_instance.basis_;
   HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  const bool right_size =
-      (HighsInt)basis.nonbasicFlag_.size() == numTot;
+  const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "nonbasicFlag size error\n");
@@ -735,14 +732,12 @@ HighsDebugStatus ekkDebugOkForSolve(
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  const HighsSimplexStatus& status =
-      ekk_instance.status_;
+  const HighsSimplexStatus& status = ekk_instance.status_;
   const SimplexBasis& basis = ekk_instance.basis_;
   const HighsOptions& options = ekk_instance.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = status.has_basis && status.has_matrix &&
-       status.has_factor_arrays &&
+  ok = status.has_basis && status.has_matrix && status.has_factor_arrays &&
        //       status.has_dual_steepest_edge_weights &&
        status.has_invert;
   if (!ok) {
@@ -762,12 +757,11 @@ HighsDebugStatus ekkDebugOkForSolve(
                    "= %" HIGHSINT_FORMAT "\n",
                    status.has_factor_arrays);
     if (!status.has_dual_steepest_edge_weights)
-      highsLogUser(
-          options.log_options, HighsLogType::kError,
-          "Not OK to solve since "
-          "status.has_dual_steepest_edge_weights = %" HIGHSINT_FORMAT
-          "\n",
-          status.has_dual_steepest_edge_weights);
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Not OK to solve since "
+                   "status.has_dual_steepest_edge_weights = %" HIGHSINT_FORMAT
+                   "\n",
+                   status.has_dual_steepest_edge_weights);
     if (!status.has_invert)
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Not OK to solve since status.has_invert = "
@@ -862,17 +856,16 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
     }
     const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
     for (HighsInt var = 0; var < numTot; ++var) {
-      ok = info.workRange_[var] ==
-           (info.workUpper_[var] - info.workLower_[var]);
+      ok =
+          info.workRange_[var] == (info.workUpper_[var] - info.workLower_[var]);
       if (!ok) {
-        highsLogUser(
-            options.log_options, HighsLogType::kError,
-            "For variable %" HIGHSINT_FORMAT
-            ", info.workRange_ should be %g = %g - %g "
-            "but is %g\n",
-            var, info.workUpper_[var] - info.workLower_[var],
-            info.workUpper_[var], info.workLower_[var],
-            info.workRange_[var]);
+        highsLogUser(options.log_options, HighsLogType::kError,
+                     "For variable %" HIGHSINT_FORMAT
+                     ", info.workRange_ should be %g = %g - %g "
+                     "but is %g\n",
+                     var, info.workUpper_[var] - info.workLower_[var],
+                     info.workUpper_[var], info.workLower_[var],
+                     info.workRange_[var]);
         return ok;
       }
     }
@@ -938,8 +931,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
                        "%11g] so nonbasic "
                        "move should be zero but is %" HIGHSINT_FORMAT "\n",
                        var, simplex_lp.numCol_, info.workLower_[var],
-                       info.workValue_[var],
-                       info.workUpper_[var],
+                       info.workValue_[var], info.workUpper_[var],
                        basis.nonbasicMove_[var]);
           return ok;
         }
@@ -1048,9 +1040,8 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
             "%" HIGHSINT_FORMAT
             ") [%11g, %11g, %11g] so nonbasic move should be down but is  "
             "%" HIGHSINT_FORMAT "\n",
-            var, simplex_lp.numCol_, info.workLower_[var],
-            info.workValue_[var], info.workUpper_[var],
-            basis.nonbasicMove_[var]);
+            var, simplex_lp.numCol_, info.workLower_[var], info.workValue_[var],
+            info.workUpper_[var], basis.nonbasicMove_[var]);
         return ok;
       }
       ok = info.workValue_[var] == info.workUpper_[var];
@@ -1237,10 +1228,9 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
   const HighsInt& num_nonbasic_free_col = nonbasic_free_col_set.count();
   HighsInt check_num_nonbasic_free_col = 0;
   for (HighsInt iVar = 0; iVar < num_tot; iVar++) {
-    bool nonbasic_free =
-        basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue &&
-        info.workLower_[iVar] <= -kHighsInf &&
-        info.workUpper_[iVar] >= kHighsInf;
+    bool nonbasic_free = basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue &&
+                         info.workLower_[iVar] <= -kHighsInf &&
+                         info.workUpper_[iVar] >= kHighsInf;
     if (nonbasic_free) check_num_nonbasic_free_col++;
   }
   if (check_num_nonbasic_free_col != num_nonbasic_free_col) {
@@ -1255,18 +1245,17 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
       nonbasic_free_col_set.entry();
   for (HighsInt ix = 0; ix < num_nonbasic_free_col; ix++) {
     HighsInt iVar = nonbasic_free_col_set_entry[ix];
-    bool nonbasic_free =
-        basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue &&
-        info.workLower_[iVar] <= -kHighsInf &&
-        info.workUpper_[iVar] >= kHighsInf;
+    bool nonbasic_free = basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue &&
+                         info.workLower_[iVar] <= -kHighsInf &&
+                         info.workUpper_[iVar] >= kHighsInf;
     if (!nonbasic_free) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "NonbasicFreeColumnData: Variable %" HIGHSINT_FORMAT
                   " in nonbasic free "
                   "set has nonbasicFlag = %" HIGHSINT_FORMAT
                   " and bounds [%g, %g]\n",
-                  iVar, basis.nonbasicFlag_[iVar],
-                  info.workLower_[iVar], info.workUpper_[iVar]);
+                  iVar, basis.nonbasicFlag_[iVar], info.workLower_[iVar],
+                  info.workUpper_[iVar]);
       return HighsDebugStatus::kLogicalError;
     }
   }

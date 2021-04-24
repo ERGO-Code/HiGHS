@@ -39,36 +39,33 @@ void choosePriceTechnique(const HighsInt price_strategy,
                           const double row_ep_density, bool& use_col_price,
                           bool& use_row_price_w_switch);
 
-void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis,
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol);
 void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
                                HighsInt XnumNewCol);
 
-void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis,
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                             HighsInt XnumNewRow);
 void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
                             HighsInt XnumNewRow);
 
 void invalidateSimplexLpBasisArtifacts(
-    HighsSimplexStatus&
-        status  // !< Status of simplex LP whose
-                           // basis artifacts are to be invalidated
+    HighsSimplexStatus& status  // !< Status of simplex LP whose
+                                // basis artifacts are to be invalidated
 );
 
 void invalidateSimplexLpBasis(
     HighsSimplexStatus& status  // !< Status of simplex LP whose
-                                             // basis is to be invalidated
+                                // basis is to be invalidated
 );
 
 void invalidateSimplexLp(
-    HighsSimplexStatus&
-        status  // !< Status of simplex LP to be invalidated
+    HighsSimplexStatus& status  // !< Status of simplex LP to be invalidated
 );
 
 void updateSimplexLpStatus(
-    HighsSimplexStatus&
-        status,  // !< Status of simplex LP to be updated
-    LpAction action         // !< Action prompting update
+    HighsSimplexStatus& status,  // !< Status of simplex LP to be updated
+    LpAction action              // !< Action prompting update
 );
 
 void unscaleSolution(HighsSolution& solution, const HighsScale scale);

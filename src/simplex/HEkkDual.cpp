@@ -102,16 +102,15 @@ HighsStatus HEkkDual::solve() {
   // smaller than 1, and the sum of primal infeasiblilities will be
   // very much larger for non-trivial LPs that are dual feasible for a
   // logical or crash basis.
-  const bool near_optimal = info.num_dual_infeasibility == 0 &&
-                            info.sum_primal_infeasibility < 1;
+  const bool near_optimal =
+      info.num_dual_infeasibility == 0 && info.sum_primal_infeasibility < 1;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Dual feasible and num / max / sum primal infeasibilities are "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
-                info.num_primal_infeasibility,
-                info.max_primal_infeasibility,
+                info.num_primal_infeasibility, info.max_primal_infeasibility,
                 info.sum_primal_infeasibility);
 
   // Perturb costs according to whether the solution is near-optimnal
@@ -187,8 +186,7 @@ HighsStatus HEkkDual::solve() {
               analysis->updateOperationResultDensity(local_row_ep_density,
                                                      analysis->row_ep_density);
               ekk_instance_.updateOperationResultDensity(
-                  local_row_ep_density,
-                  ekk_instance_.info_.row_ep_density);
+                  local_row_ep_density, ekk_instance_.info_.row_ep_density);
             }
             if (ekk_instance_.analysis_.analyse_simplex_time) {
               analysis->simplexTimerStop(SimplexIzDseWtClock);
@@ -415,8 +413,7 @@ void HEkkDual::initParallel() {
   const HighsInt num_threads = ekk_instance_.info_.num_threads;
 
   // Initialize for tasks
-  if (ekk_instance_.info_.simplex_strategy ==
-      kSimplexStrategyDualTasks) {
+  if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualTasks) {
     const HighsInt pass_num_slice = num_threads - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
@@ -431,8 +428,7 @@ void HEkkDual::initParallel() {
   }
 
   // Initialize for multi
-  if (ekk_instance_.info_.simplex_strategy ==
-      kSimplexStrategyDualMulti) {
+  if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualMulti) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
     if (multi_num > kHighsThreadLimit) multi_num = kHighsThreadLimit;
@@ -559,8 +555,7 @@ void HEkkDual::solvePhase1() {
 
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
-  if (!info.valid_backtracking_basis_)
-    ekk_instance_.putBacktrackingBasis();
+  if (!info.valid_backtracking_basis_) ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
   analysis->simplexTimerStart(IterateClock);
@@ -682,9 +677,8 @@ void HEkkDual::solvePhase1() {
   // when the LP is dual infeasible. However, the model status can't
   // be set to dual infeasible until perturbations have been removed.
   //
-  const bool no_debug =
-      ekk_instance_.info_.num_dual_infeasibility > 0 &&
-      scaled_model_status == HighsModelStatus::kNotset;
+  const bool no_debug = ekk_instance_.info_.num_dual_infeasibility > 0 &&
+                        scaled_model_status == HighsModelStatus::kNotset;
   if (!no_debug) {
     if (debugDualSimplex("End of solvePhase1") ==
         HighsDebugStatus::kLogicalError) {
@@ -759,8 +753,7 @@ void HEkkDual::solvePhase2() {
 
   // If there's no backtracking basis Save the initial basis in case of
   // backtracking
-  if (!info.valid_backtracking_basis_)
-    ekk_instance_.putBacktrackingBasis();
+  if (!info.valid_backtracking_basis_) ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
   analysis->simplexTimerStart(IterateClock);
@@ -925,8 +918,7 @@ void HEkkDual::rebuild() {
   //
   // Note that computePrimalObjectiveValue sets
   // has_primal_objective_value
-  const bool check_updated_objective_value =
-      status.has_dual_objective_value;
+  const bool check_updated_objective_value = status.has_dual_objective_value;
   double previous_dual_objective_value;
   if (check_updated_objective_value) {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
@@ -972,8 +964,7 @@ void HEkkDual::rebuild() {
     // from scratch.
     const double dual_objective_value_correction =
         info.dual_objective_value - previous_dual_objective_value;
-    info.updated_dual_objective_value +=
-        dual_objective_value_correction;
+    info.updated_dual_objective_value += dual_objective_value_correction;
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm);
   }
   // Now that there's a new dual_objective_value, reset the updated
@@ -1449,8 +1440,8 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   bool use_col_price;
   bool use_row_price_w_switch;
   HighsSimplexInfo& info = ekk_instance_.info_;
-  choosePriceTechnique(info.price_strategy, local_density,
-                       use_col_price, use_row_price_w_switch);
+  choosePriceTechnique(info.price_strategy, local_density, use_col_price,
+                       use_row_price_w_switch);
 
   if (analysis->analyse_simplex_data) {
     const HighsInt row_ep_count = row_ep->count;
@@ -1724,8 +1715,7 @@ void HEkkDual::updateDual() {
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
     //    "Before calling dualRow.updateDual");
     dualRow.updateDual(theta_dual);
-    if (ekk_instance_.info_.simplex_strategy !=
-            kSimplexStrategyDualPlain &&
+    if (ekk_instance_.info_.simplex_strategy != kSimplexStrategyDualPlain &&
         slice_PRICE) {
       // Update the slice-by-slice copy of dual variables
       for (HighsInt i = 0; i < slice_num; i++)
@@ -1874,8 +1864,7 @@ void HEkkDual::updatePivots() {
   // occurred, and set the corresponding primal infeasibility value in
   // dualRHS.work_infeasibility
   dualRHS.updatePivots(
-      row_out,
-      ekk_instance_.info_.workValue_[variable_in] + theta_primal);
+      row_out, ekk_instance_.info_.workValue_[variable_in] + theta_primal);
 
   /*
   // Determine whether to reinvert based on the synthetic clock
@@ -1893,8 +1882,7 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
   // Initialise the Devex framework: reference set is all basic
   // variables
   analysis->simplexTimerStart(DevexIzClock);
-  const vector<int8_t>& nonbasicFlag =
-      ekk_instance_.basis_.nonbasicFlag_;
+  const vector<int8_t>& nonbasicFlag = ekk_instance_.basis_.nonbasicFlag_;
   // Initialise the devex framework. The devex reference set is
   // initialise to be the current set of basic variables - and never
   // changes until a new framework is set up. In a simplex iteration,
@@ -1907,8 +1895,7 @@ void HEkkDual::initialiseDevexFramework(const bool parallel) {
   // values of devex_index to be 1-nonbasicFlag^2, ASSUMING
   // |nonbasicFlag|=1 iff the corresponding variable is nonbasic
   for (HighsInt vr_n = 0; vr_n < solver_num_tot; vr_n++)
-    info.devex_index_[vr_n] =
-        1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
+    info.devex_index_[vr_n] = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
   // Set all initial weights to 1, zero the count of iterations with
   // this Devex framework, increment the number of Devex frameworks
   // and indicate that there's no need for a new Devex framework
@@ -1984,11 +1971,11 @@ void HEkkDual::assessPhase1Optimality() {
   } else {
     log_type = HighsLogType::kInfo;
   }
-  highsLogDev(
-      ekk_instance_.options_.log_options, log_type,
-      "Optimal in phase 1 but not jumping to phase 2 since "
-      "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT "\n",
-      dual_objective_value, ekk_instance_.info_.costs_perturbed);
+  highsLogDev(ekk_instance_.options_.log_options, log_type,
+              "Optimal in phase 1 but not jumping to phase 2 since "
+              "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
+              "\n",
+              dual_objective_value, ekk_instance_.info_.costs_perturbed);
   if (dual_objective_value > 0) {
     // Can this happen, and what does it mean?
     fflush(stdout);

@@ -911,13 +911,11 @@ void HEkkDual::majorRollback() {
     MFinish* finish = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    ekk_instance_.basis_.nonbasicMove_[finish->variable_in] =
-        finish->move_in;
+    ekk_instance_.basis_.nonbasicMove_[finish->variable_in] = finish->move_in;
     ekk_instance_.basis_.nonbasicFlag_[finish->variable_in] = 1;
     ekk_instance_.basis_.nonbasicMove_[finish->variable_out] = 0;
     ekk_instance_.basis_.nonbasicFlag_[finish->variable_out] = 0;
-    ekk_instance_.basis_.basicIndex_[finish->row_out] =
-        finish->variable_out;
+    ekk_instance_.basis_.basicIndex_[finish->row_out] = finish->variable_out;
 
     // 2. Roll back matrix
     ekk_instance_.updateMatrix(finish->variable_out, finish->variable_in);
@@ -929,8 +927,7 @@ void HEkkDual::majorRollback() {
 
     // 4. Roll back cost
     ekk_instance_.info_.workShift_[finish->variable_in] = 0;
-    ekk_instance_.info_.workShift_[finish->variable_out] =
-        finish->shiftOut;
+    ekk_instance_.info_.workShift_[finish->variable_out] = finish->shiftOut;
 
     // 5. The iteration count
     ekk_instance_.iteration_count_--;
