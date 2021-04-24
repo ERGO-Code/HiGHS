@@ -408,13 +408,17 @@ void HEkkDual::init() {
   dualRHS.setup();
 }
 
-void HEkkDual::initParallel() {
+void HEkkDual::initParallel(HEkk& simplex) {
+  // No need to call this with kSimplexStrategyDualPlain
+  if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain) return;
+
   // Identify the (current) number of HiGHS tasks to be used
   const HighsInt num_threads = ekk_instance_.info_.num_threads;
 
-  // Initialize for tasks
+  HighsInt pass_num_slice;
   if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualTasks) {
-    const HighsInt pass_num_slice = num_threads - 2;
+    // Initialize for tasks
+    pass_num_slice = num_threads - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
@@ -424,11 +428,8 @@ void HEkkDual::initParallel() {
                    ") being too small: results unpredictable\n",
                    pass_num_slice, num_threads);
     }
-    initSlice(pass_num_slice);
-  }
-
-  // Initialize for multi
-  if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualMulti) {
+  } else {
+    // Initialize for multi
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
     if (multi_num > kHighsThreadLimit) multi_num = kHighsThreadLimit;
@@ -437,7 +438,7 @@ void HEkkDual::initParallel() {
       multi_choice[i].col_aq.setup(solver_num_row);
       multi_choice[i].col_BFRT.setup(solver_num_row);
     }
-    const HighsInt pass_num_slice = max(multi_num - 1, HighsInt{1});
+    pass_num_slice = max(multi_num - 1, HighsInt{1});
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
@@ -447,14 +448,14 @@ void HEkkDual::initParallel() {
                    ") being too small: results unpredictable\n",
                    pass_num_slice, num_threads);
     }
-    initSlice(pass_num_slice);
   }
+  // Create the multiple HEkkDualRow instances: one for each column
+  // slice
+  for (HighsInt i = 0; i < pass_num_slice; i++)
+    slice_dualRow.push_back(HEkkDualRow(simplex));
+  // Initialise the column slices
+  initSlice(pass_num_slice);
   multi_iteration = 0;
-  //  string partitionFile = model->strOption[STROPT_PARTITION_FILE];
-  //  if (partitionFile.size())
-  //  {
-  //    dualRHS.setup_partition(partitionFile.c_str());
-  //  }
 }
 
 void HEkkDual::initSlice(const HighsInt initial_num_slice) {

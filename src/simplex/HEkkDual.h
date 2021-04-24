@@ -46,11 +46,8 @@ class HEkkDual {
     init();
     dualRow.setup();
     dualRHS.setup();
-    if (!(ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain)) {
-      initParallel();
-      for (HighsInt i = 0; i < kHighsSlicedLimit; i++)
-        slice_dualRow.push_back(HEkkDualRow(simplex));
-    }
+    if (!(ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain))
+      initParallel(simplex);
   }
 
   /**
@@ -80,7 +77,7 @@ class HEkkDual {
    *
    * Sets up data structures for SIP or PAMI
    */
-  void initParallel();
+  void initParallel(HEkk& simplex);
 
   /**
    * @brief Initialise matrix slices and slices of row_ap or dualRow for SIP or
