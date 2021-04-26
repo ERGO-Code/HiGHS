@@ -76,11 +76,8 @@ HighsStatus HEkkPrimal::solve() {
 
   // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
-  if (ekk_instance_.bailoutOnTimeIterations()) {
-    // Not leaving in a discernable solve phase
-    ekk_instance_.exit_solve_phase = kSolvePhaseExit;
+  if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
-  }
 
   // Now to do some iterations!
   HighsInt num_primal_infeasibility =
@@ -152,8 +149,8 @@ HighsStatus HEkkPrimal::solve() {
       // solve_phase = kSolvePhase2 if the iteration or time limit has
       // been reached
       //
-      // solve_phase = kSolvePhaseCleanup if there are primal
-      // infeasiblilities to clean up after removing bound shifts
+      // solve_phase = kSolvePhaseCleanup if, after removing bound
+      // shifts, there are primal infeasiblilities to clean up
       //
       // solve_phase = kSolvePhaseUnknown if backtracking
       //
@@ -196,9 +193,8 @@ HighsStatus HEkkPrimal::solve() {
       break;
     }
     if (solve_phase == kSolvePhaseCleanup) {
-      // Primal infeasibilities after phase 2 for a problem not known
-      // to be primal infeasible. Dual feasible with primal
-      // infeasibilities so use dual simplex to clean up
+      // Primal infeasibilities after phase 2. Dual feasible with
+      // primal infeasibilities so use dual simplex to clean up
       break;
     }
     // If solve_phase == kSolvePhaseOptimal == 0 then major solving
@@ -207,8 +203,8 @@ HighsStatus HEkkPrimal::solve() {
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
   // Should only have these cases
-  assert(solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseUnknown ||
-         solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhase1 ||
+  assert(solve_phase == kSolvePhaseExit || //solve_phase == kSolvePhaseUnknown ||
+         solve_phase == kSolvePhaseOptimal || //solve_phase == kSolvePhase1 ||
          solve_phase == kSolvePhaseCleanup);
   if (solve_phase == kSolvePhaseOptimal)
     ekk_instance_.scaled_model_status_ = HighsModelStatus::kOptimal;
@@ -278,8 +274,6 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
-  ekk_instance_.exit_algorithm = SimplexAlgorithm::kPrimal;
-  HighsInt exit_solve_phase = kSolvePhaseUnknown;
   rebuild_reason = kRebuildReasonNo;
 
   resetDevex();
@@ -431,7 +425,7 @@ void HEkkPrimal::solvePhase2() {
       // simplex iterations to get primal feasibility
       solve_phase = kSolvePhaseCleanup;
     } else {
-      // There are no dual infeasiblities so optimal!
+      // There are no primal infeasiblities so optimal!
       solve_phase = kSolvePhaseOptimal;
       highsLogDev(options.log_options, HighsLogType::kDetailed,
                   "problem-optimal\n");

@@ -113,11 +113,8 @@ HighsStatus HEkkDual::solve() {
 
   // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
-  if (ekk_instance_.bailoutOnTimeIterations()) {
-    // Not leaving in a discernable solve phase
-    ekk_instance_.exit_solve_phase = kSolvePhaseExit;
+  if (ekk_instance_.bailoutOnTimeIterations()) 
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
-  }
 
   // Consider initialising edge weights
   //
@@ -343,7 +340,6 @@ HighsStatus HEkkDual::solve() {
                          ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  ekk_instance_.computePrimalObjectiveValue();
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
 }
 
@@ -505,8 +501,6 @@ void HEkkDual::initialiseSolve() {
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
-  ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
-  HighsInt exit_solve_phase = kSolvePhaseUnknown;
   rebuild_reason = kRebuildReasonNo;
 
 }
@@ -714,16 +708,14 @@ void HEkkDual::solvePhase2() {
   // kSolvePhaseOptimal => Primal feasible and no dual infeasibilities =>
   // Optimal
   //
-  // kSolvePhase1 => Primal feasible and dual infeasibilities for a
-  // problem known to be dual infeasible => Use primal phase 2 to
-  // determine primal unboundedness.
+  // kSolvePhase1 => Primal feasible and dual infeasibilities.
   //
   // kSolvePhase2 => Dual unboundedness suspected, but have to go out
   // and back in to solvePhase2 to perform fresh rebuild. Also if
   // bailing out due to reaching time/iteration limit or dual
   // objective
   //
-  // kSolvePhaseCleanup => Contrinue with primal phase 2 iterations to clean up
+  // kSolvePhaseCleanup => Continue with primal phase 2 iterations to clean up
   // dual infeasibilities
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;

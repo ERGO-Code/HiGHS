@@ -76,8 +76,6 @@ class HEkk {
 
   bool solve_bailout_;
   bool called_return_from_solve_;
-  SimplexAlgorithm exit_algorithm;
-  HighsInt exit_solve_phase;
   HighsInt return_primal_solution_status;
   HighsInt return_dual_solution_status;
 

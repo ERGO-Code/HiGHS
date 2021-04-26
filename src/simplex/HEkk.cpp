@@ -2124,7 +2124,12 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
   
-  // Check that exit_solve_phase has been set
+  // Check that an invert exists
+  assert(status_.has_invert);
+  // Determine a primal and possibly a dual solution, removing the
+  // effects of perturbations and shifts
+  
+  computePrimalObjectiveValue();
   return return_status;
 }
 
