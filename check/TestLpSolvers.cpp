@@ -89,7 +89,7 @@ void testSolver(Highs& highs, const std::string solver,
     for (num_solve = 0; num_solve < max_num_solve; num_solve++) {
       if (use_simplex) return_status = highs.setBasis();
       return_status = highs.run();
-      if (highs.getModelStatus() == HighsModelStatus::kReachedTimeLimit) break;
+      if (highs.getModelStatus() == HighsModelStatus::kTimeLimit) break;
     }
     REQUIRE(num_solve < max_num_solve);
     run_time = highs.getRunTime();
@@ -136,7 +136,7 @@ void testSolver(Highs& highs, const std::string solver,
            (HighsInt)return_status,
            highs.modelStatusToString(model_status).c_str());
   REQUIRE(return_status == HighsStatus::kWarning);
-  REQUIRE(model_status == HighsModelStatus::kReachedIterationLimit);
+  REQUIRE(model_status == HighsModelStatus::kIterationLimit);
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == 0);
@@ -167,7 +167,7 @@ void testSolver(Highs& highs, const std::string solver,
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kWarning);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kReachedIterationLimit);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
 
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == further_simplex_iterations);
@@ -377,8 +377,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status ==
-          HighsModelStatus::kReachedDualObjectiveValueUpperBound);
+  REQUIRE(model_status == HighsModelStatus::kObjectiveCutoff);
 
   // Solve again
   // This smaller dual objective value upper bound is satisfied at the start of
@@ -399,8 +398,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status ==
-          HighsModelStatus::kReachedDualObjectiveValueUpperBound);
+  REQUIRE(model_status == HighsModelStatus::kObjectiveCutoff);
 
   // Solve as maximization and ensure that the dual objective value upper bound
   // isn't used

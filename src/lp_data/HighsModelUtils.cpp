@@ -332,13 +332,13 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kOptimal:
       return "Optimal";
       break;
-    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+    case HighsModelStatus::kObjectiveCutoff:
       return "Reached dual objective upper bound";
       break;
-    case HighsModelStatus::kReachedTimeLimit:
+    case HighsModelStatus::kTimeLimit:
       return "Reached time limit";
       break;
-    case HighsModelStatus::kReachedIterationLimit:
+    case HighsModelStatus::kIterationLimit:
       return "Reached iteration limit";
       break;
     case HighsModelStatus::kUnboundedOrInfeasible:
@@ -408,11 +408,11 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::kOk;
     case HighsModelStatus::kUnbounded:
       return HighsStatus::kOk;
-    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+    case HighsModelStatus::kObjectiveCutoff:
       return HighsStatus::kOk;
-    case HighsModelStatus::kReachedTimeLimit:
+    case HighsModelStatus::kTimeLimit:
       return HighsStatus::kWarning;
-    case HighsModelStatus::kReachedIterationLimit:
+    case HighsModelStatus::kIterationLimit:
       return HighsStatus::kWarning;
     default:
       return HighsStatus::kError;

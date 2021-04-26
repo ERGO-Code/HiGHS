@@ -1065,7 +1065,7 @@ bool HighsMipSolverData::checkLimits() const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kReachedIterationLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
     }
     return true;
   }
@@ -1074,7 +1074,7 @@ bool HighsMipSolverData::checkLimits() const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached leave node limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kReachedIterationLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kIterationLimit;
     }
     return true;
   }
@@ -1083,7 +1083,7 @@ bool HighsMipSolverData::checkLimits() const {
     if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "reached time limit\n");
-      mipsolver.modelstatus_ = HighsModelStatus::kReachedTimeLimit;
+      mipsolver.modelstatus_ = HighsModelStatus::kTimeLimit;
     }
     return true;
   }

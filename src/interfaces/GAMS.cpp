@@ -305,7 +305,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       writesol = true;
       break;
 
-    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+    case HighsModelStatus::kObjectiveCutoff:
       // TODO is there a solution to write and is it feasible?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -313,7 +313,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
-    case HighsModelStatus::kReachedTimeLimit:
+    case HighsModelStatus::kTimeLimit:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);
@@ -321,7 +321,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Resource);
       break;
 
-    case HighsModelStatus::kReachedIterationLimit:
+    case HighsModelStatus::kIterationLimit:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);

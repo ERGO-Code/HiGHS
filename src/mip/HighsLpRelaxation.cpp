@@ -520,8 +520,7 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
   dualproofrhs = kHighsInf;
-  assert(lpsolver.getModelStatus(true) ==
-         HighsModelStatus::kReachedDualObjectiveValueUpperBound);
+  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kObjectiveCutoff);
 
   HighsInt numrow = lpsolver.getNumRows();
   bool hasdualray = false;
@@ -715,7 +714,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   switch (scaledmodelstatus) {
-    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+    case HighsModelStatus::kObjectiveCutoff:
       storeDualUBProof();
       if (checkDualProof()) return Status::kInfeasible;
 
@@ -793,7 +792,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return Status::kUnscaledDualFeasible;
 
       return Status::kUnscaledInfeasible;
-    case HighsModelStatus::kReachedIterationLimit: {
+    case HighsModelStatus::kIterationLimit: {
       if (resolve_on_error) {
         // printf(
         //     "error: lpsolver reached iteration limit, resolving with basis "
@@ -818,7 +817,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
     //    return Status::kInfeasible;
     //  return Status::kError;
-    case HighsModelStatus::kReachedTimeLimit:
+    case HighsModelStatus::kTimeLimit:
       return Status::kError;
     default:
       // printf("error: lpsolver stopped with unexpected status %"

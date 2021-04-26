@@ -642,7 +642,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::kError;
     // Can stop and reach time limit
     if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::kReachedTimeLimit;
+      model_status = HighsModelStatus::kTimeLimit;
       return HighsStatus::kWarning;
     }
     //========
@@ -658,10 +658,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     // Can stop with iter limit
     // Can stop with no progress
     if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
-      model_status = HighsModelStatus::kReachedTimeLimit;
+      model_status = HighsModelStatus::kTimeLimit;
       return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
-      model_status = HighsModelStatus::kReachedIterationLimit;
+      model_status = HighsModelStatus::kIterationLimit;
       return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
       reportIpmNoProgress(options, ipx_info);

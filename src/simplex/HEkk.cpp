@@ -132,12 +132,12 @@ HighsStatus HEkk::solve() {
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
     // be returned, so use primal simplex to distinguish
     if (scaled_model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
-	!options_.allow_unbounded_or_infeasible) {
+        !options_.allow_unbounded_or_infeasible) {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
       assert(called_return_from_solve_);
       return_status =
-	interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
+          interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
     }
   }
   reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_);
@@ -2086,16 +2086,15 @@ bool HEkk::bailoutOnTimeIterations() {
   if (solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(scaled_model_status_ == HighsModelStatus::kReachedTimeLimit ||
-           scaled_model_status_ == HighsModelStatus::kReachedIterationLimit ||
-           scaled_model_status_ ==
-               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
+    assert(scaled_model_status_ == HighsModelStatus::kTimeLimit ||
+           scaled_model_status_ == HighsModelStatus::kIterationLimit ||
+           scaled_model_status_ == HighsModelStatus::kObjectiveCutoff);
   } else if (timer_.readRunHighsClock() > options_.time_limit) {
     solve_bailout_ = true;
-    scaled_model_status_ = HighsModelStatus::kReachedTimeLimit;
+    scaled_model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_.simplex_iteration_limit) {
     solve_bailout_ = true;
-    scaled_model_status_ = HighsModelStatus::kReachedIterationLimit;
+    scaled_model_status_ = HighsModelStatus::kIterationLimit;
   }
   return solve_bailout_;
 }
@@ -2105,107 +2104,106 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   if (solve_bailout_) {
     // If bailout has already been decided: check that it's for one of
     // these reasons
-    assert(scaled_model_status_ == HighsModelStatus::kReachedTimeLimit ||
-           scaled_model_status_ == HighsModelStatus::kReachedIterationLimit ||
-           scaled_model_status_ ==
-               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
+    assert(scaled_model_status_ == HighsModelStatus::kTimeLimit ||
+           scaled_model_status_ == HighsModelStatus::kIterationLimit ||
+           scaled_model_status_ == HighsModelStatus::kObjectiveCutoff);
   }
   // Check that returnFromSolve has not already been called: it should
   // be called exactly once per solve
   assert(!called_return_from_solve_);
   called_return_from_solve_ = true;
   info_.valid_backtracking_basis_ = false;
-  
+
   // Initialise the status of the primal and dual solutions
   return_primal_solution_status = kHighsPrimalDualStatusUnknown;
   return_dual_solution_status = kHighsPrimalDualStatusUnknown;
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
-  
+
   // Check that an invert exists
   assert(status_.has_invert);
 
   // Determine a primal and possibly a dual solution, removing the
   // effects of perturbations and shifts
   switch (scaled_model_status_) {
-  case HighsModelStatus::kOptimal: {
-    return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-    return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-    break;
-  }
-  case HighsModelStatus::kInfeasible: {
-    // Primal simplex has identified primal infeasibility in phase 1, or
-    // dual simplex has identified dual unboundedness in phase 2. In
-    // both cases there should be no primal or dual perturbations
-    assert(!info_.costs_perturbed && !info_.bounds_perturbed);
-    if (exit_algorithm == SimplexAlgorithm::kPrimal) {
-      // Reset the simplex costs and recompute duals after primal
-      // phase 1
-      initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
-      computeDual();
-    }
-    computeSimplexInfeasible();
-    // Primal solution is valid, but shouldn't be feasible
-    assert(info_.num_primal_infeasibility > 0);
-    return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-    // Dual solution is valid, but is unlikely to be feasible!
-    if (info_.num_dual_infeasibility == 0) {
-      return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-    } else {
-      return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-    }
-    break;
-  }
-  case HighsModelStatus::kUnboundedOrInfeasible: {
-    // Dual simplex has identified dual infeasibility in phase
-    // 1. There should be no dual perturbations
-    assert(exit_algorithm == SimplexAlgorithm::kDual);
-    assert(!info_.costs_perturbed);
-    // Reset the simplex bounds and recompute primals
-    initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
-    computePrimal();
-    computeSimplexInfeasible();
-    // Primal solution is valid, but is unlikely to be feasible!
-    if (info_.num_primal_infeasibility == 0) {
+    case HighsModelStatus::kOptimal: {
       return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-    } else {
-      return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-    }
-    // Dual solution is valid, but shouldn't be feasible
-    assert(info_.num_dual_infeasibility > 0);
-    return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-    break;
-  }
-  case HighsModelStatus::kUnbounded: {
-    // Primal simplex has identified unboundedness in phase 2. There
-    // should be no primal or dual perturbations
-    assert(exit_algorithm == SimplexAlgorithm::kPrimal);
-    assert(!info_.costs_perturbed && !info_.bounds_perturbed);
-    computeSimplexInfeasible();
-    // Primal solution is valid, and should be feasible
-    assert(info_.num_primal_infeasibility == 0);
-    return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-    // Dual solution is valid, but is unlikely to be feasible!
-    if (info_.num_dual_infeasibility == 0) {
       return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-    } else {
-      return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+      break;
     }
-    break;
-  }
-  case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
-  case HighsModelStatus::kReachedTimeLimit: 
-  case HighsModelStatus::kReachedIterationLimit: {
-    break;
-  }
-  default: {
-    printf("What is default here? Status %s\n", utilModelStatusToString(scaled_model_status_).c_str());
-    break;
-  }
+    case HighsModelStatus::kInfeasible: {
+      // Primal simplex has identified primal infeasibility in phase 1, or
+      // dual simplex has identified dual unboundedness in phase 2. In
+      // both cases there should be no primal or dual perturbations
+      assert(!info_.costs_perturbed && !info_.bounds_perturbed);
+      if (exit_algorithm == SimplexAlgorithm::kPrimal) {
+        // Reset the simplex costs and recompute duals after primal
+        // phase 1
+        initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
+        computeDual();
+      }
+      computeSimplexInfeasible();
+      // Primal solution is valid, but shouldn't be feasible
+      assert(info_.num_primal_infeasibility > 0);
+      return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+      // Dual solution is valid, but is unlikely to be feasible!
+      if (info_.num_dual_infeasibility == 0) {
+        return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+      } else {
+        return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+      }
+      break;
+    }
+    case HighsModelStatus::kUnboundedOrInfeasible: {
+      // Dual simplex has identified dual infeasibility in phase
+      // 1. There should be no dual perturbations
+      assert(exit_algorithm == SimplexAlgorithm::kDual);
+      assert(!info_.costs_perturbed);
+      // Reset the simplex bounds and recompute primals
+      initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
+      computePrimal();
+      computeSimplexInfeasible();
+      // Primal solution is valid, but is unlikely to be feasible!
+      if (info_.num_primal_infeasibility == 0) {
+        return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+      } else {
+        return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+      }
+      // Dual solution is valid, but shouldn't be feasible
+      assert(info_.num_dual_infeasibility > 0);
+      return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+      break;
+    }
+    case HighsModelStatus::kUnbounded: {
+      // Primal simplex has identified unboundedness in phase 2. There
+      // should be no primal or dual perturbations
+      assert(exit_algorithm == SimplexAlgorithm::kPrimal);
+      assert(!info_.costs_perturbed && !info_.bounds_perturbed);
+      computeSimplexInfeasible();
+      // Primal solution is valid, and should be feasible
+      assert(info_.num_primal_infeasibility == 0);
+      return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+      // Dual solution is valid, but is unlikely to be feasible!
+      if (info_.num_dual_infeasibility == 0) {
+        return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+      } else {
+        return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+      }
+      break;
+    }
+    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kTimeLimit:
+    case HighsModelStatus::kIterationLimit: {
+      break;
+    }
+    default: {
+      printf("What is default here? Status %s\n",
+             utilModelStatusToString(scaled_model_status_).c_str());
+      break;
+    }
   }
 
-    computePrimalObjectiveValue();
-
+  computePrimalObjectiveValue();
 
   return return_status;
 }

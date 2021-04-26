@@ -2343,7 +2343,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       assert(return_status == HighsStatus::kOk);
       break;
 
-    case HighsModelStatus::kReachedDualObjectiveValueUpperBound:
+    case HighsModelStatus::kObjectiveCutoff:
       clearSolution();
       clearBasis();
       clearInfo();
@@ -2352,8 +2352,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       break;
 
       // Finally consider the warning returns
-    case HighsModelStatus::kReachedTimeLimit:
-    case HighsModelStatus::kReachedIterationLimit:
+    case HighsModelStatus::kTimeLimit:
+    case HighsModelStatus::kIterationLimit:
       clearSolution();
       clearBasis();
       clearInfo();

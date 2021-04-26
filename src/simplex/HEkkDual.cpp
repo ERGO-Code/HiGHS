@@ -113,7 +113,7 @@ HighsStatus HEkkDual::solve() {
 
   // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
-  if (ekk_instance_.bailoutOnTimeIterations()) 
+  if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   // Consider initialising edge weights
@@ -495,16 +495,16 @@ void HEkkDual::initialiseSolve() {
   dual_objective_value_upper_bound =
       ekk_instance_.options_.dual_objective_value_upper_bound;
 
-  interpretDualEdgeWeightStrategy(ekk_instance_.info_.dual_edge_weight_strategy);
+  interpretDualEdgeWeightStrategy(
+      ekk_instance_.info_.dual_edge_weight_strategy);
 
   // Initialise model and run status values
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
   ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
-  
-  rebuild_reason = kRebuildReasonNo;
 
+  rebuild_reason = kRebuildReasonNo;
 }
 
 void HEkkDual::solvePhase1() {
@@ -2158,12 +2158,11 @@ bool HEkkDual::bailoutOnDualObjective() {
   if (ekk_instance_.solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(ekk_instance_.scaled_model_status_ ==
-               HighsModelStatus::kReachedTimeLimit ||
+    assert(ekk_instance_.scaled_model_status_ == HighsModelStatus::kTimeLimit ||
            ekk_instance_.scaled_model_status_ ==
-               HighsModelStatus::kReachedIterationLimit ||
+               HighsModelStatus::kIterationLimit ||
            ekk_instance_.scaled_model_status_ ==
-               HighsModelStatus::kReachedDualObjectiveValueUpperBound);
+               HighsModelStatus::kObjectiveCutoff);
   } else if (ekk_instance_.simplex_lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >
@@ -2208,8 +2207,7 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
 #endif
       action = "Have DualUB bailout";
       reached_exact_dual_objective_value_upper_bound = true;
-      ekk_instance_.scaled_model_status_ =
-          HighsModelStatus::kReachedDualObjectiveValueUpperBound;
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::kObjectiveCutoff;
     } else {
       action = "No   DualUB bailout";
     }

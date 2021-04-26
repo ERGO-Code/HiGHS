@@ -203,8 +203,9 @@ HighsStatus HEkkPrimal::solve() {
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
   // Should only have these cases
-  assert(solve_phase == kSolvePhaseExit || //solve_phase == kSolvePhaseUnknown ||
-         solve_phase == kSolvePhaseOptimal || //solve_phase == kSolvePhase1 ||
+  assert(solve_phase ==
+             kSolvePhaseExit ||  // solve_phase == kSolvePhaseUnknown ||
+         solve_phase == kSolvePhaseOptimal ||  // solve_phase == kSolvePhase1 ||
          solve_phase == kSolvePhaseCleanup);
   if (solve_phase == kSolvePhaseOptimal)
     ekk_instance_.scaled_model_status_ = HighsModelStatus::kOptimal;
@@ -279,7 +280,6 @@ void HEkkPrimal::initialiseSolve() {
   rebuild_reason = kRebuildReasonNo;
 
   resetDevex();
-
 }
 
 void HEkkPrimal::solvePhase1() {
@@ -342,11 +342,11 @@ void HEkkPrimal::solvePhase1() {
       // Optimal in phase 1, so should have primal infeasiblilities
       assert(info.num_primal_infeasibility > 0);
       if (ekk_instance_.info_.bounds_perturbed) {
-	// Remove any bound perturbations and return to phase 1
-	cleanup();
+        // Remove any bound perturbations and return to phase 1
+        cleanup();
       } else {
-	ekk_instance_.scaled_model_status_ = HighsModelStatus::kInfeasible;
-	solve_phase = kSolvePhaseExit;
+        ekk_instance_.scaled_model_status_ = HighsModelStatus::kInfeasible;
+        solve_phase = kSolvePhaseExit;
       }
     }
   }
