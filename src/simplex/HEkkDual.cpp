@@ -300,7 +300,8 @@ HighsStatus HEkkDual::solve() {
   assert(!ekk_instance_.solve_bailout_);
   // Should only have these cases
   assert(solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseUnknown ||
-         solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhaseCleanup);
+         solve_phase == kSolvePhaseOptimal ||
+         solve_phase == kSolvePhaseCleanup);
   // Can't be solve_phase == kSolvePhase1 since this requires simplex
   // solver to have continued after identifying dual infeasiblility.
   if (solve_phase == kSolvePhaseCleanup) {

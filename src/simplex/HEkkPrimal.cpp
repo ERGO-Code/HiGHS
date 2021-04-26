@@ -1102,7 +1102,8 @@ void HEkkPrimal::considerBoundSwap() {
     // becoming feasible - moves up to lower (down to upper) - or
     // remaining feasible - moves down to lower (up to upper) - so
     // can't be set so easily as in phase 2
-    if (solve_phase == kSolvePhase2) move_out = alpha_col * move_in > 0 ? -1 : 1;
+    if (solve_phase == kSolvePhase2)
+      move_out = alpha_col * move_in > 0 ? -1 : 1;
     theta_primal = 0;
     if (move_out == 1) {
       theta_primal = (baseValue[row_out] - baseUpper[row_out]) / alpha_col;
