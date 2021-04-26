@@ -2105,7 +2105,9 @@ bool HEkk::bailoutOnTimeIterations() {
   return solve_bailout_;
 }
 
-HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
+HighsStatus HEkk::returnFromSolve(const HighsStatus return_status,
+				  const SimplexAlgorithm algorithm,
+				  const HighsInt solvePhase) {
   // Always called before returning from HEkkPrimal/Dual::solve()
   if (solve_bailout_) {
     // If bailout has already been decided: check that it's for one of
