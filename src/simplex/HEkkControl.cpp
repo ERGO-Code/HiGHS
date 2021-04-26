@@ -99,7 +99,7 @@ bool HEkk::switchToDevex() {
     // What if non-dual iterations have been performed: need to think about this
     HighsInt local_iteration_count =
         iteration_count_ - info_.control_iteration_count0;
-    HighsInt local_num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+    HighsInt local_num_tot = lp_.numCol_ + lp_.numRow_;
     // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations
     // have been costly
     switch_to_devex =

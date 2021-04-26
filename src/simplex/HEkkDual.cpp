@@ -61,7 +61,7 @@ HighsStatus HEkkDual::solve() {
   HighsSimplexStatus& status = ekk_instance_.status_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
 
-  bool dual_info_ok = dualInfoOk(ekk_instance_.simplex_lp_);
+  bool dual_info_ok = dualInfoOk(ekk_instance_.lp_);
   if (!dual_info_ok) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "HPrimalDual::solve has error in dual information\n");
@@ -71,8 +71,7 @@ HighsStatus HEkkDual::solve() {
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
   info.store_squared_primal_infeasibility = true;
   if (options.less_infeasible_DSE_check) {
-    if (isLessInfeasibleDSECandidate(options.log_options,
-                                     ekk_instance_.simplex_lp_)) {
+    if (isLessInfeasibleDSECandidate(options.log_options, ekk_instance_.lp_)) {
       // LP is a candidate for LiDSE
       if (options.less_infeasible_DSE_choose_row)
         // Use LiDSE
@@ -346,8 +345,8 @@ HighsStatus HEkkDual::solve() {
 void HEkkDual::initialiseInstance() {
   // Copy size, matrix and factor
 
-  solver_num_col = ekk_instance_.simplex_lp_.numCol_;
-  solver_num_row = ekk_instance_.simplex_lp_.numRow_;
+  solver_num_col = ekk_instance_.lp_.numCol_;
+  solver_num_row = ekk_instance_.lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
   matrix = &ekk_instance_.matrix_;
@@ -892,11 +891,10 @@ void HEkkDual::rebuild() {
     // Don't have the matrix either row-wise or col-wise, so
     // reinitialise it
     assert(info.backtracking_);
-    HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+    HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-                                &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
-                                &simplex_lp.Avalue_[0],
+    ekk_instance_.matrix_.setup(lp.numCol_, lp.numRow_, &lp.Astart_[0],
+                                &lp.Aindex_[0], &lp.Avalue_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
@@ -1158,7 +1156,7 @@ void HEkkDual::iterationAnalysisData() {
   // costs, in phase 2 the dual objective value is negated, so flip
   // its sign according to the LP sense
   if (solve_phase == kSolvePhase2)
-    analysis->objective_value *= (HighsInt)ekk_instance_.simplex_lp_.sense_;
+    analysis->objective_value *= (HighsInt)ekk_instance_.lp_.sense_;
   analysis->num_primal_infeasibility = info.num_primal_infeasibility;
   analysis->sum_primal_infeasibility = info.sum_primal_infeasibility;
   if (solve_phase == kSolvePhase1) {
@@ -1425,7 +1423,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   dualRow.createFreemove(row_ep);
   analysis->simplexTimerStop(Chuzc0Clock);
 
-  //  const HighsInt solver_num_row = ekk_instance_.simplex_lp_.numRow_;
+  //  const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
   const double local_density = 1.0 * row_ep->count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
@@ -2055,7 +2053,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
 }
 
 void HEkkDual::exitPhase1ResetDuals() {
-  const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+  const HighsLp& lp = ekk_instance_.lp_;
   const SimplexBasis& basis = ekk_instance_.basis_;
   HighsSimplexInfo& info = ekk_instance_.info_;
   bool& costs_perturbed = info.costs_perturbed;
@@ -2070,20 +2068,20 @@ void HEkkDual::exitPhase1ResetDuals() {
     ekk_instance_.computeDual();
   }
 
-  const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const HighsInt numTot = lp.numCol_ + lp.numRow_;
   HighsInt num_shift = 0;
   double sum_shift = 0;
   for (HighsInt iVar = 0; iVar < numTot; iVar++) {
     if (basis.nonbasicFlag_[iVar]) {
       double lp_lower;
       double lp_upper;
-      if (iVar < simplex_lp.numCol_) {
-        lp_lower = simplex_lp.colLower_[iVar];
-        lp_upper = simplex_lp.colUpper_[iVar];
+      if (iVar < lp.numCol_) {
+        lp_lower = lp.colLower_[iVar];
+        lp_upper = lp.colUpper_[iVar];
       } else {
-        HighsInt iRow = iVar - simplex_lp.numCol_;
-        lp_lower = simplex_lp.rowLower_[iRow];
-        lp_upper = simplex_lp.rowUpper_[iRow];
+        HighsInt iRow = iVar - lp.numCol_;
+        lp_lower = lp.rowLower_[iRow];
+        lp_upper = lp.rowUpper_[iRow];
       }
       if (lp_lower <= -kHighsInf && lp_upper >= kHighsInf) {
         const double shift = -info.workDual_[iVar];
@@ -2159,11 +2157,9 @@ bool HEkkDual::bailoutOnDualObjective() {
     // Bailout has already been decided: check that it's for one of these
     // reasons
     assert(ekk_instance_.model_status_ == HighsModelStatus::kTimeLimit ||
-           ekk_instance_.model_status_ ==
-               HighsModelStatus::kIterationLimit ||
-           ekk_instance_.model_status_ ==
-               HighsModelStatus::kObjectiveCutoff);
-  } else if (ekk_instance_.simplex_lp_.sense_ == ObjSense::kMinimize &&
+           ekk_instance_.model_status_ == HighsModelStatus::kIterationLimit ||
+           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveCutoff);
+  } else if (ekk_instance_.lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >
         ekk_instance_.options_.dual_objective_value_upper_bound)
@@ -2224,19 +2220,19 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
 }
 
 double HEkkDual::computeExactDualObjectiveValue() {
-  const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+  const HighsLp& lp = ekk_instance_.lp_;
   const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
   HMatrix& matrix = ekk_instance_.matrix_;
   HFactor& factor = ekk_instance_.factor_;
   // Create a local buffer for the pi vector
   HVector dual_col;
-  dual_col.setup(simplex_lp.numRow_);
+  dual_col.setup(lp.numRow_);
   dual_col.clear();
-  for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     HighsInt iVar = basis.basicIndex_[iRow];
-    if (iVar < simplex_lp.numCol_) {
-      const double value = simplex_lp.colCost_[iVar];
+    if (iVar < lp.numCol_) {
+      const double value = lp.colCost_[iVar];
       if (value) {
         dual_col.array[iRow] = value;
         dual_col.index[dual_col.count++] = iRow;
@@ -2244,21 +2240,21 @@ double HEkkDual::computeExactDualObjectiveValue() {
     }
   }
   // Create a local buffer for the dual vector
-  const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const HighsInt numTot = lp.numCol_ + lp.numRow_;
   HVector dual_row;
-  dual_row.setup(simplex_lp.numCol_);
+  dual_row.setup(lp.numCol_);
   dual_row.clear();
   if (dual_col.count) {
     const double historical_density_for_non_hypersparse_operation = 1;
     factor.btran(dual_col, historical_density_for_non_hypersparse_operation);
     matrix.priceByColumn(dual_row, dual_col);
   }
-  double dual_objective = simplex_lp.offset_;
+  double dual_objective = lp.offset_;
   double norm_dual = 0;
   double norm_delta_dual = 0;
-  for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     if (!basis.nonbasicFlag_[iCol]) continue;
-    double exact_dual = simplex_lp.colCost_[iCol] - dual_row.array[iCol];
+    double exact_dual = lp.colCost_[iCol] - dual_row.array[iCol];
     double residual = fabs(exact_dual - info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
@@ -2270,9 +2266,9 @@ double HEkkDual::computeExactDualObjectiveValue() {
           iCol, exact_dual, info.workDual_[iCol], residual);
     dual_objective += info.workValue_[iCol] * exact_dual;
   }
-  for (HighsInt iVar = simplex_lp.numCol_; iVar < numTot; iVar++) {
+  for (HighsInt iVar = lp.numCol_; iVar < numTot; iVar++) {
     if (!basis.nonbasicFlag_[iVar]) continue;
-    HighsInt iRow = iVar - simplex_lp.numCol_;
+    HighsInt iRow = iVar - lp.numCol_;
     double exact_dual = -dual_col.array[iRow];
     double residual = fabs(exact_dual - info.workDual_[iVar]);
     norm_dual += fabs(exact_dual);

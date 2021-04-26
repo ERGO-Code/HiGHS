@@ -43,7 +43,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   HighsBasis& basis = highs_model_object.basis_;
   HighsScale& scale = highs_model_object.scale_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
-  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   bool& valid_basis = basis.valid_;
@@ -233,7 +233,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   HighsBasis& basis = highs_model_object.basis_;
   HighsScale& scale = highs_model_object.scale_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
-  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Query: should simplex_status.valid be simplex_status.valid_?
@@ -396,7 +396,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   // Query: should simplex_status.valid be simplex_status.valid_?
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
-  if (simplex_status.valid) setOrientation(ekk_instance.simplex_lp_);
+  if (simplex_status.valid) setOrientation(ekk_instance.lp_);
   assert(&lp_ == &lp);
 
   bool& valid_simplex_lp = simplex_status.valid;
@@ -423,7 +423,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   if (return_status == HighsStatus::kError) return return_status;
   highs_model_object.scale_.col_.resize(lp.numCol_);
   if (valid_simplex_lp) {
-    HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+    HighsLp& simplex_lp = ekk_instance.lp_;
     return_status =
         deleteLpCols(options.log_options, simplex_lp, index_collection);
     if (return_status != HighsStatus::kOk) return return_status;
@@ -462,7 +462,7 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   // Query: should simplex_status.valid be simplex_status.valid_?
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
-  if (simplex_status.valid) setOrientation(ekk_instance.simplex_lp_);
+  if (simplex_status.valid) setOrientation(ekk_instance.lp_);
   assert(&lp_ == &lp);
 
   bool& valid_simplex_lp = simplex_status.valid;
@@ -493,7 +493,7 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
 
   highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {
-    HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+    HighsLp& simplex_lp = ekk_instance.lp_;
     return_status =
         deleteLpRows(options.log_options, simplex_lp, index_collection);
     if (return_status != HighsStatus::kOk) return return_status;
@@ -770,7 +770,7 @@ HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
       highs_model_object.scaled_model_status_;
   // Set any Simplex LP objective sense
   if (highs_model_object.ekk_instance_.status_.valid)
-    highs_model_object.ekk_instance_.simplex_lp_.sense_ = Xsense;
+    highs_model_object.ekk_instance_.lp_.sense_ = Xsense;
   return HighsStatus::kOk;
 }
 
@@ -842,7 +842,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
 
   if (ekk_instance.status_.valid) {
     // Also change the simplex LP's costs
-    HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+    HighsLp& simplex_lp = ekk_instance.lp_;
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
     call_status = changeLpCosts(options.log_options, simplex_lp,
@@ -905,7 +905,7 @@ HighsStatus Highs::changeColBoundsInterface(
 
   if (ekk_instance.status_.valid) {
     // Also change the simplex LP's column bounds
-    HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+    HighsLp& simplex_lp = ekk_instance.lp_;
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
     call_status =
@@ -979,7 +979,7 @@ HighsStatus Highs::changeRowBoundsInterface(
 
   if (ekk_instance.status_.valid) {
     // Also change the simplex LP's row bounds
-    HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+    HighsLp& simplex_lp = ekk_instance.lp_;
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
     call_status =
@@ -1018,7 +1018,7 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   setOrientation(lp_);
   if (highs_model_object.ekk_instance_.status_.valid)
-    setOrientation(highs_model_object.ekk_instance_.simplex_lp_);
+    setOrientation(highs_model_object.ekk_instance_.lp_);
   assert(&lp_ == &lp);
   if (Xrow < 0 || Xrow >= lp.numRow_) return HighsStatus::kError;
   if (Xcol < 0 || Xcol >= lp.numCol_) return HighsStatus::kError;
@@ -1031,7 +1031,7 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   }
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   if (valid_simplex_lp) {
-    HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+    HighsLp& simplex_lp = ekk_instance.lp_;
     HighsScale& scale = highs_model_object.scale_;
     double scaledXnewValue = XnewValue * scale.row_[Xrow] * scale.col_[Xcol];
     changeLpMatrixCoefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
@@ -1055,12 +1055,12 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   HighsLp& lp = lp_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
-  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
-  if (simplex_status.valid) setOrientation(ekk_instance.simplex_lp_);
+  if (simplex_status.valid) setOrientation(ekk_instance.lp_);
   assert(&lp_ == &lp);
 
   return_status = interpretCallStatus(
@@ -1109,12 +1109,12 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   HighsLp& lp = lp_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
-  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
-  if (simplex_status.valid) setOrientation(ekk_instance.simplex_lp_);
+  if (simplex_status.valid) setOrientation(ekk_instance.lp_);
   assert(&lp_ == &lp);
 
   return_status = interpretCallStatus(
@@ -1319,7 +1319,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
 
   // Ensure that the LP (and any simplex LP) is column-wise
   setOrientation(lp_);
-  if (simplex_status.valid) setOrientation(ekk_instance.simplex_lp_);
+  if (simplex_status.valid) setOrientation(ekk_instance.lp_);
   // If the simplex LP isn't initialised, scale and pass the current LP
   if (!simplex_status.initialised) scaleAndPassLpToEkk(highs_model_object);
 
@@ -1354,7 +1354,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
 
   HighsInt numRow = lp.numRow_;
   HighsInt numCol = lp.numCol_;
-  assert(numRow == ekk_instance.simplex_lp_.numRow_);
+  assert(numRow == ekk_instance.lp_.numRow_);
   for (HighsInt row = 0; row < numRow; row++) {
     HighsInt var = ekk_instance.basis_.basicIndex_[row];
     if (var < numCol) {
@@ -1376,8 +1376,8 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HVector solve_vector;
-  HighsInt numRow = ekk_instance.simplex_lp_.numRow_;
-  HighsInt numCol = ekk_instance.simplex_lp_.numCol_;
+  HighsInt numRow = ekk_instance.lp_.numRow_;
+  HighsInt numCol = ekk_instance.lp_.numCol_;
   HighsScale& scale = highs_model_object.scale_;
   // Set up solve vector with suitably scaled RHS
   solve_vector.setup(numRow);

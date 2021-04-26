@@ -103,17 +103,15 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   double new_dual_feasibility_tolerance;
   //  HighsSolutionParams solution_;
   getUnscaledInfeasibilitiesAndNewTolerances(
-      ekk_instance.options_, ekk_instance.simplex_lp_,
-      ekk_instance.model_status_, ekk_instance.basis_,
-      ekk_instance.info_, highs_model_object.scale_, solution_params,
-      new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+      ekk_instance.options_, ekk_instance.lp_, ekk_instance.model_status_,
+      ekk_instance.basis_, ekk_instance.info_, highs_model_object.scale_,
+      solution_params, new_primal_feasibility_tolerance,
+      new_dual_feasibility_tolerance);
 
   // Handle non-optimal status
   if (ekk_instance.model_status_ != HighsModelStatus::kOptimal) {
-    highs_model_object.unscaled_model_status_ =
-        ekk_instance.model_status_;
-    return_status =
-        highsStatusFromHighsModelStatus(ekk_instance.model_status_);
+    highs_model_object.unscaled_model_status_ = ekk_instance.model_status_;
+    return_status = highsStatusFromHighsModelStatus(ekk_instance.model_status_);
     return return_status;
   }
 

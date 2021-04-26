@@ -75,8 +75,8 @@ HighsStatus getRangingData(HighsRanging& ranging,
 
   // Local copies of scalars
 
-  const HighsInt numRow = ekk_instance.simplex_lp_.numRow_;
-  const HighsInt numCol = ekk_instance.simplex_lp_.numCol_;
+  const HighsInt numRow = ekk_instance.lp_.numRow_;
+  const HighsInt numCol = ekk_instance.lp_.numCol_;
   const HighsInt numTotal = numCol + numRow;
   const double H_TT = 1e-13;
   const double H_INF = kHighsInf;

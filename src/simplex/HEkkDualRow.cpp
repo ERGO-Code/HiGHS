@@ -49,8 +49,7 @@ void HEkkDualRow::setupSlice(HighsInt size) {
 
 void HEkkDualRow::setup() {
   // Setup common vectors
-  const HighsInt numTot =
-      ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+  const HighsInt numTot = ekk_instance_.lp_.numCol_ + ekk_instance_.lp_.numRow_;
   setupSlice(numTot);
   workNumTotPermutation = &ekk_instance_.info_.numTotPermutation_[0];
 
@@ -310,8 +309,7 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
-      HighsInt num_var =
-          ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+      HighsInt num_var = ekk_instance_.lp_.numCol_ + ekk_instance_.lp_.numRow_;
       debugDualChuzcFailQuad0(ekk_instance_.options_, workCount, workData,
                               num_var, workDual, selectTheta, remainTheta,
                               true);
@@ -326,8 +324,7 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
   }
   // Check that at least one group has been identified
   if ((HighsInt)workGroup.size() <= 1) {
-    HighsInt num_var =
-        ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+    HighsInt num_var = ekk_instance_.lp_.numCol_ + ekk_instance_.lp_.numRow_;
     debugDualChuzcFailQuad1(ekk_instance_.options_, workCount, workData,
                             num_var, workDual, selectTheta, true);
     return false;
@@ -363,8 +360,7 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
   alt_workGroup.clear();
   alt_workGroup.push_back(alt_workCount);
   if (heap_num_en <= 0) {
-    HighsInt num_var =
-        ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+    HighsInt num_var = ekk_instance_.lp_.numCol_ + ekk_instance_.lp_.numRow_;
     // No entries in heap = > failure
     debugDualChuzcFailHeap(ekk_instance_.options_, alt_workCount,
                            original_workData, num_var, workDual, selectTheta,
@@ -473,9 +469,8 @@ void HEkkDualRow::updateDual(double theta) {
 
 void HEkkDualRow::createFreelist() {
   freeList.clear();
-  for (HighsInt i = 0; i < ekk_instance_.simplex_lp_.numCol_ +
-                               ekk_instance_.simplex_lp_.numRow_;
-       i++) {
+  for (HighsInt i = 0;
+       i < ekk_instance_.lp_.numCol_ + ekk_instance_.lp_.numRow_; i++) {
     if (ekk_instance_.basis_.nonbasicFlag_[i] &&
         highs_isInfinity(-ekk_instance_.info_.workLower_[i]) &&
         highs_isInfinity(ekk_instance_.info_.workUpper_[i]))
@@ -494,7 +489,7 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       HighsInt iCol = *sit;
-      assert(iCol < ekk_instance_.simplex_lp_.numCol_);
+      assert(iCol < ekk_instance_.lp_.numCol_);
       double alpha = ekk_instance_.matrix_.compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * move_out > 0)
@@ -510,7 +505,7 @@ void HEkkDualRow::deleteFreemove() {
     set<HighsInt>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       HighsInt iCol = *sit;
-      assert(iCol < ekk_instance_.simplex_lp_.numCol_);
+      assert(iCol < ekk_instance_.lp_.numCol_);
       ekk_instance_.basis_.nonbasicMove_[iCol] = 0;
     }
   }

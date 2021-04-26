@@ -11,7 +11,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkk.h
- * @brief Phase 2 primal simplex solver for HiGHS
+ * @brief Primal simplex solver for HiGHS
  */
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
@@ -37,7 +37,7 @@ class HEkk {
   HighsTimer& timer_;
   HighsSimplexAnalysis analysis_;
 
-  HighsStatus passLp(const HighsLp& lp);
+  HighsStatus passLp(const HighsLp& pass_lp);
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
@@ -80,7 +80,7 @@ class HEkk {
   HighsInt return_primal_solution_status;
   HighsInt return_dual_solution_status;
 
-  HighsLp simplex_lp_;
+  HighsLp lp_;
   HighsSimplexStatus status_;
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;

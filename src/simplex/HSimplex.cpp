@@ -280,7 +280,7 @@ void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
 #ifdef HIGHSDEV
       printf(" LpAction::kDelRowsBasisOk\n");
 #endif
-      //      info.simplex_lp_ = true;
+      //      info.lp_ = true;
       break;
     case LpAction::kScaledCol:
 #ifdef HIGHSDEV
@@ -540,7 +540,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 // SCALING
 
 // void initialiseScale(HighsModelObject& highs_model_object) {
-// initialiseScale(highs_model_object.simplex_lp_, highs_model_object.scale_);}
+// initialiseScale(highs_model_object.lp_, highs_model_object.scale_);}
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale) {
   scale.is_scaled_ = false;
@@ -1100,13 +1100,13 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
 /*
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                HighsInt phase) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsLp& lp = highs_model_object.lp_;
   HighsSimplexInfo& info = highs_model_object.info_;
   HighsSimplexStatus& status =
       highs_model_object.status_;
 
   info.dual_objective_value = 0;
-  const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const HighsInt numTot = lp.numCol_ + lp.numRow_;
   for (HighsInt i = 0; i < numTot; i++) {
     if (highs_model_object.basis_.nonbasicFlag_[i]) {
       const double term =
@@ -1125,42 +1125,42 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
     // shift is subtracted. Hence the shift is added according to the
     // sign implied by sense_
     info.dual_objective_value +=
-        ((HighsInt)simplex_lp.sense_) * simplex_lp.offset_;
+        ((HighsInt)lp.sense_) * lp.offset_;
   }
   // Now have dual objective value
   status.has_dual_objective_value = true;
 }
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsLp& lp = highs_model_object.lp_;
   HighsSimplexInfo& info = highs_model_object.info_;
   SimplexBasis& basis = highs_model_object.basis_;
   HighsSimplexStatus& status =
       highs_model_object.status_;
   info.primal_objective_value = 0;
-  for (HighsInt iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     HighsInt iVar = basis.basicIndex_[iRow];
-    if (iVar < simplex_lp.numCol_) {
+    if (iVar < lp.numCol_) {
       info.primal_objective_value +=
-          info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
+          info.baseValue_[iRow] * lp.colCost_[iVar];
     }
   }
-  for (HighsInt iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     if (basis.nonbasicFlag_[iCol])
       info.primal_objective_value +=
-          info.workValue_[iCol] * simplex_lp.colCost_[iCol];
+          info.workValue_[iCol] * lp.colCost_[iCol];
   }
   info.primal_objective_value *= highs_model_object.scale_.cost_;
   // Objective value calculation is done using primal values and
   // original costs so offset is vanilla
-  info.primal_objective_value += simplex_lp.offset_;
+  info.primal_objective_value += lp.offset_;
   // Now have primal objective value
   status.has_primal_objective_value = true;
 }
 
 double computeBasisCondition(const HighsModelObject& highs_model_object) {
-  HighsInt solver_num_row = highs_model_object.simplex_lp_.numRow_;
-  HighsInt solver_num_col = highs_model_object.simplex_lp_.numCol_;
+  HighsInt solver_num_row = highs_model_object.lp_.numRow_;
+  HighsInt solver_num_col = highs_model_object.lp_.numCol_;
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
   vector<double> bs_cond_z;
@@ -1169,8 +1169,8 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   row_ep.setup(solver_num_row);
 
   const HFactor& factor = highs_model_object.factor_;
-  const HighsInt* Astart = &highs_model_object.simplex_lp_.Astart_[0];
-  const double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
+  const HighsInt* Astart = &highs_model_object.lp_.Astart_[0];
+  const double* Avalue = &highs_model_object.lp_.Avalue_[0];
   // Compute the Hager condition number estimate for the basis matrix
   const double NoDensity = 1;
   bs_cond_x.resize(solver_num_row);

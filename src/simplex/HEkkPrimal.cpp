@@ -165,8 +165,7 @@ HighsStatus HEkkPrimal::solve() {
              solve_phase == kSolvePhaseUnknown ||
              solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
-             ekk_instance_.model_status_ ==
-                 HighsModelStatus::kUnbounded);
+             ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else {
@@ -187,9 +186,8 @@ HighsStatus HEkkPrimal::solve() {
     }
     if (solve_phase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
-      assert(
-          ekk_instance_.model_status_ == HighsModelStatus::kInfeasible ||
-          ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
+      assert(ekk_instance_.model_status_ == HighsModelStatus::kInfeasible ||
+             ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       break;
     }
     if (solve_phase == kSolvePhaseCleanup) {
@@ -219,8 +217,8 @@ HighsStatus HEkkPrimal::solve() {
 void HEkkPrimal::initialiseInstance() {
   analysis = &ekk_instance_.analysis_;
 
-  num_col = ekk_instance_.simplex_lp_.numCol_;
-  num_row = ekk_instance_.simplex_lp_.numRow_;
+  num_col = ekk_instance_.lp_.numCol_;
+  num_row = ekk_instance_.lp_.numRow_;
   num_tot = num_col + num_row;
 
   // Setup local vectors
@@ -546,11 +544,10 @@ void HEkkPrimal::rebuild() {
     // Don't have the matrix either row-wise or col-wise, so
     // reinitialise it
     assert(info.backtracking_);
-    HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+    HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-                                &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
-                                &simplex_lp.Avalue_[0],
+    ekk_instance_.matrix_.setup(lp.numCol_, lp.numRow_, &lp.Astart_[0],
+                                &lp.Aindex_[0], &lp.Avalue_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
@@ -1915,11 +1912,11 @@ void HEkkPrimal::basicFeasibilityChangeUpdateDual() {
 
 void HEkkPrimal::basicFeasibilityChangeBtran() {
   // Performs BTRAN on col_basic_feasibility_change. Make sure that
-  // col_basic_feasibility_change.count is large (>simplex_lp_.numRow_ to be
+  // col_basic_feasibility_change.count is large (>lp_.numRow_ to be
   // sure) rather than 0 if the indices of the RHS (and true value of
   // col_basic_feasibility_change.count) isn't known.
   analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
-  const HighsInt solver_num_row = ekk_instance_.simplex_lp_.numRow_;
+  const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(
         ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
@@ -2246,16 +2243,16 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
 
 void HEkkPrimal::adjustPerturbedEquationOut() {
   if (!ekk_instance_.info_.bounds_perturbed) return;
-  const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+  const HighsLp& lp = ekk_instance_.lp_;
   HighsSimplexInfo& info = ekk_instance_.info_;
   double lp_lower;
   double lp_upper;
   if (variable_out < num_col) {
-    lp_lower = simplex_lp.colLower_[variable_out];
-    lp_upper = simplex_lp.colUpper_[variable_out];
+    lp_lower = lp.colLower_[variable_out];
+    lp_upper = lp.colUpper_[variable_out];
   } else {
-    lp_lower = -simplex_lp.rowUpper_[variable_out - num_col];
-    lp_upper = -simplex_lp.rowLower_[variable_out - num_col];
+    lp_lower = -lp.rowUpper_[variable_out - num_col];
+    lp_upper = -lp.rowLower_[variable_out - num_col];
   }
   if (lp_lower < lp_upper) return;
   // Leaving variable is fixed

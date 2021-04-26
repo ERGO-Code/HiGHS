@@ -445,7 +445,7 @@ HighsStatus Highs::run() {
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   setOrientation(lp_);
   if (hmos_[0].ekk_instance_.status_.valid)
-    setOrientation(hmos_[0].ekk_instance_.simplex_lp_);
+    setOrientation(hmos_[0].ekk_instance_.lp_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
