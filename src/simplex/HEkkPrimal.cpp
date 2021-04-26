@@ -276,6 +276,10 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
+  ekk_instance_.exit_algorithm = SimplexAlgorithm::kPrimal;
+  HighsInt exit_solve_phase = kSolvePhaseUnknown;
+  HighsInt return_primal_solution_status = kHighsPrimalDualStatusUnknown;
+  HighsInt return_dual_solution_status = kHighsPrimalDualStatusUnknown;
 
   rebuild_reason = kRebuildReasonNo;
 

@@ -59,10 +59,6 @@ class HEkkDual {
 
  public:
   /**
-   * @brief Set solver options from simplex options
-   */
-  void options();
-  /**
    * @brief Initialise a dual simplex instance
    *
    * Copy dimensions and pointers to matrix, factor and solver-related

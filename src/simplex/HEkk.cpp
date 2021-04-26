@@ -103,9 +103,6 @@ HighsStatus HEkk::solve() {
     algorithm = "dual";
     reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_,
                                  true);
-    HEkkDual dual_solver(*this);
-    dual_solver.options();
-    //
     // Solve, depending on the particular strategy
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(
@@ -123,6 +120,7 @@ HighsStatus HEkk::solve() {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Using EKK dual simplex solver - serial\n");
     }
+    HEkkDual dual_solver(*this);
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
@@ -180,7 +178,6 @@ HighsStatus HEkk::cleanup() {
     info_.dual_simplex_cost_perturbation_multiplier = 0;
     info_.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
     HEkkDual dual_solver(*this);
-    dual_solver.options();
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
@@ -2106,7 +2103,6 @@ bool HEkk::bailoutOnTimeIterations() {
 }
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status,
-                                  const SimplexAlgorithm algorithm,
                                   const HighsInt solve_phase) {
   // Always called before returning from HEkkPrimal/Dual::solve()
   if (solve_bailout_) {
@@ -2117,8 +2113,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status,
            scaled_model_status_ ==
                HighsModelStatus::kReachedDualObjectiveValueUpperBound);
   }
-  // Chaeck that returnFromSolve has not already been solved: it
-  // should be called exactly once per solve
+  // Check that returnFromSolve has not already been called: it should
+  // be called exactly once per solve
   assert(!called_return_from_solve_);
   called_return_from_solve_ = true;
   info_.valid_backtracking_basis_ = false;

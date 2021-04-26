@@ -341,26 +341,6 @@ HighsStatus HEkkDual::solve() {
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
 }
 
-void HEkkDual::options() {
-  // Set solver options from simplex options
-
-  const HighsSimplexInfo& info = ekk_instance_.info_;
-
-  interpretDualEdgeWeightStrategy(info.dual_edge_weight_strategy);
-
-  // Copy values of simplex solver options to dual simplex options
-  primal_feasibility_tolerance =
-      ekk_instance_.options_.primal_feasibility_tolerance;
-  dual_feasibility_tolerance =
-      ekk_instance_.options_.dual_feasibility_tolerance;
-  dual_objective_value_upper_bound =
-      ekk_instance_.options_.dual_objective_value_upper_bound;
-  //  perturb_costs = info.perturb_costs;
-  //  iterationLimit = info.iterationLimit;
-
-  // Set values of internal options
-}
-
 void HEkkDual::initialiseInstance() {
   // Copy size, matrix and factor
 
@@ -505,10 +485,24 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
 }
 
 void HEkkDual::initialiseSolve() {
+  // Copy values of simplex solver options to dual simplex options
+  primal_feasibility_tolerance =
+      ekk_instance_.options_.primal_feasibility_tolerance;
+  dual_feasibility_tolerance =
+      ekk_instance_.options_.dual_feasibility_tolerance;
+  dual_objective_value_upper_bound =
+      ekk_instance_.options_.dual_objective_value_upper_bound;
+
+  interpretDualEdgeWeightStrategy(ekk_instance_.info_.dual_edge_weight_strategy);
+
   // Initialise model and run status values
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
+  ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
+  HighsInt exit_solve_phase = kSolvePhaseUnknown;
+  HighsInt return_primal_solution_status = kHighsPrimalDualStatusUnknown;
+  HighsInt return_dual_solution_status = kHighsPrimalDualStatusUnknown;
 
   rebuild_reason = kRebuildReasonNo;
 
