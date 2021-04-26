@@ -111,11 +111,11 @@ HighsStatus HEkkDual::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
 
-  // Check whether the time/iteration limit has been First
+  // Check whether the time/iteration limit has been reached. First
   // point at which a non-error return can occur
   if (ekk_instance_.bailoutOnTimeIterations()) {
     // Not leaving in a discernable solve phase
-    exit_solve_phase = kSolvePhaseExit;
+    ekk_instance_.exit_solve_phase = kSolvePhaseExit;
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
   }
 
