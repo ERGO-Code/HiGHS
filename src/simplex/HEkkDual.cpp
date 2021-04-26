@@ -217,22 +217,22 @@ HighsStatus HEkkDual::solve() {
   // Determine the number of dual infeasibilities, and hence the solve phase
   ekk_instance_.computeDualInfeasibleWithFlips();
   dualInfeasCount = info.num_dual_infeasibility;
-  solvePhase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
-  if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solvePhase,
+  solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
+  if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
                          ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   //
   // The major solving loop
   //
-  while (solvePhase) {
+  while (solve_phase) {
     HighsInt it0 = ekk_instance_.iteration_count_;
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
     // computed from scratch in rebuild() isn't checked against the
     // the updated value
     status.has_dual_objective_value = false;
-    if (solvePhase == kSolvePhaseUnknown) {
+    if (solve_phase == kSolvePhaseUnknown) {
       // Reset the phase 2 bounds so that true number of dual
       // infeasibilities can be determined
       ekk_instance_.initialiseBound(SimplexAlgorithm::kDual,
@@ -241,24 +241,24 @@ HighsStatus HEkkDual::solve() {
       // Determine the number of dual infeasibilities, and hence the solve phase
       ekk_instance_.computeDualInfeasibleWithFlips();
       dualInfeasCount = info.num_dual_infeasibility;
-      solvePhase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
+      solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
       if (info.backtracking_) {
         // Backtracking, so set the bounds and primal values
-        ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solvePhase);
+        ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
         ekk_instance_.initialiseNonbasicValueAndMove();
         // Can now forget that we might have been backtracking
         info.backtracking_ = false;
       }
     }
-    assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2);
-    if (solvePhase == kSolvePhase1) {
+    assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2);
+    if (solve_phase == kSolvePhase1) {
       // Phase 1
       analysis->simplexTimerStart(SimplexDualPhase1Clock);
       solvePhase1();
       analysis->simplexTimerStop(SimplexDualPhase1Clock);
       info.dual_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
-    } else if (solvePhase == kSolvePhase2) {
+    } else if (solve_phase == kSolvePhase2) {
       // Phase 2
       analysis->simplexTimerStart(SimplexDualPhase2Clock);
       solvePhase2();
@@ -273,37 +273,37 @@ HighsStatus HEkkDual::solve() {
     // Return if bailing out from solve
     if (ekk_instance_.solve_bailout_)
       return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
-    // Can have all possible cases of solvePhase
-    assert(solvePhase >= kSolvePhaseMin && solvePhase <= kSolvePhaseMax);
+    // Can have all possible cases of solve_phase
+    assert(solve_phase >= kSolvePhaseMin && solve_phase <= kSolvePhaseMax);
     // Look for scenarios when the major solving loop ends
-    if (solvePhase == kSolvePhaseError) {
+    if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
       assert(scaled_model_status == HighsModelStatus::kSolveError);
       return ekk_instance_.returnFromSolve(HighsStatus::kError);
     }
-    if (solvePhase == kSolvePhaseExit) {
+    if (solve_phase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
       assert(scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
              scaled_model_status == HighsModelStatus::kInfeasible);
       break;
     }
-    if (solvePhase == kSolvePhaseCleanup) {
+    if (solve_phase == kSolvePhaseCleanup) {
       // Dual infeasibilities after phase 2 for a problem not known to
       // be dual infeasible. Primal feasible with dual infeasibilities
       // so use primal simplex to clean up
       break;
     }
-    // If solvePhase == kSolvePhaseOptimal == 0 then major solving
-    // loop ends naturally since solvePhase is false
+    // If solve_phase == kSolvePhaseOptimal == 0 then major solving
+    // loop ends naturally since solve_phase is false
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
   // Should only have these cases
-  assert(solvePhase == kSolvePhaseExit || solvePhase == kSolvePhaseUnknown ||
-         solvePhase == kSolvePhaseOptimal || solvePhase == kSolvePhaseCleanup);
-  // Can't be solvePhase == kSolvePhase1 since this requires simplex
+  assert(solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseUnknown ||
+         solve_phase == kSolvePhaseOptimal || solve_phase == kSolvePhaseCleanup);
+  // Can't be solve_phase == kSolvePhase1 since this requires simplex
   // solver to have continued after identifying dual infeasiblility.
-  if (solvePhase == kSolvePhaseCleanup) {
+  if (solve_phase == kSolvePhaseCleanup) {
     ekk_instance_.computePrimalObjectiveValue();
     if (options.dual_simplex_cleanup) {
       // Use primal to clean up. This almost always yields optimality,
@@ -345,7 +345,7 @@ HighsStatus HEkkDual::solve() {
          scaled_model_status == HighsModelStatus::kInfeasible ||
          scaled_model_status == HighsModelStatus::kUnbounded ||
          scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible);
-  if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solvePhase,
+  if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
                          ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
@@ -517,7 +517,7 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
 }
 
 void HEkkDual::solvePhase1() {
-  // Performs dual phase 1 iterations. Returns solvePhase with value
+  // Performs dual phase 1 iterations. Returns solve_phase with value
   //
   // kSolvePhaseError => Solver error
   //
@@ -542,16 +542,16 @@ void HEkkDual::solvePhase1() {
   status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
   rebuild_reason = kRebuildReasonNo;
-  // Use to set solvePhase = kSolvePhase1 and ekk_instance_.solve_bailout_ =
+  // Use to set solve_phase = kSolvePhase1 and ekk_instance_.solve_bailout_ =
   // false so they are set if solvePhase1() is called directly - but it never is
-  assert(solvePhase == kSolvePhase1);
+  assert(solve_phase == kSolvePhase1);
   assert(!ekk_instance_.solve_bailout_);
   if (ekk_instance_.bailoutOnTimeIterations()) return;
   // Report the phase start
   highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
               "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
-  ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solvePhase);
+  ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
   ekk_instance_.initialiseNonbasicValueAndMove();
 
   // If there's no backtracking basis, save the initial basis in case of
@@ -564,11 +564,11 @@ void HEkkDual::solvePhase1() {
     analysis->simplexTimerStart(IterateDualRebuildClock);
     rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
-    if (solvePhase == kSolvePhaseError) {
+    if (solve_phase == kSolvePhaseError) {
       scaled_model_status = HighsModelStatus::kSolveError;
       return;
     }
-    if (solvePhase == kSolvePhaseUnknown) {
+    if (solve_phase == kSolvePhaseUnknown) {
       // If backtracking, may change phase, so drop out
       analysis->simplexTimerStop(IterateClock);
       return;
@@ -577,7 +577,7 @@ void HEkkDual::solvePhase1() {
     for (;;) {
       if (debugDualSimplex("Before iteration") ==
           HighsDebugStatus::kLogicalError) {
-        solvePhase = kSolvePhaseError;
+        solve_phase = kSolvePhaseError;
         return;
       }
       switch (info.simplex_strategy) {
@@ -628,7 +628,7 @@ void HEkkDual::solvePhase1() {
       //
       // OK if costs are perturbed, since they remain perturbed in phase 2 until
       // the final clean-up
-      solvePhase = kSolvePhase2;
+      solve_phase = kSolvePhase2;
     } else {
       // A negative dual objective value at an optimal solution of
       // phase 1 means that there are dual infeasibilities. If the
@@ -643,7 +643,7 @@ void HEkkDual::solvePhase1() {
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
-    solvePhase = kSolvePhaseError;
+    solve_phase = kSolvePhaseError;
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     scaled_model_status = HighsModelStatus::kSolveError;
@@ -659,11 +659,11 @@ void HEkkDual::solvePhase1() {
       if (dualInfeasCount == 0) {
         // No dual infeasibilities and (since unbounded) at least zero
         // phase 1 objective so go to phase 2
-        solvePhase = kSolvePhase2;
+        solve_phase = kSolvePhase2;
       }
     } else {
       // Report strange issues
-      solvePhase = kSolvePhaseError;
+      solve_phase = kSolvePhaseError;
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       scaled_model_status = HighsModelStatus::kSolveError;
@@ -683,19 +683,19 @@ void HEkkDual::solvePhase1() {
   if (!no_debug) {
     if (debugDualSimplex("End of solvePhase1") ==
         HighsDebugStatus::kLogicalError) {
-      solvePhase = kSolvePhaseError;
+      solve_phase = kSolvePhaseError;
       return;
     }
   }
 
-  assert(solvePhase == kSolvePhase1 || solvePhase == kSolvePhase2 ||
-         solvePhase == kSolvePhaseExit);
-  if (solvePhase == kSolvePhase2 || solvePhase == kSolvePhaseExit) {
+  assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
+         solve_phase == kSolvePhaseExit);
+  if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {
     // Moving to phase 2 or exiting, so make sure that the simplex
     // bounds and nonbasic value/move correspond to the LP
     ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
     ekk_instance_.initialiseNonbasicValueAndMove();
-    if (solvePhase == kSolvePhase2) {
+    if (solve_phase == kSolvePhase2) {
       // Moving to phase 2 so comment if cost perturbation is not permitted
       //
       // It may have been prevented to avoid cleanup-perturbation loops
@@ -708,7 +708,7 @@ void HEkkDual::solvePhase1() {
 }
 
 void HEkkDual::solvePhase2() {
-  // Performs dual phase 2 iterations. Returns solvePhase with value
+  // Performs dual phase 2 iterations. Returns solve_phase with value
   //
   // kSolvePhaseError => Solver error
   //
@@ -741,9 +741,9 @@ void HEkkDual::solvePhase2() {
   status.has_dual_objective_value = false;
   // Set rebuild_reason so that it's assigned when first tested
   rebuild_reason = kRebuildReasonNo;
-  // Set solvePhase = kSolvePhase2 and ekk_instance_.solve_bailout_ = false so
+  // Set solve_phase = kSolvePhase2 and ekk_instance_.solve_bailout_ = false so
   // they are set if solvePhase2() is called directly
-  solvePhase = kSolvePhase2;
+  solve_phase = kSolvePhase2;
   ekk_instance_.solve_bailout_ = false;
   if (ekk_instance_.bailoutOnTimeIterations()) return;
   // Report the phase start
@@ -764,11 +764,11 @@ void HEkkDual::solvePhase2() {
     analysis->simplexTimerStart(IterateDualRebuildClock);
     rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
-    if (solvePhase == kSolvePhaseError) {
+    if (solve_phase == kSolvePhaseError) {
       scaled_model_status = HighsModelStatus::kSolveError;
       return;
     }
-    if (solvePhase == kSolvePhaseUnknown) {
+    if (solve_phase == kSolvePhaseUnknown) {
       // If backtracking, may change phase, so drop out
       analysis->simplexTimerStop(IterateClock);
       return;
@@ -781,7 +781,7 @@ void HEkkDual::solvePhase2() {
       // Performs one iteration in case kSimplexStrategyDualPlain:
       if (debugDualSimplex("Before iteration") ==
           HighsDebugStatus::kLogicalError) {
-        solvePhase = kSolvePhaseError;
+        solve_phase = kSolvePhaseError;
         return;
       }
       switch (info.simplex_strategy) {
@@ -821,7 +821,7 @@ void HEkkDual::solvePhase2() {
     // unboundedness from primal infeasibility
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
                 "dual-phase-2-found-free\n");
-    solvePhase = kSolvePhase1;
+    solve_phase = kSolvePhase1;
   } else if (row_out == -1) {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
@@ -831,10 +831,10 @@ void HEkkDual::solvePhase2() {
     if (dualInfeasCount > 0) {
       // There are dual infeasiblities, so consider performing primal
       // simplex iterations to get dual feasibility
-      solvePhase = kSolvePhaseCleanup;
+      solve_phase = kSolvePhaseCleanup;
     } else {
       // There are no dual infeasiblities so optimal!
-      solvePhase = kSolvePhaseOptimal;
+      solve_phase = kSolvePhaseOptimal;
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
                   "problem-optimal\n");
       scaled_model_status = HighsModelStatus::kOptimal;
@@ -842,7 +842,7 @@ void HEkkDual::solvePhase2() {
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
-    solvePhase = kSolvePhaseError;
+    solve_phase = kSolvePhaseError;
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                 "dual-phase-2-not-solved\n");
     scaled_model_status = HighsModelStatus::kSolveError;
@@ -856,7 +856,7 @@ void HEkkDual::solvePhase2() {
     } else {
       // The costs have not been perturbed, so dual unbounded---and
       // hence primal infeasible.
-      solvePhase = kSolvePhaseExit;
+      solve_phase = kSolvePhaseExit;
       // Dual feasible and dual unbounded, so save dual ray
       saveDualRay();
       // Model status should be unset?
@@ -867,10 +867,10 @@ void HEkkDual::solvePhase2() {
     }
   }
   // Before primal simplex clean-up there will be dual infeasibilities
-  if (solvePhase != kSolvePhaseCleanup) {
+  if (solve_phase != kSolvePhaseCleanup) {
     if (debugDualSimplex("End of solvePhase2") ==
         HighsDebugStatus::kLogicalError) {
-      solvePhase = kSolvePhaseError;
+      solve_phase = kSolvePhaseError;
       return;
     }
   }
@@ -893,8 +893,8 @@ void HEkkDual::rebuild() {
     // happens: Current basis is nonsingular; Current basis is
     // singular and last nonsingular basis is refactorized as
     // nonsingular - or found singular. Latter is code failure.
-    if (!ekk_instance_.getNonsingularInverse(solvePhase)) {
-      solvePhase = kSolvePhaseError;
+    if (!ekk_instance_.getNonsingularInverse(solve_phase)) {
+      solve_phase = kSolvePhaseError;
       return;
     }
   }
@@ -922,7 +922,7 @@ void HEkkDual::rebuild() {
   const bool check_updated_objective_value = status.has_dual_objective_value;
   double previous_dual_objective_value;
   if (check_updated_objective_value) {
-    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
+    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "Before computeDual");
     previous_dual_objective_value = info.updated_dual_objective_value;
   } else {
@@ -934,7 +934,7 @@ void HEkkDual::rebuild() {
 
   if (info.backtracking_) {
     // If backtracking, may change phase, so drop out
-    solvePhase = kSolvePhaseUnknown;
+    solve_phase = kSolvePhaseUnknown;
     return;
   }
   analysis->simplexTimerStart(CorrectDualClock);
@@ -943,7 +943,7 @@ void HEkkDual::rebuild() {
 
   if (!correct_dual_ok) {
     // Bail out if dual infeasibilities cannot be corrected
-    solvePhase = kSolvePhaseError;
+    solve_phase = kSolvePhaseError;
     return;
   }
 
@@ -958,7 +958,7 @@ void HEkkDual::rebuild() {
 
   // Dual objective section
   //
-  ekk_instance_.computeDualObjectiveValue(solvePhase);
+  ekk_instance_.computeDualObjectiveValue(solve_phase);
 
   if (check_updated_objective_value) {
     // Apply the objective value correction due to computing duals
@@ -975,7 +975,7 @@ void HEkkDual::rebuild() {
   if (!info.run_quiet) {
     // Report the primal infeasiblities
     ekk_instance_.computeSimplexPrimalInfeasible();
-    if (solvePhase == kSolvePhase1) {
+    if (solve_phase == kSolvePhase1) {
       // In phase 1, report the simplex LP dual infeasiblities
       ekk_instance_.computeSimplexLpDualInfeasible();
     } else {
@@ -1006,9 +1006,9 @@ void HEkkDual::cleanup() {
   // Remove perturbation and don't permit further perturbation
   ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhaseUnknown);
   info.allow_cost_perturbation = false;
-  // No solvePhase term in initialiseBound is surely an omission -
+  // No solve_phase term in initialiseBound is surely an omission -
   // when cleanup called in phase 1
-  ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solvePhase);
+  ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
   // Possibly take a copy of the original duals before recomputing them
   vector<double> original_workDual;
   if (ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap)
@@ -1022,7 +1022,7 @@ void HEkkDual::cleanup() {
   dualInfeasCount = ekk_instance_.info_.num_dual_infeasibility;
 
   // Compute the dual objective value
-  ekk_instance_.computeDualObjectiveValue(solvePhase);
+  ekk_instance_.computeDualObjectiveValue(solve_phase);
   // Now that there's a new dual_objective_value, reset the updated
   // value
   info.updated_dual_objective_value = info.dual_objective_value;
@@ -1032,7 +1032,7 @@ void HEkkDual::cleanup() {
     ekk_instance_.computeSimplexPrimalInfeasible();
     // In phase 1, report the simplex LP dual infeasiblities
     // In phase 2, report the simplex dual infeasiblities (known)
-    if (solvePhase == kSolvePhase1)
+    if (solve_phase == kSolvePhase1)
       ekk_instance_.computeSimplexLpDualInfeasible();
     reportRebuild();
   }
@@ -1077,7 +1077,7 @@ void HEkkDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "Before
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  updatePrimal");
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
   analysis->simplexTimerStart(IteratePrimalClock);
@@ -1085,7 +1085,7 @@ void HEkkDual::iterate() {
   analysis->simplexTimerStop(IteratePrimalClock);
   // After primal update in dual simplex the primal objective value is not known
   ekk_instance_.status_.has_primal_objective_value = false;
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "After
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  updatePrimal");
 
   // Update the basis representation
@@ -1147,7 +1147,7 @@ void HEkkDual::iterationAnalysisData() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->simplex_strategy = info.simplex_strategy;
   analysis->edge_weight_mode = dual_edge_weight_mode;
-  analysis->solve_phase = solvePhase;
+  analysis->solve_phase = solve_phase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;
   analysis->devex_iteration_count = num_devex_iterations;
   analysis->pivotal_row_index = row_out;
@@ -1168,11 +1168,11 @@ void HEkkDual::iterationAnalysisData() {
   // Since maximization is achieved by minimizing the LP with negated
   // costs, in phase 2 the dual objective value is negated, so flip
   // its sign according to the LP sense
-  if (solvePhase == kSolvePhase2)
+  if (solve_phase == kSolvePhase2)
     analysis->objective_value *= (HighsInt)ekk_instance_.simplex_lp_.sense_;
   analysis->num_primal_infeasibility = info.num_primal_infeasibility;
   analysis->sum_primal_infeasibility = info.sum_primal_infeasibility;
-  if (solvePhase == kSolvePhase1) {
+  if (solve_phase == kSolvePhase1) {
     analysis->num_dual_infeasibility =
         analysis->num_dual_phase_1_lp_dual_infeasibility;
     analysis->sum_dual_infeasibility =
@@ -1630,10 +1630,10 @@ void HEkkDual::updateFtranBFRT() {
     analysis->simplexTimerStart(FtranBfrtClock);
   }
 
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "Before
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  update_flip");
   dualRow.updateFlip(&col_BFRT);
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "After
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  update_flip");
 
   if (col_BFRT.count) {
@@ -1706,14 +1706,14 @@ void HEkkDual::updateDual() {
   // Update - dual (shift and back)
   if (theta_dual == 0) {
     // Little to do if theta_dual is zero
-    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
+    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "Before shift_cost");
     shiftCost(variable_in, -workDual[variable_in]);
-    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
+    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "After shift_cost");
   } else {
     // Update the whole vector of dual values
-    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
+    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "Before calling dualRow.updateDual");
     dualRow.updateDual(theta_dual);
     if (ekk_instance_.info_.simplex_strategy != kSimplexStrategyDualPlain &&
@@ -1722,7 +1722,7 @@ void HEkkDual::updateDual() {
       for (HighsInt i = 0; i < slice_num; i++)
         slice_dualRow[i].updateDual(theta_dual);
     }
-    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase,
+    //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase,
     //    "After calling dualRow.updateDual");
   }
   // Identify the changes in the dual objective
@@ -1754,10 +1754,10 @@ void HEkkDual::updateDual() {
   workDual[variable_in] = 0;
   workDual[variable_out] = -theta_dual;
 
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "Before
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  shift_back");
   shiftBack(variable_out);
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "After
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  shift_back");
 }
 
@@ -1844,10 +1844,10 @@ void HEkkDual::updatePivots() {
   if (rebuild_reason) return;
   //
   // Update the sets of indices of basic and nonbasic variables
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "Before
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "Before
   //  update_pivots");
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
-  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "After
+  //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solve_phase, "After
   //  update_pivots");
   //
   ekk_instance_.iteration_count_++;
@@ -1951,7 +1951,7 @@ void HEkkDual::assessPhase1Optimality() {
   // Should only be called when optimal in phase 1 (row_out == -1)
   // with nonzero dual activity, and after a fresh rebuild - so
   // "final" decisions can be made.
-  assert(solvePhase == kSolvePhase1);
+  assert(solve_phase == kSolvePhase1);
   assert(row_out == -1);
   assert(ekk_instance_.info_.dual_objective_value);
   assert(ekk_instance_.status_.has_fresh_rebuild);
@@ -1993,17 +1993,17 @@ void HEkkDual::assessPhase1Optimality() {
     assessPhase1OptimalityUnperturbed();
   }
   if (dualInfeasCount > 0) {
-    // Must still be solvePhase = kSolvePhase1 since dual
+    // Must still be solve_phase = kSolvePhase1 since dual
     // infeasibilities with respect to phase 1 bounds mean that primal
     // values must change, so primal feasibility is unknown
-    assert(solvePhase == kSolvePhase1);
+    assert(solve_phase == kSolvePhase1);
   } else {
     // Optimal in dual phase 1, so either dual feasible wrt Phase 2
     // bounds and going to phase 2, or identified dual infeasibility and exiting
-    assert(solvePhase == kSolvePhase2 ||
-           (solvePhase == kSolvePhaseExit &&
+    assert(solve_phase == kSolvePhase2 ||
+           (solve_phase == kSolvePhaseExit &&
             scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible));
-    if (solvePhase == kSolvePhase2) {
+    if (solve_phase == kSolvePhase2) {
       // Reset the duals, if necessary shifting costs of free variables
       // so that their duals are zero
       exitPhase1ResetDuals();
@@ -2025,7 +2025,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
                   "LP is dual feasible wrt Phase 2 bounds after removing cost "
                   "perturbations "
                   "so go to phase 2\n");
-      solvePhase = kSolvePhase2;
+      solve_phase = kSolvePhase2;
     } else {
       // Nonzero dual objective value
       HighsLogType log_type;
@@ -2052,7 +2052,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
         // the scaled model status
         reportOnPossibleLpDualInfeasibility();
         scaled_model_status = HighsModelStatus::kUnboundedOrInfeasible;
-        solvePhase = kSolvePhaseExit;
+        solve_phase = kSolvePhaseExit;
       }
     }
   } else {
@@ -2061,7 +2061,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
                 "removing cost perturbations "
                 "so return to phase 1\n",
                 dualInfeasCount);
-    assert(solvePhase == kSolvePhase1);
+    assert(solve_phase == kSolvePhase1);
   }
 }
 
@@ -2120,7 +2120,7 @@ void HEkkDual::exitPhase1ResetDuals() {
 void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexAnalysis& analysis = ekk_instance_.analysis_;
-  assert(solvePhase == kSolvePhase1);
+  assert(solve_phase == kSolvePhase1);
   assert(row_out == -1);
   //  assert(info.dual_objective_value < 0);
   assert(!info.costs_perturbed);
@@ -2176,7 +2176,7 @@ bool HEkkDual::bailoutOnDualObjective() {
            ekk_instance_.scaled_model_status_ ==
                HighsModelStatus::kReachedDualObjectiveValueUpperBound);
   } else if (ekk_instance_.simplex_lp_.sense_ == ObjSense::kMinimize &&
-             solvePhase == kSolvePhase2) {
+             solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >
         ekk_instance_.options_.dual_objective_value_upper_bound)
       ekk_instance_.solve_bailout_ = reachedExactDualObjectiveValueUpperBound();
@@ -2310,7 +2310,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
 HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
                                             const bool initialise) {
   HighsDebugStatus return_status = ekkDebugSimplex(
-      message, ekk_instance_, algorithm, solvePhase, initialise);
+      message, ekk_instance_, algorithm, solve_phase, initialise);
   if (return_status == HighsDebugStatus::kLogicalError) return return_status;
   if (initialise) return return_status;
   return HighsDebugStatus::kOk;

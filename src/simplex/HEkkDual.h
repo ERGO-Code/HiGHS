@@ -417,7 +417,7 @@ class HEkkDual {
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
 
-  HighsInt solvePhase;
+  HighsInt solve_phase;
   HighsInt rebuild_reason;
 
   HVector row_ep;

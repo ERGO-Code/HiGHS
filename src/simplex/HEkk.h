@@ -112,9 +112,9 @@ class HEkk {
   void initialiseMatrix();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
-                      const HighsInt solvePhase, const bool perturb = false);
+                      const HighsInt solve_phase, const bool perturb = false);
   void initialiseBound(const SimplexAlgorithm algorithm,
-                       const HighsInt solvePhase, const bool perturb = false);
+                       const HighsInt solve_phase, const bool perturb = false);
   void initialiseLpColCost();
   void initialiseLpRowCost();
   void initialiseLpColBound();
@@ -162,7 +162,7 @@ class HEkk {
   bool bailoutOnTimeIterations();
   HighsStatus returnFromSolve(const HighsStatus return_status,
 			      const SimplexAlgorithm algorithm = SimplexAlgorithm::kDual,
-			      const HighsInt solvePhase = kSolvePhase2);
+			      const HighsInt solve_phase = kSolvePhase2);
 
   double computeBasisCondition();
   void initialiseAnalysis();

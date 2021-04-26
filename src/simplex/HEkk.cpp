@@ -1043,7 +1043,7 @@ void HEkk::initialiseLpRowBound() {
 }
 
 void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
-                          const HighsInt solvePhase, const bool perturb) {
+                          const HighsInt solve_phase, const bool perturb) {
   // Copy the cost
   initialiseLpColCost();
   initialiseLpRowCost();
@@ -2107,7 +2107,7 @@ bool HEkk::bailoutOnTimeIterations() {
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status,
 				  const SimplexAlgorithm algorithm,
-				  const HighsInt solvePhase) {
+				  const HighsInt solve_phase) {
   // Always called before returning from HEkkPrimal/Dual::solve()
   if (solve_bailout_) {
     // If bailout has already been decided: check that it's for one of

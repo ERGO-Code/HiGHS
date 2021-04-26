@@ -106,7 +106,7 @@ class HEkkPrimal {
   HighsInt num_col;
   HighsInt num_row;
   HighsInt num_tot;
-  HighsInt solvePhase;
+  HighsInt solve_phase;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   HighsInt rebuild_reason;
