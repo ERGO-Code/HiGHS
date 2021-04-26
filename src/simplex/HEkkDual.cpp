@@ -47,21 +47,8 @@ using std::flush;
 using std::runtime_error;
 
 HighsStatus HEkkDual::solve() {
-  assert(kSolvePhaseError == -3);
-  assert(kSolvePhaseExit == -2);
-  assert(kSolvePhaseUnknown == -1);
-  assert(kSolvePhaseOptimal == 0);
-  assert(kSolvePhase1 == 1);
-  assert(kSolvePhase2 == 2);
-  assert(kSolvePhaseCleanup == 4);
-  HighsOptions& options = ekk_instance_.options_;
-  HighsSimplexInfo& info = ekk_instance_.info_;
-  HighsSimplexStatus& status = ekk_instance_.status_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
-  // Initialise model and run status values
-  scaled_model_status = HighsModelStatus::kNotset;
-  ekk_instance_.solve_bailout_ = false;
-  ekk_instance_.called_return_from_solve_ = false;
+  // Initialise control data for a particular solve
+  initialiseSolve();
 
   if (debugDualSimplex("Initialise", true) == HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
@@ -72,10 +59,10 @@ HighsStatus HEkkDual::solve() {
   if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
-  rebuild_reason = kRebuildReasonNo;
-
-  // Initialise working environment - now done in constructor
-  //  init(); initParallel();
+  HighsOptions& options = ekk_instance_.options_;
+  HighsSimplexInfo& info = ekk_instance_.info_;
+  HighsSimplexStatus& status = ekk_instance_.status_;
+  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
 
   bool dual_info_ok = dualInfoOk(ekk_instance_.simplex_lp_);
   if (!dual_info_ok) {
@@ -374,7 +361,7 @@ void HEkkDual::options() {
   // Set values of internal options
 }
 
-void HEkkDual::init() {
+void HEkkDual::initialiseInstance() {
   // Copy size, matrix and factor
 
   solver_num_col = ekk_instance_.simplex_lp_.numCol_;
@@ -409,7 +396,7 @@ void HEkkDual::init() {
   dualRHS.setup();
 }
 
-void HEkkDual::initParallel(HEkk& simplex) {
+void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
   // No need to call this with kSimplexStrategyDualPlain
   if (ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain) return;
 
@@ -515,6 +502,16 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
     slice_row_ap[i].setup(mycount);
     slice_dualRow[i].setupSlice(mycount);
   }
+}
+
+void HEkkDual::initialiseSolve() {
+  // Initialise model and run status values
+  ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
+  ekk_instance_.solve_bailout_ = false;
+  ekk_instance_.called_return_from_solve_ = false;
+
+  rebuild_reason = kRebuildReasonNo;
+
 }
 
 void HEkkDual::solvePhase1() {

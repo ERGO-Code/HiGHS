@@ -43,11 +43,11 @@ class HEkkDual {
  public:
   HEkkDual(HEkk& simplex)
       : ekk_instance_(simplex), dualRow(simplex), dualRHS(simplex) {
-    init();
+    initialiseInstance();
     dualRow.setup();
     dualRHS.setup();
     if (!(ekk_instance_.info_.simplex_strategy == kSimplexStrategyDualPlain))
-      initParallel(simplex);
+      initialiseInstanceParallel(simplex);
   }
 
   /**
@@ -70,14 +70,14 @@ class HEkkDual {
    * (columnDSE, columnBFRT, column, row_ep and row_ap), and buffers
    * for dualRow and dualRHS.
    */
-  void init();
+  void initialiseInstance();
 
   /**
    * @brief Initialise parallel aspects of a dual simplex instance
    *
    * Sets up data structures for SIP or PAMI
    */
-  void initParallel(HEkk& simplex);
+  void initialiseInstanceParallel(HEkk& simplex);
 
   /**
    * @brief Initialise matrix slices and slices of row_ap or dualRow for SIP or
@@ -90,6 +90,11 @@ class HEkkDual {
       const HighsInt init_sliced_num  //!< Ideal number of slices - true number
                                       //!< is modified in light of limits
   );
+
+  /**
+   * @brief Initialise a dual simplex solve
+   */
+  void initialiseSolve();
 
   /**
    * @brief Perform Phase 1 dual simplex iterations

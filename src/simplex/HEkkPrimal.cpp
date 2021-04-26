@@ -20,15 +20,19 @@
 #include "util/HighsSort.h"
 
 HighsStatus HEkkPrimal::solve() {
-  HighsOptions& options = ekk_instance_.options_;
-  HighsSimplexInfo& info = ekk_instance_.info_;
-  HighsSimplexStatus& status = ekk_instance_.status_;
+  // Initialise control data for a particular solve
+  initialiseSolve();
+
   // Assumes that the LP has a positive number of rows
   if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   // Check whether the time/iteration limit has been reached
   if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+
+  HighsOptions& options = ekk_instance_.options_;
+  HighsSimplexInfo& info = ekk_instance_.info_;
+  HighsSimplexStatus& status = ekk_instance_.status_;
 
   if (!status.has_invert) {
     highsLogUser(options.log_options, HighsLogType::kError,
@@ -213,26 +217,12 @@ HighsStatus HEkkPrimal::solve() {
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
 }
 
-void HEkkPrimal::initialise() {
+void HEkkPrimal::initialiseInstance() {
   analysis = &ekk_instance_.analysis_;
 
   num_col = ekk_instance_.simplex_lp_.numCol_;
   num_row = ekk_instance_.simplex_lp_.numRow_;
   num_tot = num_col + num_row;
-
-  // Copy values of simplex solver options to dual simplex options
-  primal_feasibility_tolerance =
-      ekk_instance_.options_.primal_feasibility_tolerance;
-  dual_feasibility_tolerance =
-      ekk_instance_.options_.dual_feasibility_tolerance;
-
-  rebuild_reason = kRebuildReasonNo;
-
-  ekk_instance_.status_.has_primal_objective_value = false;
-  ekk_instance_.status_.has_dual_objective_value = false;
-  ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
-  ekk_instance_.solve_bailout_ = false;
-  ekk_instance_.called_return_from_solve_ = false;
 
   // Setup local vectors
   col_aq.setup(num_row);
@@ -243,8 +233,6 @@ void HEkkPrimal::initialise() {
 
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
-
-  resetDevex();
 
   num_free_col = 0;
   for (HighsInt iCol = 0; iCol < num_tot; iCol++) {
@@ -273,6 +261,26 @@ void HEkkPrimal::initialise() {
                                   ekk_instance_.options_.output_flag,
                                   ekk_instance_.options_.log_file_stream,
                                   debug);
+}
+
+void HEkkPrimal::initialiseSolve() {
+  // Copy values of simplex solver options to dual simplex options
+  primal_feasibility_tolerance =
+      ekk_instance_.options_.primal_feasibility_tolerance;
+  dual_feasibility_tolerance =
+      ekk_instance_.options_.dual_feasibility_tolerance;
+
+  ekk_instance_.status_.has_primal_objective_value = false;
+  ekk_instance_.status_.has_dual_objective_value = false;
+
+  ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
+  ekk_instance_.solve_bailout_ = false;
+  ekk_instance_.called_return_from_solve_ = false;
+
+  rebuild_reason = kRebuildReasonNo;
+
+  resetDevex();
+
 }
 
 void HEkkPrimal::solvePhase1() {

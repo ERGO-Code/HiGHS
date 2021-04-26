@@ -31,14 +31,21 @@ const SimplexAlgorithm algorithm = SimplexAlgorithm::kPrimal;
 
 class HEkkPrimal {
  public:
-  HEkkPrimal(HEkk& simplex) : ekk_instance_(simplex) { initialise(); }
+  HEkkPrimal(HEkk& simplex) : ekk_instance_(simplex) { initialiseInstance(); }
   /**
    * @brief Solve a model instance
    */
   HighsStatus solve();
 
  private:
-  void initialise();
+  /**
+   * @brief Initialise a primal simplex instance
+   */
+  void initialiseInstance();
+  /**
+   * @brief Initialise a primal simplex solve
+   */
+  void initialiseSolve();
   void solvePhase1();
   void solvePhase2();
   void cleanup();
