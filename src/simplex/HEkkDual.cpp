@@ -501,6 +501,8 @@ void HEkkDual::initialiseSolve() {
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
+  ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
+  
   rebuild_reason = kRebuildReasonNo;
 
 }

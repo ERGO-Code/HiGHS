@@ -274,6 +274,8 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
+  ekk_instance_.exit_algorithm = SimplexAlgorithm::kPrimal;
+
   rebuild_reason = kRebuildReasonNo;
 
   resetDevex();
@@ -334,16 +336,18 @@ void HEkkPrimal::solvePhase1() {
     solve_phase = kSolvePhaseError;
     return;
   }
-  // Possible to have switched to phase 2 without any iterations - if
-  // LP with inconsistent bounds is being solved. Not that this should
-  // be allowed to happen! ToDo add inconsistent bounds check in run()
   if (solve_phase == kSolvePhase1) {
     // Determine whether primal infeasiblility has been identified
     if (variable_in < 0) {
       // Optimal in phase 1, so should have primal infeasiblilities
       assert(info.num_primal_infeasibility > 0);
-      ekk_instance_.scaled_model_status_ = HighsModelStatus::kInfeasible;
-      solve_phase = kSolvePhaseExit;
+      if (ekk_instance_.info_.bounds_perturbed) {
+	// Remove any bound perturbations and return to phase 1
+	cleanup();
+      } else {
+	ekk_instance_.scaled_model_status_ = HighsModelStatus::kInfeasible;
+	solve_phase = kSolvePhaseExit;
+      }
     }
   }
   if (solve_phase == kSolvePhase2) {
