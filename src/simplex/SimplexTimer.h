@@ -26,8 +26,8 @@ enum iClockSimplex {
   SimplexPrimalPhase2Clock,  //!< Total time for primal simplex phase 2
   Group1Clock,               //!< Group for SIP
 
-  IterateClock,               //!< Top level timing of HDual::solve_phase1() and
-                              //!< HDual::solve_phase2()
+  IterateClock,               //!< Top level timing of HDual::solvePhase1() and
+                              //!< HDual::solvePhase2()
   IterateDualRebuildClock,    //!< Second level timing of dual rebuild()
   IteratePrimalRebuildClock,  //!< Second level timing of primal rebuild()
   IterateChuzrClock,          //!< Second level timing of CHUZR

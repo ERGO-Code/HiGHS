@@ -122,7 +122,7 @@ class HEkkDual {
    * All the methods it calls have as their first line "if (rebuild_reason)
    * return;", where rebuild_reason is, for example, set to 1 when CHUZR
    * finds no candidate. This causes a break from the inner loop of
-   * solve_phase% and, hence, a call to rebuild().
+   * solvePhase% and, hence, a call to rebuild().
    */
   void iterate();
 
