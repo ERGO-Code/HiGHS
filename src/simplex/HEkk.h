@@ -165,9 +165,7 @@ class HEkk {
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
   bool bailoutOnTimeIterations();
-  HighsStatus returnFromSolve(
-      const HighsStatus return_status,
-      const HighsInt solve_phase = kSolvePhase2);
+  HighsStatus returnFromSolve(const HighsStatus return_status);
 
   double computeBasisCondition();
   void initialiseAnalysis();

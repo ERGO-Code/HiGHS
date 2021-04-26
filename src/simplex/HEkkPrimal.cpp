@@ -26,9 +26,6 @@ HighsStatus HEkkPrimal::solve() {
   // Assumes that the LP has a positive number of rows
   if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  // Check whether the time/iteration limit has been reached
-  if (ekk_instance_.bailoutOnTimeIterations())
-    return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& info = ekk_instance_.info_;
@@ -76,6 +73,16 @@ HighsStatus HEkkPrimal::solve() {
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
   }
+
+  // Check whether the time/iteration limit has been reached. First
+  // point at which a non-error return can occur
+  if (ekk_instance_.bailoutOnTimeIterations()) {
+    // Not leaving in a discernable solve phase
+    exit_solve_phase = kSolvePhaseExit;
+    return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+  }
+
+  // Now to do some iterations!
   HighsInt num_primal_infeasibility =
       ekk_instance_.info_.num_primal_infeasibility;
   solve_phase = num_primal_infeasibility > 0 ? kSolvePhase1 : kSolvePhase2;
@@ -86,11 +93,6 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
 
   // The major solving loop
-  // Initialise the iteration analysis. Necessary for strategy, but
-  // much is for development and only switched on with HiGHSDEV
-  // ToDo Move to simplex and adapt so it's OK for primal and dual
-  //  iterationAnalysisInitialise();
-
   localReportIter(true);
   correctPrimal(true);
   while (solve_phase) {
@@ -278,9 +280,6 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.called_return_from_solve_ = false;
   ekk_instance_.exit_algorithm = SimplexAlgorithm::kPrimal;
   HighsInt exit_solve_phase = kSolvePhaseUnknown;
-  HighsInt return_primal_solution_status = kHighsPrimalDualStatusUnknown;
-  HighsInt return_dual_solution_status = kHighsPrimalDualStatusUnknown;
-
   rebuild_reason = kRebuildReasonNo;
 
   resetDevex();

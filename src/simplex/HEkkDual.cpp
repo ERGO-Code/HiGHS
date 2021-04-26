@@ -55,9 +55,6 @@ HighsStatus HEkkDual::solve() {
   // Assumes that the LP has a positive number of rows
   if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
-  // Check whether the time/iteration limit has been reached
-  if (ekk_instance_.bailoutOnTimeIterations())
-    return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
 
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& info = ekk_instance_.info_;
@@ -110,9 +107,18 @@ HighsStatus HEkkDual::solve() {
   assert(status.has_invert);
   if (!status.has_invert) {
     highsLogUser(options.log_options, HighsLogType::kError,
-                 "HPrimalDual:: Should enter solve with INVERT\n");
+                 "HDual:: Should enter solve with INVERT\n");
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
+
+  // Check whether the time/iteration limit has been First
+  // point at which a non-error return can occur
+  if (ekk_instance_.bailoutOnTimeIterations()) {
+    // Not leaving in a discernable solve phase
+    exit_solve_phase = kSolvePhaseExit;
+    return ekk_instance_.returnFromSolve(HighsStatus::kWarning);
+  }
+
   // Consider initialising edge weights
   //
   // NB workEdWt is assigned and initialised to 1s in
@@ -501,9 +507,6 @@ void HEkkDual::initialiseSolve() {
   ekk_instance_.called_return_from_solve_ = false;
   ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
   HighsInt exit_solve_phase = kSolvePhaseUnknown;
-  HighsInt return_primal_solution_status = kHighsPrimalDualStatusUnknown;
-  HighsInt return_dual_solution_status = kHighsPrimalDualStatusUnknown;
-
   rebuild_reason = kRebuildReasonNo;
 
 }

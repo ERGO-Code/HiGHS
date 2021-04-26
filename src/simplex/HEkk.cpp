@@ -2102,8 +2102,7 @@ bool HEkk::bailoutOnTimeIterations() {
   return solve_bailout_;
 }
 
-HighsStatus HEkk::returnFromSolve(const HighsStatus return_status,
-                                  const HighsInt solve_phase) {
+HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   // Always called before returning from HEkkPrimal/Dual::solve()
   if (solve_bailout_) {
     // If bailout has already been decided: check that it's for one of
@@ -2118,6 +2117,14 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status,
   assert(!called_return_from_solve_);
   called_return_from_solve_ = true;
   info_.valid_backtracking_basis_ = false;
+  
+  // Initialise the status of the primal and dual solutions
+  return_primal_solution_status = kHighsPrimalDualStatusUnknown;
+  return_dual_solution_status = kHighsPrimalDualStatusUnknown;
+  // Nothing more is known about the solve after an error return
+  if (return_status == HighsStatus::kError) return return_status;
+  
+  // Check that exit_solve_phase has been set
   return return_status;
 }
 
