@@ -83,7 +83,7 @@ class HEkk {
   HighsLp simplex_lp_;
   HighsSimplexStatus status_;
   HighsSimplexInfo info_;
-  HighsModelStatus scaled_model_status_;
+  HighsModelStatus model_status_;
   SimplexBasis basis_;
   HighsRandom random_;
 

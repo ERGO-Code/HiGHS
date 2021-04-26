@@ -85,7 +85,7 @@ HighsStatus HEkkPrimal::solve() {
   solve_phase = num_primal_infeasibility > 0 ? kSolvePhase1 : kSolvePhase2;
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
-                         ekk_instance_.scaled_model_status_) ==
+                         ekk_instance_.model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
 
@@ -126,7 +126,7 @@ HighsStatus HEkkPrimal::solve() {
       // solve_phase = kSolvePhaseUnknown if backtracking
       //
       // solve_phase = kSolvePhaseExit if primal infeasiblilty is
-      // detected, in which case scaled_model_status_ =
+      // detected, in which case model_status_ =
       // HighsModelStatus::kInfeasible is set
       //
       // solve_phase = kSolvePhaseError is set if an error occurs
@@ -155,7 +155,7 @@ HighsStatus HEkkPrimal::solve() {
       // solve_phase = kSolvePhaseUnknown if backtracking
       //
       // solve_phase = kSolvePhaseExit if primal unboundedness is
-      // detected, in which case scaled_model_status_ =
+      // detected, in which case model_status_ =
       // HighsModelStatus::kUnbounded is set
       //
       // solve_phase = kSolvePhaseError is set if an error occurs
@@ -165,13 +165,13 @@ HighsStatus HEkkPrimal::solve() {
              solve_phase == kSolvePhaseUnknown ||
              solve_phase == kSolvePhaseExit || solve_phase == kSolvePhaseError);
       assert(solve_phase != kSolvePhaseExit ||
-             ekk_instance_.scaled_model_status_ ==
+             ekk_instance_.model_status_ ==
                  HighsModelStatus::kUnbounded);
       info.primal_phase2_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else {
       // Should only be kSolvePhase1 or kSolvePhase2
-      ekk_instance_.scaled_model_status_ = HighsModelStatus::kSolveError;
+      ekk_instance_.model_status_ = HighsModelStatus::kSolveError;
       return ekk_instance_.returnFromSolve(HighsStatus::kError);
     }
     // Return if bailing out from solve
@@ -182,14 +182,14 @@ HighsStatus HEkkPrimal::solve() {
     // Look for scenarios when the major solving loop ends
     if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
-      ekk_instance_.scaled_model_status_ = HighsModelStatus::kSolveError;
+      ekk_instance_.model_status_ = HighsModelStatus::kSolveError;
       return ekk_instance_.returnFromSolve(HighsStatus::kError);
     }
     if (solve_phase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
       assert(
-          ekk_instance_.scaled_model_status_ == HighsModelStatus::kInfeasible ||
-          ekk_instance_.scaled_model_status_ == HighsModelStatus::kUnbounded);
+          ekk_instance_.model_status_ == HighsModelStatus::kInfeasible ||
+          ekk_instance_.model_status_ == HighsModelStatus::kUnbounded);
       break;
     }
     if (solve_phase == kSolvePhaseCleanup) {
@@ -208,9 +208,9 @@ HighsStatus HEkkPrimal::solve() {
          solve_phase == kSolvePhaseOptimal ||  // solve_phase == kSolvePhase1 ||
          solve_phase == kSolvePhaseCleanup);
   if (solve_phase == kSolvePhaseOptimal)
-    ekk_instance_.scaled_model_status_ = HighsModelStatus::kOptimal;
+    ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
-                         ekk_instance_.scaled_model_status_) ==
+                         ekk_instance_.model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
@@ -272,7 +272,7 @@ void HEkkPrimal::initialiseSolve() {
   ekk_instance_.status_.has_primal_objective_value = false;
   ekk_instance_.status_.has_dual_objective_value = false;
 
-  ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
+  ekk_instance_.model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
   ekk_instance_.exit_algorithm = SimplexAlgorithm::kPrimal;
@@ -345,7 +345,7 @@ void HEkkPrimal::solvePhase1() {
         // Remove any bound perturbations and return to phase 1
         cleanup();
       } else {
-        ekk_instance_.scaled_model_status_ = HighsModelStatus::kInfeasible;
+        ekk_instance_.model_status_ = HighsModelStatus::kInfeasible;
         solve_phase = kSolvePhaseExit;
       }
     }
@@ -363,7 +363,7 @@ void HEkkPrimal::solvePhase1() {
 void HEkkPrimal::solvePhase2() {
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexStatus& status = ekk_instance_.status_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  HighsModelStatus& model_status = ekk_instance_.model_status_;
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
   // computed from scratch in build() isn't checked against the the
@@ -433,7 +433,7 @@ void HEkkPrimal::solvePhase2() {
       solve_phase = kSolvePhaseOptimal;
       highsLogDev(options.log_options, HighsLogType::kDetailed,
                   "problem-optimal\n");
-      scaled_model_status = HighsModelStatus::kOptimal;
+      model_status = HighsModelStatus::kOptimal;
       ekk_instance_.computeDualObjectiveValue();  // Why?
     }
   } else {
@@ -454,10 +454,10 @@ void HEkkPrimal::solvePhase2() {
       // Primal unbounded, so save primal ray
       savePrimalRay();
       // Model status should be unset
-      assert(scaled_model_status == HighsModelStatus::kNotset);
+      assert(model_status == HighsModelStatus::kNotset);
       highsLogDev(options.log_options, HighsLogType::kInfo,
                   "problem-primal-unbounded\n");
-      scaled_model_status = HighsModelStatus::kUnbounded;
+      model_status = HighsModelStatus::kUnbounded;
     }
   }
 }

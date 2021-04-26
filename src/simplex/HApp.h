@@ -89,7 +89,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 
   // Copy solution data into the HMO
   HighsSolutionParams& solution_params = highs_model_object.solution_params_;
-  highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
+  highs_model_object.scaled_model_status_ = ekk_instance.model_status_;
   solution_params.objective_function_value =
       ekk_instance.info_.primal_objective_value;
   highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
@@ -104,22 +104,22 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //  HighsSolutionParams solution_;
   getUnscaledInfeasibilitiesAndNewTolerances(
       ekk_instance.options_, ekk_instance.simplex_lp_,
-      ekk_instance.scaled_model_status_, ekk_instance.basis_,
+      ekk_instance.model_status_, ekk_instance.basis_,
       ekk_instance.info_, highs_model_object.scale_, solution_params,
       new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
 
   // Handle non-optimal status
-  if (ekk_instance.scaled_model_status_ != HighsModelStatus::kOptimal) {
+  if (ekk_instance.model_status_ != HighsModelStatus::kOptimal) {
     highs_model_object.unscaled_model_status_ =
-        ekk_instance.scaled_model_status_;
+        ekk_instance.model_status_;
     return_status =
-        highsStatusFromHighsModelStatus(ekk_instance.scaled_model_status_);
+        highsStatusFromHighsModelStatus(ekk_instance.model_status_);
     return return_status;
   }
 
   // Now interpret the status of the unscaled solution when the scaled
   // LP is solved to optimailty
-  assert(ekk_instance.scaled_model_status_ == HighsModelStatus::kOptimal);
+  assert(ekk_instance.model_status_ == HighsModelStatus::kOptimal);
 
   HighsInt num_unscaled_primal_infeasibility =
       solution_params.num_primal_infeasibility;
@@ -149,7 +149,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
                  num_unscaled_dual_infeasibility,
                  solution_params.max_dual_infeasibility,
                  solution_params.sum_dual_infeasibility);
-    if (ekk_instance.scaled_model_status_ == HighsModelStatus::kOptimal)
+    if (ekk_instance.model_status_ == HighsModelStatus::kOptimal)
       highsLogUser(highs_model_object.options_.log_options, HighsLogType::kInfo,
                    "Possibly re-solve with feasibility tolerances of %g "
                    "primal and %g dual\n",

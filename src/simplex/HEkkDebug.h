@@ -33,14 +33,14 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance);
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
                                     const HighsInt phase,
-                                    const HighsModelStatus scaled_model_status);
+                                    const HighsModelStatus model_status);
 
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
                           const SimplexAlgorithm algorithm,
                           const HighsInt phase,
-                          const HighsModelStatus scaled_model_status);
+                          const HighsModelStatus model_status);
 
 bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
                                            const HighsInt var);

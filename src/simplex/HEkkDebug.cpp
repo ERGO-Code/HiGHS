@@ -416,7 +416,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         " / %g / %g; Phase = %" HIGHSINT_FORMAT "; status = %s\n",
         message.c_str(), iteration_count, num_dual_infeasibility,
         max_dual_infeasibility, sum_dual_infeasibility, phase,
-        utilModelStatusToString(ekk_instance.scaled_model_status_).c_str());
+        utilModelStatusToString(ekk_instance.model_status_).c_str());
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::kLogicalError;
   }
@@ -727,7 +727,7 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
 
 HighsDebugStatus ekkDebugOkForSolve(
     const HEkk& ekk_instance, const SimplexAlgorithm algorithm,
-    const HighsInt phase, const HighsModelStatus scaled_model_status) {
+    const HighsInt phase, const HighsModelStatus model_status) {
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -775,7 +775,7 @@ HighsDebugStatus ekkDebugOkForSolve(
     return HighsDebugStatus::kLogicalError;
   // Check work cost, lower, upper and range
   if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase,
-                            scaled_model_status))
+                            model_status))
     return HighsDebugStatus::kLogicalError;
   const HighsInt numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   // Check nonbasic move against work cost, lower, upper and range
@@ -794,7 +794,7 @@ HighsDebugStatus ekkDebugOkForSolve(
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
                           const SimplexAlgorithm algorithm,
                           const HighsInt phase,
-                          const HighsModelStatus scaled_model_status) {
+                          const HighsModelStatus model_status) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& info = ekk_instance.info_;
   const HighsOptions& options = ekk_instance.options_;
@@ -873,7 +873,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
   // Don't check costs against the LP, when using primal simplex in
   // primal phase 1, if the LP is primal infeasible, or if the costs
   // have been perturbed
-  if (!(primal_phase1 || scaled_model_status == HighsModelStatus::kInfeasible ||
+  if (!(primal_phase1 || model_status == HighsModelStatus::kInfeasible ||
         info.costs_perturbed)) {
     for (HighsInt col = 0; col < simplex_lp.numCol_; ++col) {
       HighsInt var = col;

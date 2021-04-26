@@ -59,7 +59,7 @@ HighsStatus HEkkDual::solve() {
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  HighsModelStatus& model_status = ekk_instance_.model_status_;
 
   bool dual_info_ok = dualInfoOk(ekk_instance_.simplex_lp_);
   if (!dual_info_ok) {
@@ -209,7 +209,7 @@ HighsStatus HEkkDual::solve() {
   dualInfeasCount = info.num_dual_infeasibility;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
-                         ekk_instance_.scaled_model_status_) ==
+                         ekk_instance_.model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   //
@@ -257,7 +257,7 @@ HighsStatus HEkkDual::solve() {
           (ekk_instance_.iteration_count_ - it0);
     } else {
       // Should only be kSolvePhase1 or kSolvePhase2
-      scaled_model_status = HighsModelStatus::kSolveError;
+      model_status = HighsModelStatus::kSolveError;
       return ekk_instance_.returnFromSolve(HighsStatus::kError);
     }
     // Return if bailing out from solve
@@ -268,13 +268,13 @@ HighsStatus HEkkDual::solve() {
     // Look for scenarios when the major solving loop ends
     if (solve_phase == kSolvePhaseError) {
       // Solver error so return HighsStatus::kError
-      assert(scaled_model_status == HighsModelStatus::kSolveError);
+      assert(model_status == HighsModelStatus::kSolveError);
       return ekk_instance_.returnFromSolve(HighsStatus::kError);
     }
     if (solve_phase == kSolvePhaseExit) {
       // LP identified as not having an optimal solution
-      assert(scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
-             scaled_model_status == HighsModelStatus::kInfeasible);
+      assert(model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+             model_status == HighsModelStatus::kInfeasible);
       break;
     }
     if (solve_phase == kSolvePhaseCleanup) {
@@ -329,15 +329,15 @@ HighsStatus HEkkDual::solve() {
       // optimally. Optimality (unlikely) for the unscaled LP will
       // still be assessed honestly, so leave it to the user to decide
       // whether the solution can be accepted.
-      scaled_model_status = HighsModelStatus::kOptimal;
+      model_status = HighsModelStatus::kOptimal;
     }
   }
-  assert(scaled_model_status == HighsModelStatus::kOptimal ||
-         scaled_model_status == HighsModelStatus::kInfeasible ||
-         scaled_model_status == HighsModelStatus::kUnbounded ||
-         scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible);
+  assert(model_status == HighsModelStatus::kOptimal ||
+         model_status == HighsModelStatus::kInfeasible ||
+         model_status == HighsModelStatus::kUnbounded ||
+         model_status == HighsModelStatus::kUnboundedOrInfeasible);
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
-                         ekk_instance_.scaled_model_status_) ==
+                         ekk_instance_.model_status_) ==
       HighsDebugStatus::kLogicalError)
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   return ekk_instance_.returnFromSolve(HighsStatus::kOk);
@@ -499,7 +499,7 @@ void HEkkDual::initialiseSolve() {
       ekk_instance_.info_.dual_edge_weight_strategy);
 
   // Initialise model and run status values
-  ekk_instance_.scaled_model_status_ = HighsModelStatus::kNotset;
+  ekk_instance_.model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
   ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
@@ -524,7 +524,7 @@ void HEkkDual::solvePhase1() {
 
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  HighsModelStatus& model_status = ekk_instance_.model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
@@ -556,7 +556,7 @@ void HEkkDual::solvePhase1() {
     rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
     if (solve_phase == kSolvePhaseError) {
-      scaled_model_status = HighsModelStatus::kSolveError;
+      model_status = HighsModelStatus::kSolveError;
       return;
     }
     if (solve_phase == kSolvePhaseUnknown) {
@@ -637,7 +637,7 @@ void HEkkDual::solvePhase1() {
     solve_phase = kSolvePhaseError;
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
-    scaled_model_status = HighsModelStatus::kSolveError;
+    model_status = HighsModelStatus::kSolveError;
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
@@ -657,7 +657,7 @@ void HEkkDual::solvePhase1() {
       solve_phase = kSolvePhaseError;
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
-      scaled_model_status = HighsModelStatus::kSolveError;
+      model_status = HighsModelStatus::kSolveError;
     }
   }
 
@@ -670,7 +670,7 @@ void HEkkDual::solvePhase1() {
   // be set to dual infeasible until perturbations have been removed.
   //
   const bool no_debug = ekk_instance_.info_.num_dual_infeasibility > 0 &&
-                        scaled_model_status == HighsModelStatus::kNotset;
+                        model_status == HighsModelStatus::kNotset;
   if (!no_debug) {
     if (debugDualSimplex("End of solvePhase1") ==
         HighsDebugStatus::kLogicalError) {
@@ -721,7 +721,7 @@ void HEkkDual::solvePhase2() {
   // dual infeasibilities
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  HighsModelStatus& model_status = ekk_instance_.model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
@@ -754,7 +754,7 @@ void HEkkDual::solvePhase2() {
     rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
     if (solve_phase == kSolvePhaseError) {
-      scaled_model_status = HighsModelStatus::kSolveError;
+      model_status = HighsModelStatus::kSolveError;
       return;
     }
     if (solve_phase == kSolvePhaseUnknown) {
@@ -826,7 +826,7 @@ void HEkkDual::solvePhase2() {
       solve_phase = kSolvePhaseOptimal;
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
                   "problem-optimal\n");
-      scaled_model_status = HighsModelStatus::kOptimal;
+      model_status = HighsModelStatus::kOptimal;
     }
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     // chooseColumn has failed
@@ -834,7 +834,7 @@ void HEkkDual::solvePhase2() {
     solve_phase = kSolvePhaseError;
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                 "dual-phase-2-not-solved\n");
-    scaled_model_status = HighsModelStatus::kSolveError;
+    model_status = HighsModelStatus::kSolveError;
   } else if (variable_in == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
@@ -849,10 +849,10 @@ void HEkkDual::solvePhase2() {
       // Dual feasible and dual unbounded, so save dual ray
       saveDualRay();
       // Model status should be unset?
-      assert(scaled_model_status == HighsModelStatus::kNotset);
+      assert(model_status == HighsModelStatus::kNotset);
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                   "problem-primal-infeasible\n");
-      scaled_model_status = HighsModelStatus::kInfeasible;
+      model_status = HighsModelStatus::kInfeasible;
     }
   }
   // Before primal simplex clean-up there will be dual infeasibilities
@@ -1946,7 +1946,7 @@ void HEkkDual::assessPhase1Optimality() {
   assert(ekk_instance_.status_.has_fresh_rebuild);
 
   HighsSimplexInfo& info = ekk_instance_.info_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
   bool& costs_perturbed = info.costs_perturbed;
   //
@@ -1991,7 +1991,7 @@ void HEkkDual::assessPhase1Optimality() {
     // bounds and going to phase 2, or identified dual infeasibility and exiting
     assert(solve_phase == kSolvePhase2 ||
            (solve_phase == kSolvePhaseExit &&
-            scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible));
+            model_status == HighsModelStatus::kUnboundedOrInfeasible));
     if (solve_phase == kSolvePhase2) {
       // Reset the duals, if necessary shifting costs of free variables
       // so that their duals are zero
@@ -2002,7 +2002,7 @@ void HEkkDual::assessPhase1Optimality() {
 
 void HEkkDual::assessPhase1OptimalityUnperturbed() {
   HighsSimplexInfo& info = ekk_instance_.info_;
-  HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
+  HighsModelStatus& model_status = ekk_instance_.model_status_;
   double& dual_objective_value = info.dual_objective_value;
   assert(!info.costs_perturbed);
   if (dualInfeasCount == 0) {
@@ -2040,7 +2040,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
         // Indicate the conclusion of dual infeasiblility by setting
         // the scaled model status
         reportOnPossibleLpDualInfeasibility();
-        scaled_model_status = HighsModelStatus::kUnboundedOrInfeasible;
+        model_status = HighsModelStatus::kUnboundedOrInfeasible;
         solve_phase = kSolvePhaseExit;
       }
     }
@@ -2158,10 +2158,10 @@ bool HEkkDual::bailoutOnDualObjective() {
   if (ekk_instance_.solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(ekk_instance_.scaled_model_status_ == HighsModelStatus::kTimeLimit ||
-           ekk_instance_.scaled_model_status_ ==
+    assert(ekk_instance_.model_status_ == HighsModelStatus::kTimeLimit ||
+           ekk_instance_.model_status_ ==
                HighsModelStatus::kIterationLimit ||
-           ekk_instance_.scaled_model_status_ ==
+           ekk_instance_.model_status_ ==
                HighsModelStatus::kObjectiveCutoff);
   } else if (ekk_instance_.simplex_lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
@@ -2207,7 +2207,7 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
 #endif
       action = "Have DualUB bailout";
       reached_exact_dual_objective_value_upper_bound = true;
-      ekk_instance_.scaled_model_status_ = HighsModelStatus::kObjectiveCutoff;
+      ekk_instance_.model_status_ = HighsModelStatus::kObjectiveCutoff;
     } else {
       action = "No   DualUB bailout";
     }

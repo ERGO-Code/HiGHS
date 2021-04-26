@@ -66,7 +66,7 @@ HighsStatus HEkk::solve() {
   assert(status_.has_basis);
   assert(status_.has_invert);
   assert(status_.valid);
-  if (scaled_model_status_ == HighsModelStatus::kOptimal)
+  if (model_status_ == HighsModelStatus::kOptimal)
     return HighsStatus::kOk;
 
   HighsStatus return_status = HighsStatus::kOk;
@@ -131,7 +131,7 @@ HighsStatus HEkk::solve() {
     // Dual simplex solver may set model_status to be
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
     // be returned, so use primal simplex to distinguish
-    if (scaled_model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
+    if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
         !options_.allow_unbounded_or_infeasible) {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
@@ -149,9 +149,9 @@ HighsStatus HEkk::solve() {
               "Status %s\n",
               algorithm.c_str(), info_.num_primal_infeasibility,
               info_.num_dual_infeasibility,
-              utilModelStatusToString(scaled_model_status_).c_str());
-  // Can scaled_model_status_ = HighsModelStatus::kNotset be returned?
-  assert(scaled_model_status_ != HighsModelStatus::kNotset);
+              utilModelStatusToString(model_status_).c_str());
+  // Can model_status_ = HighsModelStatus::kNotset be returned?
+  assert(model_status_ != HighsModelStatus::kNotset);
 
   if (analysis_.analyse_simplex_time) {
     analysis_.simplexTimerStop(SimplexTotalClock);
@@ -510,9 +510,9 @@ HighsStatus HEkk::initialiseForSolve() {
 
   bool primal_feasible = info_.num_primal_infeasibility == 0;
   bool dual_feasible = info_.num_dual_infeasibility == 0;
-  scaled_model_status_ = HighsModelStatus::kNotset;
+  model_status_ = HighsModelStatus::kNotset;
   if (primal_feasible && dual_feasible)
-    scaled_model_status_ = HighsModelStatus::kOptimal;
+    model_status_ = HighsModelStatus::kOptimal;
   return HighsStatus::kOk;
 }
 
@@ -2086,15 +2086,15 @@ bool HEkk::bailoutOnTimeIterations() {
   if (solve_bailout_) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(scaled_model_status_ == HighsModelStatus::kTimeLimit ||
-           scaled_model_status_ == HighsModelStatus::kIterationLimit ||
-           scaled_model_status_ == HighsModelStatus::kObjectiveCutoff);
+    assert(model_status_ == HighsModelStatus::kTimeLimit ||
+           model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kObjectiveCutoff);
   } else if (timer_.readRunHighsClock() > options_.time_limit) {
     solve_bailout_ = true;
-    scaled_model_status_ = HighsModelStatus::kTimeLimit;
+    model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= options_.simplex_iteration_limit) {
     solve_bailout_ = true;
-    scaled_model_status_ = HighsModelStatus::kIterationLimit;
+    model_status_ = HighsModelStatus::kIterationLimit;
   }
   return solve_bailout_;
 }
@@ -2104,9 +2104,9 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   if (solve_bailout_) {
     // If bailout has already been decided: check that it's for one of
     // these reasons
-    assert(scaled_model_status_ == HighsModelStatus::kTimeLimit ||
-           scaled_model_status_ == HighsModelStatus::kIterationLimit ||
-           scaled_model_status_ == HighsModelStatus::kObjectiveCutoff);
+    assert(model_status_ == HighsModelStatus::kTimeLimit ||
+           model_status_ == HighsModelStatus::kIterationLimit ||
+           model_status_ == HighsModelStatus::kObjectiveCutoff);
   }
   // Check that returnFromSolve has not already been called: it should
   // be called exactly once per solve
@@ -2125,7 +2125,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
 
   // Determine a primal and possibly a dual solution, removing the
   // effects of perturbations and shifts
-  switch (scaled_model_status_) {
+  switch (model_status_) {
     case HighsModelStatus::kOptimal: {
       return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
       return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
@@ -2198,7 +2198,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     }
     default: {
       printf("What is default here? Status %s\n",
-             utilModelStatusToString(scaled_model_status_).c_str());
+             utilModelStatusToString(model_status_).c_str());
       break;
     }
   }
