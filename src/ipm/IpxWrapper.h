@@ -304,7 +304,7 @@ bool ipxStatusError(const bool status_error, const HighsOptions& options,
   return status_error;
 }
 
-bool illegalIpxSolvedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
+bool illegalIpxSolvedStatus(const ipx::Info& ipx_info, const HighsOptions& options) {
   bool found_illegal_status = false;
   //========
   // For IPX
@@ -387,7 +387,7 @@ bool illegalIpxSolvedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
   return found_illegal_status;
 }
 
-bool illegalIpxStoppedIpmStatus(ipx::Info& ipx_info,
+bool illegalIpxStoppedIpmStatus(const ipx::Info& ipx_info,
                                 const HighsOptions& options) {
   bool found_illegal_status = false;
   // Cannot stop and be optimal
@@ -427,7 +427,7 @@ bool illegalIpxStoppedIpmStatus(ipx::Info& ipx_info,
   return found_illegal_status;
 }
 
-bool illegalIpxStoppedCrossoverStatus(ipx::Info& ipx_info,
+bool illegalIpxStoppedCrossoverStatus(const ipx::Info& ipx_info,
                                       const HighsOptions& options) {
   bool found_illegal_status = false;
   // Cannot stop and be optimal
@@ -522,7 +522,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsIterationCounts& iteration_counts,
                        HighsModelStatus& model_status,
-                       HighsSolutionParams& solution_params) {
+                       HighsSolutionParams& solution_params,
+		       bool& has_solution) {
   imprecise_solution = false;
   resetModelStatusAndSolutionParams(model_status, solution_params, options);
   // Create the LpSolver instance
@@ -586,12 +587,17 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
                     &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 
-  // todo: handle load error
+  if (load_status) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  // Use IPX to solve the LP!
   ipx::Int solve_status = lps.Solve();
 
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
-  ipx::Info ipx_info = lps.GetInfo();
+  const ipx::Info ipx_info = lps.GetInfo();
   iteration_counts.ipm += (HighsInt)ipx_info.iter;
 
   iteration_counts.crossover += (HighsInt)ipx_info.updates_crossover;
@@ -623,10 +629,14 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // IPX_STATUS_stopped
   if (ipxStatusError(
           solve_status != IPX_STATUS_solved &&
-              solve_status != IPX_STATUS_stopped,
+          solve_status != IPX_STATUS_stopped,
           options, "solve_status should be solved or stopped here but value is",
           (int)solve_status))
     return HighsStatus::kError;
+
+  // Only error returns so far
+  // 
+  
 
   if (solve_status == IPX_STATUS_stopped) {
     //
@@ -665,7 +675,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::kWarning;
     } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
       reportIpmNoProgress(options, ipx_info);
-      return analyseIpmNoProgress(ipx_info, lps.GetParameters(), model_status);
+      HighsStatus ipm_no_progress_return_status = 
+	analyseIpmNoProgress(ipx_info, lps.GetParameters(), model_status);
+      return ipm_no_progress_return_status;
     }
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved
