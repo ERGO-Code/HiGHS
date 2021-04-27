@@ -120,7 +120,8 @@ enum class HighsModelStatus {
   kObjectiveCutoff,
   kTimeLimit,
   kIterationLimit,
-  kMax = kIterationLimit
+  kUnknown,
+  kMax = kUnknown
 };
 
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */

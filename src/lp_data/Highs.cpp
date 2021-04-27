@@ -2354,6 +2354,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       // Finally consider the warning returns
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kUnknown:
       clearSolution();
       clearBasis();
       clearInfo();

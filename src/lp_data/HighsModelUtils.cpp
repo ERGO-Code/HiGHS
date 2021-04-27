@@ -323,14 +323,17 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kModelEmpty:
       return "Model empty";
       break;
+    case HighsModelStatus::kOptimal:
+      return "Optimal";
+      break;
     case HighsModelStatus::kInfeasible:
       return "Infeasible";
       break;
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      return "Primal infeasible or unbounded";
+      break;
     case HighsModelStatus::kUnbounded:
       return "Unbounded";
-      break;
-    case HighsModelStatus::kOptimal:
-      return "Optimal";
       break;
     case HighsModelStatus::kObjectiveCutoff:
       return "Reached dual objective upper bound";
@@ -341,8 +344,8 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kIterationLimit:
       return "Reached iteration limit";
       break;
-    case HighsModelStatus::kUnboundedOrInfeasible:
-      return "Primal infeasible or unbounded";
+    case HighsModelStatus::kUnknown:
+      return "Unknown";
       break;
     default:
 #ifdef HiGHSDEV

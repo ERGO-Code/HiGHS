@@ -283,11 +283,25 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Solver);
       break;
 
+    case HighsModelStatus::kOptimal:
+      gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+      gmoSolveStatSet(gmo, gmoSolveStat_Normal);
+      writesol = true;
+      break;
+
     case HighsModelStatus::kInfeasible:
       // TODO is there an infeasible solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleGlobal :
       // gmoModelStat_InfeasibleNoSolution);
       gmoModelStatSet(gmo, gmoModelStat_InfeasibleNoSolution);
+      gmoSolveStatSet(gmo, gmoSolveStat_Normal);
+      break;
+
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      // TODO is there a (feasible) solution to write?
+      // gmoModelStatSet(gmo, havesol ? gmoModelStat_Unbounded :
+      // gmoModelStat_UnboundedNoSolution);
+      gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
@@ -297,12 +311,6 @@ static HighsInt processSolve(gamshighs_t* gh) {
       // gmoModelStat_UnboundedNoSolution);
       gmoModelStatSet(gmo, gmoModelStat_UnboundedNoSolution);
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-      break;
-
-    case HighsModelStatus::kOptimal:
-      gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
-      gmoSolveStatSet(gmo, gmoSolveStat_Normal);
-      writesol = true;
       break;
 
     case HighsModelStatus::kObjectiveCutoff:
@@ -322,6 +330,14 @@ static HighsInt processSolve(gamshighs_t* gh) {
       break;
 
     case HighsModelStatus::kIterationLimit:
+      // TODO is there an (feasible) solution to write?
+      // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
+      // gmoModelStat_NoSolutionReturned);
+      gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
+      gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
+      break;
+
+    case HighsModelStatus::kUnknown:
       // TODO is there an (feasible) solution to write?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);

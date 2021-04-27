@@ -498,12 +498,12 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
                                  const ipx::Parameters& parameters,
                                  HighsModelStatus& model_status) {
   if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
-    // Looks like the LP is infeasible
+    // Looks like the LP is primal infeasible
     model_status = HighsModelStatus::kInfeasible;
     return HighsStatus::kOk;
   } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
-    // Looks like the LP is unbounded
-    model_status = HighsModelStatus::kUnbounded;
+    // Looks like the LP is dual infeasible, so primal unbounded or infeasible
+    model_status = HighsModelStatus::kUnboundedOrInfeasible;
     return HighsStatus::kOk;
   } else if (ipx_info.pobjval < -kHighsInf) {
     // Looks like the LP is unbounded
@@ -511,10 +511,10 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
     return HighsStatus::kOk;
   } else {
     // Don't know
-    model_status = HighsModelStatus::kSolveError;
-    return HighsStatus::kError;
+    assert(1==0);
+    model_status = HighsModelStatus::kUnknown;
+    return HighsStatus::kWarning;
   }
-  return HighsStatus::kWarning;
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
@@ -636,7 +636,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   // Only error returns so far
   // 
-  
+  // If crossover or IPM hit the time limit, or if IPM hit the iter
+  // limit or made no progress,
 
   if (solve_status == IPX_STATUS_stopped) {
     //
@@ -719,21 +720,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                      (int)ipx_info.status_crossover))
     return HighsStatus::kError;
 
-  // Get the interior solution (available if IPM was started).
-  // GetInteriorSolution() returns the final IPM iterate, regardless if the
-  // IPM terminated successfully or not. (Only in case of out-of-memory no
-  // solution exists.)
-  std::vector<double> x(num_col);
-  std::vector<double> xl(num_col);
-  std::vector<double> xu(num_col);
-  std::vector<double> zl(num_col);
-  std::vector<double> zu(num_col);
-  std::vector<double> slack(num_row);
-  std::vector<double> y(num_row);
-
-  lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
-                          &zu[0]);
-
   // Basic solution depends on crossover being run
   const bool have_basic_solution =
       ipx_info.status_crossover != IPX_STATUS_not_run;
@@ -758,6 +744,21 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
+    // Get the interior solution (available if IPM was started).
+    // GetInteriorSolution() returns the final IPM iterate, regardless if the
+    // IPM terminated successfully or not. (Only in case of out-of-memory no
+    // solution exists.)
+    std::vector<double> x(num_col);
+    std::vector<double> xl(num_col);
+    std::vector<double> xu(num_col);
+    std::vector<double> zl(num_col);
+    std::vector<double> zu(num_col);
+    std::vector<double> slack(num_row);
+    std::vector<double> y(num_row);
+    
+    lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
+			    &zu[0]);
+
     ipxSolutionToHighsSolution(options.log_options, lp, rhs, constraint_type,
                                num_col, num_row, x, slack, highs_solution);
     highs_basis.valid_ = false;
