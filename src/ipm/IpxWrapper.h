@@ -517,6 +517,32 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
   }
 }
 
+void getHighsSolution(const HighsLogOptions& log_options, const HighsLp& lp,
+		      const std::vector<double>& rhs,
+		      const std::vector<char>& constraint_type,
+		      const ipx::Int num_col, const ipx::Int num_row,
+		      HighsSolution& highs_solution,
+		      const ipx::LpSolver& lps) {
+  // Get the interior solution (available if IPM was started).
+  // GetInteriorSolution() returns the final IPM iterate, regardless if the
+  // IPM terminated successfully or not. (Only in case of out-of-memory no
+  // solution exists.)
+  std::vector<double> x(num_col);
+  std::vector<double> xl(num_col);
+  std::vector<double> xu(num_col);
+  std::vector<double> zl(num_col);
+  std::vector<double> zu(num_col);
+  std::vector<double> slack(num_row);
+  std::vector<double> y(num_row);
+    
+  lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
+			    &zu[0]);
+
+  ipxSolutionToHighsSolution(log_options, lp, rhs, constraint_type,
+			     num_col, num_row, x, slack, highs_solution);
+  
+}
+
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, bool& imprecise_solution,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
@@ -744,6 +770,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
+    getHighsSolution(options.log_options, lp, rhs, constraint_type,
+		     num_col, num_row, highs_solution, lps);
     // Get the interior solution (available if IPM was started).
     // GetInteriorSolution() returns the final IPM iterate, regardless if the
     // IPM terminated successfully or not. (Only in case of out-of-memory no
