@@ -1131,33 +1131,6 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   status.has_dual_objective_value = true;
 }
 
-void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
-  HighsLp& lp = highs_model_object.lp_;
-  HighsSimplexInfo& info = highs_model_object.info_;
-  SimplexBasis& basis = highs_model_object.basis_;
-  HighsSimplexStatus& status =
-      highs_model_object.status_;
-  info.primal_objective_value = 0;
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    HighsInt iVar = basis.basicIndex_[iRow];
-    if (iVar < lp.numCol_) {
-      info.primal_objective_value +=
-          info.baseValue_[iRow] * lp.colCost_[iVar];
-    }
-  }
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.nonbasicFlag_[iCol])
-      info.primal_objective_value +=
-          info.workValue_[iCol] * lp.colCost_[iCol];
-  }
-  info.primal_objective_value *= highs_model_object.scale_.cost_;
-  // Objective value calculation is done using primal values and
-  // original costs so offset is vanilla
-  info.primal_objective_value += lp.offset_;
-  // Now have primal objective value
-  status.has_primal_objective_value = true;
-}
-
 double computeBasisCondition(const HighsModelObject& highs_model_object) {
   HighsInt solver_num_row = highs_model_object.lp_.numRow_;
   HighsInt solver_num_col = highs_model_object.lp_.numCol_;

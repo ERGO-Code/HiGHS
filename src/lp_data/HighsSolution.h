@@ -35,6 +35,7 @@ using std::string;
 void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params);
+double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis);
 

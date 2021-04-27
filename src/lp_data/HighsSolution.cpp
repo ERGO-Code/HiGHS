@@ -47,12 +47,20 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
   double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
+  bool have_basis = basis.valid_;
+
   num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
   sum_primal_infeasibility = 0;
-  num_dual_infeasibility = 0;
-  max_dual_infeasibility = 0;
-  sum_dual_infeasibility = 0;
+  if (have_basis) {
+    num_dual_infeasibility = 0;
+    max_dual_infeasibility = 0;
+    sum_dual_infeasibility = 0;
+  } else {
+    num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
+    max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+    sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  }
 
   double primal_infeasibility;
   double dual_infeasibility;
@@ -67,20 +75,23 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
       lower = lp.colLower_[iCol];
       upper = lp.colUpper_[iCol];
       value = solution.col_value[iCol];
-      dual = solution.col_dual[iCol];
-      status = basis.col_status[iCol];
+      if (have_basis) {
+        status = basis.col_status[iCol];
+        dual = solution.col_dual[iCol];
+      }
     } else {
       HighsInt iRow = iVar - lp.numCol_;
       lower = lp.rowLower_[iRow];
       upper = lp.rowUpper_[iRow];
       value = solution.row_value[iRow];
-      dual = -solution.row_dual[iRow];
-      status = basis.row_status[iRow];
+      if (have_basis) {
+        status = basis.row_status[iRow];
+        dual = -solution.row_dual[iRow];
+      }
     }
     // Flip dual according to lp.sense_
     dual *= (HighsInt)lp.sense_;
 
-    double primal_residual = std::max(lower - value, value - upper);
     // @primal_infeasibility calculation
     primal_infeasibility = 0;
     if (value < lower - primal_feasibility_tolerance) {
@@ -95,42 +106,58 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
           std::max(primal_infeasibility, max_primal_infeasibility);
       sum_primal_infeasibility += primal_infeasibility;
     }
-    //    primal_infeasibility = std::max(primal_residual, 0.);
-    //    if (primal_infeasibility > primal_feasibility_tolerance)
-    //      num_primal_infeasibility++;
-    //    max_primal_infeasibility =
-    //        std::max(primal_infeasibility, max_primal_infeasibility);
-    //    sum_primal_infeasibility += primal_infeasibility;
-
-    if (status != HighsBasisStatus::kBasic) {
-      // Nonbasic variable: look for dual infeasibility
-      if (primal_residual >= -primal_feasibility_tolerance) {
-        // At a bound
-        double middle = (lower + upper) * 0.5;
-        if (lower < upper) {
-          // Non-fixed variable
-          if (value < middle) {
-            // At lower
-            dual_infeasibility = std::max(-dual, 0.);
+    if (have_basis) {
+      if (status != HighsBasisStatus::kBasic) {
+        // Nonbasic variable: look for dual infeasibility
+        double primal_residual = std::max(lower - value, value - upper);
+        if (primal_residual >= -primal_feasibility_tolerance) {
+          // At a bound
+          double middle = (lower + upper) * 0.5;
+          if (lower < upper) {
+            // Non-fixed variable
+            if (value < middle) {
+              // At lower
+              dual_infeasibility = std::max(-dual, 0.);
+            } else {
+              // At Upper
+              dual_infeasibility = std::max(dual, 0.);
+            }
           } else {
-            // At Upper
-            dual_infeasibility = std::max(dual, 0.);
+            // Fixed variable
+            dual_infeasibility = 0;
           }
         } else {
-          // Fixed variable
-          dual_infeasibility = 0;
+          // Between bounds (or free)
+          dual_infeasibility = fabs(dual);
         }
-      } else {
-        // Between bounds (or free)
-        dual_infeasibility = fabs(dual);
+        if (dual_infeasibility > dual_feasibility_tolerance)
+          num_dual_infeasibility++;
+        max_dual_infeasibility =
+            std::max(dual_infeasibility, max_dual_infeasibility);
+        sum_dual_infeasibility += dual_infeasibility;
       }
-      if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibility++;
-      max_dual_infeasibility =
-          std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibility += dual_infeasibility;
     }
   }
+  if (num_primal_infeasibility == 0) {
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+  } else {
+    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+  }
+  if (num_dual_infeasibility == kHighsIllegalInfeasibilityCount) {
+    solution_params.dual_status = kHighsPrimalDualStatusNoSolution;
+  } else if (num_dual_infeasibility == 0) {
+    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+  } else {
+    solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+  }
+}
+
+double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution) {
+  double objective_value = 0;
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
+    objective_value += lp.colCost_[iCol] * solution.col_value[iCol];
+  objective_value += lp.offset_;
+  return objective_value;
 }
 
 // Refine any HighsBasisStatus::kNonbasic settings according to the LP

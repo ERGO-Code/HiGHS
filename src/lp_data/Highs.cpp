@@ -2308,7 +2308,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       break;
 
     case HighsModelStatus::kInfeasible:
-      clearSolution();
       // May have a basis, according to whether infeasibility was
       // detected in presolve or solve
       assert(model_status_ == scaled_model_status_);

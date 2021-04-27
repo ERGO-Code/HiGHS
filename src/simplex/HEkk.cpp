@@ -2188,9 +2188,9 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       std::string algorithm_name = "primal";
       if (exit_algorithm == SimplexAlgorithm::kDual) algorithm_name = "dual";
       highsLogDev(options_.log_options, HighsLogType::kError,
-              "EKK %s simplex solver returns status %s\n",
-              algorithm_name.c_str(), 
-              utilModelStatusToString(model_status_).c_str());
+                  "EKK %s simplex solver returns status %s\n",
+                  algorithm_name.c_str(),
+                  utilModelStatusToString(model_status_).c_str());
       return HighsStatus::kError;
       break;
     }

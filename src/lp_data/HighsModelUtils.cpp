@@ -417,6 +417,8 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::kWarning;
     case HighsModelStatus::kIterationLimit:
       return HighsStatus::kWarning;
+    case HighsModelStatus::kUnknown:
+      return HighsStatus::kWarning;
     default:
       return HighsStatus::kError;
   }

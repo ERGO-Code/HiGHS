@@ -25,11 +25,11 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 
-void fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
+void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
                    std::vector<double>& obj, std::vector<double>& col_lb,
-                   std::vector<double>& col_ub, ipx::Int& num_row,
-                   std::vector<ipx::Int>& Ap, std::vector<ipx::Int>& Ai,
-                   std::vector<double>& Ax, std::vector<double>& rhs,
+                   std::vector<double>& col_ub, std::vector<ipx::Int>& Ap,
+                   std::vector<ipx::Int>& Ai, std::vector<double>& Ax,
+                   std::vector<double>& rhs,
                    std::vector<char>& constraint_type) {
   num_col = lp.numCol_;
   num_row = lp.numRow_;
@@ -304,7 +304,8 @@ bool ipxStatusError(const bool status_error, const HighsOptions& options,
   return status_error;
 }
 
-bool illegalIpxSolvedStatus(const ipx::Info& ipx_info, const HighsOptions& options) {
+bool illegalIpxSolvedStatus(const ipx::Info& ipx_info,
+                            const HighsOptions& options) {
   bool found_illegal_status = false;
   //========
   // For IPX
@@ -494,35 +495,14 @@ void reportIpmNoProgress(const HighsOptions& options,
                ipx_info.abs_dresidual);
 }
 
-HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
-                                 const ipx::Parameters& parameters,
-                                 HighsModelStatus& model_status) {
-  if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
-    // Looks like the LP is primal infeasible
-    model_status = HighsModelStatus::kInfeasible;
-    return HighsStatus::kOk;
-  } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
-    // Looks like the LP is dual infeasible, so primal unbounded or infeasible
-    model_status = HighsModelStatus::kUnboundedOrInfeasible;
-    return HighsStatus::kOk;
-  } else if (ipx_info.pobjval < -kHighsInf) {
-    // Looks like the LP is unbounded
-    model_status = HighsModelStatus::kUnbounded;
-    return HighsStatus::kOk;
-  } else {
-    // Don't know
-    assert(1==0);
-    model_status = HighsModelStatus::kUnknown;
-    return HighsStatus::kWarning;
-  }
-}
-
-void getHighsSolution(const HighsLogOptions& log_options, const HighsLp& lp,
-		      const std::vector<double>& rhs,
-		      const std::vector<char>& constraint_type,
-		      const ipx::Int num_col, const ipx::Int num_row,
-		      HighsSolution& highs_solution,
-		      const ipx::LpSolver& lps) {
+void getHighsNonVertexSolution(const HighsLogOptions& log_options,
+                               const HighsLp& lp, const ipx::Int num_col,
+                               const ipx::Int num_row,
+                               const std::vector<double>& rhs,
+                               const std::vector<char>& constraint_type,
+                               const ipx::LpSolver& lps,
+                               HighsBasis& highs_basis,
+                               HighsSolution& highs_solution) {
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
   // IPM terminated successfully or not. (Only in case of out-of-memory no
@@ -534,13 +514,14 @@ void getHighsSolution(const HighsLogOptions& log_options, const HighsLp& lp,
   std::vector<double> zu(num_col);
   std::vector<double> slack(num_row);
   std::vector<double> y(num_row);
-    
-  lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
-			    &zu[0]);
 
-  ipxSolutionToHighsSolution(log_options, lp, rhs, constraint_type,
-			     num_col, num_row, x, slack, highs_solution);
-  
+  lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
+                          &zu[0]);
+
+  ipxSolutionToHighsSolution(log_options, lp, rhs, constraint_type, num_col,
+                             num_row, x, slack, highs_solution);
+  // Indicate that there is no basis corresponding to this solution
+  highs_basis.valid_ = false;
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
@@ -549,7 +530,32 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsIterationCounts& iteration_counts,
                        HighsModelStatus& model_status,
                        HighsSolutionParams& solution_params,
-		       bool& has_solution) {
+                       bool& has_solution) {
+  // Use IPX to try to solve the LP
+  //
+  // Can return HighsModelStatus (HighsStatus) values:
+  //
+  // 1. kSolveError (kError) if various unlikely solution errors occur
+  //
+  // 2. kTimeLimit (kWarning) if time limit is reached
+  //
+  // 3. kIterationLimit (kWarning) if iteration limit is reached
+  //
+  // 4. kUnknown (kWarning) if IPM makes no progress or if
+  // IPM/crossover are imprecise
+  //
+  // 5. kInfeasible (kOk) if IPM identifies primal infeasibility
+  //
+  // 6. kUnboundedOrInfeasible (kOk) if IPM identifies dual
+  // infeasibility
+  //
+  // kOptimal (kOk) if IPM/crossover identify optimality
+  //
+  // With a non-error return, if just IPM has been run then a
+  // non-vertex primal solution is obtained; if crossover has been run
+  // then a basis and primal+dual solution are obtained.
+  //
+  //
   imprecise_solution = false;
   resetModelStatusAndSolutionParams(model_status, solution_params, options);
   // Create the LpSolver instance
@@ -577,9 +583,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
-  parameters.ipm_feasibility_tol =
-      min(solution_params.primal_feasibility_tolerance,
-          solution_params.dual_feasibility_tolerance);
+  parameters.ipm_feasibility_tol = min(options.primal_feasibility_tolerance,
+                                       options.dual_feasibility_tolerance);
 
   parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
   parameters.crossover_start = options.start_crossover_tolerance;
@@ -602,7 +607,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   std::vector<ipx::Int> Ap, Ai;
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
-  fillInIpxData(lp, num_col, objective, col_lb, col_ub, num_row, Ap, Ai, Av,
+  fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub, Ap, Ai, Av,
                 rhs, constraint_type);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "IPX model has %" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
@@ -655,17 +660,21 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // IPX_STATUS_stopped
   if (ipxStatusError(
           solve_status != IPX_STATUS_solved &&
-          solve_status != IPX_STATUS_stopped,
+              solve_status != IPX_STATUS_stopped,
           options, "solve_status should be solved or stopped here but value is",
           (int)solve_status))
     return HighsStatus::kError;
 
   // Only error returns so far
-  // 
-  // If crossover or IPM hit the time limit, or if IPM hit the iter
-  // limit or made no progress,
+  //
 
   if (solve_status == IPX_STATUS_stopped) {
+    // IPX stopped, so there's certainly no basic solution. Get the
+    // non-vertex solution, though.
+    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
+                              constraint_type, lps, highs_basis,
+                              highs_solution);
+    has_solution = true;
     //
     // Look at the reason why IPX stopped
     //
@@ -700,11 +709,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
       model_status = HighsModelStatus::kIterationLimit;
       return HighsStatus::kWarning;
-    } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
+    } else {
+      assert(ipx_info.status_ipm == IPX_STATUS_no_progress);
       reportIpmNoProgress(options, ipx_info);
-      HighsStatus ipm_no_progress_return_status = 
-	analyseIpmNoProgress(ipx_info, lps.GetParameters(), model_status);
-      return ipm_no_progress_return_status;
+      model_status = HighsModelStatus::kUnknown;
+      return HighsStatus::kWarning;
     }
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved
@@ -722,19 +731,34 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Can solve and be optimal
   // Can solve and be imprecise
   //========
-  // For IPX
+  // For IPM
   //========
   // Can solve and be optimal
   // Can solve and be imprecise
   // Can solve and be primal_infeas
   // Can solve and be dual_infeas
-  if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
-    model_status = HighsModelStatus::kInfeasible;
-    return HighsStatus::kOk;
-  } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    model_status = HighsModelStatus::kUnboundedOrInfeasible;
+  if (ipx_info.status_ipm == IPX_STATUS_primal_infeas ||
+      ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
+    if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
+      model_status = HighsModelStatus::kInfeasible;
+    } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
+      model_status = HighsModelStatus::kUnboundedOrInfeasible;
+    }
+    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
+                              constraint_type, lps, highs_basis,
+                              highs_solution);
+    has_solution = true;
     return HighsStatus::kOk;
   }
+
+  // Should only reach here if IPM is optimal or imprecise
+  if (ipxStatusError(ipx_info.status_ipm != IPX_STATUS_optimal &&
+                         ipx_info.status_ipm != IPX_STATUS_imprecise,
+                     options,
+                     "ipm status should be not run, optimal or imprecise "
+                     "but value is",
+                     (int)ipx_info.status_ipm))
+    return HighsStatus::kError;
 
   // Should only reach here if crossover is not run, optimal or imprecise
   if (ipxStatusError(ipx_info.status_crossover != IPX_STATUS_not_run &&
@@ -749,7 +773,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Basic solution depends on crossover being run
   const bool have_basic_solution =
       ipx_info.status_crossover != IPX_STATUS_not_run;
-  imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise;
+  // Both crossover and IPM can be imprecise
+  imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise ||
+                       ipx_info.status_ipm == IPX_STATUS_imprecise;
   if (have_basic_solution) {
     IpxSolution ipx_solution;
     ipx_solution.num_col = num_col;
@@ -770,47 +796,19 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
-    getHighsSolution(options.log_options, lp, rhs, constraint_type,
-		     num_col, num_row, highs_solution, lps);
-    // Get the interior solution (available if IPM was started).
-    // GetInteriorSolution() returns the final IPM iterate, regardless if the
-    // IPM terminated successfully or not. (Only in case of out-of-memory no
-    // solution exists.)
-    std::vector<double> x(num_col);
-    std::vector<double> xl(num_col);
-    std::vector<double> xu(num_col);
-    std::vector<double> zl(num_col);
-    std::vector<double> zu(num_col);
-    std::vector<double> slack(num_row);
-    std::vector<double> y(num_row);
-    
-    lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
-			    &zu[0]);
-
-    ipxSolutionToHighsSolution(options.log_options, lp, rhs, constraint_type,
-                               num_col, num_row, x, slack, highs_solution);
-    highs_basis.valid_ = false;
+    getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
+                              constraint_type, lps, highs_basis,
+                              highs_solution);
   }
+  has_solution = true;
   HighsStatus return_status;
   if (imprecise_solution) {
-    model_status = HighsModelStatus::kNotset;
+    model_status = HighsModelStatus::kUnknown;
     return_status = HighsStatus::kWarning;
   } else {
     model_status = HighsModelStatus::kOptimal;
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
-    // Currently only have a dual solution if there is a basic solution
-    if (have_basic_solution)
-      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
     return_status = HighsStatus::kOk;
   }
-  double objective_function_value = lp.offset_;
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
-    objective_function_value +=
-        highs_solution.col_value[iCol] * lp.colCost_[iCol];
-  solution_params.objective_function_value = objective_function_value;
-  if (highs_basis.valid_)
-    getPrimalDualInfeasibilities(lp, highs_basis, highs_solution,
-                                 solution_params);
   return return_status;
 }
 #endif
