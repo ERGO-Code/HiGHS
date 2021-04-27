@@ -61,13 +61,13 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   resetModelStatusAndSolutionParams(highs_model_object);
 
   // Assumes that the LP has a positive number of rows, since
-  // unconstrained LPs should be solved in solveLpSimplex
+  // unconstrained LPs should be solved in solveLp
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) {
     highsLogUser(
         options.log_options, HighsLogType::kError,
-        "solveLpEkkSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
+        "solveLpSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
         ") "
         "number of constraints\n",
         highs_model_object.lp_.numRow_);

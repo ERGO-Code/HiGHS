@@ -1217,15 +1217,15 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
   if (header) {
     analysis_log << "       Iteration        Objective    ";
   } else {
-    std::string algorithm;
+    std::string algorithm_name;
     if (dualAlgorithm()) {
-      algorithm = "Du";
+      algorithm_name = "Du";
     } else {
-      algorithm = "Pr";
+      algorithm_name = "Pr";
     }
     analysis_log << highsFormatToString(
         "%2sPh%1" HIGHSINT_FORMAT " %10" HIGHSINT_FORMAT " %20.10e",
-        algorithm.c_str(), solve_phase, simplex_iteration_count,
+        algorithm_name.c_str(), solve_phase, simplex_iteration_count,
         objective_value);
   }
 }

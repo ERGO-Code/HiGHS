@@ -70,7 +70,7 @@ HighsStatus HEkk::solve() {
 
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  std::string algorithm;
+  std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
   status_.has_dual_ray = false;
@@ -86,7 +86,7 @@ HighsStatus HEkk::solve() {
 
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
-    algorithm = "primal";
+    algorithm_name = "primal";
     reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_,
                                  true);
     highsLogUser(options_.log_options, HighsLogType::kInfo,
@@ -99,7 +99,7 @@ HighsStatus HEkk::solve() {
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
-    algorithm = "dual";
+    algorithm_name = "dual";
     reportSimplexPhaseIterations(options_.log_options, iteration_count_, info_,
                                  true);
     // Solve, depending on the particular strategy
@@ -146,7 +146,7 @@ HighsStatus HEkk::solve() {
               " primal and %" HIGHSINT_FORMAT
               " dual infeasibilities: "
               "Status %s\n",
-              algorithm.c_str(), info_.num_primal_infeasibility,
+              algorithm_name.c_str(), info_.num_primal_infeasibility,
               info_.num_dual_infeasibility,
               utilModelStatusToString(model_status_).c_str());
   // Can model_status_ = HighsModelStatus::kNotset be returned?
@@ -2113,10 +2113,18 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   // Check that an invert exists
   assert(status_.has_invert);
 
-  // Determine a primal and possibly a dual solution, removing the
-  // effects of perturbations and shifts
+  // Determine a primal and dual solution, removing the effects of
+  // perturbations and shifts
+  //
+  // Unless the solution is optimal, invalidate the infeasibility data
+  if (model_status_ != HighsModelStatus::kOptimal) {
+    invalidatePrimalInfeasibilityRecord();
+    invalidateDualInfeasibilityRecord();
+  }
   switch (model_status_) {
     case HighsModelStatus::kOptimal: {
+      assert(info_.num_primal_infeasibility == 0);
+      assert(info_.num_dual_infeasibility == 0);
       return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
       return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
       break;
@@ -2133,15 +2141,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
         computeDual();
       }
       computeSimplexInfeasible();
-      // Primal solution is valid, but shouldn't be feasible
+      // Primal solution shouldn't be feasible
       assert(info_.num_primal_infeasibility > 0);
-      return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-      // Dual solution is valid, but is unlikely to be feasible!
-      if (info_.num_dual_infeasibility == 0) {
-        return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-      } else {
-        return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-      }
       break;
     }
     case HighsModelStatus::kUnboundedOrInfeasible: {
@@ -2153,15 +2154,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
       computePrimal();
       computeSimplexInfeasible();
-      // Primal solution is valid, but is unlikely to be feasible!
-      if (info_.num_primal_infeasibility == 0) {
-        return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-      } else {
-        return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-      }
-      // Dual solution is valid, but shouldn't be feasible
+      // Dual solution shouldn't be feasible
       assert(info_.num_dual_infeasibility > 0);
-      return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
       break;
     }
     case HighsModelStatus::kUnbounded: {
@@ -2170,29 +2164,49 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       assert(exit_algorithm == SimplexAlgorithm::kPrimal);
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
       computeSimplexInfeasible();
-      // Primal solution is valid, and should be feasible
+      // Primal solution should be feasible
       assert(info_.num_primal_infeasibility == 0);
-      return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-      // Dual solution is valid, but is unlikely to be feasible!
-      if (info_.num_dual_infeasibility == 0) {
-        return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-      } else {
-        return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
-      }
       break;
     }
     case HighsModelStatus::kObjectiveCutoff:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit: {
+      // Simplex has bailed out due to reaching the objecive cut-off,
+      // time or iteration limit. Could happen anywhere (other than
+      // the fist implying dual simplex)
+      //
+      // Reset the simplex bounds and recompute primals
+      initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
+      computePrimal();
+      // Reset the simplex costs and recompute duals
+      initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
+      computeDual();
+      computeSimplexInfeasible();
       break;
     }
     default: {
-      printf("What is default here? Status %s\n",
-             utilModelStatusToString(model_status_).c_str());
+      std::string algorithm_name = "primal";
+      if (exit_algorithm == SimplexAlgorithm::kDual) algorithm_name = "dual";
+      highsLogDev(options_.log_options, HighsLogType::kError,
+              "EKK %s simplex solver returns status %s\n",
+              algorithm_name.c_str(), 
+              utilModelStatusToString(model_status_).c_str());
+      return HighsStatus::kError;
       break;
     }
   }
-
+  assert(info_.num_primal_infeasibility >= 0);
+  assert(info_.num_dual_infeasibility >= 0);
+  if (info_.num_primal_infeasibility == 0) {
+    return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+  } else {
+    return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+  }
+  if (info_.num_dual_infeasibility == 0) {
+    return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+  } else {
+    return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+  }
   computePrimalObjectiveValue();
 
   return return_status;
