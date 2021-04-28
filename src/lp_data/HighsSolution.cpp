@@ -90,7 +90,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
       }
     }
     // Flip dual according to lp.sense_
-    dual *= (HighsInt)lp.sense_;
+    if (have_basis) dual *= (HighsInt)lp.sense_;
 
     // @primal_infeasibility calculation
     primal_infeasibility = 0;
