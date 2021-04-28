@@ -89,6 +89,7 @@ set(sources
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsInfoDebug.cpp
     lp_data/HighsDeprecated.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
@@ -178,6 +179,7 @@ set(headers
     lp_data/HighsAnalysis.h
     lp_data/HighsDebug.h
     lp_data/HighsInfo.h
+    lp_data/HighsInfoDebug.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
@@ -487,6 +489,7 @@ target_sources(libhighs PRIVATE
     lp_data/HighsDebug.cpp
     lp_data/HighsDeprecated.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsInfoDebug.cpp
     lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
@@ -589,6 +592,7 @@ set(headers_fast_build_
     lp_data/HighsAnalysis.h
     lp_data/HighsDebug.h
     lp_data/HighsInfo.h
+    lp_data/HighsInfoDebug.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h

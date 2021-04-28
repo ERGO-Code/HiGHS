@@ -25,6 +25,7 @@
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
+#include "lp_data/HighsInfoDebug.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
@@ -2308,22 +2309,23 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       break;
 
     case HighsModelStatus::kInfeasible:
-      // May have a basis, according to whether infeasibility was
-      // detected in presolve or solve
+    case HighsModelStatus::kUnbounded:
+    case HighsModelStatus::kObjectiveCutoff:
+      have_solution = true;
+      // For kInfeasible, will not have a basis, if infeasibility was
+      // detected in presolve or by IPX without crossover
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kOk);
       break;
 
     case HighsModelStatus::kUnboundedOrInfeasible:
-      if (options_.allow_unbounded_or_infeasible) {
-        clearSolution();
-        // May have a basis, according to whether infeasibility was
-        // detected in presolve or solve
-        clearInfo();
+      have_solution = true;
+      if (options_.allow_unbounded_or_infeasible ||
+	  (options_.solver == ipm_string && options_.run_crossover)) {
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::kOk);
       } else {
-        // This model status is not permitted
+        // This model status is not permitted unless IPM is run without crossover
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "
@@ -2333,30 +2335,11 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       }
       break;
 
-    case HighsModelStatus::kUnbounded:
-      clearSolution();
-      // May have a basis, according to whether infeasibility was
-      // detected in presolve or solve
-      clearInfo();
-      assert(model_status_ == scaled_model_status_);
-      assert(return_status == HighsStatus::kOk);
-      break;
-
-    case HighsModelStatus::kObjectiveCutoff:
-      clearSolution();
-      clearBasis();
-      clearInfo();
-      assert(model_status_ == scaled_model_status_);
-      assert(return_status == HighsStatus::kOk);
-      break;
-
       // Finally consider the warning returns
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:
     case HighsModelStatus::kUnknown:
-      clearSolution();
-      clearBasis();
-      clearInfo();
+      have_solution = true;
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kWarning);
       break;
@@ -2375,6 +2358,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }
+  if (debugInfo(options_, lp_, basis_, solution_, info_, model_status_) ==
+      HighsDebugStatus::kLogicalError)
+    return_status = HighsStatus::kError;
+
   return returnFromHighs(return_status);
 }
 

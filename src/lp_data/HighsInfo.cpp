@@ -18,6 +18,7 @@
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
+  valid_ = false;
   primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
   dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
   objective_function_value = 0;
@@ -29,7 +30,7 @@ void HighsInfo::clear() {
   sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 }
 
-std::string infoEntryType2string(const HighsInfoType type) {
+std::string infoEntryTypeToString(const HighsInfoType type) {
   if (type == HighsInfoType::kInt) {
     return "int";
   } else {
@@ -130,7 +131,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
     highsLogUser(
         options.log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
-        name.c_str(), infoEntryType2string(type).c_str());
+        name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;
   }
   InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
@@ -150,7 +151,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
     highsLogUser(
         options.log_options, HighsLogType::kError,
         "getInfoValue: Info \"%s\" requires value of type %s, not double\n",
-        name.c_str(), infoEntryType2string(type).c_str());
+        name.c_str(), infoEntryTypeToString(type).c_str());
     return InfoStatus::kIllegalValue;
   }
   InfoRecordDouble info = ((InfoRecordDouble*)info_records[index])[0];
