@@ -189,7 +189,7 @@ HighsStatus Highs::writeInfo(const std::string filename) {
   if (return_status == HighsStatus::kError) return return_status;
 
   return_status =
-      interpretCallStatus(writeInfoToFile(file, info_.records, html),
+      interpretCallStatus(writeInfoToFile(file, info_.valid, info_.records, html),
                           return_status, "writeInfoToFile");
   return return_status;
 }

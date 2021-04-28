@@ -20,10 +20,12 @@ HighsDebugStatus debugInfo(const HighsOptions& options,
 			   const HighsBasis& basis,
 			   const HighsSolution& solution,
 			   const HighsInfo& info,
-			   const HighsModelStatus model_status_
+			   const HighsModelStatus model_status
 			   ) {
   //  if (options.highs_debug_level < kHighsDebugLevelCostly) return HighsDebugStatus::kNotChecked;
   printf("debugInfo!\n");
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
+  if (!info.valid) return return_status;
+  return return_status;
 }
 

@@ -18,7 +18,7 @@
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
-  valid_ = false;
+  valid = false;
   primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
   dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
   objective_function_value = 0;
@@ -160,6 +160,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
 }
 
 HighsStatus writeInfoToFile(FILE* file,
+			    const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const bool html) {
   if (html) {
@@ -176,7 +177,7 @@ HighsStatus writeInfoToFile(FILE* file,
     fprintf(file, "<h3>HiGHS Info</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
-  reportInfo(file, info_records, html);
+  if (html || valid) reportInfo(file, info_records, html);
   if (html) {
     fprintf(file, "</ul>\n");
     fprintf(file, "</body>\n\n</html>\n");
@@ -184,7 +185,8 @@ HighsStatus writeInfoToFile(FILE* file,
   return HighsStatus::kOk;
 }
 
-void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
+void reportInfo(FILE* file, 
+		const std::vector<InfoRecord*>& info_records,
                 const bool html) {
   HighsInt num_info = info_records.size();
   for (HighsInt index = 0; index < num_info; index++) {
@@ -199,7 +201,9 @@ void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
   }
 }
 
-void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
+void reportInfo(FILE* file, 
+		const InfoRecordInt& info,
+		const bool html) {
   if (html) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
@@ -217,7 +221,9 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
   }
 }
 
-void reportInfo(FILE* file, const InfoRecordDouble& info, const bool html) {
+void reportInfo(FILE* file, 
+		const InfoRecordDouble& info,
+		const bool html) {
   if (html) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",

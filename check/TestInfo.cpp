@@ -5,7 +5,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 TEST_CASE("highs-info", "[highs_info]") {
   std::string filename;
@@ -38,6 +38,11 @@ TEST_CASE("highs-info", "[highs_info]") {
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+
+  if (dev_run) {
+    return_status = highs.writeInfo("");
+    REQUIRE(return_status == HighsStatus::kOk);
+  }
 
   double objective_function_value;
   return_status =

@@ -27,7 +27,7 @@ HighsDebugStatus debugInfo(const HighsOptions& options,
 			   const HighsBasis& basis,
 			   const HighsSolution& solution,
 			   const HighsInfo& info,
-			   const HighsModelStatus model_status_
+			   const HighsModelStatus model_status
 			   );
 
 #endif

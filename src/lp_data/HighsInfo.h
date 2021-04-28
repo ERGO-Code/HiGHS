@@ -93,12 +93,17 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
                              double& value);
 
 HighsStatus writeInfoToFile(FILE* file,
+			    const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const bool html = false);
-void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
+void reportInfo(FILE* file, 
+		const std::vector<InfoRecord*>& info_records,
                 const bool html = false);
-void reportInfo(FILE* file, const InfoRecordInt& info, const bool html = false);
-void reportInfo(FILE* file, const InfoRecordDouble& info,
+void reportInfo(FILE* file,
+		const InfoRecordInt& info,
+		const bool html = false);
+void reportInfo(FILE* file, 
+		const InfoRecordDouble& info,
                 const bool html = false);
 
 // For now, but later change so HiGHS properties are string based so that new
@@ -107,7 +112,7 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
 // todo: when creating the new info don't forget underscores for class
 // variables but no underscores for struct
 struct HighsInfoStruct {
-  bool valid_;
+  bool valid;
   int64_t mip_node_count;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
