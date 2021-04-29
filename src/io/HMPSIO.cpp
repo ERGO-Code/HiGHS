@@ -104,7 +104,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
   double objName = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
     if (flag[0] == 'N' &&
-        (objName == 0 || keep_n_rows == KEEP_N_ROWS_DELETE_ROWS)) {
+        (objName == 0 || keep_n_rows == kKeepNRowsDeleteRows)) {
       // N-row: take the first as the objective and possibly ignore any others
       if (objName == 0) objName = data[1];
     } else {
@@ -164,7 +164,7 @@ FilereaderRetcode readMPS(const HighsLogOptions& log_options,
     else if (data[0] != 0) {
       HighsInt iRow = rowIndex[data[2]] - 1;
       if (iRow >= 0) {
-        if (rowType[iRow] != 'N' || keep_n_rows != KEEP_N_ROWS_DELETE_ENTRIES) {
+        if (rowType[iRow] != 'N' || keep_n_rows != kKeepNRowsDeleteEntries) {
           Aindex.push_back(iRow);
           Avalue.push_back(data[0]);
         }

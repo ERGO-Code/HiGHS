@@ -519,7 +519,7 @@ HighsStatus Highs::run() {
     //
     // If using IPX to solve the reduced LP, crossover must be run
     // since a basic solution is required by postsolve
-    if (options_.solver == ipm_string && !options_.run_crossover) {
+    if (options_.solver == kIpmString && !options_.run_crossover) {
       highsLogUser(options_.log_options, HighsLogType::kWarning,
                    "Forcing IPX to use crossover after presolve\n");
       options_.run_crossover = true;
@@ -774,7 +774,7 @@ HighsStatus Highs::run() {
           if (full_logging) options.log_dev_level = kHighsLogDevLevelVerbose;
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
-          if (options.solver == ipm_string) options.solver = simplex_string;
+          if (options.solver == kIpmString) options.solver = kSimplexString;
           options.simplex_strategy = kSimplexStrategyChoose;
           // Ensure that the parallel solver isn't used
           options.highs_min_threads = 1;
@@ -2323,7 +2323,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kUnboundedOrInfeasible:
       have_solution = true;
       if (options_.allow_unbounded_or_infeasible ||
-          (options_.solver == ipm_string && options_.run_crossover)) {
+          (options_.solver == kIpmString && options_.run_crossover)) {
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::kOk);
       } else {

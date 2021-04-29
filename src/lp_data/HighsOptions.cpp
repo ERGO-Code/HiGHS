@@ -42,13 +42,13 @@ bool commandLineOffChooseOnOk(const HighsLogOptions& log_options,
 
 bool commandLineSolverOk(const HighsLogOptions& log_options,
                          const string& value) {
-  if (value == simplex_string || value == kHighsChooseString ||
-      value == ipm_string)
+  if (value == kSimplexString || value == kHighsChooseString ||
+      value == kIpmString)
     return true;
   highsLogUser(log_options, HighsLogType::kWarning,
                "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
-               value.c_str(), simplex_string.c_str(),
-               kHighsChooseString.c_str(), ipm_string.c_str());
+               value.c_str(), kSimplexString.c_str(),
+               kHighsChooseString.c_str(), kIpmString.c_str());
   return false;
 }
 
@@ -307,13 +307,13 @@ OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               const std::string value) {
   // Setting a string option. For some options only particular values
   // are permitted, so check them
-  if (option.name == presolve_string) {
+  if (option.name == kPresolveString) {
     if (!commandLineOffChooseOnOk(log_options, value) && value != "mip")
       return OptionStatus::kIllegalValue;
-  } else if (option.name == solver_string) {
+  } else if (option.name == kSolverString) {
     if (!commandLineSolverOk(log_options, value))
       return OptionStatus::kIllegalValue;
-  } else if (option.name == parallel_string) {
+  } else if (option.name == kParallelString) {
     if (!commandLineOffChooseOnOk(log_options, value))
       return OptionStatus::kIllegalValue;
   }
@@ -443,7 +443,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
                                atof(value.c_str()));
   } else {
     // Setting a string option value
-    if (!name.compare(log_file_string)) {
+    if (!name.compare(kLogFileString)) {
       // Changing the name of the log file
       if (log_options.log_file_stream != NULL) {
         // Current log file stream is not null, so flush and close it
@@ -458,7 +458,7 @@ OptionStatus setLocalOptionValue(HighsLogOptions& log_options,
         log_options.log_file_stream = NULL;
       }
     }
-    if (!name.compare(model_file_string)) {
+    if (!name.compare(kModelFileString)) {
       // Don't allow model filename to be changed - it's only an
       // option so that reading of run-time options works
       highsLogUser(log_options, HighsLogType::kError,
@@ -825,7 +825,7 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
 void reportOption(FILE* file, const OptionRecordString& option,
                   const bool report_only_non_default_values, const bool html) {
   // Don't report for the options file if writing to an options file
-  if (option.name == options_file_string) return;
+  if (option.name == kOptionsFileString) return;
   if (!report_only_non_default_values ||
       option.default_value != *option.value) {
     if (html) {

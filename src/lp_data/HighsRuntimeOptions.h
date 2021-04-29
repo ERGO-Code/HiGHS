@@ -26,22 +26,22 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
 
     std::string presolve, solver, parallel;
 
-    cxx_options.add_options()(model_file_string, "File of model to solve.",
+    cxx_options.add_options()(kModelFileString, "File of model to solve.",
                               cxxopts::value<std::vector<std::string>>())(
-        presolve_string,
+        kPresolveString,
         "Presolve: \"choose\" by default - \"on\"/\"off\"/\"mip\" are "
         "alternatives.",
         cxxopts::value<std::string>(presolve))(
-        solver_string,
+        kSolverString,
         "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
         cxxopts::value<std::string>(solver))(
-        parallel_string,
+        kParallelString,
         "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
         "alternatives.",
-        cxxopts::value<std::string>(parallel))(time_limit_string,
+        cxxopts::value<std::string>(parallel))(kTimeLimitString,
                                                "Run time limit (double).",
                                                cxxopts::value<double>())(
-        options_file_string, "File containing HiGHS options.",
+        kOptionsFileString, "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())("h, help", "Print help.");
     cxx_options.parse_positional("model_file");
 
@@ -52,8 +52,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       exit(0);
     }
 
-    if (result.count(model_file_string)) {
-      auto& v = result[model_file_string].as<std::vector<std::string>>();
+    if (result.count(kModelFileString)) {
+      auto& v = result[kModelFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {
         HighsInt nonEmpty = 0;
         for (HighsInt i = 0; i < (HighsInt)v.size(); i++) {
@@ -72,36 +72,36 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       }
     }
 
-    if (result.count(presolve_string)) {
-      std::string value = result[presolve_string].as<std::string>();
-      if (setLocalOptionValue(options.log_options, presolve_string,
+    if (result.count(kPresolveString)) {
+      std::string value = result[kPresolveString].as<std::string>();
+      if (setLocalOptionValue(options.log_options, kPresolveString,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
 
-    if (result.count(solver_string)) {
-      std::string value = result[solver_string].as<std::string>();
-      if (setLocalOptionValue(options.log_options, solver_string,
+    if (result.count(kSolverString)) {
+      std::string value = result[kSolverString].as<std::string>();
+      if (setLocalOptionValue(options.log_options, kSolverString,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
 
-    if (result.count(parallel_string)) {
-      std::string value = result[parallel_string].as<std::string>();
-      if (setLocalOptionValue(options.log_options, parallel_string,
+    if (result.count(kParallelString)) {
+      std::string value = result[kParallelString].as<std::string>();
+      if (setLocalOptionValue(options.log_options, kParallelString,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
 
-    if (result.count(time_limit_string)) {
-      double value = result[time_limit_string].as<double>();
-      if (setLocalOptionValue(options.log_options, time_limit_string,
+    if (result.count(kTimeLimitString)) {
+      double value = result[kTimeLimitString].as<double>();
+      if (setLocalOptionValue(options.log_options, kTimeLimitString,
                               options.records, value) != OptionStatus::kOk)
         return false;
     }
 
-    if (result.count(options_file_string)) {
-      auto& v = result[options_file_string].as<std::vector<std::string>>();
+    if (result.count(kOptionsFileString)) {
+      auto& v = result[kOptionsFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {
         std::cout << "Multiple options files not implemented.\n";
         return false;

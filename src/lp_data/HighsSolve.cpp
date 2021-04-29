@@ -53,7 +53,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
     // Set the scaled model status for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
-  } else if (options.solver == ipm_string) {
+  } else if (options.solver == kIpmString) {
     // Use IPM
 #ifdef IPX_ON
     bool imprecise_solution;
