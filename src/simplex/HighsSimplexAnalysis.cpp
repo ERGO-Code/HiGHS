@@ -203,11 +203,11 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
         if ((k == ANALYSIS_OPERATION_TYPE_BTRAN_EP) ||
             (k == ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE) ||
             (k == ANALYSIS_OPERATION_TYPE_BTRAN_FULL)) {
-          AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
-          AnIter->AnIterOpHyperTRAN = hyperBTRANU;
+          AnIter->AnIterOpHyperCANCEL = kHyperCancel;
+          AnIter->AnIterOpHyperTRAN = kHyperBtranU;
         } else {
-          AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
-          AnIter->AnIterOpHyperTRAN = hyperFTRANL;
+          AnIter->AnIterOpHyperCANCEL = kHyperCancel;
+          AnIter->AnIterOpHyperTRAN = kHyperFtranL;
         }
         AnIter->AnIterOpRsDim = numRow;
       }
@@ -753,7 +753,7 @@ void HighsSimplexAnalysis::operationRecordAfter(const HighsInt operation_type,
                                                 const HighsInt result_count) {
   AnIterOpRec& AnIter = AnIterOp[operation_type];
   const double result_density = 1.0 * result_count / AnIter.AnIterOpRsDim;
-  if (result_density <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
+  if (result_density <= kHyperResult) AnIter.AnIterOpNumHyperRs++;
   if (result_density > 0) {
     AnIter.AnIterOpSumLog10RsDensity += log(result_density) / log(10.0);
   } else {

@@ -333,10 +333,10 @@ void HFactor::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
     return;
   }
 
-  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);
-  if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_MPF) updateMPF(aq, ep, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);
+  if (updateMethod == kUpdateMethodFt) updateFT(aq, ep, *iRow);
+  if (updateMethod == kUpdateMethodPf) updatePF(aq, *iRow, hint);
+  if (updateMethod == kUpdateMethodMpf) updateMPF(aq, ep, *iRow, hint);
+  if (updateMethod == kUpdateMethodApf) updateAPF(aq, ep, *iRow);
 }
 
 bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
@@ -998,7 +998,7 @@ void HFactor::buildFinish() {
 
   // UR space
   HighsInt UcountX = Uindex.size();
-  HighsInt URstuffX = updateMethod == UPDATE_METHOD_FT ? 5 : 0;
+  HighsInt URstuffX = updateMethod == kUpdateMethodFt ? 5 : 0;
   HighsInt URcountX = UcountX + URstuffX * numRow;
   URindex.resize(URcountX);
   URvalue.resize(URcountX);
@@ -1027,8 +1027,8 @@ void HFactor::buildFinish() {
   // Re-factor merit
   UmeritX = numRow + (LcountX + UcountX) * 1.5;
   UtotalX = UcountX;
-  if (updateMethod == UPDATE_METHOD_PF) UmeritX = numRow + UcountX * 4;
-  if (updateMethod == UPDATE_METHOD_MPF) UmeritX = numRow + UcountX * 3;
+  if (updateMethod == kUpdateMethodPf) UmeritX = numRow + UcountX * 4;
+  if (updateMethod == kUpdateMethodMpf) UmeritX = numRow + UcountX * 3;
 
   // Clear update buffer
   PFpivotValue.clear();
@@ -1049,7 +1049,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
                      HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranLower, factor_timer_clock_pointer);
-  if (updateMethod == UPDATE_METHOD_APF) {
+  if (updateMethod == kUpdateMethodApf) {
     factor_timer.start(FactorFtranLowerAPF, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();
@@ -1059,7 +1059,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
   }
 
   double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > hyperCANCEL || historical_density > hyperFTRANL) {
+  if (current_density > kHyperCancel || historical_density > kHyperFtranL) {
     factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
     // Alias to RHS
     HighsInt RHScount = 0;
@@ -1104,7 +1104,7 @@ void HFactor::btranL(HVector& rhs, double historical_density,
   FactorTimer factor_timer;
   factor_timer.start(FactorBtranLower, factor_timer_clock_pointer);
   double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > hyperCANCEL || historical_density > hyperBTRANL) {
+  if (current_density > kHyperCancel || historical_density > kHyperBtranL) {
     // Alias to RHS
     factor_timer.start(FactorBtranLowerSps, factor_timer_clock_pointer);
     HighsInt RHScount = 0;
@@ -1145,7 +1145,7 @@ void HFactor::btranL(HVector& rhs, double historical_density,
     factor_timer.stop(FactorBtranLowerHyper, factor_timer_clock_pointer);
   }
 
-  if (updateMethod == UPDATE_METHOD_APF) {
+  if (updateMethod == kUpdateMethodApf) {
     factor_timer.start(FactorBtranLowerAPF, factor_timer_clock_pointer);
     btranAPF(rhs);
     rhs.tight();
@@ -1160,7 +1160,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranUpper, factor_timer_clock_pointer);
   // The update part
-  if (updateMethod == UPDATE_METHOD_FT) {
+  if (updateMethod == kUpdateMethodFt) {
     factor_timer.start(FactorFtranUpperFT, factor_timer_clock_pointer);
     //    const double current_density = 1.0 * rhs.count / numRow;
     ftranFT(rhs);
@@ -1168,7 +1168,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
     rhs.pack();
     factor_timer.stop(FactorFtranUpperFT, factor_timer_clock_pointer);
   }
-  if (updateMethod == UPDATE_METHOD_MPF) {
+  if (updateMethod == kUpdateMethodMpf) {
     factor_timer.start(FactorFtranUpperMPF, factor_timer_clock_pointer);
     ftranMPF(rhs);
     rhs.tight();
@@ -1178,9 +1178,9 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
 
   // The regular part
   const double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > hyperCANCEL || historical_density > hyperFTRANU) {
+  if (current_density > kHyperCancel || historical_density > kHyperFtranU) {
     const bool report_ftran_upper_sparse =
-        false;  // current_density < hyperCANCEL;
+        false;  // current_density < kHyperCancel;
     HighsInt use_clock;
     if (current_density < 0.1)
       use_clock = FactorFtranUpperSps2;
@@ -1257,7 +1257,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
     factor_timer.stop(use_clock, factor_timer_clock_pointer);
   }
-  if (updateMethod == UPDATE_METHOD_PF) {
+  if (updateMethod == kUpdateMethodPf) {
     factor_timer.start(FactorFtranUpperPF, factor_timer_clock_pointer);
     ftranPF(rhs);
     rhs.tight();
@@ -1271,7 +1271,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
                      HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtranUpper, factor_timer_clock_pointer);
-  if (updateMethod == UPDATE_METHOD_PF) {
+  if (updateMethod == kUpdateMethodPf) {
     factor_timer.start(FactorBtranUpperPF, factor_timer_clock_pointer);
     btranPF(rhs);
     factor_timer.stop(FactorBtranUpperPF, factor_timer_clock_pointer);
@@ -1279,7 +1279,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
 
   // The regular part
   double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > hyperCANCEL || historical_density > hyperBTRANU) {
+  if (current_density > kHyperCancel || historical_density > kHyperBtranU) {
     factor_timer.start(FactorBtranUpperSps, factor_timer_clock_pointer);
     // Alias to non constant
     double RHS_syntheticTick = 0;
@@ -1329,7 +1329,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
   }
 
   // The update part
-  if (updateMethod == UPDATE_METHOD_FT) {
+  if (updateMethod == kUpdateMethodFt) {
     factor_timer.start(FactorBtranUpperFT, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();
@@ -1338,7 +1338,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
     rhs.tight();
     factor_timer.stop(FactorBtranUpperFT, factor_timer_clock_pointer);
   }
-  if (updateMethod == UPDATE_METHOD_MPF) {
+  if (updateMethod == kUpdateMethodMpf) {
     factor_timer.start(FactorBtranUpperMPF, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();

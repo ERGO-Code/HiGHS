@@ -34,10 +34,10 @@ using std::vector;
 class HVector;
 
 enum UPDATE_METHOD {
-  UPDATE_METHOD_FT = 1,
-  UPDATE_METHOD_PF = 2,
-  UPDATE_METHOD_MPF = 3,
-  UPDATE_METHOD_APF = 4
+  kUpdateMethodFt = 1,
+  kUpdateMethodPf = 2,
+  kUpdateMethodMpf = 3,
+  kUpdateMethodApf = 4
 };
 /**
  * Limits and default value of pivoting threshold
@@ -56,19 +56,19 @@ const double max_pivot_tolerance = 1.0;
  * Necessary thresholds for historical density to trigger
  * hyper-sparse TRANs,
  */
-const double hyperFTRANL = 0.15;
-const double hyperFTRANU = 0.10;
-const double hyperBTRANL = 0.10;
-const double hyperBTRANU = 0.15;
+const double kHyperFtranL = 0.15;
+const double kHyperFtranU = 0.10;
+const double kHyperBtranL = 0.10;
+const double kHyperBtranU = 0.15;
 /**
  * Necessary threshold for RHS density to trigger hyper-sparse TRANs,
  */
-const double hyperCANCEL = 0.05;
+const double kHyperCancel = 0.05;
 /**
  * Threshold for result density for it to be considered as
  * hyper-sparse - only for reporting
  */
-const double hyperRESULT = 0.10;
+const double kHyperResult = 0.10;
 
 /**
  * Parameters for reinversion on synthetic clock
@@ -147,7 +147,7 @@ class HFactor {
       bool output_flag = false, FILE* logfile = NULL,
       bool log_to_console = true, int log_dev_level = 0,
       const bool use_original_HFactor_logic = true,
-      const HighsInt updateMethod = UPDATE_METHOD_FT);
+      const HighsInt updateMethod = kUpdateMethodFt);
 
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
