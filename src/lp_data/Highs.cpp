@@ -166,17 +166,25 @@ const HighsOptions& Highs::getOptions() const { return options_; }
 const HighsInfo& Highs::getInfo() const { return info_; }
 
 HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
-  if (getLocalInfoValue(options_, info, info_.records, value) ==
-      InfoStatus::kOk)
+  InfoStatus status = getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
-  return HighsStatus::kError;
+  } else if (status == InfoStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
 }
 
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
-  if (getLocalInfoValue(options_, info, info_.records, value) ==
-      InfoStatus::kOk)
+  InfoStatus status = getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
-  return HighsStatus::kError;
+  } else if (status == InfoStatus::kUnavailable) {
+    return HighsStatus::kWarning;
+  } else {
+    return HighsStatus::kError;
+  }
 }
 
 HighsStatus Highs::writeInfo(const std::string filename) {
@@ -2041,10 +2049,10 @@ HighsStatus Highs::callSolveMip() {
   info_.max_primal_infeasibility =
       std::max({solver.bound_violation_, solver.row_violation_,
                 solver.integrality_violation_});
-  info_.sum_primal_infeasibilities = -1;  // Not known
-  info_.num_dual_infeasibilities = -1;    // Not known
-  info_.max_dual_infeasibility = -1;      // Not known
-  info_.sum_dual_infeasibilities = -1;    // Not known
+  info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
   // The solution needs to be here, but just resize it for now
   if (solver.solution_objective_ != kHighsInf) {
     info_.primal_status = kHighsPrimalDualStatusFeasiblePoint;
@@ -2054,11 +2062,7 @@ HighsStatus Highs::callSolveMip() {
     for (HighsInt iCol = 0; iCol < lp_.numCol_; iCol++)
       solution_.col_value[iCol] = solver.solution_[iCol];
   }
-
-  //  assert((HighsInt)solution_.col_value.size() == lp_.numCol_);
-  //  assert((HighsInt)solution_.row_value.size() == lp_.numRow_);
-  //  solution_.row_value.resize(lp_.numRow_);
-
+  info_.valid = true;
   return return_status;
 }
 
@@ -2075,12 +2079,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-
-  //  std::cout << "warning: Feature under development" << std::endl;
-
   writeSolutionToFile(file, lp, basis, solution, pretty);
-
-  //  return HighsStatus::kWarning;
   return HighsStatus::kOk;
 }
 
@@ -2132,6 +2131,7 @@ bool Highs::getHighsModelStatusAndInfo(const HighsInt solved_hmo) {
   info_.num_dual_infeasibilities = solution_params.num_dual_infeasibility;
   info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
   info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibility;
+  info_.valid = true;
   return true;
 }
 

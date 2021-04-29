@@ -121,11 +121,13 @@ InfoStatus checkInfo(const HighsOptions& options,
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name,
+                             const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
+  if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::kInt) {
     highsLogUser(
@@ -141,11 +143,13 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name,
+                             const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value) {
   HighsInt index;
   InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::kOk) return status;
+  if (!valid) return InfoStatus::kUnavailable;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::kDouble) {
     highsLogUser(

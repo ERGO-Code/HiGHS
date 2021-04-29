@@ -24,7 +24,7 @@
 
 class HighsOptions;
 
-enum class InfoStatus { kOk = 0, kUnknownInfo, kIllegalValue };
+enum class InfoStatus { kOk = 0, kUnknownInfo, kIllegalValue, kUnavailable };
 
 class InfoRecord {
  public:
@@ -85,10 +85,12 @@ InfoStatus checkInfo(const InfoRecordDouble& info);
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name,
+                             const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value);
 InfoStatus getLocalInfoValue(const HighsOptions& options,
                              const std::string& name,
+                             const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value);
 
