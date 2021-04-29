@@ -3,7 +3,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;
+const bool dev_run = false;
 
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
@@ -166,4 +166,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   highs.run();
   if (dev_run) highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
+
+  REQUIRE((int)info.mip_node_count == 1);
+  REQUIRE(info.mip_dual_bound == -6);
+  REQUIRE(info.mip_gap == 0);
 }

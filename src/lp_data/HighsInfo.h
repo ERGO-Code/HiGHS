@@ -213,6 +213,21 @@ class HighsInfo : public HighsInfoStruct {
                                          &objective_function_value, 0);
     records.push_back(record_double);
 
+    record_int = new InfoRecordInt("mip_node_count",
+                                   "MIP solver node count",
+                                   advanced, &mip_node_count, 0);
+    records.push_back(record_int);
+
+    record_double = new InfoRecordDouble("mip_dual_bound",
+                                         "MIP solver dual bound", advanced,
+                                         &mip_dual_bound, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble("mip_gap",
+                                         "MIP solver gap (%)", advanced,
+                                         &mip_gap, 0);
+    records.push_back(record_double);
+
     record_int = new InfoRecordInt("num_primal_infeasibilities",
                                    "Number of primal infeasibilities", advanced,
                                    &num_primal_infeasibilities, -1);

@@ -19,9 +19,15 @@
 
 void HighsInfo::clear() {
   valid = false;
+  mip_node_count = -1;
+  simplex_iteration_count = -1;
+  ipm_iteration_count = -1;
+  crossover_iteration_count = -1;
   primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
   dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
   objective_function_value = 0;
+  mip_dual_bound = 0;
+  mip_gap = kHighsInf;
   num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
@@ -167,6 +173,7 @@ HighsStatus writeInfoToFile(FILE* file,
 			    const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const bool html) {
+  if (!html && !valid) return HighsStatus::kWarning;
   if (html) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Info</title>\n");
