@@ -16,11 +16,11 @@
 #include "lp_data/HighsOptions.h"
 
 void setLogOptions();
-std::string optionEntryType2string(const HighsOptionType type) {
+std::string optionEntryTypeToString(const HighsOptionType type) {
   if (type == HighsOptionType::kBool) {
     return "bool";
   } else if (type == HighsOptionType::kInt) {
-    return "int";
+    return "HighsInt";
   } else if (type == HighsOptionType::kDouble) {
     return "double";
   } else {
@@ -591,7 +591,7 @@ OptionStatus getLocalOptionValue(
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not bool\n",
-                 name.c_str(), optionEntryType2string(type).c_str());
+                 name.c_str(), optionEntryTypeToString(type).c_str());
     return OptionStatus::kIllegalValue;
   }
   OptionRecordBool option = ((OptionRecordBool*)option_records[index])[0];
@@ -610,8 +610,8 @@ OptionStatus getLocalOptionValue(
   if (type != HighsOptionType::kInt) {
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
-                 "%s, not int\n",
-                 name.c_str(), optionEntryType2string(type).c_str());
+                 "%s, not HighsInt\n",
+                 name.c_str(), optionEntryTypeToString(type).c_str());
     return OptionStatus::kIllegalValue;
   }
   OptionRecordInt option = ((OptionRecordInt*)option_records[index])[0];
@@ -631,7 +631,7 @@ OptionStatus getLocalOptionValue(
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not double\n",
-                 name.c_str(), optionEntryType2string(type).c_str());
+                 name.c_str(), optionEntryTypeToString(type).c_str());
     return OptionStatus::kIllegalValue;
   }
   OptionRecordDouble option = ((OptionRecordDouble*)option_records[index])[0];
@@ -651,7 +651,7 @@ OptionStatus getLocalOptionValue(
     highsLogUser(log_options, HighsLogType::kError,
                  "getLocalOptionValue: Option \"%s\" requires value of type "
                  "%s, not string\n",
-                 name.c_str(), optionEntryType2string(type).c_str());
+                 name.c_str(), optionEntryTypeToString(type).c_str());
     return OptionStatus::kIllegalValue;
   }
   OptionRecordString option = ((OptionRecordString*)option_records[index])[0];

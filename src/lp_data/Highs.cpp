@@ -166,7 +166,8 @@ const HighsOptions& Highs::getOptions() const { return options_; }
 const HighsInfo& Highs::getInfo() const { return info_; }
 
 HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
-  InfoStatus status = getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  InfoStatus status =
+      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {
@@ -177,7 +178,8 @@ HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
 }
 
 HighsStatus Highs::getInfoValue(const std::string& info, double& value) const {
-  InfoStatus status = getLocalInfoValue(options_, info, info_.valid, info_.records, value);
+  InfoStatus status =
+      getLocalInfoValue(options_, info, info_.valid, info_.records, value);
   if (status == InfoStatus::kOk) {
     return HighsStatus::kOk;
   } else if (status == InfoStatus::kUnavailable) {
@@ -196,9 +198,9 @@ HighsStatus Highs::writeInfo(const std::string filename) {
                           return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
 
-  return_status =
-      interpretCallStatus(writeInfoToFile(file, info_.valid, info_.records, html),
-                          return_status, "writeInfoToFile");
+  return_status = interpretCallStatus(
+      writeInfoToFile(file, info_.valid, info_.records, html), return_status,
+      "writeInfoToFile");
   return return_status;
 }
 
@@ -2321,11 +2323,12 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kUnboundedOrInfeasible:
       have_solution = true;
       if (options_.allow_unbounded_or_infeasible ||
-	  (options_.solver == ipm_string && options_.run_crossover)) {
+          (options_.solver == ipm_string && options_.run_crossover)) {
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::kOk);
       } else {
-        // This model status is not permitted unless IPM is run without crossover
+        // This model status is not permitted unless IPM is run without
+        // crossover
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "

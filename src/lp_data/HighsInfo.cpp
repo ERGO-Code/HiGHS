@@ -37,8 +37,10 @@ void HighsInfo::clear() {
 }
 
 std::string infoEntryTypeToString(const HighsInfoType type) {
-  if (type == HighsInfoType::kInt) {
-    return "int";
+  if (type == HighsInfoType::kInt64) {
+    return "int64_t";
+  } else if (type == HighsInfoType::kInt) {
+    return "HighsInt";
   } else {
     return "double";
   }
@@ -75,7 +77,28 @@ InfoStatus checkInfo(const HighsOptions& options,
         error_found = true;
       }
     }
-    if (type == HighsInfoType::kInt) {
+    if (type == HighsInfoType::kInt64) {
+      // Check int64_t info
+      InfoRecordInt64& info = ((InfoRecordInt64*)info_records[index])[0];
+      // Check that there are no other info with the same value pointers
+      int64_t* value_pointer = info.value;
+      for (HighsInt check_index = 0; check_index < num_info; check_index++) {
+        if (check_index == index) continue;
+        InfoRecordInt64& check_info =
+            ((InfoRecordInt64*)info_records[check_index])[0];
+        if (check_info.type == HighsInfoType::kInt64) {
+          if (check_info.value == value_pointer) {
+            highsLogUser(options.log_options, HighsLogType::kError,
+                         "checkInfo: Info %" HIGHSINT_FORMAT
+                         " (\"%s\") has the same value "
+                         "pointer as info %" HIGHSINT_FORMAT " (\"%s\")\n",
+                         index, info.name.c_str(), check_index,
+                         check_info.name.c_str());
+            error_found = true;
+          }
+        }
+      }
+    } else if (type == HighsInfoType::kInt) {
       // Check HighsInt info
       InfoRecordInt& info = ((InfoRecordInt*)info_records[index])[0];
       // Check that there are no other info with the same value pointers
@@ -126,8 +149,7 @@ InfoStatus checkInfo(const HighsOptions& options,
 }
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
-                             const std::string& name,
-                             const bool valid,
+                             const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              HighsInt& value) {
   HighsInt index;
@@ -148,8 +170,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
 }
 
 InfoStatus getLocalInfoValue(const HighsOptions& options,
-                             const std::string& name,
-                             const bool valid,
+                             const std::string& name, const bool valid,
                              const std::vector<InfoRecord*>& info_records,
                              double& value) {
   HighsInt index;
@@ -169,8 +190,7 @@ InfoStatus getLocalInfoValue(const HighsOptions& options,
   return InfoStatus::kOk;
 }
 
-HighsStatus writeInfoToFile(FILE* file,
-			    const bool valid,
+HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const bool html) {
   if (!html && !valid) return HighsStatus::kWarning;
@@ -196,15 +216,16 @@ HighsStatus writeInfoToFile(FILE* file,
   return HighsStatus::kOk;
 }
 
-void reportInfo(FILE* file, 
-		const std::vector<InfoRecord*>& info_records,
+void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
                 const bool html) {
   HighsInt num_info = info_records.size();
   for (HighsInt index = 0; index < num_info; index++) {
     HighsInfoType type = info_records[index]->type;
     // Skip the advanced info when creating HTML
     if (html && info_records[index]->advanced) continue;
-    if (type == HighsInfoType::kInt) {
+    if (type == HighsInfoType::kInt64) {
+      reportInfo(file, ((InfoRecordInt64*)info_records[index])[0], html);
+    } else if (type == HighsInfoType::kInt) {
       reportInfo(file, ((InfoRecordInt*)info_records[index])[0], html);
     } else {
       reportInfo(file, ((InfoRecordDouble*)info_records[index])[0], html);
@@ -212,9 +233,24 @@ void reportInfo(FILE* file,
   }
 }
 
-void reportInfo(FILE* file, 
-		const InfoRecordInt& info,
-		const bool html) {
+void reportInfo(FILE* file, const InfoRecordInt64& info, const bool html) {
+  if (html) {
+    fprintf(file,
+            "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
+            info.name.c_str());
+    fprintf(file, "%s<br>\n", info.description.c_str());
+    fprintf(file, "type: HighsInt, advanced: %s\n",
+            highsBoolToString(info.advanced).c_str());
+    fprintf(file, "</li>\n");
+  } else {
+    fprintf(file, "\n# %s\n", info.description.c_str());
+    fprintf(file, "# [type: HighsInt, advanced: %s]\n",
+            highsBoolToString(info.advanced).c_str());
+    fprintf(file, "%s = %" PRId64 "\n", info.name.c_str(), *info.value);
+  }
+}
+
+void reportInfo(FILE* file, const InfoRecordInt& info, const bool html) {
   if (html) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
@@ -232,9 +268,7 @@ void reportInfo(FILE* file,
   }
 }
 
-void reportInfo(FILE* file, 
-		const InfoRecordDouble& info,
-		const bool html) {
+void reportInfo(FILE* file, const InfoRecordDouble& info, const bool html) {
   if (html) {
     fprintf(file,
             "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
