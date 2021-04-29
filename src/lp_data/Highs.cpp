@@ -345,7 +345,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   }
   // Update the HiGHS basis and invalidate any simplex basis for the model
   basis_ = read_basis;
-  basis_.valid_ = true;
+  basis_.valid = true;
   if (hmos_.size() > 0) {
     clearBasisInterface();
   }
@@ -514,7 +514,7 @@ HighsStatus Highs::run() {
   // original LP
   HighsInt solved_hmo = original_hmo;
 
-  if (!basis_.valid_ && options_.presolve != kHighsOffString) {
+  if (!basis_.valid && options_.presolve != kHighsOffString) {
     // No HiGHS basis so consider presolve
     //
     // If using IPX to solve the reduced LP, crossover must be run
@@ -748,7 +748,7 @@ HighsStatus Highs::run() {
           hmos_[original_hmo].solution_ = presolve_.data_.recovered_solution_;
 
           // Set basis and its status
-          hmos_[original_hmo].basis_.valid_ = true;
+          hmos_[original_hmo].basis_.valid = true;
           hmos_[original_hmo].basis_.col_status =
               presolve_.data_.recovered_basis_.col_status;
           hmos_[original_hmo].basis_.row_status =
@@ -829,7 +829,7 @@ HighsStatus Highs::run() {
     // There is a valid basis for the problem or presolve is off
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "LP without presolve or with basis";
-    if (basis_.valid_) {
+    if (basis_.valid) {
       // There is a valid HiGHS basis, so use it to initialise the basis
       // in the HMO to be solved after refining any status values that
       // are simply HighsBasisStatus::kNonbasic
@@ -1232,7 +1232,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   }
   // Update the HiGHS basis
   basis_ = basis;
-  basis_.valid_ = true;
+  basis_.valid = true;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1242,7 +1242,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
 HighsStatus Highs::setBasis() {
   // Invalidate the basis for HiGHS Don't set to logical basis since
   // that causes presolve to be skipped
-  basis_.valid_ = false;
+  basis_.valid = false;
   // Follow implications of a new HiGHS basis
   newHighsBasis();
   // Can't use returnFromHighs since...
@@ -1876,7 +1876,7 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       unscaled_primal_status, (HighsInt)solution.col_value.size(),
       (HighsInt)solution.row_value.size(), unscaled_dual_status,
       (HighsInt)solution.col_dual.size(), (HighsInt)solution.row_dual.size(),
-      basis.valid_, (HighsInt)basis.col_status.size(),
+      basis.valid, (HighsInt)basis.col_status.size(),
       (HighsInt)basis.row_status.size());
 }
 #endif
@@ -2108,11 +2108,11 @@ void Highs::forceHighsSolutionBasisSize() {
   // invalidating the basis if they aren't
   if ((HighsInt)basis_.col_status.size() != lp_.numCol_) {
     basis_.col_status.resize(lp_.numCol_);
-    basis_.valid_ = false;
+    basis_.valid = false;
   }
   if ((HighsInt)basis_.row_status.size() != lp_.numRow_) {
     basis_.row_status.resize(lp_.numRow_);
-    basis_.valid_ = false;
+    basis_.valid = false;
   }
 }
 
@@ -2175,7 +2175,7 @@ HighsStatus Highs::getUseModelStatus(
       use_model_status = HighsModelStatus::kOptimal;
     } else if (rerun_from_logical_basis) {
       std::string save_presolve = options_.presolve;
-      basis_.valid_ = false;
+      basis_.valid = false;
       options_.presolve = kHighsOnString;
       call_status = run();
       return_status = interpretCallStatus(call_status, return_status, "run()");
@@ -2355,7 +2355,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   }
   // Now to check what's available with each model status
   //
-  const bool have_basis = basis_.valid_;
+  const bool have_basis = basis_.valid;
   /*
   const bool have_info = info_.valid;
   switch (scaled_model_status_) {

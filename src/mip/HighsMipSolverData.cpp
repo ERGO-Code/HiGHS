@@ -395,7 +395,7 @@ double HighsMipSolverData::percentageInactiveIntegers() const {
 }
 
 void HighsMipSolverData::performRestart() {
-  HighsBasis rootBasis;
+  HighsBasis root_basis;
   HighsPseudocostInitialization pscostinit(
       pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
       postSolveStack);
@@ -412,23 +412,23 @@ void HighsMipSolverData::performRestart() {
   presolvedModel = lp.getLp();
   presolvedModel.integrality_ = std::move(integrality);
   const HighsBasis& basis = lp.getLpSolver().getBasis();
-  if (basis.valid_) {
+  if (basis.valid) {
     // if we have a basis after solving the root LP, we expand it to the
     // original space so that it can be used for constructing a starting basis
     // for the presolved model after the restart
-    rootBasis.col_status.resize(postSolveStack.getOrigNumCol());
-    rootBasis.row_status.resize(postSolveStack.getOrigNumRow());
-    rootBasis.valid_ = true;
+    root_basis.col_status.resize(postSolveStack.getOrigNumCol());
+    root_basis.row_status.resize(postSolveStack.getOrigNumRow());
+    root_basis.valid = true;
 
     for (HighsInt i = 0; i != mipsolver.model_->numCol_; ++i)
-      rootBasis.col_status[postSolveStack.getOrigColIndex(i)] =
+      root_basis.col_status[postSolveStack.getOrigColIndex(i)] =
           basis.col_status[i];
 
     for (HighsInt i = 0; i != mipsolver.model_->numRow_; ++i)
-      rootBasis.row_status[postSolveStack.getOrigRowIndex(i)] =
+      root_basis.row_status[postSolveStack.getOrigRowIndex(i)] =
           basis.row_status[i];
 
-    mipsolver.rootbasis = &rootBasis;
+    mipsolver.rootbasis = &root_basis;
   }
 
   // transform the objective upper bound into the original space, as it is
@@ -459,7 +459,7 @@ void HighsMipSolverData::performRestart() {
   // std::swap(nodequeue, oldNodeQueue);
 
   // remove the pointer into the stack-space of this function
-  if (mipsolver.rootbasis == &rootBasis) mipsolver.rootbasis = nullptr;
+  if (mipsolver.rootbasis == &root_basis) mipsolver.rootbasis = nullptr;
   mipsolver.pscostinit = nullptr;
 }
 
@@ -471,7 +471,7 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.col_status.assign(mipsolver.numCol(),
                                      HighsBasisStatus::kNonbasic);
     firstrootbasis.row_status.assign(numRow, HighsBasisStatus::kNonbasic);
-    firstrootbasis.valid_ = true;
+    firstrootbasis.valid = true;
     HighsInt missingbasic = numRow;
 
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -764,7 +764,7 @@ restart:
     lp.addCuts(cutset);
   }
 
-  if (firstrootbasis.valid_) lp.getLpSolver().setBasis(firstrootbasis);
+  if (firstrootbasis.valid) lp.getLpSolver().setBasis(firstrootbasis);
   lp.getLpSolver().setOptionValue("presolve", "on");
 
   lp.getLpSolver().setOptionValue("output_flag",
@@ -791,7 +791,7 @@ restart:
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;
   firstlpsolobj = lp.getObjective();
-  if (lp.getLpSolver().getBasis().valid_ && lp.numRows() == mipsolver.numRow())
+  if (lp.getLpSolver().getBasis().valid && lp.numRows() == mipsolver.numRow())
     firstrootbasis = lp.getLpSolver().getBasis();
   else {
     // the root basis is later expected to be consistent for the model without
@@ -801,7 +801,7 @@ restart:
                                      HighsBasisStatus::kNonbasic);
     firstrootbasis.row_status.assign(mipsolver.numRow(),
                                      HighsBasisStatus::kBasic);
-    firstrootbasis.valid_ = true;
+    firstrootbasis.valid = true;
   }
   rootlpsolobj = firstlpsolobj;
 

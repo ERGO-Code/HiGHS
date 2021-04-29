@@ -4941,31 +4941,31 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
     postSolveStack.undoUntil(options, flagRow, flagCol, sol, basis,
                              tmp.numReductions());
 
-    HighsBasis tmpBasis;
-    HighsSolution tmpSol;
-    tmpBasis.col_status.resize(model.numCol_);
-    tmpSol.col_dual.resize(model.numCol_);
-    tmpSol.col_value.resize(model.numCol_);
+    HighsBasis temp_basis;
+    HighsSolution temp_sol;
+    temp_basis.col_status.resize(model.numCol_);
+    temp_sol.col_dual.resize(model.numCol_);
+    temp_sol.col_value.resize(model.numCol_);
     for (HighsInt i = 0; i != model.numCol_; ++i) {
-      tmpSol.col_dual[i] = sol.col_dual[tmp.getOrigColIndex(i)];
-      tmpSol.col_value[i] = sol.col_value[tmp.getOrigColIndex(i)];
-      tmpBasis.col_status[i] = basis.col_status[tmp.getOrigColIndex(i)];
+      temp_sol.col_dual[i] = sol.col_dual[tmp.getOrigColIndex(i)];
+      temp_sol.col_value[i] = sol.col_value[tmp.getOrigColIndex(i)];
+      temp_basis.col_status[i] = basis.col_status[tmp.getOrigColIndex(i)];
     }
 
-    tmpBasis.row_status.resize(model.numRow_);
-    tmpSol.row_dual.resize(model.numRow_);
+    temp_basis.row_status.resize(model.numRow_);
+    temp_sol.row_dual.resize(model.numRow_);
     for (HighsInt i = 0; i != model.numRow_; ++i) {
-      tmpSol.row_dual[i] = sol.row_dual[tmp.getOrigRowIndex(i)];
-      tmpBasis.row_status[i] = basis.row_status[tmp.getOrigRowIndex(i)];
+      temp_sol.row_dual[i] = sol.row_dual[tmp.getOrigRowIndex(i)];
+      temp_basis.row_status[i] = basis.row_status[tmp.getOrigRowIndex(i)];
     }
-    tmpSol.row_value.resize(model.numRow_);
+    temp_sol.row_value.resize(model.numRow_);
     calculateRowValues(model, sol);
-    tmpBasis.valid_ = true;
-    refineBasis(model, tmpSol, tmpBasis);
+    temp_basis.valid = true;
+    refineBasis(model, temp_sol, temp_basis);
     Highs highs;
     highs.passOptions(options);
     highs.passModel(model);
-    highs.setBasis(tmpBasis);
+    highs.setBasis(temp_basis);
     // highs.writeModel("model.mps");
     // highs.writeBasis("bad.bas");
     highs.run();

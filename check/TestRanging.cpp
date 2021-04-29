@@ -66,7 +66,7 @@ void testRanging(Highs& highs) {
   HighsRanging ranging;
   REQUIRE(highs.getRanging(ranging) == HighsStatus::kOk);
   HighsBasis basis = highs.getBasis();
-  assert(basis.valid_);
+  assert(basis.valid);
   HighsSolution solution = highs.getSolution();
 
   vector<HighsBasisStatus>& col_status = basis.col_status;

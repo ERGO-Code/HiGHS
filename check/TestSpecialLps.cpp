@@ -399,7 +399,7 @@ void singularStartingBasis(Highs& highs) {
   basis.col_status[2] = HighsBasisStatus::kLower;
   basis.row_status[0] = HighsBasisStatus::kUpper;
   basis.row_status[1] = HighsBasisStatus::kUpper;
-  basis.valid_ = true;
+  basis.valid = true;
 
   REQUIRE(highs.setBasis(basis) == HighsStatus::kOk);
 

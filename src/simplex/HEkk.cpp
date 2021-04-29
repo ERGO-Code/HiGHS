@@ -375,7 +375,7 @@ HighsBasis HEkk::getHighsBasis() {
   highs_basis.col_status.resize(num_col);
   highs_basis.row_status.resize(num_row);
   assert(status_.has_basis);
-  highs_basis.valid_ = false;
+  highs_basis.valid = false;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
     const double lower = lp_.colLower_[iCol];
@@ -416,7 +416,7 @@ HighsBasis HEkk::getHighsBasis() {
     }
     highs_basis.row_status[iRow] = basis_status;
   }
-  highs_basis.valid_ = true;
+  highs_basis.valid = true;
   return highs_basis;
 }
 

@@ -521,7 +521,7 @@ void getHighsNonVertexSolution(const HighsLogOptions& log_options,
   ipxSolutionToHighsSolution(log_options, lp, rhs, constraint_type, num_col,
                              num_row, x, slack, highs_solution);
   // Indicate that there is no basis corresponding to this solution
-  highs_basis.valid_ = false;
+  highs_basis.valid = false;
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,

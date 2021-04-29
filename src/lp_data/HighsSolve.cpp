@@ -132,7 +132,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   // Possibly analyse the HiGHS basic solution
   //
   // NB IPX may not yield a basic solution
-  if (model.basis_.valid_) debugHighsBasicSolution(message, model);
+  if (model.basis_.valid) debugHighsBasicSolution(message, model);
 
   return return_status;
 }
@@ -259,7 +259,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     }
   }
   solution_params.objective_function_value = objective;
-  basis.valid_ = true;
+  basis.valid = true;
 
   if (infeasible) {
     model_status = HighsModelStatus::kInfeasible;

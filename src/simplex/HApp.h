@@ -78,7 +78,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   if (!status.initialised) scaleAndPassLpToEkk(highs_model_object);
 
   // If there is no simplex basis, use the HiGHS basis
-  if (!status.has_basis && highs_model_object.basis_.valid_) {
+  if (!status.has_basis && highs_model_object.basis_.valid) {
     return_status = ekk_instance.setBasis(highs_model_object.basis_);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }

@@ -1373,7 +1373,7 @@ HighsDebugStatus debugSimplexBasicSolution(
       }
     }
   }
-  highs_basis.valid_ = true;
+  highs_basis.valid = true;
   // Possibly scaled model
   // Determine a HiGHS solution simplex solution
   HighsSolution solution;

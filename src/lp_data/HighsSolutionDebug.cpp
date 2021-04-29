@@ -38,7 +38,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  if (!basis.valid_) return return_status;
+  if (!basis.valid) return return_status;
   bool consistent = isBasisConsistent(lp, basis);
   if (!consistent) {
     highsLogUser(options.log_options, HighsLogType::kError,
@@ -218,7 +218,7 @@ HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsSolution& solution) {
   if (!isSolutionRightSize(lp, solution))
     return HighsDebugStatus::kLogicalError;
-  if (!isBasisRightSize(lp, basis) && basis.valid_)
+  if (!isBasisRightSize(lp, basis) && basis.valid)
     return HighsDebugStatus::kLogicalError;
   return HighsDebugStatus::kOk;
 }

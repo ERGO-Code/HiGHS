@@ -211,7 +211,7 @@ class HighsLpRelaxation {
   }
 
   void storeBasis() {
-    if (!currentbasisstored && lpsolver.getBasis().valid_) {
+    if (!currentbasisstored && lpsolver.getBasis().valid) {
       basischeckpoint = std::make_shared<HighsBasis>(lpsolver.getBasis());
       currentbasisstored = true;
     }

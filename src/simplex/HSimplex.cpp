@@ -77,8 +77,8 @@ void choosePriceTechnique(const HighsInt price_strategy,
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol) {
-  assert(highs_basis.valid_);
-  if (!highs_basis.valid_) {
+  assert(highs_basis.valid);
+  if (!highs_basis.valid) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
   }
   // Add nonbasic structurals
@@ -154,8 +154,8 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
 
 void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                             HighsInt XnumNewRow) {
-  assert(highs_basis.valid_);
-  if (!highs_basis.valid_) {
+  assert(highs_basis.valid);
+  if (!highs_basis.valid) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
   }
   // Add basic logicals

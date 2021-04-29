@@ -1996,7 +1996,7 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
             " : Number of columns and rows for primal and dual solution "
             "and basis\n",
             lp.numCol_, lp.numRow_);
-    const bool with_basis = basis.valid_;
+    const bool with_basis = basis.valid;
     if (with_basis) {
       fprintf(file, "T\n");
     } else {
@@ -2023,7 +2023,7 @@ HighsStatus writeBasisFile(const HighsLogOptions& log_options,
                            const HighsBasis& basis,
                            const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  if (basis.valid_ == false) {
+  if (basis.valid == false) {
     highsLogUser(log_options, HighsLogType::kError,
                  "writeBasisFile: Cannot write an invalid basis\n");
     return HighsStatus::kError;

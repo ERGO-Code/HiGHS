@@ -46,7 +46,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
-  bool& valid_basis = basis.valid_;
+  bool& valid_basis = basis.valid;
   bool& valid_simplex_lp = simplex_status.valid;
   bool& valid_simplex_basis = simplex_status.has_basis;
   bool& scaled_simplex_lp = scale.is_scaled;
@@ -237,7 +237,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
   // Query: should simplex_status.valid be simplex_status.valid_?
-  bool& valid_basis = basis.valid_;
+  bool& valid_basis = basis.valid;
   bool& valid_simplex_lp = simplex_status.valid;
   bool& valid_simplex_basis = simplex_status.has_basis;
   bool& scaled_simplex_lp = scale.is_scaled;
@@ -414,7 +414,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
     highs_model_object.unscaled_model_status_ =
         highs_model_object.scaled_model_status_;
-    basis.valid_ = false;
+    basis.valid = false;
   }
   return_status = interpretCallStatus(
       deleteScale(options.log_options, highs_model_object.scale_.col,
@@ -480,7 +480,7 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     highs_model_object.scaled_model_status_ = HighsModelStatus::kNotset;
     highs_model_object.unscaled_model_status_ =
         highs_model_object.scaled_model_status_;
-    basis.valid_ = false;
+    basis.valid = false;
   }
 
   if (highs_model_object.scale_.is_scaled) {
@@ -918,7 +918,7 @@ HighsStatus Highs::changeColBoundsInterface(
                                 index_collection);
     }
   }
-  if (highs_model_object.basis_.valid_) {
+  if (highs_model_object.basis_.valid) {
     // Update HiGHS basis status and (any) simplex move status of
     // nonbasic variables whose bounds have changed
     return_status =
@@ -992,7 +992,7 @@ HighsStatus Highs::changeRowBoundsInterface(
                                 index_collection);
     }
   }
-  if (highs_model_object.basis_.valid_) {
+  if (highs_model_object.basis_.valid) {
     // Update HiGHS basis status and (any) simplex move status of
     // nonbasic variables whose bounds have changed
     return_status =
@@ -1068,7 +1068,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
       return_status, "applyScalingToLpCol");
   if (return_status == HighsStatus::kError) return return_status;
 
-  if (scaleval < 0 && basis.valid_) {
+  if (scaleval < 0 && basis.valid) {
     // Negative, so flip any nonbasic status
     if (basis.col_status[col] == HighsBasisStatus::kLower) {
       basis.col_status[col] = HighsBasisStatus::kUpper;
@@ -1122,7 +1122,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
       return_status, "applyScalingToLpRow");
   if (return_status == HighsStatus::kError) return return_status;
 
-  if (scaleval < 0 && basis.valid_) {
+  if (scaleval < 0 && basis.valid) {
     // Negative, so flip any nonbasic status
     if (basis.row_status[row] == HighsBasisStatus::kLower) {
       basis.row_status[row] = HighsBasisStatus::kUpper;
@@ -1166,7 +1166,7 @@ HighsStatus Highs::setNonbasicStatusInterface(
   SimplexBasis& simplex_basis = ekk_instance.basis_;
   HighsOptions& options = highs_model_object.options_;
 
-  assert(basis.valid_);
+  assert(basis.valid);
   const bool has_simplex_basis = ekk_instance.status_.has_basis;
 
   if (!assessIndexCollection(options.log_options, index_collection))
@@ -1331,7 +1331,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // Arguable that a warning should be issued and a logical basis
     // set up
     HighsBasis& basis = highs_model_object.basis_;
-    if (basis.valid_) {
+    if (basis.valid) {
       return_status = interpretCallStatus(ekk_instance.setBasis(basis),
                                           return_status, "setBasis");
       if (return_status == HighsStatus::kError) return return_status;

@@ -41,7 +41,7 @@ struct HighsSolution {
 };
 
 struct HighsBasis {
-  bool valid_ = false;
+  bool valid = false;
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
 };

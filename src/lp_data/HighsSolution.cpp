@@ -47,7 +47,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
   double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
-  bool have_basis = basis.valid_;
+  bool have_basis = basis.valid;
 
   num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
@@ -164,7 +164,7 @@ double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution) {
 // and any solution values
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis) {
-  assert(basis.valid_);
+  assert(basis.valid);
   assert(isBasisRightSize(lp, basis));
   const bool have_highs_solution = isSolutionRightSize(lp, solution);
 
@@ -546,7 +546,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
       num_basic_variables++;
   }
   assert(num_basic_variables == lp.numRow_);
-  highs_basis.valid_ = true;
+  highs_basis.valid = true;
   assert(ipx_row == ipx_solution.num_row);
   assert(ipx_slack == ipx_solution.num_col);
 
@@ -735,5 +735,5 @@ void clearSolutionUtil(HighsSolution& solution) {
 void clearBasisUtil(HighsBasis& basis) {
   basis.row_status.clear();
   basis.col_status.clear();
-  basis.valid_ = false;
+  basis.valid = false;
 }

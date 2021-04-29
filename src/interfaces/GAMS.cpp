@@ -241,10 +241,10 @@ static HighsInt setupProblem(gamshighs_t* gh) {
       if (basis.row_status[i] == HighsBasisStatus::kBasic) ++nbasic;
     }
 
-    basis.valid_ = nbasic == numRow;
+    basis.valid = nbasic == numRow;
     /* HiGHS compiled without NDEBUG defined currently raises an assert in
      * basisOK() if given an invalid basis */
-    if (basis.valid_) gh->highs->setBasis(basis);
+    if (basis.valid) gh->highs->setBasis(basis);
   }
 
   rc = 0;
@@ -354,12 +354,12 @@ static HighsInt processSolve(gamshighs_t* gh) {
     assert((HighsInt)sol.row_dual.size() == gmoM(gmo));
 
     const HighsBasis& basis = highs->getBasis();
-    assert(!basis.valid_ || (HighsInt)basis.col_status.size() == gmoN(gmo));
-    assert(!basis.valid_ || (HighsInt)basis.row_status.size() == gmoM(gmo));
+    assert(!basis.valid || (HighsInt)basis.col_status.size() == gmoN(gmo));
+    assert(!basis.valid || (HighsInt)basis.row_status.size() == gmoM(gmo));
 
     for (HighsInt i = 0; i < gmoN(gmo); ++i) {
       gmoVarEquBasisStatus basisstat;
-      if (basis.valid_)
+      if (basis.valid)
         basisstat = translateBasisStatus(basis.col_status[i]);
       else
         basisstat = gmoBstat_Super;
@@ -373,7 +373,7 @@ static HighsInt processSolve(gamshighs_t* gh) {
 
     for (HighsInt i = 0; i < gmoM(gmo); ++i) {
       gmoVarEquBasisStatus basisstat;
-      if (basis.valid_)
+      if (basis.valid)
         basisstat = translateBasisStatus(basis.row_status[i]);
       else
         basisstat = gmoBstat_Super;
