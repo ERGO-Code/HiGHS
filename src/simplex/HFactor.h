@@ -73,19 +73,13 @@ const double kHyperResult = 0.10;
 /**
  * Parameters for reinversion on synthetic clock
  */
-const double original_multi_build_synthetic_tick_mu = 1.5;
-const double multi_build_synthetic_tick_mu = 1.0;
-// original_multi_build_synthetic_tick_mu;//
-const double numerical_trouble_tolerance = 1e-7;
-const double original_multi_numerical_trouble_tolerance = 1e-8;
-const double multi_numerical_trouble_tolerance = 1e-7;
-// original_multi_numerical_trouble_tolerance;
+const double kMultiBuildSyntheticTickMu = 1.0;
+const double kNumericalTroubleTolerance = 1e-7;
+const double kMultiNumericalTroubleTolerance = 1e-7;
 
-const HighsInt synthetic_tick_reinversion_min_update_count = 50;
-const HighsInt original_multi_synthetic_tick_reinversion_min_update_count = 201;
-const HighsInt multi_synthetic_tick_reinversion_min_update_count =
-    synthetic_tick_reinversion_min_update_count;
-// original_multi_synthetic_tick_reinversion_min_update_count;
+const HighsInt kSyntheticTickReinversionMinUpdateCount = 50;
+const HighsInt kMultiSyntheticTickReinversionMinUpdateCount =
+    kSyntheticTickReinversionMinUpdateCount;
 
 /**
  * @brief Basis matrix factorization, update and solves for HiGHS

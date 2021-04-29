@@ -1679,7 +1679,7 @@ void HEkkDual::updateVerify() {
   // Use the two pivot values to identify numerical trouble
   if (ekk_instance_.reinvertOnNumericalTrouble(
           "HEkkDual::updateVerify", numericalTrouble, alpha_col, alpha_row,
-          numerical_trouble_tolerance)) {
+          kNumericalTroubleTolerance)) {
     rebuild_reason = kRebuildReasonPossiblySingularBasis;
   }
 }
@@ -1859,7 +1859,7 @@ void HEkkDual::updatePivots() {
   bool reinvert_syntheticClock = total_synthetic_tick >= build_synthetic_tick;
   const bool performed_min_updates =
       ekk_instance_.info_.update_count >=
-      synthetic_tick_reinversion_min_update_count;
+      kSyntheticTickReinversionMinUpdateCount;
   if (reinvert_syntheticClock && performed_min_updates)
     rebuild_reason = kRebuildReasonSyntheticClockSaysInvert;
   */

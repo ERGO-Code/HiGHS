@@ -541,7 +541,7 @@ void HEkkDual::majorUpdate() {
     // Use the two pivot values to identify numerical trouble
     if (ekk_instance_.reinvertOnNumericalTrouble(
             "HEkkDual::majorUpdate", numericalTrouble, iColumn->array[iRow_Out],
-            iFinish->alpha_row, multi_numerical_trouble_tolerance)) {
+            iFinish->alpha_row, kMultiNumericalTroubleTolerance)) {
       // HighsInt startUpdate = ekk_instance_.info_.update_count -
       // multi_nFinish;
       rebuild_reason = kRebuildReasonPossiblySingularBasis;
@@ -894,12 +894,12 @@ void HEkkDual::majorUpdateFactor() {
 
   // Determine whether to reinvert based on the synthetic clock
   const double use_build_synthetic_tick =
-      ekk_instance_.build_synthetic_tick_ * multi_build_synthetic_tick_mu;
+      ekk_instance_.build_synthetic_tick_ * kMultiBuildSyntheticTickMu;
   const bool reinvert_syntheticClock =
       ekk_instance_.total_synthetic_tick_ >= use_build_synthetic_tick;
   const bool performed_min_updates =
       ekk_instance_.info_.update_count >=
-      multi_synthetic_tick_reinversion_min_update_count;
+      kMultiSyntheticTickReinversionMinUpdateCount;
   if (reinvert_syntheticClock && performed_min_updates)
     rebuild_reason = kRebuildReasonSyntheticClockSaysInvert;
 
