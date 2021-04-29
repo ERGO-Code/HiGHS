@@ -600,9 +600,9 @@ void HEkkPrimal::rebuild() {
   reportRebuild(reason_for_rebuild);
 
   // Record the synthetic clock for INVERT, and zero it for UPDATE
-  ekk_instance_.build_syntheticTick_ =
-      ekk_instance_.factor_.build_syntheticTick;
-  ekk_instance_.total_syntheticTick_ = 0;
+  ekk_instance_.build_synthetic_tick_ =
+      ekk_instance_.factor_.build_synthetic_tick;
+  ekk_instance_.total_synthetic_tick_ = 0;
 
   // Determine whether to use hyper-sparse CHUZC
   if (solve_phase == kSolvePhase1) {
@@ -1226,7 +1226,7 @@ void HEkkPrimal::update() {
     localReportIter();
     num_flip_since_rebuild++;
     // Update the synthetic clock for UPDATE
-    ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
+    ekk_instance_.total_synthetic_tick_ += col_aq.synthetic_tick;
     return;
   }
 
@@ -1273,8 +1273,8 @@ void HEkkPrimal::update() {
   localReportIter();
 
   // Update the synthetic clock for UPDATE
-  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-  ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
+  ekk_instance_.total_synthetic_tick_ += col_aq.synthetic_tick;
+  ekk_instance_.total_synthetic_tick_ += row_ep.synthetic_tick;
 
   // Perform hyper-sparse CHUZC
   hyperChooseColumn();

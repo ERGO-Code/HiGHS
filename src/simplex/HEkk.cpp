@@ -1788,7 +1788,7 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
     *hint = kRebuildReasonUpdateLimitReached;
 
   // Determine whether to reinvert based on the synthetic clock
-  bool reinvert_syntheticClock = total_syntheticTick_ >= build_syntheticTick_;
+  bool reinvert_syntheticClock = total_synthetic_tick_ >= build_synthetic_tick_;
   const bool performed_min_updates =
       info_.update_count >= synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)

@@ -41,7 +41,7 @@ void HVector::setup(HighsInt size_) {
   // matter, since clear() is usually called before a vector is
   // (re-)used.
   packFlag = false;
-  syntheticTick = 0;
+  synthetic_tick = 0;
   next = 0;
 }
 
@@ -65,7 +65,7 @@ void HVector::clear() {
   // Zero the number of stored indices
   count = 0;
   // Zero the synthetic clock for operations with this vector
-  syntheticTick = 0;
+  synthetic_tick = 0;
   // Initialise the next value
   next = 0;
 }
@@ -110,7 +110,7 @@ void HVector::copy(const HVector* from) {
    * Copy from another HVector structure to this instance
    */
   clear();
-  syntheticTick = from->syntheticTick;
+  synthetic_tick = from->synthetic_tick;
   const HighsInt fromCount = count = from->count;
   const HighsInt* fromIndex = &from->index[0];
   const double* fromArray = &from->array[0];

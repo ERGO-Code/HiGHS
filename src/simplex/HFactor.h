@@ -73,9 +73,9 @@ const double kHyperResult = 0.10;
 /**
  * Parameters for reinversion on synthetic clock
  */
-const double original_multi_build_syntheticTick_mu = 1.5;
-const double multi_build_syntheticTick_mu = 1.0;
-// original_multi_build_syntheticTick_mu;//
+const double original_multi_build_synthetic_tick_mu = 1.5;
+const double multi_build_synthetic_tick_mu = 1.0;
+// original_multi_build_synthetic_tick_mu;//
 const double numerical_trouble_tolerance = 1e-7;
 const double original_multi_numerical_trouble_tolerance = 1e-8;
 const double multi_numerical_trouble_tolerance = 1e-7;
@@ -201,7 +201,7 @@ class HFactor {
   /**
    * @brief The synthetic clock for INVERT
    */
-  double build_syntheticTick;
+  double build_synthetic_tick;
 
   // Rank deficiency information
 

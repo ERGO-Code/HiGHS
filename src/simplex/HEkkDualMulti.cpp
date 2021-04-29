@@ -652,8 +652,8 @@ void HEkkDual::majorUpdateFtranParallel() {
     MFinish* finish = &multi_finish[iFn];
     HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
-    ekk_instance_.total_syntheticTick_ += Col->syntheticTick;
-    ekk_instance_.total_syntheticTick_ += Row->syntheticTick;
+    ekk_instance_.total_synthetic_tick_ += Col->synthetic_tick;
+    ekk_instance_.total_synthetic_tick_ += Row->synthetic_tick;
   }
 
   // Update rates
@@ -893,10 +893,10 @@ void HEkkDual::majorUpdateFactor() {
                                iRows, &rebuild_reason);
 
   // Determine whether to reinvert based on the synthetic clock
-  const double use_build_syntheticTick =
-      ekk_instance_.build_syntheticTick_ * multi_build_syntheticTick_mu;
+  const double use_build_synthetic_tick =
+      ekk_instance_.build_synthetic_tick_ * multi_build_synthetic_tick_mu;
   const bool reinvert_syntheticClock =
-      ekk_instance_.total_syntheticTick_ >= use_build_syntheticTick;
+      ekk_instance_.total_synthetic_tick_ >= use_build_synthetic_tick;
   const bool performed_min_updates =
       ekk_instance_.info_.update_count >=
       multi_synthetic_tick_reinversion_min_update_count;

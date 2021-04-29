@@ -46,7 +46,7 @@ class HVector {
   vector<HighsInt> index;  //!< Packed indices of nonzeros
   vector<double> array;    //!< Full-length array of values
 
-  double syntheticTick;  //!< Synthetic clock for operations with this vector
+  double synthetic_tick;  //!< Synthetic clock for operations with this vector
 
   // For update
   vector<char> cwork;      //!< char working buffer for UPDATE

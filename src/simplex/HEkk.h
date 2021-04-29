@@ -93,8 +93,8 @@ class HEkk {
   HMatrix matrix_;
   HFactor factor_;
 
-  double build_syntheticTick_;
-  double total_syntheticTick_;
+  double build_synthetic_tick_;
+  double total_synthetic_tick_;
 
  private:
   void initialiseForNewLp();

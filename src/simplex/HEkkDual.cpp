@@ -972,8 +972,8 @@ void HEkkDual::rebuild() {
     reportRebuild(reason_for_rebuild);
   }
 
-  ekk_instance_.build_syntheticTick_ = factor->build_syntheticTick;
-  ekk_instance_.total_syntheticTick_ = 0;
+  ekk_instance_.build_synthetic_tick_ = factor->build_synthetic_tick;
+  ekk_instance_.total_synthetic_tick_ = 0;
 
   // Dual simplex doesn't maintain the number of primal
   // infeasiblities, so set it to an illegal value now
@@ -1799,10 +1799,10 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   dualRHS.updateInfeasList(&col_aq);
 
   // Whether or not dual steepest edge weights are being used, have to
-  // add in DSE_Vector->syntheticTick_ since this contains the
+  // add in DSE_Vector->synthetic_tick_ since this contains the
   // contribution from forming row_ep = B^{-T}e_p.
-  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-  ekk_instance_.total_syntheticTick_ += DSE_Vector->syntheticTick;
+  ekk_instance_.total_synthetic_tick_ += col_aq.synthetic_tick;
+  ekk_instance_.total_synthetic_tick_ += DSE_Vector->synthetic_tick;
 }
 
 // Record the shift in the cost of a particular column
@@ -1856,7 +1856,7 @@ void HEkkDual::updatePivots() {
 
   /*
   // Determine whether to reinvert based on the synthetic clock
-  bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
+  bool reinvert_syntheticClock = total_synthetic_tick >= build_synthetic_tick;
   const bool performed_min_updates =
       ekk_instance_.info_.update_count >=
       synthetic_tick_reinversion_min_update_count;

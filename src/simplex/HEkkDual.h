@@ -504,8 +504,8 @@ class HEkkDual {
   MChoice multi_choice[kHighsThreadLimit];
   MFinish multi_finish[kHighsThreadLimit];
 
-  //  double build_syntheticTick;
-  //  double total_syntheticTick;
+  //  double build_synthetic_tick;
+  //  double total_synthetic_tick;
 };
 
 #endif /* SIMPLEX_HEKKDUAL_H_ */
