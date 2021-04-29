@@ -2277,6 +2277,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   reportModelStatusSolutionBasis("returnFromRun(HiGHS)");
   reportModelStatusSolutionBasis("returnFromRun(HMO_0)", 0);
 #endif
+  // ToDo: Outcome of Run() should be driven by model_status_, not
+  // scaled_model_status_. This is currently done because latter may
+  // be optimal but tolerances not satisfied for unscaled model.
   switch (scaled_model_status_) {
       // First consider the error returns
     case HighsModelStatus::kNotset:
@@ -2346,24 +2349,62 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kWarning);
       break;
+    default:
+      // All cases should have been considered so assert on reaching here
+      assert(1==0);
   }
-  if (have_solution) debugSolutionRightSize(options_, lp_, solution_);
-  bool have_basis = basis_.valid_;
-  if (have_basis) {
-    if (debugBasisRightSize(options_, lp_, basis_) ==
-        HighsDebugStatus::kLogicalError)
-      return_status = HighsStatus::kError;
-  }
+  // Now to check what's available with each model status
+  //
+  const bool have_basis = basis_.valid_;
+  /*
+  const bool have_info = info_.valid;
+  switch (scaled_model_status_) {
+    case HighsModelStatus::kNotset:
+    case HighsModelStatus::kLoadError:
+    case HighsModelStatus::kModelError:
+    case HighsModelStatus::kPresolveError:
+    case HighsModelStatus::kSolveError:
+    case HighsModelStatus::kPostsolveError:
+    case HighsModelStatus::kModelEmpty:
+      // No solution, basis or info
+      assert(have_solution == false);
+      assert(have_basis == false);
+      assert(have_info == false);
+      break;
+    case HighsModelStatus::kOptimal:
+    case HighsModelStatus::kInfeasible:
+    case HighsModelStatus::kUnbounded:
+    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kUnboundedOrInfeasible:
+    case HighsModelStatus::kTimeLimit:
+    case HighsModelStatus::kIterationLimit:
+    case HighsModelStatus::kUnknown:
+      // Have solution and info, but not necessarily a basis
+      if (have_solution == true || scaled_model_status_ == HighsModelStatus::kInfeasible);
+      assert(have_info == true);
 
-  if (have_solution && have_basis) {
-    if (debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
-                                solution_, info_, model_status_) ==
-        HighsDebugStatus::kLogicalError)
-      return_status = HighsStatus::kError;
+      break;
+    default:
+      // All cases should have been considered so assert on reaching here
+      assert(1==0);
   }
-  if (debugInfo(options_, lp_, basis_, solution_, info_, model_status_) ==
+  */
+  if (have_solution) {
+    debugSolutionRightSize(options_, lp_, solution_);
+    if (have_basis) {
+      if (debugBasisRightSize(options_, lp_, basis_) ==
+	  HighsDebugStatus::kLogicalError)
+	return_status = HighsStatus::kError;
+      if (debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
+				  solution_, info_, model_status_) ==
+	  HighsDebugStatus::kLogicalError)
+	return_status = HighsStatus::kError;
+    }
+  }
+  if (debugInfo(options_, lp_, basis_, solution_, info_, scaled_model_status_) ==
       HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
+
 
   return returnFromHighs(return_status);
 }

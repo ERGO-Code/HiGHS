@@ -24,5 +24,8 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
   printf("debugInfo!\n");
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   if (!info.valid) return return_status;
+
+  //  switch (model_status_) {
+  
   return return_status;
 }
