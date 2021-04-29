@@ -574,8 +574,8 @@ class HighsOptions : public HighsOptionsStruct {
                                &solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 
-    record_string = new OptionRecordString(kLogFileString, "Log file",
-                                           advanced, &log_file, "Highs.log");
+    record_string = new OptionRecordString(kLogFileString, "Log file", advanced,
+                                           &log_file, "Highs.log");
     records.push_back(record_string);
 
     record_bool =

@@ -38,9 +38,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
         kParallelString,
         "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
         "alternatives.",
-        cxxopts::value<std::string>(parallel))(kTimeLimitString,
-                                               "Run time limit (double).",
-                                               cxxopts::value<double>())(
+        cxxopts::value<std::string>(parallel))(
+        kTimeLimitString, "Run time limit (double).", cxxopts::value<double>())(
         kOptionsFileString, "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())("h, help", "Print help.");
     cxx_options.parse_positional("model_file");

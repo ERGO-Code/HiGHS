@@ -695,8 +695,8 @@ HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
   all_rows.from_ = 0;
   all_rows.to_ = lp.numRow_ - 1;
 
-  scale_error = applyScalingToLpColCost(log_options, lp, scale.col,
-                                        all_cols) != HighsStatus::kOk ||
+  scale_error = applyScalingToLpColCost(log_options, lp, scale.col, all_cols) !=
+                    HighsStatus::kOk ||
                 scale_error;
   scale_error = applyScalingToLpColBounds(log_options, lp, scale.col,
                                           all_cols) != HighsStatus::kOk ||
