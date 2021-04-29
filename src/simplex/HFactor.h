@@ -42,10 +42,10 @@ enum UPDATE_METHOD {
 /**
  * Limits and default value of pivoting threshold
  */
-const double min_pivot_threshold = 8e-4;
-const double default_pivot_threshold = 0.1;
-const double pivot_threshold_change_factor = 5.0;
-const double max_pivot_threshold = 0.5;
+const double kMinPivotThreshold = 8e-4;
+const double kDefaultPivotThreshold = 0.1;
+const double kPivotThresholdChangeFactor = 5.0;
+const double kMaxPivotThreshold = 0.5;
 /**
  * Limits and default value of minimum absolute pivot
  */
@@ -141,7 +141,7 @@ class HFactor {
       const HighsInt* Aindex,  //!< Row indices of constraint matrix
       const double* Avalue,    //!< Row values of constraint matrix
       HighsInt* baseIndex,     //!< Indices of basic variables
-      double pivot_threshold = default_pivot_threshold,  //!< Pivoting threshold
+      double pivot_threshold = kDefaultPivotThreshold,  //!< Pivoting threshold
       double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
       HighsInt highs_debug_level = kHighsDebugLevelMin,
       bool output_flag = false, FILE* logfile = NULL,
@@ -186,7 +186,7 @@ class HFactor {
    * @brief Sets pivoting threshold
    */
   bool setPivotThreshold(
-      const double new_pivot_threshold = default_pivot_threshold);
+      const double new_pivot_threshold = kDefaultPivotThreshold);
   /**
    * @brief Sets minimum absolute pivot
    */

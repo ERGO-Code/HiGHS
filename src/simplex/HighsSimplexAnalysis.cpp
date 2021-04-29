@@ -239,8 +239,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     initialiseValueDistribution("Simplex pivot summary", "", 1e-8, 1e16, 10.0,
                                 simplex_pivot_distribution);
     initialiseValueDistribution("Factor pivot threshold summary", "",
-                                min_pivot_threshold, max_pivot_threshold,
-                                pivot_threshold_change_factor,
+                                kMinPivotThreshold, kMaxPivotThreshold,
+                                kPivotThresholdChangeFactor,
                                 factor_pivot_threshold_distribution);
     initialiseValueDistribution("Numerical trouble summary", "", 1e-16, 1.0,
                                 10.0, numerical_trouble_distribution);

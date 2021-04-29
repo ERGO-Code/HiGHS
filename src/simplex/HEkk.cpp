@@ -1751,18 +1751,18 @@ bool HEkk::reinvertOnNumericalTrouble(
     // Consider increasing the Markowitz multiplier
     const double current_pivot_threshold = info_.factor_pivot_threshold;
     double new_pivot_threshold = 0;
-    if (current_pivot_threshold < default_pivot_threshold) {
+    if (current_pivot_threshold < kDefaultPivotThreshold) {
       // Threshold is below default value, so increase it
       new_pivot_threshold =
-          min(current_pivot_threshold * pivot_threshold_change_factor,
-              default_pivot_threshold);
-    } else if (current_pivot_threshold < max_pivot_threshold) {
+          min(current_pivot_threshold * kPivotThresholdChangeFactor,
+              kDefaultPivotThreshold);
+    } else if (current_pivot_threshold < kMaxPivotThreshold) {
       // Threshold is below max value, so increase it if few updates have been
       // performed
       if (update_count < 10)
         new_pivot_threshold =
-            min(current_pivot_threshold * pivot_threshold_change_factor,
-                max_pivot_threshold);
+            min(current_pivot_threshold * kPivotThresholdChangeFactor,
+                kMaxPivotThreshold);
     }
     if (new_pivot_threshold) {
       highsLogUser(options_.log_options, HighsLogType::kWarning,

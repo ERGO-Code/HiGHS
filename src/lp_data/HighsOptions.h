@@ -765,8 +765,8 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "presolve_pivot_threshold",
         "Matrix factorization pivot threshold for substitutions in presolve",
-        advanced, &presolve_pivot_threshold, min_pivot_threshold, 0.01,
-        max_pivot_threshold);
+        advanced, &presolve_pivot_threshold, kMinPivotThreshold, 0.01,
+        kMaxPivotThreshold);
     records.push_back(record_double);
 
     record_int = new OptionRecordInt("presolve_substitution_maxfillin",
@@ -777,8 +777,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "factor_pivot_threshold", "Matrix factorization pivot threshold",
-        advanced, &factor_pivot_threshold, min_pivot_threshold,
-        default_pivot_threshold, max_pivot_threshold);
+        advanced, &factor_pivot_threshold, kMinPivotThreshold,
+        kDefaultPivotThreshold, kMaxPivotThreshold);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

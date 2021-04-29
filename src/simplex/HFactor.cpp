@@ -173,7 +173,7 @@ void HFactor::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
   Avalue = Avalue_;
   baseIndex = baseIndex_;
   pivot_threshold =
-      max(min_pivot_threshold, min(pivot_threshold_, max_pivot_threshold));
+      max(kMinPivotThreshold, min(pivot_threshold_, kMaxPivotThreshold));
   pivot_tolerance =
       max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
   highs_debug_level = highs_debug_level_;
@@ -340,8 +340,8 @@ void HFactor::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
 }
 
 bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
-  if (new_pivot_threshold < min_pivot_threshold) return false;
-  if (new_pivot_threshold > max_pivot_threshold) return false;
+  if (new_pivot_threshold < kMinPivotThreshold) return false;
+  if (new_pivot_threshold > kMaxPivotThreshold) return false;
   pivot_threshold = new_pivot_threshold;
   return true;
 }
