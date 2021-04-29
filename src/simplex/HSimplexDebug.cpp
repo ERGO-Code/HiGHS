@@ -46,8 +46,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   const HFactor& factor = ekk_instance.factor_;
 
   bool right_size = true;
-  right_size = (HighsInt)scale.col_.size() == simplex_lp.numCol_ && right_size;
-  right_size = (HighsInt)scale.row_.size() == simplex_lp.numRow_ && right_size;
+  right_size = (HighsInt)scale.col.size() == simplex_lp.numCol_ && right_size;
+  right_size = (HighsInt)scale.row.size() == simplex_lp.numRow_ && right_size;
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "scale size error\n");
@@ -371,8 +371,8 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   const HFactor& factor = highs_model_object.factor_;
 
   bool right_size = true;
-  right_size = (HighsInt)scale.col_.size() == lp.numCol_ && right_size;
-  right_size = (HighsInt)scale.row_.size() == lp.numRow_ && right_size;
+  right_size = (HighsInt)scale.col.size() == lp.numCol_ && right_size;
+  right_size = (HighsInt)scale.row.size() == lp.numRow_ && right_size;
   if (!right_size) {
     highsLogUser(options.log_options, HighsLogType::kError,
                     "scale size error\n");
@@ -1416,16 +1416,16 @@ HighsDebugStatus debugSimplexBasicSolution(
                               highs_model_object.scaled_model_status_),
       return_status);
 
-  if (!highs_model_object.scale_.is_scaled_) return return_status;
+  if (!highs_model_object.scale_.is_scaled) return return_status;
 
   // Doesn't work if simplex LP has permuted columns
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    solution.col_value[iCol] *= scale.col_[iCol];
-    solution.col_dual[iCol] /= (scale.col_[iCol] / scale.cost_);
+    solution.col_value[iCol] *= scale.col[iCol];
+    solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
   }
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    solution.row_value[iRow] /= scale.row_[iRow];
-    solution.row_dual[iRow] *= (scale.row_[iRow] * scale.cost_);
+    solution.row_value[iRow] /= scale.row[iRow];
+    solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
   }
   // Cannot assume unscaled solution params or unscaled model status are known
   const std::string message_unscaled = message + " - unscaled";
@@ -1461,10 +1461,10 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
     HighsInt iVar = iCol;
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
       // Consider this nonbasic column
-      double local_col_value = info.workValue_[iVar] * scale.col_[iCol];
+      double local_col_value = info.workValue_[iVar] * scale.col[iCol];
       double local_col_dual = (HighsInt)lp.sense_ *
                               info.workDual_[iVar] /
-                              (scale.col_[iCol] / scale.cost_);
+                              (scale.col[iCol] / scale.cost);
       double value_difference =
           fabs(local_col_value - solution.col_value[iCol]);
       double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
@@ -1490,10 +1490,10 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue) {
       // Consider this nonbasic row
       double local_row_value =
-          -info.workValue_[iVar] / scale.row_[iRow];
+          -info.workValue_[iVar] / scale.row[iRow];
       double local_row_dual = (HighsInt)lp.sense_ *
                               info.workDual_[iVar] *
-                              (scale.row_[iRow] * scale.cost_);
+                              (scale.row[iRow] * scale.cost);
       double value_difference =
           fabs(local_row_value - solution.row_value[iRow]);
       double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
@@ -1507,7 +1507,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
     if (iVar < lp.numCol_) {
       // Consider this basic column
       HighsInt iCol = iVar;
-      double local_col_value = info.baseValue_[ix] * scale.col_[iCol];
+      double local_col_value = info.baseValue_[ix] * scale.col[iCol];
       double local_col_dual = 0;
       double value_difference =
           fabs(local_col_value - solution.col_value[iCol]);
@@ -1519,7 +1519,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
     } else {
       // Consider this basic row
       iRow = iVar - lp.numCol_;
-      double local_row_value = -info.baseValue_[ix] / scale.row_[iRow];
+      double local_row_value = -info.baseValue_[ix] / scale.row[iRow];
       double local_row_dual = 0;
       double value_difference =
           fabs(local_row_value - solution.row_value[iRow]);

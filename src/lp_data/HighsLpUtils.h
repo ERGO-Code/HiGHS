@@ -18,7 +18,6 @@
 
 #include <vector>
 
-#include "HConfig.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"

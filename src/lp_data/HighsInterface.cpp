@@ -49,7 +49,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   bool& valid_basis = basis.valid_;
   bool& valid_simplex_lp = simplex_status.valid;
   bool& valid_simplex_basis = simplex_status.has_basis;
-  bool& scaled_simplex_lp = scale.is_scaled_;
+  bool& scaled_simplex_lp = scale.is_scaled;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of rows
@@ -111,9 +111,9 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
 
   // Now consider scaling. First resize the scaling factors and
   // initialise the new components
-  scale.col_.resize(newNumCol);
+  scale.col.resize(newNumCol);
   for (HighsInt col = 0; col < XnumNewCol; col++)
-    scale.col_[lp.numCol_ + col] = 1.0;
+    scale.col[lp.numCol_ + col] = 1.0;
 
   // Now consider any new matrix columns
   if (XnumNewNZ) {
@@ -142,11 +142,11 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
         // Apply the row scaling to the new columns
-        applyRowScalingToMatrix(scale.row_, XnumNewCol, local_Astart,
+        applyRowScalingToMatrix(scale.row, XnumNewCol, local_Astart,
                                 local_Aindex, local_Avalue);
         // Determine and apply the column scaling for the new columns
         colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                       &scale.col_[lp.numCol_], XnumNewCol, local_Astart,
+                       &scale.col[lp.numCol_], XnumNewCol, local_Astart,
                        local_Aindex, local_Avalue);
       }
       // Append the columns to the Simplex LP matrix
@@ -164,13 +164,13 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
         scaling_index_collection.from_ = lp.numCol_;
         scaling_index_collection.to_ = newNumCol - 1;
         return_status = interpretCallStatus(
-            applyScalingToLpColCost(options.log_options, simplex_lp, scale.col_,
+            applyScalingToLpColCost(options.log_options, simplex_lp, scale.col,
                                     scaling_index_collection),
             return_status, "applyScalingToLpColCost");
         if (return_status == HighsStatus::kError) return return_status;
         return_status = interpretCallStatus(
             applyScalingToLpColBounds(options.log_options, simplex_lp,
-                                      scale.col_, scaling_index_collection),
+                                      scale.col, scaling_index_collection),
             return_status, "applyScalingToLpColBounds");
         if (return_status == HighsStatus::kError) return return_status;
       }
@@ -240,7 +240,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   bool& valid_basis = basis.valid_;
   bool& valid_simplex_lp = simplex_status.valid;
   bool& valid_simplex_basis = simplex_status.has_basis;
-  bool& scaled_simplex_lp = scale.is_scaled_;
+  bool& scaled_simplex_lp = scale.is_scaled;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of columns
@@ -291,9 +291,9 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 
   // Now consider scaling. First resize the scaling factors and
   // initialise the new components
-  scale.row_.resize(newNumRow);
+  scale.row.resize(newNumRow);
   for (HighsInt row = 0; row < XnumNewRow; row++)
-    scale.row_[lp.numRow_ + row] = 1.0;
+    scale.row[lp.numRow_ + row] = 1.0;
 
   // Now consider any new matrix rows
   if (XnumNewNZ) {
@@ -323,13 +323,13 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
         // Apply the column scaling to the new rows
-        applyRowScalingToMatrix(scale.col_, XnumNewRow, local_ARstart,
+        applyRowScalingToMatrix(scale.col, XnumNewRow, local_ARstart,
                                 local_ARindex, local_ARvalue);
         // Determine and apply the row scaling for the new rows. Using
         // colScaleMatrix to take the row-wise matrix and then treat
         // it col-wise
         colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                       &scale.row_[lp.numRow_], XnumNewRow, local_ARstart,
+                       &scale.row[lp.numRow_], XnumNewRow, local_ARstart,
                        local_ARindex, local_ARvalue);
       }
       // Append the rows to the Simplex LP matrix
@@ -349,7 +349,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
         scaling_index_collection.to_ = newNumRow - 1;
         return_status = interpretCallStatus(
             applyScalingToLpRowBounds(options.log_options, simplex_lp,
-                                      scale.row_, scaling_index_collection),
+                                      scale.row, scaling_index_collection),
             return_status, "applyScalingToLpRowBounds");
         if (return_status == HighsStatus::kError) return return_status;
       }
@@ -417,11 +417,11 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     basis.valid_ = false;
   }
   return_status = interpretCallStatus(
-      deleteScale(options.log_options, highs_model_object.scale_.col_,
+      deleteScale(options.log_options, highs_model_object.scale_.col,
                   index_collection),
       return_status, "deleteScale");
   if (return_status == HighsStatus::kError) return return_status;
-  highs_model_object.scale_.col_.resize(lp.numCol_);
+  highs_model_object.scale_.col.resize(lp.numCol_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = ekk_instance.lp_;
     return_status =
@@ -483,15 +483,15 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     basis.valid_ = false;
   }
 
-  if (highs_model_object.scale_.is_scaled_) {
+  if (highs_model_object.scale_.is_scaled) {
     return_status = interpretCallStatus(
-        deleteScale(options.log_options, highs_model_object.scale_.row_,
+        deleteScale(options.log_options, highs_model_object.scale_.row,
                     index_collection),
         return_status, "deleteScale");
     if (return_status == HighsStatus::kError) return return_status;
   }
 
-  highs_model_object.scale_.row_.resize(lp.numRow_);
+  highs_model_object.scale_.row.resize(lp.numRow_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = ekk_instance.lp_;
     return_status =
@@ -848,9 +848,9 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
     call_status = changeLpCosts(options.log_options, simplex_lp,
                                 index_collection, local_colCost);
     if (call_status == HighsStatus::kError) return HighsStatus::kError;
-    if (highs_model_object.scale_.is_scaled_) {
+    if (highs_model_object.scale_.is_scaled) {
       applyScalingToLpColCost(options.log_options, simplex_lp,
-                              highs_model_object.scale_.col_, index_collection);
+                              highs_model_object.scale_.col, index_collection);
     }
   }
   // Deduce the consequences of new costs
@@ -912,9 +912,9 @@ HighsStatus Highs::changeColBoundsInterface(
         changeLpColBounds(options.log_options, simplex_lp, index_collection,
                           local_colLower, local_colUpper);
     if (call_status == HighsStatus::kError) return HighsStatus::kError;
-    if (highs_model_object.scale_.is_scaled_) {
+    if (highs_model_object.scale_.is_scaled) {
       applyScalingToLpColBounds(options.log_options, simplex_lp,
-                                highs_model_object.scale_.col_,
+                                highs_model_object.scale_.col,
                                 index_collection);
     }
   }
@@ -986,9 +986,9 @@ HighsStatus Highs::changeRowBoundsInterface(
         changeLpRowBounds(options.log_options, simplex_lp, index_collection,
                           local_rowLower, local_rowUpper);
     if (call_status == HighsStatus::kError) return HighsStatus::kError;
-    if (highs_model_object.scale_.is_scaled_) {
+    if (highs_model_object.scale_.is_scaled) {
       applyScalingToLpRowBounds(options.log_options, simplex_lp,
-                                highs_model_object.scale_.row_,
+                                highs_model_object.scale_.row,
                                 index_collection);
     }
   }
@@ -1027,13 +1027,13 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_status.has_matrix);
-    assert(!highs_model_object.scale_.is_scaled_);
+    assert(!highs_model_object.scale_.is_scaled);
   }
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = ekk_instance.lp_;
     HighsScale& scale = highs_model_object.scale_;
-    double scaledXnewValue = XnewValue * scale.row_[Xrow] * scale.col_[Xcol];
+    double scaledXnewValue = XnewValue * scale.row[Xrow] * scale.col[Xcol];
     changeLpMatrixCoefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
   }
   // Deduce the consequences of a changed element
@@ -1390,9 +1390,9 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
         double rhs_value = rhs[row];
         HighsInt col = ekk_instance.basis_.basicIndex_[row];
         if (col < numCol) {
-          rhs_value *= scale.col_[col];
+          rhs_value *= scale.col[col];
         } else {
-          double scale_value = scale.row_[col - numCol];
+          double scale_value = scale.row[col - numCol];
           rhs_value /= scale_value;
         }
         solve_vector.array[row] = rhs_value;
@@ -1402,7 +1402,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     for (HighsInt row = 0; row < numRow; row++) {
       if (rhs[row]) {
         solve_vector.index[rhs_num_nz++] = row;
-        solve_vector.array[row] = rhs[row] * scale.row_[row];
+        solve_vector.array[row] = rhs[row] * scale.row[row];
       }
     }
   }
@@ -1464,13 +1464,13 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     if (solve_vector.count > numRow) {
       // Solution nonzeros not known
       for (HighsInt row = 0; row < numRow; row++) {
-        double scale_value = scale.row_[row];
+        double scale_value = scale.row[row];
         solution_vector[row] *= scale_value;
       }
     } else {
       for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
         HighsInt row = solve_vector.index[ix];
-        double scale_value = scale.row_[row];
+        double scale_value = scale.row[row];
         solution_vector[row] *= scale_value;
       }
     }
@@ -1480,9 +1480,9 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
       for (HighsInt row = 0; row < numRow; row++) {
         HighsInt col = ekk_instance.basis_.basicIndex_[row];
         if (col < numCol) {
-          solution_vector[row] *= scale.col_[col];
+          solution_vector[row] *= scale.col[col];
         } else {
-          double scale_value = scale.row_[col - numCol];
+          double scale_value = scale.row[col - numCol];
           solution_vector[row] /= scale_value;
         }
       }
@@ -1491,9 +1491,9 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
         HighsInt row = solve_vector.index[ix];
         HighsInt col = ekk_instance.basis_.basicIndex_[row];
         if (col < numCol) {
-          solution_vector[row] *= scale.col_[col];
+          solution_vector[row] *= scale.col[col];
         } else {
-          double scale_value = scale.row_[col - numCol];
+          double scale_value = scale.row[col - numCol];
           solution_vector[row] /= scale_value;
         }
       }

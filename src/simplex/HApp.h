@@ -94,7 +94,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       ekk_instance.info_.primal_objective_value;
   highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
   highs_model_object.solution_ = ekk_instance.getSolution();
-  if (highs_model_object.scale_.is_scaled_)
+  if (highs_model_object.scale_.is_scaled)
     unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
   highs_model_object.basis_ = ekk_instance.getHighsBasis();
 
@@ -154,7 +154,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
                    new_primal_feasibility_tolerance,
                    new_dual_feasibility_tolerance);
     highs_model_object.solution_ = ekk_instance.getSolution();
-    if (highs_model_object.scale_.is_scaled_)
+    if (highs_model_object.scale_.is_scaled)
       unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
     highs_model_object.basis_ = ekk_instance.getHighsBasis();
   }

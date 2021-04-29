@@ -319,12 +319,12 @@ void unscaleSolution(HighsSolution& solution, const HighsScale scale) {
   HighsInt num_row = solution.row_value.size();
 
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-    solution.col_value[iCol] *= scale.col_[iCol];
-    solution.col_dual[iCol] /= (scale.col_[iCol] / scale.cost_);
+    solution.col_value[iCol] *= scale.col[iCol];
+    solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-    solution.row_value[iRow] /= scale.row_[iRow];
-    solution.row_dual[iRow] *= (scale.row_[iRow] * scale.cost_);
+    solution.row_value[iRow] /= scale.row[iRow];
+    solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
   }
 }
 
@@ -412,8 +412,8 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     new_dual_feasibility_tolerance = kHighsInf;
   }
 
-  assert(int(scale.col_.size()) == lp.numCol_);
-  assert(int(scale.row_.size()) == lp.numRow_);
+  assert(int(scale.col.size()) == lp.numCol_);
+  assert(int(scale.row.size()) == lp.numRow_);
   for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
@@ -425,12 +425,12 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     HighsInt iRow = 0;
     if (col) {
       iCol = iVar;
-      assert(int(scale.col_.size()) > iCol);
-      scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
+      assert(int(scale.col.size()) > iCol);
+      scale_mu = 1 / (scale.col[iCol] / scale.cost);
     } else {
       iRow = iVar - lp.numCol_;
-      assert(int(scale.row_.size()) > iRow);
-      scale_mu = scale.row_[iRow] * scale.cost_;
+      assert(int(scale.row.size()) > iRow);
+      scale_mu = scale.row[iRow] * scale.cost;
     }
     const double scaled_dual = info.workDual_[iVar];
     const double scaled_lower = info.workLower_[iVar];
@@ -479,10 +479,10 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     HighsInt iRow = 0;
     if (col) {
       iCol = iVar;
-      scale_mu = scale.col_[iCol];
+      scale_mu = scale.col[iCol];
     } else {
       iRow = iVar - lp.numCol_;
-      scale_mu = 1 / scale.row_[iRow];
+      scale_mu = 1 / scale.row[iRow];
     }
     // Look at the basic primal infeasibilities
 
@@ -543,10 +543,10 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 // initialiseScale(highs_model_object.lp_, highs_model_object.scale_);}
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale) {
-  scale.is_scaled_ = false;
-  scale.col_.assign(lp.numCol_, 1);
-  scale.row_.assign(lp.numRow_, 1);
-  scale.cost_ = 1;
+  scale.is_scaled = false;
+  scale.col.assign(lp.numCol_, 1);
+  scale.row.assign(lp.numRow_, 1);
+  scale.cost = 1;
 }
 
 void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
@@ -556,8 +556,8 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   HighsInt numRow = lp.numRow_;
   // Scaling not well defined for models with no columns
   assert(numCol > 0);
-  double* colScale = &scale.col_[0];
-  double* rowScale = &scale.row_[0];
+  double* colScale = &scale.col[0];
+  double* rowScale = &scale.row[0];
   HighsInt* Astart = &lp.Astart_[0];
   double* Avalue = &lp.Avalue_[0];
   double* colCost = &lp.colCost_[0];
@@ -607,7 +607,7 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
     } else {
       scaled_matrix = maxValueScaleSimplexMatrix(options, lp, scale);
     }
-    scale.is_scaled_ = scaled_matrix;
+    scale.is_scaled = scaled_matrix;
     if (scaled_matrix) {
       // Matrix is scaled, so scale the bounds and costs
       for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -622,11 +622,11 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
     }
   }
   // Possibly scale the costs
-  if (allow_cost_scaling) scaleCosts(options, lp, scale.cost_);
+  if (allow_cost_scaling) scaleCosts(options, lp, scale.cost);
 
   // If matrix is unscaled, then LP is only scaled if there is a cost scaling
   // factor
-  if (!scaled_matrix) scale.is_scaled_ = scale.cost_ != 1;
+  if (!scaled_matrix) scale.is_scaled = scale.cost != 1;
 }
 
 void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
@@ -666,8 +666,8 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                      HighsScale& scale) {
   HighsInt numCol = lp.numCol_;
   HighsInt numRow = lp.numRow_;
-  double* colScale = &scale.col_[0];
-  double* rowScale = &scale.row_[0];
+  double* colScale = &scale.col[0];
+  double* rowScale = &scale.row[0];
   HighsInt* Astart = &lp.Astart_[0];
   HighsInt* Aindex = &lp.Aindex_[0];
   double* Avalue = &lp.Avalue_[0];
@@ -984,8 +984,8 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                 HighsScale& scale) {
   HighsInt numCol = lp.numCol_;
   HighsInt numRow = lp.numRow_;
-  vector<double>& colScale = scale.col_;
-  vector<double>& rowScale = scale.row_;
+  vector<double>& colScale = scale.col;
+  vector<double>& rowScale = scale.row;
   vector<HighsInt>& Astart = lp.Astart_;
   vector<HighsInt>& Aindex = lp.Aindex_;
   vector<double>& Avalue = lp.Avalue_;
@@ -1117,7 +1117,7 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
       }
     }
   }
-  info.dual_objective_value *= highs_model_object.scale_.cost_;
+  info.dual_objective_value *= highs_model_object.scale_.cost;
   if (phase != 1) {
     // In phase 1 the dual objective has no objective
     // shift. Otherwise, if minimizing the shift is added. If

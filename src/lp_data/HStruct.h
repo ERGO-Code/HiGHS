@@ -27,10 +27,10 @@ struct HighsIterationCounts {
 };
 
 struct HighsScale {
-  bool is_scaled_ = false;
-  double cost_;
-  std::vector<double> col_;
-  std::vector<double> row_;
+  bool is_scaled = false;
+  double cost;
+  std::vector<double> col;
+  std::vector<double> row;
 };
 
 struct HighsSolution {

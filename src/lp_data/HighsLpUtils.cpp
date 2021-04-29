@@ -679,9 +679,9 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
 
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
                              const HighsScale& scale) {
-  if (!scale.is_scaled_) return HighsStatus::kOk;
-  if ((HighsInt)scale.col_.size() < lp.numCol_) return HighsStatus::kError;
-  if ((HighsInt)scale.row_.size() < lp.numRow_) return HighsStatus::kError;
+  if (!scale.is_scaled) return HighsStatus::kOk;
+  if ((HighsInt)scale.col.size() < lp.numCol_) return HighsStatus::kError;
+  if ((HighsInt)scale.row.size() < lp.numRow_) return HighsStatus::kError;
   bool scale_error = false;
   // Set up column and row index collections for scaling
   HighsIndexCollection all_cols;
@@ -695,17 +695,17 @@ HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
   all_rows.from_ = 0;
   all_rows.to_ = lp.numRow_ - 1;
 
-  scale_error = applyScalingToLpColCost(log_options, lp, scale.col_,
+  scale_error = applyScalingToLpColCost(log_options, lp, scale.col,
                                         all_cols) != HighsStatus::kOk ||
                 scale_error;
-  scale_error = applyScalingToLpColBounds(log_options, lp, scale.col_,
+  scale_error = applyScalingToLpColBounds(log_options, lp, scale.col,
                                           all_cols) != HighsStatus::kOk ||
                 scale_error;
-  scale_error = applyScalingToLpRowBounds(log_options, lp, scale.row_,
+  scale_error = applyScalingToLpRowBounds(log_options, lp, scale.row,
                                           all_rows) != HighsStatus::kOk ||
                 scale_error;
-  scale_error = applyScalingToLpMatrix(log_options, lp, &scale.col_[0],
-                                       &scale.row_[0], 0, lp.numCol_ - 1, 0,
+  scale_error = applyScalingToLpMatrix(log_options, lp, &scale.col[0],
+                                       &scale.row[0], 0, lp.numCol_ - 1, 0,
                                        lp.numRow_ - 1) != HighsStatus::kOk ||
                 scale_error;
   if (scale_error) return HighsStatus::kError;
@@ -1973,11 +1973,11 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
 
 void analyseScaledLp(const HighsLogOptions& log_options,
                      const HighsScale& scale, const HighsLp& scaled_lp) {
-  if (!scale.is_scaled_) return;
+  if (!scale.is_scaled) return;
   analyseVectorValues(log_options, "Column scaling factors", scaled_lp.numCol_,
-                      scale.col_);
+                      scale.col);
   analyseVectorValues(log_options, "Row    scaling factors", scaled_lp.numRow_,
-                      scale.row_);
+                      scale.row);
   analyseLp(log_options, scaled_lp, "Scaled");
 }
 
