@@ -49,9 +49,9 @@ const double kMaxPivotThreshold = 0.5;
 /**
  * Limits and default value of minimum absolute pivot
  */
-const double min_pivot_tolerance = 0;
-const double default_pivot_tolerance = 1e-10;
-const double max_pivot_tolerance = 1.0;
+const double kMinPivotTolerance = 0;
+const double kDefaultPivotTolerance = 1e-10;
+const double kMaxPivotTolerance = 1.0;
 /**
  * Necessary thresholds for historical density to trigger
  * hyper-sparse TRANs,
@@ -142,7 +142,7 @@ class HFactor {
       const double* Avalue,    //!< Row values of constraint matrix
       HighsInt* baseIndex,     //!< Indices of basic variables
       double pivot_threshold = kDefaultPivotThreshold,  //!< Pivoting threshold
-      double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
+      double pivot_tolerance = kDefaultPivotTolerance,  //!< Min absolute pivot
       HighsInt highs_debug_level = kHighsDebugLevelMin,
       bool output_flag = false, FILE* logfile = NULL,
       bool log_to_console = true, int log_dev_level = 0,
@@ -191,7 +191,7 @@ class HFactor {
    * @brief Sets minimum absolute pivot
    */
   bool setMinAbsPivot(
-      const double new_pivot_tolerance = default_pivot_tolerance);
+      const double new_pivot_tolerance = kDefaultPivotTolerance);
 
   /**
    * @brief Wall clock time for INVERT

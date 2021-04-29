@@ -783,8 +783,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "factor_pivot_tolerance", "Matrix factorization pivot tolerance",
-        advanced, &factor_pivot_tolerance, min_pivot_tolerance,
-        default_pivot_tolerance, max_pivot_tolerance);
+        advanced, &factor_pivot_tolerance, kMinPivotTolerance,
+        kDefaultPivotTolerance, kMaxPivotTolerance);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

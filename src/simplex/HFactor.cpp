@@ -175,7 +175,7 @@ void HFactor::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
   pivot_threshold =
       max(kMinPivotThreshold, min(pivot_threshold_, kMaxPivotThreshold));
   pivot_tolerance =
-      max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
+      max(kMinPivotTolerance, min(pivot_tolerance_, kMaxPivotTolerance));
   highs_debug_level = highs_debug_level_;
   log_options.log_file_stream = log_file_stream_;
   log_data = decltype(log_data)(new std::tuple<bool, bool, HighsInt>(
