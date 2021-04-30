@@ -40,6 +40,14 @@ struct HighsPrimalDualErrors {
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp lp, const HighsBasis& basis);
 
+HighsDebugStatus debugPrimalSolutionRightSize(const HighsOptions& options,
+                                        const HighsLp lp,
+                                        const HighsSolution& solution);
+
+HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
+                                        const HighsLp lp,
+                                        const HighsSolution& solution);
+
 HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
                                         const HighsLp lp,
                                         const HighsSolution& solution);

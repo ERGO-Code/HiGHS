@@ -358,10 +358,11 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
   return "";
 }
 
-void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts) {
-  iteration_counts.simplex = 0;
-  iteration_counts.ipm = 0;
-  iteration_counts.crossover = 0;
+void clearHighsIterationCounts(HighsInfo& info) {
+  info.simplex_iteration_count = -1;
+  info.ipm_iteration_count = -1;
+  info.crossover_iteration_count = -1;
+  info.mip_node_count = -1;
 }
 
 void zeroHighsIterationCounts(HighsInfo& info) {

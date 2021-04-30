@@ -981,6 +981,9 @@ class Highs {
   void clearSolution();
   void clearBasis();
   void clearInfo();
+  void noSolution();
+  void noDualSolution();
+  void setModelStatus(const HighsModelStatus status);
 
   void underDevelopmentLogMessage(const string method_name);
   HighsStatus returnFromRun(const HighsStatus return_status);

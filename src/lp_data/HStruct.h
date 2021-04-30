@@ -34,6 +34,8 @@ struct HighsScale {
 };
 
 struct HighsSolution {
+  bool value_valid = false;
+  bool dual_valid = false;
   std::vector<double> col_value;
   std::vector<double> col_dual;
   std::vector<double> row_value;

@@ -57,24 +57,24 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // Use IPM
 #ifdef IPX_ON
     bool imprecise_solution;
-    bool has_solution = false;
     call_status = solveLpIpx(
         options, model.timer_, model.lp_, imprecise_solution, model.basis_,
         model.solution_, model.iteration_counts_, model.unscaled_model_status_,
-        model.solution_params_, has_solution);
+        model.solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) return return_status;
-    // Non-error return requires a solution
-    assert(has_solution);
+    // Non-error return requires a primal solution
+    assert(model.solution_.value_valid);
     // Set the scaled model status for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
-    if (model.unscaled_model_status_ == HighsModelStatus::kTimeLimit ||
-        model.unscaled_model_status_ == HighsModelStatus::kIterationLimit ||
-        model.unscaled_model_status_ == HighsModelStatus::kInfeasible) {
-      // Return with the (primal) solution
-      getPrimalDualInfeasibilities(model.lp_, model.basis_, model.solution_,
-                                   model.solution_params_);
+    if (model.unscaled_model_status_ == HighsModelStatus::kInfeasible ||
+	model.unscaled_model_status_ == HighsModelStatus::kTimeLimit ||
+        model.unscaled_model_status_ == HighsModelStatus::kIterationLimit) {
+      // IPX has proven (primal) infeasiblilty or reached
+      // time/iteration limit so no further calculation is performed:
+      // return with the (primal) solution
+      getPrimalDualInfeasibilities(model.lp_, model.solution_, model.solution_params_);
       model.solution_params_.objective_function_value =
           computeObjectiveValue(model.lp_, model.solution_);
       return return_status;
@@ -103,8 +103,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         }
       } else {
         // Have to return whatever solution has been identified
-        getPrimalDualInfeasibilities(model.lp_, model.basis_, model.solution_,
-                                     model.solution_params_);
+        getPrimalDualInfeasibilities(model.lp_, model.solution_, model.solution_params_);
         model.solution_params_.objective_function_value =
             computeObjectiveValue(model.lp_, model.solution_);
         return return_status;
@@ -129,7 +128,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       return HighsStatus::kError;
     }
   }
-  // Possibly analyse the HiGHS basic solution
+  // ToDo: Possibly analyse the HiGHS (basic) solution - generalise to
+  // handle solution without basis? But doesn't returnFromRun do this?
   //
   // NB IPX may not yield a basic solution
   if (model.basis_.valid) debugHighsBasicSolution(message, model);

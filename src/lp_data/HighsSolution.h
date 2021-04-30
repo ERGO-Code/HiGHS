@@ -32,7 +32,7 @@ class HighsModelObject;
 
 using std::string;
 
-void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
+void getPrimalDualInfeasibilities(const HighsLp& lp, 
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params);
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
@@ -76,8 +76,14 @@ void copyFromSolutionParams(HighsInfo& highs_info,
                             const HighsSolutionParams& solution_params);
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
+
+bool isPrimalSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
+bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
+
+void clearPrimalSolutionUtil(HighsSolution& solution);
+void clearDualSolutionUtil(HighsSolution& solution);
 void clearSolutionUtil(HighsSolution& solution);
 void clearBasisUtil(HighsBasis& solution);
 
