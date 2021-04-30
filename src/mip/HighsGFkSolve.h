@@ -116,6 +116,15 @@ class HighsGFkSolve {
   void addNonzero(HighsInt row, HighsInt col, unsigned int val);
 
  public:
+  struct SolutionEntry {
+    HighsInt index;
+    unsigned int weight;
+
+    bool operator<(const SolutionEntry& other) const {
+      return index < other.index;
+    }
+  };
+
   // access to triplets and find nonzero function for unit test
   const std::vector<HighsInt>& getArow() const { return Arow; }
   const std::vector<HighsInt>& getAcol() const { return Acol; }
@@ -319,7 +328,7 @@ class HighsGFkSolve {
     // When a column leaves the basis we do not allow it to enter again so that
     // we iterate at most one solution for each nonbasic column
 
-    std::vector<std::pair<HighsInt, unsigned int>> solution;
+    std::vector<SolutionEntry> solution;
     solution.reserve(numCol);
     HighsInt numFactorRows = factorRowPerm.size();
 
@@ -360,9 +369,9 @@ class HighsGFkSolve {
 
         unsigned int solval = 0;
 
-        for (const std::pair<HighsInt, unsigned int>& solentry : solution) {
-          HighsInt pos = findNonzero(row, solentry.first);
-          if (pos != -1) solval += Avalue[pos] * solentry.second;
+        for (const SolutionEntry& solentry : solution) {
+          HighsInt pos = findNonzero(row, solentry.index);
+          if (pos != -1) solval += Avalue[pos] * solentry.weight;
         }
 
         solval = rhs[row] + k - (solval % k);
@@ -380,7 +389,7 @@ class HighsGFkSolve {
         assert(solval >= 0 && solval < k);
 
         // only record nonzero solution values
-        if (solval != 0) solution.emplace_back(col, solval);
+        if (solval != 0) solution.emplace_back(SolutionEntry{col, solval});
       }
 
       reportSolution(solution);

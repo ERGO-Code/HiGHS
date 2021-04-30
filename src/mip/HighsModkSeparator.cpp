@@ -169,12 +169,12 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<HighsInt> tmpinds;
   std::vector<double> tmpvals;
 
-  HighsHashTable<std::vector<std::pair<HighsInt, unsigned int>>> usedWeights;
-  // std::unordered_set<std::vector<std::pair<HighsInt, unsigned int>>,
+  HighsHashTable<std::vector<HighsGFkSolve::SolutionEntry>> usedWeights;
+  // std::unordered_set<std::vector<HighsGFkSolve::SolutionEntry>,
   //                   HighsVectorHasher, HighsVectorEqual>
   //    usedWeights;
   HighsInt k;
-  auto foundCut = [&](std::vector<std::pair<HighsInt, unsigned int>>& weights) {
+  auto foundCut = [&](std::vector<HighsGFkSolve::SolutionEntry>& weights) {
     // cuts which come from a single row can already be found with the
     // aggregation heuristic
     if (weights.size() <= 1) return;
@@ -183,8 +183,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     if (!usedWeights.insert(weights)) return;
 
     for (const auto& w : weights) {
-      HighsInt row = integralScales[w.first].first;
-      double weight = (integralScales[w.first].second * w.second) / k;
+      HighsInt row = integralScales[w.index].first;
+      double weight = (integralScales[w.index].second * w.weight) / k;
       lpAggregator.addRow(row, weight);
     }
 
