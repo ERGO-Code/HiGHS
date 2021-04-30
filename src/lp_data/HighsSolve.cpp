@@ -68,48 +68,38 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     assert(model.solution_.value_valid);
     // Set the scaled model status for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
-    if (model.unscaled_model_status_ == HighsModelStatus::kInfeasible ||
-	model.unscaled_model_status_ == HighsModelStatus::kTimeLimit ||
-        model.unscaled_model_status_ == HighsModelStatus::kIterationLimit) {
-      // IPX has proven (primal) infeasiblilty or reached
-      // time/iteration limit so no further calculation is performed:
-      // return with the (primal) solution
-      getPrimalDualInfeasibilities(model.lp_, model.solution_, model.solution_params_);
-      model.solution_params_.objective_function_value =
-          computeObjectiveValue(model.lp_, model.solution_);
-      return return_status;
-    } else if (model.unscaled_model_status_ == HighsModelStatus::kUnknown ||
-               model.unscaled_model_status_ ==
-                   HighsModelStatus::kUnboundedOrInfeasible) {
-      // Allow simplex clean-up if crossover was allowed - since it's
-      // unusual and the cost will usually be acceptable. Worst case is
-      // if crossover wasn't run, in which case there's no basis to
-      // start simplex
-      if (options.run_crossover) {
-        highsLogUser(options.log_options, HighsLogType::kWarning,
-                     "Imprecise solution returned from IPX, so use simplex to "
-                     "clean up\n");
-        // Reset the return status since it will now be determined by
-        // the outcome of the simplex solve
-        return_status = HighsStatus::kOk;
-        call_status = solveLpSimplex(model);
-        return_status =
-            interpretCallStatus(call_status, return_status, "solveLpSimplex");
-        if (return_status == HighsStatus::kError) return return_status;
-        if (!isSolutionRightSize(model.lp_, model.solution_)) {
-          highsLogUser(options.log_options, HighsLogType::kError,
-                       "Inconsistent solution returned from solver\n");
-          return HighsStatus::kError;
-        }
-      } else {
-        // Have to return whatever solution has been identified
-        getPrimalDualInfeasibilities(model.lp_, model.solution_, model.solution_params_);
-        model.solution_params_.objective_function_value =
-            computeObjectiveValue(model.lp_, model.solution_);
-        return return_status;
+    // Get the infeasibilities and objective value
+    // ToDo: This should take model.basis_ and use it if it's valid
+    getPrimalDualInfeasibilities(model.lp_, model.solution_, model.solution_params_);
+    model.solution_params_.objective_function_value =
+      computeObjectiveValue(model.lp_, model.solution_);
+    if ((model.unscaled_model_status_ == HighsModelStatus::kUnknown ||
+	 (model.unscaled_model_status_ ==
+	  HighsModelStatus::kUnboundedOrInfeasible && !options.allow_unbounded_or_infeasible)) &&
+	options.run_crossover) {
+      // IPX has returned a model status that HiGHS would rather
+      // avoid, so perform simplex clean-up if crossover was allowed.
+      //
+      // This is an unusual situation, and the cost will usually be
+      // acceptable. Worst case is if crossover wasn't run, in which
+      // case there's no basis to start simplex
+      //
+      // ToDo: Check whether simplex can exploit the primal solution returned by IPX
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+		   "Imprecise solution returned from IPX, so use simplex to "
+		   "clean up\n");
+      // Reset the return status since it will now be determined by
+      // the outcome of the simplex solve
+      return_status = HighsStatus::kOk;
+      call_status = solveLpSimplex(model);
+      return_status =
+	interpretCallStatus(call_status, return_status, "solveLpSimplex");
+      if (return_status == HighsStatus::kError) return return_status;
+      if (!isSolutionRightSize(model.lp_, model.solution_)) {
+	highsLogUser(options.log_options, HighsLogType::kError,
+		     "Inconsistent solution returned from solver\n");
+	return HighsStatus::kError;
       }
-    } else {
-      assert(model.unscaled_model_status_ == HighsModelStatus::kOptimal);
     }
 #else
     highsLogUser(options.log_options, HighsLogType::kError,

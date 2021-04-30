@@ -118,6 +118,11 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
     }
     if (have_dual_solution) {
       double primal_residual = std::min(std::fabs(lower - value), std::fabs(value - upper));
+      if (lower == -kHighsInf && upper == kHighsInf) {
+	printf("getPrimalDualInfeasibilities: %d (%g, %g, %g), %g from min(%g, %g)\n", (int)iVar,
+	       lower, value, upper, primal_residual,
+	       std::fabs(lower - value), std::fabs(value - upper));
+      }
       if (primal_residual <= primal_feasibility_tolerance) {
 	// At a bound
 	double middle = (lower + upper) * 0.5;
