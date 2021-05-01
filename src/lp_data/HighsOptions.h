@@ -271,7 +271,8 @@ struct HighsOptionsStruct {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double ipm_optimality_tolerance;
-  double dual_objective_value_upper_bound;
+  double objective_bound;
+  double objective_target;
   HighsInt highs_random_seed;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
@@ -469,10 +470,14 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "dual_objective_value_upper_bound",
-        "Upper bound on objective value for dual simplex: algorithm terminates "
-        "if reached",
-        advanced, &dual_objective_value_upper_bound, -kHighsInf, kHighsInf,
+        "objective_bound", "Objective bound for termination",
+        advanced, &objective_bound, -kHighsInf, kHighsInf,
+        kHighsInf);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "objective_target", "Objective target for termination",
+        advanced, &objective_target, -kHighsInf, -kHighsInf,
         kHighsInf);
     records.push_back(record_double);
 

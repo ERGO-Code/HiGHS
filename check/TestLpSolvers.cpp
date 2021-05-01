@@ -307,10 +307,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   bool bool_status;
   const double min_objective_function_value = -11.6389290663705;
   const double max_objective_function_value = 111.650960689315;
-  const double smaller_min_dual_objective_value_upper_bound = -110.0;
-  const double larger_min_dual_objective_value_upper_bound = -45.876;
-  const double use_max_dual_objective_value_upper_bound = 150.0;
-  double save_dual_objective_value_upper_bound;
+  const double smaller_min_objective_bound = -110.0;
+  const double larger_min_objective_bound = -45.876;
+  const double use_max_objective_bound = 150.0;
+  double save_objective_bound;
   Highs highs;
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
@@ -339,12 +339,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(error < 1e-14);
 
   // Set dual objective value upper bound after saving the default value
-  status = highs.getOptionValue("dual_objective_value_upper_bound",
-                                save_dual_objective_value_upper_bound);
+  status = highs.getOptionValue("objective_bound", save_objective_bound);
   REQUIRE(status == HighsStatus::kOk);
 
-  status = highs.setOptionValue("dual_objective_value_upper_bound",
-                                larger_min_dual_objective_value_upper_bound);
+  status = highs.setOptionValue("objective_bound", larger_min_objective_bound);
   REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
@@ -352,7 +350,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
     printf(
         "\nSolving LP with presolve and dual objective value upper bound of "
         "%g\n",
-        larger_min_dual_objective_value_upper_bound);
+        larger_min_objective_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::kOk);
 
@@ -369,7 +367,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
     printf(
         "\nSolving LP without presolve and larger dual objective value upper "
         "bound of %g\n",
-        larger_min_dual_objective_value_upper_bound);
+        larger_min_objective_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::kOk);
 
@@ -377,7 +375,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kObjectiveCutoff);
+  REQUIRE(model_status == HighsModelStatus::kObjectiveBound);
 
   // Solve again
   // This smaller dual objective value upper bound is satisfied at the start of
@@ -386,9 +384,8 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
     printf(
         "\nSolving LP without presolve and smaller dual objective value upper "
         "bound of %g\n",
-        smaller_min_dual_objective_value_upper_bound);
-  status = highs.setOptionValue("dual_objective_value_upper_bound",
-                                smaller_min_dual_objective_value_upper_bound);
+        smaller_min_objective_bound);
+  status = highs.setOptionValue("objective_bound", smaller_min_objective_bound);
   REQUIRE(status == HighsStatus::kOk);
 
   status = highs.setBasis();
@@ -398,15 +395,14 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kObjectiveCutoff);
+  REQUIRE(model_status == HighsModelStatus::kObjectiveBound);
 
   // Solve as maximization and ensure that the dual objective value upper bound
   // isn't used
   bool_status = highs.changeObjectiveSense(ObjSense::kMaximize);
   REQUIRE(bool_status);
 
-  status = highs.setOptionValue("dual_objective_value_upper_bound",
-                                use_max_dual_objective_value_upper_bound);
+  status = highs.setOptionValue("objective_bound", use_max_objective_bound);
   REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
@@ -415,7 +411,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
         "\nSolving LP as maximization without presolve and dual objective "
         "value "
         "upper bound of %g\n",
-        use_max_dual_objective_value_upper_bound);
+        use_max_objective_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::kOk);
 

@@ -113,7 +113,7 @@ static HighsInt setupOptions(gamshighs_t* gh) {
     gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
 
   if (gevGetIntOpt(gh->gev, gevUseCutOff))
-    gh->options->dual_objective_value_upper_bound =
+    gh->options->objective_bound =
         gevGetDblOpt(gh->gev, gevCutOff);
 
   if (gmoOptFile(gh->gmo) > 0) {
@@ -313,7 +313,15 @@ static HighsInt processSolve(gamshighs_t* gh) {
       gmoSolveStatSet(gmo, gmoSolveStat_Normal);
       break;
 
-    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kObjectiveBound:
+      // TODO is there a solution to write and is it feasible?
+      // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
+      // gmoModelStat_NoSolutionReturned);
+      gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
+      gmoSolveStatSet(gmo, gmoSolveStat_Solver);
+      break;
+
+    case HighsModelStatus::kObjectiveTarget:
       // TODO is there a solution to write and is it feasible?
       // gmoModelStatSet(gmo, havesol ? gmoModelStat_InfeasibleIntermed :
       // gmoModelStat_NoSolutionReturned);

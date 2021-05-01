@@ -266,7 +266,7 @@ class HEkkDual {
   void interpretDualEdgeWeightStrategy(
       const HighsInt simplex_dual_edge_weight_strategy);
 
-  bool reachedExactDualObjectiveValueUpperBound();
+  bool reachedExactObjectiveBound();
   double computeExactDualObjectiveValue();
 
   /**
@@ -416,7 +416,7 @@ class HEkkDual {
 
   double Td;  // Tolerance for dual
   double dual_feasibility_tolerance;
-  double dual_objective_value_upper_bound;
+  double objective_bound;
 
   HighsInt solve_phase;
   HighsInt rebuild_reason;

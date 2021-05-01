@@ -626,9 +626,8 @@ HighsStatus Highs::run() {
         // objective values aren't correct
         //	HighsOptions& options = hmos_[solved_hmo].options_;
         //	HighsOptions save_options = options;
-        const double save_dual_objective_value_upper_bound =
-            options_.dual_objective_value_upper_bound;
-        options_.dual_objective_value_upper_bound = kHighsInf;
+        const double save_objective_bound = options_.objective_bound;
+        options_.objective_bound = kHighsInf;
         this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
         call_status = callSolveLp(solved_hmo, "Solving the presolved LP");
@@ -641,8 +640,7 @@ HighsStatus Highs::run() {
               hmos_[solved_hmo].ekk_instance_.info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
-        options_.dual_objective_value_upper_bound =
-            save_dual_objective_value_upper_bound;
+        options_.objective_bound = save_objective_bound;
         return_status =
             interpretCallStatus(call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::kError) {
@@ -2346,7 +2344,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 
     case HighsModelStatus::kInfeasible:
     case HighsModelStatus::kUnbounded:
-    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kObjectiveBound:
+    case HighsModelStatus::kObjectiveTarget:
       // For kInfeasible, will not have a basis, if infeasibility was
       // detected in presolve or by IPX without crossover
       assert(model_status_ == scaled_model_status_);
@@ -2406,7 +2405,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kOptimal:
     case HighsModelStatus::kInfeasible:
     case HighsModelStatus::kUnbounded:
-    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kObjectiveBound:
+    case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kUnboundedOrInfeasible:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit:

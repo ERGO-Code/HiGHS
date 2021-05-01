@@ -151,7 +151,7 @@ void HighsMipSolverData::init() {
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
   upper_bound = kHighsInf;
-  upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound;
+  upper_limit = mipsolver.options_mip_->objective_bound;
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;

@@ -168,7 +168,7 @@ bool OsiHiGHSSolverInterface::setDblParam(OsiDblParam key, double value) {
               "Calling OsiHiGHSSolverInterface::setDblParam()\n");
   switch (key) {
     case OsiDualObjectiveLimit:
-      this->highs->options_.dual_objective_value_upper_bound = value;
+      this->highs->options_.objective_bound = value;
       return true;
     case OsiPrimalObjectiveLimit:
       return false;
@@ -231,7 +231,7 @@ bool OsiHiGHSSolverInterface::getDblParam(OsiDblParam key,
               "Calling OsiHiGHSSolverInterface::getDblParam()\n");
   switch (key) {
     case OsiDualObjectiveLimit:
-      value = this->highs->options_.dual_objective_value_upper_bound;
+      value = this->highs->options_.objective_bound;
       return true;
     case OsiPrimalObjectiveLimit:
       return false;

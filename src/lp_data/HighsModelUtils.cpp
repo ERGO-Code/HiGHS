@@ -335,8 +335,11 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::kUnbounded:
       return "Unbounded";
       break;
-    case HighsModelStatus::kObjectiveCutoff:
-      return "Reached dual objective upper bound";
+    case HighsModelStatus::kObjectiveBound:
+      return "Reached objective bound";
+      break;
+    case HighsModelStatus::kObjectiveTarget:
+      return "Reached objective target";
       break;
     case HighsModelStatus::kTimeLimit:
       return "Reached time limit";
@@ -412,7 +415,9 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::kOk;
     case HighsModelStatus::kUnbounded:
       return HighsStatus::kOk;
-    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kObjectiveBound:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kObjectiveTarget:
       return HighsStatus::kOk;
     case HighsModelStatus::kTimeLimit:
       return HighsStatus::kWarning;

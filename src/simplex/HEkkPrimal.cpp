@@ -266,6 +266,7 @@ void HEkkPrimal::initialiseSolve() {
       ekk_instance_.options_.primal_feasibility_tolerance;
   dual_feasibility_tolerance =
       ekk_instance_.options_.dual_feasibility_tolerance;
+  objective_target = ekk_instance_.options_.objective_target;
 
   ekk_instance_.status_.has_primal_objective_value = false;
   ekk_instance_.status_.has_dual_objective_value = false;

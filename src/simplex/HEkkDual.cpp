@@ -491,8 +491,7 @@ void HEkkDual::initialiseSolve() {
       ekk_instance_.options_.primal_feasibility_tolerance;
   dual_feasibility_tolerance =
       ekk_instance_.options_.dual_feasibility_tolerance;
-  dual_objective_value_upper_bound =
-      ekk_instance_.options_.dual_objective_value_upper_bound;
+  objective_bound = ekk_instance_.options_.objective_bound;
 
   interpretDualEdgeWeightStrategy(
       ekk_instance_.info_.dual_edge_weight_strategy);
@@ -2158,24 +2157,25 @@ bool HEkkDual::bailoutOnDualObjective() {
     // reasons
     assert(ekk_instance_.model_status_ == HighsModelStatus::kTimeLimit ||
            ekk_instance_.model_status_ == HighsModelStatus::kIterationLimit ||
-           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveCutoff);
+           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveBound ||
+           ekk_instance_.model_status_ == HighsModelStatus::kObjectiveTarget);
   } else if (ekk_instance_.lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >
-        ekk_instance_.options_.dual_objective_value_upper_bound)
-      ekk_instance_.solve_bailout_ = reachedExactDualObjectiveValueUpperBound();
+        ekk_instance_.options_.objective_bound)
+      ekk_instance_.solve_bailout_ = reachedExactObjectiveBound();
   }
   return ekk_instance_.solve_bailout_;
 }
 
-bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
+bool HEkkDual::reachedExactObjectiveBound() {
   // Solving a minimization in dual simplex phase 2, and dual
   // objective exceeds the prescribed upper bound. However, costs
   // will be perturbed, so need to check whether exact dual
   // objective value exceeds the prescribed upper bound. This can be
   // a relatively expensive calculation, so determine whether to do
   // it according to the sparsity of the pivotal row
-  bool reached_exact_dual_objective_value_upper_bound = false;
+  bool reached_exact_objective_bound = false;
   double use_row_ap_density =
       std::min(std::max(analysis->row_ap_density, 0.01), 1.0);
   HighsInt check_frequency = 1.0 / use_row_ap_density;
@@ -2185,25 +2185,25 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
       ekk_instance_.info_.update_count % check_frequency == 0;
 
   if (check_exact_dual_objective_value) {
-    const double dual_objective_value_upper_bound =
-        ekk_instance_.options_.dual_objective_value_upper_bound;
+    const double objective_bound =
+        ekk_instance_.options_.objective_bound;
     const double perturbed_dual_objective_value =
         ekk_instance_.info_.updated_dual_objective_value;
     const double perturbed_value_residual =
-        perturbed_dual_objective_value - dual_objective_value_upper_bound;
+        perturbed_dual_objective_value - objective_bound;
     const double exact_dual_objective_value = computeExactDualObjectiveValue();
     const double exact_value_residual =
-        exact_dual_objective_value - dual_objective_value_upper_bound;
+        exact_dual_objective_value - objective_bound;
     std::string action;
-    if (exact_dual_objective_value > dual_objective_value_upper_bound) {
+    if (exact_dual_objective_value > objective_bound) {
 #ifdef SCIP_DEV
       printf("HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
              ekk_instance_.info_.updated_dual_objective_value,
-             dual_objective_value_upper_bound);
+             objective_bound);
 #endif
       action = "Have DualUB bailout";
-      reached_exact_dual_objective_value_upper_bound = true;
-      ekk_instance_.model_status_ = HighsModelStatus::kObjectiveCutoff;
+      reached_exact_objective_bound = true;
+      ekk_instance_.model_status_ = HighsModelStatus::kObjectiveBound;
     } else {
       action = "No   DualUB bailout";
     }
@@ -2216,7 +2216,7 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
                  use_row_ap_density, check_frequency, perturbed_value_residual,
                  exact_value_residual);
   }
-  return reached_exact_dual_objective_value_upper_bound;
+  return reached_exact_objective_bound;
 }
 
 double HEkkDual::computeExactDualObjectiveValue() {

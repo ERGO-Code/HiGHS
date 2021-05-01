@@ -2078,7 +2078,8 @@ bool HEkk::bailoutOnTimeIterations() {
     // reasons
     assert(model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
-           model_status_ == HighsModelStatus::kObjectiveCutoff);
+           model_status_ == HighsModelStatus::kObjectiveBound ||
+           model_status_ == HighsModelStatus::kObjectiveTarget);
   } else if (timer_.readRunHighsClock() > options_.time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
@@ -2096,7 +2097,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     // these reasons
     assert(model_status_ == HighsModelStatus::kTimeLimit ||
            model_status_ == HighsModelStatus::kIterationLimit ||
-           model_status_ == HighsModelStatus::kObjectiveCutoff);
+           model_status_ == HighsModelStatus::kObjectiveBound ||
+           model_status_ == HighsModelStatus::kObjectiveTarget);
   }
   // Check that returnFromSolve has not already been called: it should
   // be called exactly once per solve
@@ -2168,7 +2170,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       assert(info_.num_primal_infeasibility == 0);
       break;
     }
-    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kObjectiveBound:
+    case HighsModelStatus::kObjectiveTarget:
     case HighsModelStatus::kTimeLimit:
     case HighsModelStatus::kIterationLimit: {
       // Simplex has bailed out due to reaching the objecive cut-off,

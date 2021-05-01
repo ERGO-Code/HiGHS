@@ -520,7 +520,7 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
   dualproofrhs = kHighsInf;
-  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kObjectiveCutoff);
+  assert(lpsolver.getModelStatus(true) == HighsModelStatus::kObjectiveBound);
 
   HighsInt numrow = lpsolver.getNumRows();
   bool hasdualray = false;
@@ -565,7 +565,7 @@ void HighsLpRelaxation::storeDualUBProof() {
 
   assert(scale == 1.0);
 
-  HighsCDouble upper = lpsolver.getOptions().dual_objective_value_upper_bound;
+  HighsCDouble upper = lpsolver.getOptions().objective_bound;
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
     if (dualray[i] == 0.0) continue;
 
@@ -714,7 +714,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   switch (scaledmodelstatus) {
-    case HighsModelStatus::kObjectiveCutoff:
+    case HighsModelStatus::kObjectiveBound:
       storeDualUBProof();
       if (checkDualProof()) return Status::kInfeasible;
 

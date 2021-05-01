@@ -116,6 +116,7 @@ class HEkkPrimal {
   HighsInt solve_phase;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
+  double objective_target;
   HighsInt rebuild_reason;
   // Pivot related
   HighsInt variable_in;
