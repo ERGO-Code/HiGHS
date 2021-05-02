@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 
 #include "presolve/ICrashX.h"
@@ -14,7 +15,7 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
 
 bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::vector<double>& x_values,
                    HighsSolution& solution, HighsBasis& basis) {
-  std::cout << "Calling ipx crossover after icrash...";
+  std::cout << "Calling ipx crossover after icrash...\n";
 
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
@@ -23,56 +24,64 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
 
   IpxStatus res = fillInIpxData(lp, num_col, objective, col_lb, col_ub, num_row,
                                 Ap, Ai, Av, rhs, constraint_type);
-
   if (res != IpxStatus::OK) return false;
 
   ipx::Parameters parameters;
   parameters.crossover = true;
+  parameters.crash_basis = 1;   // 0 = slack basis; 1 = crash basis
 
   ipx::LpSolver lps;
   lps.SetParameters(parameters);
 
-  ipx::Int load_status =
+  ipx::Int errflag =
       lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
                     &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
+  if (errflag != 0) {
+      std::cout << "Error loading ipx model: " << errflag << std::endl;
+      return false;
+  }
 
-  // run crossover
-  // lps.RunCrossover_();
-
-  // specify primal values coming from icrash
-  const double* x = &x_values[0];
-
-  std::vector<double> collb(num_col, 0);
-  std::vector<double> colub(num_col, 0);
-  std::vector<double> zsx(num_col, 0);
-  std::vector<double> zsy(num_row, 0);
-
-  // for (int i = 0; i < num_col; i++) {
-  //   if (col_lb[i] == -INFINITY) collb[i] = INFINITY;
-  //   if (col_ub[i] == INFINITY) colub[i] = INFINITY;
-  // }
-
+  // Set x values within bounds.
+  std::vector<double> x(x_values);
   for (int i = 0; i < num_col; i++) {
-    collb[i] = fabs(col_lb[i]);
-    if (col_lb[i] == -INFINITY) collb[i] = INFINITY;
-    colub[i] = fabs(col_ub[i]);
-    if (col_ub[i] == INFINITY) colub[i] = INFINITY;
+      x[i] = std::max(x[i], col_lb[i]);
+      x[i] = std::min(x[i], col_ub[i]);
   }
 
-  const double* zl = &collb[0];
-  const double* zu = &colub[0];
-  const double* y = &zsy[0];
-  const double* zx = &zsx[0];
-
-  const int flag = lps.LoadIPMStartingPoint(x, zl, zu, y, y, zx, zx);
-  if (flag) {
-    std::cout << "Error loading ipm crossover starting point: " << flag << std::endl;
-    return false;
+  // Build slack variables from rhs-A*x but subject to sign conditions.
+  std::vector<double> slack(rhs);
+  for (int i = 0; i < num_col; i++) {
+      for (int p = Ap[i]; p < Ap[i+1]; ++p)
+          slack[Ai[p]] -= Av[p] * x[i];
+  }
+  for (int i = 0; i < num_row; i++) {
+      switch (constraint_type[i]) {
+      case '=':
+          slack[i] = 0.0;
+          break;
+      case '<':
+          slack[i] = std::max(slack[i], 0.0);
+          break;
+      case '>':
+          slack[i] = std::min(slack[i], 0.0);
+          break;
+      }
   }
 
-  lps.RunCrossover_X();
+  errflag = lps.CrossoverFromStartingPoint(&x[0], &slack[0], NULL, NULL);
+  if (errflag != 0) {
+      std::cout << "Error calling ipx crossover: " << errflag << std::endl;
+      return false;
+  }
+  ipx::Info info = lps.GetInfo();
+  if (info.status_crossover != IPX_STATUS_optimal &&
+      info.status_crossover != IPX_STATUS_imprecise) {
+      std::cout << "IPX crossover failed: status = " << info.status_crossover
+                << std::endl;
+      return false;
+  }
 
-  // get basis
+  // Get basis
   IpxSolution ipx_solution;
   ipx_solution.num_col = num_col;
   ipx_solution.num_row = num_row;
@@ -82,10 +91,14 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   ipx_solution.ipx_row_dual.resize(num_row);
   ipx_solution.ipx_row_status.resize(num_row);
   ipx_solution.ipx_col_status.resize(num_col);
-  lps.GetBasicSolution(
+  errflag = lps.GetBasicSolution(
       &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
       &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
       &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
+  if (errflag != 0) {
+      std::cout << "Error getting basic solution from ipx: " << errflag << std::endl;
+      return false;
+  }
 
   // Convert the IPX basic solution to a HiGHS basic solution
   ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
