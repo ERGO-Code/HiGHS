@@ -164,6 +164,9 @@ Int LpSolver::CrossoverFromStartingPoint(const double* x_start,
     const Int n = model_.cols();
     const Vector& lb = model_.lb();
     const Vector& ub = model_.ub();
+    const SparseMatrix& AI = model_.AI();
+
+    ClearSolution();
     control_.Log() << "Crossover from starting point\n";
 
     x_crossover_.resize(n+m);
@@ -184,7 +187,37 @@ Int LpSolver::CrossoverFromStartingPoint(const double* x_start,
             return IPX_ERROR_invalid_vector;
     }
 
+    // Construct starting basis.
     basis_.reset(new Basis(control_, model_));
+    if (control_.crash_basis()) {
+        // Take columns in the following order of priority:
+        // - free columns
+        // - columns between their bounds, in increasing number of nonzeros
+        // - columns with zero dual, in increasing number of nonzeros
+        // - Fixed columns and those with nonzero dual
+        Timer timer;
+        Vector colweight(n+m);
+        for (Int j = 0; j < n+m; j++) {
+            Int nz = AI.entries(j);
+            if (lb[j] == ub[j])
+                colweight[j] = 0.0;
+            else if (std::isinf(lb[j]) && std::isinf(ub[j]))
+                colweight[j] = INFINITY;
+            else if (z_crossover_[j] != 0.0)
+                colweight[j] = 0.0;
+            else if (x_crossover_[j] != lb[j] && x_crossover_[j] != ub[j])
+                colweight[j] = m + (m-nz+1);
+            else
+                colweight[j] = m-nz+1;
+        }
+        basis_->ConstructBasisFromWeights(&colweight[0], &info_);
+        info_.time_starting_basis += timer.Elapsed();
+        if (info_.errflag) {
+            ClearSolution();
+            return 0;
+        }
+    }
+
     RunCrossover();
     return 0;
 }
