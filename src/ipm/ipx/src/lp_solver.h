@@ -106,6 +106,20 @@ public:
     // Discards the starting point (if any).
     void ClearIPMStartingPoint();
 
+    // Runs crossover for the given starting point. The starting point must be
+    // complementary and satisfy bound and sign conditions; i.e. a dual variable
+    // must be non-positive (non-negative) when its primal is not at lower
+    // (upper) bound. Each of the pointer arguments can be NULL, in which case
+    // all elements of the vector are assumed to be zero.
+    // Returns:
+    // 0                            starting point OK
+    // IPX_ERROR_invalid_vector     starting point not complementary or violates
+    //                              bound or sign conditions
+    Int CrossoverFromStartingPoint(const double* x_start,
+                                   const double* slack_start,
+                                   const double* y_start,
+                                   const double* z_start);
+
     // -------------------------------------------------------------------------
     // The remaining methods are for debugging.
     // -------------------------------------------------------------------------
@@ -146,24 +160,6 @@ public:
     // @rowcounts, @colcounts: either NULL or size num_rows_solver arrays.
     // Returns -1 if no basis was available and 0 otherwise.
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
-
-    void RunCrossover_() {
-        iterate_.reset(new Iterate(model_));
-
-        BuildStartingBasis();
-
-        RunCrossover();
-    }
-
-    void RunCrossover_X() {
-        iterate_.reset(new Iterate(model_));
-
-        iterate_->Initialize(x_start_, xl_start_, xu_start_,
-                             y_start_, zl_start_, zu_start_);
-        BuildStartingBasis();
-
-        RunCrossover();
-    }
 
 private:
     void ClearSolution();

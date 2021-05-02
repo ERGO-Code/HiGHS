@@ -156,6 +156,39 @@ void LpSolver::ClearIPMStartingPoint() {
     zu_start_.resize(0);
 }
 
+Int LpSolver::CrossoverFromStartingPoint(const double* x_start,
+                                         const double* slack_start,
+                                         const double* y_start,
+                                         const double* z_start) {
+    const Int m = model_.rows();
+    const Int n = model_.cols();
+    const Vector& lb = model_.lb();
+    const Vector& ub = model_.ub();
+    control_.Log() << "Crossover from starting point\n";
+
+    x_crossover_.resize(n+m);
+    y_crossover_.resize(m);
+    z_crossover_.resize(n+m);
+    crossover_weights_.resize(0);
+    model_.PresolveStartingPoint(x_start, slack_start, y_start, z_start,
+                                 x_crossover_, y_crossover_, z_crossover_);
+
+    // Check that starting point is complementary and satisfies bound and sign
+    // conditions.
+    for (Int j = 0; j < n+m; j++) {
+        if (x_crossover_[j] < lb[j] || x_crossover_[j] > ub[j])
+            return IPX_ERROR_invalid_vector;
+        if (x_crossover_[j] != lb[j] && z_crossover_[j] > 0.0)
+            return IPX_ERROR_invalid_vector;
+        if (x_crossover_[j] != ub[j] && z_crossover_[j] < 0.0)
+            return IPX_ERROR_invalid_vector;
+    }
+
+    basis_.reset(new Basis(control_, model_));
+    RunCrossover();
+    return 0;
+}
+
 Int LpSolver::GetIterate(double* x, double* y, double* zl, double* zu,
                          double* xl, double* xu) {
     if (!iterate_)
