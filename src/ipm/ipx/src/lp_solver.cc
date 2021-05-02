@@ -59,8 +59,11 @@ Int LpSolver::Solve() {
     try {
         InteriorPointSolve();
         if ((info_.status_ipm == IPX_STATUS_optimal ||
-             info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover())
+             info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover()) {
+            control_.Log() << "Crossover\n";
+            BuildCrossoverStartingPoint();
             RunCrossover();
+        }
         if (basis_) {
             info_.ftran_sparse = basis_->frac_ftran_sparse();
             info_.btran_sparse = basis_->frac_btran_sparse();
@@ -254,6 +257,7 @@ void LpSolver::ClearSolution() {
     x_crossover_.resize(0);
     y_crossover_.resize(0);
     z_crossover_.resize(0);
+    crossover_weights_.resize(0);
     basic_statuses_.clear();
     basic_statuses_.shrink_to_fit();
     info_ = Info();
@@ -456,14 +460,9 @@ void LpSolver::RunMainIPM(IPM& ipm) {
     info_.time_ipm2 = timer.Elapsed();
 }
 
-void LpSolver::RunCrossover() {
-    control_.Log() << "Crossover\n";
-    assert(basis_);
+void LpSolver::BuildCrossoverStartingPoint() {
     const Int m = model_.rows();
     const Int n = model_.cols();
-    const Vector& lb = model_.lb();
-    const Vector& ub = model_.ub();
-    basic_statuses_.clear();
 
     // Construct a complementary primal-dual point from the final IPM iterate.
     // This usually increases the residuals to Ax=b and A'y+z=c.
@@ -472,26 +471,40 @@ void LpSolver::RunCrossover() {
     z_crossover_.resize(n+m);
     iterate_->DropToComplementarity(x_crossover_, y_crossover_, z_crossover_);
 
-    // Run crossover. Perform dual pushes in increasing order and primal pushes
-    // in decreasing order of the scaling factors from the final IPM iterate.
-    {
-        Vector weights(n+m);
-        for (Int j = 0; j < n+m; j++)
-            weights[j] = iterate_->ScalingFactor(j);
-        Crossover crossover(control_);
-        crossover.PushAll(basis_.get(), x_crossover_, y_crossover_,
-                          z_crossover_, &weights[0], &info_);
-        info_.time_crossover =
-            crossover.time_primal() + crossover.time_dual();
-        info_.updates_crossover =
-            crossover.primal_pivots() + crossover.dual_pivots();
-        if (info_.status_crossover != IPX_STATUS_optimal) {
-            // Crossover failed. Discard solution.
-            x_crossover_.resize(0);
-            y_crossover_.resize(0);
-            z_crossover_.resize(0);
-            return;
-        }
+    // Perform dual pushes in increasing order and primal pushes in decreasing
+    // order of the scaling factors from the final IPM iterate.
+    crossover_weights_.resize(n+m);
+    for (Int j = 0; j < n+m; j++)
+        crossover_weights_[j] = iterate_->ScalingFactor(j);
+}
+
+void LpSolver::RunCrossover() {
+    assert(basis_);
+    const Int m = model_.rows();
+    const Int n = model_.cols();
+    const Vector& lb = model_.lb();
+    const Vector& ub = model_.ub();
+    const double *weights = NULL;
+    basic_statuses_.clear();
+
+    if (crossover_weights_.size()) {
+        assert(crossover_weights_.size() == n+m);
+        weights = &crossover_weights_[0];
+    }
+
+    Crossover crossover(control_);
+    crossover.PushAll(basis_.get(), x_crossover_, y_crossover_, z_crossover_,
+                      weights, &info_);
+    info_.time_crossover =
+        crossover.time_primal() + crossover.time_dual();
+    info_.updates_crossover =
+        crossover.primal_pivots() + crossover.dual_pivots();
+    if (info_.status_crossover != IPX_STATUS_optimal) {
+        // Crossover failed. Discard solution.
+        x_crossover_.resize(0);
+        y_crossover_.resize(0);
+        z_crossover_.resize(0);
+        return;
     }
 
     // Recompute vertex solution and set basic statuses.

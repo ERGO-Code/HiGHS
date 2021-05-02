@@ -174,6 +174,7 @@ private:
     void RunInitialIPM(IPM& ipm);
     void BuildStartingBasis();
     void RunMainIPM(IPM& ipm);
+    void BuildCrossoverStartingPoint();
     void RunCrossover();
     void PrintSummary();
 
@@ -186,7 +187,11 @@ private:
     // Basic solution computed by crossover and basic status of each variable
     // (one of IPX_nonbasic_lb, IPX_nonbasic_ub, IPX_basic, IPX_superbasic).
     // If crossover was not run or failed, then basic_statuses_ is empty.
+    // If crossover_weights_ is non-empty at call to RunCrossover(), then it
+    // contains model_.cols() + model_.rows() weights that define the order of
+    // primal and dual pushes.
     Vector x_crossover_, y_crossover_, z_crossover_;
+    Vector crossover_weights_;
     std::vector<Int> basic_statuses_;
 
     // IPM starting point provided by user (presolved).
