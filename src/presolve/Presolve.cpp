@@ -2251,7 +2251,6 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const HighsInt j,
   // case two singleton columns
   // when we get here bounds on xj are updated so we can choose low/upper one
   // depending on the cost of xj
-  // throw; // does not get triggered by ctest or small.
   flagRow.at(i) = 0;
   double value;
   if (colCost.at(j) > 0) {
