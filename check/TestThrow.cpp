@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdexcept> //Used in HiGHS
 //#include <exception>
-const bool dev_run = true;
+const bool dev_run = false;
 
 void invalidArgument() {
   // Used in .lp file reader

@@ -393,10 +393,6 @@ HighsStatus Highs::run() {
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
-  //  kHighsDebugLevelCheap;
-  //  kHighsDebugLevelCostly;
-  //  kHighsDebugLevelExpensive;
-  //  kHighsDebugLevelMax;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
                            //  kHighsDebugLevelCheap;
@@ -404,13 +400,13 @@ HighsStatus Highs::run() {
   //  kHighsDebugLevelExpensive;
   //  kHighsDebugLevelMax;
   if (options_.highs_debug_level < min_highs_debug_level)
-    printf(
-        "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
-        "from %" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT "\n",
-        options_.highs_debug_level, min_highs_debug_level);
-    //  writeModel("HighsRunModel.mps");
-    //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
-    //  "LpMatrix", lp_);
+    highsLogDev(options_.log_options, HighsLogType::kWarning,
+		"Highs::run() HiGHSDEV defined, so switching options_.highs_debug_level "
+		"from %" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT "\n",
+		options_.highs_debug_level, min_highs_debug_level);
+  //  writeModel("HighsRunModel.mps");
+  //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
+  //  "LpMatrix", lp_);
 #endif
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
@@ -420,11 +416,23 @@ HighsStatus Highs::run() {
   assert(omp_max_threads > 0);
 #ifdef HiGHSDEV
   if (omp_max_threads <= 0)
-    printf("WARNING: omp_get_max_threads() returns %" HIGHSINT_FORMAT "\n",
-           omp_max_threads);
-  printf("Running with %" HIGHSINT_FORMAT " OMP thread(s)\n", omp_max_threads);
+    highsLogDev(options_.log_options, HighsLogType::kWarning,
+		"WARNING: omp_get_max_threads() returns %" HIGHSINT_FORMAT "\n",
+		omp_max_threads);
+  
+  highsLogDev(options_.log_options, HighsLogType::kDetailed,
+	      "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n", omp_max_threads);
 #endif
 #endif
+  assert(called_return_from_run);
+  if (!called_return_from_run) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+		"Highs::run() called with called_return_from_run false\n");
+    return HighsStatus::kError;
+  }
+  // Set this so that calls to returnFromRun() can be checked
+  called_return_from_run = false;
+  // From here all return statements execute returnFromRun()
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Initialise the HiGHS model status values
@@ -436,7 +444,8 @@ HighsStatus Highs::run() {
   clearInfo();
   // Zero the HiGHS iteration counts
   zeroHighsIterationCounts(info_);
-
+  // Start the HiGHS run clock
+  timer_.startRunHighsClock();
   // Return immediately if the model has no columns
   if (!lp_.numCol_) {
     clearSolver();
@@ -2288,6 +2297,7 @@ void Highs::setModelStatus(const HighsModelStatus status) {
 
 // Applies checks before returning from run()
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
+  assert(!called_return_from_run);
   HighsStatus return_status = highsStatusFromHighsModelStatus(scaled_model_status_);
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
@@ -2295,6 +2305,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     // No model has been loaded: ensure that the status, solution,
     // basis and info associated with any previous model are cleared
     clearSolver();
+    // Record that returnFromRun() has been called, and stop the Highs
+    // run clock
+    called_return_from_run = true;
     return returnFromHighs(return_status);
   }
   // A model has been loaded: remove any additional HMO created when solving
@@ -2438,6 +2451,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   }
   if (debugInfo(options_, lp_, basis_, solution_, info_, scaled_model_status_) ==
       HighsDebugStatus::kLogicalError) return_status = HighsStatus::kError;
+  // Record that returnFromRun() has been called, and stop the Highs
+  // run clock
+  called_return_from_run = true;
+
   return returnFromHighs(return_status);
 }
 
@@ -2467,7 +2484,14 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
       return_status = HighsStatus::kError;
     }
   }
-
+  // Check that returnFromRun() has been called
+  if (!called_return_from_run) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+		"Highs::returnFromHighs() called with called_return_from_run false\n");
+    assert(called_return_from_run);
+  }
+  // Stop the HiGHS run clock if it is running
+  if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
