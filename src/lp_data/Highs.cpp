@@ -492,16 +492,11 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", lp_.model_name_.c_str());
 
-  // Start the HiGHS clock unless it's already running
-  const bool run_highs_clock_already_running = timer_.runningRunHighsClock();
-  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-
   if (!options_.solver.compare(kHighsChooseString) && isMip(lp_)) {
     // Solve the model as a MIP
     call_status = callSolveMip();
     return_status =
         interpretCallStatus(call_status, return_status, "callSolveMip");
-    if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
     return returnFromRun(return_status);
   }
 
@@ -545,10 +540,8 @@ HighsStatus Highs::run() {
     this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status =
         interpretCallStatus(call_status, return_status, "callSolveLp");
-    if (return_status == HighsStatus::kError) {
-      if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+    if (return_status == HighsStatus::kError)
       return returnFromRun(return_status);
-    }
   } else {
     // No HiGHS basis so consider presolve
     //
@@ -585,10 +578,8 @@ HighsStatus Highs::run() {
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "callSolveLp");
-        if (return_status == HighsStatus::kError) {
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        if (return_status == HighsStatus::kError) 
           return returnFromRun(return_status);
-	}
         break;
       }
       case HighsPresolveStatus::kNotReduced: {
@@ -604,10 +595,8 @@ HighsStatus Highs::run() {
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "callSolveLp");
-        if (return_status == HighsStatus::kError) {
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
-	}
         break;
       }
       case HighsPresolveStatus::kReduced: {
@@ -652,10 +641,8 @@ HighsStatus Highs::run() {
         options_.objective_bound = save_objective_bound;
         return_status =
             interpretCallStatus(call_status, return_status, "callSolveLp");
-        if (return_status == HighsStatus::kError) {
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
-	}
 	have_optimal_solution = hmos_[solved_hmo].scaled_model_status_ == HighsModelStatus::kOptimal;
         break;
       }
@@ -677,7 +664,6 @@ HighsStatus Highs::run() {
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Problem status detected on presolve: %s\n",
                      modelStatusToString(model_status_).c_str());
-	if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 	return returnFromRun(return_status);
       }
       case HighsPresolveStatus::kUnboundedOrInfeasible: {
@@ -690,7 +676,6 @@ HighsStatus Highs::run() {
 	  highsLogUser(options_.log_options, HighsLogType::kInfo,
 		       "Problem status detected on presolve: %s\n",
 		       modelStatusToString(model_status_).c_str());
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
           return returnFromRun(return_status);
         }
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
@@ -707,10 +692,8 @@ HighsStatus Highs::run() {
                                   "to determine infeasible or unbounded");
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
-        if (return_status == HighsStatus::kError) {
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
-	}
         setModelStatus(hmos_[original_hmo].unscaled_model_status_);
         assert(model_status_ == HighsModelStatus::kInfeasible ||
                model_status_ == HighsModelStatus::kUnbounded);
@@ -718,7 +701,6 @@ HighsStatus Highs::run() {
         // HMO statuses;
 	//        hmos_[original_hmo].unscaled_model_status_ = model_status_;
 	//        hmos_[original_hmo].scaled_model_status_ = model_status_;
-        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
         return returnFromRun(return_status);
       }
       case HighsPresolveStatus::kTimeout: {
@@ -727,7 +709,6 @@ HighsStatus Highs::run() {
 	noSolution();
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Presolve reached timeout\n");
-        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
         return returnFromRun(HighsStatus::kWarning);
       }
       case HighsPresolveStatus::kOptionsError: {
@@ -736,7 +717,6 @@ HighsStatus Highs::run() {
 	noSolution();
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Presolve options error\n");
-        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
         return returnFromRun(HighsStatus::kError);
       }
       default: {
@@ -746,7 +726,6 @@ HighsStatus Highs::run() {
 	noSolution();
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Presolve returned status %d\n", (int)presolve_status);
-        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
         return returnFromRun(HighsStatus::kError);
       }
     }
@@ -859,7 +838,6 @@ HighsStatus Highs::run() {
 	  noSolution();
 	  //          hmos_[0].unscaled_model_status_ = model_status_;
 	  //          hmos_[0].scaled_model_status_ = model_status_;
-	  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
           return returnFromRun(HighsStatus::kError);
         }
       }
@@ -891,9 +869,6 @@ HighsStatus Highs::run() {
   // them to have the right dimension.
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
-  // Stop and read the HiGHS clock, then work out time for this call
-  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
