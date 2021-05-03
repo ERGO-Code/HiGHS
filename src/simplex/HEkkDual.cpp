@@ -21,7 +21,6 @@
 #include <cstring>
 #include <iostream>
 #include <set>
-#include <stdexcept>
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"

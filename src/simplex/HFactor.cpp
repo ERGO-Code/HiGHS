@@ -18,10 +18,8 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
-#include <stdexcept>
 
 #include "lp_data/HConst.h"
-//#include "io/HighsIO.h"
 #include "simplex/FactorTimer.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HVector.h"
