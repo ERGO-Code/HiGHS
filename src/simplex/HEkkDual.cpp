@@ -361,10 +361,6 @@ void HEkkDual::initialiseInstance() {
   baseUpper = &ekk_instance_.info_.baseUpper_[0];
   baseValue = &ekk_instance_.info_.baseValue_[0];
 
-  // Copy tolerances
-  Tp = primal_feasibility_tolerance;
-  Td = dual_feasibility_tolerance;
-
   // Setup local vectors
   col_DSE.setup(solver_num_row);
   col_BFRT.setup(solver_num_row);
@@ -491,6 +487,11 @@ void HEkkDual::initialiseSolve() {
   dual_feasibility_tolerance =
       ekk_instance_.options_.dual_feasibility_tolerance;
   objective_bound = ekk_instance_.options_.objective_bound;
+
+  // Copy tolerances
+  // ToDo: Eliminate these horribly-named unnecessary copies!
+  Tp = primal_feasibility_tolerance;
+  Td = dual_feasibility_tolerance;
 
   interpretDualEdgeWeightStrategy(
       ekk_instance_.info_.dual_edge_weight_strategy);
