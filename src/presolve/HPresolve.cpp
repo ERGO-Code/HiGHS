@@ -3278,7 +3278,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
     return HighsModelStatus::kOptimal;
   }
 
-  if (!mipsolver) setRelaxedImpliedBounds();
+  if (!mipsolver && options->use_implied_bounds_from_presolve)
+    setRelaxedImpliedBounds();
 
   return HighsModelStatus::kNotset;
 }

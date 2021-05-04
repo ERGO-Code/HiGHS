@@ -297,6 +297,7 @@ struct HighsOptionsStruct {
   HighsInt log_dev_level;
   bool run_crossover;
   bool allow_unbounded_or_infeasible;
+  bool use_implied_bounds_from_presolve;
   bool mps_parser_type_free;
   HighsInt keep_n_rows;
   HighsInt allowed_simplex_matrix_scale_factor;
@@ -678,6 +679,12 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordBool("allow_unbounded_or_infeasible",
                              "Allow ModelStatus::kUnboundedOrInfeasible",
                              advanced, &allow_unbounded_or_infeasible, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("use_implied_bounds_from_presolve",
+                             "Use relaxed implied bounds from presolve",
+                             advanced, &use_implied_bounds_from_presolve, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("mps_parser_type_free",
