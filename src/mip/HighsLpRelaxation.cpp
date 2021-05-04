@@ -667,17 +667,11 @@ void HighsLpRelaxation::recoverBasis() {
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
-  HighsStatus callstatus;
-
   lpsolver.setOptionValue(
       "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
                         mipsolver.timer_.read(mipsolver.timer_.solve_clock));
 
-  try {
-    callstatus = lpsolver.run();
-  } catch (const std::runtime_error&) {
-    callstatus = HighsStatus::kError;
-  }
+  HighsStatus callstatus = lpsolver.run();
 
   const HighsInfo& info = lpsolver.getInfo();
   HighsInt itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
