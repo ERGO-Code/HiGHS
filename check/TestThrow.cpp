@@ -51,6 +51,33 @@ TEST_CASE("ThrowCatch", "[highs_test_throw]") {
     ok = true;
   }
   REQUIRE(ok);
+  // Catch invalid_argument via exception
+  ok = false;
+  try {
+    invalidArgument();
+  } catch (const std::exception& exception) {
+    if (dev_run) std::cout << exception.what() << std::endl;
+    ok = true;
+  }
+  REQUIRE(ok);
+  // Catch logic_error via exception
+  ok = false;
+  try {
+    logicError();
+  } catch (const std::exception& exception) {
+    if (dev_run) std::cout << exception.what() << std::endl;
+    ok = true;
+  }
+  REQUIRE(ok);
+  // Catch bad_alloc via exception
+  ok = false;
+  try {
+    badAlloc();
+  } catch (const std::exception& exception) {
+    if (dev_run) std::cout << exception.what() << std::endl;
+    ok = true;
+  }
+  REQUIRE(ok);
 }
 
 

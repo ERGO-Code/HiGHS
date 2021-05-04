@@ -62,9 +62,9 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       call_status = solveLpIpx(options, model.timer_, model.lp_, imprecise_solution, model.basis_,
 			       model.solution_, model.iteration_counts_, model.unscaled_model_status_,
 			       model.solution_params_);
-    } catch (const std::runtime_error& exception) {
+    } catch (const std::exception& exception) {
       highsLogDev(options.log_options, HighsLogType::kError,
-		  "Runtime error %s in solveLpIpx\n", exception.what());
+		  "Exception %s in solveLpIpx\n", exception.what());
       call_status = HighsStatus::kError;
     }
     return_status =
