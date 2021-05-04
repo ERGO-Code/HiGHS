@@ -32,11 +32,11 @@ const HighsInt kHighsThreadLimit = 8;  // 32;
 const double kRunningAverageMultiplier = 0.05;
 
 enum HighsDebugLevel {
-  kHighsDebugLevelMin = 0,
-  kHighsDebugLevelNone = kHighsDebugLevelMin,  // 0
-  kHighsDebugLevelCheap,                       // 1
-  kHighsDebugLevelCostly,                      // 2
-  kHighsDebugLevelExpensive,                   // 3
+  kHighsDebugLevelNone = 0,
+  kHighsDebugLevelCheap,
+  kHighsDebugLevelCostly,
+  kHighsDebugLevelExpensive,
+  kHighsDebugLevelMin = kHighsDebugLevelNone,
   kHighsDebugLevelMax = kHighsDebugLevelExpensive
 };
 
@@ -52,13 +52,13 @@ enum class HighsDebugStatus {
 };
 
 enum HighsAnalysisLevel {
-  kHighsAnalysisLevelMin = 0,
-  kHighsAnalysisLevelNone = kHighsAnalysisLevelMin,
+  kHighsAnalysisLevelNone = 0,
   kHighsAnalysisLevelModelData = 1,
   kHighsAnalysisLevelSolverData = 2,
   kHighsAnalysisLevelSolverTime = 4,
   kHighsAnalysisLevelNlaData = 8,
   kHighsAnalysisLevelNlaTime = 16,
+  kHighsAnalysisLevelMin = kHighsAnalysisLevelNone,
   kHighsAnalysisLevelMax =
       kHighsAnalysisLevelModelData + kHighsAnalysisLevelSolverData +
       kHighsAnalysisLevelSolverTime + kHighsAnalysisLevelNlaData +
@@ -88,11 +88,11 @@ enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 
 enum PrimalDualStatus {
   kHighsPrimalDualStatusNotset = -1,
-  kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNotset,
   kHighsPrimalDualStatusNoSolution,
   kHighsPrimalDualStatusUnknown,
   kHighsPrimalDualStatusInfeasiblePoint,
   kHighsPrimalDualStatusFeasiblePoint,
+  kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNotset,
   kHighsPrimalDualStatusMax = kHighsPrimalDualStatusFeasiblePoint
 };
 
@@ -106,7 +106,6 @@ enum class HighsModelStatus {
   // values is unchanged, since enums are not preserved in some
   // interfaces
   kNotset = 0,
-  kMin = kNotset,
   kLoadError,
   kModelError,
   kPresolveError,
@@ -122,6 +121,7 @@ enum class HighsModelStatus {
   kTimeLimit,
   kIterationLimit,
   kUnknown,
+  kMin = kNotset,
   kMax = kUnknown
 };
 

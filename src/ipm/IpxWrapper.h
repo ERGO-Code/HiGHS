@@ -672,7 +672,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (solve_status == IPX_STATUS_stopped) {
     // IPX stopped, so there's certainly no basic solution. Get the
     // non-vertex solution, though.
-    assert(1==0);
+    //    assert(0==1);
     getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
     //
@@ -746,7 +746,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
       model_status = HighsModelStatus::kUnboundedOrInfeasible;
     }
-    assert(2==0);
+    //    assert(0==2);
     getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
     return HighsStatus::kOk;
@@ -797,7 +797,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
-    //    assert(3==0);
+    //    assert(0==3);
     getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
   }

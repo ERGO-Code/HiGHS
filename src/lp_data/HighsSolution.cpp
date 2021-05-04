@@ -31,7 +31,7 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void getPrimalDualInfeasibilities(const HighsLp& lp, 
+void getPrimalDualInfeasibilities(const HighsLp& lp,
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params) {
   double primal_feasibility_tolerance =
@@ -59,7 +59,8 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
 
   const bool have_primal_solution = solution.value_valid;
   if (have_primal_solution) {
-    // There's a primal solution, so check its size and initialise the infeasiblilty counts
+    // There's a primal solution, so check its size and initialise the
+    // infeasiblilty counts
     assert((int)solution.col_value.size() >= lp.numCol_);
     assert((int)solution.row_value.size() >= lp.numRow_);
     num_primal_infeasibility = 0;
@@ -71,7 +72,8 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
   }
   const bool have_dual_solution = solution.dual_valid;
   if (have_dual_solution) {
-    // There's a dual solution, so check its size and initialise the infeasiblilty counts
+    // There's a dual solution, so check its size and initialise the
+    // infeasiblilty counts
     assert((int)solution.col_dual.size() >= lp.numCol_);
     assert((int)solution.row_dual.size() >= lp.numRow_);
     num_dual_infeasibility = 0;
@@ -117,36 +119,39 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
       sum_primal_infeasibility += primal_infeasibility;
     }
     if (have_dual_solution) {
-      double primal_residual = std::min(std::fabs(lower - value), std::fabs(value - upper));
+      double primal_residual =
+          std::min(std::fabs(lower - value), std::fabs(value - upper));
       if (lower == -kHighsInf && upper == kHighsInf) {
-	printf("getPrimalDualInfeasibilities: %d (%g, %g, %g), %g from min(%g, %g)\n", (int)iVar,
-	       lower, value, upper, primal_residual,
-	       std::fabs(lower - value), std::fabs(value - upper));
+        printf(
+            "getPrimalDualInfeasibilities: %d (%g, %g, %g), %g from min(%g, "
+            "%g)\n",
+            (int)iVar, lower, value, upper, primal_residual,
+            std::fabs(lower - value), std::fabs(value - upper));
       }
       if (primal_residual <= primal_feasibility_tolerance) {
-	// At a bound
-	double middle = (lower + upper) * 0.5;
-	if (lower < upper) {
-	  // Non-fixed variable
-	  if (value < middle) {
-	    // At lower
-	    dual_infeasibility = std::max(-dual, 0.);
-	  } else {
-	    // At Upper
-	    dual_infeasibility = std::max(dual, 0.);
-	  }
-	} else {
-	  // Fixed variable
-	  dual_infeasibility = 0;
-	}
+        // At a bound
+        double middle = (lower + upper) * 0.5;
+        if (lower < upper) {
+          // Non-fixed variable
+          if (value < middle) {
+            // At lower
+            dual_infeasibility = std::max(-dual, 0.);
+          } else {
+            // At Upper
+            dual_infeasibility = std::max(dual, 0.);
+          }
+        } else {
+          // Fixed variable
+          dual_infeasibility = 0;
+        }
       } else {
-	// Off bounds (or free)
-	dual_infeasibility = fabs(dual);
+        // Off bounds (or free)
+        dual_infeasibility = fabs(dual);
       }
       if (dual_infeasibility > dual_feasibility_tolerance)
-	num_dual_infeasibility++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
-	std::max(dual_infeasibility, max_dual_infeasibility);
+          std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
   }
@@ -161,7 +166,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
     } else {
       solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
     }
-  }    
+  }
 }
 
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution) {
@@ -372,23 +377,24 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     } else {
       unrecognised = true;
       highsLogDev(log_options, HighsLogType::kError,
-          "\nError in IPX conversion: Unrecognised value "
-          "ipx_col_status[%2" HIGHSINT_FORMAT
-          "] = "
-          "%" HIGHSINT_FORMAT "\n",
-          col, (HighsInt)ipx_col_status[col]);
+                  "\nError in IPX conversion: Unrecognised value "
+                  "ipx_col_status[%2" HIGHSINT_FORMAT
+                  "] = "
+                  "%" HIGHSINT_FORMAT "\n",
+                  col, (HighsInt)ipx_col_status[col]);
     }
     if (unrecognised) {
       highsLogDev(log_options, HighsLogType::kError,
-		  "Bounds [%11.4g, %11.4g]\n", lp.colLower_[col], lp.colUpper_[col]);
+                  "Bounds [%11.4g, %11.4g]\n", lp.colLower_[col],
+                  lp.colUpper_[col]);
       highsLogDev(log_options, HighsLogType::kError,
-		  "Col %2" HIGHSINT_FORMAT " ipx_col_status[%2" HIGHSINT_FORMAT
-		  "] = %2" HIGHSINT_FORMAT "; x[%2" HIGHSINT_FORMAT
-		  "] = %11.4g; z[%2" HIGHSINT_FORMAT
-		  "] = "
-		  "%11.4g\n",
-		  col, col, (HighsInt)ipx_col_status[col], col, ipx_col_value[col],
-		  col, ipx_col_dual[col]);
+                  "Col %2" HIGHSINT_FORMAT " ipx_col_status[%2" HIGHSINT_FORMAT
+                  "] = %2" HIGHSINT_FORMAT "; x[%2" HIGHSINT_FORMAT
+                  "] = %11.4g; z[%2" HIGHSINT_FORMAT
+                  "] = "
+                  "%11.4g\n",
+                  col, col, (HighsInt)ipx_col_status[col], col,
+                  ipx_col_value[col], col, ipx_col_dual[col]);
       assert(!unrecognised);
       highsLogUser(log_options, HighsLogType::kError,
                    "Unrecognised ipx_col_status value from IPX\n");
@@ -453,13 +459,14 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
           highs_solution.row_dual[row] = dual;
         } else {
           unrecognised = true;
-	  highsLogDev(log_options, HighsLogType::kError,
-		       "Error in IPX conversion: Row %2" HIGHSINT_FORMAT
-		       " (IPX row %2" HIGHSINT_FORMAT
-		       ") has "
-		       "unrecognised value ipx_col_status[%2" HIGHSINT_FORMAT
-		       "] = %" HIGHSINT_FORMAT "\n",
-		       row, ipx_row, ipx_slack, (HighsInt)ipx_col_status[ipx_slack]);
+          highsLogDev(log_options, HighsLogType::kError,
+                      "Error in IPX conversion: Row %2" HIGHSINT_FORMAT
+                      " (IPX row %2" HIGHSINT_FORMAT
+                      ") has "
+                      "unrecognised value ipx_col_status[%2" HIGHSINT_FORMAT
+                      "] = %" HIGHSINT_FORMAT "\n",
+                      row, ipx_row, ipx_slack,
+                      (HighsInt)ipx_col_status[ipx_slack]);
         }
         // Update the slack to be used for boxed rows
         ipx_slack++;
@@ -491,12 +498,12 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
           highs_solution.row_dual[row] = dual;
         } else {
           unrecognised = true;
-	  highsLogDev(log_options, HighsLogType::kError,
-		       "Error in IPX conversion: Row %2" HIGHSINT_FORMAT
-		       ": cannot handle "
-		       "constraint_type[%2" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
-		       "\n",
-		       row, ipx_row, constraint_type[ipx_row]);
+          highsLogDev(log_options, HighsLogType::kError,
+                      "Error in IPX conversion: Row %2" HIGHSINT_FORMAT
+                      ": cannot handle "
+                      "constraint_type[%2" HIGHSINT_FORMAT
+                      "] = %" HIGHSINT_FORMAT "\n",
+                      row, ipx_row, constraint_type[ipx_row]);
         }
       }
       // Update the IPX row index
@@ -504,16 +511,17 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     }
     if (unrecognised) {
       highsLogDev(log_options, HighsLogType::kError,
-		   "Bounds [%11.4g, %11.4g]\n", lp.rowLower_[row], lp.rowUpper_[row]);
+                  "Bounds [%11.4g, %11.4g]\n", lp.rowLower_[row],
+                  lp.rowUpper_[row]);
       highsLogDev(log_options, HighsLogType::kError,
-		   "Row %2" HIGHSINT_FORMAT " ipx_row_status[%2" HIGHSINT_FORMAT
-		   "] = %2" HIGHSINT_FORMAT "; s[%2" HIGHSINT_FORMAT
-		   "] = %11.4g; y[%2" HIGHSINT_FORMAT
-		   "] = "
-		   "%11.4g\n",
-		   row, this_ipx_row, (HighsInt)ipx_row_status[this_ipx_row],
-		   this_ipx_row, ipx_row_value[this_ipx_row], this_ipx_row,
-		   ipx_row_dual[this_ipx_row]);
+                  "Row %2" HIGHSINT_FORMAT " ipx_row_status[%2" HIGHSINT_FORMAT
+                  "] = %2" HIGHSINT_FORMAT "; s[%2" HIGHSINT_FORMAT
+                  "] = %11.4g; y[%2" HIGHSINT_FORMAT
+                  "] = "
+                  "%11.4g\n",
+                  row, this_ipx_row, (HighsInt)ipx_row_status[this_ipx_row],
+                  this_ipx_row, ipx_row_value[this_ipx_row], this_ipx_row,
+                  ipx_row_dual[this_ipx_row]);
       assert(!unrecognised);
       highsLogUser(log_options, HighsLogType::kError,
                    "Unrecognised ipx_row_status value from IPX\n");
@@ -534,10 +542,12 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     highs_solution.row_dual[iRow] *= (HighsInt)lp.sense_;
   }
 
-  if (num_boxed_rows) highsLogDev(log_options, HighsLogType::kInfo,
-	   "Of %" HIGHSINT_FORMAT " boxed rows: %" HIGHSINT_FORMAT
-           " are basic and %" HIGHSINT_FORMAT " have basic slacks\n",
-           num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
+  if (num_boxed_rows)
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Of %" HIGHSINT_FORMAT " boxed rows: %" HIGHSINT_FORMAT
+                " are basic and %" HIGHSINT_FORMAT " have basic slacks\n",
+                num_boxed_rows, num_boxed_rows_basic,
+                num_boxed_row_slacks_basic);
   // Indicate that the primal solution, dual solution and basis are valid
   highs_solution.value_valid = true;
   highs_solution.dual_valid = true;
@@ -687,28 +697,25 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   return consistent;
 }
 
-bool isPrimalSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
-  return
-    (HighsInt)solution.col_value.size() == lp.numCol_ && 
-    (HighsInt)solution.row_value.size() == lp.numRow_;
+bool isPrimalSolutionRightSize(const HighsLp& lp,
+                               const HighsSolution& solution) {
+  return (HighsInt)solution.col_value.size() == lp.numCol_ &&
+         (HighsInt)solution.row_value.size() == lp.numRow_;
 }
 
 bool isDualSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
-  return
-    (HighsInt)solution.col_dual.size() == lp.numCol_ &&
-    (HighsInt)solution.row_dual.size() == lp.numRow_;
+  return (HighsInt)solution.col_dual.size() == lp.numCol_ &&
+         (HighsInt)solution.row_dual.size() == lp.numRow_;
 }
 
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
-  return
-    isPrimalSolutionRightSize(lp, solution) &&
-    isDualSolutionRightSize(lp, solution);
+  return isPrimalSolutionRightSize(lp, solution) &&
+         isDualSolutionRightSize(lp, solution);
 }
 
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
-  return
-    (HighsInt)basis.col_status.size() == lp.numCol_ &&
-    (HighsInt)basis.row_status.size() == lp.numRow_;
+  return (HighsInt)basis.col_status.size() == lp.numCol_ &&
+         (HighsInt)basis.row_status.size() == lp.numRow_;
 }
 
 void clearPrimalSolutionUtil(HighsSolution& solution) {
@@ -724,8 +731,8 @@ void clearDualSolutionUtil(HighsSolution& solution) {
 }
 
 void clearSolutionUtil(HighsSolution& solution) {
-  clearPrimalSolutionUtil(solution); 
-  clearDualSolutionUtil(solution); 
+  clearPrimalSolutionUtil(solution);
+  clearDualSolutionUtil(solution);
 }
 
 void clearBasisUtil(HighsBasis& basis) {

@@ -84,8 +84,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.mip_pscost_minreliable = 0;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  submipoptions.objective_bound =
-      mipsolver.mipdata_->upper_limit;
+  submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
   submipoptions.presolve = "on";
   // setup solver and run it
 

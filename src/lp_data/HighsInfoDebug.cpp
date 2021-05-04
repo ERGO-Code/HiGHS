@@ -26,6 +26,6 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
   if (!info.valid) return return_status;
 
   //  switch (model_status_) {
-  
+
   return return_status;
 }

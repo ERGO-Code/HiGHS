@@ -113,8 +113,7 @@ static HighsInt setupOptions(gamshighs_t* gh) {
     gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
 
   if (gevGetIntOpt(gh->gev, gevUseCutOff))
-    gh->options->objective_bound =
-        gevGetDblOpt(gh->gev, gevCutOff);
+    gh->options->objective_bound = gevGetDblOpt(gh->gev, gevCutOff);
 
   if (gmoOptFile(gh->gmo) > 0) {
     char optfilename[GMS_SSSIZE];

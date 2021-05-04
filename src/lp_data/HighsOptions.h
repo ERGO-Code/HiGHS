@@ -471,15 +471,13 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_bound", "Objective bound for termination",
-        advanced, &objective_bound, -kHighsInf, kHighsInf,
-        kHighsInf);
+        "objective_bound", "Objective bound for termination", advanced,
+        &objective_bound, -kHighsInf, kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "objective_target", "Objective target for termination",
-        advanced, &objective_target, -kHighsInf, -kHighsInf,
-        kHighsInf);
+        "objective_target", "Objective target for termination", advanced,
+        &objective_target, -kHighsInf, -kHighsInf, kHighsInf);
     records.push_back(record_double);
 
     record_int =

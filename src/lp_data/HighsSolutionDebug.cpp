@@ -66,8 +66,8 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
 }
 
 HighsDebugStatus debugPrimalSolutionRightSize(const HighsOptions& options,
-                                        const HighsLp lp,
-                                        const HighsSolution& solution) {
+                                              const HighsLp lp,
+                                              const HighsSolution& solution) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -82,8 +82,8 @@ HighsDebugStatus debugPrimalSolutionRightSize(const HighsOptions& options,
 }
 
 HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
-                                        const HighsLp lp,
-                                        const HighsSolution& solution) {
+                                            const HighsLp lp,
+                                            const HighsSolution& solution) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -370,23 +370,22 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     if (report) {
       if (!header_written) {
         highsLogDev(
-      options.log_options, HighsLogType::kError,
+            options.log_options, HighsLogType::kError,
             "\nColumns\nIndex NonBs Mv [          LB,           UB]       "
             "Primal         Dual    PrimalIfs      DualIfs\n");
         header_written = true;
       }
-      highsLogDev(
-      options.log_options, HighsLogType::kError,"%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT
-             " [%12g, %12g] %12g %12g",
-             iCol, (HighsInt)status, lower, upper, value, dual);
-      highsLogDev(
-      options.log_options, HighsLogType::kError," %12g %12g", primal_infeasibility, dual_infeasibility);
+      highsLogDev(options.log_options, HighsLogType::kError,
+                  "%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT
+                  " [%12g, %12g] %12g %12g",
+                  iCol, (HighsInt)status, lower, upper, value, dual);
+      highsLogDev(options.log_options, HighsLogType::kError, " %12g %12g",
+                  primal_infeasibility, dual_infeasibility);
       debugBasicSolutionVariable(
           report, primal_feasibility_tolerance, dual_feasibility_tolerance,
           status, lower, upper, value, dual, num_non_basic_var, num_basic_var,
           off_bound_nonbasic, primal_infeasibility, dual_infeasibility);
-      highsLogDev(
-      options.log_options, HighsLogType::kError,"\n");
+      highsLogDev(options.log_options, HighsLogType::kError, "\n");
     }
     dual_activities[iCol] = lp.colCost_[iCol];
     for (HighsInt el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
@@ -405,15 +404,15 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       if (report) {
         if (!header_written) {
           highsLogDev(
-      options.log_options, HighsLogType::kError,
+              options.log_options, HighsLogType::kError,
               "\nRow primal residuals\nIndex     Activity     Solution     "
               "Residual\n");
           header_written = true;
         }
-        highsLogDev(
-      options.log_options, HighsLogType::kError,"%5" HIGHSINT_FORMAT " %12g %12g %12g\n", iRow,
-               primal_activities[iRow], solution.row_value[iRow],
-               primal_residual_error);
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "%5" HIGHSINT_FORMAT " %12g %12g %12g\n", iRow,
+                    primal_activities[iRow], solution.row_value[iRow],
+                    primal_residual_error);
       }
       num_primal_residual++;
     }
@@ -428,15 +427,15 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       if (report) {
         if (!header_written) {
           highsLogDev(
-      options.log_options, HighsLogType::kError,
+              options.log_options, HighsLogType::kError,
               "\nRow dual residuals\nIndex     Activity     Solution     "
               "Residual\n");
           header_written = true;
         }
-        highsLogDev(
-      options.log_options, HighsLogType::kError,"%5" HIGHSINT_FORMAT " %12g %12g %12g\n", iCol,
-               dual_activities[iCol], solution.col_dual[iCol],
-               dual_residual_error);
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "%5" HIGHSINT_FORMAT " %12g %12g %12g\n", iCol,
+                    dual_activities[iCol], solution.col_dual[iCol],
+                    dual_residual_error);
       }
       num_dual_residual++;
     }
@@ -490,23 +489,22 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     if (report) {
       if (!header_written) {
         highsLogDev(
-      options.log_options, HighsLogType::kError,
+            options.log_options, HighsLogType::kError,
             "Rows\nIndex NonBs Mv [          LB,           UB]       Primal    "
             "     Dual    PrimalIfs      DualIfs\n");
         header_written = true;
       }
-      highsLogDev(
-      options.log_options, HighsLogType::kError,"%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT
-             " [%12g, %12g] %12g %12g",
-             iRow, (HighsInt)status, lower, upper, value, dual);
-      highsLogDev(
-      options.log_options, HighsLogType::kError," %12g %12g", primal_infeasibility, dual_infeasibility);
+      highsLogDev(options.log_options, HighsLogType::kError,
+                  "%5" HIGHSINT_FORMAT " %5" HIGHSINT_FORMAT
+                  " [%12g, %12g] %12g %12g",
+                  iRow, (HighsInt)status, lower, upper, value, dual);
+      highsLogDev(options.log_options, HighsLogType::kError, " %12g %12g",
+                  primal_infeasibility, dual_infeasibility);
       debugBasicSolutionVariable(
           report, primal_feasibility_tolerance, dual_feasibility_tolerance,
           status, lower, upper, value, dual, num_non_basic_var, num_basic_var,
           off_bound_nonbasic, primal_infeasibility, dual_infeasibility);
-      highsLogDev(
-      options.log_options, HighsLogType::kError,"\n");
+      highsLogDev(options.log_options, HighsLogType::kError, "\n");
     }
   }
 }

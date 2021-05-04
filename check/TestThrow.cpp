@@ -1,7 +1,8 @@
 //#include "Highs.h"
-#include "catch.hpp"
 #include <iostream>
-#include <stdexcept> //Used in HiGHS
+#include <stdexcept>  //Used in HiGHS
+
+#include "catch.hpp"
 //#include <exception>
 const bool dev_run = false;
 
@@ -79,5 +80,3 @@ TEST_CASE("ThrowCatch", "[highs_test_throw]") {
   }
   REQUIRE(ok);
 }
-
-

@@ -2184,8 +2184,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
       ekk_instance_.info_.update_count % check_frequency == 0;
 
   if (check_exact_dual_objective_value) {
-    const double objective_bound =
-        ekk_instance_.options_.objective_bound;
+    const double objective_bound = ekk_instance_.options_.objective_bound;
     const double perturbed_dual_objective_value =
         ekk_instance_.info_.updated_dual_objective_value;
     const double perturbed_value_residual =
@@ -2197,8 +2196,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
     if (exact_dual_objective_value > objective_bound) {
 #ifdef SCIP_DEV
       printf("HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
-             ekk_instance_.info_.updated_dual_objective_value,
-             objective_bound);
+             ekk_instance_.info_.updated_dual_objective_value, objective_bound);
 #endif
       action = "Have DualUB bailout";
       reached_exact_objective_bound = true;
