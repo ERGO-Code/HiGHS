@@ -931,6 +931,7 @@ class Highs {
   HighsTimer timer_;
 
   HighsOptions options_;
+  HighsIterationCounts iteration_counts_;
   HighsInfo info_;
 
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
@@ -974,7 +975,8 @@ class Highs {
 
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
-  bool getHighsModelStatusAndInfo(const HighsInt model_index);
+  void setHighsModelStatusAndInfo(const HighsModelStatus model_status);
+  void setHighsModelStatusBasisSolutionAndInfo(const HighsInt model_index);
 
   HighsStatus reset();
 
@@ -983,8 +985,6 @@ class Highs {
   void clearBasis();
   void clearInfo();
   void noSolution();
-  void noDualSolution();
-  void setModelStatus(const HighsModelStatus status);
 
   void underDevelopmentLogMessage(const string method_name);
   HighsStatus returnFromRun(const HighsStatus return_status);
