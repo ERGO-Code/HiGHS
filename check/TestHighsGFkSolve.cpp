@@ -38,7 +38,7 @@ void testGFkSolve(const std::vector<HighsInt>& Avalue,
   REQUIRE(nnz == GFkSolve.numNonzeros());
 
   GFkSolve.solve<k>(
-      [&](const std::vector<std::pair<HighsInt, unsigned int>>& solution) {
+      [&](const std::vector<HighsGFkSolve::SolutionEntry>& solution) {
         HighsInt numSolutionNnz = solution.size();
         if (dev_run)
           printf("solution (k=%d) has %" HIGHSINT_FORMAT " nonzeros\n", k,
@@ -46,12 +46,12 @@ void testGFkSolve(const std::vector<HighsInt>& Avalue,
 
         std::vector<unsigned int> solSums(numRow);
         for (const auto& solentry : solution) {
-          REQUIRE(solentry.second > 0);
-          REQUIRE(solentry.second < k);
-          for (HighsInt j = Astart[solentry.first];
-               j != Astart[solentry.first + 1]; ++j) {
+          REQUIRE(solentry.weight > 0);
+          REQUIRE(solentry.weight < k);
+          for (HighsInt j = Astart[solentry.index];
+               j != Astart[solentry.index + 1]; ++j) {
             int64_t val =
-                (solSums[Aindex[j]] + (Avalue[j] * (int64_t)solentry.second)) %
+                (solSums[Aindex[j]] + (Avalue[j] * (int64_t)solentry.weight)) %
                 k;
             if (val < 0) val += k;
             solSums[Aindex[j]] = val;
