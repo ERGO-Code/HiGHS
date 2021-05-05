@@ -106,6 +106,20 @@ public:
     // Discards the starting point (if any).
     void ClearIPMStartingPoint();
 
+    // Runs crossover for the given starting point. The starting point must be
+    // complementary and satisfy bound and sign conditions; i.e. a dual variable
+    // must be non-positive (non-negative) when its primal is not at lower
+    // (upper) bound. Each of the pointer arguments can be NULL, in which case
+    // all elements of the vector are assumed to be zero.
+    // Returns:
+    // 0                            starting point OK
+    // IPX_ERROR_invalid_vector     starting point not complementary or violates
+    //                              bound or sign conditions
+    Int CrossoverFromStartingPoint(const double* x_start,
+                                   const double* slack_start,
+                                   const double* y_start,
+                                   const double* z_start);
+
     // -------------------------------------------------------------------------
     // The remaining methods are for debugging.
     // -------------------------------------------------------------------------
@@ -179,6 +193,7 @@ private:
     void RunInitialIPM(IPM& ipm);
     void BuildStartingBasis();
     void RunMainIPM(IPM& ipm);
+    void BuildCrossoverStartingPoint();
     void RunCrossover();
     void PrintSummary();
 
@@ -191,7 +206,11 @@ private:
     // Basic solution computed by crossover and basic status of each variable
     // (one of IPX_nonbasic_lb, IPX_nonbasic_ub, IPX_basic, IPX_superbasic).
     // If crossover was not run or failed, then basic_statuses_ is empty.
+    // If crossover_weights_ is non-empty at call to RunCrossover(), then it
+    // contains model_.cols() + model_.rows() weights that define the order of
+    // primal and dual pushes.
     Vector x_crossover_, y_crossover_, z_crossover_;
+    Vector crossover_weights_;
     std::vector<Int> basic_statuses_;
 
     // IPM starting point provided by user (presolved).

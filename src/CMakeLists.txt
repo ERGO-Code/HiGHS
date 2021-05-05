@@ -207,6 +207,7 @@ set(headers
     simplex/SimplexStruct.h
     presolve/ICrash.h
     presolve/ICrashUtil.h
+    presolve/ICrashX.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
@@ -548,8 +549,7 @@ set(headers_fast_build_
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
-    presolve/ICrash.h
-    presolve/ICrashUtil.h
+    presolve/ICrashX.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h

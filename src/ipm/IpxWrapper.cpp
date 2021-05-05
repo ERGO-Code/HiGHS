@@ -14,6 +14,7 @@
 #include "ipm/IpxWrapper.h"
 
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsSolution.h"
 
 IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
                         std::vector<double>& obj, std::vector<double>& col_lb,

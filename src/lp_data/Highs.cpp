@@ -30,6 +30,8 @@
 #include "simplex/HighsSimplexInterface.h"
 #include "util/HighsMatrixPic.h"
 
+#include "presolve/ICrashX.h"
+
 #ifdef OPENMP
 #include "omp.h"
 #endif
@@ -529,7 +531,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
 #ifdef IPX_ON
     HighsBasis basis;
-    bool x_status = callCrossover(lp_, options_, icrash_info_.x_values, solution_, basis);
+    std::vector<double> x_values(lp_.numCol_, 0);
+    // use these to test crossover link as before.
+    // std::vector<double> x_values(lp_.numCol_, 1);
+    // std::vector<double> x_values(lp_.numCol_, 100);
+
+    bool x_status = callCrossover(lp_, options_, x_values, solution_, basis);
     if (!x_status)
       return HighsStatus::Error;
     // todo: if crossover OK start solver
@@ -538,7 +545,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // and continue with run() now that we have set the basis.
 #else 
     // No IPX available so end here at approximate solve.
-    return icrash_status;
+    // todo: add trick here.
+    return HighsStatus::Error;
 #endif
   }
 
