@@ -259,6 +259,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     }
   }
   solution_params.objective_function_value = objective;
+  solution.value_valid = true;
+  solution.dual_valid = true;
   basis.valid = true;
 
   if (infeasible) {

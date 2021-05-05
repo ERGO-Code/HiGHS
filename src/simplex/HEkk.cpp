@@ -365,6 +365,8 @@ HighsSolution HEkk::getSolution() {
     solution.row_dual[iRow] =
         (HighsInt)lp_.sense_ * info_.workDual_[lp_.numCol_ + iRow];
   }
+  solution.value_valid = true;
+  solution.dual_valid = true;
   return solution;
 }
 

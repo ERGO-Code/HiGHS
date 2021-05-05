@@ -32,6 +32,47 @@ class HighsModelObject;
 
 using std::string;
 
+struct HighsPrimalDualErrors {
+  HighsInt num_nonzero_basic_duals;
+  HighsInt num_large_nonzero_basic_duals;
+  double max_nonzero_basic_dual;
+  double sum_nonzero_basic_duals;
+  HighsInt num_off_bound_nonbasic;
+  double max_off_bound_nonbasic;
+  double sum_off_bound_nonbasic;
+  HighsInt num_primal_residual;
+  double max_primal_residual;
+  double sum_primal_residual;
+  HighsInt num_dual_residual;
+  double max_dual_residual;
+  double sum_dual_residual;
+};
+
+void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                    const HighsBasis& basis,
+                    HighsSolutionParams& solution_params,
+                    HighsPrimalDualErrors& primal_dual_errors);
+
+void getVariableKktFailures(const double primal_feasibility_tolerance,
+                            const double dual_feasibility_tolerance,
+                            const double lower, const double upper,
+                            const double value, const double dual,
+                            HighsBasisStatus* status_pointer,
+                            double& primal_infeasibility,
+                            double& dual_infeasibility, double& value_residual);
+
+void getReportKktFailures(const HighsOptions& options, const HighsLp& lp,
+                          const HighsSolution& solution,
+                          const HighsBasis& basis);
+
+bool reportKktFailureInt(const std::string message,
+                         const HighsLogOptions& log_options,
+                         const HighsInt value);
+
+bool reportKktFailureDouble(const std::string message,
+                            const HighsLogOptions& log_options,
+                            const double value);
+
 void getPrimalDualInfeasibilities(const HighsLp& lp,
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params);

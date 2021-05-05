@@ -31,6 +31,413 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
+void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                    const HighsBasis& basis,
+                    HighsSolutionParams& solution_params,
+                    HighsPrimalDualErrors& primal_dual_errors) {
+  double primal_feasibility_tolerance =
+      solution_params.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance =
+      solution_params.dual_feasibility_tolerance;
+  // solution_params are the values computed in this method.
+  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibility;
+  double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
+  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
+  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibility;
+  double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
+  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
+
+  num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
+  max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solution_params.primal_status = kHighsPrimalDualStatusNoSolution;
+
+  num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
+  max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solution_params.dual_status = kHighsPrimalDualStatusNoSolution;
+
+  const bool& have_primal_solution = solution.value_valid;
+  const bool& have_dual_solution = solution.dual_valid;
+  const bool& have_basis = basis.valid;
+  // Check that there is no dual solution if there's no primal solution
+  assert(have_primal_solution || !have_dual_solution);
+  // Check that there is no basis if there's no dual solution
+  assert(have_dual_solution || !have_basis);
+
+  if (have_primal_solution) {
+    // There's a primal solution, so check its size and initialise the
+    // infeasiblilty counts
+    assert((int)solution.col_value.size() >= lp.numCol_);
+    assert((int)solution.row_value.size() >= lp.numRow_);
+    num_primal_infeasibility = 0;
+    max_primal_infeasibility = 0;
+    sum_primal_infeasibility = 0;
+    if (have_dual_solution) {
+      // There's a dual solution, so check its size and initialise the
+      // infeasiblilty counts
+      assert((int)solution.col_dual.size() >= lp.numCol_);
+      assert((int)solution.row_dual.size() >= lp.numRow_);
+      num_dual_infeasibility = 0;
+      max_dual_infeasibility = 0;
+      sum_dual_infeasibility = 0;
+    }
+  }
+
+  HighsInt& num_nonzero_basic_duals =
+      primal_dual_errors.num_nonzero_basic_duals;
+  HighsInt& num_large_nonzero_basic_duals =
+      primal_dual_errors.num_large_nonzero_basic_duals;
+  double& max_nonzero_basic_dual = primal_dual_errors.max_nonzero_basic_dual;
+  double& sum_nonzero_basic_duals = primal_dual_errors.sum_nonzero_basic_duals;
+
+  HighsInt& num_off_bound_nonbasic = primal_dual_errors.num_off_bound_nonbasic;
+  double& max_off_bound_nonbasic = primal_dual_errors.max_off_bound_nonbasic;
+  double& sum_off_bound_nonbasic = primal_dual_errors.sum_off_bound_nonbasic;
+
+  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
+  double& max_primal_residual = primal_dual_errors.max_primal_residual;
+  double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
+
+  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
+  double& max_dual_residual = primal_dual_errors.max_dual_residual;
+  double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
+
+  // Initialise HighsPrimalDualErrors
+
+  if (have_primal_solution) {
+    num_primal_residual = 0;
+    max_primal_residual = 0;
+    sum_primal_residual = 0;
+    if (have_dual_solution) {
+      num_dual_residual = 0;
+      max_dual_residual = 0;
+      sum_dual_residual = 0;
+    } else {
+      num_dual_residual = kHighsIllegalInfeasibilityCount;
+      max_dual_residual = kHighsIllegalInfeasibilityMeasure;
+      sum_dual_residual = kHighsIllegalInfeasibilityMeasure;
+    }
+    if (have_basis) {
+      num_nonzero_basic_duals = 0;
+      num_large_nonzero_basic_duals = 0;
+      max_nonzero_basic_dual = 0;
+      sum_nonzero_basic_duals = 0;
+
+      num_off_bound_nonbasic = 0;
+      max_off_bound_nonbasic = 0;
+      sum_off_bound_nonbasic = 0;
+    } else {
+      num_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
+      num_large_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
+      max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
+      sum_nonzero_basic_duals = kHighsIllegalInfeasibilityMeasure;
+
+      num_off_bound_nonbasic = kHighsIllegalInfeasibilityCount;
+      max_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+      sum_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+    }
+  } else {
+    // No primal solution so nothing can be done
+    return;
+  }
+  std::vector<double> primal_activities;
+  std::vector<double> dual_activities;
+  primal_activities.assign(lp.numRow_, 0);
+  dual_activities.resize(lp.numCol_);
+  HighsInt num_basic_var = 0;
+  HighsInt num_non_basic_var = 0;
+
+  // Set status to a value so the compiler doesn't think it might be unassigned.
+  HighsBasisStatus status = HighsBasisStatus::kNonbasic;
+  // Set status_pointer to be NULL unless we have a basis, in which
+  // case it's the pointer to status. Can't make it a pointer to the
+  // entry of basis since this is const.
+  HighsBasisStatus* status_pointer = NULL;
+  if (have_basis) status_pointer = &status;
+
+  double primal_infeasibility;
+  double dual_infeasibility;
+  double value_residual;
+  double lower;
+  double upper;
+  double value;
+  double dual = 0;
+  for (HighsInt iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+    if (iVar < lp.numCol_) {
+      HighsInt iCol = iVar;
+      lower = lp.colLower_[iCol];
+      upper = lp.colUpper_[iCol];
+      value = solution.col_value[iCol];
+      if (have_dual_solution) dual = solution.col_dual[iCol];
+      if (have_basis) status = basis.col_status[iCol];
+    } else {
+      HighsInt iRow = iVar - lp.numCol_;
+      lower = lp.rowLower_[iRow];
+      upper = lp.rowUpper_[iRow];
+      value = solution.row_value[iRow];
+      if (have_dual_solution) dual = -solution.row_dual[iRow];
+      if (have_basis) status = basis.row_status[iRow];
+    }
+    // Flip dual according to lp.sense_
+    dual *= (HighsInt)lp.sense_;
+    getVariableKktFailures(  // const HighsLogOptions& log_options,
+        primal_feasibility_tolerance, dual_feasibility_tolerance, lower, upper,
+        value, dual, status_pointer, primal_infeasibility, dual_infeasibility,
+        value_residual);
+    // Accumulate primal infeasiblilties
+    if (primal_infeasibility > primal_feasibility_tolerance)
+      num_primal_infeasibility++;
+    max_primal_infeasibility =
+        std::max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibility += primal_infeasibility;
+
+    if (have_dual_solution) {
+      // Accumulate dual infeasiblilties
+      if (dual_infeasibility > dual_feasibility_tolerance)
+        num_dual_infeasibility++;
+      max_dual_infeasibility =
+          std::max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibility += dual_infeasibility;
+    }
+    if (have_basis) {
+      if (status == HighsBasisStatus::kBasic) {
+        num_basic_var++;
+        double abs_basic_dual = dual_infeasibility;
+        if (abs_basic_dual > 0) {
+          num_nonzero_basic_duals++;
+          if (abs_basic_dual > dual_feasibility_tolerance)
+            num_large_nonzero_basic_duals++;
+          max_nonzero_basic_dual =
+              std::max(abs_basic_dual, max_nonzero_basic_dual);
+          sum_nonzero_basic_duals += abs_basic_dual;
+        }
+      } else {
+        num_non_basic_var++;
+        double off_bound_nonbasic = value_residual;
+        if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
+        max_off_bound_nonbasic =
+            std::max(off_bound_nonbasic, max_off_bound_nonbasic);
+        sum_off_bound_nonbasic += off_bound_nonbasic;
+      }
+    }
+    if (iVar < lp.numCol_) {
+      HighsInt iCol = iVar;
+      if (have_dual_solution) dual_activities[iCol] = lp.colCost_[iCol];
+      for (HighsInt el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
+        HighsInt iRow = lp.Aindex_[el];
+        double Avalue = lp.Avalue_[el];
+        primal_activities[iRow] += value * Avalue;
+        if (have_dual_solution)
+          dual_activities[iCol] += solution.row_dual[iRow] * Avalue;
+      }
+    }
+  }
+  const double large_residual_error = 1e-12;
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+    double primal_residual_error =
+        std::fabs(primal_activities[iRow] - solution.row_value[iRow]);
+    if (primal_residual_error > large_residual_error) num_primal_residual++;
+    max_primal_residual = std::max(primal_residual_error, max_primal_residual);
+    sum_primal_residual += primal_residual_error;
+  }
+  if (have_dual_solution) {
+    for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+      double dual_residual_error =
+          std::fabs(dual_activities[iCol] - solution.col_dual[iCol]);
+      if (dual_residual_error > large_residual_error) num_dual_residual++;
+      max_dual_residual = std::max(dual_residual_error, max_dual_residual);
+      sum_dual_residual += dual_residual_error;
+    }
+  }
+}
+// Gets the KKT failures for a variable. The lack of a basis status is
+// indicated by status_pointer being null.
+//
+// Value and dual are used compute the primal and dual infeasibility -
+// according to the basis status (if valid) or primal value.It's up to
+// the calling method to ignore these if the value or dual are not
+// valid.
+//
+// If the basis status is valid, then the numbers of basic and
+// nonbasic variables are updated, and the extent to which a nonbasic
+// variable is off its bound is returned.
+void getVariableKktFailures(  // const HighsLogOptions& log_options,
+    const double primal_feasibility_tolerance,
+    const double dual_feasibility_tolerance, const double lower,
+    const double upper, const double value, const double dual,
+    HighsBasisStatus* status_pointer, double& primal_infeasibility,
+    double& dual_infeasibility, double& value_residual) {
+  const double middle = (lower + upper) * 0.5;
+  // @primal_infeasibility calculation
+  primal_infeasibility = -1;
+  if (value < lower - primal_feasibility_tolerance) {
+    // Below lower
+    primal_infeasibility = lower - value;
+  } else if (value > upper + primal_feasibility_tolerance) {
+    // Above upper
+    primal_infeasibility = value - upper;
+  }
+  value_residual = std::min(std::fabs(lower - value), std::fabs(value - upper));
+  // Determine whether the variable is at a bound using the basis
+  // status (if valid) or value residual.
+  bool at_a_bound = value_residual <= primal_feasibility_tolerance;
+  if (status_pointer != NULL) {
+    // If the variable is basic, then consider it not to be at a bound
+    // so that any dual value yields an infeasibility value
+    if (*status_pointer == HighsBasisStatus::kBasic) at_a_bound = false;
+  }
+  if (at_a_bound) {
+    // At a bound
+    double middle = (lower + upper) * 0.5;
+    if (lower < upper) {
+      // Non-fixed variable
+      if (value < middle) {
+        // At lower
+        dual_infeasibility = std::max(-dual, 0.);
+      } else {
+        // At upper
+        dual_infeasibility = std::max(dual, 0.);
+      }
+    } else {
+      // Fixed variable
+      dual_infeasibility = 0;
+    }
+  } else {
+    // Off bounds (or free)
+    dual_infeasibility = fabs(dual);
+  }
+}
+
+void getReportKktFailures(const HighsOptions& options, const HighsLp& lp,
+                          const HighsSolution& solution,
+                          const HighsBasis& basis) {
+  const HighsLogOptions& log_options = options.log_options;
+  HighsSolutionParams solution_params;
+  solution_params.primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options.dual_feasibility_tolerance;
+  HighsPrimalDualErrors primal_dual_errors;
+  getKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+
+  bool have_kkt_failure = false;
+  highsLogDev(log_options, HighsLogType::kInfo, "KKT Failures\n");
+  have_kkt_failure =
+      reportKktFailureInt("Number of primal infeasibilities         ",
+                          log_options,
+                          solution_params.num_primal_infeasibility) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureDouble("Maximum   primal infeasibility           ",
+                             log_options,
+                             solution_params.max_primal_infeasibility) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureDouble("Sum of    primal infeasibilities         ",
+                             log_options,
+                             solution_params.sum_primal_infeasibility) ||
+      have_kkt_failure;
+
+  have_kkt_failure = reportKktFailureInt(
+                         "Number of dual infeasibilities           ",
+                         log_options, solution_params.num_dual_infeasibility) ||
+                     have_kkt_failure;
+  have_kkt_failure = reportKktFailureDouble(
+                         "Maximum   dual infeasibility             ",
+                         log_options, solution_params.max_dual_infeasibility) ||
+                     have_kkt_failure;
+  have_kkt_failure = reportKktFailureDouble(
+                         "Sum of    dual infeasibilities           ",
+                         log_options, solution_params.sum_dual_infeasibility) ||
+                     have_kkt_failure;
+
+  have_kkt_failure =
+      reportKktFailureInt("Number of       nonzero basic dual values",
+                          log_options,
+                          primal_dual_errors.num_nonzero_basic_duals) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureInt("Number of large nonzero basic dual values",
+                          log_options,
+                          primal_dual_errors.num_large_nonzero_basic_duals) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureDouble("Maximum         nonzero basic dual value ",
+                             log_options,
+                             primal_dual_errors.max_nonzero_basic_dual) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureDouble("Sum of          nonzero basic dual values",
+                             log_options,
+                             primal_dual_errors.sum_nonzero_basic_duals) ||
+      have_kkt_failure;
+
+  have_kkt_failure =
+      reportKktFailureInt("Number of off-bound nonbasic values      ",
+                          log_options,
+                          primal_dual_errors.num_off_bound_nonbasic) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureDouble("Maximum   off-bound nonbasic value       ",
+                             log_options,
+                             primal_dual_errors.max_off_bound_nonbasic) ||
+      have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureDouble("Sum of    off-bound nonbasic values      ",
+                             log_options,
+                             primal_dual_errors.sum_off_bound_nonbasic) ||
+      have_kkt_failure;
+  have_kkt_failure = reportKktFailureInt(
+                         "Number of primal residuals               ",
+                         log_options, primal_dual_errors.num_primal_residual) ||
+                     have_kkt_failure;
+  have_kkt_failure = reportKktFailureDouble(
+                         "Maximum   primal residual                ",
+                         log_options, primal_dual_errors.max_primal_residual) ||
+                     have_kkt_failure;
+  have_kkt_failure = reportKktFailureDouble(
+                         "Sum of    primal residuals               ",
+                         log_options, primal_dual_errors.sum_primal_residual) ||
+                     have_kkt_failure;
+  have_kkt_failure =
+      reportKktFailureInt("Number of dual residuals                 ",
+                          log_options, primal_dual_errors.num_dual_residual) ||
+      have_kkt_failure;
+  have_kkt_failure = reportKktFailureDouble(
+                         "Maximum   dual residual                  ",
+                         log_options, primal_dual_errors.max_dual_residual) ||
+                     have_kkt_failure;
+  have_kkt_failure = reportKktFailureDouble(
+                         "Sum of    dual residuals                 ",
+                         log_options, primal_dual_errors.sum_dual_residual) ||
+                     have_kkt_failure;
+  if (!have_kkt_failure)
+    highsLogDev(log_options, HighsLogType::kInfo, "   None!\n");
+}
+
+bool reportKktFailureInt(const std::string message,
+                         const HighsLogOptions& log_options,
+                         const HighsInt value) {
+  if (value > 0) {
+    highsLogDev(log_options, HighsLogType::kInfo, "%s: %" HIGHSINT_FORMAT "\n",
+                message.c_str(), value);
+    return true;
+  }
+  return false;
+}
+
+bool reportKktFailureDouble(const std::string message,
+                            const HighsLogOptions& log_options,
+                            const double value) {
+  if (value > 0) {
+    highsLogDev(log_options, HighsLogType::kInfo, "%s: %g\n", message.c_str(),
+                value);
+    return true;
+  }
+  return false;
+}
+
 void getPrimalDualInfeasibilities(const HighsLp& lp,
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params) {

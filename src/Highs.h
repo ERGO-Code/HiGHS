@@ -976,7 +976,7 @@ class Highs {
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
   void setHighsModelStatusAndInfo(const HighsModelStatus model_status);
-  void setHighsModelStatusBasisSolutionAndInfo(const HighsInt model_index);
+  void setHighsModelStatusBasisSolutionAndInfo();
 
   HighsStatus reset();
 

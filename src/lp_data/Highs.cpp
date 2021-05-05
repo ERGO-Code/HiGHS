@@ -451,16 +451,11 @@ HighsStatus Highs::run() {
   // Return immediately if the model has no columns
   if (!lp_.numCol_) {
     setHighsModelStatusAndInfo(HighsModelStatus::kModelEmpty);
-    //    hmos_[0].unscaled_model_status_ = model_status_;
-    //    hmos_[0].scaled_model_status_ = model_status_;
-    // return_status = highsStatusFromHighsModelStatus(model_status_);
     return returnFromRun(HighsStatus::kOk);
   }
   // Return immediately if the model is infeasible due to inconsistent bounds
   if (isBoundInfeasible(options_.log_options, lp_)) {
     setHighsModelStatusAndInfo(HighsModelStatus::kInfeasible);
-    //    hmos_[0].unscaled_model_status_ = model_status_;
-    //    hmos_[0].scaled_model_status_ = model_status_;
     return returnFromRun(return_status);
   }
 
@@ -657,8 +652,6 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::kInfeasible: {
         setHighsModelStatusAndInfo(HighsModelStatus::kInfeasible);
-        //    hmos_[0].unscaled_model_status_ = model_status_;
-        //    hmos_[0].scaled_model_status_ = model_status_;
         highsLogUser(options_.log_options, HighsLogType::kInfo,
                      "Problem status detected on presolve: %s\n",
                      modelStatusToString(model_status_).c_str());
@@ -667,8 +660,6 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kUnboundedOrInfeasible: {
         if (options_.allow_unbounded_or_infeasible) {
           setHighsModelStatusAndInfo(HighsModelStatus::kUnboundedOrInfeasible);
-          //    hmos_[0].unscaled_model_status_ = model_status_;
-          //    hmos_[0].scaled_model_status_ = model_status_;
           highsLogUser(options_.log_options, HighsLogType::kInfo,
                        "Problem status detected on presolve: %s\n",
                        modelStatusToString(model_status_).c_str());
@@ -690,13 +681,9 @@ HighsStatus Highs::run() {
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
-        setHighsModelStatusBasisSolutionAndInfo(original_hmo);
+        setHighsModelStatusBasisSolutionAndInfo();
         assert(model_status_ == HighsModelStatus::kInfeasible ||
                model_status_ == HighsModelStatus::kUnbounded);
-        // Transfer the model status to the scaled model status and original
-        // HMO statuses;
-        //        hmos_[original_hmo].unscaled_model_status_ = model_status_;
-        //        hmos_[original_hmo].scaled_model_status_ = model_status_;
         return returnFromRun(return_status);
       }
       case HighsPresolveStatus::kTimeout: {
@@ -826,31 +813,36 @@ HighsStatus Highs::run() {
                        "Postsolve return status is %d\n",
                        (int)postsolve_status);
           setHighsModelStatusAndInfo(HighsModelStatus::kPostsolveError);
-          //          hmos_[0].unscaled_model_status_ = model_status_;
-          //          hmos_[0].scaled_model_status_ = model_status_;
           return returnFromRun(HighsStatus::kError);
         }
+      } else {
+        // LP was not reduced by presolve, so have simply solved the original LP
+        assert(presolve_status == HighsPresolveStatus::kNotReduced);
+        assert(solved_hmo == original_hmo);
       }
     } else {
       // Optimal solution of presolved problem has not been found
       // The original model inherits the solved model's status
-      hmos_[original_hmo].unscaled_model_status_ =
-          hmos_[solved_hmo].unscaled_model_status_;
-      hmos_[original_hmo].scaled_model_status_ =
-          hmos_[solved_hmo].scaled_model_status_;
+      //      hmos_[original_hmo].unscaled_model_status_ =
+      //          hmos_[solved_hmo].unscaled_model_status_;
+      //      hmos_[original_hmo].scaled_model_status_ =
+      //          hmos_[solved_hmo].scaled_model_status_;
     }
   }
-  //  assert(solved_hmo == original_hmo);
   // solved_hmo will be original_hmo unless the presolved LP is found to be
-  // infeasible or unbounded
-
-  setHighsModelStatusBasisSolutionAndInfo(solved_hmo);
-
-  // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and
-  // basis_ The HiGHS solution and basis have to come from the original_hmo for
-  // them to have the right dimension.
-  //  solution_ = hmos_[original_hmo].solution_;
-  //  basis_ = hmos_[original_hmo].basis_;
+  // infeasible or unbounded, or if the time/iteration limit is reached
+  if (solved_hmo != original_hmo) {
+    HighsModelStatus solved_model_status =
+        hmos_[solved_hmo].unscaled_model_status_;
+    assert(solved_model_status == HighsModelStatus::kInfeasible ||
+           solved_model_status == HighsModelStatus::kUnbounded ||
+           solved_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+           solved_model_status == HighsModelStatus::kTimeLimit ||
+           solved_model_status == HighsModelStatus::kIterationLimit);
+    setHighsModelStatusAndInfo(solved_model_status);
+  } else {
+    setHighsModelStatusBasisSolutionAndInfo();
+  }
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
@@ -2099,25 +2091,27 @@ void Highs::setHighsModelStatusAndInfo(const HighsModelStatus model_status) {
   model_status_ = model_status;
   scaled_model_status_ = model_status_;
   noSolution();
+  info_.simplex_iteration_count = iteration_counts_.simplex;
+  info_.ipm_iteration_count = iteration_counts_.ipm;
+  info_.crossover_iteration_count = iteration_counts_.crossover;
   assert(info_.valid);
 }
 
-void Highs::setHighsModelStatusBasisSolutionAndInfo(
-    const HighsInt model_index) {
+void Highs::setHighsModelStatusBasisSolutionAndInfo() {
   assert(haveHmo("setHighsModelStatusBasisSolutionAndInfo"));
   clearSolver();
 
-  model_status_ = hmos_[model_index].unscaled_model_status_;
-  scaled_model_status_ = hmos_[model_index].scaled_model_status_;
+  model_status_ = hmos_[0].unscaled_model_status_;
+  scaled_model_status_ = hmos_[0].scaled_model_status_;
 
-  basis_ = hmos_[model_index].basis_;
-  solution_ = hmos_[model_index].solution_;
+  basis_ = hmos_[0].basis_;
+  solution_ = hmos_[0].solution_;
 
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
   info_.crossover_iteration_count = iteration_counts_.crossover;
 
-  HighsSolutionParams& solution_params = hmos_[model_index].solution_params_;
+  HighsSolutionParams& solution_params = hmos_[0].solution_params_;
   info_.primal_status = solution_params.primal_status;
   info_.dual_status = solution_params.dual_status;
   info_.objective_function_value = solution_params.objective_function_value;
@@ -2418,6 +2412,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }
+  getReportKktFailures(options_, lp_, solution_, basis_);
   if (debugInfo(options_, lp_, basis_, solution_, info_,
                 scaled_model_status_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
