@@ -26,11 +26,10 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "presolve/ICrashX.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "util/HighsMatrixPic.h"
-
-#include "presolve/ICrashX.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -526,24 +525,19 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // todo: timing. some strange compile issue.
     HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
 
-    if (icrash_status != HighsStatus::OK)
-      return icrash_status;
+    if (icrash_status != HighsStatus::OK) return icrash_status;
 
 #ifdef IPX_ON
     HighsBasis basis;
-    std::vector<double> x_values(lp_.numCol_, 0);
-    // use these to test crossover link as before.
-    // std::vector<double> x_values(lp_.numCol_, 1);
-    // std::vector<double> x_values(lp_.numCol_, 100);
 
-    bool x_status = callCrossover(lp_, options_, x_values, solution_, basis);
-    if (!x_status)
-      return HighsStatus::Error;
+    bool x_status =
+        callCrossover(lp_, options_, icrash_info_.x_values, solution_, basis);
+    if (!x_status) return HighsStatus::Error;
     // todo: if crossover OK start solver
-     
+
     setBasis(basis);
     // and continue with run() now that we have set the basis.
-#else 
+#else
     // No IPX available so end here at approximate solve.
     // todo: add trick here.
     return HighsStatus::Error;
