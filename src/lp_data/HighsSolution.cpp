@@ -84,6 +84,14 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
     }
   }
 
+  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
+  double& max_primal_residual = primal_dual_errors.max_primal_residual;
+  double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
+
+  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
+  double& max_dual_residual = primal_dual_errors.max_dual_residual;
+  double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
+
   HighsInt& num_nonzero_basic_duals =
       primal_dual_errors.num_nonzero_basic_duals;
   HighsInt& num_large_nonzero_basic_duals =
@@ -95,52 +103,47 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
   double& max_off_bound_nonbasic = primal_dual_errors.max_off_bound_nonbasic;
   double& sum_off_bound_nonbasic = primal_dual_errors.sum_off_bound_nonbasic;
 
-  HighsInt& num_primal_residual = primal_dual_errors.num_primal_residual;
-  double& max_primal_residual = primal_dual_errors.max_primal_residual;
-  double& sum_primal_residual = primal_dual_errors.sum_primal_residual;
-
-  HighsInt& num_dual_residual = primal_dual_errors.num_dual_residual;
-  double& max_dual_residual = primal_dual_errors.max_dual_residual;
-  double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
-
   // Initialise HighsPrimalDualErrors
 
   if (have_primal_solution) {
     num_primal_residual = 0;
     max_primal_residual = 0;
     sum_primal_residual = 0;
-    if (have_dual_solution) {
-      num_dual_residual = 0;
-      max_dual_residual = 0;
-      sum_dual_residual = 0;
-    } else {
-      num_dual_residual = kHighsIllegalInfeasibilityCount;
-      max_dual_residual = kHighsIllegalInfeasibilityMeasure;
-      sum_dual_residual = kHighsIllegalInfeasibilityMeasure;
-    }
-    if (have_basis) {
-      num_nonzero_basic_duals = 0;
-      num_large_nonzero_basic_duals = 0;
-      max_nonzero_basic_dual = 0;
-      sum_nonzero_basic_duals = 0;
-
-      num_off_bound_nonbasic = 0;
-      max_off_bound_nonbasic = 0;
-      sum_off_bound_nonbasic = 0;
-    } else {
-      num_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
-      num_large_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
-      max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
-      sum_nonzero_basic_duals = kHighsIllegalInfeasibilityMeasure;
-
-      num_off_bound_nonbasic = kHighsIllegalInfeasibilityCount;
-      max_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
-      sum_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
-    }
   } else {
-    // No primal solution so nothing can be done
-    return;
+    num_primal_residual = kHighsIllegalInfeasibilityCount;
+    max_primal_residual = kHighsIllegalInfeasibilityMeasure;
+    sum_primal_residual = kHighsIllegalInfeasibilityMeasure;
   }
+  if (have_dual_solution) {
+    num_dual_residual = 0;
+    max_dual_residual = 0;
+    sum_dual_residual = 0;
+  } else {
+    num_dual_residual = kHighsIllegalInfeasibilityCount;
+    max_dual_residual = kHighsIllegalInfeasibilityMeasure;
+    sum_dual_residual = kHighsIllegalInfeasibilityMeasure;
+  }
+  if (have_basis) {
+    num_nonzero_basic_duals = 0;
+    num_large_nonzero_basic_duals = 0;
+    max_nonzero_basic_dual = 0;
+    sum_nonzero_basic_duals = 0;
+
+    num_off_bound_nonbasic = 0;
+    max_off_bound_nonbasic = 0;
+    sum_off_bound_nonbasic = 0;
+  } else {
+    num_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
+    num_large_nonzero_basic_duals = kHighsIllegalInfeasibilityCount;
+    max_nonzero_basic_dual = kHighsIllegalInfeasibilityMeasure;
+    sum_nonzero_basic_duals = kHighsIllegalInfeasibilityMeasure;
+
+    num_off_bound_nonbasic = kHighsIllegalInfeasibilityCount;
+    max_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+    sum_off_bound_nonbasic = kHighsIllegalInfeasibilityMeasure;
+  }
+  // Without a primal solution, nothing can be done!
+  if (!have_primal_solution) return;
   std::vector<double> primal_activities;
   std::vector<double> dual_activities;
   primal_activities.assign(lp.numRow_, 0);
@@ -528,13 +531,6 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
     if (have_dual_solution) {
       double primal_residual =
           std::min(std::fabs(lower - value), std::fabs(value - upper));
-      if (lower == -kHighsInf && upper == kHighsInf) {
-        printf(
-            "getPrimalDualInfeasibilities: %d (%g, %g, %g), %g from min(%g, "
-            "%g)\n",
-            (int)iVar, lower, value, upper, primal_residual,
-            std::fabs(lower - value), std::fabs(value - upper));
-      }
       if (primal_residual <= primal_feasibility_tolerance) {
         // At a bound
         double middle = (lower + upper) * 0.5;
