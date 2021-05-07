@@ -255,12 +255,11 @@ const string kOptionsFileString = "options_file";
 const string kLogFileString = "log_file";
 
 struct HighsOptionsStruct {
-  // Options read from the command line
+  // Run-time options read from the command line
   std::string presolve;
   std::string solver;
   std::string parallel;
   double time_limit;
-  std::string options_file;
 
   // Options read from the file
   double infinite_cost;
@@ -417,10 +416,6 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordDouble(kTimeLimitString, "Time limit", advanced,
                                &time_limit, 0, kHighsInf, kHighsInf);
     records.push_back(record_double);
-    record_string =
-        new OptionRecordString(kOptionsFileString, "Options file", advanced,
-                               &options_file, kHighsFilenameDefault);
-    records.push_back(record_string);
     // Options read from the file
     record_double =
         new OptionRecordDouble("infinite_cost",

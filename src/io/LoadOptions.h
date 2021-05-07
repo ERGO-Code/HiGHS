@@ -19,8 +19,7 @@
 
 #include "lp_data/HighsOptions.h"
 
-// For extended options to be parsed from a file. Assuming options file is
-// specified.
-bool loadOptionsFromFile(HighsOptions& options);
+// For extended options to be parsed from filename
+bool loadOptionsFromFile(HighsOptions& options, const std::string filename);
 
 #endif

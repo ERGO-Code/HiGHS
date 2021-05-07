@@ -105,8 +105,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& mode
         std::cout << "Multiple options files not implemented.\n";
         return false;
       }
-      options.options_file = v[0];
-      if (!loadOptionsFromFile(options)) return false;
+      if (!loadOptionsFromFile(options, v[0])) return false;
     }
 
   } catch (const cxxopts::OptionException& e) {

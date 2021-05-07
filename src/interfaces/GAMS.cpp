@@ -118,8 +118,7 @@ static HighsInt setupOptions(gamshighs_t* gh) {
   if (gmoOptFile(gh->gmo) > 0) {
     char optfilename[GMS_SSSIZE];
     gmoNameOptFile(gh->gmo, optfilename);
-    gh->options->options_file = optfilename;
-    if (!loadOptionsFromFile(*gh->options)) return 1;
+    if (!loadOptionsFromFile(*gh->options, optfilename)) return 1;
   }
 
   gh->options->printmsgcb = gevprint;

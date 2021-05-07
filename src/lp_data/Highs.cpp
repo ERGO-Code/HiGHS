@@ -88,8 +88,7 @@ HighsStatus Highs::readOptions(const std::string filename) {
                  "Empty file name so not reading options\n");
     return HighsStatus::kWarning;
   }
-  options_.options_file = filename;
-  if (!loadOptionsFromFile(options_)) return HighsStatus::kError;
+  if (!loadOptionsFromFile(options_, filename)) return HighsStatus::kError;
   return HighsStatus::kOk;
 }
 

@@ -18,12 +18,12 @@
 
 // For extended options to be parsed from a file. Assuming options file is
 // specified.
-bool loadOptionsFromFile(HighsOptions& options) {
-  if (options.options_file.size() == 0) return false;
+bool loadOptionsFromFile(HighsOptions& options, const std::string filename) {
+  if (filename.size() == 0) return false;
 
   string line, option, value;
   HighsInt line_count = 0;
-  std::ifstream file(options.options_file);
+  std::ifstream file(filename);
   if (file.is_open()) {
     while (file.good()) {
       getline(file, line);
