@@ -24,7 +24,7 @@
 #include "lp_data/HighsLpUtils.h"
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
-						  const std::string filename,
+                                                  const std::string filename,
                                                   HighsLp& model) {
   try {
     Model m = readinstance(filename);

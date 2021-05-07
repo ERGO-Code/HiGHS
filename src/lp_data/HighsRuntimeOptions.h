@@ -19,7 +19,8 @@
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
 
-bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& model_file) {
+bool loadOptions(int argc, char** argv, HighsOptions& options,
+                 std::string& model_file) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
@@ -59,7 +60,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& mode
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;
-	    model_file = arg;
+            model_file = arg;
           }
         }
         if (nonEmpty > 1) {
@@ -67,7 +68,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& mode
           return false;
         }
       } else {
-	model_file = v[0];
+        model_file = v[0];
       }
     }
 

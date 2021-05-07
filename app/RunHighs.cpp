@@ -18,7 +18,7 @@
 
 void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,
-                          const HighsStatus read_status, const HighsLp& lp);
+                             const HighsStatus read_status, const HighsLp& lp);
 void reportSolvedLpStats(const HighsLogOptions& log_options,
                          const HighsStatus run_status, Highs& highs);
 
@@ -45,7 +45,8 @@ int main(int argc, char** argv) {
   HighsStatus run_status = highs.run();
   //
   // Report solution stats if model solved as LP
-  if (highs.getInfo().mip_node_count == -1) reportSolvedLpStats(options.log_options, run_status, highs);
+  if (highs.getInfo().mip_node_count == -1)
+    reportSolvedLpStats(options.log_options, run_status, highs);
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
@@ -65,7 +66,7 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options) {
 }
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,
-			     const HighsStatus read_status, const HighsLp& lp) {
+                             const HighsStatus read_status, const HighsLp& lp) {
   if (read_status == HighsStatus::kError) {
     highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
   } else {
@@ -143,4 +144,3 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
                  "HiGHS run time      : %13.2f\n", run_time);
   }
 }
-

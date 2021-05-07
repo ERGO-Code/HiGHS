@@ -24,7 +24,7 @@
 #include "util/stringutil.h"
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
-						   const std::string filename,
+                                                   const std::string filename,
                                                    HighsLp& model) {
   std::ifstream f;
   HighsInt i;
