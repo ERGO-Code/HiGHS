@@ -24,12 +24,11 @@
 #include "util/stringutil.h"
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
-						   const std::string model_file,
+						   const std::string filename,
                                                    HighsLp& model) {
   std::ifstream f;
   HighsInt i;
 
-  const std::string filename = model_file;
   f.open(filename, std::ios::in);
   if (f.is_open()) {
     std::string line;

@@ -115,7 +115,6 @@ bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& mode
     return false;
   }
 
-  //  if (options.model_file.size() == 0) {
   if (model_file.size() == 0) {
     std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
     return false;

@@ -256,7 +256,6 @@ const string kLogFileString = "log_file";
 
 struct HighsOptionsStruct {
   // Options read from the command line
-  //  std::string model_file;
   std::string presolve;
   std::string solver;
   std::string parallel;
@@ -402,12 +401,6 @@ class HighsOptions : public HighsOptionsStruct {
     bool advanced;
     advanced = false;
     // Options read from the command line
-    /*
-    record_string =
-        new OptionRecordString(kModelFileString, "Model file", advanced,
-                               &model_file, kHighsFilenameDefault);
-    records.push_back(record_string);
-    */
     record_string = new OptionRecordString(
         kPresolveString, "Presolve option: \"off\", \"choose\" or \"on\"",
         advanced, &presolve, kHighsChooseString);

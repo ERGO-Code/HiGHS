@@ -13,14 +13,8 @@
 /**@file ../app/RunHighs.cpp
  * @brief HiGHS main
  */
-#include "HConfig.h"
 #include "Highs.h"
-#include "HighsIO.h"
-#include "HighsMipSolver.h"
-#include "HighsOptions.h"
 #include "HighsRuntimeOptions.h"
-#include "HighsTimer.h"
-#include "presolve/HAggregator.h"
 
 void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,
@@ -37,14 +31,20 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options, model_file);
   if (!options_ok) return 0;
   Highs highs;
-  //  highs.setOptionValue("log_dev_level", 1);
+  //
+  // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(options.log_options, read_status, highs.getLp());
   if (read_status == HighsStatus::kError)
     return 1;  // todo: change to read error
-
+  //
+  // Pass the option seetings to HiGHS
   highs.passOptions(options);
+  //
+  // Solve the model
   HighsStatus run_status = highs.run();
+  //
+  // Report solution stats if model solved as LP
   if (highs.getInfo().mip_node_count == -1) reportSolvedLpStats(options.log_options, run_status, highs);
 
   // Possibly write the solution to a file

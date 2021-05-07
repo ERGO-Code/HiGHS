@@ -300,8 +300,6 @@ HighsStatus Highs::readModel(const std::string filename) {
   }
 
   HighsLp model;
-  //  options_.model_file = filename;
-
   FilereaderRetcode call_code = reader->readModelFromFile(options_, filename, model);
   delete reader;
   if (call_code != FilereaderRetcode::kOk) {
