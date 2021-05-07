@@ -108,6 +108,22 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       solution_params, new_primal_feasibility_tolerance,
       new_dual_feasibility_tolerance);
 
+  HighsInt num_unscaled_primal_infeasibility =
+      solution_params.num_primal_infeasibility;
+  HighsInt num_unscaled_dual_infeasibility =
+      solution_params.num_dual_infeasibility;
+
+  if (num_unscaled_primal_infeasibility > 0) {
+    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+  } else {
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+  }
+  if (num_unscaled_dual_infeasibility > 0) {
+    solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+  } else {
+    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+  }
+
   // Handle non-optimal status
   if (ekk_instance.model_status_ != HighsModelStatus::kOptimal) {
     highs_model_object.unscaled_model_status_ = ekk_instance.model_status_;
@@ -119,23 +135,17 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // LP is solved to optimailty
   assert(ekk_instance.model_status_ == HighsModelStatus::kOptimal);
 
-  HighsInt num_unscaled_primal_infeasibility =
-      solution_params.num_primal_infeasibility;
-  HighsInt num_unscaled_dual_infeasibility =
-      solution_params.num_dual_infeasibility;
   // Set the model and solution status according to the unscaled solution
   // parameters
   if (num_unscaled_primal_infeasibility == 0 &&
       num_unscaled_dual_infeasibility == 0) {
     // Optimal
     highs_model_object.unscaled_model_status_ = HighsModelStatus::kOptimal;
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
-    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
   } else {
     // Not optimal - should try refinement
-    highs_model_object.unscaled_model_status_ = HighsModelStatus::kNotset;
     assert(num_unscaled_primal_infeasibility > 0 ||
            num_unscaled_dual_infeasibility > 0);
+    highs_model_object.unscaled_model_status_ = HighsModelStatus::kNotset;
     highsLogUser(highs_model_object.options_.log_options, HighsLogType::kInfo,
                  "Have num/max/sum primal (%" HIGHSINT_FORMAT
                  "/%g/%g) and dual (%" HIGHSINT_FORMAT
