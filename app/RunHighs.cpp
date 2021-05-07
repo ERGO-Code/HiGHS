@@ -22,53 +22,39 @@
 #include "HighsTimer.h"
 #include "presolve/HAggregator.h"
 
-void printHighsVersionCopyright(const HighsLogOptions& log_options,
-                                const char* message = nullptr);
-void reportLpStatsOrError(const HighsLogOptions& log_options,
+void printHighsVersionCopyright(const HighsLogOptions& log_options);
+void reportModelStatsOrError(const HighsLogOptions& log_options,
                           const HighsStatus read_status, const HighsLp& lp);
 void reportSolvedLpStats(const HighsLogOptions& log_options,
-                         const HighsStatus run_status, const Highs& highs);
-HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
-HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
+                         const HighsStatus run_status, Highs& highs);
 
 int main(int argc, char** argv) {
   // Load user options.
   HighsOptions options;
+  std::string model_file;
   printHighsVersionCopyright(options.log_options);
 
-  bool options_ok = loadOptions(argc, argv, options);
+  bool options_ok = loadOptions(argc, argv, options, model_file);
   if (!options_ok) return 0;
   Highs highs;
   //  highs.setOptionValue("log_dev_level", 1);
-  HighsStatus read_status = highs.readModel(options.model_file);
-  reportLpStatsOrError(options.log_options, read_status, highs.getLp());
+  HighsStatus read_status = highs.readModel(model_file);
+  reportModelStatsOrError(options.log_options, read_status, highs.getLp());
   if (read_status == HighsStatus::kError)
     return 1;  // todo: change to read error
 
-  // Run LP or MIP solver.
-  const HighsLp& lp = highs.getLp();
-  HighsStatus run_status = HighsStatus::kError;
+  highs.passOptions(options);
+  HighsStatus run_status = highs.run();
+  if (highs.getInfo().mip_node_count == -1) reportSolvedLpStats(options.log_options, run_status, highs);
 
-  bool is_mip = false;
-  for (HighsInt i = 0; i < (HighsInt)lp.integrality_.size(); i++)
-    if (lp.integrality_[i] == HighsVarType::kInteger) {
-      is_mip = true;
-      break;
-    }
-  is_mip = false;
-
-  if (options.solver == "simplex" || options.solver == "ipm" ||
-      (!is_mip && options.presolve != "mip")) {
-    run_status = callLpSolver(options, lp);
-  } else {
-    run_status = callMipSolver(options, lp);
-  }
+  // Possibly write the solution to a file
+  if (options.write_solution_to_file)
+    highs.writeSolution(options.solution_file, options.write_solution_pretty);
 
   return (int)run_status;
 }
 
-void printHighsVersionCopyright(const HighsLogOptions& log_options,
-                                const char* message) {
+void printHighsVersionCopyright(const HighsLogOptions& log_options) {
   highsLogUser(log_options, HighsLogType::kInfo,
                "Running HiGHS %" HIGHSINT_FORMAT ".%" HIGHSINT_FORMAT
                ".%" HIGHSINT_FORMAT " [date: %s, git hash: %s]\n",
@@ -76,41 +62,10 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options,
                HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   highsLogUser(log_options, HighsLogType::kInfo,
                "Copyright (c) 2021 ERGO-Code under MIT licence terms\n\n");
-#ifdef HiGHSDEV
-  // Report on preprocessing macros
-  if (message != nullptr) {
-    highsLogUser(log_options, HighsLogType::kInfo, "In %s\n", message);
-  }
-#ifdef OPENMP
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "OPENMP           is     defined\n");
-#else
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "OPENMP           is not defined\n");
-#endif
-
-#ifdef SCIP_DEV
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "SCIP_DEV         is     defined\n");
-#else
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "SCIP_DEV         is not defined\n");
-#endif
-
-#ifdef HiGHSDEV
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "HiGHSDEV         is     defined\n");
-#else
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "HiGHSDEV         is not defined\n");
-#endif
-  highsLogUser(log_options, HighsLogType::kInfo,
-               "Built with CMAKE_BUILD_TYPE=%s\n", CMAKE_BUILD_TYPE);
-#endif
 }
 
-void reportLpStatsOrError(const HighsLogOptions& log_options,
-                          const HighsStatus read_status, const HighsLp& lp) {
+void reportModelStatsOrError(const HighsLogOptions& log_options,
+			     const HighsStatus read_status, const HighsLp& lp) {
   if (read_status == HighsStatus::kError) {
     highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
   } else {
@@ -186,40 +141,6 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     double run_time = highs.getRunTime();
     highsLogUser(log_options, HighsLogType::kInfo,
                  "HiGHS run time      : %13.2f\n", run_time);
-    // Possibly write the solution to a file
-    const HighsOptions& options = highs.getOptions();
-    if (options.write_solution_to_file)
-      highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
 }
 
-HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
-  // Solve LP case.
-  Highs highs;
-  highs.passOptions(use_options);
-  //  const HighsOptions& options = highs.getOptions();
-
-  // Load problem.
-  highs.passModel(lp);
-  // HighsStatus read_status = highs.readModel(options.model_file);
-  // reportLpStatsOrError(options.log_options, read_status, highs.getLp());
-  // if (read_status == HighsStatus::kError) return HighsStatus::kError;
-
-  // Run HiGHS.
-  highs.setBasis();
-  HighsStatus run_status = highs.run();
-
-  if (highs.getInfo().mip_node_count == -1)
-    reportSolvedLpStats(use_options.log_options, run_status, highs);
-  //  HighsRanging ranging; highs.getRanging(ranging);
-  //  highs.writeSolution("", true);
-  return run_status;
-}
-
-HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
-  use_options.log_dev_level = kHighsLogDevLevelInfo;
-  HighsMipSolver solver(use_options, lp);
-  solver.run();
-
-  return HighsStatus::kOk;
-}

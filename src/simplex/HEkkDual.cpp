@@ -2195,10 +2195,9 @@ bool HEkkDual::reachedExactObjectiveBound() {
         exact_dual_objective_value - objective_bound;
     std::string action;
     if (exact_dual_objective_value > objective_bound) {
-#ifdef SCIP_DEV
-      printf("HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
-             ekk_instance_.info_.updated_dual_objective_value, objective_bound);
-#endif
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
+		  "HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
+		  ekk_instance_.info_.updated_dual_objective_value, objective_bound);
       action = "Have DualUB bailout";
       reached_exact_objective_bound = true;
       ekk_instance_.model_status_ = HighsModelStatus::kObjectiveBound;

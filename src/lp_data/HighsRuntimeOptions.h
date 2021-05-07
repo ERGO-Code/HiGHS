@@ -19,7 +19,7 @@
 #include "io/LoadOptions.h"
 #include "util/stringutil.h"
 
-bool loadOptions(int argc, char** argv, HighsOptions& options) {
+bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& model_file) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
@@ -60,6 +60,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
           if (trim(arg).size() > 0) {
             nonEmpty++;
             options.model_file = arg;
+	    model_file = arg;
           }
         }
         if (nonEmpty > 1) {
@@ -68,6 +69,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
         }
       } else {
         options.model_file = v[0];
+	model_file = v[0];
       }
     }
 
@@ -115,7 +117,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     return false;
   }
 
-  if (options.model_file.size() == 0) {
+  //  if (options.model_file.size() == 0) {
+  if (model_file.size() == 0) {
     std::cout << "Please specify filename in .mps|.lp|.ems format.\n";
     return false;
   }
