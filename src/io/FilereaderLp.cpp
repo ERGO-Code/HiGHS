@@ -24,9 +24,10 @@
 #include "lp_data/HighsLpUtils.h"
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
+						  const std::string model_file,
                                                   HighsLp& model) {
   try {
-    Model m = readinstance(options.model_file);
+    Model m = readinstance(model_file);
 
     // build variable index and gather variable information
     std::map<std::string, unsigned int> varindex;

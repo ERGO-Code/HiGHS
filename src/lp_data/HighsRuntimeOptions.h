@@ -59,7 +59,6 @@ bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& mode
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;
-            options.model_file = arg;
 	    model_file = arg;
           }
         }
@@ -68,7 +67,6 @@ bool loadOptions(int argc, char** argv, HighsOptions& options, std::string& mode
           return false;
         }
       } else {
-        options.model_file = v[0];
 	model_file = v[0];
       }
     }
