@@ -124,6 +124,8 @@ HighsDebugStatus debugHighsBasicSolution(
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options and info
   //
+
+
   // Extract the solution_params from info and options
   HighsSolutionParams solution_params;
   solution_params.primal_feasibility_tolerance =
@@ -208,6 +210,18 @@ HighsDebugStatus debugHighsBasicSolution(
       HighsDebugStatus::kOk)
     return HighsDebugStatus::kLogicalError;
 
+  HighsSolutionParams check_solution_params0;
+  HighsPrimalDualErrors primal_dual_errors0;
+  check_solution_params0.primal_feasibility_tolerance =
+      solution_params.primal_feasibility_tolerance;
+  check_solution_params0.dual_feasibility_tolerance =
+      solution_params.dual_feasibility_tolerance;
+  check_solution_params0.objective_function_value = solution_params.objective_function_value;
+  getKktFailures(lp, solution, basis, check_solution_params0, primal_dual_errors0);
+  HighsDebugStatus return_status0 = debugCompareSolutionParams(
+      options, solution_params, check_solution_params0);
+  debugAnalysePrimalDualErrors(options, primal_dual_errors0);
+  
   HighsSolutionParams check_solution_params;
   double check_primal_objective_value;
   double check_dual_objective_value;

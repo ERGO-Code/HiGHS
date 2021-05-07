@@ -48,10 +48,17 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsLp& lp,
+		    const HighsSolution& solution,
+                    const HighsBasis& basis,
+                    HighsSolutionParams& solution_params);
+
+void getKktFailures(const HighsLp& lp,
+		    const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsSolutionParams& solution_params,
-                    HighsPrimalDualErrors& primal_dual_errors);
+                    HighsPrimalDualErrors& primal_dual_errors,
+		    const bool get_residuals=false);
 
 void getVariableKktFailures(const double primal_feasibility_tolerance,
                             const double dual_feasibility_tolerance,

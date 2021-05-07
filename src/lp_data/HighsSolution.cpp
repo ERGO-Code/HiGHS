@@ -33,8 +33,16 @@
 
 void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
                     const HighsBasis& basis,
+                    HighsSolutionParams& solution_params) {
+  HighsPrimalDualErrors primal_dual_errors;
+  getKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+}
+
+void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                    const HighsBasis& basis,
                     HighsSolutionParams& solution_params,
-                    HighsPrimalDualErrors& primal_dual_errors) {
+                    HighsPrimalDualErrors& primal_dual_errors,
+		    const bool get_residuals) {
   double primal_feasibility_tolerance =
       solution_params.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
@@ -105,7 +113,7 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
 
   // Initialise HighsPrimalDualErrors
 
-  if (have_primal_solution) {
+  if (have_primal_solution && get_residuals) {
     num_primal_residual = 0;
     max_primal_residual = 0;
     sum_primal_residual = 0;
@@ -114,7 +122,7 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
     max_primal_residual = kHighsIllegalInfeasibilityMeasure;
     sum_primal_residual = kHighsIllegalInfeasibilityMeasure;
   }
-  if (have_dual_solution) {
+  if (have_dual_solution && get_residuals) {
     num_dual_residual = 0;
     max_dual_residual = 0;
     sum_dual_residual = 0;
@@ -146,8 +154,11 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
   if (!have_primal_solution) return;
   std::vector<double> primal_activities;
   std::vector<double> dual_activities;
-  primal_activities.assign(lp.numRow_, 0);
-  dual_activities.resize(lp.numCol_);
+  if (get_residuals) {
+    primal_activities.assign(lp.numRow_, 0);
+    if (have_dual_solution) 
+      dual_activities.resize(lp.numCol_);
+  }
   HighsInt num_basic_var = 0;
   HighsInt num_non_basic_var = 0;
 
@@ -224,7 +235,7 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
         sum_off_bound_nonbasic += off_bound_nonbasic;
       }
     }
-    if (iVar < lp.numCol_) {
+    if (iVar < lp.numCol_ && get_residuals) {
       HighsInt iCol = iVar;
       if (have_dual_solution) dual_activities[iCol] = lp.colCost_[iCol];
       for (HighsInt el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
@@ -236,21 +247,37 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
       }
     }
   }
-  const double large_residual_error = 1e-12;
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    double primal_residual_error =
+  if (get_residuals) {
+    const double large_residual_error = 1e-12;
+    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+      double primal_residual_error =
         std::fabs(primal_activities[iRow] - solution.row_value[iRow]);
-    if (primal_residual_error > large_residual_error) num_primal_residual++;
-    max_primal_residual = std::max(primal_residual_error, max_primal_residual);
-    sum_primal_residual += primal_residual_error;
+      if (primal_residual_error > large_residual_error) num_primal_residual++;
+      max_primal_residual = std::max(primal_residual_error, max_primal_residual);
+      sum_primal_residual += primal_residual_error;
+    }
+    if (have_dual_solution) {
+      for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+	double dual_residual_error =
+          std::fabs(dual_activities[iCol] - solution.col_dual[iCol]);
+	if (dual_residual_error > large_residual_error) num_dual_residual++;
+	max_dual_residual = std::max(dual_residual_error, max_dual_residual);
+	sum_dual_residual += dual_residual_error;
+      }
+    }
+  }
+  // Assign primal solution status
+  if (num_primal_infeasibility) {
+    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+  } else {
+    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
   }
   if (have_dual_solution) {
-    for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-      double dual_residual_error =
-          std::fabs(dual_activities[iCol] - solution.col_dual[iCol]);
-      if (dual_residual_error > large_residual_error) num_dual_residual++;
-      max_dual_residual = std::max(dual_residual_error, max_dual_residual);
-      sum_dual_residual += dual_residual_error;
+    // Assign dual solution status
+    if (num_dual_infeasibility) {
+      solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+    } else {
+      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
     }
   }
 }
@@ -265,7 +292,7 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
 // If the basis status is valid, then the numbers of basic and
 // nonbasic variables are updated, and the extent to which a nonbasic
 // variable is off its bound is returned.
-void getVariableKktFailures(  // const HighsLogOptions& log_options,
+void getVariableKktFailures(
     const double primal_feasibility_tolerance,
     const double dual_feasibility_tolerance, const double lower,
     const double upper, const double value, const double dual,
@@ -273,7 +300,7 @@ void getVariableKktFailures(  // const HighsLogOptions& log_options,
     double& dual_infeasibility, double& value_residual) {
   const double middle = (lower + upper) * 0.5;
   // @primal_infeasibility calculation
-  primal_infeasibility = -1;
+  primal_infeasibility = 0;
   if (value < lower - primal_feasibility_tolerance) {
     // Below lower
     primal_infeasibility = lower - value;
@@ -322,7 +349,7 @@ void getReportKktFailures(const HighsOptions& options, const HighsLp& lp,
   solution_params.dual_feasibility_tolerance =
       options.dual_feasibility_tolerance;
   HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+  getKktFailures(lp, solution, basis, solution_params, primal_dual_errors, true);
 
   bool have_kkt_failure = false;
   highsLogDev(log_options, HighsLogType::kInfo, "KKT Failures\n");

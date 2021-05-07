@@ -79,8 +79,19 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // ToDo: This should take model.basis_ and use it if it's valid
     getPrimalDualInfeasibilities(model.lp_, model.solution_,
                                  model.solution_params_);
-    model.solution_params_.objective_function_value =
-        computeObjectiveValue(model.lp_, model.solution_);
+    const double objective_function_value = computeObjectiveValue(model.lp_, model.solution_);
+    model.solution_params_.objective_function_value = objective_function_value;
+
+    HighsSolutionParams check_solution_params;
+    check_solution_params.objective_function_value = objective_function_value;
+    check_solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+    check_solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+    getKktFailures(model.lp_, model.solution_, model.basis_, check_solution_params);
+    
+    if (debugCompareSolutionParams(options, model.solution_params_, check_solution_params) != HighsDebugStatus::kOk) {
+      return HighsStatus::kError;
+    }
+
     if ((model.unscaled_model_status_ == HighsModelStatus::kUnknown ||
          (model.unscaled_model_status_ ==
               HighsModelStatus::kUnboundedOrInfeasible &&
