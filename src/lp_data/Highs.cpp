@@ -1995,45 +1995,60 @@ HighsStatus Highs::callSolveMip() {
   // Clear the solver
   clearSolver();
   // Run the MIP solver
-  options_.log_dev_level = kHighsLogDevLevelInfo;
+  HighsInt log_dev_level = options_.log_dev_level;
+  //  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
   assert(lp_.orientation_ != MatrixOrientation::kRowwise);
   HighsMipSolver solver(options_, lp_);
   solver.run();
-  // Cheating now, but need to set this honestly!
+  options_.log_dev_level = log_dev_level;
   HighsStatus call_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "HighsMipSolver::solver");
   if (return_status == HighsStatus::kError) return return_status;
   scaled_model_status_ = solver.modelstatus_;
   model_status_ = scaled_model_status_;
-  // Set the values in HighsInfo instance info_
+  // Use generic method to set data required for info
+  HighsSolutionParams solution_params;
+  solution_params.primal_feasibility_tolerance =
+      options_.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
+  if (solver.solution_objective_ != kHighsInf) {
+    // There is a primal solution
+    HighsInt solver_solution_size = solver.solution_.size();
+    assert(solver_solution_size >= lp_.numCol_);
+    solution_.col_value.resize(lp_.numCol_);
+    solution_.row_value.assign(lp_.numRow_, 0);
+    for (HighsInt iCol = 0; iCol < lp_.numCol_; iCol++) {
+      double value = solver.solution_[iCol];
+      for (HighsInt iEl = lp_.Astart_[iCol]; iEl < lp_.Astart_[iCol + 1];
+           iEl++) {
+        HighsInt iRow = lp_.Aindex_[iEl];
+        solution_.row_value[iRow] += value * lp_.Avalue_[iEl];
+      }
+      solution_.col_value[iCol] = value;
+    }
+    solution_.value_valid = true;
+  } else {
+    // There is no primal solution: should be so by default
+    assert(!solution_.value_valid);
+  }
+  // There is no dual solution: should be so by default
+  assert(!solution_.dual_valid);
+  // There is no basis: should be so by default
+  assert(!basis_.valid);
+  getKktFailures(lp_, solution_, basis_, solution_params);
+  // Set the values in HighsInfo instance info_.
+  solution_params.objective_function_value = solver.solution_objective_;
+  //  Most come from solution_params...
+  copyFromSolutionParams(info_, solution_params);
+  // ... but others are MIP-specific.
   info_.mip_node_count = solver.node_count_;
-  info_.primal_status = kHighsPrimalDualStatusNoSolution;
-  info_.dual_status = kHighsPrimalDualStatusNoSolution;
-  info_.objective_function_value = solver.solution_objective_;
   info_.mip_dual_bound = solver.dual_bound_;
   info_.mip_gap =
       100 * std::abs(info_.objective_function_value - info_.mip_dual_bound) /
       std::max(1.0, std::abs(info_.objective_function_value));
-  info_.num_primal_infeasibilities = -1;  // Not known
-  // Are the violations max or sum?
-  info_.max_primal_infeasibility =
-      std::max({solver.bound_violation_, solver.row_violation_,
-                solver.integrality_violation_});
-  info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  // The solution needs to be here, but just resize it for now
-  if (solver.solution_objective_ != kHighsInf) {
-    info_.primal_status = kHighsPrimalDualStatusFeasiblePoint;
-    HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= lp_.numCol_);
-    solution_.col_value.resize(lp_.numCol_);
-    for (HighsInt iCol = 0; iCol < lp_.numCol_; iCol++)
-      solution_.col_value[iCol] = solver.solution_[iCol];
-  }
   info_.valid = true;
   return return_status;
 }

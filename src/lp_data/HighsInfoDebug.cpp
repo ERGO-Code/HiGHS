@@ -24,7 +24,7 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
   //  printf("debugInfo!\n");
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   HighsDebugStatus call_status;
-  
+
   const bool have_info = info.valid;
   const bool have_primal_solution = solution.value_valid;
   const bool have_dual_solution = solution.dual_valid;
@@ -56,62 +56,71 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
       // Should have info
       assert(have_info == true);
       if (have_primal_solution) {
-	if (info.num_primal_infeasibilities < 0) {
-	  highsLogDev(options.log_options, HighsLogType::kError,
-		      "Have primal solution but num_primal_infeasibilities = %"
-		      HIGHSINT_FORMAT "\n", info.num_primal_infeasibilities);
-	  return HighsDebugStatus::kLogicalError;
-	} else if (info.num_primal_infeasibilities == 0) {
-	  if (info.primal_status != kHighsPrimalDualStatusFeasiblePoint) {
-	    highsLogDev(options.log_options, HighsLogType::kError,
-			"Have primal solution and no infeasibilities but primal status = %"
-			HIGHSINT_FORMAT "\n", info.primal_status);
-	    return HighsDebugStatus::kLogicalError;
-	  }
-	} else {
-	  if (info.primal_status != kHighsPrimalDualStatusInfeasiblePoint) {
-	    highsLogDev(options.log_options, HighsLogType::kError,
-			"Have primal solution and infeasibilities but primal status = %"
-			HIGHSINT_FORMAT "\n", info.primal_status);
-	    return HighsDebugStatus::kLogicalError;
-	  }
-	}
+        if (info.num_primal_infeasibilities < 0) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Have primal solution but num_primal_infeasibilities = "
+                      "%" HIGHSINT_FORMAT "\n",
+                      info.num_primal_infeasibilities);
+          return HighsDebugStatus::kLogicalError;
+        } else if (info.num_primal_infeasibilities == 0) {
+          if (info.primal_status != kHighsPrimalDualStatusFeasiblePoint) {
+            highsLogDev(options.log_options, HighsLogType::kError,
+                        "Have primal solution and no infeasibilities but "
+                        "primal status = %" HIGHSINT_FORMAT "\n",
+                        info.primal_status);
+            return HighsDebugStatus::kLogicalError;
+          }
+        } else {
+          if (info.primal_status != kHighsPrimalDualStatusInfeasiblePoint) {
+            highsLogDev(options.log_options, HighsLogType::kError,
+                        "Have primal solution and infeasibilities but primal "
+                        "status = %" HIGHSINT_FORMAT "\n",
+                        info.primal_status);
+            return HighsDebugStatus::kLogicalError;
+          }
+        }
       } else {
-	if (info.primal_status != kHighsPrimalDualStatusNoSolution) {
-	  highsLogDev(options.log_options, HighsLogType::kError,
-		      "Have no primal solution but primal status = %"
-		      HIGHSINT_FORMAT "\n", info.primal_status);
-	  return HighsDebugStatus::kLogicalError;
-	}
+        if (info.primal_status != kHighsPrimalDualStatusNoSolution) {
+          highsLogDev(
+              options.log_options, HighsLogType::kError,
+              "Have no primal solution but primal status = %" HIGHSINT_FORMAT
+              "\n",
+              info.primal_status);
+          return HighsDebugStatus::kLogicalError;
+        }
       }
       if (have_dual_solution) {
-	if (info.num_dual_infeasibilities < 0) {
-	  highsLogDev(options.log_options, HighsLogType::kError,
-		      "Have dual solution but num_dual_infeasibilities = %"
-		      HIGHSINT_FORMAT "\n", info.num_dual_infeasibilities);
-	  return HighsDebugStatus::kLogicalError;
-	} else if (info.num_dual_infeasibilities == 0) {
-	  if (info.dual_status != kHighsPrimalDualStatusFeasiblePoint) {
-	    highsLogDev(options.log_options, HighsLogType::kError,
-			"Have dual solution and no infeasibilities but dual status = %"
-			HIGHSINT_FORMAT "\n", info.dual_status);
-	    return HighsDebugStatus::kLogicalError;
-	  }
-	} else {
-	  if (info.dual_status != kHighsPrimalDualStatusInfeasiblePoint) {
-	    highsLogDev(options.log_options, HighsLogType::kError,
-			"Have dual solution and infeasibilities but dual status = %"
-			HIGHSINT_FORMAT "\n", info.dual_status);
-	    return HighsDebugStatus::kLogicalError;
-	  }
-	}
+        if (info.num_dual_infeasibilities < 0) {
+          highsLogDev(options.log_options, HighsLogType::kError,
+                      "Have dual solution but num_dual_infeasibilities = "
+                      "%" HIGHSINT_FORMAT "\n",
+                      info.num_dual_infeasibilities);
+          return HighsDebugStatus::kLogicalError;
+        } else if (info.num_dual_infeasibilities == 0) {
+          if (info.dual_status != kHighsPrimalDualStatusFeasiblePoint) {
+            highsLogDev(options.log_options, HighsLogType::kError,
+                        "Have dual solution and no infeasibilities but dual "
+                        "status = %" HIGHSINT_FORMAT "\n",
+                        info.dual_status);
+            return HighsDebugStatus::kLogicalError;
+          }
+        } else {
+          if (info.dual_status != kHighsPrimalDualStatusInfeasiblePoint) {
+            highsLogDev(options.log_options, HighsLogType::kError,
+                        "Have dual solution and infeasibilities but dual "
+                        "status = %" HIGHSINT_FORMAT "\n",
+                        info.dual_status);
+            return HighsDebugStatus::kLogicalError;
+          }
+        }
       } else {
-	if (info.dual_status != kHighsPrimalDualStatusNoSolution) {
-	  highsLogDev(options.log_options, HighsLogType::kError,
-		      "Have no dual solution but dual status = %"
-		      HIGHSINT_FORMAT "\n", info.dual_status);
-	  return HighsDebugStatus::kLogicalError;
-	}
+        if (info.dual_status != kHighsPrimalDualStatusNoSolution) {
+          highsLogDev(
+              options.log_options, HighsLogType::kError,
+              "Have no dual solution but dual status = %" HIGHSINT_FORMAT "\n",
+              info.dual_status);
+          return HighsDebugStatus::kLogicalError;
+        }
       }
       break;
     default:
@@ -134,31 +143,35 @@ HighsDebugStatus debugNoInfo(const HighsInfo& info) {
     if (type == HighsInfoType::kInt64) {
       int v0 = (int)*(((InfoRecordInt64*)info_records[index])[0].value);
       int v1 = (int)*(((InfoRecordInt64*)info_records[index])[0].value);
-      if (v0 != v1) printf("debugNoInfo: Index %" HIGHSINT_FORMAT " has %d != %d \n",
-			   index, v0, v1);	   
-       error_found = (*(((InfoRecordInt64*)info_records[index])[0].value) !=
-		      *(((InfoRecordInt64*)no_info_records[index])[0].value)) || error_found;
+      if (v0 != v1)
+        printf("debugNoInfo: Index %" HIGHSINT_FORMAT " has %d != %d \n", index,
+               v0, v1);
+      error_found = (*(((InfoRecordInt64*)info_records[index])[0].value) !=
+                     *(((InfoRecordInt64*)no_info_records[index])[0].value)) ||
+                    error_found;
     } else if (type == HighsInfoType::kInt) {
       int v0 = (int)*(((InfoRecordInt*)info_records[index])[0].value);
       int v1 = (int)*(((InfoRecordInt*)info_records[index])[0].value);
-      if (v0 != v1) printf("debugNoInfo: Index %" HIGHSINT_FORMAT " has %d != %d \n",
-			   index, v0, v1);	   
-       error_found = (*(((InfoRecordInt*)info_records[index])[0].value) !=
-		      *(((InfoRecordInt*)no_info_records[index])[0].value)) || error_found;
+      if (v0 != v1)
+        printf("debugNoInfo: Index %" HIGHSINT_FORMAT " has %d != %d \n", index,
+               v0, v1);
+      error_found = (*(((InfoRecordInt*)info_records[index])[0].value) !=
+                     *(((InfoRecordInt*)no_info_records[index])[0].value)) ||
+                    error_found;
     } else if (type == HighsInfoType::kDouble) {
       double v0 = (double)*(((InfoRecordDouble*)info_records[index])[0].value);
       double v1 = (double)*(((InfoRecordDouble*)info_records[index])[0].value);
-      if (v0 != v1) printf("debugNoInfo: Index %" HIGHSINT_FORMAT " has %g != %g \n",
-			   index, v0, v1);	   
-       error_found = (*(((InfoRecordDouble*)info_records[index])[0].value) !=
-		      *(((InfoRecordDouble*)no_info_records[index])[0].value)) || error_found;
+      if (v0 != v1)
+        printf("debugNoInfo: Index %" HIGHSINT_FORMAT " has %g != %g \n", index,
+               v0, v1);
+      error_found = (*(((InfoRecordDouble*)info_records[index])[0].value) !=
+                     *(((InfoRecordDouble*)no_info_records[index])[0].value)) ||
+                    error_found;
     } else {
-      assert(1==0);
+      assert(1 == 0);
     }
   }
   error_found = (info.valid != no_info.valid) || error_found;
-  if (error_found) 
-    return HighsDebugStatus::kLogicalError;
+  if (error_found) return HighsDebugStatus::kLogicalError;
   return HighsDebugStatus::kOk;
 }
-

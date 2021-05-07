@@ -79,16 +79,22 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // ToDo: This should take model.basis_ and use it if it's valid
     getPrimalDualInfeasibilities(model.lp_, model.solution_,
                                  model.solution_params_);
-    const double objective_function_value = computeObjectiveValue(model.lp_, model.solution_);
+    const double objective_function_value =
+        computeObjectiveValue(model.lp_, model.solution_);
     model.solution_params_.objective_function_value = objective_function_value;
 
     HighsSolutionParams check_solution_params;
     check_solution_params.objective_function_value = objective_function_value;
-    check_solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-    check_solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-    getKktFailures(model.lp_, model.solution_, model.basis_, check_solution_params);
-    
-    if (debugCompareSolutionParams(options, model.solution_params_, check_solution_params) != HighsDebugStatus::kOk) {
+    check_solution_params.primal_feasibility_tolerance =
+        options.primal_feasibility_tolerance;
+    check_solution_params.dual_feasibility_tolerance =
+        options.dual_feasibility_tolerance;
+    getKktFailures(model.lp_, model.solution_, model.basis_,
+                   check_solution_params);
+
+    if (debugCompareSolutionParams(options, model.solution_params_,
+                                   check_solution_params) !=
+        HighsDebugStatus::kOk) {
       return HighsStatus::kError;
     }
 
@@ -219,53 +225,53 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
           value = 0;
           status = HighsBasisStatus::kZero;
           primal_infeasibility = kHighsInf;
-	  dual_infeasibility = std::fabs(dual);
+          dual_infeasibility = std::fabs(dual);
         } else {
-	  // Finite upper bound - since lower exceeds it
+          // Finite upper bound - since lower exceeds it
           value = upper;
           status = HighsBasisStatus::kUpper;
           primal_infeasibility = lower - value;
-	  dual_infeasibility = std::max(dual, 0.);
+          dual_infeasibility = std::max(dual, 0.);
         }
       } else {
-	// Finite lower bound
+        // Finite lower bound
         value = lower;
         status = HighsBasisStatus::kLower;
         primal_infeasibility = value - upper;
-	dual_infeasibility = std::max(-dual, 0.);
+        dual_infeasibility = std::max(-dual, 0.);
       }
     } else if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free column: set to zero and record dual infeasiblility
       value = 0;
       status = HighsBasisStatus::kZero;
-      dual_infeasibility= std::fabs(dual);
+      dual_infeasibility = std::fabs(dual);
     } else if (dual >= dual_feasibility_tolerance) {
       // Column with sufficiently positive dual
       if (!highs_isInfinity(-lower)) {
-	// Set to this finite lower bound
-	value = lower;
-	status = HighsBasisStatus::kLower;
-	dual_infeasibility = 0;
+        // Set to this finite lower bound
+        value = lower;
+        status = HighsBasisStatus::kLower;
+        dual_infeasibility = 0;
       } else {
-	// Infinite lower bound so set to upper bound and record dual
-	// infeasiblility
-	value = upper;
-	status = HighsBasisStatus::kUpper;
-	dual_infeasibility = dual;
+        // Infinite lower bound so set to upper bound and record dual
+        // infeasiblility
+        value = upper;
+        status = HighsBasisStatus::kUpper;
+        dual_infeasibility = dual;
       }
     } else if (dual <= -dual_feasibility_tolerance) {
       // Column with sufficiently negative dual
       if (!highs_isInfinity(upper)) {
-	// Set to this finite upper bound
-	value = upper;
-	status = HighsBasisStatus::kUpper;
-	dual_infeasibility = 0;
+        // Set to this finite upper bound
+        value = upper;
+        status = HighsBasisStatus::kUpper;
+        dual_infeasibility = 0;
       } else {
-	// Infinite upper bound so set to lower bound and record dual
-	// infeasiblility
-	value = lower;
-	status = HighsBasisStatus::kLower;
-	dual_infeasibility = -dual;
+        // Infinite upper bound so set to lower bound and record dual
+        // infeasiblility
+        value = lower;
+        status = HighsBasisStatus::kLower;
+        dual_infeasibility = -dual;
       }
     } else {
       // Column with sufficiently small dual: set to lower bound (if
@@ -285,17 +291,16 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     solution.col_dual[iCol] = (HighsInt)lp.sense_ * dual;
     basis.col_status[iCol] = status;
     objective += value * cost;
-    if (primal_infeasibility > primal_feasibility_tolerance) 
+    if (primal_infeasibility > primal_feasibility_tolerance)
       solution_params.num_primal_infeasibility++;
     solution_params.sum_primal_infeasibility += primal_infeasibility;
-    solution_params.max_primal_infeasibility =
-      std::max(primal_infeasibility, solution_params.max_primal_infeasibility);
+    solution_params.max_primal_infeasibility = std::max(
+        primal_infeasibility, solution_params.max_primal_infeasibility);
     if (dual_infeasibility > dual_feasibility_tolerance)
       solution_params.num_dual_infeasibility++;
     solution_params.sum_dual_infeasibility += dual_infeasibility;
     solution_params.max_dual_infeasibility =
-      std::max(dual_infeasibility, solution_params.max_dual_infeasibility);
-
+        std::max(dual_infeasibility, solution_params.max_dual_infeasibility);
   }
   solution_params.objective_function_value = objective;
   solution.value_valid = true;
