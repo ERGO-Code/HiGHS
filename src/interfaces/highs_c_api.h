@@ -899,9 +899,9 @@ const char* Highs_modelStatusToChar(
  * @brief Returns a pointer to a character representation of a primal/dual
  * status
  */
-const char* Highs_primalDualStatusToChar(
-    void* highs,                     //!< HiGHS object reference
-    HighsInt int_primal_dual_status  //!< Status to interpret
+const char* Highs_solutionStatusToChar(
+    void* highs,                  //!< HiGHS object reference
+    HighsInt int_solution_status  //!< Status to interpret
 );
 
 // /**

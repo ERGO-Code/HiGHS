@@ -212,7 +212,7 @@ void full_api() {
   const int scaled_model = 0;
   int modelstatus = Highs_getModelStatus(highs, scaled_model);
 
-  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
+  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
 
   double objective_function_value;
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
@@ -261,7 +261,7 @@ void full_api() {
 			astart, aindex, avalue);
   runstatus = Highs_run(highs);
   modelstatus = Highs_getModelStatus(highs, scaled_model);
-  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
+  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
   Highs_destroy(highs);
 }
 
