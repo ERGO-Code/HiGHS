@@ -66,45 +66,11 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp lp,
                                       const HighsBasis& basis);
 
-HighsDebugStatus debugHighsBasicSolution(
-    const string message, const HighsModelObject& highs_model_object);
-
-HighsDebugStatus debugHighsBasicSolution(
-    const string message, const HighsOptions& options, const HighsLp& lp,
-    const HighsBasis& basis, const HighsSolution& solution,
-    const HighsInfo& info, const HighsModelStatus model_status);
-
-HighsDebugStatus debugHighsBasicSolution(const string message,
-                                         const HighsOptions& options,
-                                         const HighsLp& lp,
-                                         const HighsBasis& basis,
-                                         const HighsSolution& solution);
-
-HighsDebugStatus debugHighsBasicSolution(
-    const string message, const HighsOptions& options, const HighsLp& lp,
-    const HighsBasis& basis, const HighsSolution& solution,
-    const HighsSolutionParams& solution_params,
-    const HighsModelStatus model_status);
-
 // Methods below are not called externally
 
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsBasis& basis,
                                                const HighsSolution& solution);
-
-void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
-    const HighsOptions& options, const HighsLp& lp, const HighsBasis& basis,
-    const HighsSolution& solution, double& primal_objective_value,
-    double& dual_objective_value, HighsSolutionParams& solution_params,
-    HighsPrimalDualErrors& primal_dual_errors);
-
-bool debugBasicSolutionVariable(
-    bool report, const double primal_feasibility_tolerance,
-    const double dual_feasibility_tolerance, const HighsBasisStatus status,
-    const double lower, const double upper, const double value,
-    const double dual, HighsInt& num_non_basic_var, HighsInt& num_basic_var,
-    double& off_bound_nonbasic, double& primal_infeasibility,
-    double& dual_infeasibility);
 
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors);

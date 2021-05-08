@@ -762,9 +762,6 @@ HighsStatus Highs::run() {
           const bool force_debug = false;
           HighsInt save_highs_debug_level = options_.highs_debug_level;
           if (force_debug) options_.highs_debug_level = kHighsDebugLevelCostly;
-          debugHighsBasicSolution("After returning from postsolve", options_,
-                                  lp_, hmos_[original_hmo].basis_,
-                                  hmos_[original_hmo].solution_);
           if (debugHighsSolution("After returning from postsolve", options_,
                                  lp_, hmos_[original_hmo].solution_,
                                  hmos_[original_hmo].basis_) ==
@@ -2421,12 +2418,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   }
   if (have_basis) {
     if (debugBasisRightSize(options_, lp_, basis_) ==
-        HighsDebugStatus::kLogicalError)
-      return_status = HighsStatus::kError;
-  }
-  if (have_dual_solution && have_basis) {
-    if (debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
-                                solution_, info_, model_status_) ==
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }

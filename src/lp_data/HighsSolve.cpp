@@ -145,11 +145,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       return HighsStatus::kError;
     }
   }
-  // ToDo: Possibly analyse the HiGHS (basic) solution - generalise to
-  // handle solution without basis? But doesn't returnFromRun do this?
-  //
-  // NB IPX may not yield a basic solution
-  if (model.basis_.valid) debugHighsBasicSolution(message, model);
+  // Analyse the HiGHS (basic) solution
   if (debugHighsSolution(message, model) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   return return_status;
