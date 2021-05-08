@@ -118,7 +118,7 @@ class HighsGFkSolve {
  public:
   struct SolutionEntry {
     HighsInt index;
-    unsigned int weight;
+    HighsUInt weight;
 
     bool operator<(const SolutionEntry& other) const {
       return index < other.index;
@@ -185,12 +185,12 @@ class HighsGFkSolve {
 
   template <unsigned int k, typename ReportSolution>
   void solve(ReportSolution&& reportSolution) {
-    auto cmpPrio = [](const std::pair<HighsInt, int>& a,
-                      const std::pair<HighsInt, int>& b) {
+    auto cmpPrio = [](const std::pair<HighsInt, HighsInt>& a,
+                      const std::pair<HighsInt, HighsInt>& b) {
       return a.first > b.first;
     };
-    std::priority_queue<std::pair<HighsInt, int>,
-                        std::vector<std::pair<HighsInt, int>>,
+    std::priority_queue<std::pair<HighsInt, HighsInt>,
+                        std::vector<std::pair<HighsInt, HighsInt>>,
                         decltype(cmpPrio)>
         pqueue(cmpPrio);
 
