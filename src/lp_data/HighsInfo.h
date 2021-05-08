@@ -211,13 +211,15 @@ class HighsInfo : public HighsInfoStruct {
 
     record_int = new InfoRecordInt(
         "primal_status",
-        "Primal status of the model: 0 => No solution; 1 => Infeasible point; 2 => Feasible point",
+        "Primal status of the model: 0 => No solution; 1 => Infeasible point; "
+        "2 => Feasible point",
         advanced, &primal_status, kHighsPrimalDualStatusNoSolution);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
         "dual_status",
-        "Dual status of the model: 0 => No solution; 1 => Infeasible point; 2 => Feasible point",
+        "Dual status of the model: 0 => No solution; 1 => Infeasible point; 2 "
+        "=> Feasible point",
         advanced, &dual_status, kHighsPrimalDualStatusNoSolution);
     records.push_back(record_int);
 

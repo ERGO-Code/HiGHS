@@ -747,8 +747,8 @@ HighsStatus Highs::run() {
           resetModelStatusAndSolutionParams(hmos_[original_hmo]);
           // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_.data_.recovered_solution_;
-	  hmos_[original_hmo].solution_.value_valid = true;
-	  hmos_[original_hmo].solution_.dual_valid = true;
+          hmos_[original_hmo].solution_.value_valid = true;
+          hmos_[original_hmo].solution_.dual_valid = true;
 
           // Set basis and its status
           hmos_[original_hmo].basis_.valid = true;
@@ -765,10 +765,11 @@ HighsStatus Highs::run() {
           debugHighsBasicSolution("After returning from postsolve", options_,
                                   lp_, hmos_[original_hmo].basis_,
                                   hmos_[original_hmo].solution_);
-	  if (debugHighsSolution("After returning from postsolve", options_,
-				 lp_, hmos_[original_hmo].solution_,
-				 hmos_[original_hmo].basis_) == HighsDebugStatus::kLogicalError)
-	    return returnFromRun(HighsStatus::kError);
+          if (debugHighsSolution("After returning from postsolve", options_,
+                                 lp_, hmos_[original_hmo].solution_,
+                                 hmos_[original_hmo].basis_) ==
+              HighsDebugStatus::kLogicalError)
+            return returnFromRun(HighsStatus::kError);
           options_.highs_debug_level = save_highs_debug_level;
 
           // Now hot-start the simplex solver for the original_hmo
@@ -2429,9 +2430,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }
-  if (debugHighsSolution("Return from run()", options_, lp_, 
-			 solution_, basis_, model_status_, info_) ==
-      HighsDebugStatus::kLogicalError)
+  if (debugHighsSolution("Return from run()", options_, lp_, solution_, basis_,
+                         model_status_,
+                         info_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   //  getReportKktFailures(options_, lp_, solution_, basis_);
   if (debugInfo(options_, lp_, basis_, solution_, info_,

@@ -3,7 +3,7 @@
 #include "lp_data/HConst.h"
 
 const double inf = kHighsInf;
-const bool dev_run = true;
+const bool dev_run = false;
 
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,

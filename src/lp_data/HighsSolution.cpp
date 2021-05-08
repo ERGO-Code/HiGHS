@@ -1114,13 +1114,17 @@ void copyFromSolutionParams(HighsInfo& highs_info,
 }
 
 void copyFromInfo(HighsSolutionParams& solution_params,
-		  const HighsInfo& highs_info) {
+                  const HighsInfo& highs_info) {
   solution_params.primal_status = highs_info.primal_status;
   solution_params.dual_status = highs_info.dual_status;
-  solution_params.objective_function_value = highs_info.objective_function_value;
-  solution_params.num_primal_infeasibility = highs_info.num_primal_infeasibilities;
-  solution_params.max_primal_infeasibility = highs_info.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
+  solution_params.objective_function_value =
+      highs_info.objective_function_value;
+  solution_params.num_primal_infeasibility =
+      highs_info.num_primal_infeasibilities;
+  solution_params.max_primal_infeasibility =
+      highs_info.max_primal_infeasibility;
+  solution_params.sum_primal_infeasibility =
+      highs_info.sum_primal_infeasibilities;
   solution_params.num_dual_infeasibility = highs_info.num_dual_infeasibilities;
   solution_params.max_dual_infeasibility = highs_info.max_dual_infeasibility;
   solution_params.sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;

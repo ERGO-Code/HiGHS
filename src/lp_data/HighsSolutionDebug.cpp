@@ -31,10 +31,10 @@ const double large_residual_error = 1e-12;
 const double excessive_residual_error = sqrt(large_residual_error);
 
 HighsDebugStatus debugHighsSolution(const string message,
-				    const HighsOptions& options,
-				    const HighsLp& lp,
-				    const HighsSolution& solution,
-				    const HighsBasis& basis) {
+                                    const HighsOptions& options,
+                                    const HighsLp& lp,
+                                    const HighsSolution& solution,
+                                    const HighsBasis& basis) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to report on KKT errors after solving a model when only
@@ -49,41 +49,30 @@ HighsDebugStatus debugHighsSolution(const string message,
   HighsSolutionParams dummy_solution_params;
   // Call resetModelStatusAndSolutionParams to side-step compiler
   // warning.
-  resetModelStatusAndSolutionParams(dummy_model_status, dummy_solution_params, options);
+  resetModelStatusAndSolutionParams(dummy_model_status, dummy_solution_params,
+                                    options);
   const bool check_model_status_and_solution_params = false;
-  return debugHighsSolution(message,
-			    options,
-			    lp,
-			    solution,
-			    basis,
-			    dummy_model_status,
-			    dummy_solution_params,
-			    check_model_status_and_solution_params);
+  return debugHighsSolution(message, options, lp, solution, basis,
+                            dummy_model_status, dummy_solution_params,
+                            check_model_status_and_solution_params);
 }
 
 HighsDebugStatus debugHighsSolution(const std::string message,
-				    const HighsModelObject& model) {
+                                    const HighsModelObject& model) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the unscaled model status and solution params
   const bool check_model_status_and_solution_params = true;
-  return debugHighsSolution(message,
-			    model.options_,
-			    model.lp_,
-			    model.solution_,
-			    model.basis_,
-			    model.unscaled_model_status_,
-			    model.solution_params_,
-			    check_model_status_and_solution_params);
+  return debugHighsSolution(message, model.options_, model.lp_, model.solution_,
+                            model.basis_, model.unscaled_model_status_,
+                            model.solution_params_,
+                            check_model_status_and_solution_params);
 }
-				    
-HighsDebugStatus debugHighsSolution(const string message,
-				    const HighsOptions& options,
-				    const HighsLp& lp,
-				    const HighsSolution& solution,
-				    const HighsBasis& basis,
-				    const HighsModelStatus model_status,
-				    const HighsInfo& info) {
+
+HighsDebugStatus debugHighsSolution(
+    const string message, const HighsOptions& options, const HighsLp& lp,
+    const HighsSolution& solution, const HighsBasis& basis,
+    const HighsModelStatus model_status, const HighsInfo& info) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the HiGHS model_status and info
@@ -93,23 +82,21 @@ HighsDebugStatus debugHighsSolution(const string message,
   HighsSolutionParams solution_params;
   copyFromInfo(solution_params, info);
   solution_params.primal_feasibility_tolerance =
-    options.primal_feasibility_tolerance;
+      options.primal_feasibility_tolerance;
   solution_params.dual_feasibility_tolerance =
-    options.dual_feasibility_tolerance;
+      options.dual_feasibility_tolerance;
   const bool check_model_status_and_solution_params = true;
-  return debugHighsSolution(message, options, lp, solution, basis,
-			    model_status, solution_params,
-			    check_model_status_and_solution_params);
+  return debugHighsSolution(message, options, lp, solution, basis, model_status,
+                            solution_params,
+                            check_model_status_and_solution_params);
 }
 
-HighsDebugStatus debugHighsSolution(const std::string message,
-				    const HighsOptions& options,
-				    const HighsLp& lp,
-				    const HighsSolution& solution,
-				    const HighsBasis& basis,
-				    const HighsModelStatus model_status,
-				    const HighsSolutionParams& solution_params,
-				    const bool check_model_status_and_solution_params) {
+HighsDebugStatus debugHighsSolution(
+    const std::string message, const HighsOptions& options, const HighsLp& lp,
+    const HighsSolution& solution, const HighsBasis& basis,
+    const HighsModelStatus model_status,
+    const HighsSolutionParams& solution_params,
+    const bool check_model_status_and_solution_params) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to possibly check the model_status and solution_params,
@@ -123,60 +110,76 @@ HighsDebugStatus debugHighsSolution(const std::string message,
   // checking - or if it's not known
   HighsSolutionParams local_solution_params;
   local_solution_params.primal_feasibility_tolerance =
-    options.primal_feasibility_tolerance;
+      options.primal_feasibility_tolerance;
   local_solution_params.dual_feasibility_tolerance =
-    options.dual_feasibility_tolerance;
+      options.dual_feasibility_tolerance;
+  if (check_model_status_and_solution_params) {
+    double local_objective_function_value = 0;
+    if (solution.value_valid)
+      local_objective_function_value = computeObjectiveValue(lp, solution);
+    local_solution_params.objective_function_value =
+        local_objective_function_value;
+  }
   HighsPrimalDualErrors primal_dual_errors;
   // Determine the extent to which KKT conditions are not satisfied,
   // accumulating data on primal/dual errors relating to any basis
   // implications and excessive residuals
-  const bool get_residuals = true;// options.highs_debug_level >= kHighsDebugLevelCostly;
-  getKktFailures(lp, solution, basis, local_solution_params, primal_dual_errors, get_residuals);
-  HighsInt& num_primal_infeasibility = local_solution_params.num_primal_infeasibility;
-  HighsInt& num_dual_infeasibility = local_solution_params.num_dual_infeasibility;
+  const bool get_residuals =
+      true;  // options.highs_debug_level >= kHighsDebugLevelCostly;
+  getKktFailures(lp, solution, basis, local_solution_params, primal_dual_errors,
+                 get_residuals);
+  HighsInt& num_primal_infeasibility =
+      local_solution_params.num_primal_infeasibility;
+  HighsInt& num_dual_infeasibility =
+      local_solution_params.num_dual_infeasibility;
   if (check_model_status_and_solution_params) {
-    // Can assume that model_status and solution_params are known, so should be checked
+    // Can assume that model_status and solution_params are known, so should be
+    // checked
     local_model_status = model_status;
     // Check that solution_params is the same as when computed from scratch
-    return_status = debugCompareSolutionParams(options, solution_params, local_solution_params);
+    return_status = debugCompareSolutionParams(options, solution_params,
+                                               local_solution_params);
     if (return_status != HighsDebugStatus::kOk) return return_status;
   } else {
-   // Determine whether optimality can be reported
-    if (num_primal_infeasibility == 0 && num_dual_infeasibility == 0) local_model_status = HighsModelStatus::kOptimal;
+    // Determine whether optimality can be reported
+    if (num_primal_infeasibility == 0 && num_dual_infeasibility == 0)
+      local_model_status = HighsModelStatus::kOptimal;
   }
-  if (check_model_status_and_solution_params && model_status == HighsModelStatus::kOptimal) {
+  if (check_model_status_and_solution_params &&
+      model_status == HighsModelStatus::kOptimal) {
     bool error_found = false;
     if (num_primal_infeasibility > 0) {
       error_found = true;
       highsLogDev(options.log_options, HighsLogType::kError,
-		  "debugHighsSolution: %" HIGHSINT_FORMAT
-		  " primal infeasiblilities but model status is %s\n",
-		  num_primal_infeasibility,
-		  utilModelStatusToString(model_status).c_str());
+                  "debugHighsSolution: %" HIGHSINT_FORMAT
+                  " primal infeasiblilities but model status is %s\n",
+                  num_primal_infeasibility,
+                  utilModelStatusToString(model_status).c_str());
     }
     if (num_dual_infeasibility > 0) {
       error_found = true;
       highsLogDev(options.log_options, HighsLogType::kError,
-		  "debugHighsSolution: %" HIGHSINT_FORMAT
-		  " dual infeasiblilities but model status is %s\n",
-		  num_dual_infeasibility,
-		  utilModelStatusToString(model_status).c_str());
+                  "debugHighsSolution: %" HIGHSINT_FORMAT
+                  " dual infeasiblilities but model status is %s\n",
+                  num_dual_infeasibility,
+                  utilModelStatusToString(model_status).c_str());
     }
     if (error_found) return HighsDebugStatus::kLogicalError;
   }
   // Report on the solution
-  debugReportHighsSolution(message, options.log_options, local_solution_params, local_model_status);
+  debugReportHighsSolution(message, options.log_options, local_solution_params,
+                           local_model_status);
   // Analyse the primal and dual errors
   return_status = debugAnalysePrimalDualErrors(options, primal_dual_errors);
-  return return_status; 
+  return return_status;
 }
-				    
+
 void debugReportHighsSolution(const string message,
-			      const HighsLogOptions& log_options,
-			      const HighsSolutionParams& solution_params,
-			      const HighsModelStatus model_status) {
-  highsLogDev(log_options, HighsLogType::kInfo,
-              "\nHiGHS solution: %s\n", message.c_str());
+                              const HighsLogOptions& log_options,
+                              const HighsSolutionParams& solution_params,
+                              const HighsModelStatus model_status) {
+  highsLogDev(log_options, HighsLogType::kInfo, "\nHiGHS solution: %s\n",
+              message.c_str());
   highsLogDev(log_options, HighsLogType::kInfo,
               "Infeas:                Pr %" HIGHSINT_FORMAT
               "(Max %.4g, Sum %.4g); Du %" HIGHSINT_FORMAT
