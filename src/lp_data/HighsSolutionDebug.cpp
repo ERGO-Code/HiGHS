@@ -261,26 +261,7 @@ HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
-                                        const HighsLp lp,
-                                        const HighsSolution& solution) {
-  HighsDebugStatus return_status;
-  return_status = debugPrimalSolutionRightSize(options, lp, solution);
-  if (return_status != HighsDebugStatus::kOk) return return_status;
-  return debugDualSolutionRightSize(options, lp, solution);
-}
-
 // Methods below are not called externally
-
-HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
-                                               const HighsBasis& basis,
-                                               const HighsSolution& solution) {
-  if (!isSolutionRightSize(lp, solution))
-    return HighsDebugStatus::kLogicalError;
-  if (!isBasisRightSize(lp, basis) && basis.valid)
-    return HighsDebugStatus::kLogicalError;
-  return HighsDebugStatus::kOk;
-}
 
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors) {
@@ -412,11 +393,11 @@ HighsDebugStatus debugCompareSolutionStatusParams(
                                        solution_params0.primal_solution_status,
                                        solution_params1.primal_solution_status),
       return_status);
-  return_status =
-      debugWorseStatus(debugCompareSolutionParamInteger(
-                           "dual_status", options, solution_params0.dual_solution_status,
-                           solution_params1.dual_solution_status),
-                       return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamInteger("dual_status", options,
+                                       solution_params0.dual_solution_status,
+                                       solution_params1.dual_solution_status),
+      return_status);
   return return_status;
 }
 
@@ -495,24 +476,4 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
               "SolutionPar:  difference of %" HIGHSINT_FORMAT " for %s\n",
               v1 - v0, name.c_str());
   return HighsDebugStatus::kLogicalError;
-}
-
-void debugReportHighsBasicSolution(const string message,
-                                   const HighsOptions& options,
-                                   const HighsSolutionParams& solution_params,
-                                   const HighsModelStatus model_status) {
-  highsLogDev(options.log_options, HighsLogType::kInfo,
-              "\nHiGHS basic solution: %s\n", message.c_str());
-  highsLogDev(options.log_options, HighsLogType::kInfo,
-              "Infeas:                Pr %" HIGHSINT_FORMAT
-              "(Max %.4g, Sum %.4g); Du %" HIGHSINT_FORMAT
-              "(Max %.4g, "
-              "Sum %.4g); Status: %s\n",
-              solution_params.num_primal_infeasibility,
-              solution_params.max_primal_infeasibility,
-              solution_params.sum_primal_infeasibility,
-              solution_params.num_dual_infeasibility,
-              solution_params.max_dual_infeasibility,
-              solution_params.sum_dual_infeasibility,
-              utilModelStatusToString(model_status).c_str());
 }

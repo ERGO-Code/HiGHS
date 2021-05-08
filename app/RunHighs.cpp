@@ -116,9 +116,9 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     }
     highsLogUser(log_options, HighsLogType::kInfo, "Model   status      : %s\n",
                  highs.modelStatusToString(model_status).c_str());
-    highsLogUser(
-        log_options, HighsLogType::kInfo, "Primal  status      : %s\n",
-        highs.solutionStatusToString(highs_info.primal_solution_status).c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "Primal  status      : %s\n",
+                 highs.solutionStatusToString(highs_info.primal_solution_status)
+                     .c_str());
     highsLogUser(
         log_options, HighsLogType::kInfo, "Dual    status      : %s\n",
         highs.solutionStatusToString(highs_info.dual_solution_status).c_str());

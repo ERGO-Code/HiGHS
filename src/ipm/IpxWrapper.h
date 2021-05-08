@@ -21,6 +21,7 @@
 #include "ipm/IpxSolution.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
+//#include "lp_data/HighsModelObject.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
@@ -810,5 +811,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     return_status = HighsStatus::kOk;
   }
   return return_status;
+}
+
+HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model) {
+  return solveLpIpx(model.options_, model.timer_, model.lp_, imprecise_solution,
+                    model.basis_, model.solution_, model.iteration_counts_,
+                    model.unscaled_model_status_, model.solution_params_);
 }
 #endif

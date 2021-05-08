@@ -278,4 +278,3 @@ HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
   }
   return return_status;
 }
-

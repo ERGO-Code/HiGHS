@@ -329,7 +329,8 @@ class SpecialLps {
         printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
                solution.row_value[iRow], solution.row_dual[iRow]);
     } else {
-      printf("info.primal_solution_status = %" HIGHSINT_FORMAT "\n", info.primal_solution_status);
+      printf("info.primal_solution_status = %" HIGHSINT_FORMAT "\n",
+             info.primal_solution_status);
     }
   }
 };

@@ -66,22 +66,8 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& primal_infeasibility,
                             double& dual_infeasibility, double& value_residual);
 
-void getReportKktFailures(const HighsOptions& options, const HighsLp& lp,
-                          const HighsSolution& solution,
-                          const HighsBasis& basis);
-
-bool reportKktFailureInt(const std::string message,
-                         const HighsLogOptions& log_options,
-                         const HighsInt value);
-
-bool reportKktFailureDouble(const std::string message,
-                            const HighsLogOptions& log_options,
-                            const double value);
-
-void getPrimalDualInfeasibilities(const HighsLp& lp,
-                                  const HighsSolution& solution,
-                                  HighsSolutionParams& solution_params);
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
+
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis);
 

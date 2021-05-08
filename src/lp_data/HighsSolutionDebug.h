@@ -58,19 +58,11 @@ HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
                                             const HighsLp lp,
                                             const HighsSolution& solution);
 
-HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
-                                        const HighsLp lp,
-                                        const HighsSolution& solution);
-
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp lp,
                                       const HighsBasis& basis);
 
 // Methods below are not called externally
-
-HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
-                                               const HighsBasis& basis,
-                                               const HighsSolution& solution);
 
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors);
@@ -97,10 +89,5 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
                                                   const HighsInt v0,
                                                   const HighsInt v1);
-
-void debugReportHighsBasicSolution(const string message,
-                                   const HighsOptions& options,
-                                   const HighsSolutionParams& solution_params,
-                                   const HighsModelStatus model_status);
 
 #endif  // SIMPLEX_HIGHSSOLUTIONDEBUG_H_

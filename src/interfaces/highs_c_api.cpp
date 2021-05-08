@@ -693,8 +693,9 @@ const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
 }
 
 const char* Highs_solutionStatusToChar(void* highs,
-                                         HighsInt int_solution_status) {
-  const char* illegal_solution_status = "Primal/Dual solution status out of range";
+                                       HighsInt int_solution_status) {
+  const char* illegal_solution_status =
+      "Primal/Dual solution status out of range";
   if (int_solution_status < kSolutionStatusMin ||
       int_solution_status > kSolutionStatusMax)
     return illegal_solution_status;

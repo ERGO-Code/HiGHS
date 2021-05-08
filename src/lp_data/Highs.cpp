@@ -1834,8 +1834,10 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
     scaled_model_status = hmos_[hmo_ix].scaled_model_status_;
     solution = hmos_[hmo_ix].solution_;
     basis = hmos_[hmo_ix].basis_;
-    unscaled_primal_solution_status = hmos_[hmo_ix].solution_params_.primal_solution_status;
-    unscaled_dual_solution_status = hmos_[hmo_ix].solution_params_.dual_solution_status;
+    unscaled_primal_solution_status =
+        hmos_[hmo_ix].solution_params_.primal_solution_status;
+    unscaled_dual_solution_status =
+        hmos_[hmo_ix].solution_params_.dual_solution_status;
     lp = hmos_[hmo_ix].lp_;
   }
   printf(
@@ -2319,9 +2321,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kOptimal:
       // The following is an aspiration
       //
-      //assert(info_.primal_solution_status == kSolutionStatusFeasible);
+      // assert(info_.primal_solution_status == kSolutionStatusFeasible);
       //
-      //assert(info_.dual_solution_status == kSolutionStatusFeasible);
+      // assert(info_.dual_solution_status == kSolutionStatusFeasible);
       assert(model_status_ == HighsModelStatus::kNotset ||
              model_status_ == HighsModelStatus::kOptimal);
       assert(return_status == HighsStatus::kOk);

@@ -59,10 +59,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     bool imprecise_solution;
     // Use IPX to solve the LP
     try {
-      call_status =
-          solveLpIpx(options, model.timer_, model.lp_, imprecise_solution,
-                     model.basis_, model.solution_, model.iteration_counts_,
-                     model.unscaled_model_status_, model.solution_params_);
+      call_status = solveLpIpx(imprecise_solution, model);
     } catch (const std::exception& exception) {
       highsLogDev(options.log_options, HighsLogType::kError,
                   "Exception %s in solveLpIpx\n", exception.what());
@@ -77,8 +74,10 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     model.scaled_model_status_ = model.unscaled_model_status_;
     // Get the infeasibilities and objective value
     // ToDo: This should take model.basis_ and use it if it's valid
-    getPrimalDualInfeasibilities(model.lp_, model.solution_,
-                                 model.solution_params_);
+    //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
+    //    model.solution_params_);
+    getKktFailures(model.lp_, model.solution_, model.basis_,
+                   model.solution_params_);
     const double objective_function_value =
         computeObjectiveValue(model.lp_, model.solution_);
     model.solution_params_.objective_function_value = objective_function_value;

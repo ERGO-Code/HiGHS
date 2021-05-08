@@ -19,14 +19,8 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 
-HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, bool& imprecise_solution,
-                       HighsBasis& highs_basis, HighsSolution& highs_solution,
-                       HighsIterationCounts& iteration_counts,
-                       HighsModelStatus& unscaled_model_status,
-                       HighsSolutionParams& unscaled_solution_params) {
-  unscaled_model_status = HighsModelStatus::kNotset;
+HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model) {
+  model.unscaled_model_status_ = HighsModelStatus::kNotset;
   return HighsStatus::kError;
 }
-
 #endif
