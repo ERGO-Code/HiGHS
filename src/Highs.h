@@ -181,10 +181,9 @@ class Highs {
    */
 
   /**
-   * @brief Returns the HighsLp instance for the LP of the (first?)
-   * HighsModelObject
+   * @brief Returns the HighsLp instance of the model in HiGHS
    */
-  const HighsLp& getLp() const { return lp_; }
+  const HighsLp& getModel() const { return lp_; }
 
   /**
    * @brief Returns the HighsSolution
@@ -825,6 +824,8 @@ class Highs {
   friend class OsiHiGHSSolverInterface;
 #endif
   // Start of deprecated methods
+
+  const HighsLp& getLp() const { return getModel(); }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name

@@ -887,61 +887,22 @@ HighsInt Highs_getNumNz(void* highs  //!< HiGHS object reference
 );
 
 /**
- * @brief Returns a pointer to a character representation of a HiGHS model
+ * @brief Returns a pointer to a character representation of a model
  * status
  */
 const char* Highs_modelStatusToChar(
     void* highs,                     //!< HiGHS object reference
-    HighsInt int_highs_model_status  //!< Status to interpret
+    HighsInt int_model_status  //!< Status to interpret
 );
 
 /**
- * @brief Returns a pointer to a character representation of a primal/dual
- * status
+ * @brief Returns a pointer to a character representation of a
+ * solution status
  */
 const char* Highs_solutionStatusToChar(
     void* highs,                  //!< HiGHS object reference
     HighsInt int_solution_status  //!< Status to interpret
 );
-
-// /**
-//  * @brief Returns the current model
-//  */
-// void Highs_getLp(
-//     void *highs,       //!< HiGHS object reference
-//     HighsInt* numcol,        //!< number of columns
-//     HighsInt* numrow,        //!< number of rows
-//     HighsInt* numnz,         //!< number of entries in the constraint matrix
-//     double *colcost,   //!< array of length [numcol] with column costs
-//     double *collower,  //!< array of length [numcol] with lower column bounds
-//     double *colupper,  //!< array of length [numcol] with upper column bounds
-//     double *rowlower,  //!< array of length [numrow] with lower row bounds
-//     double *rowupper,  //!< array of length [numrow] with upper row bounds
-//     HighsInt *astart,       //!< array of length [numcol+1] with column start
-//     indices HighsInt *
-//         aindex,  //!< array of length [numnz] with row indices of matrix
-//         entries
-//     double *avalue  //!< array of length [numnz] with value of matrix entries
-// );
-
-// Highs(HighsOptions &options) { options_ = options; }
-
-// /**
-//  * @brief Clears the vector of HighsModelObjects (hmos), creates a
-//  * HighsModelObject for this LP and makes it the first of the vector
-//  * of HighsModelObjects
-//  */
-// HighsStatus passModel(
-//     const HighsLp &lp  //!< The HighsLp instance for this LP
-// );
-
-// HighsStatus setSolution(const HighsSolution &solution);
-
-// /**
-//  * @brief Uses the HighsBasis passed to set the basis for the
-//  * LP of the (first?) HighsModelObject
-//  */
-// HighsStatus setBasis(const HighsBasis &basis);
 
 // *********************
 // * Deprecated methods*
