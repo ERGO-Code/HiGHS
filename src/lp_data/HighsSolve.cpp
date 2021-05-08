@@ -150,7 +150,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   //
   // NB IPX may not yield a basic solution
   if (model.basis_.valid) debugHighsBasicSolution(message, model);
-
+  if (debugHighsSolution(message, model) == HighsDebugStatus::kLogicalError)
+    return_status = HighsStatus::kError;
   return return_status;
 }
 

@@ -120,6 +120,8 @@ void copySolutionObjectiveParams(
 
 void copyFromSolutionParams(HighsInfo& highs_info,
                             const HighsSolutionParams& solution_params);
+void copyFromInfo(HighsSolutionParams& solution_params,
+		  const HighsInfo& highs_info);
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 

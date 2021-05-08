@@ -89,7 +89,6 @@ enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 enum PrimalDualStatus {
   kHighsPrimalDualStatusNotset = -1,
   kHighsPrimalDualStatusNoSolution,
-  kHighsPrimalDualStatusUnknown,
   kHighsPrimalDualStatusInfeasiblePoint,
   kHighsPrimalDualStatusFeasiblePoint,
   kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNotset,

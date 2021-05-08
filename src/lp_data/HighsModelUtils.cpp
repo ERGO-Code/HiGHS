@@ -273,92 +273,79 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
 // Return a string representation of PrimalDualStatus
 std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
   switch (primal_dual_status) {
-    case kHighsPrimalDualStatusNotset:
-      return "Not set";
-      break;
-    case kHighsPrimalDualStatusNoSolution:
-      return "No solution";
-      break;
-    case kHighsPrimalDualStatusUnknown:
-      return "Point of unknown feasibility";
-      break;
-    case kHighsPrimalDualStatusInfeasiblePoint:
-      return "Infeasible point";
-      break;
-    case kHighsPrimalDualStatusFeasiblePoint:
-      return "Feasible point";
-      break;
-    default:
-#ifdef HiGHSDEV
-      printf("Primal/dual status %" HIGHSINT_FORMAT " not recognised\n",
-             primal_dual_status);
-#endif
-      return "Unrecognised primal/dual status";
-      break;
+  case kHighsPrimalDualStatusNotset:
+    return "Not set";
+    break;
+  case kHighsPrimalDualStatusNoSolution:
+    return "No solution";
+    break;
+  case kHighsPrimalDualStatusInfeasiblePoint:
+    return "Infeasible point";
+    break;
+  case kHighsPrimalDualStatusFeasiblePoint:
+    return "Feasible point";
+    break;
+  default:
+    assert(1==0);
+    return "Unrecognised primal/dual status";
   }
-  return "";
 }
 
 // Return a string representation of HighsModelStatus.
 std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::kNotset:
-      return "Not Set";
-      break;
-    case HighsModelStatus::kLoadError:
-      return "Load error";
-      break;
-    case HighsModelStatus::kModelError:
-      return "Model error";
-      break;
-    case HighsModelStatus::kPresolveError:
-      return "Presolve error";
-      break;
-    case HighsModelStatus::kSolveError:
-      return "Solve error";
-      break;
-    case HighsModelStatus::kPostsolveError:
-      return "Postsolve error";
-      break;
-    case HighsModelStatus::kModelEmpty:
-      return "Model empty";
-      break;
-    case HighsModelStatus::kOptimal:
-      return "Optimal";
-      break;
-    case HighsModelStatus::kInfeasible:
-      return "Infeasible";
-      break;
-    case HighsModelStatus::kUnboundedOrInfeasible:
-      return "Primal infeasible or unbounded";
-      break;
-    case HighsModelStatus::kUnbounded:
-      return "Unbounded";
-      break;
-    case HighsModelStatus::kObjectiveBound:
-      return "Reached objective bound";
-      break;
-    case HighsModelStatus::kObjectiveTarget:
-      return "Reached objective target";
-      break;
-    case HighsModelStatus::kTimeLimit:
-      return "Reached time limit";
-      break;
-    case HighsModelStatus::kIterationLimit:
-      return "Reached iteration limit";
-      break;
-    case HighsModelStatus::kUnknown:
-      return "Unknown";
-      break;
-    default:
-#ifdef HiGHSDEV
-      printf("HiGHS model status %" HIGHSINT_FORMAT " not recognised\n",
-             (HighsInt)model_status);
-#endif
-      return "Unrecognised HiGHS model status";
-      break;
+  case HighsModelStatus::kNotset:
+    return "Not Set";
+    break;
+  case HighsModelStatus::kLoadError:
+    return "Load error";
+    break;
+  case HighsModelStatus::kModelError:
+    return "Model error";
+    break;
+  case HighsModelStatus::kPresolveError:
+    return "Presolve error";
+    break;
+  case HighsModelStatus::kSolveError:
+    return "Solve error";
+    break;
+  case HighsModelStatus::kPostsolveError:
+    return "Postsolve error";
+    break;
+  case HighsModelStatus::kModelEmpty:
+    return "Model empty";
+    break;
+  case HighsModelStatus::kOptimal:
+    return "Optimal";
+    break;
+  case HighsModelStatus::kInfeasible:
+    return "Infeasible";
+    break;
+  case HighsModelStatus::kUnboundedOrInfeasible:
+    return "Primal infeasible or unbounded";
+    break;
+  case HighsModelStatus::kUnbounded:
+    return "Unbounded";
+    break;
+  case HighsModelStatus::kObjectiveBound:
+    return "Reached objective bound";
+    break;
+  case HighsModelStatus::kObjectiveTarget:
+    return "Reached objective target";
+    break;
+  case HighsModelStatus::kTimeLimit:
+    return "Reached time limit";
+    break;
+  case HighsModelStatus::kIterationLimit:
+    return "Reached iteration limit";
+    break;
+  case HighsModelStatus::kUnknown:
+    return "Unknown";
+    break;
+  default:
+    assert(1==0);
+    return "Unrecognised HiGHS model status";
   }
-  return "";
 }
 
 void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts) {

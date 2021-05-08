@@ -2109,8 +2109,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   info_.valid_backtracking_basis_ = false;
 
   // Initialise the status of the primal and dual solutions
-  return_primal_solution_status = kHighsPrimalDualStatusUnknown;
-  return_dual_solution_status = kHighsPrimalDualStatusUnknown;
+  return_primal_solution_status = kHighsPrimalDualStatusNoSolution;
+  return_dual_solution_status = kHighsPrimalDualStatusNoSolution;
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
 

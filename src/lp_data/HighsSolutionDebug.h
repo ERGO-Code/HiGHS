@@ -21,6 +21,38 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
+HighsDebugStatus debugHighsSolution(const string message,
+				    const HighsOptions& options,
+				    const HighsLp& lp,
+				    const HighsSolution& solution,
+				    const HighsBasis& basis);
+
+HighsDebugStatus debugHighsSolution(const std::string message,
+				    const HighsModelObject& model);
+
+HighsDebugStatus debugHighsSolution(const string message,
+				    const HighsOptions& options,
+				    const HighsLp& lp,
+				    const HighsSolution& solution,
+				    const HighsBasis& basis,
+				    const HighsModelStatus model_status,
+				    const HighsInfo& info);
+
+HighsDebugStatus debugHighsSolution(const std::string message,
+				    const HighsOptions& options,
+				    const HighsLp& lp,
+				    const HighsSolution& solution,
+				    const HighsBasis& basis,
+				    const HighsModelStatus model_status,
+				    const HighsSolutionParams& solution_params,
+				    const bool check_model_status_and_solution_params);
+
+
+void debugReportHighsSolution(const string message,
+			      const HighsLogOptions& log_options,
+			      const HighsSolutionParams& solution_params,
+			      const HighsModelStatus model_status);
+
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp lp, const HighsBasis& basis);
 
