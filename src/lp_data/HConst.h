@@ -87,11 +87,10 @@ enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 
 enum PrimalDualStatus {
-  kHighsPrimalDualStatusNotset = -1,
-  kHighsPrimalDualStatusNoSolution,
+  kHighsPrimalDualStatusNoSolution = 0,
   kHighsPrimalDualStatusInfeasiblePoint,
   kHighsPrimalDualStatusFeasiblePoint,
-  kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNotset,
+  kHighsPrimalDualStatusMin = kHighsPrimalDualStatusNoSolution,
   kHighsPrimalDualStatusMax = kHighsPrimalDualStatusFeasiblePoint
 };
 

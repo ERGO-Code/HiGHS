@@ -273,9 +273,6 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
 // Return a string representation of PrimalDualStatus
 std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
   switch (primal_dual_status) {
-  case kHighsPrimalDualStatusNotset:
-    return "Not set";
-    break;
   case kHighsPrimalDualStatusNoSolution:
     return "No solution";
     break;

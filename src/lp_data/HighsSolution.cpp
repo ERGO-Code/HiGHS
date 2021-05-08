@@ -1073,8 +1073,8 @@ void invalidateSolutionParams(HighsSolutionParams& solution_params) {
 // Invalidate the solution status values in a HighsSolutionParams
 // instance.
 void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
-  solution_params.primal_status = kHighsPrimalDualStatusNotset;
-  solution_params.dual_status = kHighsPrimalDualStatusNotset;
+  solution_params.primal_status = kHighsPrimalDualStatusNoSolution;
+  solution_params.dual_status = kHighsPrimalDualStatusNoSolution;
 }
 
 // Invalidate the infeasibility values in a HighsSolutionParams

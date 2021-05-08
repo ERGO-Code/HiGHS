@@ -747,6 +747,8 @@ HighsStatus Highs::run() {
           resetModelStatusAndSolutionParams(hmos_[original_hmo]);
           // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_.data_.recovered_solution_;
+	  hmos_[original_hmo].solution_.value_valid = true;
+	  hmos_[original_hmo].solution_.dual_valid = true;
 
           // Set basis and its status
           hmos_[original_hmo].basis_.valid = true;
@@ -2252,8 +2254,8 @@ void Highs::clearModelStatus() {
 }
 
 void Highs::clearSolution() {
-  info_.primal_status = (HighsInt)kHighsPrimalDualStatusNotset;
-  info_.dual_status = (HighsInt)kHighsPrimalDualStatusNotset;
+  info_.primal_status = kHighsPrimalDualStatusNoSolution;
+  info_.dual_status = kHighsPrimalDualStatusNoSolution;
   clearSolutionUtil(solution_);
 }
 
@@ -2263,8 +2265,6 @@ void Highs::clearInfo() { info_.clear(); }
 
 void Highs::noSolution() {
   clearSolution();
-  info_.primal_status = kHighsPrimalDualStatusNoSolution;
-  info_.dual_status = kHighsPrimalDualStatusNoSolution;
   info_.valid = true;
 }
 
