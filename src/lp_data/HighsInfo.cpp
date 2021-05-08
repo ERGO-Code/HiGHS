@@ -23,8 +23,8 @@ void HighsInfo::clear() {
   simplex_iteration_count = -1;
   ipm_iteration_count = -1;
   crossover_iteration_count = -1;
-  primal_status = kHighsPrimalDualStatusNoSolution;
-  dual_status = kHighsPrimalDualStatusNoSolution;
+  primal_solution_status = kSolutionStatusNone;
+  dual_solution_status = kSolutionStatusNone;
   objective_function_value = 0;
   mip_dual_bound = 0;
   mip_gap = kHighsInf;

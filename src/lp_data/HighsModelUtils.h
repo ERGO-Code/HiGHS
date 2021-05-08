@@ -47,7 +47,7 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
 
 std::string utilModelStatusToString(const HighsModelStatus model_status);
 
-std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status);
+std::string utilSolutionStatusToString(const HighsInt solution_status);
 
 void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts);
 

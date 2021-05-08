@@ -271,20 +271,20 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
 }
 
 // Return a string representation of PrimalDualStatus
-std::string utilPrimalDualStatusToString(const HighsInt primal_dual_status) {
-  switch (primal_dual_status) {
-    case kHighsPrimalDualStatusNoSolution:
-      return "No solution";
+std::string utilSolutionStatusToString(const HighsInt solution_status) {
+  switch (solution_status) {
+    case kSolutionStatusNone:
+      return "None";
       break;
-    case kHighsPrimalDualStatusInfeasiblePoint:
-      return "Infeasible point";
+    case kSolutionStatusInfeasible:
+      return "Infeasible";
       break;
-    case kHighsPrimalDualStatusFeasiblePoint:
-      return "Feasible point";
+    case kSolutionStatusFeasible:
+      return "Feasible";
       break;
     default:
       assert(1 == 0);
-      return "Unrecognised primal/dual status";
+      return "Unrecognised solution status";
   }
 }
 

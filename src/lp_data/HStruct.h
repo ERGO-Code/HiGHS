@@ -52,8 +52,8 @@ struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  HighsInt primal_status;
-  HighsInt dual_status;
+  HighsInt primal_solution_status;
+  HighsInt dual_solution_status;
   // Output from solution analysis method
   double objective_function_value;
   HighsInt num_primal_infeasibility;

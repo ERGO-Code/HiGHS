@@ -114,14 +114,14 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       solution_params.num_dual_infeasibility;
 
   if (num_unscaled_primal_infeasibility > 0) {
-    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusFeasible;
   }
   if (num_unscaled_dual_infeasibility > 0) {
-    solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.dual_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.dual_solution_status = kSolutionStatusFeasible;
   }
 
   // Handle non-optimal status

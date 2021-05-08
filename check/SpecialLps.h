@@ -317,7 +317,7 @@ class SpecialLps {
   void reportSolution(Highs& highs, const bool dev_run = false) {
     if (!dev_run) return;
     const HighsInfo& info = highs.getInfo();
-    if (info.primal_status == kHighsPrimalDualStatusFeasiblePoint) {
+    if (info.primal_solution_status == kSolutionStatusFeasible) {
       const HighsSolution& solution = highs.getSolution();
       printf("Solution\n");
       printf("Col       Value        Dual\n");
@@ -329,7 +329,7 @@ class SpecialLps {
         printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
                solution.row_value[iRow], solution.row_dual[iRow]);
     } else {
-      printf("info.primal_status = %" HIGHSINT_FORMAT "\n", info.primal_status);
+      printf("info.primal_solution_status = %" HIGHSINT_FORMAT "\n", info.primal_solution_status);
     }
   }
 };

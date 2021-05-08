@@ -692,15 +692,15 @@ const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
   return string_model_status.c_str();
 }
 
-const char* Highs_primalDualStatusToChar(void* highs,
-                                         HighsInt int_primal_dual_status) {
-  const char* illegal_primal_dual_status = "Primal/Dual status out of range";
-  if (int_primal_dual_status < kHighsPrimalDualStatusMin ||
-      int_primal_dual_status > kHighsPrimalDualStatusMax)
-    return illegal_primal_dual_status;
-  const std::string string_primal_dual_status =
-      ((Highs*)highs)->primalDualStatusToString(int_primal_dual_status);
-  return string_primal_dual_status.c_str();
+const char* Highs_solutionStatusToChar(void* highs,
+                                         HighsInt int_solution_status) {
+  const char* illegal_solution_status = "Primal/Dual solution status out of range";
+  if (int_solution_status < kSolutionStatusMin ||
+      int_solution_status > kSolutionStatusMax)
+    return illegal_solution_status;
+  const std::string string_solution_status =
+      ((Highs*)highs)->solutionStatusToString(int_solution_status);
+  return string_solution_status.c_str();
 }
 
 // *********************

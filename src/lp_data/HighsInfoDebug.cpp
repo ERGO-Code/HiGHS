@@ -63,29 +63,29 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
                       info.num_primal_infeasibilities);
           return HighsDebugStatus::kLogicalError;
         } else if (info.num_primal_infeasibilities == 0) {
-          if (info.primal_status != kHighsPrimalDualStatusFeasiblePoint) {
+          if (info.primal_solution_status != kSolutionStatusFeasible) {
             highsLogDev(options.log_options, HighsLogType::kError,
                         "Have primal solution and no infeasibilities but "
                         "primal status = %" HIGHSINT_FORMAT "\n",
-                        info.primal_status);
+                        info.primal_solution_status);
             return HighsDebugStatus::kLogicalError;
           }
         } else {
-          if (info.primal_status != kHighsPrimalDualStatusInfeasiblePoint) {
+          if (info.primal_solution_status != kSolutionStatusInfeasible) {
             highsLogDev(options.log_options, HighsLogType::kError,
                         "Have primal solution and infeasibilities but primal "
                         "status = %" HIGHSINT_FORMAT "\n",
-                        info.primal_status);
+                        info.primal_solution_status);
             return HighsDebugStatus::kLogicalError;
           }
         }
       } else {
-        if (info.primal_status != kHighsPrimalDualStatusNoSolution) {
+        if (info.primal_solution_status != kSolutionStatusNone) {
           highsLogDev(
               options.log_options, HighsLogType::kError,
               "Have no primal solution but primal status = %" HIGHSINT_FORMAT
               "\n",
-              info.primal_status);
+              info.primal_solution_status);
           return HighsDebugStatus::kLogicalError;
         }
       }
@@ -97,28 +97,28 @@ HighsDebugStatus debugInfo(const HighsOptions& options, const HighsLp& lp,
                       info.num_dual_infeasibilities);
           return HighsDebugStatus::kLogicalError;
         } else if (info.num_dual_infeasibilities == 0) {
-          if (info.dual_status != kHighsPrimalDualStatusFeasiblePoint) {
+          if (info.dual_solution_status != kSolutionStatusFeasible) {
             highsLogDev(options.log_options, HighsLogType::kError,
                         "Have dual solution and no infeasibilities but dual "
                         "status = %" HIGHSINT_FORMAT "\n",
-                        info.dual_status);
+                        info.dual_solution_status);
             return HighsDebugStatus::kLogicalError;
           }
         } else {
-          if (info.dual_status != kHighsPrimalDualStatusInfeasiblePoint) {
+          if (info.dual_solution_status != kSolutionStatusInfeasible) {
             highsLogDev(options.log_options, HighsLogType::kError,
                         "Have dual solution and infeasibilities but dual "
                         "status = %" HIGHSINT_FORMAT "\n",
-                        info.dual_status);
+                        info.dual_solution_status);
             return HighsDebugStatus::kLogicalError;
           }
         }
       } else {
-        if (info.dual_status != kHighsPrimalDualStatusNoSolution) {
+        if (info.dual_solution_status != kSolutionStatusNone) {
           highsLogDev(
               options.log_options, HighsLogType::kError,
               "Have no dual solution but dual status = %" HIGHSINT_FORMAT "\n",
-              info.dual_status);
+              info.dual_solution_status);
           return HighsDebugStatus::kLogicalError;
         }
       }

@@ -2109,8 +2109,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   info_.valid_backtracking_basis_ = false;
 
   // Initialise the status of the primal and dual solutions
-  return_primal_solution_status = kHighsPrimalDualStatusNoSolution;
-  return_dual_solution_status = kHighsPrimalDualStatusNoSolution;
+  return_primal_solution_status = kSolutionStatusNone;
+  return_dual_solution_status = kSolutionStatusNone;
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -2129,8 +2129,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kOptimal: {
       assert(info_.num_primal_infeasibility == 0);
       assert(info_.num_dual_infeasibility == 0);
-      return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
-      return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+      return_primal_solution_status = kSolutionStatusFeasible;
+      return_dual_solution_status = kSolutionStatusFeasible;
       break;
     }
     case HighsModelStatus::kInfeasible: {
@@ -2203,14 +2203,14 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   assert(info_.num_primal_infeasibility >= 0);
   assert(info_.num_dual_infeasibility >= 0);
   if (info_.num_primal_infeasibility == 0) {
-    return_primal_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+    return_primal_solution_status = kSolutionStatusFeasible;
   } else {
-    return_primal_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+    return_primal_solution_status = kSolutionStatusInfeasible;
   }
   if (info_.num_dual_infeasibility == 0) {
-    return_dual_solution_status = kHighsPrimalDualStatusFeasiblePoint;
+    return_dual_solution_status = kSolutionStatusFeasible;
   } else {
-    return_dual_solution_status = kHighsPrimalDualStatusInfeasiblePoint;
+    return_dual_solution_status = kSolutionStatusInfeasible;
   }
   computePrimalObjectiveValue();
 

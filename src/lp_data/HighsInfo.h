@@ -133,8 +133,8 @@ struct HighsInfoStruct {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt crossover_iteration_count;
-  HighsInt primal_status;
-  HighsInt dual_status;
+  HighsInt primal_solution_status;
+  HighsInt dual_solution_status;
   double objective_function_value;
   double mip_dual_bound;
   double mip_gap;
@@ -210,17 +210,17 @@ class HighsInfo : public HighsInfoStruct {
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
-        "primal_status",
+        "primal_solution_status",
         "Primal status of the model: 0 => No solution; 1 => Infeasible point; "
         "2 => Feasible point",
-        advanced, &primal_status, kHighsPrimalDualStatusNoSolution);
+        advanced, &primal_solution_status, kSolutionStatusNone);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
-        "dual_status",
+        "dual_solution_status",
         "Dual status of the model: 0 => No solution; 1 => Infeasible point; 2 "
         "=> Feasible point",
-        advanced, &dual_status, kHighsPrimalDualStatusNoSolution);
+        advanced, &dual_solution_status, kSolutionStatusNone);
     records.push_back(record_int);
 
     record_double = new InfoRecordDouble("objective_function_value",

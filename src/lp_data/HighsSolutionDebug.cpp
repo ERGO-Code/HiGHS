@@ -295,8 +295,8 @@ HighsDebugStatus debugHighsBasicSolution(
       options.primal_feasibility_tolerance;
   solution_params.dual_feasibility_tolerance =
       options.dual_feasibility_tolerance;
-  solution_params.primal_status = info.primal_status;
-  solution_params.dual_status = info.dual_status;
+  solution_params.primal_solution_status = info.primal_solution_status;
+  solution_params.dual_solution_status = info.dual_solution_status;
   solution_params.objective_function_value = info.objective_function_value;
   solution_params.num_primal_infeasibility = info.num_primal_infeasibilities;
   solution_params.max_primal_infeasibility = info.max_primal_infeasibility;
@@ -395,8 +395,8 @@ HighsDebugStatus debugHighsBasicSolution(
       solution_params.primal_feasibility_tolerance;
   check_solution_params.dual_feasibility_tolerance =
       solution_params.dual_feasibility_tolerance;
-  check_solution_params.primal_status = solution_params.primal_status;
-  check_solution_params.dual_status = solution_params.dual_status;
+  check_solution_params.primal_solution_status = solution_params.primal_solution_status;
+  check_solution_params.dual_solution_status = solution_params.dual_solution_status;
   // Get values for solution params from scratch. Also get primal/dual errors
   HighsPrimalDualErrors primal_dual_errors;
   // Get the primal and dual infeasibilities and errors
@@ -923,13 +923,13 @@ HighsDebugStatus debugCompareSolutionStatusParams(
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   return_status = debugWorseStatus(
       debugCompareSolutionParamInteger("primal_status", options,
-                                       solution_params0.primal_status,
-                                       solution_params1.primal_status),
+                                       solution_params0.primal_solution_status,
+                                       solution_params1.primal_solution_status),
       return_status);
   return_status =
       debugWorseStatus(debugCompareSolutionParamInteger(
-                           "dual_status", options, solution_params0.dual_status,
-                           solution_params1.dual_status),
+                           "dual_status", options, solution_params0.dual_solution_status,
+                           solution_params1.dual_solution_status),
                        return_status);
   return return_status;
 }

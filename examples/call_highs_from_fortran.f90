@@ -91,7 +91,7 @@ program fortrantest
   integer, parameter :: runstatus_ok = 0
   integer, parameter :: scaled_model = 0
   integer col, row
-  integer iteration_count, primal_status, dual_status
+  integer iteration_count, primal_solution_status, dual_solution_status
   double precision objective_function_value
   integer option_type
   integer dummy_info
@@ -272,8 +272,8 @@ program fortrantest
   ! Get solution data
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);
   runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count"//C_NULL_CHAR, iteration_count);
-  runstatus = Highs_getIntInfoValue(highs, "primal_status"//C_NULL_CHAR, primal_status);
-  runstatus = Highs_getIntInfoValue(highs, "dual_status"//C_NULL_CHAR, dual_status);
+  runstatus = Highs_getIntInfoValue(highs, "primal_solution_status"//C_NULL_CHAR, primal_solution_status);
+  runstatus = Highs_getIntInfoValue(highs, "dual_solution_status"//C_NULL_CHAR, dual_solution_status);
   ! This is what happens if an invalid name is passed
   runstatus = Highs_getIntInfoValue(highs, "bad_info"//C_NULL_CHAR, dummy_info)
   call assert(runstatus .eq. 2, "getOptionType runstatus")
@@ -282,8 +282,8 @@ program fortrantest
   print*, "modelstatus = ", modelstatus
   call assert(modelstatus .eq. modelstatus_optimal, "Optimal => modelstatus = modelstatus_optimal")
   if (modelstatus .eq. modelstatus_optimal) then
-     call assert(primal_status .eq. 3, "Optimal => primal_status = 3")
-     call assert(dual_status .eq. 3, "Optimal => dual_status = 3")
+     call assert(primal_solution_status .eq. 2, "Optimal => primal_solution_status = 2")
+     call assert(dual_solution_status .eq. 2, "Optimal => dual_solution_status = 2")
      ! Get the primal and dual solution
      runstatus = Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
      ! Get the basis

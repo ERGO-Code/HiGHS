@@ -816,7 +816,7 @@ class Highs {
 
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
-  std::string primalDualStatusToString(const HighsInt primal_dual_status);
+  std::string solutionStatusToString(const HighsInt solution_status);
 
   void setMatrixOrientation(const MatrixOrientation& desired_orientation =
                                 MatrixOrientation::kColwise);

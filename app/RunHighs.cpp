@@ -118,10 +118,10 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
                  highs.modelStatusToString(model_status).c_str());
     highsLogUser(
         log_options, HighsLogType::kInfo, "Primal  status      : %s\n",
-        highs.primalDualStatusToString(highs_info.primal_status).c_str());
+        highs.solutionStatusToString(highs_info.primal_solution_status).c_str());
     highsLogUser(
         log_options, HighsLogType::kInfo, "Dual    status      : %s\n",
-        highs.primalDualStatusToString(highs_info.dual_status).c_str());
+        highs.solutionStatusToString(highs_info.dual_solution_status).c_str());
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
                  highs_info.simplex_iteration_count);

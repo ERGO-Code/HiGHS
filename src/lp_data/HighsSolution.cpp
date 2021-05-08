@@ -58,12 +58,12 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.primal_status = kHighsPrimalDualStatusNoSolution;
+  solution_params.primal_solution_status = kSolutionStatusNone;
 
   num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.dual_status = kHighsPrimalDualStatusNoSolution;
+  solution_params.dual_solution_status = kSolutionStatusNone;
 
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
@@ -268,16 +268,16 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
   }
   // Assign primal solution status
   if (num_primal_infeasibility) {
-    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusFeasible;
   }
   if (have_dual_solution) {
     // Assign dual solution status
     if (num_dual_infeasibility) {
-      solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+      solution_params.dual_solution_status = kSolutionStatusInfeasible;
     } else {
-      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+      solution_params.dual_solution_status = kSolutionStatusFeasible;
     }
   }
 }
@@ -490,12 +490,12 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.primal_status = kHighsPrimalDualStatusNoSolution;
+  solution_params.primal_solution_status = kSolutionStatusNone;
 
   num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.dual_status = kHighsPrimalDualStatusNoSolution;
+  solution_params.dual_solution_status = kSolutionStatusNone;
 
   const bool have_primal_solution = solution.value_valid;
   if (have_primal_solution) {
@@ -589,15 +589,15 @@ void getPrimalDualInfeasibilities(const HighsLp& lp,
     }
   }
   if (num_primal_infeasibility == 0) {
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusFeasible;
   } else {
-    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusInfeasible;
   }
   if (have_dual_solution) {
     if (num_dual_infeasibility == 0) {
-      solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+      solution_params.dual_solution_status = kSolutionStatusFeasible;
     } else {
-      solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+      solution_params.dual_solution_status = kSolutionStatusInfeasible;
     }
   }
 }
@@ -1073,8 +1073,8 @@ void invalidateSolutionParams(HighsSolutionParams& solution_params) {
 // Invalidate the solution status values in a HighsSolutionParams
 // instance.
 void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
-  solution_params.primal_status = kHighsPrimalDualStatusNoSolution;
-  solution_params.dual_status = kHighsPrimalDualStatusNoSolution;
+  solution_params.primal_solution_status = kSolutionStatusNone;
+  solution_params.dual_solution_status = kSolutionStatusNone;
 }
 
 // Invalidate the infeasibility values in a HighsSolutionParams
@@ -1098,8 +1098,8 @@ void copySolutionObjectiveParams(
 
 void copyFromSolutionParams(HighsInfo& highs_info,
                             const HighsSolutionParams& solution_params) {
-  highs_info.primal_status = solution_params.primal_status;
-  highs_info.dual_status = solution_params.dual_status;
+  highs_info.primal_solution_status = solution_params.primal_solution_status;
+  highs_info.dual_solution_status = solution_params.dual_solution_status;
   highs_info.objective_function_value =
       solution_params.objective_function_value;
   highs_info.num_primal_infeasibilities =
@@ -1115,8 +1115,8 @@ void copyFromSolutionParams(HighsInfo& highs_info,
 
 void copyFromInfo(HighsSolutionParams& solution_params,
                   const HighsInfo& highs_info) {
-  solution_params.primal_status = highs_info.primal_status;
-  solution_params.dual_status = highs_info.dual_status;
+  solution_params.primal_solution_status = highs_info.primal_solution_status;
+  solution_params.dual_solution_status = highs_info.dual_solution_status;
   solution_params.objective_function_value =
       highs_info.objective_function_value;
   solution_params.num_primal_infeasibility =

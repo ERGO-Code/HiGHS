@@ -308,14 +308,14 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.dual_valid = true;
   basis.valid = true;
   if (solution_params.num_primal_infeasibility > 0) {
-    solution_params.primal_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.primal_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.primal_solution_status = kSolutionStatusFeasible;
   }
   if (solution_params.num_dual_infeasibility > 0) {
-    solution_params.dual_status = kHighsPrimalDualStatusInfeasiblePoint;
+    solution_params.dual_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.dual_status = kHighsPrimalDualStatusFeasiblePoint;
+    solution_params.dual_solution_status = kSolutionStatusFeasible;
   }
   if (solution_params.num_primal_infeasibility > 0) {
     // Primal infeasible
