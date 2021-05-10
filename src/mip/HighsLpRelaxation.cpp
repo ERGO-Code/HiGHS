@@ -524,9 +524,10 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofvals.clear();
 
   if (!computeDualProof(mipsolver.mipdata_->domain,
-                        lpsolver.getHighsOptions().objective_bound,
-                        dualproofinds, dualproofvals, dualproofrhs)) {
+                        mipsolver.mipdata_->upper_limit, dualproofinds,
+                        dualproofvals, dualproofrhs)) {
     dualproofrhs = kHighsInf;
+    hasdualproof = false;
   }
 }
 
@@ -630,9 +631,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "proof constraint for obj limit %g not valid, solving without "
         //     "objlim\n",
         //     objbound);
-        setObjectiveLimit();
+        lpsolver.setOptionValue("objective_bound", kHighsInf);
         run(resolve_on_error);
-        setObjectiveLimit(objbound);
+        lpsolver.setOptionValue("objective_bound", objbound);
       }
 
       return Status::kError;
