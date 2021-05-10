@@ -391,6 +391,7 @@ HighsStatus Highs::run() {
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+  //    kHighsDebugLevelCostly;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
                            //  kHighsDebugLevelCheap;

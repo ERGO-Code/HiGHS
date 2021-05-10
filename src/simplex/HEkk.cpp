@@ -2182,6 +2182,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       //
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
+      initialiseNonbasicValueAndMove();
       computePrimal();
       // Reset the simplex costs and recompute duals
       initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);

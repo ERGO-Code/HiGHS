@@ -174,11 +174,6 @@ if (HIGHS_COVERAGE)
   endif()
 endif ()
 
-option(SCIP_DEV "SCIP  development" OFF)
-if (NOT (${SCIP_DEV} STREQUAL  "OFF"))
-    message(STATUS "SCIP  development: " ${SCIP_DEV})
-endif()
-
 option(HiGHSDEV "HiGHS development" OFF)
 if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
     message(STATUS "HiGHS development: " ${HiGHSDEV})
