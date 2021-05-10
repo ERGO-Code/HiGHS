@@ -891,7 +891,7 @@ HighsInt Highs_getNumNz(void* highs  //!< HiGHS object reference
  * status
  */
 const char* Highs_modelStatusToChar(
-    void* highs,                     //!< HiGHS object reference
+    void* highs,               //!< HiGHS object reference
     HighsInt int_model_status  //!< Status to interpret
 );
 
