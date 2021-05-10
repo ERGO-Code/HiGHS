@@ -76,7 +76,7 @@ class HighsMipSolver {
   }
 
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
-                 bool submip = false);
+                 const HighsSolution& solution, bool submip = false);
 
   ~HighsMipSolver();
 

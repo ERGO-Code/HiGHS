@@ -1175,27 +1175,37 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::kOk;
-  // Check if solution is valid.
-  assert((HighsInt)solution_.col_value.size() != 0 ||
-         (HighsInt)solution_.col_value.size() != lp_.numCol_);
-  assert((HighsInt)solution.col_dual.size() == 0 ||
-         (HighsInt)solution.col_dual.size() == lp_.numCol_);
-  assert((HighsInt)solution.row_dual.size() == 0 ||
-         (HighsInt)solution.row_dual.size() == lp_.numRow_);
-
-  if (solution.col_value.size()) solution_.col_value = solution.col_value;
-  if (solution.col_dual.size()) solution_.col_dual = solution.col_dual;
-  if (solution.row_dual.size()) solution_.row_dual = solution.row_dual;
-
-  if (solution.col_value.size() > 0) {
-    return_status = interpretCallStatus(calculateRowValues(lp_, solution_),
-                                        return_status, "calculateRowValues");
-    if (return_status == HighsStatus::kError) return return_status;
+  // Check if primal solution is valid.
+  if (lp_.numCol_ > 0 && solution.col_value.size() >= lp_.numCol_) {
+    // Worth considering the column values
+    solution_.col_value = solution.col_value;
+    if (lp_.numRow_ > 0) {
+      // Worth computing the row values
+      solution_.row_value.resize(lp_.numRow_);
+      return_status = interpretCallStatus(calculateRowValues(lp_, solution_),
+                                          return_status, "calculateRowValues");
+      if (return_status == HighsStatus::kError) return return_status;
+    }
+    solution_.value_valid = true;
+  } else {
+    // Primal solution not valid
+    solution_.value_valid = false;
   }
-  if (solution.row_dual.size() > 0) {
-    return_status = interpretCallStatus(calculateColDuals(lp_, solution_),
-                                        return_status, "calculateColDuals");
-    if (return_status == HighsStatus::kError) return return_status;
+  // Check if dual solution is valid.
+  if (lp_.numRow_ > 0 && solution.row_dual.size() >= lp_.numRow_) {
+    // Worth considering the row duals
+    solution_.row_dual = solution.row_dual;
+    if (lp_.numCol_ > 0) {
+      // Worth computing the column duals
+      solution_.col_dual.resize(lp_.numCol_);
+      return_status = interpretCallStatus(calculateColDuals(lp_, solution_),
+                                          return_status, "calculateColDuals");
+      if (return_status == HighsStatus::kError) return return_status;
+    }
+    solution_.dual_valid = true;
+  } else {
+    // Dual solution not valid
+    solution_.dual_valid = false;
   }
   return returnFromHighs(return_status);
 }
@@ -2008,7 +2018,7 @@ HighsStatus Highs::callSolveMip() {
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
   assert(lp_.orientation_ != MatrixOrientation::kRowwise);
-  HighsMipSolver solver(options_, lp_);
+  HighsMipSolver solver(options_, lp_, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
   HighsStatus call_status = HighsStatus::kOk;

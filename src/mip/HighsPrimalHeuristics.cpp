@@ -88,7 +88,10 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipoptions.presolve = "on";
   // setup solver and run it
 
-  HighsMipSolver submipsolver(submipoptions, submip, true);
+  HighsSolution solution;
+  solution.value_valid = false;
+  solution.dual_valid = false;
+  HighsMipSolver submipsolver(submipoptions, submip, solution, true);
   submipsolver.rootbasis = &basis;
   HighsPseudocostInitialization pscostinit(mipsolver.mipdata_->pseudocost, 1);
   submipsolver.pscostinit = &pscostinit;

@@ -29,7 +29,7 @@
 #include "util/HighsCDouble.h"
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
-                               bool submip)
+                               const HighsSolution& solution, bool submip)
     : options_mip_(&options),
       model_(&lp),
       solution_objective_(kHighsInf),
