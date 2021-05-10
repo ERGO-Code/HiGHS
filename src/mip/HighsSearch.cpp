@@ -704,6 +704,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     }
   } else {
     lp->flushDomain(localdom);
+    lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
