@@ -270,7 +270,7 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
   return checked_status;
 }
 
-// Return a string representation of PrimalDualStatus
+// Return a string representation of SolutionStatus
 std::string utilSolutionStatusToString(const HighsInt solution_status) {
   switch (solution_status) {
     case kSolutionStatusNone:

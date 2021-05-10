@@ -30,6 +30,7 @@ const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
 const HighsInt kHighsThreadLimit = 8;  // 32;
 const double kRunningAverageMultiplier = 0.05;
+const HighsInt kHighsPrereleaseRowDualSign = 1;
 
 enum HighsDebugLevel {
   kHighsDebugLevelNone = 0,
@@ -86,7 +87,7 @@ enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 
 enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
 
-enum PrimalDualStatus {
+enum SolutionStatus {
   kSolutionStatusNone = 0,
   kSolutionStatusInfeasible,
   kSolutionStatusFeasible,
