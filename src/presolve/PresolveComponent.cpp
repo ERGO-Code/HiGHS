@@ -31,6 +31,35 @@ HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
   return HighsStatus::kOk;
 }
 
+std::string PresolveComponent::presolveStatusToString(const HighsPresolveStatus presolve_status) {
+   switch (presolve_status) {
+   case HighsPresolveStatus::kNotPresolved:
+     return "Not presolved";
+   case HighsPresolveStatus::kNotReduced:
+     return "Not reduced";
+   case HighsPresolveStatus::kInfeasible:
+     return "Infeasible";
+   case HighsPresolveStatus::kUnboundedOrInfeasible:
+     return "Unbounded or infeasible";
+   case HighsPresolveStatus::kEmpty:
+     assert(presolve_status != HighsPresolveStatus::kEmpty);
+     return "Empty LP";
+   case HighsPresolveStatus::kReduced:
+     return "Reduced";
+   case HighsPresolveStatus::kReducedToEmpty:
+     return "Reduced to empty";
+   case HighsPresolveStatus::kTimeout:
+     return "Timeout";
+   case HighsPresolveStatus::kNullError:
+     return "Null error";
+   case HighsPresolveStatus::kOptionsError:
+     return "Options error";
+   default:
+     assert(1 == 0);
+   return "Unrecognised presolve status";
+  }
+}
+
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
   for (HighsInt col = 0; col < data_.reduced_lp_.numCol_; col++)
     data_.recovered_solution_.col_dual[col] =
@@ -59,7 +88,7 @@ HighsPresolveStatus PresolveComponent::run() {
 }
 
 void PresolveComponent::clear() {
-  has_run_ = false;
+  //  has_run_ = false;
   data_.clear();
 }
 namespace presolve {

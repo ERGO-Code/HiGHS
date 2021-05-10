@@ -529,6 +529,7 @@ HighsPresolveStatus Presolve::presolve() {
         presolve_status = HighsPresolveStatus::kReducedToEmpty;
       break;
     case Stat::kEmpty:
+      assert(result != Stat::kEmpty);
       presolve_status = HighsPresolveStatus::kEmpty;
       break;
     case Stat::kOptimal:
@@ -537,6 +538,11 @@ HighsPresolveStatus Presolve::presolve() {
       break;
     case Stat::kTimeout:
       presolve_status = HighsPresolveStatus::kTimeout;
+      break;
+  default:
+      assert(result != result);
+      printf("Unrecognised presolve return of %" HIGHSINT_FORMAT "\n", result);
+      return HighsPresolveStatus::kNullError;
   }
   timer.recordFinish(kTotalPresolveTime);
   if (iPrint > 0) {
@@ -1095,6 +1101,7 @@ void Presolve::resizeProblem() {
 
   chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 
+  assert(nR + nC > 0);
   if (nR + nC == 0) {
     status = kEmpty;
     return;

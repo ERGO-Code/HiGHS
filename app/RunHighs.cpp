@@ -14,7 +14,7 @@
  * @brief HiGHS main
  */
 #include "Highs.h"
-#include "HighsRuntimeOptions.h"
+#include "lp_data/HighsRuntimeOptions.h"
 
 void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,

@@ -48,7 +48,7 @@ class HighsComponent {
   virtual ~HighsComponent() = default;
 
  private:
-  bool has_run_ = false;
+  //  bool has_run_ = false;
 
   HighsComponentInfo info_;
   HighsComponentData data_;

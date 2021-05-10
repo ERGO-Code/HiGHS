@@ -90,11 +90,12 @@ class PresolveComponent : public HighsComponent {
   HighsLp& getReducedProblem() { return data_.reduced_lp_; }
 
   HighsStatus setOptions(const HighsOptions& options);
+  std::string presolveStatusToString(const HighsPresolveStatus presolve_status);
 
   void negateReducedLpColDuals(bool reduced);
   void negateReducedLpCost();
 
-  bool has_run_ = false;
+  //  bool has_run_ = false;
 
   PresolveComponentInfo info_;
   PresolveComponentData data_;
