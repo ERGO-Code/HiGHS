@@ -330,6 +330,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       return candidate;
     }
 
+    lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+
     HighsInt col = fracints[candidate].first;
     double fracval = fracints[candidate].second;
     double upval = std::ceil(fracval);
