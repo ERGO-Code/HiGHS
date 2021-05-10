@@ -1925,8 +1925,8 @@ HighsPresolveStatus Highs::runPresolve() {
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
-	      "presolve_.run() returns status: %s\n",
-	      presolve_.presolveStatusToString(presolve_return_status).c_str());
+              "presolve_.run() returns status: %s\n",
+              presolve_.presolveStatusToString(presolve_return_status).c_str());
 
   // Update reduction counts.
   switch (presolve_.presolve_status_) {

@@ -539,7 +539,7 @@ HighsPresolveStatus Presolve::presolve() {
     case Stat::kTimeout:
       presolve_status = HighsPresolveStatus::kTimeout;
       break;
-  default:
+    default:
       assert(result != result);
       printf("Unrecognised presolve return of %" HIGHSINT_FORMAT "\n", result);
       return HighsPresolveStatus::kNullError;
