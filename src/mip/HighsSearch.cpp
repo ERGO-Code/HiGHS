@@ -330,6 +330,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       return candidate;
     }
 
+    lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+
     HighsInt col = fracints[candidate].first;
     double fracval = fracints[candidate].second;
     double upval = std::ceil(fracval);
@@ -704,6 +706,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     }
   } else {
     lp->flushDomain(localdom);
+    lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {

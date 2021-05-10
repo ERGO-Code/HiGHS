@@ -918,6 +918,7 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     int numBoundChgs = (int)propdomain.getChangedCols().size();
 
     if (!propdomain.getChangedCols().empty()) {
+      lp->setObjectiveLimit(mipdata.upper_limit);
       status = lp->resolveLp(&propdomain);
 
       if (!lp->scaledOptimal(status)) return -1;

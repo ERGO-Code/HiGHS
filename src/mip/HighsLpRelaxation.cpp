@@ -147,6 +147,7 @@ void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
   lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
   lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
+  lpmodel.offset_ = 0;
   lprows.clear();
   lprows.reserve(lpmodel.numRow_);
   for (HighsInt i = 0; i != lpmodel.numRow_; ++i)
@@ -517,110 +518,17 @@ void HighsLpRelaxation::storeDualInfProof() {
 }
 
 void HighsLpRelaxation::storeDualUBProof() {
-  dualproofinds.clear();
-  dualproofvals.clear();
-  dualproofrhs = kHighsInf;
   assert(lpsolver.getModelStatus(true) == HighsModelStatus::kObjectiveBound);
 
-  HighsInt numrow = lpsolver.getNumRows();
-  bool hasdualray = false;
-  lpsolver.getDualRay(hasdualray);
+  dualproofinds.clear();
+  dualproofvals.clear();
 
-  if (!hasdualray) return;
-
-  const HighsLp& lp = lpsolver.getLp();
-  dualproofbuffer.resize(numrow);
-
-  lpsolver.getDualRay(hasdualray, dualproofbuffer.data());
-  std::vector<double>& dualray = dualproofbuffer;
-
-  double scale = 0.0;
-
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (std::abs(dualray[i]) <= mipsolver.mipdata_->feastol) {
-      dualray[i] = 0.0;
-      continue;
-    }
-
-    if (scale * dualray[i] <= 0.0) {
-      if (lp.rowUpper_[i] == kHighsInf) {
-        if (scale == 0.0)
-          scale = copysign(1.0, dualray[i]);
-        else
-          return;
-      }
-    }
-
-    if (scale * dualray[i] >= 0.0) {
-      if (lp.rowLower_[i] == -kHighsInf) {
-        if (scale == 0.0)
-          scale = -copysign(1.0, dualray[i]);
-        else
-          return;
-      }
-    }
+  if (!computeDualProof(mipsolver.mipdata_->domain,
+                        mipsolver.mipdata_->upper_limit, dualproofinds,
+                        dualproofvals, dualproofrhs)) {
+    dualproofrhs = kHighsInf;
+    hasdualproof = false;
   }
-
-  if (scale == 0.0) scale = 1.0;
-
-  assert(scale == 1.0);
-
-  HighsCDouble upper = lpsolver.getOptions().objective_bound;
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (dualray[i] == 0.0) continue;
-
-    if (scale * dualray[i] < 0) {
-      assert(lp.rowUpper_[i] != kHighsInf);
-      upper -= scale * dualray[i] * lp.rowUpper_[i];
-    } else {
-      assert(lp.rowLower_[i] != -kHighsInf);
-      upper -= scale * dualray[i] * lp.rowLower_[i];
-    }
-  }
-
-  for (HighsInt i = 0; i != lp.numCol_; ++i) {
-    HighsInt start = lp.Astart_[i];
-    HighsInt end = lp.Astart_[i + 1];
-
-    HighsCDouble sum = scale * mipsolver.colCost(i);
-
-    for (HighsInt j = start; j != end; ++j) {
-      if (dualray[lp.Aindex_[j]] == 0.0) continue;
-      sum -= lp.Avalue_[j] * dualray[lp.Aindex_[j]];
-    }
-
-    double val = scale * double(sum);
-
-    if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
-
-    if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
-        std::abs(val) < mipsolver.mipdata_->feastol ||
-        mipsolver.mipdata_->domain.colLower_[i] ==
-            mipsolver.mipdata_->domain.colUpper_[i]) {
-      if (val < 0) {
-        if (mipsolver.mipdata_->domain.colUpper_[i] == kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.colUpper_[i];
-      } else {
-        if (mipsolver.mipdata_->domain.colLower_[i] == -kHighsInf) return;
-
-        upper -= val * mipsolver.mipdata_->domain.colLower_[i];
-      }
-
-      continue;
-    }
-
-    dualproofvals.push_back(val);
-    dualproofinds.push_back(i);
-  }
-
-  dualproofrhs = double(upper);
-  mipsolver.mipdata_->domain.tightenCoefficients(
-      dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
-      dualproofrhs);
-
-  mipsolver.mipdata_->debugSolution.checkCut(
-      dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
-      dualproofrhs);
 }
 
 bool HighsLpRelaxation::checkDualProof() const {
@@ -709,8 +617,24 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
   switch (scaledmodelstatus) {
     case HighsModelStatus::kObjectiveBound:
+      ++numSolved;
+      avgSolveIters += (itercount - avgSolveIters) / numSolved;
+
       storeDualUBProof();
-      if (checkDualProof()) return Status::kInfeasible;
+      if (checkDualProof()) {
+        // printf("proof constraint for obj limit %g valid\n",
+        //        lpsolver.getHighsOptions().objective_bound);
+        return Status::kInfeasible;
+      } else {
+        double objbound = lpsolver.getHighsOptions().objective_bound;
+        // printf(
+        //     "proof constraint for obj limit %g not valid, solving without "
+        //     "objlim\n",
+        //     objbound);
+        lpsolver.setOptionValue("objective_bound", kHighsInf);
+        run(resolve_on_error);
+        lpsolver.setOptionValue("objective_bound", objbound);
+      }
 
       return Status::kError;
     case HighsModelStatus::kInfeasible: {

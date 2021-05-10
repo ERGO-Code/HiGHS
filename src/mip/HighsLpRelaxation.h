@@ -207,7 +207,7 @@ class HighsLpRelaxation {
   void recoverBasis();
 
   void setObjectiveLimit(double objlim = kHighsInf) {
-    // lpsolver.setOptionValue("objective_bound", objlim);
+    lpsolver.setOptionValue("objective_bound", objlim + 0.5);
   }
 
   void storeBasis() {

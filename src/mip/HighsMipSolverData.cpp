@@ -409,7 +409,9 @@ void HighsMipSolverData::performRestart() {
   HighsInt numCuts = numLpRows - numModelRows;
   if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
+  double offset = presolvedModel.offset_;
   presolvedModel = lp.getLp();
+  presolvedModel.offset_ = offset;
   presolvedModel.integrality_ = std::move(integrality);
   const HighsBasis& basis = lp.getLpSolver().getBasis();
   if (basis.valid) {
