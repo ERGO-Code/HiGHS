@@ -783,6 +783,9 @@ class Highs {
     presolve_.options_ = options;
   }
 
+  // Runs ipx crossover and if successful loads basis into Highs::basis_
+  HighsStatus crossover();
+
  private:
   HighsSolution solution_;
   HighsBasis basis_;

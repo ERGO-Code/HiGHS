@@ -8,7 +8,6 @@
 #include "lp_data/HighsSolution.h"
 
 bool callCrossover(const HighsLp& lp, const HighsOptions& options,
-                   const std::vector<double>& x_values, HighsSolution& solution,
-                   HighsBasis& highs_basis);
+                   HighsSolution& solution, HighsBasis& highs_basis);
 
 #endif
