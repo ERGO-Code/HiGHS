@@ -89,7 +89,6 @@ program fortrantest
   
   real, parameter :: inf = 1e30
   integer, parameter :: runstatus_ok = 0
-  integer, parameter :: scaled_model = 0
   integer col, row
   integer iteration_count, primal_solution_status, dual_solution_status
   double precision objective_function_value
@@ -202,7 +201,7 @@ program fortrantest
   astart, aindex, avalue)
 !  print*, "Suppressing all HiGHS output"; runstatus = Highs_runQuiet(highs)
   runstatus = Highs_run(highs)
-  modelstatus = Highs_getModelStatus(highs, scaled_model);
+  modelstatus = Highs_getModelStatus(highs);
   print*, "modelstatus = ", modelstatus
   call assert(runstatus .eq. 0, "Highs_run runstatus")
   call assert(modelstatus .eq. modelstatus_optimal, "Highs_run modelstatus optimal")
@@ -266,7 +265,7 @@ program fortrantest
   ! Solve the LP
   runstatus = Highs_run(highs);
   ! Get the model status
-  modelstatus = Highs_getModelStatus(highs, scaled_model);
+  modelstatus = Highs_getModelStatus(highs);
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
 
   ! Get solution data
@@ -326,7 +325,7 @@ program fortrantest
   ! Solve the LP
   runstatus = Highs_run(highs);
   ! Get the model status
-  modelstatus = Highs_getModelStatus(highs, scaled_model);
+  modelstatus = Highs_getModelStatus(highs);
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);
   runstatus = Highs_getIntInfoValue(highs, "simplex_iteration_count"//C_NULL_CHAR, iteration_count);
@@ -367,7 +366,7 @@ program fortrantest
   ! Solve the LP
   runstatus = Highs_run(highs);
   ! Get the model status
-  modelstatus = Highs_getModelStatus(highs, scaled_model);
+  modelstatus = Highs_getModelStatus(highs);
   call assert(modelstatus .eq. modelstatus_optimal, "Highs_run modelstatus optimal")
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);

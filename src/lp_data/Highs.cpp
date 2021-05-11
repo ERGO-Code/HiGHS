@@ -246,6 +246,7 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const double* row_lower, const double* row_upper,
                              const HighsInt* astart, const HighsInt* aindex,
                              const double* avalue,
+			     const bool colwise,
                              const HighsInt* integrality) {
   HighsLp lp;
   lp.numCol_ = num_col;
@@ -270,13 +271,23 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
     assert(astart != NULL);
     assert(aindex != NULL);
     assert(avalue != NULL);
-    lp.Astart_.assign(astart, astart + num_col);
+    if (colwise) {
+      lp.Astart_.assign(astart, astart + num_col);
+    } else {
+      lp.Astart_.assign(astart, astart + num_row);
+    }
     lp.Aindex_.assign(aindex, aindex + num_nz);
     lp.Avalue_.assign(avalue, avalue + num_nz);
   }
-  lp.Astart_.resize(num_col + 1);
-  lp.Astart_[num_col] = num_nz;
-  lp.orientation_ = MatrixOrientation::kColwise;
+  if (colwise) {
+    lp.Astart_.resize(num_col + 1);
+    lp.Astart_[num_col] = num_nz;
+    lp.orientation_ = MatrixOrientation::kColwise;
+  } else {
+    lp.Astart_.resize(num_row + 1);
+    lp.Astart_[num_row] = num_nz;
+    lp.orientation_ = MatrixOrientation::kRowwise;
+  }
   if (num_col > 0 && integrality != NULL) {
     lp.integrality_.resize(num_col);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {

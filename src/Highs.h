@@ -51,7 +51,9 @@ class Highs {
                         const double* row_lower, const double* row_upper,
                         const HighsInt* astart, const HighsInt* aindex,
                         const double* avalue,
+			const bool colwise = true,
                         const HighsInt* integrality = NULL);
+
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */

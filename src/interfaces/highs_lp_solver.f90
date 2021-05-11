@@ -91,6 +91,65 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passLp
 
+    function Highs_passMip ( h, numcol, numrow, numnz,&
+         colcost, collower, colupper, rowlower, rowupper, &
+         astart, aindex, avalue, integrality) result ( s ) bind ( c, name='Highs_passMip' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_passMip
+
+    function Highs_passLpRowwise ( h, numcol, numrow, numnz,&
+         colcost, collower, colupper, rowlower, rowupper, &
+         arstart, arindex, arvalue) result ( s ) bind ( c, name='Highs_passLpRowwise' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: arstart(*)
+      integer ( c_int ) :: arindex(*)
+      real ( c_double ) :: arvalue(*)
+      integer ( c_int ) :: s
+    end function Highs_passLpRowwise
+
+    function Highs_passMipRowwise ( h, numcol, numrow, numnz,&
+         colcost, collower, colupper, rowlower, rowupper, &
+         arstart, arindex, arvalue, integrality) result ( s ) bind ( c, name='Highs_passMipRowwise' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: arstart(*)
+      integer ( c_int ) :: arindex(*)
+      real ( c_double ) :: arvalue(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_passMipRowwise
+
     function Highs_setBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setBoolOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
@@ -205,12 +264,17 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getBasis
     
-    function Highs_getModelStatus (h, scaled_model) result(model_status) bind(c, name='Highs_getModelStatus')
+    function Highs_getModelStatus (h) result(model_status) bind(c, name='Highs_getModelStatus')
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer ( c_int ) :: model_status
-      integer ( c_int ), VALUE :: scaled_model
     end function Highs_getModelStatus
+
+    function Highs_getScaledModelStatus (h) result(model_status) bind(c, name='Highs_getScaledModelStatus')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: model_status
+    end function Highs_getScaledModelStatus
 
     function Highs_getObjectiveValue (h) result(ov) bind(c, name='Highs_getObjectiveValue')
       use iso_c_binding

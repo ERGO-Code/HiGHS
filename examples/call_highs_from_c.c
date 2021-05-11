@@ -209,8 +209,7 @@ void full_api() {
   Highs_setHighsBoolOptionValue(highs, "output_flag", 1);
 
   // Get the model status
-  const int scaled_model = 0;
-  int modelstatus = Highs_getModelStatus(highs, scaled_model);
+  int modelstatus = Highs_getModelStatus(highs);
 
   printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
 
@@ -260,7 +259,7 @@ void full_api() {
 			rowlower, rowupper,
 			astart, aindex, avalue);
   runstatus = Highs_run(highs);
-  modelstatus = Highs_getModelStatus(highs, scaled_model);
+  modelstatus = Highs_getModelStatus(highs);
   printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
   Highs_destroy(highs);
 }
