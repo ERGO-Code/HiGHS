@@ -22,7 +22,7 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       const HighsInt* aindex, const double* avalue,
                       double* colvalue, double* coldual, double* rowvalue,
                       double* rowdual, HighsInt* colbasisstatus,
-                      HighsInt* rowbasisstatus, int* modelstatus) {
+                      HighsInt* rowbasisstatus, HighsInt* modelstatus) {
   Highs highs;
 
   HighsInt status =
@@ -68,7 +68,7 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
                        const HighsInt* integrality, double* colvalue,
                        double* coldual, double* rowvalue, double* rowdual,
                        HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
-                       int* modelstatus) {
+                       HighsInt* modelstatus) {
   Highs highs;
   HighsInt status = Highs_passMip(
       &highs, numcol, numrow, numnz, rowwise, colcost, collower, colupper,
@@ -721,7 +721,7 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
                     const HighsInt* astart, const HighsInt* aindex,
                     const double* avalue, double* colvalue, double* coldual,
                     double* rowvalue, double* rowdual, HighsInt* colbasisstatus,
-                    HighsInt* rowbasisstatus, int* modelstatus) {
+                    HighsInt* rowbasisstatus, HighsInt* modelstatus) {
   const HighsInt rowwise = 0;
   return Highs_lpCall(numcol, numrow, numnz, rowwise, colcost, collower,
                       colupper, rowlower, rowupper, astart, aindex, avalue,
