@@ -5,7 +5,7 @@
 #include "HConfig.h"
 
 #ifndef IPX_ON
-bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::vector<double>& x_values,
+bool callCrossover(const HighsLp& lp, const HighsOptions& options,
                    HighsSolution& solution, HighsBasis& highs_basis) {
   return false;
 }
@@ -13,9 +13,9 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
 
 #include "ipm/IpxWrapper.h"
 
-bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::vector<double>& x_values,
+bool callCrossover(const HighsLp& lp, const HighsOptions& options, 
                    HighsSolution& solution, HighsBasis& basis) {
-  std::cout << "Calling ipx crossover after icrash...\n";
+  std::cout << "Calling ipx crossover\n";
 
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
@@ -42,7 +42,7 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   }
 
   // Set x values within bounds.
-  std::vector<double> x(x_values);
+  std::vector<double> x(solution.col_value);
   for (int i = 0; i < num_col; i++) {
       x[i] = std::max(x[i], col_lb[i]);
       x[i] = std::min(x[i], col_ub[i]);
@@ -101,9 +101,12 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options, const std::ve
   }
 
   // Convert the IPX basic solution to a HiGHS basic solution
-  ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
+  HighsStatus status = ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
                                        constraint_type, ipx_solution,
                                        basis, solution);
+
+  if (status != HighsStatus::OK)
+    return false;
 
   std::cout << "Crossover basic solution >>>" << std::endl;
 

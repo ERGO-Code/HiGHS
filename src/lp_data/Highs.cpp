@@ -503,27 +503,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // original LP
   int solved_hmo = original_hmo;
 
-  const bool test_call_crossover = true;
-  if (test_call_crossover) {
-#ifdef IPX_ON
-    HighsBasis basis;
-    std::vector<double> x_values(lp_.numCol_, 0);
-    // std::vector<double> x_values(lp_.numCol_, 1);
-    // std::vector<double> x_values(lp_.numCol_, 100);
-
-    bool x_status = callCrossover(lp_, options_, x_values, solution_, basis);
-    if (!x_status)
-      return HighsStatus::Error;
-    // todo: if crossover OK start solver
-     
-    setBasis(basis);
-    // and continue with run() now that we have set the basis.
-#else 
-    // No IPX available so end here at approximate solve.
-    return HighsStatus::Error;
-#endif
-  }
-
   if (!basis_.valid_ && options_.presolve != off_string) {
     // No HiGHS basis so consider presolve
     //
@@ -2286,4 +2265,24 @@ void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
   rows = presolve_.info_.n_rows_removed;
   cols = presolve_.info_.n_cols_removed;
   nnz = presolve_.info_.n_nnz_removed;
+}
+
+HighsStatus Highs::crossover() {
+#ifdef IPX_ON
+  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+                    "Loading crossover...\n");
+    HighsBasis basis;
+    bool x_status = callCrossover(lp_, options_, solution_, basis);
+    if (!x_status)
+      return HighsStatus::Error;
+     
+    setBasis(basis);
+#else 
+    // No IPX available so end here at approximate solve.
+    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+                    "No ipx code available. Error.\n");
+    return HighsStatus::Error;
+#endif
+
+  return HighsStatus::OK;
 }
