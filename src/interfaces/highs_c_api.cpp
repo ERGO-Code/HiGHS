@@ -151,29 +151,29 @@ HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                   rowupper, astart, aindex, avalue, colwise, integrality);
 }
 
-HighsInt Highs_passLpRowwise(void* highs, const HighsInt numcol, const HighsInt numrow,
-                      const HighsInt numnz, const double* colcost,
-                      const double* collower, const double* colupper,
-                      const double* rowlower, const double* rowupper,
-                      const HighsInt* arstart, const HighsInt* arindex,
-                      const double* arvalue) {
+HighsInt Highs_passLpRowwise(void* highs, const HighsInt numcol,
+                             const HighsInt numrow, const HighsInt numnz,
+                             const double* colcost, const double* collower,
+                             const double* colupper, const double* rowlower,
+                             const double* rowupper, const HighsInt* arstart,
+                             const HighsInt* arindex, const double* arvalue) {
   const bool colwise = false;
   return (HighsInt)((Highs*)highs)
-    ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
-		rowupper, arstart, arindex, arvalue, colwise);
+      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
+                  rowupper, arstart, arindex, arvalue, colwise);
 }
 
 HighsInt Highs_passMipRowwise(void* highs, const HighsInt numcol,
-                       const HighsInt numrow, const HighsInt numnz,
-                       const double* colcost, const double* collower,
-                       const double* colupper, const double* rowlower,
-                       const double* rowupper, const HighsInt* arstart,
-                       const HighsInt* arindex, const double* arvalue,
-                       const HighsInt* integrality) {
+                              const HighsInt numrow, const HighsInt numnz,
+                              const double* colcost, const double* collower,
+                              const double* colupper, const double* rowlower,
+                              const double* rowupper, const HighsInt* arstart,
+                              const HighsInt* arindex, const double* arvalue,
+                              const HighsInt* integrality) {
   const bool colwise = false;
   return (HighsInt)((Highs*)highs)
-    ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
-		rowupper, arstart, arindex, arvalue, colwise, integrality);
+      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
+                  rowupper, arstart, arindex, arvalue, colwise, integrality);
 }
 
 HighsInt Highs_clearModel(void* highs) {

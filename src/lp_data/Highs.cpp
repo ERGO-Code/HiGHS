@@ -245,8 +245,7 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const double* col_lower, const double* col_upper,
                              const double* row_lower, const double* row_upper,
                              const HighsInt* astart, const HighsInt* aindex,
-                             const double* avalue,
-			     const bool colwise,
+                             const double* avalue, const bool colwise,
                              const HighsInt* integrality) {
   HighsLp lp;
   lp.numCol_ = num_col;

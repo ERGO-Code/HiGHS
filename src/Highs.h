@@ -50,8 +50,7 @@ class Highs {
                         const double* col_lower, const double* col_upper,
                         const double* row_lower, const double* row_upper,
                         const HighsInt* astart, const HighsInt* aindex,
-                        const double* avalue,
-			const bool colwise = true,
+                        const double* avalue, const bool colwise = true,
                         const HighsInt* integrality = NULL);
 
   /**
