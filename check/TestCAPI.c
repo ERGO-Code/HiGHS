@@ -273,7 +273,8 @@ void full_api_lp() {
   // Get the model status
   HighsInt modelstatus = Highs_getModelStatus(highs);
 
-  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
+  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", runstatus, modelstatus);
+  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
 
   double objective_function_value;
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
@@ -286,8 +287,8 @@ void full_api_lp() {
 
   printf("Objective value = %g; Iteration count = %"HIGHSINT_FORMAT"\n", objective_function_value, simplex_iteration_count);
   if (modelstatus == 7) {
-    printf("Solution primal status = %s\n", Highs_solutionStatusToChar(highs, primal_solution_status));
-    printf("Solution dual status = %s\n", Highs_solutionStatusToChar(highs, dual_solution_status));
+    //    printf("Solution primal status = %s\n", Highs_solutionStatusToChar(highs, primal_solution_status));
+    //    printf("Solution dual status = %s\n", Highs_solutionStatusToChar(highs, dual_solution_status));
     // Get the primal and dual solution
     Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
     // Get the basis
@@ -322,8 +323,10 @@ void full_api_lp() {
 			rowlower, rowupper,
 			astart, aindex, avalue);
   runstatus = Highs_run(highs);
-  modelstatus = Highs_getModelStatus(highs);
-  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
+  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", runstatus, modelstatus);
+  //  modelstatus = Highs_getModelStatus(highs);
+  //  const char* modelstatus_char = Highs_modelStatusToChar(highs, modelstatus);
+  //  printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT" = %s\n", runstatus, modelstatus, modelstatus_char);
   Highs_destroy(highs);
 }
 
@@ -373,8 +376,8 @@ void test_getColsByRange() {
 int main() {
   minimal_api();
   full_api();
-  minimal_api_lp();
-  full_api_lp();
+  //  minimal_api_lp();
+  //  full_api_lp();
   options();
   test_getColsByRange();
   return 0;
