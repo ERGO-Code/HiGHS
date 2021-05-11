@@ -161,29 +161,6 @@ public:
     // Returns -1 if no basis was available and 0 otherwise.
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
 
-    void RunCrossover_() {
-        iterate_.reset(new Iterate(model_));
-
-        if (control_.crossover())
-            iterate_->crossover_start(control_.crossover_start());
-        BuildStartingBasis();
-
-        RunCrossover();
-    }
-
-    void RunCrossover_X() {
-        iterate_.reset(new Iterate(model_));
-
-        if (control_.crossover())
-            iterate_->crossover_start(control_.crossover_start());
-
-        iterate_->Initialize(x_start_, xl_start_, xu_start_,
-                             y_start_, zl_start_, zu_start_);
-        BuildStartingBasis();
-
-        RunCrossover();
-    }
-
 private:
     void ClearSolution();
     void InteriorPointSolve();

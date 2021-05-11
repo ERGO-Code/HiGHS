@@ -450,9 +450,6 @@ class HighsOptions : public HighsOptionsStruct {
                             HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
     records.push_back(record_int);
 
-
-
-
     record_int =
         new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
                             advanced, &simplex_strategy, SIMPLEX_STRATEGY_MIN,
