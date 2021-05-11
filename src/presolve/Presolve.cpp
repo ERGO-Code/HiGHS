@@ -379,6 +379,10 @@ void Presolve::removeFixed() {
 }
 
 HighsInt Presolve::presolve(HighsInt print) {
+  // This is the original presolve framework, now superseded by
+  //
+  // HPresolve::Result HPresolve::presolve(HighsPostsolveStack&
+  // postSolveStack)
   timer.start_time = timer.getTime();
   bool aggregatorCalled = false;
 
@@ -1097,6 +1101,7 @@ void Presolve::resizeProblem() {
 
   chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 
+  // This is where status = kEmpty was set if nR + nC == 0
   assert(nR + nC > 0);
   if (nR + nC == 0) return;
 
