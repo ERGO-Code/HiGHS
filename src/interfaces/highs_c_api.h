@@ -23,10 +23,11 @@ extern "C" {
  * @brief solves an LP using HiGHS
  */
 HighsInt Highs_lpCall(
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -54,10 +55,11 @@ HighsInt Highs_lpCall(
  * @brief solves a MIP using HiGHS
  */
 HighsInt Highs_mipCall(
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -157,20 +159,21 @@ HighsInt Highs_writeSolutionPretty(void* highs,
  */
 HighsInt Highs_passLp(
     void* highs,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
         colupper,  //!< array of length [numcol] with upper column bounds
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt* astart,  //!< array of length [numcol or numrow if(rowwise)]
+                             //!< with start indices
     const HighsInt*
-        astart,  //!< array of length [numcol] with column start indices
-    const HighsInt*
-        aindex,  //!< array of length [numnz] with row indices of matrix entries
+        aindex,  //!< array of length [numnz] with indices of matrix entries
     const double*
         avalue  //!< array of length [numnz] with value of matrix entries
 );
@@ -180,71 +183,23 @@ HighsInt Highs_passLp(
  */
 HighsInt Highs_passMip(
     void* highs,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
         colupper,  //!< array of length [numcol] with upper column bounds
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt* astart,  //!< array of length [numcol or numrow if(rowwise)]
+                             //!< with start indices
     const HighsInt*
-        astart,  //!< array of length [numcol] with column start indices
-    const HighsInt*
-        aindex,  //!< array of length [numnz] with row indices of matrix entries
+        aindex,  //!< array of length [numnz] with indices of matrix entries
     const double*
         avalue,  //!< array of length [numnz] with value of matrix entries
-    const HighsInt*
-        integrality  //!< array of length [numcol] indicating whether
-                     //!< variables are continuous (0) or integer (1)
-);
-
-/*
- * @brief pass an LP to HiGHS row-wise
- */
-HighsInt Highs_passLpRowwise(
-    void* highs,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
-    const double*
-        collower,  //!< array of length [numcol] with lower column bounds
-    const double*
-        colupper,  //!< array of length [numcol] with upper column bounds
-    const double* rowlower,  //!< array of length [numrow] with lower row bounds
-    const double* rowupper,  //!< array of length [numrow] with upper row bounds
-    const HighsInt*
-        arstart,  //!< array of length [numrow] with row start indices
-    const HighsInt* arindex,  //!< array of length [numnz] with column indices
-                              //!< of matrix entries
-    const double*
-        arvalue  //!< array of length [numnz] with value of matrix entries
-);
-
-/*
- * @brief pass a MIP to HiGHS row-wise
- */
-HighsInt Highs_passMipRowwise(
-    void* highs,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
-    const double*
-        collower,  //!< array of length [numcol] with lower column bounds
-    const double*
-        colupper,  //!< array of length [numcol] with upper column bounds
-    const double* rowlower,  //!< array of length [numrow] with lower row bounds
-    const double* rowupper,  //!< array of length [numrow] with upper row bounds
-    const HighsInt*
-        arstart,  //!< array of length [numrow] with row start indices
-    const HighsInt* arindex,  //!< array of length [numnz] with column indices
-                              //!< of matrix entries
-    const double*
-        arvalue,  //!< array of length [numnz] with value of matrix entries
     const HighsInt*
         integrality  //!< array of length [numcol] indicating whether
                      //!< variables are continuous (0) or integer (1)

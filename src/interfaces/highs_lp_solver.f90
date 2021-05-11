@@ -72,7 +72,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_writeSolutionPretty
 
-    function Highs_passLp ( h, numcol, numrow, numnz,&
+    function Highs_passLp ( h, numcol, numrow, numnz, rowwise,&
          colcost, collower, colupper, rowlower, rowupper, &
          astart, aindex, avalue) result ( s ) bind ( c, name='Highs_passLp' )
       use iso_c_binding
@@ -80,6 +80,7 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numcol
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: rowwise
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -91,7 +92,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passLp
 
-    function Highs_passMip ( h, numcol, numrow, numnz,&
+    function Highs_passMip ( h, numcol, numrow, numnz, rowwise,&
          colcost, collower, colupper, rowlower, rowupper, &
          astart, aindex, avalue, integrality) result ( s ) bind ( c, name='Highs_passMip' )
       use iso_c_binding
@@ -99,6 +100,7 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numcol
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: rowwise
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -110,45 +112,6 @@ module highs_lp_solver
       integer ( c_int ) :: integrality(*)
       integer ( c_int ) :: s
     end function Highs_passMip
-
-    function Highs_passLpRowwise ( h, numcol, numrow, numnz,&
-         colcost, collower, colupper, rowlower, rowupper, &
-         arstart, arindex, arvalue) result ( s ) bind ( c, name='Highs_passLpRowwise' )
-      use iso_c_binding
-      type(c_ptr), VALUE :: h
-      integer ( c_int ), VALUE :: numcol
-      integer ( c_int ), VALUE :: numrow
-      integer ( c_int ), VALUE :: numnz
-      real ( c_double ) :: colcost(*)
-      real ( c_double ) :: collower(*)
-      real ( c_double ) :: colupper(*)
-      real ( c_double ) :: rowlower(*)
-      real ( c_double ) :: rowupper(*)
-      integer ( c_int ) :: arstart(*)
-      integer ( c_int ) :: arindex(*)
-      real ( c_double ) :: arvalue(*)
-      integer ( c_int ) :: s
-    end function Highs_passLpRowwise
-
-    function Highs_passMipRowwise ( h, numcol, numrow, numnz,&
-         colcost, collower, colupper, rowlower, rowupper, &
-         arstart, arindex, arvalue, integrality) result ( s ) bind ( c, name='Highs_passMipRowwise' )
-      use iso_c_binding
-      type(c_ptr), VALUE :: h
-      integer ( c_int ), VALUE :: numcol
-      integer ( c_int ), VALUE :: numrow
-      integer ( c_int ), VALUE :: numnz
-      real ( c_double ) :: colcost(*)
-      real ( c_double ) :: collower(*)
-      real ( c_double ) :: colupper(*)
-      real ( c_double ) :: rowlower(*)
-      real ( c_double ) :: rowupper(*)
-      integer ( c_int ) :: arstart(*)
-      integer ( c_int ) :: arindex(*)
-      real ( c_double ) :: arvalue(*)
-      integer ( c_int ) :: integrality(*)
-      integer ( c_int ) :: s
-    end function Highs_passMipRowwise
 
     function Highs_setBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setBoolOptionValue' )
       use iso_c_binding

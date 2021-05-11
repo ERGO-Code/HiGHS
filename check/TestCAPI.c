@@ -312,11 +312,12 @@ void full_api_lp() {
   Highs_destroy(highs);
 
   // Define the constraint matrix col-wise to pass to the LP
+  int rowwise = 0;
   int astart[2] = {0, 2};
   int aindex[5] = {1, 2, 0, 1, 2};
   double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz,
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise,
 			colcost, collower, colupper,
 			rowlower, rowupper,
 			astart, aindex, avalue);

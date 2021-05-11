@@ -15,19 +15,19 @@
 #include "Highs.h"
 
 HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
-                      const HighsInt numnz, const double* colcost,
-                      const double* collower, const double* colupper,
-                      const double* rowlower, const double* rowupper,
-                      const HighsInt* astart, const HighsInt* aindex,
-                      const double* avalue, double* colvalue, double* coldual,
-                      double* rowvalue, double* rowdual,
-                      HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
-                      int* modelstatus) {
+                      const HighsInt numnz, const HighsInt rowwise,
+                      const double* colcost, const double* collower,
+                      const double* colupper, const double* rowlower,
+                      const double* rowupper, const HighsInt* astart,
+                      const HighsInt* aindex, const double* avalue,
+                      double* colvalue, double* coldual, double* rowvalue,
+                      double* rowdual, HighsInt* colbasisstatus,
+                      HighsInt* rowbasisstatus, int* modelstatus) {
   Highs highs;
 
   HighsInt status =
-      Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
-                   rowlower, rowupper, astart, aindex, avalue);
+      Highs_passLp(&highs, numcol, numrow, numnz, rowwise, colcost, collower,
+                   colupper, rowlower, rowupper, astart, aindex, avalue);
   if (status != 0) {
     return status;
   }
@@ -60,19 +60,19 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
 }
 
 HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
-                       const HighsInt numnz, const double* colcost,
-                       const double* collower, const double* colupper,
-                       const double* rowlower, const double* rowupper,
-                       const HighsInt* astart, const HighsInt* aindex,
-                       const double* avalue, const HighsInt* integrality,
-                       double* colvalue, double* coldual, double* rowvalue,
-                       double* rowdual, HighsInt* colbasisstatus,
-                       HighsInt* rowbasisstatus, int* modelstatus) {
+                       const HighsInt numnz, const HighsInt rowwise,
+                       const double* colcost, const double* collower,
+                       const double* colupper, const double* rowlower,
+                       const double* rowupper, const HighsInt* astart,
+                       const HighsInt* aindex, const double* avalue,
+                       const HighsInt* integrality, double* colvalue,
+                       double* coldual, double* rowvalue, double* rowdual,
+                       HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
+                       int* modelstatus) {
   Highs highs;
-
-  HighsInt status =
-      Highs_passMip(&highs, numcol, numrow, numnz, colcost, collower, colupper,
-                    rowlower, rowupper, astart, aindex, avalue, integrality);
+  HighsInt status = Highs_passMip(
+      &highs, numcol, numrow, numnz, rowwise, colcost, collower, colupper,
+      rowlower, rowupper, astart, aindex, avalue, integrality);
   if (status != 0) {
     return status;
   }
@@ -127,53 +127,29 @@ HighsInt Highs_writeSolutionPretty(void* highs, const char* filename) {
 }
 
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
-                      const HighsInt numnz, const double* colcost,
-                      const double* collower, const double* colupper,
-                      const double* rowlower, const double* rowupper,
-                      const HighsInt* astart, const HighsInt* aindex,
-                      const double* avalue) {
-  const bool colwise = true;
+                      const HighsInt numnz, const HighsInt rowwise,
+                      const double* colcost, const double* collower,
+                      const double* colupper, const double* rowlower,
+                      const double* rowupper, const HighsInt* astart,
+                      const HighsInt* aindex, const double* avalue) {
+  const bool bool_rowwise = rowwise;
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
-                  rowupper, astart, aindex, avalue, colwise);
+      ->passModel(numcol, numrow, numnz, bool_rowwise, colcost, collower,
+                  colupper, rowlower, rowupper, astart, aindex, avalue);
 }
 
 HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                        const HighsInt numrow, const HighsInt numnz,
-                       const double* colcost, const double* collower,
-                       const double* colupper, const double* rowlower,
-                       const double* rowupper, const HighsInt* astart,
-                       const HighsInt* aindex, const double* avalue,
-                       const HighsInt* integrality) {
-  const bool colwise = true;
+                       const HighsInt rowwise, const double* colcost,
+                       const double* collower, const double* colupper,
+                       const double* rowlower, const double* rowupper,
+                       const HighsInt* astart, const HighsInt* aindex,
+                       const double* avalue, const HighsInt* integrality) {
+  const bool bool_rowwise = rowwise;
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
-                  rowupper, astart, aindex, avalue, colwise, integrality);
-}
-
-HighsInt Highs_passLpRowwise(void* highs, const HighsInt numcol,
-                             const HighsInt numrow, const HighsInt numnz,
-                             const double* colcost, const double* collower,
-                             const double* colupper, const double* rowlower,
-                             const double* rowupper, const HighsInt* arstart,
-                             const HighsInt* arindex, const double* arvalue) {
-  const bool colwise = false;
-  return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
-                  rowupper, arstart, arindex, arvalue, colwise);
-}
-
-HighsInt Highs_passMipRowwise(void* highs, const HighsInt numcol,
-                              const HighsInt numrow, const HighsInt numnz,
-                              const double* colcost, const double* collower,
-                              const double* colupper, const double* rowlower,
-                              const double* rowupper, const HighsInt* arstart,
-                              const HighsInt* arindex, const double* arvalue,
-                              const HighsInt* integrality) {
-  const bool colwise = false;
-  return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, colcost, collower, colupper, rowlower,
-                  rowupper, arstart, arindex, arvalue, colwise, integrality);
+      ->passModel(numcol, numrow, numnz, bool_rowwise, colcost, collower,
+                  colupper, rowlower, rowupper, astart, aindex, avalue,
+                  integrality);
 }
 
 HighsInt Highs_clearModel(void* highs) {
@@ -746,9 +722,10 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
                     const double* avalue, double* colvalue, double* coldual,
                     double* rowvalue, double* rowdual, HighsInt* colbasisstatus,
                     HighsInt* rowbasisstatus, int* modelstatus) {
-  return Highs_lpCall(numcol, numrow, numnz, colcost, collower, colupper,
-                      rowlower, rowupper, astart, aindex, avalue, colvalue,
-                      coldual, rowvalue, rowdual, colbasisstatus,
+  const HighsInt rowwise = 0;
+  return Highs_lpCall(numcol, numrow, numnz, rowwise, colcost, collower,
+                      colupper, rowlower, rowupper, astart, aindex, avalue,
+                      colvalue, coldual, rowvalue, rowdual, colbasisstatus,
                       rowbasisstatus, modelstatus);
 }
 
