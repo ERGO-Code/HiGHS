@@ -528,10 +528,6 @@ HighsPresolveStatus Presolve::presolve() {
       else
         presolve_status = HighsPresolveStatus::kReducedToEmpty;
       break;
-    case Stat::kEmpty:
-      assert(result != Stat::kEmpty);
-      presolve_status = HighsPresolveStatus::kEmpty;
-      break;
     case Stat::kOptimal:
       // reduced problem solution indicated as optimal by
       // the solver.
@@ -1102,10 +1098,7 @@ void Presolve::resizeProblem() {
   chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 
   assert(nR + nC > 0);
-  if (nR + nC == 0) {
-    status = kEmpty;
-    return;
-  }
+  if (nR + nC == 0) return;
 
   // matrix
   vector<HighsInt> iwork(numCol, 0);

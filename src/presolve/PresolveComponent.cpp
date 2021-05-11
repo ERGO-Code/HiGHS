@@ -42,9 +42,6 @@ std::string PresolveComponent::presolveStatusToString(
       return "Infeasible";
     case HighsPresolveStatus::kUnboundedOrInfeasible:
       return "Unbounded or infeasible";
-    case HighsPresolveStatus::kEmpty:
-      assert(presolve_status != HighsPresolveStatus::kEmpty);
-      return "Empty LP";
     case HighsPresolveStatus::kReduced:
       return "Reduced";
     case HighsPresolveStatus::kReducedToEmpty:
