@@ -754,6 +754,7 @@ restart:
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
   lp.loadModel();
+  lp.setObjectiveLimit(upper_limit);
 
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
