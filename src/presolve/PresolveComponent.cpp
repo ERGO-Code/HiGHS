@@ -22,6 +22,7 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
                                     bool mip) {
   data_.postSolveStack.initializeIndexMaps(lp.numRow_, lp.numCol_);
   data_.reduced_lp_ = lp;
+  this->timer = &timer;
   return HighsStatus::kOk;
 }
 
@@ -69,7 +70,7 @@ void PresolveComponent::negateReducedLpCost() { return; }
 
 HighsPresolveStatus PresolveComponent::run() {
   presolve::HPresolve presolve;
-  presolve.setInput(data_.reduced_lp_, *options_);
+  presolve.setInput(data_.reduced_lp_, *options_, timer);
 
   HighsModelStatus status = presolve.run(data_.postSolveStack);
 

@@ -41,6 +41,7 @@ class HPresolve {
   // pointer to model and options that where presolved
   HighsLp* model;
   const HighsOptions* options;
+  HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
 
   // triplet storage
@@ -243,7 +244,7 @@ class HPresolve {
 
  public:
   // for LP presolve
-  void setInput(HighsLp& model_, const HighsOptions& options_);
+  void setInput(HighsLp& model_, const HighsOptions& options_, HighsTimer* timer = nullptr);
 
   // for MIP presolve
   void setInput(HighsMipSolver& mipsolver);

@@ -67,9 +67,11 @@ void HPresolve::debugPrintRow(HighsPostsolveStack& postSolveStack,
 }
 #endif
 
-void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_) {
+void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
+                         HighsTimer* timer) {
   model = &model_;
   options = &options_;
+  this->timer = timer;
 
   colLowerSource.resize(model->numCol_, -1);
   colUpperSource.resize(model->numCol_, -1);
@@ -129,7 +131,8 @@ void HPresolve::setInput(HighsMipSolver& mipsolver) {
         mipsolver.mipdata_->domain.colUpper_;
   }
 
-  setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_);
+  setInput(mipsolver.mipdata_->presolvedModel, *mipsolver.options_mip_,
+           &mipsolver.timer_);
 }
 
 bool HPresolve::rowCoefficientsIntegral(HighsInt row, double scale) const {
@@ -3194,8 +3197,14 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postSolveStack) {
   }
 #endif
 
-  return postSolveStack.numReductions() >= reductionLimit ? Result::kStopped
-                                                          : Result::kOk;
+  size_t numreductions = postSolveStack.numReductions();
+
+  if (timer != nullptr && (numreductions & 1023u) == 0) {
+    if (timer->readRunHighsClock() >= options->time_limit)
+      return Result::kStopped;
+  }
+
+  return numreductions >= reductionLimit ? Result::kStopped : Result::kOk;
 }
 
 void HPresolve::storeCurrentProblemSize() {

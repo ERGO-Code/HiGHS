@@ -100,6 +100,7 @@ class PresolveComponent : public HighsComponent {
   PresolveComponentInfo info_;
   PresolveComponentData data_;
   const HighsOptions* options_;
+  HighsTimer* timer;
 
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::kNotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::kNotPresolved;
