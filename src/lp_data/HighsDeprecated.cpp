@@ -98,7 +98,8 @@ HighsStatus Highs::writeHighsOptions(
 
 const HighsOptions& Highs::getHighsOptions() const {
   deprecationMessage("getHighsOptions", "getOptions");
-  return getOptions(); }
+  return getOptions();
+}
 
 HighsStatus Highs::setHighsLogfile(FILE* logfile) {
   deprecationMessage("setHighsLogfile", "None");
@@ -114,7 +115,8 @@ HighsStatus Highs::setHighsOutput(FILE* output) {
 
 const HighsInfo& Highs::getHighsInfo() const {
   deprecationMessage("getHighsInfo", "getInfo");
-  return getInfo(); }
+  return getInfo();
+}
 
 HighsStatus Highs::getHighsInfoValue(const std::string& info, HighsInt& value) {
   deprecationMessage("getHighsInfoValue", "getInfoValue");
@@ -134,8 +136,10 @@ HighsStatus Highs::writeHighsInfo(const std::string filename) {
 
 double Highs::getHighsInfinity() {
   deprecationMessage("getHighsInfinity", "getInfinity");
-  return getInfinity(); }
+  return getInfinity();
+}
 
 double Highs::getHighsRunTime() {
   deprecationMessage("getHighsRunTime", "getRunTime");
-  return getRunTime(); }
+  return getRunTime();
+}

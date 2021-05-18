@@ -321,11 +321,11 @@ class SpecialLps {
       const HighsSolution& solution = highs.getSolution();
       printf("Solution\n");
       printf("Col       Value        Dual\n");
-      for (HighsInt iCol = 0; iCol < highs.getLp().numCol_; iCol++)
+      for (HighsInt iCol = 0; iCol < highs.getModel().numCol_; iCol++)
         printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iCol,
                solution.col_value[iCol], solution.col_dual[iCol]);
       printf("Row       Value        Dual\n");
-      for (HighsInt iRow = 0; iRow < highs.getLp().numRow_; iRow++)
+      for (HighsInt iRow = 0; iRow < highs.getModel().numRow_; iRow++)
         printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
                solution.row_value[iRow], solution.row_dual[iRow]);
     } else {

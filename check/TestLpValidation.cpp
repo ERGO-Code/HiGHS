@@ -197,7 +197,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
     highs.setOptionValue("output_flag", false);
   }
 
-  const HighsLp& internal_lp = highs.getLp();
+  const HighsLp& internal_lp = highs.getModel();
   double check_value;
   REQUIRE(!highs.getCoeff(-1, 0, check_value));
   REQUIRE(!highs.getCoeff(0, -1, check_value));

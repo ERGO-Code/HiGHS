@@ -662,9 +662,9 @@ void HighsSearch::resetLocalDomain() {
 
 #ifndef NDEBUG
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-    assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
+    assert(lp->getLpSolver().getModel().colLower_[i] == localdom.colLower_[i] ||
            mipsolver.variableType(i) == HighsVarType::kContinuous);
-    assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
+    assert(lp->getLpSolver().getModel().colUpper_[i] == localdom.colUpper_[i] ||
            mipsolver.variableType(i) == HighsVarType::kContinuous);
   }
 #endif
@@ -710,9 +710,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      assert(lp->getLpSolver().getLp().colLower_[i] == localdom.colLower_[i] ||
+      assert(lp->getLpSolver().getModel().colLower_[i] ==
+                 localdom.colLower_[i] ||
              mipsolver.variableType(i) == HighsVarType::kContinuous);
-      assert(lp->getLpSolver().getLp().colUpper_[i] == localdom.colUpper_[i] ||
+      assert(lp->getLpSolver().getModel().colUpper_[i] ==
+                 localdom.colUpper_[i] ||
              mipsolver.variableType(i) == HighsVarType::kContinuous);
     }
 #endif

@@ -23,7 +23,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 
   if (dev_run)
     printf("Solved %s with presolve: status = %s\n",
-           highs.getLp().model_name_.c_str(),
+           highs.getModel().model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
   REQUIRE(highs.getModelStatus() == require_model_status);
 
@@ -34,7 +34,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
   if (require_iteration_count >= 0) {
     HighsInt iteration_count;
     if (solver == "simplex") {
-      iteration_count = highs.getSimplexIterationCount();
+      iteration_count = highs.getInfo().simplex_iteration_count;
     } else {
       iteration_count = highs.getInfo().ipm_iteration_count;
     }

@@ -148,7 +148,7 @@ void testBasisSolve(Highs& highs) {
   vector<HighsInt> basic_variables, solution_row_indices, solution_col_indices;
   vector<double> rhs, known_solution, solution_row, solution_col;
 
-  HighsLp lp = highs.getLp();
+  HighsLp lp = highs.getModel();
   HighsInt numRow = lp.numRow_;
   HighsInt numCol = lp.numCol_;
   basic_variables.resize(numRow);
@@ -577,5 +577,5 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   // Solve
   highs.run();
-  REQUIRE(highs.getSimplexIterationCount() == 0);
+  REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }

@@ -464,8 +464,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  return_status = highs.writeModel("");
 
-  REQUIRE(
-      areLpEqual(highs.getLp(), avgas_highs.getLp(), options.infinite_bound));
+  REQUIRE(areLpEqual(highs.getModel(), avgas_highs.getModel(),
+                     options.infinite_bound));
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -643,7 +643,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.deleteCols(0, num_col - 1));
 
 #ifdef HiGHSDEV
-  messageReportLp("After deleting all columns", highs.getLp());
+  messageReportLp("After deleting all columns", highs.getModel());
   highs.reportModelStatusSolutionBasis("After deleting all columns");
 #endif
 
@@ -673,7 +673,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
                         row012_value));
 
 #ifdef HiGHSDEV
-  messageReportLp("After restoring all rows", highs.getLp());
+  messageReportLp("After restoring all rows", highs.getModel());
   highs.reportModelStatusSolutionBasis("After restoring all rows");
 #endif
 
@@ -818,7 +818,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
-  const HighsLp& local_lp = highs.getLp();
+  const HighsLp& local_lp = highs.getModel();
   row0135789_lower[0] = local_lp.rowLower_[0];
   row0135789_lower[1] = local_lp.rowLower_[1];
   row0135789_lower[2] = local_lp.rowLower_[3];
@@ -951,8 +951,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]));
 
   avgas_highs.setMatrixOrientation();
-  REQUIRE(
-      areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound));
+  REQUIRE(areLpEqual(avgas_highs.getModel(), highs.getModel(),
+                     options.infinite_bound));
 
   HighsInt before_num_col;
   HighsInt after_num_col;
@@ -1105,7 +1105,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
-  const HighsLp& lp = highs.getLp();
+  const HighsLp& lp = highs.getModel();
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 

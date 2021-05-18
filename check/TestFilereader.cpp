@@ -93,7 +93,7 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
-  HighsLp lp_free = highs.getLp();
+  HighsLp lp_free = highs.getModel();
 
   status = highs.setOptionValue("mps_parser_type_free", false);
   REQUIRE(status == HighsStatus::kOk);
@@ -101,7 +101,7 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
-  HighsLp lp_fixed = highs.getLp();
+  HighsLp lp_fixed = highs.getModel();
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
@@ -121,7 +121,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
-  HighsLp lp_mps = highs.getLp();
+  HighsLp lp_mps = highs.getModel();
 
   // Write lp
   std::string filename_lp = "adlittle.lp";
@@ -141,7 +141,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   REQUIRE(status == HighsStatus::kOk);
 
   std::cout << "Compare LP from .ems and .mps" << std::endl;
-  are_the_same = lp_mps == highs.getLp();
+  are_the_same = lp_mps == highs.getModel();
   REQUIRE(are_the_same);
 
   std::remove(filename_ems.c_str());
@@ -186,7 +186,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
-  HighsLp lp_free = highs.getLp();
+  HighsLp lp_free = highs.getModel();
 
   REQUIRE(lp_free.integrality_.size() == lp_free.numCol_);
   REQUIRE(lp_free.integrality_ == kIntegers);
@@ -198,7 +198,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
-  HighsLp lp_fixed = highs.getLp();
+  HighsLp lp_fixed = highs.getModel();
 
   REQUIRE(lp_fixed.integrality_.size() == lp_fixed.numCol_);
   REQUIRE(lp_fixed.integrality_ == kIntegers);

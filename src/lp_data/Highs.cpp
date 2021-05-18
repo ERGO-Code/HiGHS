@@ -2506,16 +2506,15 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "unpredictable\n",
                method_name.c_str());
 }
-void Highs::deprecationMessage(const std::string method_name, const std::string alt_method_name) const {
-  assert(1==0);
+void Highs::deprecationMessage(const std::string method_name,
+                               const std::string alt_method_name) const {
   if (alt_method_name.compare("None") == 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "Method %s is deprecated: no alternative method\n",
-		 method_name.c_str());
+                 "Method %s is deprecated: no alternative method\n",
+                 method_name.c_str());
   } else {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "Method %s is deprecated: alternative method is %s\n",
-		 method_name.c_str(),
-		 alt_method_name.c_str());
+                 "Method %s is deprecated: alternative method is %s\n",
+                 method_name.c_str(), alt_method_name.c_str());
   }
 }

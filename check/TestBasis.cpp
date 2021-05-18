@@ -51,7 +51,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Ensure that no simplex iterations are required when solved from
   // the optimal basis
   highs.run();
-  REQUIRE(highs.getSimplexIterationCount() == 0);
+  REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 void testBasisRestart(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
@@ -62,9 +62,10 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // highs.writeSolution("", true);
   // Change a bound and resolve
 
-  const HighsLp& lp = highs.getLp();
+  const HighsLp& lp = highs.getModel();
   const HighsBasis& basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
+  const HighsInfo& info = highs.getInfo();
   // Find the first basic variable
   HighsInt iCol;
   for (iCol = 0; iCol < lp.numCol_; iCol++) {
@@ -85,11 +86,11 @@ void testBasisRestart(Highs& highs, const bool from_file) {
            "LP "
            "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
            changeCol, old_lower_bound, new_lower_bound,
-           highs.getSimplexIterationCount(), highs.getObjectiveValue());
+           info.simplex_iteration_count, highs.getObjectiveValue());
     //  highs.writeSolution("", true);
   }
   // Make sure that the test requires iterations
-  assert(highs.getSimplexIterationCount() > 0);
+  assert(info.simplex_iteration_count > 0);
 
   // Recover bound, load optimal basis and resolve
 
@@ -111,10 +112,10 @@ void testBasisRestart(Highs& highs, const bool from_file) {
            "LP "
            "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
            changeCol, new_lower_bound, old_lower_bound,
-           highs.getSimplexIterationCount(), highs.getObjectiveValue());
+           info.simplex_iteration_count, highs.getObjectiveValue());
   }
 
-  REQUIRE(highs.getSimplexIterationCount() == 0);
+  REQUIRE(info.simplex_iteration_count == 0);
 }
 
 // No commas in test case name.

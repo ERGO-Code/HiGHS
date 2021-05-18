@@ -832,8 +832,9 @@ class Highs {
   // Start of deprecated methods
 
   const HighsLp& getLp() const {
-   deprecationMessage("getLp", "getModel");
-   return getModel(); }
+    deprecationMessage("getLp", "getModel");
+    return getModel();
+  }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
@@ -909,9 +910,10 @@ class Highs {
       const std::string filename,  //!< The filename
       const bool report_only_non_default_values = true);
 
-  HighsInt getSimplexIterationCount() { 
+  HighsInt getSimplexIterationCount() {
     deprecationMessage("getSimplexIterationCount", "None");
-    return info_.simplex_iteration_count; }
+    return info_.simplex_iteration_count;
+  }
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
@@ -1001,7 +1003,7 @@ class Highs {
 
   void underDevelopmentLogMessage(const std::string method_name);
   void deprecationMessage(const std::string method_name,
-			  const std::string alt_method_name) const;
+                          const std::string alt_method_name) const;
 
   // Interface methods
   HighsStatus addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
