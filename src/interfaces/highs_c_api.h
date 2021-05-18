@@ -880,23 +880,31 @@ HighsInt Highs_getNumRows(void* highs);
  */
 HighsInt Highs_getNumNz(void* highs);
 
-/**
- * @brief Returns a pointer to a character representation of a model
- * status
- */
-const char* Highs_modelStatusToChar(
-    void* highs,
-    HighsInt int_model_status  //!< Status to interpret
-);
-
-/**
- * @brief Returns a pointer to a character representation of a
- * solution status
- */
-const char* Highs_solutionStatusToChar(
-    void* highs,
-    HighsInt int_solution_status  //!< Status to interpret
-);
+// Fails on Windows and MacOS since string_model_status is destroyed
+// after the method returns, so what's returned is a pointer to
+// something that no longer exists.
+//
+// /**
+//  * @brief Returns a pointer to a character representation of a model
+//  * status
+//  */
+// const char* Highs_modelStatusToChar(
+//     void* highs,
+//     HighsInt int_model_status  //!< Status to interpret
+// );
+//
+// Fails on Windows and MacOS since string_solution_status is
+// destroyed after the method returns, so what's returned is a pointer
+// to something that no longer exists.
+// 
+// /**
+//  * @brief Returns a pointer to a character representation of a
+//  * solution status
+//  */
+// const char* Highs_solutionStatusToChar(
+//     void* highs,
+//     HighsInt int_solution_status  //!< Status to interpret
+// );
 
 // *********************
 // * Deprecated methods*
@@ -994,8 +1002,8 @@ double Highs_getHighsInfinity(void* highs);
 
 double Highs_getHighsRunTime(void* highs);
 
-const char* Highs_highsModelStatusToChar(void* highs,
-                                         HighsInt int_model_status);
+  // const char* Highs_highsModelStatusToChar(void* highs,
+  //                                          HighsInt int_model_status);
 
 #ifdef __cplusplus
 }

@@ -687,28 +687,37 @@ HighsInt Highs_getNumNz(void* highs) {
   return ((Highs*)highs)->getLp().Astart_[numCol];
 }
 
-const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
-  const char* illegal_model_status = "Model status out of range";
-  if (int_model_status < (HighsInt)HighsModelStatus::kMin ||
-      int_model_status > (HighsInt)HighsModelStatus::kMax)
-    return illegal_model_status;
-  const std::string string_model_status =
-      ((Highs*)highs)
-          ->modelStatusToString(
-              static_cast<HighsModelStatus>(int_model_status));
-  return string_model_status.c_str();
-}
+// Fails on Windows and MacOS since string_model_status is destroyed
+// after the method returns, so what's returned is a pointer to
+// something that no longer exists.
+//
+// const char* Highs_modelStatusToChar(void* highs, HighsInt int_model_status) {
+//   const char* illegal_model_status = "Model status out of range";
+//   if (int_model_status < (HighsInt)HighsModelStatus::kMin ||
+//       int_model_status > (HighsInt)HighsModelStatus::kMax)
+//     return illegal_model_status;
+//   const std::string string_model_status =
+//       ((Highs*)highs)
+//           ->modelStatusToString(
+//               static_cast<HighsModelStatus>(int_model_status));
+//   return string_model_status.c_str();
+// }
 
-const char* Highs_solutionStatusToChar(void* highs,
-                                       HighsInt int_solution_status) {
-  const char* illegal_solution_status = "Solution status out of range";
-  if (int_solution_status < kSolutionStatusMin ||
-      int_solution_status > kSolutionStatusMax)
-    return illegal_solution_status;
-  const std::string string_solution_status =
-      ((Highs*)highs)->solutionStatusToString(int_solution_status);
-  return string_solution_status.c_str();
-}
+// Fails on Windows and MacOS since string_solution_status is
+// destroyed after the method returns, so what's returned is a pointer
+// to something that no longer exists.
+//
+// const char* Highs_solutionStatusToChar(void* highs,
+//                                        HighsInt int_solution_status) {
+//   const char* illegal_solution_status = "Solution status out of range";
+//   if (int_solution_status < kSolutionStatusMin ||
+//       int_solution_status > kSolutionStatusMax)
+//     return illegal_solution_status;
+//   const std::string string_solution_status =
+//       ((Highs*)highs)->solutionStatusToString(int_solution_status);
+//   return string_solution_status.c_str();
+// }
+
 
 // *********************
 // * Deprecated methods*
@@ -817,7 +826,7 @@ double Highs_getHighsRunTime(void* highs) { return Highs_getRunTime(highs); }
 
 double Highs_getHighsInfinity(void* highs) { return Highs_getInfinity(highs); }
 
-const char* Highs_highsModelStatusToChar(void* highs,
-                                         HighsInt int_model_status) {
-  return Highs_modelStatusToChar(highs, int_model_status);
-}
+// const char* Highs_highsModelStatusToChar(void* highs,
+//                                          HighsInt int_model_status) {
+//   return Highs_modelStatusToChar(highs, int_model_status);
+// }
