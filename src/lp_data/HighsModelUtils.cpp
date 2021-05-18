@@ -125,9 +125,13 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
                         const std::vector<double>& dual,
                         const std::vector<HighsBasisStatus>& status) {
   const bool have_names = names.size() > 0;
-  const bool have_basis = status.size() > 0;
   const bool have_primal = primal.size() > 0;
   const bool have_dual = dual.size() > 0;
+  const bool have_basis = status.size() > 0;
+  if (have_names) assert((int)names.size() >= dim);
+  if (have_primal) assert((int)primal.size() >= dim);
+  if (have_dual) assert((int)dual.size() >= dim);
+  if (have_basis) assert((int)status.size() >= dim);
   std::string var_status_string;
   if (columns) {
     fprintf(file, "Columns\n");

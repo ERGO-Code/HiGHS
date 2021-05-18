@@ -896,7 +896,7 @@ HighsInt Highs_getNumNz(void* highs);
 // Fails on Windows and MacOS since string_solution_status is
 // destroyed after the method returns, so what's returned is a pointer
 // to something that no longer exists.
-// 
+//
 // /**
 //  * @brief Returns a pointer to a character representation of a
 //  * solution status
@@ -1002,8 +1002,8 @@ double Highs_getHighsInfinity(void* highs);
 
 double Highs_getHighsRunTime(void* highs);
 
-  // const char* Highs_highsModelStatusToChar(void* highs,
-  //                                          HighsInt int_model_status);
+// const char* Highs_highsModelStatusToChar(void* highs,
+//                                          HighsInt int_model_status);
 
 #ifdef __cplusplus
 }

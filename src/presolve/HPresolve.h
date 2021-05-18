@@ -244,7 +244,8 @@ class HPresolve {
 
  public:
   // for LP presolve
-  void setInput(HighsLp& model_, const HighsOptions& options_, HighsTimer* timer = nullptr);
+  void setInput(HighsLp& model_, const HighsOptions& options_,
+                HighsTimer* timer = nullptr);
 
   // for MIP presolve
   void setInput(HighsMipSolver& mipsolver);

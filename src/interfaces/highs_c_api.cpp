@@ -718,7 +718,6 @@ HighsInt Highs_getNumNz(void* highs) {
 //   return string_solution_status.c_str();
 // }
 
-
 // *********************
 // * Deprecated methods*
 // *********************

@@ -1983,37 +1983,73 @@ void analyseScaledLp(const HighsLogOptions& log_options,
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty) {
+  const bool have_value = solution.value_valid;
+  const bool have_dual = solution.dual_valid;
+  const bool have_basis = basis.valid;
+  vector<double> use_col_value;
+  vector<double> use_row_value;
+  vector<double> use_col_dual;
+  vector<double> use_row_dual;
+  vector<HighsBasisStatus> use_col_status;
+  vector<HighsBasisStatus> use_row_status;
+  if (have_value) {
+    use_col_value = solution.col_value;
+    use_row_value = solution.row_value;
+  }
+  if (have_dual) {
+    use_col_dual = solution.col_dual;
+    use_row_dual = solution.row_dual;
+  }
+  if (have_basis) {
+    use_col_status = basis.col_status;
+    use_row_status = basis.row_status;
+  }
+  if (!have_value && !have_dual && !have_basis) return;
   if (pretty) {
     writeModelBoundSol(file, true, lp.numCol_, lp.colLower_, lp.colUpper_,
-                       lp.col_names_, solution.col_value, solution.col_dual,
-                       basis.col_status);
+                       lp.col_names_, use_col_value, use_col_dual,
+                       use_col_status);
     writeModelBoundSol(file, false, lp.numRow_, lp.rowLower_, lp.rowUpper_,
-                       lp.row_names_, solution.row_value, solution.row_dual,
-                       basis.row_status);
+                       lp.row_names_, use_row_value, use_row_dual,
+                       use_row_status);
   } else {
     fprintf(file,
             "%" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
-            " : Number of columns and rows for primal and dual solution "
-            "and basis\n",
+            " : Number of columns and rows for primal or dual solution "
+            "or basis\n",
             lp.numCol_, lp.numRow_);
-    const bool with_basis = basis.valid;
-    if (with_basis) {
-      fprintf(file, "T\n");
+    if (have_value) {
+      fprintf(file, "T");
     } else {
-      fprintf(file, "F\n");
+      fprintf(file, "F");
     }
+    fprintf(file, " Primal solution\n");
+    if (have_dual) {
+      fprintf(file, "T");
+    } else {
+      fprintf(file, "F");
+    }
+    fprintf(file, " Dual solution\n");
+    if (have_basis) {
+      fprintf(file, "T");
+    } else {
+      fprintf(file, "F");
+    }
+    fprintf(file, " Basis\n");
+    fprintf(file, "Columns\n");
     for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-      fprintf(file, "%g %g", solution.col_value[iCol], solution.col_dual[iCol]);
-      if (with_basis)
-        fprintf(file, " %" HIGHSINT_FORMAT "",
-                (HighsInt)basis.col_status[iCol]);
+      if (have_value) fprintf(file, "%g", use_col_value[iCol]);
+      if (have_dual) fprintf(file, "%g", use_col_dual[iCol]);
+      if (have_basis)
+        fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
       fprintf(file, " \n");
     }
+    fprintf(file, "Rows\n");
     for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-      fprintf(file, "%g %g", solution.row_value[iRow], solution.row_dual[iRow]);
-      if (with_basis)
-        fprintf(file, " %" HIGHSINT_FORMAT "",
-                (HighsInt)basis.row_status[iRow]);
+      if (have_value) fprintf(file, "%g", use_row_value[iRow]);
+      if (have_dual) fprintf(file, "%g", use_row_dual[iRow]);
+      if (have_basis)
+        fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
       fprintf(file, " \n");
     }
   }
