@@ -211,7 +211,7 @@ void full_api() {
   // Get the model status
   int modelstatus = Highs_getModelStatus(highs);
 
-  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
+  printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
 
   double objective_function_value;
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
@@ -223,9 +223,9 @@ void full_api() {
   Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
 
   printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
-  if (modelstatus == 9) {
-    printf("Solution primal status = %s\n", Highs_solutionStatusToChar(highs, primal_solution_status));
-    printf("Solution dual status = %s\n", Highs_solutionStatusToChar(highs, dual_solution_status));
+  if (modelstatus == 7) {
+    printf("Solution primal status = %d\n", primal_solution_status);
+    printf("Solution dual status = %d\n", dual_solution_status);
     // Get the primal and dual solution
     Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
     // Get the basis
@@ -261,7 +261,7 @@ void full_api() {
 			astart, aindex, avalue);
   runstatus = Highs_run(highs);
   modelstatus = Highs_getModelStatus(highs);
-  printf("Run status = %d; Model status = %d = %s\n", runstatus, modelstatus, Highs_modelStatusToChar(highs, modelstatus));
+  printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
   Highs_destroy(highs);
 }
 
