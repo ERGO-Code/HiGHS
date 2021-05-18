@@ -48,7 +48,7 @@ HighsInt Highs_lpCall(
                                //!< basis status
     HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
                                //!< basis status
-    int* modelstatus           //!< status of the model will be saved here
+    HighsInt* modelstatus      //!< status of the model will be saved here
 );
 
 /*
