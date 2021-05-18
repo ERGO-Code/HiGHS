@@ -934,6 +934,10 @@ class Highs {
   double getHighsInfinity();
 
   double getHighsRunTime();
+
+  void deprecationMessage(const std::string method_name,
+                          const std::string alt_method_name) const;
+
   // End of deprecated methods
  private:
   HighsSolution solution_;
@@ -1002,8 +1006,6 @@ class Highs {
   HighsStatus returnFromHighs(const HighsStatus return_status);
 
   void underDevelopmentLogMessage(const std::string method_name);
-  void deprecationMessage(const std::string method_name,
-                          const std::string alt_method_name) const;
 
   // Interface methods
   HighsStatus addColsInterface(HighsInt XnumNewCol, const double* XcolCost,

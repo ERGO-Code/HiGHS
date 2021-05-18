@@ -1831,6 +1831,19 @@ double Highs::getInfinity() { return kHighsInf; }
 
 double Highs::getRunTime() { return timer_.readRunHighsClock(); }
 
+void Highs::deprecationMessage(const std::string method_name,
+                               const std::string alt_method_name) const {
+  if (alt_method_name.compare("None") == 0) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Method %s is deprecated: no alternative method\n",
+                 method_name.c_str());
+  } else {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Method %s is deprecated: alternative method is %s\n",
+                 method_name.c_str(), alt_method_name.c_str());
+  }
+}
+
 HighsStatus Highs::clearSolver() {
   clearModelStatus();
   clearInfo();
@@ -2505,16 +2518,4 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
                method_name.c_str());
-}
-void Highs::deprecationMessage(const std::string method_name,
-                               const std::string alt_method_name) const {
-  if (alt_method_name.compare("None") == 0) {
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Method %s is deprecated: no alternative method\n",
-                 method_name.c_str());
-  } else {
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Method %s is deprecated: alternative method is %s\n",
-                 method_name.c_str(), alt_method_name.c_str());
-  }
 }

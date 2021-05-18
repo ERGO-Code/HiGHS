@@ -730,6 +730,8 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
                     const double* avalue, double* colvalue, double* coldual,
                     double* rowvalue, double* rowdual, HighsInt* colbasisstatus,
                     HighsInt* rowbasisstatus, HighsInt* modelstatus) {
+  printf(
+      "Method Highs_call is deprecated: alternative method is Highs_lpCall\n");
   const HighsInt rowwise = 0;
   return Highs_lpCall(numcol, numrow, numnz, rowwise, colcost, collower,
                       colupper, rowlower, rowupper, astart, aindex, avalue,
@@ -738,92 +740,144 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
 }
 
 HighsInt Highs_runQuiet(void* highs) {
+  ((Highs*)highs)->deprecationMessage("Highs_runQuiet", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
 HighsInt Highs_setHighsLogfile(void* highs, void* logfile) {
+  ((Highs*)highs)->deprecationMessage("Highs_setHighsLogfile", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
 HighsInt Highs_setHighsOutput(void* highs, void* outputfile) {
+  ((Highs*)highs)->deprecationMessage("Highs_setHighsOutput", "None");
   return (HighsInt)((Highs*)highs)->setOptionValue("output_flag", false);
 }
 
 HighsInt Highs_getIterationCount(void* highs) {
-  return Highs_getSimplexIterationCount(highs);
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getIterationCount", "Highs_getIntInfoValue");
+  return (HighsInt)((Highs*)highs)->getInfo().simplex_iteration_count;
 }
 
 HighsInt Highs_getSimplexIterationCount(void* highs) {
-  return (HighsInt)((Highs*)highs)->getSimplexIterationCount();
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getSimplexIterationCount",
+                           "Highs_getIntInfoValue");
+  return (HighsInt)((Highs*)highs)->getInfo().simplex_iteration_count;
 }
 
 HighsInt Highs_setHighsBoolOptionValue(void* highs, const char* option,
                                        const HighsInt value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_setHighsBoolOptionValue",
+                           "Highs_setBoolOptionValue");
   return Highs_setBoolOptionValue(highs, option, value);
 }
 
 HighsInt Highs_setHighsIntOptionValue(void* highs, const char* option,
                                       const HighsInt value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_setHighsIntOptionValue",
+                           "Highs_setIntOptionValue");
   return Highs_setIntOptionValue(highs, option, value);
 }
 
 HighsInt Highs_setHighsDoubleOptionValue(void* highs, const char* option,
                                          const double value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_setHighsDoubleOptionValue",
+                           "Highs_setDoubleOptionValue");
   return Highs_setDoubleOptionValue(highs, option, value);
 }
 
 HighsInt Highs_setHighsStringOptionValue(void* highs, const char* option,
                                          const char* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_setHighsStringOptionValue",
+                           "Highs_setStringOptionValue");
   return Highs_setStringOptionValue(highs, option, value);
 }
 
 HighsInt Highs_setHighsOptionValue(void* highs, const char* option,
                                    const char* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_setHighsOptionValue", "Highs_setOptionValue");
   return Highs_setOptionValue(highs, option, value);
 }
 
 HighsInt Highs_getHighsBoolOptionValue(void* highs, const char* option,
                                        HighsInt* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsBoolOptionValue",
+                           "Highs_getBoolOptionValue");
   return Highs_getBoolOptionValue(highs, option, value);
 }
 
 HighsInt Highs_getHighsIntOptionValue(void* highs, const char* option,
                                       HighsInt* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsIntOptionValue",
+                           "Highs_getIntOptionValue");
   return Highs_getIntOptionValue(highs, option, value);
 }
 
 HighsInt Highs_getHighsDoubleOptionValue(void* highs, const char* option,
                                          double* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsDoubleOptionValue",
+                           "Highs_getDoubleOptionValue");
   return Highs_getDoubleOptionValue(highs, option, value);
 }
 
 HighsInt Highs_getHighsStringOptionValue(void* highs, const char* option,
                                          char* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsStringOptionValue",
+                           "Highs_getStringOptionValue");
   return Highs_getStringOptionValue(highs, option, value);
 }
 
 HighsInt Highs_getHighsOptionType(void* highs, const char* option,
                                   HighsInt* type) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsOptionType", "Highs_getOptionType");
   return Highs_getOptionType(highs, option, type);
 }
 
 HighsInt Highs_resetHighsOptions(void* highs) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_resetHighsOptions", "Highs_resetOptions");
   return Highs_resetOptions(highs);
 }
 
 HighsInt Highs_getHighsIntInfoValue(void* highs, const char* info,
                                     HighsInt* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsIntInfoValue",
+                           "Highs_getIntInfoValue");
   return Highs_getIntInfoValue(highs, info, value);
 }
 
 HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
                                        double* value) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsDoubleInfoValue",
+                           "Highs_getDoubleInfoValue");
   return Highs_getDoubleInfoValue(highs, info, value);
 }
 
-double Highs_getHighsRunTime(void* highs) { return Highs_getRunTime(highs); }
+double Highs_getHighsRunTime(void* highs) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsRunTime", "Highs_getRunTime");
+  return Highs_getRunTime(highs);
+}
 
-double Highs_getHighsInfinity(void* highs) { return Highs_getInfinity(highs); }
+double Highs_getHighsInfinity(void* highs) {
+  ((Highs*)highs)
+      ->deprecationMessage("Highs_getHighsInfinity", "Highs_getInfinity");
+  return Highs_getInfinity(highs);
+}
 
 // const char* Highs_highsModelStatusToChar(void* highs,
 //                                          HighsInt int_model_status) {

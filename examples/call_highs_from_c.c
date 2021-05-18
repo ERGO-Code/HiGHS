@@ -87,12 +87,13 @@ void minimal_api() {
 
   int modelstatus;
 
-  int runstatus = Highs_call(numcol, numrow, numnz,
-			  colcost, collower, colupper, rowlower, rowupper,
-			  astart, aindex, avalue,
-			  colvalue, coldual, rowvalue, rowdual,
-			  colbasisstatus, rowbasisstatus,
-			  &modelstatus);
+  const int rowwise = 0;
+  int runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
+			       colcost, collower, colupper, rowlower, rowupper,
+			       astart, aindex, avalue,
+			       colvalue, coldual, rowvalue, rowdual,
+			       colbasisstatus, rowbasisstatus,
+			       &modelstatus);
 
   assert(runstatus == 0);
 
@@ -202,11 +203,11 @@ void full_api() {
   primal_feasibility_tolerance = 1e-6;
   Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
-  Highs_setHighsBoolOptionValue(highs, "output_flag", 0);
+  Highs_setBoolOptionValue(highs, "output_flag", 0);
   printf("Running quietly...\n");
   int runstatus = Highs_run(highs);
   printf("Running loudly...\n");
-  Highs_setHighsBoolOptionValue(highs, "output_flag", 1);
+  Highs_setBoolOptionValue(highs, "output_flag", 1);
 
   // Get the model status
   int modelstatus = Highs_getModelStatus(highs);
@@ -262,6 +263,9 @@ void full_api() {
   runstatus = Highs_run(highs);
   modelstatus = Highs_getModelStatus(highs);
   printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
+  int iteration_count;
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count);
+  printf("Iteration count = %d\n", iteration_count);
   Highs_destroy(highs);
 }
 

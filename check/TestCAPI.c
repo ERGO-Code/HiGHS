@@ -10,6 +10,7 @@ void minimal_api() {
   HighsInt numcol = 2;
   HighsInt numrow = 2;
   HighsInt nnz = 4;
+  HighsInt rowwise = 0;
   HighsInt i;
 
   double cc[2] = {1.0, -2.0};
@@ -31,7 +32,7 @@ void minimal_api() {
 
   HighsInt modelstatus;
 
-  HighsInt status = Highs_call(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
+  HighsInt status = Highs_lpCall(numcol, numrow, nnz, rowwise, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
             cd, rv, rd, cbs, rbs, &modelstatus);
   assert(status == 0);
 
@@ -105,6 +106,7 @@ void minimal_api_lp() {
   const HighsInt numcol = 2;
   const HighsInt numrow = 3;
   const HighsInt numnz = 5;
+  HighsInt rowwise = 0;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[2] = {2.0, 3.0};
@@ -128,12 +130,12 @@ void minimal_api_lp() {
 
   HighsInt modelstatus;
 
-  HighsInt runstatus = Highs_call(numcol, numrow, numnz,
-			  colcost, collower, colupper, rowlower, rowupper,
-			  astart, aindex, avalue,
-			  colvalue, coldual, rowvalue, rowdual,
-			  colbasisstatus, rowbasisstatus,
-			  &modelstatus);
+  HighsInt runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
+				    colcost, collower, colupper, rowlower, rowupper,
+				    astart, aindex, avalue,
+				    colvalue, coldual, rowvalue, rowdual,
+				    colbasisstatus, rowbasisstatus,
+				    &modelstatus);
 
   assert(runstatus == 0);
 
@@ -144,12 +146,14 @@ void minimal_api_lp() {
     double objective_value = 0;
     // Report the column primal and dual values, and basis status
     for (i = 0; i < numcol; i++) {
-      printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, colvalue[i], coldual[i], colbasisstatus[i]);
+      printf("Col%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
+	     i, colvalue[i], coldual[i], colbasisstatus[i]);
       objective_value += colvalue[i]*colcost[i];
     }
     // Report the row primal and dual values, and basis status
     for (i = 0; i < numrow; i++) {
-      printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n", i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
+      printf("Row%"HIGHSINT_FORMAT" = %lf; dual = %lf; status = %"HIGHSINT_FORMAT"; \n",
+	     i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
     }
     printf("Optimal objective value = %g\n", objective_value);
   }
@@ -319,9 +323,9 @@ void full_api_lp() {
   double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
   runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise,
-			colcost, collower, colupper,
-			rowlower, rowupper,
-			astart, aindex, avalue);
+			   colcost, collower, colupper,
+			   rowlower, rowupper,
+			   astart, aindex, avalue);
   runstatus = Highs_run(highs);
   printf("Run status = %"HIGHSINT_FORMAT"; Model status = %"HIGHSINT_FORMAT"\n", runstatus, modelstatus);
   //  modelstatus = Highs_getModelStatus(highs);
