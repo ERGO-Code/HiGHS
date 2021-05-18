@@ -116,26 +116,6 @@ HighsInt Highs_writeModel(void* highs,
 HighsInt Highs_clearModel(void* highs);
 
 /*
- * @brief Sets the Logfile and Output to NULL - Deprecated
- */
-HighsInt Highs_runQuiet(void* highs);
-
-/*
- * @brief Sets the logfile for printing. - Deprecated
- */
-HighsInt Highs_setHighsLogfile(void* highs,
-                               void* logfile  //!< File handle of the logfile
-);
-
-/*
- * @brief Sets the output for printing. - Deprecated
- */
-HighsInt Highs_setHighsOutput(
-    void* highs,
-    void* outputfile  //!< File handle of the output file
-);
-
-/*
  * @brief Runs HiGHS
  */
 HighsInt Highs_run(void* highs);
