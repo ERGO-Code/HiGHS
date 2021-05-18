@@ -220,6 +220,11 @@ class Highs {
   HighsStatus getRanging(HighsRanging& ranging);
 
   /**
+   * @brief Gets the current model objective value
+   */
+  double getObjectiveValue() { return info_.objective_function_value; }
+
+  /**
    * Methods for operations with the invertible representation of the
    * current basis matrix
    */
@@ -826,7 +831,9 @@ class Highs {
 #endif
   // Start of deprecated methods
 
-  const HighsLp& getLp() const { return getModel(); }
+  const HighsLp& getLp() const {
+   deprecationMessage("getLp", "getModel");
+   return getModel(); }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
@@ -843,7 +850,8 @@ class Highs {
       const std::string& option,  //!< The option name
       const int value             //!< The option value
   ) {
-    return setHighsOptionValue(option, HighsInt{value});
+    deprecationMessage("setHighsOptionValue", "setOptionValue");
+    return setOptionValue(option, HighsInt{value});
   }
 #endif
 
@@ -901,9 +909,9 @@ class Highs {
       const std::string filename,  //!< The filename
       const bool report_only_non_default_values = true);
 
-  double getObjectiveValue() { return info_.objective_function_value; }
-
-  HighsInt getSimplexIterationCount() { return info_.simplex_iteration_count; }
+  HighsInt getSimplexIterationCount() { 
+    deprecationMessage("getSimplexIterationCount", "None");
+    return info_.simplex_iteration_count; }
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
@@ -988,9 +996,12 @@ class Highs {
   void clearInfo();
   void noSolution();
 
-  void underDevelopmentLogMessage(const string method_name);
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
+
+  void underDevelopmentLogMessage(const std::string method_name);
+  void deprecationMessage(const std::string method_name,
+			  const std::string alt_method_name) const;
 
   // Interface methods
   HighsStatus addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
