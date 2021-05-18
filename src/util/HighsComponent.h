@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file HighsComponent.h
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHS_COMPONENT_H_
 #define UTIL_HIGHS_COMPONENT_H_
@@ -46,7 +48,7 @@ class HighsComponent {
   virtual ~HighsComponent() = default;
 
  private:
-  bool has_run_ = false;
+  //  bool has_run_ = false;
 
   HighsComponentInfo info_;
   HighsComponentData data_;

@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsStatus.h"
 
@@ -14,18 +17,19 @@
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
-    case HighsStatus::OK:
+    case HighsStatus::kOk:
       return "OK";
       break;
-    case HighsStatus::Warning:
+    case HighsStatus::kWarning:
       return "Warning";
       break;
-    case HighsStatus::Error:
+    case HighsStatus::kError:
       return "Error";
       break;
     default:
 #ifdef HiGHSDEV
-      printf("HiGHS status %d not recognised\n", (int)status);
+      printf("HiGHS status %" HIGHSINT_FORMAT " not recognised\n",
+             (HighsInt)status);
 #endif
       return "Unrecognised HiGHS status";
       break;
@@ -39,7 +43,7 @@ HighsStatus interpretCallStatus(const HighsStatus call_status,
   HighsStatus to_return_status;
   to_return_status = worseStatus(call_status, from_return_status);
 #ifdef HiGHSDEV
-  if (call_status != HighsStatus::OK) {
+  if (call_status != HighsStatus::kOk) {
     if (message != "") {
       printf("HighsStatus::%s return from %s\n",
              HighsStatusToString(call_status).c_str(), message.c_str());
@@ -53,12 +57,12 @@ HighsStatus interpretCallStatus(const HighsStatus call_status,
 }
 
 HighsStatus worseStatus(const HighsStatus status0, const HighsStatus status1) {
-  HighsStatus return_status = HighsStatus::Error;
-  if (status0 == HighsStatus::Error || status1 == HighsStatus::Error)
-    return_status = HighsStatus::Error;
-  else if (status0 == HighsStatus::Warning || status1 == HighsStatus::Warning)
-    return_status = HighsStatus::Warning;
+  HighsStatus return_status = HighsStatus::kError;
+  if (status0 == HighsStatus::kError || status1 == HighsStatus::kError)
+    return_status = HighsStatus::kError;
+  else if (status0 == HighsStatus::kWarning || status1 == HighsStatus::kWarning)
+    return_status = HighsStatus::kWarning;
   else
-    return_status = HighsStatus::OK;
+    return_status = HighsStatus::kOk;
   return return_status;
 }

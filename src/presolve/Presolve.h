@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/HPresolve.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef PRESOLVE_PRESOLVE_H_
 #define PRESOLVE_PRESOLVE_H_
@@ -17,11 +19,11 @@
 #include <list>
 #include <map>
 #include <stack>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 #include "presolve/HAggregator.h"
@@ -33,26 +35,22 @@ using std::list;
 using std::string;
 
 enum class HighsPostsolveStatus {
-  NotPresolved = -1,
-  ReducedSolutionEmpty,
-  ReducedSolutionDimenionsError,
-  SolutionRecovered,
-  LpOrPresolveObjectMissing,
-  BasisError,
-  NoPostsolve
+  kNotPresolved = -1,
+  kReducedSolutionDimenionsError,
+  kSolutionRecovered,
+  kBasisError
 };
 
 enum class HighsPresolveStatus {
-  NotPresolved = -1,
-  NotReduced,
-  Infeasible,
-  Unbounded,
-  Empty,
-  Reduced,
-  ReducedToEmpty,
-  Timeout,
-  NullError,
-  OptionsError,
+  kNotPresolved = -1,
+  kNotReduced,
+  kInfeasible,
+  kUnboundedOrInfeasible,
+  kReduced,
+  kReducedToEmpty,
+  kTimeout,
+  kNullError,
+  kOptionsError,
 };
 
 namespace presolve {
@@ -105,27 +103,26 @@ class Presolve : public HPreData {
     HAggregator::PostsolveStack postsolveStack;
     std::vector<double> colCostAtCall;
     std::vector<double> ARvalueAtCall;
-    std::vector<int> ARindexAtCall;
-    std::vector<int> ARstartAtCall;
+    std::vector<HighsInt> ARindexAtCall;
+    std::vector<HighsInt> ARstartAtCall;
   };
 
   std::vector<AggregatorCall> aggregatorStack;
 
-  int max_iterations = 0;
+  HighsInt max_iterations = 0;
 
   void setTimeLimit(const double limit) {
     assert(limit < inf && limit > 0);
     timer.time_limit = limit;
   }
 
-  int iPrint = 0;
-  int message_level;
-  FILE* output;
+  HighsInt iPrint = 0;
+  HighsLogOptions log_options;
   double objShift;
 
  private:
-  int iKKTcheck = 0;
-  int presolve(int print);
+  HighsInt iKKTcheck = 0;
+  HighsInt presolve(HighsInt print);
 
   const bool report_postsolve = false;
 
@@ -134,17 +131,17 @@ class Presolve : public HPreData {
   void runPropagator();
   void detectImpliedIntegers();
   void applyMipDualFixing();
-  void setProblemStatus(const int s);
+  void setProblemStatus(const HighsInt s);
   void reportTimes();
 
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
   vector<double> implColUpper;
-  vector<int> implColLowerRowIndex;
-  vector<int> implColUpperRowIndex;
+  vector<HighsInt> implColLowerRowIndex;
+  vector<HighsInt> implColUpperRowIndex;
 
-  vector<int> implRowDualLowerSingColRowIndex;
-  vector<int> implRowDualUpperSingColRowIndex;
+  vector<HighsInt> implRowDualLowerSingColRowIndex;
+  vector<HighsInt> implRowDualUpperSingColRowIndex;
 
   // new bounds on row duals y_i
   vector<double> implRowDualLower;
@@ -157,23 +154,22 @@ class Presolve : public HPreData {
 
   PresolveTimer timer;  // holds enum for main presolve rules
 
-  enum stat {
-    Unset = 0,
-    Infeasible = 1,
-    Unbounded = 2,
-    Empty = 3,
-    Optimal = 4,
-    Reduced = 5,
-    Timeout = 6,
+  enum Stat {
+    kUnset = 0,
+    kInfeasible = 1,
+    kUnboundedOrInfeasible = 2,
+    kOptimal = 4,
+    kReduced = 5,
+    kTimeout = 6,
   };
 
  private:
   bool mip;
   bool hasChange = true;
-  int status = 0;  // 0 is unassigned, see enum stat
+  HighsInt status = Stat::kUnset;
 
-  list<int> singRow;  // singleton rows
-  list<int> singCol;  // singleton columns
+  list<HighsInt> singRow;  // singleton rows
+  list<HighsInt> singCol;  // singleton columns
 
   // original data
  public:
@@ -186,81 +182,86 @@ class Presolve : public HPreData {
   vector<double> colUpperOriginal;
 
   // functions
-  void setPrimalValue(const int j, const double value);
-  void checkForChanges(int iteration);
+  void setPrimalValue(const HighsInt j, const double value);
+  void checkForChanges(HighsInt iteration);
   void resizeProblem();
   void resizeImpliedBounds();
 
   // easy transformations
-  void removeFixedCol(int j);
+  void removeFixedCol(HighsInt j);
   void removeEmpty();
   void removeFixed();
-  void removeEmptyRow(int i);
-  void removeEmptyColumn(int j);
-  void removeRow(int i);
+  void removeEmptyRow(HighsInt i);
+  void removeEmptyColumn(HighsInt j);
+  void removeRow(HighsInt i);
   void checkBoundsAreConsistent();
 
   // singleton rows
   void removeRowSingletons();
-  int getSingRowElementIndexInAR(int i);
-  int getSingColElementIndexInA(int j);
+  HighsInt getSingRowElementIndexInAR(HighsInt i);
+  HighsInt getSingColElementIndexInA(HighsInt j);
 
   // forcing constraints
   void removeForcingConstraints();
-  pair<double, double> getImpliedRowBounds(int row);
-  void setVariablesToBoundForForcingRow(const int row, const bool isLower);
-  void dominatedConstraintProcedure(const int i, const double g,
+  pair<double, double> getImpliedRowBounds(HighsInt row);
+  void setVariablesToBoundForForcingRow(const HighsInt row, const bool isLower);
+  void dominatedConstraintProcedure(const HighsInt i, const double g,
                                     const double h);
 
   // doubleton equations
   void removeDoubletonEquations();
-  pair<int, int> getXYDoubletonEquations(const int row);
-  void processRowDoubletonEquation(const int row, const int x, const int y,
-                                   const double akx, const double aky,
-                                   const double b);
-  pair<double, double> getNewBoundsDoubletonConstraint(int row, int col, int j,
+  pair<HighsInt, HighsInt> getXYDoubletonEquations(const HighsInt row);
+  void processRowDoubletonEquation(const HighsInt row, const HighsInt x,
+                                   const HighsInt y, const double akx,
+                                   const double aky, const double b);
+  pair<double, double> getNewBoundsDoubletonConstraint(HighsInt row,
+                                                       HighsInt col, HighsInt j,
                                                        double aik, double aij);
-  void UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
-                                               const int y, const double aiy,
-                                               const double akx,
-                                               const double aky);
-  void UpdateMatrixCoeffDoubletonEquationXnonZero(const int i, const int x,
-                                                  const int y, const double aiy,
-                                                  const double akx,
-                                                  const double aky);
+  void UpdateMatrixCoeffDoubletonEquationXzero(
+      const HighsInt i, const HighsInt x, const HighsInt y, const double aiy,
+      const double akx, const double aky);
+  void UpdateMatrixCoeffDoubletonEquationXnonZero(
+      const HighsInt i, const HighsInt x, const HighsInt y, const double aiy,
+      const double akx, const double aky);
 
   // column singletons
   void removeColumnSingletons();
-  bool removeIfImpliedFree(int col, int i, int k);
-  void removeFreeColumnSingleton(const int col, const int row, const int k);
-  void removeZeroCostColumnSingleton(const int col, const int row, const int k);
-  bool removeColumnSingletonInDoubletonInequality(const int col, const int i,
-                                                  const int k);
-  void removeSecondColumnSingletonInDoubletonRow(const int j, const int i);
+  bool removeIfImpliedFree(HighsInt col, HighsInt i, HighsInt k);
+  void removeFreeColumnSingleton(const HighsInt col, const HighsInt row,
+                                 const HighsInt k);
+  void removeZeroCostColumnSingleton(const HighsInt col, const HighsInt row,
+                                     const HighsInt k);
+  bool removeColumnSingletonInDoubletonInequality(const HighsInt col,
+                                                  const HighsInt i,
+                                                  const HighsInt k);
+  void removeSecondColumnSingletonInDoubletonRow(const HighsInt j,
+                                                 const HighsInt i);
   pair<double, double> getBoundsImpliedFree(double lowInit, double uppInit,
-                                            const int col, const int i,
-                                            const int k);
-  void removeImpliedFreeColumn(const int col, const int i, const int k);
+                                            const HighsInt col,
+                                            const HighsInt i, const HighsInt k);
+  void removeImpliedFreeColumn(const HighsInt col, const HighsInt i,
+                               const HighsInt k);
 
   // dominated columns
   void removeDominatedColumns();
   void rowDualBoundsDominatedColumns();
-  pair<double, double> getImpliedColumnBounds(int j);
-  void removeIfWeaklyDominated(const int j, const double d, const double e);
+  pair<double, double> getImpliedColumnBounds(HighsInt j);
+  void removeIfWeaklyDominated(const HighsInt j, const double d,
+                               const double e);
 
   //    void findDuplicateRows();
   //    void findDuplicateColumns();
-  //    void removeDuplicateRows(int i, int k, double v);
-  //    int makeCheckForDuplicateRows(int k, int i, vector<double>& coeff,
-  //    vector<int>& colIndex, double v, int whichIsFirst); void
-  //    removeDuplicateColumns(int j,int k, double v); bool
-  //    checkDuplicateRows(int i, int k) ;
-  //	  bool checkDuplicateColumns(int i, int k) ;
+  //    void removeDuplicateRows(HighsInt i, HighsInt k, double v);
+  //    HighsInt makeCheckForDuplicateRows(HighsInt k, HighsInt i,
+  //    vector<double>& coeff, vector<HighsInt>& colIndex, double v, HighsInt
+  //    whichIsFirst); void removeDuplicateColumns(HighsInt j,HighsInt k, double
+  //    v); bool checkDuplicateRows(HighsInt i, HighsInt k) ;
+  //	  bool checkDuplicateColumns(HighsInt i, HighsInt k) ;
 
   // old or test
-  // void updateRemovedColRow(int dim);
+  // void updateRemovedColRow(HighsInt dim);
   // void updateRowsByNZ();
-  void testAnAR(int post);
+  void testAnAR(HighsInt post);
 
   void countRemovedRows(PresolveRule rule);
   void countRemovedCols(PresolveRule rule);
@@ -281,18 +282,19 @@ class Presolve : public HPreData {
   // postsolve
   bool noPostSolve = false;
 
-  void addChange(const PresolveRule type, const int row, const int col);
-  void fillStackRowBounds(const int col);
+  void addChange(const PresolveRule type, const HighsInt row,
+                 const HighsInt col);
+  void fillStackRowBounds(const HighsInt col);
   void setKKTcheckerData();
 
-  void getBoundOnLByZj(const int row, const int j, double* lo, double* up,
-                       const double colLow, const double colUpp);
-  double getRowDualPost(const int row, const int col);
-  double getColumnDualPost(const int col);
-  void roundIntegerBounds(int col);
-  string getDualsForcingRow(const int row, vector<int>& fRjs);
-  void getDualsSingletonRow(const int row, const int col);
-  void getDualsDoubletonEquation(const int row, const int col);
+  void getBoundOnLByZj(const HighsInt row, const HighsInt j, double* lo,
+                       double* up, const double colLow, const double colUpp);
+  double getRowDualPost(const HighsInt row, const HighsInt col);
+  double getColumnDualPost(const HighsInt col);
+  void roundIntegerBounds(HighsInt col);
+  string getDualsForcingRow(const HighsInt row, vector<HighsInt>& fRjs);
+  void getDualsSingletonRow(const HighsInt row, const HighsInt col);
+  void getDualsDoubletonEquation(const HighsInt row, const HighsInt col);
   void recordCounts(const string fileName);
   void trimA();
 
@@ -301,11 +303,11 @@ class Presolve : public HPreData {
   // test basis matrix singularity
   //
   // public:
-  //	vector<int> nbffull;
-  //	vector<int> bindfull;
-  //	void cmpNBF(int row, int col);
-  //	void setNBFfullproblem(vector<int>& nbfFull, vector<int>& bnFull);
-  //	int testBasisMatrixSingularity();
+  //	vector<HighsInt> nbffull;
+  //	vector<HighsInt> bindfull;
+  //	void cmpNBF(HighsInt row, HighsInt col);
+  //	void setNBFfullproblem(vector<HighsInt>& nbfFull, vector<HighsInt>&
+  // bnFull); 	HighsInt testBasisMatrixSingularity();
   //
 
   // Dev presolve
@@ -313,18 +315,18 @@ class Presolve : public HPreData {
   void reportDevMainLoop();
   void reportDevMidMainLoop();
   PresolveStats stats;
-  int runPresolvers(const std::vector<Presolver>& order);
+  HighsInt runPresolvers(const std::vector<Presolver>& order);
 
   void checkKkt(const bool final = false);
   dev_kkt_check::State initState(const bool intermediate = false);
 
-  void caseTwoSingletonsDoubletonInequality(const int row, const int x,
-                                            const int y);
+  void caseTwoSingletonsDoubletonInequality(const HighsInt row,
+                                            const HighsInt x, const HighsInt y);
 
   // August 2020
   void removeSingletonsOnly();
-  bool isKnapsack(const int col) const;
-  void removeKnapsack(const int col);
+  bool isKnapsack(const HighsInt col) const;
+  void removeKnapsack(const HighsInt col);
 };
 
 }  // namespace presolve

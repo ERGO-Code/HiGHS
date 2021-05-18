@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsDynamicRowMatrix.h"
 
@@ -14,20 +17,21 @@
 #include <cstddef>
 #include <numeric>
 
-HighsDynamicRowMatrix::HighsDynamicRowMatrix(int ncols) {
+HighsDynamicRowMatrix::HighsDynamicRowMatrix(HighsInt ncols) {
   Ahead_.resize(ncols, -1);
   Atail_.resize(ncols, -1);
   Asize_.resize(ncols);
 }
 /// adds a row to the matrix with the given values and returns its index
-int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
-  int rowindex;
-  int start;
-  int end;
+HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
+                                       HighsInt Rlen) {
+  HighsInt rowindex;
+  HighsInt start;
+  HighsInt end;
 
   // insert the row in an existing empty space or append the values to the end
   // if no space that is large enough exists
-  std::set<std::pair<int, int>>::iterator it;
+  std::set<std::pair<HighsInt, int>>::iterator it;
   if (freespaces_.empty() || (it = freespaces_.lower_bound(std::make_pair(
                                   Rlen, -1))) == freespaces_.end()) {
     start = ARindex_.size();
@@ -39,7 +43,7 @@ int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
     Aprev_.resize(end);
     Anext_.resize(end);
   } else {
-    std::pair<int, int> freeslot = *it;
+    std::pair<HighsInt, int> freeslot = *it;
     freespaces_.erase(it);
 
     start = freeslot.second;
@@ -55,7 +59,7 @@ int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
   // and sort it by the column indices
   std::iota(ARindex_.begin() + start, ARindex_.begin() + end, 0);
   std::sort(ARindex_.begin() + start, ARindex_.begin() + end,
-            [Rindex](int a, int b) { return Rindex[a] < Rindex[b]; });
+            [Rindex](HighsInt a, HighsInt b) { return Rindex[a] < Rindex[b]; });
 
   // register the range of values for this row with a reused or a new index
   if (deletedrows_.empty()) {
@@ -69,19 +73,19 @@ int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
   }
 
   // now add the nonzeros in the order sorted by the index value
-  for (int i = start; i != end; ++i) {
-    int k = ARindex_[i];
+  for (HighsInt i = start; i != end; ++i) {
+    HighsInt k = ARindex_[i];
     ARindex_[i] = Rindex[k];
     ARvalue_[i] = Rvalue[k];
     ARrowindex_[i] = rowindex;
   }
   // link the row values to the columns
-  for (int i = start; i != end; ++i) {
-    int col = ARindex_[i];
+  for (HighsInt i = start; i != end; ++i) {
+    HighsInt col = ARindex_[i];
 
     ++Asize_[col];
     Anext_[i] = -1;
-    int tail = Atail_[col];
+    HighsInt tail = Atail_[col];
     Aprev_[i] = tail;
 
     if (tail == -1) {
@@ -103,17 +107,17 @@ int HighsDynamicRowMatrix::addRow(int* Rindex, double* Rvalue, int Rlen) {
 
 /// removes the row with the given index from the matrix, afterwards the index
 /// can be reused for new rows
-void HighsDynamicRowMatrix::removeRow(int rowindex) {
-  int start = ARrange_[rowindex].first;
-  int end = ARrange_[rowindex].second;
+void HighsDynamicRowMatrix::removeRow(HighsInt rowindex) {
+  HighsInt start = ARrange_[rowindex].first;
+  HighsInt end = ARrange_[rowindex].second;
 
-  for (int i = start; i != end; ++i) {
-    int col = ARindex_[i];
+  for (HighsInt i = start; i != end; ++i) {
+    HighsInt col = ARindex_[i];
 
     --Asize_[col];
 
-    int prev = Aprev_[i];
-    int next = Anext_[i];
+    HighsInt prev = Aprev_[i];
+    HighsInt next = Anext_[i];
 
     if (next != -1) {
       assert(Aprev_[next] == i);
@@ -143,9 +147,10 @@ void HighsDynamicRowMatrix::removeRow(int rowindex) {
 }
 
 /// replaces a rows values but does not change the support
-void HighsDynamicRowMatrix::replaceRowValues(int rowindex, double* Rvalue) {
-  int start = ARrange_[rowindex].first;
-  int end = ARrange_[rowindex].second;
+void HighsDynamicRowMatrix::replaceRowValues(HighsInt rowindex,
+                                             double* Rvalue) {
+  HighsInt start = ARrange_[rowindex].first;
+  HighsInt end = ARrange_[rowindex].second;
 
-  std::copy(Rvalue, Rvalue + (end - start), &ARvalue_[start]);
+  std::copy(Rvalue, Rvalue + (end - start), ARvalue_.data() + start);
 }

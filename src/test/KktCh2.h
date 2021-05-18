@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file test/KktChStep.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef TEST_KKTCH2_H_
 #define TEST_KKTCH2_H_
@@ -24,6 +26,7 @@
 
 #include "lp_data/HConst.h"
 #include "test/DevKkt.h"
+#include "util/HighsInt.h"
 
 namespace presolve {
 
@@ -44,11 +47,11 @@ class KktChStep {
 
   int print = 1;
 
-  std::stack<std::vector<std::pair<int, double> > > rLowers;
-  std::stack<std::vector<std::pair<int, double> > > rUppers;
-  std::stack<std::vector<std::pair<int, double> > > cLowers;
-  std::stack<std::vector<std::pair<int, double> > > cUppers;
-  std::stack<std::vector<std::pair<int, double> > > costs;
+  std::stack<std::vector<std::pair<HighsInt, double> > > rLowers;
+  std::stack<std::vector<std::pair<HighsInt, double> > > rUppers;
+  std::stack<std::vector<std::pair<HighsInt, double> > > cLowers;
+  std::stack<std::vector<std::pair<HighsInt, double> > > cUppers;
+  std::stack<std::vector<std::pair<HighsInt, double> > > costs;
 
   // full matrix
   void setBoundsCostRHS(const std::vector<double>& colUpper_,
@@ -56,16 +59,19 @@ class KktChStep {
                         const std::vector<double>& cost,
                         const std::vector<double>& rowLower_,
                         const std::vector<double>& rowUpper_);
-  void addChange(int type, int row, int col, double valC, double dualC,
-                 double dualR);
-  void addCost(int col, double value);
+  void addChange(int type, HighsInt row, HighsInt col, double valC,
+                 double dualC, double dualR);
+  void addCost(HighsInt col, double value);
 
   dev_kkt_check::State initState(
-      const int numCol_, const int numRow_, const std::vector<int>& Astart_,
-      const std::vector<int>& Aend_, const std::vector<int>& Aindex_,
-      const std::vector<double>& Avalue_, const std::vector<int>& ARstart_,
-      const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_,
-      const std::vector<int>& flagCol_, const std::vector<int>& flagRow_,
+      const HighsInt numCol_, const HighsInt numRow_,
+      const std::vector<HighsInt>& Astart_, const std::vector<HighsInt>& Aend_,
+      const std::vector<HighsInt>& Aindex_, const std::vector<double>& Avalue_,
+      const std::vector<HighsInt>& ARstart_,
+      const std::vector<HighsInt>& ARindex_,
+      const std::vector<double>& ARvalue_,
+      const std::vector<HighsInt>& flagCol_,
+      const std::vector<HighsInt>& flagRow_,
       const std::vector<double>& colValue_, const std::vector<double>& colDual_,
       const std::vector<double>& rowValue_, const std::vector<double>& rowDual_,
       const std::vector<HighsBasisStatus>& col_status_,

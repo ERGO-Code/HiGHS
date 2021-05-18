@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSolve.h
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHSSOLVE_H_
 #define LP_DATA_HIGHSSOLVE_H_
@@ -17,4 +19,8 @@
 #include "lp_data/HighsModelUtils.h"
 HighsStatus solveLp(HighsModelObject& highs_model_object, const string message);
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
+HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
+                                 HighsModelStatus& model_status,
+                                 HighsSolutionParams& solution_params,
+                                 HighsSolution& solution, HighsBasis& basis);
 #endif  // LP_DATA_HIGHSSOLVE_H_

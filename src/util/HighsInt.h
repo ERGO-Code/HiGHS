@@ -6,10 +6,34 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef IPM_IPX_STATUS_H_
-#define IPM_IPX_STATUS_H_
+/**@file HighsInt.h
+ * @brief The definition for the integer type to use
+ */
 
-enum class IpxStatus { OK, Error, ErrorFreeRow, ErrorOrNotOptimal };
+#ifndef UTIL_HIGHS_INT_H_
+#define UTIL_HIGHS_INT_H_
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+#define __STDC_FORMAT_MACROS
+#endif
+#include <inttypes.h>
+
+#include "HConfig.h"
+
+#ifdef HIGHSINT64
+typedef int64_t HighsInt;
+typedef uint64_t HighsUInt;
+#define HIGHSINT_FORMAT PRId64
+#else
+typedef int HighsInt;
+typedef unsigned int HighsUInt;
+#define HIGHSINT_FORMAT "d"
+#endif
 
 #endif

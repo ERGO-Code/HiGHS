@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "io/Filereader.h"
@@ -42,26 +45,27 @@ Filereader* Filereader::getFilereader(const std::string filename) {
   return reader;
 }
 
-void interpretFilereaderRetcode(FILE* logfile, const std::string filename,
+void interpretFilereaderRetcode(const HighsLogOptions& log_options,
+                                const std::string filename,
                                 const FilereaderRetcode code) {
   switch (code) {
-    case FilereaderRetcode::OK:
+    case FilereaderRetcode::kOk:
       break;
-    case FilereaderRetcode::FILENOTFOUND:
-      HighsLogMessage(logfile, HighsMessageType::ERROR, "File %s not found",
-                      filename.c_str());
+    case FilereaderRetcode::kFileNotFound:
+      highsLogUser(log_options, HighsLogType::kError, "File %s not found\n",
+                   filename.c_str());
       break;
-    case FilereaderRetcode::PARSERERROR:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "Parser error reading %s", filename.c_str());
+    case FilereaderRetcode::kParserError:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Parser error reading %s\n", filename.c_str());
       break;
-    case FilereaderRetcode::NOT_IMPLEMENTED:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "Parser not implemented for %s", filename.c_str());
+    case FilereaderRetcode::kNotImplemented:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Parser not implemented for %s", filename.c_str());
       break;
-    case FilereaderRetcode::TIMEOUT:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "Parser reached timeout.", filename.c_str());
+    case FilereaderRetcode::kTimeout:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Parser reached timeout\n", filename.c_str());
       break;
   }
 }

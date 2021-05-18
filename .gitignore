@@ -46,11 +46,12 @@ local.properties
 [Dd]ebug/
 [Rr]elease/
 x64/
-build/
-buildDebug/
+build32/
+build64/
 [Bb]in/
 [Oo]bj/
 test/
+test64/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -250,6 +251,9 @@ HighsRunModel.mps
 
 # Website
 htdocs/
+
+# Release documents
+releaseDocs
 
 #HiGHS options files
 *.set

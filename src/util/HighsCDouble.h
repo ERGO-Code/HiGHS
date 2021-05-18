@@ -6,20 +6,24 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file util/HighsCDouble.h
  * @brief Quad precision type implemented with two standard double precision
  *        representing the value and a compensation term
- * @author Leona Gottwald
  */
 #ifndef UTIL_HIGHSCDOUBLE_H_
 #define UTIL_HIGHSCDOUBLE_H_
 
 #include <cmath>
+#include <cstdint>
 
 /// A compensated double number achieving roughly quad precision on the
 /// supported operations
+
 class HighsCDouble {
  private:
   double hi;
@@ -247,7 +251,29 @@ class HighsCDouble {
     return a <= double(b);
   }
 
+  bool operator==(const HighsCDouble& other) const {
+    return double(*this) == double(other);
+  }
+
+  bool operator==(double other) const { return double(*this) == other; }
+
+  friend bool operator==(double a, const HighsCDouble& b) {
+    return a == double(b);
+  }
+
+  bool operator!=(const HighsCDouble& other) const {
+    return double(*this) != double(other);
+  }
+
+  bool operator!=(double other) const { return double(*this) != other; }
+
+  friend bool operator!=(double a, const HighsCDouble& b) {
+    return a != double(b);
+  }
+
   void renormalize() { two_sum(hi, lo, hi, lo); }
+
+  friend HighsCDouble abs(const HighsCDouble& v) { return v < 0 ? -v : v; }
 
   friend HighsCDouble sqrt(const HighsCDouble& v) {
     double c = std::sqrt(v.hi + v.lo);
@@ -263,6 +289,24 @@ class HighsCDouble {
     res.lo *= 0.5;
     return res;
   }
+
+  friend HighsCDouble floor(const HighsCDouble& x) {
+    double floor_x = std::floor(double(x));
+    HighsCDouble res;
+
+    two_sum(res.hi, res.lo, floor_x, std::floor(double(x - floor_x)));
+    return res;
+  }
+
+  friend HighsCDouble ceil(const HighsCDouble& x) {
+    double ceil_x = std::ceil(double(x));
+    HighsCDouble res;
+
+    two_sum(res.hi, res.lo, ceil_x, std::ceil(double(x - ceil_x)));
+    return res;
+  }
+
+  friend HighsCDouble round(const HighsCDouble& x) { return floor(x + 0.5); }
 };
 
 #endif
