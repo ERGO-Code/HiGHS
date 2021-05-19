@@ -3,7 +3,7 @@ import os
 
 highslib = ctypes.cdll.LoadLibrary("libhighs.so") # highs lib folder must be in "LD_LIBRARY_PATH" environment variable
 
-highslib.Highs_call.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int, 
+highslib.Highs_lpCall.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, 
 ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), 
 ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), 
 ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
@@ -12,12 +12,13 @@ ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),
 ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
 highslib.Highs_call.restype = ctypes.c_int
 
-def Highs_call(colcost, collower, colupper, rowlower, rowupper, astart, aindex, avalue):
+def Highs_lpCall(colcost, collower, colupper, rowlower, rowupper, astart, aindex, avalue):
    global highslib
    n_col = len(colcost)
    n_row = len(rowlower)
    n_nz = len(aindex)
-
+   rowwise = 0
+   
    dbl_array_type_col = ctypes.c_double * n_col
    dbl_array_type_row = ctypes.c_double * n_row
    int_array_type_astart = ctypes.c_int * n_col
@@ -30,8 +31,8 @@ def Highs_call(colcost, collower, colupper, rowlower, rowupper, astart, aindex, 
    col_value = [0] * n_col
    col_dual = [0] * n_col
 
-   row_value = [0] * n_col
-   row_dual = [0] * n_col
+   row_value = [0] * n_row
+   row_dual = [0] * n_row
 
    col_basis = [0] * n_col
    row_basis = [0] * n_row
@@ -45,8 +46,8 @@ def Highs_call(colcost, collower, colupper, rowlower, rowupper, astart, aindex, 
    col_basis = int_array_type_col(*col_basis)
    row_basis = int_array_type_row(*row_basis)
 
-   retcode = highslib.Highs_call(
-      ctypes.c_int(n_col), ctypes.c_int(n_row), ctypes.c_int(n_nz), 
+   retcode = highslib.Highs_lpCall(
+      ctypes.c_int(n_col), ctypes.c_int(n_row), ctypes.c_int(n_nz), ctypes.c_int(rowwise), 
       dbl_array_type_col(*colcost), dbl_array_type_col(*collower), dbl_array_type_col(*colupper), 
       dbl_array_type_row(*rowlower), dbl_array_type_row(*rowupper), 
       int_array_type_astart(*astart), int_array_type_aindex(*aindex), dbl_array_type_avalue(*avalue),
