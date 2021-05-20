@@ -19,9 +19,15 @@ extern "C"{
  * int64_t is optional in the C99 standard, but available on most systems.
  *
  */
+#include <limits.h>
 #include <stdint.h>
+#ifdef HIGHSINT64
 typedef int64_t lu_int;
 #define LU_INT_MAX INT64_MAX
+#else
+typedef int lu_int;
+#define LU_INT_MAX INT_MAX
+#endif
 /* #include <limits.h> */
 /* typedef long lu_int; */
 /* #define LU_INT_MAX LONG_MAX */

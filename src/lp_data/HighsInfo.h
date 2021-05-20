@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsInfo.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_INFO_H_
 #define LP_DATA_HIGHS_INFO_H_
@@ -22,7 +24,7 @@
 
 class HighsOptions;
 
-enum class InfoStatus { OK = 0, NO_FILE, UNKNOWN_INFO, ILLEGAL_VALUE };
+enum class InfoStatus { kOk = 0, kUnknownInfo, kIllegalValue, kUnavailable };
 
 class InfoRecord {
  public:
@@ -42,13 +44,28 @@ class InfoRecord {
   virtual ~InfoRecord() {}
 };
 
+class InfoRecordInt64 : public InfoRecord {
+ public:
+  int64_t* value;
+  int64_t default_value;
+  InfoRecordInt64(std::string Xname, std::string Xdescription, bool Xadvanced,
+                  int64_t* Xvalue_pointer, int64_t Xdefault_value)
+      : InfoRecord(HighsInfoType::kInt64, Xname, Xdescription, Xadvanced) {
+    value = Xvalue_pointer;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+
+  virtual ~InfoRecordInt64() {}
+};
+
 class InfoRecordInt : public InfoRecord {
  public:
-  int* value;
-  int default_value;
+  HighsInt* value;
+  HighsInt default_value;
   InfoRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                int* Xvalue_pointer, int Xdefault_value)
-      : InfoRecord(HighsInfoType::INT, Xname, Xdescription, Xadvanced) {
+                HighsInt* Xvalue_pointer, HighsInt Xdefault_value)
+      : InfoRecord(HighsInfoType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
@@ -63,7 +80,7 @@ class InfoRecordDouble : public InfoRecord {
   double default_value;
   InfoRecordDouble(std::string Xname, std::string Xdescription, bool Xadvanced,
                    double* Xvalue_pointer, double Xdefault_value)
-      : InfoRecord(HighsInfoType::DOUBLE, Xname, Xdescription, Xadvanced) {
+      : InfoRecord(HighsInfoType::kDouble, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
@@ -74,24 +91,32 @@ class InfoRecordDouble : public InfoRecord {
 
 InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
                         const std::vector<InfoRecord*>& info_records,
-                        int& index);
+                        HighsInt& index);
 
 InfoStatus checkInfo(const HighsOptions& options,
                      const std::vector<InfoRecord*>& info_records);
 InfoStatus checkInfo(const InfoRecordInt& info);
 InfoStatus checkInfo(const InfoRecordDouble& info);
 
-InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        int& value);
-InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
-                        const std::vector<InfoRecord*>& info_records,
-                        double& value);
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
+                             int64_t& value);
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
+                             HighsInt& value);
+InfoStatus getLocalInfoValue(const HighsOptions& options,
+                             const std::string& name, const bool valid,
+                             const std::vector<InfoRecord*>& info_records,
+                             double& value);
 
-HighsStatus writeInfoToFile(FILE* file,
+HighsStatus writeInfoToFile(FILE* file, const bool valid,
                             const std::vector<InfoRecord*>& info_records,
                             const bool html = false);
 void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records,
+                const bool html = false);
+void reportInfo(FILE* file, const InfoRecordInt64& info,
                 const bool html = false);
 void reportInfo(FILE* file, const InfoRecordInt& info, const bool html = false);
 void reportInfo(FILE* file, const InfoRecordDouble& info,
@@ -103,16 +128,20 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
 // todo: when creating the new info don't forget underscores for class
 // variables but no underscores for struct
 struct HighsInfoStruct {
-  int simplex_iteration_count;
-  int ipm_iteration_count;
-  int crossover_iteration_count;
-  int primal_status;
-  int dual_status;
+  bool valid;
+  int64_t mip_node_count;
+  HighsInt simplex_iteration_count;
+  HighsInt ipm_iteration_count;
+  HighsInt crossover_iteration_count;
+  HighsInt primal_solution_status;
+  HighsInt dual_solution_status;
   double objective_function_value;
-  int num_primal_infeasibilities;
+  double mip_dual_bound;
+  double mip_gap;
+  HighsInt num_primal_infeasibilities;
   double max_primal_infeasibility;
   double sum_primal_infeasibilities;
-  int num_dual_infeasibilities;
+  HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
 };
@@ -133,7 +162,7 @@ class HighsInfo : public HighsInfoStruct {
 
   const HighsInfo& operator=(const HighsInfo& other) {
     if (&other != this) {
-      if ((int)records.size() == 0) initRecords();
+      if ((HighsInt)records.size() == 0) initRecords();
       HighsInfoStruct::operator=(other);
     }
     return *this;
@@ -141,7 +170,7 @@ class HighsInfo : public HighsInfoStruct {
 
   const HighsInfo& operator=(HighsInfo&& other) {
     if (&other != this) {
-      if ((int)records.size() == 0) initRecords();
+      if ((HighsInt)records.size() == 0) initRecords();
       HighsInfoStruct::operator=(other);
     }
     return *this;
@@ -155,10 +184,11 @@ class HighsInfo : public HighsInfoStruct {
 
  private:
   void deleteRecords() {
-    for (unsigned int i = 0; i < records.size(); i++) delete records[i];
+    for (HighsUInt i = 0; i < records.size(); i++) delete records[i];
   }
 
   void initRecords() {
+    InfoRecordInt64* record_int64;
     InfoRecordInt* record_int;
     InfoRecordDouble* record_double;
     bool advanced;
@@ -180,22 +210,36 @@ class HighsInfo : public HighsInfoStruct {
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
-        "primal_status",
-        "Primal status of the model: -1 => Not set; 0 => No solution; 1 => "
-        "Unknown; 2 => Infeasible point; 3 => Feasible point",
-        advanced, &primal_status, (int)PrimalDualStatus::STATUS_NOTSET);
+        "primal_solution_status",
+        "Primal status of the model: 0 => No solution; 1 => Infeasible point; "
+        "2 => Feasible point",
+        advanced, &primal_solution_status, kSolutionStatusNone);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
-        "dual_status",
-        "Dual status of the model: -1 => Not set; 0 => No solution; 1 => "
-        "Unknown; 2 => Infeasible point; 3 => Feasible point",
-        advanced, &dual_status, (int)PrimalDualStatus::STATUS_NOTSET);
+        "dual_solution_status",
+        "Dual status of the model: 0 => No solution; 1 => Infeasible point; 2 "
+        "=> Feasible point",
+        advanced, &dual_solution_status, kSolutionStatusNone);
     records.push_back(record_int);
 
     record_double = new InfoRecordDouble("objective_function_value",
                                          "Objective function value", advanced,
                                          &objective_function_value, 0);
+    records.push_back(record_double);
+
+    record_int64 =
+        new InfoRecordInt64("mip_node_count", "MIP solver node count", advanced,
+                            &mip_node_count, 0);
+    records.push_back(record_int64);
+
+    record_double =
+        new InfoRecordDouble("mip_dual_bound", "MIP solver dual bound",
+                             advanced, &mip_dual_bound, 0);
+    records.push_back(record_double);
+
+    record_double = new InfoRecordDouble("mip_gap", "MIP solver gap (%)",
+                                         advanced, &mip_gap, 0);
     records.push_back(record_double);
 
     record_int = new InfoRecordInt("num_primal_infeasibilities",

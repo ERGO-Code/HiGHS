@@ -6,42 +6,44 @@ using System.Runtime.InteropServices;
 
 public enum HighsStatus
 {
-   OK,
-   Warning,
-   Error
+   kOk,
+   kWarning,
+   kError
 }
 
 public enum HighsBasisStatus
 {
-   Lower,
-   Basic,
-   Upper,
-   Zero,
-   Nonbasic,
-   Super
+  kLower = 0,
+  kBasic,
+  kUpper,
+  kZero,
+  kNonbasic
 }
 
 public enum HighsObjectiveSense
 {
-   Minimize = 1,
-   Maximize = -1
+   kMinimize = 1,
+   kMaximize = -1
 }
 
 public enum HighsModelStatus
 {
-   NOTSET,
-   LOAD_ERROR,
-   MODEL_ERROR,
-   PRESOLVE_ERROR,
-   SOLVE_ERROR,
-   POSTSOLVE_ERROR,
-   MODEL_EMPTY,
-   PRIMAL_INFEASIBLE,
-   PRIMAL_UNBOUNDED,
-   OPTIMAL,
-   REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
-   REACHED_TIME_LIMIT,
-   REACHED_ITERATION_LIMIT
+  kNotset = 0,
+  kLoadError,
+  kModelError,
+  kPresolveError,
+  kSolveError,
+  kPostsolveError,
+  kModelEmpty,
+  kOptimal,
+  kInfeasible,
+  kUnboundedOrInfeasible,
+  kUnbounded,
+  kObjectiveBound,
+  kObjectiveTarget,
+  kTimeLimit,
+  kIterationLimit,
+  kUnknown
 }
 
 public class HighsModel

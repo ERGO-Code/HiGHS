@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
@@ -14,6 +17,7 @@
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
+#include "simplex/HEkk.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
@@ -27,30 +31,25 @@
 class HighsModelObject {
  public:
   HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
-      : lp_(lp), options_(options), timer_(timer), simplex_analysis_(timer) {}
+      : lp_(lp),
+        options_(options),
+        timer_(timer),
+        ekk_instance_(options, timer) {}
 
   HighsLp& lp_;
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsModelStatus unscaled_model_status_ = HighsModelStatus::NOTSET;
-  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
-  HighsSolutionParams unscaled_solution_params_;
-  HighsSolutionParams scaled_solution_params_;
+  HighsSolutionParams solution_params_;
   HighsIterationCounts iteration_counts_;
   HighsBasis basis_;
   HighsSolution solution_;
 
-  HighsLp simplex_lp_;
-  SimplexBasis simplex_basis_;
-  HighsSimplexInfo simplex_info_;
-  HighsSimplexLpStatus simplex_lp_status_;
   HighsScale scale_;
-  HMatrix matrix_;
-  HFactor factor_;
-  HighsSimplexAnalysis simplex_analysis_;
-  HighsRandom random_;
+  HEkk ekk_instance_;
 };
 
 #endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_

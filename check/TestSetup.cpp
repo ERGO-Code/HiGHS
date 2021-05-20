@@ -6,6 +6,6 @@ const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("correct-print-status", "[highs_data]") {
-  std::string str = HighsStatusToString(HighsStatus::OK);
+  std::string str = HighsStatusToString(HighsStatus::kOk);
   REQUIRE(str == "OK");
 }

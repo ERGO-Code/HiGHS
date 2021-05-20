@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsRanging.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_RANGING_H_
 #define LP_DATA_HIGHS_RANGING_H_
@@ -21,8 +23,8 @@
 struct HighsRangingRecord {
   std::vector<double> value_;
   std::vector<double> objective_;
-  std::vector<int> in_var_;
-  std::vector<int> ou_var_;
+  std::vector<HighsInt> in_var_;
+  std::vector<HighsInt> ou_var_;
 };
 
 struct HighsRanging {
@@ -34,6 +36,8 @@ struct HighsRanging {
   HighsRangingRecord row_bound_dn;
 };
 
-HighsStatus getHighsRanging(HighsRanging& ranging,
-                            const HighsModelObject& highs_model_object);
+HighsStatus getRangingData(HighsRanging& ranging,
+                           const HighsModelObject& highs_model_object);
+void writeRanging(const HighsRanging& ranging,
+                  const HighsModelObject& highs_model_object);
 #endif

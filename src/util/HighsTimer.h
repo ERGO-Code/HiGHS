@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsTimer.h
  * @brief Profiling facility for computational components in HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHSTIMER_H_
 #define UTIL_HIGHSTIMER_H_
@@ -20,12 +22,14 @@
 #include <cstdlib>
 #include <string>
 
+#include "util/HighsInt.h"
+
 /**
  * @brief Clock record structure
  */
 /*
 struct HighsClockRecord {
-  int calls;
+  HighsInt calls;
   double start;
   double time;
   std::string name;
@@ -39,7 +43,7 @@ class HighsTimer {
  public:
   HighsTimer() {
     num_clock = 0;
-    int i_clock = clock_def("Run HiGHS", "RnH");
+    HighsInt i_clock = clock_def("Run HiGHS", "RnH");
     assert(i_clock == 0);
     run_highs_clock = i_clock;
 
@@ -51,11 +55,11 @@ class HighsTimer {
   /**
    * @brief Define a clock
    */
-  int clock_def(
+  HighsInt clock_def(
       const char* name,  //!< Full-length name (<=16 characters) for the clock
       const char* ch3_name  //!< 3-character name for the clock
   ) {
-    int i_clock = num_clock;
+    HighsInt i_clock = num_clock;
     clock_num_call.push_back(0);
     clock_start.push_back(initial_clock_start);
     clock_time.push_back(0);
@@ -84,12 +88,9 @@ class HighsTimer {
    */
   /*
     void clockAdd(HighsClockRecord x_clock,  //!< Record for the external clock
-                  int i_clock                //!< Clock of record to be added
-    ) {
-      assert(i_clock >= 0);
-      assert(i_clock < num_clock);
-      x_clock.calls += clock_num_call[i_clock];
-      x_clock.start = initial_clock_start;
+                  HighsInt i_clock                //!< Clock of record to be
+    added ) { assert(i_clock >= 0); assert(i_clock < num_clock); x_clock.calls
+    += clock_num_call[i_clock]; x_clock.start = initial_clock_start;
       x_clock.time += clock_time[i_clock];
     }
     */
@@ -104,7 +105,7 @@ class HighsTimer {
     this->clock_start.clear();
     this->clock_names.clear();
     this->clock_ch3_names.clear();
-    int i_clock = clock_def("Run HiGHS", "RnH");
+    HighsInt i_clock = clock_def("Run HiGHS", "RnH");
     assert(i_clock == 0);
     this->run_highs_clock = i_clock;
     this->presolve_clock = clock_def("Presolve", "Pre");
@@ -116,7 +117,7 @@ class HighsTimer {
    * @brief Zero the data for all clocks
    */
   void zeroAllClocks() {
-    for (int i = 0; i < num_clock; i++) {
+    for (HighsInt i = 0; i < num_clock; i++) {
       clock_num_call[i] = 0;
       clock_start[i] = initial_clock_start;
       clock_time[i] = 0;
@@ -126,7 +127,7 @@ class HighsTimer {
   /**
    * @brief Start a clock
    */
-  void start(int i_clock  //!< Index of the clock to be started
+  void start(HighsInt i_clock  //!< Index of the clock to be started
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
@@ -134,8 +135,9 @@ class HighsTimer {
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
 #ifdef HiGHSDEV
     if (clock_start[i_clock] <= 0) {
-      printf("recordStart [%2d] (%s) is %11.4g: _num_call = %d\n", i_clock,
-             clock_names[i_clock].c_str(), clock_start[i_clock],
+      printf("recordStart [%2" HIGHSINT_FORMAT
+             "] (%s) is %11.4g: _num_call = %" HIGHSINT_FORMAT "\n",
+             i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
              clock_num_call[i_clock]);
       fflush(stdout);
     }
@@ -149,7 +151,7 @@ class HighsTimer {
   /**
    * @brief Stop a clock
    */
-  void stop(int i_clock  //!< Index of the clock to be stopped
+  void stop(HighsInt i_clock  //!< Index of the clock to be stopped
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
@@ -157,8 +159,9 @@ class HighsTimer {
     // -getWallTime() <= 0
 #ifdef HiGHSDEV
     if (clock_start[i_clock] > 0) {
-      printf("recordFinish[%2d] (%s) is %11.4g: _num_call = %d\n", i_clock,
-             clock_names[i_clock].c_str(), clock_start[i_clock],
+      printf("recordFinish[%2" HIGHSINT_FORMAT
+             "] (%s) is %11.4g: _num_call = %" HIGHSINT_FORMAT "\n",
+             i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
              clock_num_call[i_clock]);
       fflush(stdout);
     }
@@ -176,7 +179,7 @@ class HighsTimer {
   /**
    * @brief Read the time of a clock
    */
-  double read(int i_clock  //!< Index of the clock to be read
+  double read(HighsInt i_clock  //!< Index of the clock to be read
   ) {
     assert(i_clock >= 0);
     assert(i_clock < num_clock);
@@ -217,7 +220,7 @@ class HighsTimer {
    */
   void report(const char* grep_stamp,  //!< Character string used to extract
                                        //!< output using grep
-              std::vector<int>& clock_list,  //!< List of indices to report
+              std::vector<HighsInt>& clock_list,  //!< List of indices to report
               double ideal_sum_time = 0  //!< Ideal value for times to sum to
   ) {
     double tl_per_cent_report = 1.0;
@@ -227,43 +230,43 @@ class HighsTimer {
   void report_tl(
       const char*
           grep_stamp,  //!< Character string used to extract output using grep
-      std::vector<int>& clock_list,  //!< List of indices to report
-      double ideal_sum_time = 0,     //!< Ideal value for times to sum to
+      std::vector<HighsInt>& clock_list,  //!< List of indices to report
+      double ideal_sum_time = 0,          //!< Ideal value for times to sum to
       double tl_per_cent_report =
           0  //!< Lower bound on percentage of total time
              //!< before an individual clock is reported
   ) {
-    int num_clock_list_entries = clock_list.size();
+    HighsInt num_clock_list_entries = clock_list.size();
 
     // Check validity of the clock list and check no clocks are still running
-    for (int i = 0; i < num_clock_list_entries; i++) {
+    for (HighsInt i = 0; i < num_clock_list_entries; i++) {
       assert(clock_list[i] >= 0);
       assert(clock_list[i] < num_clock);
       // Check that the clock's not still running. It should be set to
       // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
 #ifdef HiGHSDEV
-      int i_clock = clock_list[i];
+      HighsInt i_clock = clock_list[i];
       if (clock_start[i_clock] <= 0) {
-        printf(
-            "Clock %2d (%s) is still running: Start = %11.4g: "
-            "_num_call = %d\n",
-            i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-            clock_num_call[i_clock]);
+        printf("Clock %2" HIGHSINT_FORMAT
+               " (%s) is still running: Start = %11.4g: "
+               "_num_call = %" HIGHSINT_FORMAT "\n",
+               i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
+               clock_num_call[i_clock]);
         fflush(stdout);
       }
 #endif
       assert(clock_start[clock_list[i]] > 0);
     }
     // Determine whether there are any times to report
-    int sum_calls = 0;
-    for (int i = 0; i < num_clock_list_entries; i++)
+    HighsInt sum_calls = 0;
+    for (HighsInt i = 0; i < num_clock_list_entries; i++)
       sum_calls += clock_num_call[clock_list[i]];
     if (!sum_calls) return;
 
     // Report in one line the per-mille contribution from each clock
     // First give the 3-character clock names as column headers
     printf("%s-name  ", grep_stamp);
-    for (int i = 0; i < num_clock_list_entries; i++) {
+    for (HighsInt i = 0; i < num_clock_list_entries; i++) {
       printf(" %-3s", clock_ch3_names[clock_list[i]].c_str());
     }
     printf("\n");
@@ -273,7 +276,7 @@ class HighsTimer {
     // clocks
     double current_run_highs_time = readRunHighsClock();
     double sum_clock_times = 0;
-    for (int passNum = 0; passNum < 3; passNum++) {
+    for (HighsInt passNum = 0; passNum < 3; passNum++) {
       // Don't write out if there's no ideal time
       if (passNum == 1 && ideal_sum_time <= 0) continue;
       double suPerMille = 0;
@@ -284,8 +287,8 @@ class HighsTimer {
       } else {
         printf("%s-local ", grep_stamp);
       }
-      for (int i = 0; i < num_clock_list_entries; i++) {
-        int i_clock = clock_list[i];
+      for (HighsInt i = 0; i < num_clock_list_entries; i++) {
+        HighsInt i_clock = clock_list[i];
         double perMille;
         if (passNum == 0) {
           perMille = 1000.0 * clock_time[i_clock] / current_run_highs_time;
@@ -294,9 +297,10 @@ class HighsTimer {
         } else {
           perMille = 1000.0 * clock_time[i_clock] / sum_clock_times;
         }
-        int int_PerMille = (perMille + 0.5);  // Forcing proper rounding
+        HighsInt int_PerMille = (perMille + 0.5);  // Forcing proper rounding
         if (int_PerMille > 0) {
-          printf("%4d", int_PerMille);  // Just in case one time is 1000!
+          printf("%4" HIGHSINT_FORMAT "",
+                 int_PerMille);  // Just in case one time is 1000!
         } else {
           printf("    ");  // Just in case one time is 1000!
         }
@@ -305,8 +309,9 @@ class HighsTimer {
           sum_clock_times += clock_time[i_clock];
         }
       }
-      int int_sum_permille = (suPerMille + 0.5);  // Forcing proper rounding
-      printf(" per mille: Sum = %4d", int_sum_permille);
+      HighsInt int_sum_permille =
+          (suPerMille + 0.5);  // Forcing proper rounding
+      printf(" per mille: Sum = %4" HIGHSINT_FORMAT "", int_sum_permille);
       printf("\n");
     }
 
@@ -316,8 +321,8 @@ class HighsTimer {
     printf(";  Local):    Calls  Time/Call\n");
     // Convert approximate seconds
     double sum_time = 0;
-    for (int i = 0; i < num_clock_list_entries; i++) {
-      int i_clock = clock_list[i];
+    for (HighsInt i = 0; i < num_clock_list_entries; i++) {
+      HighsInt i_clock = clock_list[i];
       double time = clock_time[i_clock];
       double percent_run_highs = 100.0 * time / current_run_highs_time;
       double percent_sum_clock_times = 100.0 * time / sum_clock_times;
@@ -331,8 +336,9 @@ class HighsTimer {
             double percent_ideal = 100.0 * time / ideal_sum_time;
             printf("; %5.1f%%", percent_ideal);
           }
-          printf("; %5.1f%%):%9d %11.4e\n", percent_sum_clock_times,
-                 clock_num_call[i_clock], time_per_call);
+          printf("; %5.1f%%):%9" HIGHSINT_FORMAT " %11.4e\n",
+                 percent_sum_clock_times, clock_num_call[i_clock],
+                 time_per_call);
         }
       }
       sum_time += time;
@@ -370,18 +376,18 @@ class HighsTimer {
   // having been stopped
   const double initial_clock_start = 1.0;
 
-  int num_clock = 0;
-  std::vector<int> clock_num_call;
+  HighsInt num_clock = 0;
+  std::vector<HighsInt> clock_num_call;
   std::vector<double> clock_start;
   std::vector<double> clock_time;
   std::vector<std::string> clock_names;
   std::vector<std::string> clock_ch3_names;
   // The index of the RunHighsClock - should always be 0
-  int run_highs_clock;
+  HighsInt run_highs_clock;
   // Fundamental Highs clocks
-  int presolve_clock;
-  int solve_clock;
-  int postsolve_clock;
+  HighsInt presolve_clock;
+  HighsInt solve_clock;
+  HighsInt postsolve_clock;
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */

@@ -6,35 +6,35 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HDualMulti.cpp
+/**@file simplex/HEkkDualMulti.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <iostream>
 #include <set>
-#include <stdexcept>
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "simplex/HDual.h"
-#include "simplex/HPrimal.h"
+#include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
 
 using std::cout;
 using std::endl;
 
-void HDual::iterateMulti() {
+void HEkkDual::iterateMulti() {
   slice_PRICE = 1;
 
   // Report candidate
   majorChooseRow();
   minorChooseRow();
-  if (rowOut == -1) {
-    invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+  if (row_out == -1) {
+    rebuild_reason = kRebuildReasonPossiblyOptimal;
     return;
   }
 
@@ -50,14 +50,16 @@ void HDual::iterateMulti() {
     chooseColumn(multi_finish[multi_nFinish].row_ep);
   }
   // If we failed.
-  if (invertHint) {
+  if (rebuild_reason) {
     if (multi_nFinish) {
       majorUpdate();
     } else {
-      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-                      "PAMI skipping majorUpdate() due to multi_nFinish = %d; "
-                      "invertHint = %d",
-                      multi_nFinish, invertHint);
+      highsLogUser(
+          ekk_instance_.options_.log_options, HighsLogType::kWarning,
+          "PAMI skipping majorUpdate() due to multi_nFinish = %" HIGHSINT_FORMAT
+          "; "
+          "rebuild_reason = %" HIGHSINT_FORMAT "\n",
+          multi_nFinish, rebuild_reason);
     }
     return;
   }
@@ -66,11 +68,11 @@ void HDual::iterateMulti() {
   majorUpdate();
 }
 
-void HDual::majorChooseRow() {
+void HEkkDual::majorChooseRow() {
   /**
    * 0. Initial check to see if we need to do it again
    */
-  if (workHMO.simplex_info_.update_count == 0) multi_chooseAgain = 1;
+  if (ekk_instance_.info_.update_count == 0) multi_chooseAgain = 1;
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
@@ -78,10 +80,10 @@ void HDual::majorChooseRow() {
    * Major loop:
    *     repeat 1-5, until we found a good sets of choices
    */
-  std::vector<int> choiceIndex(multi_num, 0);
+  std::vector<HighsInt> choiceIndex(multi_num, 0);
   for (;;) {
     // 1. Multiple CHUZR
-    int initialCount = 0;
+    HighsInt initialCount = 0;
 
     // Call the hyper-graph method, but partSwitch=0 so just uses
     // choose_multi_global
@@ -94,9 +96,9 @@ void HDual::majorChooseRow() {
     }
 
     // 2. Shrink the size by cutoff
-    int choiceCount = 0;
-    for (int i = 0; i < initialCount; i++) {
-      int iRow = choiceIndex[i];
+    HighsInt choiceCount = 0;
+    for (HighsInt i = 0; i < initialCount; i++) {
+      HighsInt iRow = choiceIndex[i];
       if (dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow] >=
           dualRHS.workCutoff) {
         choiceIndex[choiceCount++] = iRow;
@@ -110,35 +112,38 @@ void HDual::majorChooseRow() {
     }
 
     // 3. Store the choiceIndex to buffer
-    for (int ich = 0; ich < multi_num; ich++) multi_choice[ich].rowOut = -1;
-    for (int ich = 0; ich < choiceCount; ich++)
-      multi_choice[ich].rowOut = choiceIndex[ich];
+    for (HighsInt ich = 0; ich < multi_num; ich++)
+      multi_choice[ich].row_out = -1;
+    for (HighsInt ich = 0; ich < choiceCount; ich++)
+      multi_choice[ich].row_out = choiceIndex[ich];
 
     // 4. Parallel BTRAN and compute weight
     majorChooseRowBtran();
 
     // 5. Update row densities
-    for (int ich = 0; ich < multi_num; ich++) {
-      if (multi_choice[ich].rowOut >= 0) {
+    for (HighsInt ich = 0; ich < multi_num; ich++) {
+      if (multi_choice[ich].row_out >= 0) {
         const double local_row_ep_density =
             (double)multi_choice[ich].row_ep.count / solver_num_row;
         analysis->updateOperationResultDensity(local_row_ep_density,
                                                analysis->row_ep_density);
+        ekk_instance_.updateOperationResultDensity(
+            local_row_ep_density, ekk_instance_.info_.row_ep_density);
       }
     }
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // 6. Check updated and computed weight - just for dual steepest edge
-      int countWrongEdWt = 0;
-      for (int i = 0; i < multi_num; i++) {
-        const int iRow = multi_choice[i].rowOut;
+      HighsInt countWrongEdWt = 0;
+      for (HighsInt i = 0; i < multi_num; i++) {
+        const HighsInt iRow = multi_choice[i].row_out;
         if (iRow < 0) continue;
         double updated_edge_weight = dualRHS.workEdWt[iRow];
         computed_edge_weight = dualRHS.workEdWt[iRow] =
             multi_choice[i].infeasEdWt;
         //      if (updated_edge_weight < 0.25 * computed_edge_weight) {
         if (!acceptDualSteepestEdgeWeight(updated_edge_weight)) {
-          multi_choice[i].rowOut = -1;
+          multi_choice[i].row_out = -1;
           countWrongEdWt++;
         }
       }
@@ -151,9 +156,9 @@ void HDual::majorChooseRow() {
 
   // 6. Take other info associated with choices
   multi_chosen = 0;
-  double pami_cutoff = 0.95;
-  for (int i = 0; i < multi_num; i++) {
-    const int iRow = multi_choice[i].rowOut;
+  const double kPamiCutoff = 0.95;
+  for (HighsInt i = 0; i < multi_num; i++) {
+    const HighsInt iRow = multi_choice[i].row_out;
     if (iRow < 0) continue;
     multi_chosen++;
     // Other info
@@ -164,40 +169,40 @@ void HDual::majorChooseRow() {
     multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit =
         dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow];
-    multi_choice[i].infeasLimit *= pami_cutoff;
+    multi_choice[i].infeasLimit *= kPamiCutoff;
   }
 
   // 6. Finish count
   multi_nFinish = 0;
 }
 
-void HDual::majorChooseRowBtran() {
+void HEkkDual::majorChooseRowBtran() {
   analysis->simplexTimerStart(BtranClock);
 
   // 4.1. Prepare BTRAN buffer
-  int multi_ntasks = 0;
-  int multi_iRow[HIGHS_THREAD_LIMIT];
-  int multi_iwhich[HIGHS_THREAD_LIMIT];
-  double multi_EdWt[HIGHS_THREAD_LIMIT];
-  HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
-  for (int ich = 0; ich < multi_num; ich++) {
-    if (multi_choice[ich].rowOut >= 0) {
-      multi_iRow[multi_ntasks] = multi_choice[ich].rowOut;
+  HighsInt multi_ntasks = 0;
+  HighsInt multi_iRow[kHighsThreadLimit];
+  HighsInt multi_iwhich[kHighsThreadLimit];
+  double multi_EdWt[kHighsThreadLimit];
+  HVector_ptr multi_vector[kHighsThreadLimit];
+  for (HighsInt ich = 0; ich < multi_num; ich++) {
+    if (multi_choice[ich].row_out >= 0) {
+      multi_iRow[multi_ntasks] = multi_choice[ich].row_out;
       multi_vector[multi_ntasks] = &multi_choice[ich].row_ep;
       multi_iwhich[multi_ntasks] = ich;
       multi_ntasks++;
     }
   }
 
-#ifdef HiGHSDEV
-  for (int i = 0; i < multi_ntasks; i++)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, 1,
-                                    analysis->row_ep_density);
-#endif
-    // 4.2 Perform BTRAN
+  if (analysis->analyse_simplex_data) {
+    for (HighsInt i = 0; i < multi_ntasks; i++)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, 1,
+                                      analysis->row_ep_density);
+  }
+  // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
-  for (int i = 0; i < multi_ntasks; i++) {
-    const int iRow = multi_iRow[i];
+  for (HighsInt i = 0; i < multi_ntasks; i++) {
+    const HighsInt iRow = multi_iRow[i];
     HVector_ptr work_ep = multi_vector[i];
     work_ep->clear();
     work_ep->count = 1;
@@ -208,7 +213,7 @@ void HDual::majorChooseRowBtran() {
         analysis->getThreadFactorTimerClockPointer();
     factor->btran(*work_ep, analysis->row_ep_density,
                   factor_timer_clock_pointer);
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // For Dual steepest edge we know the exact weight as the 2-norm of
       // work_ep
       multi_EdWt[i] = work_ep->norm2();
@@ -217,20 +222,20 @@ void HDual::majorChooseRowBtran() {
       multi_EdWt[i] = dualRHS.workEdWt[iRow];
     }
   }
-#ifdef HiGHSDEV
-  for (int i = 0; i < multi_ntasks; i++)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP,
-                                   multi_vector[i]->count);
-#endif
+  if (analysis->analyse_simplex_data) {
+    for (HighsInt i = 0; i < multi_ntasks; i++)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP,
+                                     multi_vector[i]->count);
+  }
   // 4.3 Put back edge weights: the edge weights for the chosen rows
   // are stored in multi_choice[*].infeasEdWt
-  for (int i = 0; i < multi_ntasks; i++)
+  for (HighsInt i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
 
   analysis->simplexTimerStop(BtranClock);
 }
 
-void HDual::minorChooseRow() {
+void HEkkDual::minorChooseRow() {
   /**
    * 1. Find which to go out
    *        Because we had other checking code
@@ -238,8 +243,8 @@ void HDual::minorChooseRow() {
    */
   multi_iChoice = -1;
   double bestMerit = 0;
-  for (int ich = 0; ich < multi_num; ich++) {
-    const int iRow = multi_choice[ich].rowOut;
+  for (HighsInt ich = 0; ich < multi_num; ich++) {
+    const HighsInt iRow = multi_choice[ich].row_out;
     if (iRow < 0) continue;
     double infeasValue = multi_choice[ich].infeasValue;
     double infeasEdWt = multi_choice[ich].infeasEdWt;
@@ -253,23 +258,23 @@ void HDual::minorChooseRow() {
   /**
    * 2. Obtain other info for current sub-optimization choice
    */
-  rowOut = -1;
+  row_out = -1;
   if (multi_iChoice != -1) {
     MChoice* workChoice = &multi_choice[multi_iChoice];
 
     // Assign useful variables
-    rowOut = workChoice->rowOut;
-    columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
+    row_out = workChoice->row_out;
+    variable_out = ekk_instance_.basis_.basicIndex_[row_out];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
-    deltaPrimal = valueOut - (valueOut < lowerOut ? lowerOut : upperOut);
-    sourceOut = deltaPrimal < 0 ? -1 : 1;
+    delta_primal = valueOut - (valueOut < lowerOut ? lowerOut : upperOut);
+    move_out = delta_primal < 0 ? -1 : 1;
 
     // Assign buffers
     MFinish* finish = &multi_finish[multi_nFinish];
-    finish->rowOut = rowOut;
-    finish->columnOut = columnOut;
+    finish->row_out = row_out;
+    finish->variable_out = variable_out;
     finish->row_ep = &workChoice->row_ep;
     finish->col_aq = &workChoice->col_aq;
     finish->col_BFRT = &workChoice->col_BFRT;
@@ -277,17 +282,17 @@ void HDual::minorChooseRow() {
     finish->EdWt = workChoice->infeasEdWt;
 
     // Disable current row
-    workChoice->rowOut = -1;
+    workChoice->row_out = -1;
   }
 }
 
-void HDual::minorUpdate() {
+void HEkkDual::minorUpdate() {
   // Minor update - store roll back data
   MFinish* finish = &multi_finish[multi_nFinish];
-  finish->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
-  finish->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
+  finish->move_in = ekk_instance_.basis_.nonbasicMove_[variable_in];
+  finish->shiftOut = ekk_instance_.info_.workShift_[variable_out];
   finish->flipList.clear();
-  for (int i = 0; i < dualRow.workCount; i++)
+  for (HighsInt i = 0; i < dualRow.workCount; i++)
     finish->flipList.push_back(dualRow.workData[i].first);
 
   // Minor update - key parts
@@ -297,8 +302,8 @@ void HDual::minorUpdate() {
   minorUpdateRows();
   if (minor_new_devex_framework) {
     /*
-    printf("Iter %7d (Major %7d): Minor new Devex framework\n",
-           workHMO.iteration_counts_.simplex,
+    printf("Iter %7" HIGHSINT_FORMAT " (Major %7" HIGHSINT_FORMAT "): Minor new
+    Devex framework\n", ekk_instance_.iteration_counts_.simplex,
            multi_iteration);
     */
     minorInitialiseDevexFramework();
@@ -308,9 +313,9 @@ void HDual::minorUpdate() {
   iterationAnalysisMinor();
 
   // Minor update - check for the next iteration
-  int countRemain = 0;
-  for (int i = 0; i < multi_num; i++) {
-    int iRow = multi_choice[i].rowOut;
+  HighsInt countRemain = 0;
+  for (HighsInt i = 0; i < multi_num; i++) {
+    HighsInt iRow = multi_choice[i].row_out;
     if (iRow < 0) continue;
     double myInfeas = multi_choice[i].infeasValue;
     double myWeight = multi_choice[i].infeasEdWt;
@@ -319,23 +324,23 @@ void HDual::minorUpdate() {
   if (countRemain == 0) multi_chooseAgain = 1;
 }
 
-void HDual::minorUpdateDual() {
+void HEkkDual::minorUpdateDual() {
   /**
    * 1. Update the dual solution
    *    XXX Data parallel (depends on the ap partition before)
    */
-  if (thetaDual == 0) {
-    shift_cost(workHMO, columnIn, -workDual[columnIn]);
+  if (theta_dual == 0) {
+    shiftCost(variable_in, -workDual[variable_in]);
   } else {
-    dualRow.updateDual(thetaDual);
+    dualRow.updateDual(theta_dual);
     if (slice_PRICE) {
-      for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].updateDual(thetaDual);
+      for (HighsInt i = 0; i < slice_num; i++)
+        slice_dualRow[i].updateDual(theta_dual);
     }
   }
-  workDual[columnIn] = 0;
-  workDual[columnOut] = -thetaDual;
-  shift_back(workHMO, columnOut);
+  workDual[variable_in] = 0;
+  workDual[variable_out] = -theta_dual;
+  shiftBack(variable_out);
 
   /**
    * 2. Apply global bound flip
@@ -345,10 +350,10 @@ void HDual::minorUpdateDual() {
   /**
    * 3. Apply local bound flips
    */
-  for (int ich = 0; ich < multi_num; ich++) {
-    if (ich == multi_iChoice || multi_choice[ich].rowOut >= 0) {
+  for (HighsInt ich = 0; ich < multi_num; ich++) {
+    if (ich == multi_iChoice || multi_choice[ich].row_out >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
-      for (int i = 0; i < dualRow.workCount; i++) {
+      for (HighsInt i = 0; i < dualRow.workCount; i++) {
         double dot = matrix->compute_dot(*this_ep, dualRow.workData[i].first);
         multi_choice[ich].baseValue -= dualRow.workData[i].second * dot;
       }
@@ -356,33 +361,35 @@ void HDual::minorUpdateDual() {
   }
 }
 
-void HDual::minorUpdatePrimal() {
+void HEkkDual::minorUpdatePrimal() {
   MChoice* choice = &multi_choice[multi_iChoice];
   MFinish* finish = &multi_finish[multi_nFinish];
   double valueOut = choice->baseValue;
   double lowerOut = choice->baseLower;
   double upperOut = choice->baseUpper;
-  if (deltaPrimal < 0) {
-    thetaPrimal = (valueOut - lowerOut) / alphaRow;
+  if (delta_primal < 0) {
+    theta_primal = (valueOut - lowerOut) / alpha_row;
     finish->basicBound = lowerOut;
   }
-  if (deltaPrimal > 0) {
-    thetaPrimal = (valueOut - upperOut) / alphaRow;
+  if (delta_primal > 0) {
+    theta_primal = (valueOut - upperOut) / alpha_row;
     finish->basicBound = upperOut;
   }
-  finish->thetaPrimal = thetaPrimal;
+  finish->theta_primal = theta_primal;
 
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
       !new_devex_framework) {
-    assert(rowOut >= 0);
-    if (rowOut < 0) printf("ERROR: rowOut = %d in minorUpdatePrimal\n", rowOut);
-    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+    assert(row_out >= 0);
+    if (row_out < 0)
+      printf("ERROR: row_out = %" HIGHSINT_FORMAT " in minorUpdatePrimal\n",
+             row_out);
+    const double updated_edge_weight = dualRHS.workEdWt[row_out];
     new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
     // Transform the edge weight of the pivotal row according to the
     // simplex update
     double new_pivotal_edge_weight =
-        computed_edge_weight / (alphaRow * alphaRow);
+        computed_edge_weight / (alpha_row * alpha_row);
     new_pivotal_edge_weight = max(1.0, new_pivotal_edge_weight);
     // Store the Devex weight of the leaving row now - OK since it's
     // stored in finish->EdWt and the updated weights are stored in
@@ -392,13 +399,13 @@ void HDual::minorUpdatePrimal() {
 
   /**
    * 5. Update the other primal value
-   *    By the pivot (thetaPrimal)
+   *    By the pivot (theta_primal)
    */
-  for (int ich = 0; ich < multi_num; ich++) {
-    if (multi_choice[ich].rowOut >= 0) {
+  for (HighsInt ich = 0; ich < multi_num; ich++) {
+    if (multi_choice[ich].row_out >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
-      double dot = matrix->compute_dot(*this_ep, columnIn);
-      multi_choice[ich].baseValue -= thetaPrimal * dot;
+      double dot = matrix->compute_dot(*this_ep, variable_in);
+      multi_choice[ich].baseValue -= theta_primal * dot;
       double value = multi_choice[ich].baseValue;
       double lower = multi_choice[ich].baseLower;
       double upper = multi_choice[ich].baseUpper;
@@ -407,7 +414,7 @@ void HDual::minorUpdatePrimal() {
       if (value > upper + Tp) infeas = value - upper;
       infeas *= infeas;
       multi_choice[ich].infeasValue = infeas;
-      if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex) {
         // Update the other Devex weights
         const double new_pivotal_edge_weight = finish->EdWt;
         double aa_iRow = dot;
@@ -418,37 +425,36 @@ void HDual::minorUpdatePrimal() {
     }
   }
 }
-void HDual::minorUpdatePivots() {
+void HEkkDual::minorUpdatePivots() {
   MFinish* finish = &multi_finish[multi_nFinish];
-  update_pivots(workHMO, columnIn, rowOut, sourceOut);
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  ekk_instance_.updatePivots(variable_in, row_out, move_out);
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     // Transform the edge weight of the pivotal row according to the
     // simplex update
-    finish->EdWt /= (alphaRow * alphaRow);
+    finish->EdWt /= (alpha_row * alpha_row);
   }
-  finish->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
-  update_matrix(workHMO, columnIn, columnOut);
-  finish->columnIn = columnIn;
-  finish->alphaRow = alphaRow;
+  finish->basicValue =
+      ekk_instance_.info_.workValue_[variable_in] + theta_primal;
+  ekk_instance_.updateMatrix(variable_in, variable_out);
+  finish->variable_in = variable_in;
+  finish->alpha_row = alpha_row;
   // numericalTrouble is not set in minor iterations, only in
   // majorUpdate, so set it to an illegal value so that its
   // distribution is not updated
   numericalTrouble = -1;
-  // Move thisTo Simplex class once it's created
-  // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
-  workHMO.iteration_counts_.simplex++;
+  ekk_instance_.iteration_count_++;
 }
 
-void HDual::minorUpdateRows() {
+void HEkkDual::minorUpdateRows() {
   analysis->simplexTimerStart(UpdateRowClock);
   const HVector* Row = multi_finish[multi_nFinish].row_ep;
-  int updateRows_inDense =
+  HighsInt updateRows_inDense =
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
   if (updateRows_inDense) {
-    int multi_nTasks = 0;
-    int multi_iwhich[HIGHS_THREAD_LIMIT];
-    double multi_xpivot[HIGHS_THREAD_LIMIT];
-    HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
+    HighsInt multi_nTasks = 0;
+    HighsInt multi_iwhich[kHighsThreadLimit];
+    double multi_xpivot[kHighsThreadLimit];
+    HVector_ptr multi_vector[kHighsThreadLimit];
 
     /*
      * Dense mode
@@ -457,13 +463,13 @@ void HDual::minorUpdateRows() {
      */
 
     // Collect tasks
-    for (int ich = 0; ich < multi_num; ich++) {
-      if (multi_choice[ich].rowOut >= 0) {
+    for (HighsInt ich = 0; ich < multi_num; ich++) {
+      if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
-        double pivotX = matrix->compute_dot(*next_ep, columnIn);
-        if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
+        double pivotX = matrix->compute_dot(*next_ep, variable_in);
+        if (fabs(pivotX) < kHighsTiny) continue;
         multi_vector[multi_nTasks] = next_ep;
-        multi_xpivot[multi_nTasks] = -pivotX / alphaRow;
+        multi_xpivot[multi_nTasks] = -pivotX / alpha_row;
         multi_iwhich[multi_nTasks] = ich;
         multi_nTasks++;
       }
@@ -471,31 +477,31 @@ void HDual::minorUpdateRows() {
 
     // Perform tasks
 #pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < multi_nTasks; i++) {
+    for (HighsInt i = 0; i < multi_nTasks; i++) {
       HVector_ptr nextEp = multi_vector[i];
       const double xpivot = multi_xpivot[i];
       nextEp->saxpy(xpivot, Row);
       nextEp->tight();
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         multi_xpivot[i] = nextEp->norm2();
       }
     }
 
     // Put weight back
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      for (int i = 0; i < multi_nTasks; i++)
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
+      for (HighsInt i = 0; i < multi_nTasks; i++)
         multi_choice[multi_iwhich[i]].infeasEdWt = multi_xpivot[i];
     }
   } else {
     // Sparse mode: just do it sequentially
-    for (int ich = 0; ich < multi_num; ich++) {
-      if (multi_choice[ich].rowOut >= 0) {
+    for (HighsInt ich = 0; ich < multi_num; ich++) {
+      if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
-        double pivotX = matrix->compute_dot(*next_ep, columnIn);
-        if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
-        next_ep->saxpy(-pivotX / alphaRow, Row);
+        double pivotX = matrix->compute_dot(*next_ep, variable_in);
+        if (fabs(pivotX) < kHighsTiny) continue;
+        next_ep->saxpy(-pivotX / alpha_row, Row);
         next_ep->tight();
-        if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+        if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
           multi_choice[ich].infeasEdWt = next_ep->norm2();
         }
       }
@@ -504,19 +510,19 @@ void HDual::minorUpdateRows() {
   analysis->simplexTimerStop(UpdateRowClock);
 }
 
-void HDual::minorInitialiseDevexFramework() {
+void HEkkDual::minorInitialiseDevexFramework() {
   // Set the local Devex weights to 1
-  for (int i = 0; i < multi_num; i++) {
+  for (HighsInt i = 0; i < multi_num; i++) {
     multi_choice[i].infeasEdWt = 1.0;
   }
   minor_new_devex_framework = false;
 }
 
-void HDual::majorUpdate() {
+void HEkkDual::majorUpdate() {
   /**
    * 0. See if it's ready to perform a major update
    */
-  if (invertHint) multi_chooseAgain = 1;
+  if (rebuild_reason) multi_chooseAgain = 1;
   if (!multi_chooseAgain) return;
 
   // Major update - FTRANs
@@ -525,21 +531,22 @@ void HDual::majorUpdate() {
   majorUpdateFtranFinal();
 
   // Major update - check for roll back
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* iFinish = &multi_finish[iFn];
     HVector* iColumn = iFinish->col_aq;
-    int iRowOut = iFinish->rowOut;
+    HighsInt iRow_Out = iFinish->row_out;
 
     // Use the two pivot values to identify numerical trouble
-    if (reinvertOnNumericalTrouble("HDual::majorUpdate", workHMO,
-                                   numericalTrouble, iColumn->array[iRowOut],
-                                   iFinish->alphaRow,
-                                   multi_numerical_trouble_tolerance)) {
-      // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
-      invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+    if (ekk_instance_.reinvertOnNumericalTrouble(
+            "HEkkDual::majorUpdate", numericalTrouble, iColumn->array[iRow_Out],
+            iFinish->alpha_row, kMultiNumericalTroubleTolerance)) {
+      // HighsInt startUpdate = ekk_instance_.info_.update_count -
+      // multi_nFinish;
+      rebuild_reason = kRebuildReasonPossiblySingularBasis;
       // if (startUpdate > 0) {
       majorRollback();
       return;
+      // }
     }
   }
 
@@ -547,85 +554,82 @@ void HDual::majorUpdate() {
   majorUpdatePrimal();
   majorUpdateFactor();
   if (new_devex_framework) {
-    //    printf("Iter %7d: New Devex framework\n",
-    //    workHMO.iteration_counts_.simplex);
+    //    printf("Iter %7" HIGHSINT_FORMAT ": New Devex framework\n",
+    //    ekk_instance_.iteration_counts_.simplex);
     const bool parallel = true;
     initialiseDevexFramework(parallel);
   }
   iterationAnalysisMajor();
 }
 
-void HDual::majorUpdateFtranPrepare() {
+void HEkkDual::majorUpdateFtranPrepare() {
   // Prepare FTRAN BFRT buffer
   col_BFRT.clear();
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Vec = finish->col_BFRT;
-    matrix->collect_aj(*Vec, finish->columnIn, finish->thetaPrimal);
+    matrix->collect_aj(*Vec, finish->variable_in, finish->theta_primal);
 
     // Update this buffer by previous Row_ep
-    for (int jFn = iFn - 1; jFn >= 0; jFn--) {
+    for (HighsInt jFn = iFn - 1; jFn >= 0; jFn--) {
       MFinish* jFinish = &multi_finish[jFn];
       double* jRow_epArray = &jFinish->row_ep->array[0];
       double pivotX = 0;
-      for (int k = 0; k < Vec->count; k++) {
-        int iRow = Vec->index[k];
+      for (HighsInt k = 0; k < Vec->count; k++) {
+        HighsInt iRow = Vec->index[k];
         pivotX += Vec->array[iRow] * jRow_epArray[iRow];
       }
-      if (fabs(pivotX) > HIGHS_CONST_TINY) {
-        pivotX /= jFinish->alphaRow;
-        matrix->collect_aj(*Vec, jFinish->columnIn, -pivotX);
-        matrix->collect_aj(*Vec, jFinish->columnOut, pivotX);
+      if (fabs(pivotX) > kHighsTiny) {
+        pivotX /= jFinish->alpha_row;
+        matrix->collect_aj(*Vec, jFinish->variable_in, -pivotX);
+        matrix->collect_aj(*Vec, jFinish->variable_out, pivotX);
       }
     }
     col_BFRT.saxpy(1, Vec);
   }
 
   // Prepare regular FTRAN buffer
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* iFinish = &multi_finish[iFn];
     HVector* iColumn = iFinish->col_aq;
     iColumn->clear();
     iColumn->packFlag = true;
-    matrix->collect_aj(*iColumn, iFinish->columnIn, 1);
+    matrix->collect_aj(*iColumn, iFinish->variable_in, 1);
   }
 }
 
-void HDual::majorUpdateFtranParallel() {
+void HEkkDual::majorUpdateFtranParallel() {
   analysis->simplexTimerStart(FtranMixParClock);
 
   // Prepare buffers
-  int multi_ntasks = 0;
-  double multi_density[HIGHS_THREAD_LIMIT * 2 + 1];
-  HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
+  HighsInt multi_ntasks = 0;
+  double multi_density[kHighsThreadLimit * 2 + 1];
+  HVector_ptr multi_vector[kHighsThreadLimit * 2 + 1];
   // BFRT first
-#ifdef HiGHSDEV
-  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-                                  col_BFRT.count, analysis->col_aq_density);
-#endif
+  if (analysis->analyse_simplex_data)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
+                                    col_BFRT.count, analysis->col_aq_density);
   multi_density[multi_ntasks] = analysis->col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     // Then DSE
-    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-#ifdef HiGHSDEV
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-                                      multi_finish[iFn].row_ep->count,
-                                      analysis->row_DSE_density);
-#endif
+    for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
+      if (analysis->analyse_simplex_data)
+        analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+                                        multi_finish[iFn].row_ep->count,
+                                        analysis->row_DSE_density);
       multi_density[multi_ntasks] = analysis->row_DSE_density;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
       multi_ntasks++;
     }
   }
   // Then Column
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-#ifdef HiGHSDEV
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN,
-                                    multi_finish[iFn].col_aq->count,
-                                    analysis->col_aq_density);
-#endif
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
+    if (analysis->analyse_simplex_data)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN,
+                                      multi_finish[iFn].col_aq->count,
+                                      analysis->col_aq_density);
     multi_density[multi_ntasks] = analysis->col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
@@ -633,7 +637,7 @@ void HDual::majorUpdateFtranParallel() {
 
   // Perform FTRAN
 #pragma omp parallel for schedule(dynamic, 1)
-  for (int i = 0; i < multi_ntasks; i++) {
+  for (HighsInt i = 0; i < multi_ntasks; i++) {
     HVector_ptr rhs = multi_vector[i];
     double density = multi_density[i];
     HighsTimerClock* factor_timer_clock_pointer =
@@ -642,95 +646,96 @@ void HDual::majorUpdateFtranParallel() {
   }
 
   // Update ticks
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
-    total_syntheticTick += Col->syntheticTick;
-    total_syntheticTick += Row->syntheticTick;
+    ekk_instance_.total_synthetic_tick_ += Col->synthetic_tick;
+    ekk_instance_.total_synthetic_tick_ += Row->synthetic_tick;
   }
 
   // Update rates
-#ifdef HiGHSDEV
-  analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-                                 col_BFRT.count);
-#endif
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  if (analysis->analyse_simplex_data)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
+                                   col_BFRT.count);
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
     const double local_col_aq_density = (double)Col->count / solver_num_row;
     analysis->updateOperationResultDensity(local_col_aq_density,
                                            analysis->col_aq_density);
-#ifdef HiGHSDEV
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
-#endif
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    ekk_instance_.updateOperationResultDensity(
+        local_col_aq_density, ekk_instance_.info_.col_aq_density);
+    if (analysis->analyse_simplex_data)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       const double local_row_DSE_density = (double)Row->count / solver_num_row;
       analysis->updateOperationResultDensity(local_row_DSE_density,
                                              analysis->row_DSE_density);
-#ifdef HiGHSDEV
-      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-                                     Row->count);
-#endif
+      ekk_instance_.updateOperationResultDensity(
+          local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
+      if (analysis->analyse_simplex_data)
+        analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+                                       Row->count);
     }
   }
   analysis->simplexTimerStop(FtranMixParClock);
 }
 
-void HDual::majorUpdateFtranFinal() {
+void HEkkDual::majorUpdateFtranFinal() {
   analysis->simplexTimerStart(FtranMixFinalClock);
-  int updateFTRAN_inDense = dualRHS.workCount < 0;
+  HighsInt updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
-    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+    for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       multi_finish[iFn].col_aq->count = -1;
       multi_finish[iFn].row_ep->count = -1;
       double* myCol = &multi_finish[iFn].col_aq->array[0];
       double* myRow = &multi_finish[iFn].row_ep->array[0];
-      for (int jFn = 0; jFn < iFn; jFn++) {
-        int pivotRow = multi_finish[jFn].rowOut;
-        const double pivotAlpha = multi_finish[jFn].alphaRow;
+      for (HighsInt jFn = 0; jFn < iFn; jFn++) {
+        HighsInt pivotRow = multi_finish[jFn].row_out;
+        const double pivotAlpha = multi_finish[jFn].alpha_row;
         const double* pivotArray = &multi_finish[jFn].col_aq->array[0];
         double pivotX1 = myCol[pivotRow];
         double pivotX2 = myRow[pivotRow];
 
         // The FTRAN regular buffer
-        if (fabs(pivotX1) > HIGHS_CONST_TINY) {
+        if (fabs(pivotX1) > kHighsTiny) {
           const double pivot = pivotX1 / pivotAlpha;
 #pragma omp parallel for
-          for (int i = 0; i < solver_num_row; i++)
+          for (HighsInt i = 0; i < solver_num_row; i++)
             myCol[i] -= pivot * pivotArray[i];
           myCol[pivotRow] = pivot;
         }
         // The FTRAN-DSE buffer
-        if (fabs(pivotX2) > HIGHS_CONST_TINY) {
+        if (fabs(pivotX2) > kHighsTiny) {
           const double pivot = pivotX2 / pivotAlpha;
 #pragma omp parallel for
-          for (int i = 0; i < solver_num_row; i++)
+          for (HighsInt i = 0; i < solver_num_row; i++)
             myRow[i] -= pivot * pivotArray[i];
           myRow[pivotRow] = pivot;
         }
       }
     }
   } else {
-    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+    for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* finish = &multi_finish[iFn];
       HVector* Col = finish->col_aq;
       HVector* Row = finish->row_ep;
-      for (int jFn = 0; jFn < iFn; jFn++) {
+      for (HighsInt jFn = 0; jFn < iFn; jFn++) {
         MFinish* jFinish = &multi_finish[jFn];
-        int pivotRow = jFinish->rowOut;
+        HighsInt pivotRow = jFinish->row_out;
         double pivotX1 = Col->array[pivotRow];
         // The FTRAN regular buffer
-        if (fabs(pivotX1) > HIGHS_CONST_TINY) {
-          pivotX1 /= jFinish->alphaRow;
+        if (fabs(pivotX1) > kHighsTiny) {
+          pivotX1 /= jFinish->alpha_row;
           Col->saxpy(-pivotX1, jFinish->col_aq);
           Col->array[pivotRow] = pivotX1;
         }
         // The FTRAN-DSE buffer
         double pivotX2 = Row->array[pivotRow];
-        if (fabs(pivotX2) > HIGHS_CONST_TINY) {
-          pivotX2 /= jFinish->alphaRow;
+        if (fabs(pivotX2) > kHighsTiny) {
+          pivotX2 /= jFinish->alpha_row;
           Row->saxpy(-pivotX2, jFinish->col_aq);
           Row->array[pivotRow] = pivotX2;
         }
@@ -740,7 +745,7 @@ void HDual::majorUpdateFtranFinal() {
   analysis->simplexTimerStop(FtranMixFinalClock);
 }
 
-void HDual::majorUpdatePrimal() {
+void HEkkDual::majorUpdatePrimal() {
   const bool updatePrimal_inDense = dualRHS.workCount < 0;
   if (updatePrimal_inDense) {
     // Dense update of primal values, infeasibility list and
@@ -748,34 +753,34 @@ void HDual::majorUpdatePrimal() {
     const double* mixArray = &col_BFRT.array[0];
     double* local_work_infeasibility = &dualRHS.work_infeasibility[0];
 #pragma omp parallel for schedule(static)
-    for (int iRow = 0; iRow < solver_num_row; iRow++) {
+    for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
       baseValue[iRow] -= mixArray[iRow];
       const double value = baseValue[iRow];
       const double less = baseLower[iRow] - value;
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      if (workHMO.simplex_info_.store_squared_primal_infeasibility)
+      if (ekk_instance_.info_.store_squared_primal_infeasibility)
         local_work_infeasibility[iRow] = infeas * infeas;
       else
         local_work_infeasibility[iRow] = fabs(infeas);
     }
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE ||
-        (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+    if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge ||
+        (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
          !new_devex_framework)) {
       // Dense update of any edge weights (except weights for pivotal rows)
-      for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+      for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
         // multi_finish[iFn].EdWt has already been transformed to correspond to
         // the new basis
         const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
         const double* colArray = &multi_finish[iFn].col_aq->array[0];
         double* EdWt = &dualRHS.workEdWt[0];
-        if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+        if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
           // Update steepest edge weights
           const double* dseArray = &multi_finish[iFn].row_ep->array[0];
-          const double Kai = -2 / multi_finish[iFn].alphaRow;
+          const double Kai = -2 / multi_finish[iFn].alpha_row;
 #pragma omp parallel for schedule(static)
-          for (int iRow = 0; iRow < solver_num_row; iRow++) {
+          for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
             const double aa_iRow = colArray[iRow];
             EdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow +
                                      Kai * dseArray[iRow]);
@@ -783,7 +788,7 @@ void HDual::majorUpdatePrimal() {
           }
         } else {
           // Update Devex weights
-          for (int iRow = 0; iRow < solver_num_row; iRow++) {
+          for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
             const double aa_iRow = colArray[iRow];
             EdWt[iRow] =
                 max(EdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
@@ -802,17 +807,17 @@ void HDual::majorUpdatePrimal() {
     // on the previous updated weights not the computed pivotal weight
     // that's known. For the rows pivotal in this set of MI, the
     // weights will be over-written in the next section of code.
-    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+    for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* finish = &multi_finish[iFn];
       HVector* Col = finish->col_aq;
       const double new_pivotal_edge_weight = finish->EdWt;
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         // Update steepest edge weights
         HVector* Row = finish->row_ep;
-        double Kai = -2 / finish->alphaRow;
+        double Kai = -2 / finish->alpha_row;
         dualRHS.updateWeightDualSteepestEdge(Col, new_pivotal_edge_weight, Kai,
                                              &Row->array[0]);
-      } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+      } else if (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
                  !new_devex_framework) {
         // Update Devex weights
         dualRHS.updateWeightDevex(Col, new_pivotal_edge_weight);
@@ -822,29 +827,29 @@ void HDual::majorUpdatePrimal() {
   }
 
   // Update primal value for the rows pivotal in this set of MI
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
-    int iRow = finish->rowOut;
+    HighsInt iRow = finish->row_out;
     double value = baseValue[iRow] - finish->basicBound + finish->basicValue;
     dualRHS.updatePivots(iRow, value);
   }
 
   // Update any edge weights for the rows pivotal in this set of MI.
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE ||
-      (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge ||
+      (dual_edge_weight_mode == DualEdgeWeightMode::kDevex &&
        !new_devex_framework)) {
     // Update weights for the pivots using the computed values.
-    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-      const int iRow = multi_finish[iFn].rowOut;
+    for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
+      const HighsInt iRow = multi_finish[iFn].row_out;
       const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
       const double* colArray = &multi_finish[iFn].col_aq->array[0];
       // The weight for this pivot is known, but weights for rows
       // pivotal earlier need to be updated
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
         const double* dseArray = &multi_finish[iFn].row_ep->array[0];
-        double Kai = -2 / multi_finish[iFn].alphaRow;
-        for (int jFn = 0; jFn < iFn; jFn++) {
-          int jRow = multi_finish[jFn].rowOut;
+        double Kai = -2 / multi_finish[iFn].alpha_row;
+        for (HighsInt jFn = 0; jFn < iFn; jFn++) {
+          HighsInt jRow = multi_finish[jFn].row_out;
           double value = colArray[jRow];
           double EdWt = dualRHS.workEdWt[jRow];
           EdWt +=
@@ -855,8 +860,8 @@ void HDual::majorUpdatePrimal() {
         }
         dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
       } else {
-        for (int jFn = 0; jFn < iFn; jFn++) {
-          int jRow = multi_finish[jFn].rowOut;
+        for (HighsInt jFn = 0; jFn < iFn; jFn++) {
+          HighsInt jRow = multi_finish[jFn].row_out;
           const double aa_iRow = colArray[iRow];
           double EdWt = dualRHS.workEdWt[jRow];
           EdWt = max(EdWt, new_pivotal_edge_weight * aa_iRow * aa_iRow);
@@ -870,74 +875,68 @@ void HDual::majorUpdatePrimal() {
   checkNonUnitWeightError("999");
 }
 
-void HDual::majorUpdateFactor() {
+void HEkkDual::majorUpdateFactor() {
   /**
    * 9. Update the factor by CFT
    */
-  int* iRows = new int[multi_nFinish];
-  for (int iCh = 0; iCh < multi_nFinish - 1; iCh++) {
+  HighsInt* iRows = new HighsInt[multi_nFinish];
+  for (HighsInt iCh = 0; iCh < multi_nFinish - 1; iCh++) {
     multi_finish[iCh].row_ep->next = multi_finish[iCh + 1].row_ep;
     multi_finish[iCh].col_aq->next = multi_finish[iCh + 1].col_aq;
-    iRows[iCh] = multi_finish[iCh].rowOut;
+    iRows[iCh] = multi_finish[iCh].row_out;
   }
-  iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
+  iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].row_out;
   if (multi_nFinish > 0)
-    update_factor(workHMO, multi_finish[0].col_aq, multi_finish[0].row_ep,
-                  iRows, &invertHint);
+    ekk_instance_.updateFactor(multi_finish[0].col_aq, multi_finish[0].row_ep,
+                               iRows, &rebuild_reason);
+
   // Determine whether to reinvert based on the synthetic clock
-  const double use_build_syntheticTick =
-      build_syntheticTick * multi_build_syntheticTick_mu;
+  const double use_build_synthetic_tick =
+      ekk_instance_.build_synthetic_tick_ * kMultiBuildSyntheticTickMu;
   const bool reinvert_syntheticClock =
-      total_syntheticTick >= use_build_syntheticTick;
+      ekk_instance_.total_synthetic_tick_ >= use_build_synthetic_tick;
   const bool performed_min_updates =
-      workHMO.simplex_info_.update_count >=
-      multi_synthetic_tick_reinversion_min_update_count;
-#ifdef HiGHSDEV
-  if (rp_reinvert_syntheticClock && multi_build_syntheticTick_mu == 1.0)
-    printf(
-        "Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = "
-        "build_syntheticTick: (%1d, %4d)\n",
-        total_syntheticTick, build_syntheticTick, reinvert_syntheticClock,
-        workHMO.simplex_info_.update_count);
-#endif
+      ekk_instance_.info_.update_count >=
+      kMultiSyntheticTickReinversionMinUpdateCount;
   if (reinvert_syntheticClock && performed_min_updates)
-    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+    rebuild_reason = kRebuildReasonSyntheticClockSaysInvert;
+
   delete[] iRows;
 }
 
-void HDual::majorRollback() {
-  for (int iFn = multi_nFinish - 1; iFn >= 0; iFn--) {
+void HEkkDual::majorRollback() {
+  for (HighsInt iFn = multi_nFinish - 1; iFn >= 0; iFn--) {
     MFinish* finish = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    workHMO.simplex_basis_.nonbasicMove_[finish->columnIn] = finish->moveIn;
-    workHMO.simplex_basis_.nonbasicFlag_[finish->columnIn] = 1;
-    workHMO.simplex_basis_.nonbasicMove_[finish->columnOut] = 0;
-    workHMO.simplex_basis_.nonbasicFlag_[finish->columnOut] = 0;
-    workHMO.simplex_basis_.basicIndex_[finish->rowOut] = finish->columnOut;
+    ekk_instance_.basis_.nonbasicMove_[finish->variable_in] = finish->move_in;
+    ekk_instance_.basis_.nonbasicFlag_[finish->variable_in] = 1;
+    ekk_instance_.basis_.nonbasicMove_[finish->variable_out] = 0;
+    ekk_instance_.basis_.nonbasicFlag_[finish->variable_out] = 0;
+    ekk_instance_.basis_.basicIndex_[finish->row_out] = finish->variable_out;
 
     // 2. Roll back matrix
-    update_matrix(workHMO, finish->columnOut, finish->columnIn);
+    ekk_instance_.updateMatrix(finish->variable_out, finish->variable_in);
 
     // 3. Roll back flips
     for (unsigned i = 0; i < finish->flipList.size(); i++) {
-      flip_bound(workHMO, finish->flipList[i]);
+      ekk_instance_.flipBound(finish->flipList[i]);
     }
 
     // 4. Roll back cost
-    workHMO.simplex_info_.workShift_[finish->columnIn] = 0;
-    workHMO.simplex_info_.workShift_[finish->columnOut] = finish->shiftOut;
+    ekk_instance_.info_.workShift_[finish->variable_in] = 0;
+    ekk_instance_.info_.workShift_[finish->variable_out] = finish->shiftOut;
 
     // 5. The iteration count
-    workHMO.iteration_counts_.simplex--;
+    ekk_instance_.iteration_count_--;
   }
 }
 
-bool HDual::checkNonUnitWeightError(std::string message) {
+bool HEkkDual::checkNonUnitWeightError(std::string message) {
   bool error_found = false;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DANTZIG) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kDantzig) {
     double unit_wt_error = 0;
-    for (int iRow = 0; iRow < solver_num_row; iRow++) {
+    for (HighsInt iRow = 0; iRow < solver_num_row; iRow++) {
       unit_wt_error += fabs(dualRHS.workEdWt[iRow] - 1.0);
     }
     error_found = unit_wt_error > 1e-4;
@@ -948,47 +947,45 @@ bool HDual::checkNonUnitWeightError(std::string message) {
   return error_found;
 }
 
-void HDual::iterationAnalysisMinorData() {
+void HEkkDual::iterationAnalysisMinorData() {
   analysis->multi_iteration_count = multi_iteration;
   analysis->multi_chosen = multi_chosen;
   analysis->multi_finished = multi_nFinish;
 }
 
-void HDual::iterationAnalysisMinor() {
+void HEkkDual::iterationAnalysisMinor() {
   // Possibly report on the iteration
-  // PAMI uses alphaRow but serial solver uses alpha
-  alpha = alphaRow;
+  // PAMI uses alpha_row but serial solver uses alpha
+  alpha_col = alpha_row;
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-#endif
+  if (analysis->analyse_simplex_data) analysis->iterationRecord();
 }
 
-void HDual::iterationAnalysisMajorData() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+void HEkkDual::iterationAnalysisMajorData() {
+  HighsSimplexInfo& info = ekk_instance_.info_;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->min_threads = simplex_info.min_threads;
-  analysis->num_threads = simplex_info.num_threads;
-  analysis->max_threads = simplex_info.max_threads;
+  analysis->min_threads = info.min_threads;
+  analysis->num_threads = info.num_threads;
+  analysis->max_threads = info.max_threads;
 }
 
-void HDual::iterationAnalysisMajor() {
+void HEkkDual::iterationAnalysisMajor() {
   iterationAnalysisMajorData();
   // Possibly switch from DSE to Devex
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     bool switch_to_devex = false;
     switch_to_devex = analysis->switchToDevex();
     if (switch_to_devex) {
-      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
+      dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
       // Set up the Devex framework
-      workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
+      ekk_instance_.info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
   }
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-  analysis->iterationRecordMajor();
-#endif
+  if (analysis->analyse_simplex_data) {
+    analysis->iterationRecord();
+    analysis->iterationRecordMajor();
+  }
 }

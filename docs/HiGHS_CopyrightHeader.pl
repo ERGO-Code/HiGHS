@@ -5,11 +5,10 @@ $infile='';
 $CopyrightHeaderLine0 = "/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */";
 $CopyrightHeaderLine1 = "/*                                                                       */";
 $CopyrightHeaderLine2 = "/*    This file is part of the HiGHS linear optimization suite           */";
-$CopyrightHeaderLine3 = "/*                                                                       */";
-$CopyrightHeaderLine4 = "/*    Written and engineered 2008-2021 at the University of Edinburgh    */";
-$CopyrightHeaderLine5 = "/*                                                                       */";
-$CopyrightHeaderLine6 = "/*    Available as open-source under the MIT License                     */";
-$CopyrightHeaderLine7 = "/*                                                                       */";
+$CopyrightHeaderLine3 = "/*    Written and engineered 2008-2021 at the University of Edinburgh    */";
+$CopyrightHeaderLine4 = "/*    Available as open-source under the MIT License                     */";
+$CopyrightHeaderLine5 = "/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */";
+$CopyrightHeaderLine6 = "/*    and Michael Feldmeier                                              */";
 $RemoveCopyrightHeader = 0;
 while(<>) {
     if ($infile ne $ARGV) {
@@ -31,11 +30,14 @@ while(<>) {
 	print(outfile "$CopyrightHeaderLine0\n");
 	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine2\n");
+	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine3\n");
+	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine4\n");
+	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine5\n");
 	print(outfile "$CopyrightHeaderLine6\n");
-	print(outfile "$CopyrightHeaderLine7\n");
+	print(outfile "$CopyrightHeaderLine1\n");
 	print(outfile "$CopyrightHeaderLine0\n");
 #
 # Determine whether an old copyright header should be ignored

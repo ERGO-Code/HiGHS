@@ -6,113 +6,88 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file PresolveComponent.cpp
  * @brief The HiGHS class
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "presolve/PresolveComponent.h"
 
+#include "presolve/HPresolve.h"
+
 HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
                                     bool mip) {
-  assert(options_.presolve_on);
-  data_.presolve_.push_back(presolve::Presolve(timer));
-  data_.presolve_[0].load(lp, mip);
-  return HighsStatus::OK;
+  data_.postSolveStack.initializeIndexMaps(lp.numRow_, lp.numCol_);
+  data_.reduced_lp_ = lp;
+  this->timer = &timer;
+  return HighsStatus::kOk;
 }
 
 HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
-  if (options.presolve == off_string) {
-    options_.presolve_on = false;
-    return HighsStatus::OK;
+  options_ = &options;
+
+  return HighsStatus::kOk;
+}
+
+std::string PresolveComponent::presolveStatusToString(
+    const HighsPresolveStatus presolve_status) {
+  switch (presolve_status) {
+    case HighsPresolveStatus::kNotPresolved:
+      return "Not presolved";
+    case HighsPresolveStatus::kNotReduced:
+      return "Not reduced";
+    case HighsPresolveStatus::kInfeasible:
+      return "Infeasible";
+    case HighsPresolveStatus::kUnboundedOrInfeasible:
+      return "Unbounded or infeasible";
+    case HighsPresolveStatus::kReduced:
+      return "Reduced";
+    case HighsPresolveStatus::kReducedToEmpty:
+      return "Reduced to empty";
+    case HighsPresolveStatus::kTimeout:
+      return "Timeout";
+    case HighsPresolveStatus::kNullError:
+      return "Null error";
+    case HighsPresolveStatus::kOptionsError:
+      return "Options error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised presolve status";
   }
-
-  if (options.presolve != on_string) return HighsStatus::Error;
-
-  assert(options_.presolve_on);
-  return HighsStatus::OK;
 }
 
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
-  if (reduced)
-    for (unsigned int col = 0; col < data_.reduced_solution_.col_dual.size();
-         col++)
-      data_.reduced_solution_.col_dual[col] =
-          data_.reduced_solution_.col_dual[col];
-  else
-    for (unsigned int col = 0; col < data_.recovered_solution_.col_dual.size();
-         col++)
-      data_.recovered_solution_.col_dual[col] =
-          data_.recovered_solution_.col_dual[col];
+  for (HighsInt col = 0; col < data_.reduced_lp_.numCol_; col++)
+    data_.recovered_solution_.col_dual[col] =
+        -data_.recovered_solution_.col_dual[col];
   return;
 }
 
-void PresolveComponent::negateReducedLpCost() {
-  for (unsigned int col = 0; col < data_.reduced_lp_.colCost_.size(); col++)
-    data_.reduced_lp_.colCost_[col] = -data_.reduced_lp_.colCost_[col];
-  return;
-}
+void PresolveComponent::negateReducedLpCost() { return; }
 
 HighsPresolveStatus PresolveComponent::run() {
-  has_run_ = true;
-  assert(data_.presolve_.size() > 0);
-  // Set options.
-  bool options_ok = presolve::checkOptions(options_);
-  if (options_ok) {
-    if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
+  presolve::HPresolve presolve;
+  presolve.setInput(data_.reduced_lp_, *options_, timer);
 
-    // max iterations
-    if (options_.iteration_strategy == "num_limit")
-      data_.presolve_[0].max_iterations = options_.max_iterations;
+  HighsModelStatus status = presolve.run(data_.postSolveStack);
 
-    // time limit
-    if (options_.time_limit < presolve::inf && options_.time_limit > 0)
-      data_.presolve_[0].setTimeLimit(options_.time_limit);
-
-    // order and selection of presolvers
-    if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
-
-    // printing
-    if (options_.dev) data_.presolve_[0].iPrint = -1;
-
-    data_.presolve_[0].setNumericalTolerances();
-
-    // Run presolve.
-    presolve_status_ = data_.presolve_[0].presolve();
-  } else {
-    presolve_status_ = HighsPresolveStatus::OptionsError;
+  switch (status) {
+    case HighsModelStatus::kInfeasible:
+      return HighsPresolveStatus::kInfeasible;
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      return HighsPresolveStatus::kUnboundedOrInfeasible;
+    case HighsModelStatus::kOptimal:
+      return HighsPresolveStatus::kReducedToEmpty;
+    default:
+      return HighsPresolveStatus::kReduced;
   }
-
-  // else: Run default.
-
-  if (presolve_status_ == HighsPresolveStatus::Reduced ||
-      presolve_status_ == HighsPresolveStatus::ReducedToEmpty) {
-    // Move vectors so no copying happens. presolve does not need that lp
-    // any more.
-    data_.reduced_lp_.numCol_ = data_.presolve_[0].numCol;
-    data_.reduced_lp_.numRow_ = data_.presolve_[0].numRow;
-    data_.reduced_lp_.Astart_ = std::move(data_.presolve_[0].Astart);
-    data_.reduced_lp_.Aindex_ = std::move(data_.presolve_[0].Aindex);
-    data_.reduced_lp_.Avalue_ = std::move(data_.presolve_[0].Avalue);
-    data_.reduced_lp_.colCost_ = std::move(data_.presolve_[0].colCost);
-    data_.reduced_lp_.colLower_ = std::move(data_.presolve_[0].colLower);
-    data_.reduced_lp_.colUpper_ = std::move(data_.presolve_[0].colUpper);
-    data_.reduced_lp_.rowLower_ = std::move(data_.presolve_[0].rowLower);
-    data_.reduced_lp_.rowUpper_ = std::move(data_.presolve_[0].rowUpper);
-    data_.reduced_lp_.integrality_ = std::move(data_.presolve_[0].integrality);
-
-    data_.reduced_lp_.sense_ = ObjSense::MINIMIZE;
-    data_.reduced_lp_.offset_ = data_.presolve_[0].objShift;
-    data_.reduced_lp_.model_name_ =
-        std::move(data_.presolve_[0].modelName);  //"Presolved model";
-  }
-
-  return presolve_status_;
 }
 
 void PresolveComponent::clear() {
-  has_run_ = false;
+  //  has_run_ = false;
   data_.clear();
 }
 namespace presolve {

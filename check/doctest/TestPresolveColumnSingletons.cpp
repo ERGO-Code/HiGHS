@@ -1,7 +1,7 @@
 #include <doctest.h>
 #include "Highs.h"
 
-int factorial(int number) { return number <= 1 ? number : factorial(number - 1) * number; }
+HighsInt factorial(HighsInt number) { return number <= 1 ? number : factorial(number - 1) * number; }
 
 TEST_CASE("testing the factorial function") {
     CHECK(factorial(1) == 1);
@@ -45,7 +45,7 @@ HighsStatus zeroCostColSing() {
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -100,7 +100,7 @@ HighsStatus colSingDoubletonEquality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -154,7 +154,7 @@ HighsStatus colSingDoubletonInequality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -191,7 +191,7 @@ HighsStatus twoColSingDoubletonEquality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   status = highs.run();
   return status;
@@ -228,7 +228,7 @@ HighsStatus twoColSingDoubletonInequality()
 
   Highs highs;
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::OK);
+  assert(status == HighsStatus::kOk);
 
   highs.run();
   status = highs.run();
@@ -270,3 +270,4 @@ TEST_CASE("two-col-sing-doubleton-ineq [presolve-col-sing]") {
   std::string str = HighsStatusToString(status);
   REQUIRE(str == "OK");
 }
+
