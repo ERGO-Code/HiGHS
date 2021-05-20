@@ -22,6 +22,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "model/HighsModel.h"
 #include "presolve/PresolveComponent.h"
 
 /**
@@ -37,13 +38,26 @@ class Highs {
    */
 
   /**
-   * @brief Every model loading module eventually uses passModel to
-   * communicate the model to HiGHS. It clears the vector of
-   * HighsModelObjects (hmos), creates a HighsModelObject for this LP
-   * and makes it the first of the vector of HighsModelObjects
+   * @brief Every model loading module eventually uses the first
+   * passModel to communicate the model to HiGHS. It clears the vector
+   * of HighsModelObjects (hmos), creates a HighsModelObject for the
+   * LP and makes it the first of the vector of HighsModelObjects
    */
+  HighsStatus passModel(HighsModel model  //!< The HighsModel instance for this model
+  );
+
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
+
+  HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
+                        const HighsInt num_nz, const bool rowwise,
+                        const double* costs, const double* col_lower,
+                        const double* col_upper, const double* row_lower,
+                        const double* row_upper, const HighsInt* astart,
+                        const HighsInt* aindex, const double* avalue,
+			const HighsInt* q_start,
+                        const HighsInt* q_index, const double* q_value,
+                        const HighsInt* integrality = NULL);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const bool rowwise,

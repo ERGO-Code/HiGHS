@@ -223,6 +223,10 @@ HighsStatus Highs::reset() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::passModel(const HighsModel model) {
+  return HighsStatus::kError;
+}
+
 HighsStatus Highs::passModel(const HighsLp lp) {
   HighsStatus return_status = HighsStatus::kOk;
   // move the copy of the LP to the internal LP
@@ -238,6 +242,18 @@ HighsStatus Highs::passModel(const HighsLp lp) {
   // model object for this LP
   return_status = interpretCallStatus(reset(), return_status, "reset");
   return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
+                             const HighsInt num_nz, const bool rowwise,
+                             const double* costs, const double* col_lower,
+                             const double* col_upper, const double* row_lower,
+                             const double* row_upper, const HighsInt* astart,
+                             const HighsInt* aindex, const double* avalue,
+			     const HighsInt* q_start,
+			     const HighsInt* q_index, const double* q_value,
+                             const HighsInt* integrality) {
+  return HighsStatus::kError;
 }
 
 HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
