@@ -189,7 +189,8 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
       lower = lp.rowLower_[iRow];
       upper = lp.rowUpper_[iRow];
       value = solution.row_value[iRow];
-      if (have_dual_solution) dual = -solution.row_dual[iRow];
+      // @FlipRowDual -solution.row_dual[iRow]; became solution.row_dual[iRow];
+      if (have_dual_solution) dual = solution.row_dual[iRow];
       if (have_basis) status = basis.row_status[iRow];
     }
     // Flip dual according to lp.sense_
@@ -241,8 +242,9 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
         HighsInt iRow = lp.Aindex_[el];
         double Avalue = lp.Avalue_[el];
         primal_activities[iRow] += value * Avalue;
+        // @FlipRowDual += became -=
         if (have_dual_solution)
-          dual_activities[iCol] += solution.row_dual[iRow] * Avalue;
+          dual_activities[iCol] -= solution.row_dual[iRow] * Avalue;
       }
     }
   }
@@ -605,7 +607,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         double slack_value = ipx_col_value[ipx_slack];
         double slack_dual = ipx_col_dual[ipx_slack];
         double value = slack_value;
-        double dual = -slack_dual;
+        // @FlipRowDual -slack_dual became slack_dual
+        double dual = slack_dual;
         if (ipx_row_status[ipx_row] == ipx_basic) {
           // Row is basic
           num_boxed_rows_basic++;
@@ -652,7 +655,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
         assert(ipx_row_status[ipx_row] ==
                -1);  // const ipx::Int ipx_nonbasic_row = -1;
         double value = rhs[ipx_row] - ipx_row_value[ipx_row];
-        double dual = -ipx_row_dual[ipx_row];
+        // @FlipRowDual -ipx_row_dual[ipx_row]; became ipx_row_dual[ipx_row];
+        double dual = ipx_row_dual[ipx_row];
         if (constraint_type[ipx_row] == '>') {
           // Row is at its lower bound
           highs_basis.row_status[row] = HighsBasisStatus::kLower;

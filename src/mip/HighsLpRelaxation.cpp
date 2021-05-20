@@ -346,14 +346,18 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   HighsCDouble upper = upperbound;
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (row_dual[i] < 0) {
+    // @FlipRowDual row_dual[i] < 0 became row_dual[i] > 0
+    if (row_dual[i] > 0) {
       if (lp.rowLower_[i] != -kHighsInf)
-        upper += row_dual[i] * lp.rowLower_[i];
+        // @FlipRowDual += became -=
+        upper -= row_dual[i] * lp.rowLower_[i];
       else
         row_dual[i] = 0;
-    } else if (row_dual[i] > 0) {
+      // @FlipRowDual row_dual[i] > 0 became row_dual[i] < 0
+    } else if (row_dual[i] < 0) {
       if (lp.rowUpper_[i] != kHighsInf)
-        upper += row_dual[i] * lp.rowUpper_[i];
+        // @FlipRowDual += became -=
+        upper -= row_dual[i] * lp.rowUpper_[i];
       else
         row_dual[i] = 0;
     }
@@ -369,7 +373,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     for (HighsInt j = start; j != end; ++j) {
       if (row_dual[lp.Aindex_[j]] == 0) continue;
-      sum += lp.Avalue_[j] * row_dual[lp.Aindex_[j]];
+      // @FlipRowDual += became -=
+      sum -= lp.Avalue_[j] * row_dual[lp.Aindex_[j]];
     }
 
     double val = double(sum);
