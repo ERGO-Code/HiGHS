@@ -6,118 +6,133 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HighsSort.h
  * @brief Sorting routines for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef UTIL_HIGHSSORT_H_
 #define UTIL_HIGHSSORT_H_
 
 #include <vector>
 
+#include "lp_data/HConst.h"
+#include "util/HighsInt.h"
+
 using std::vector;
 
-void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
-                         vector<int>& heap_ix, double v, int ix);
-void sortDecreasingHeap(const int n, vector<double>& heap_v,
-                        vector<int>& heap_ix);
+void addToDecreasingHeap(HighsInt& n, HighsInt mx_n, vector<double>& heap_v,
+                         vector<HighsInt>& heap_ix, double v, HighsInt ix);
+void sortDecreasingHeap(const HighsInt n, vector<double>& heap_v,
+                        vector<HighsInt>& heap_ix);
 /**
  * @brief Sort values[1..n] of an array by increasing value
  */
-void maxheapsort(int* heap_v,  //!< Int values to be sorted
-                 int n         //!< Number of values to be sorted
+void maxheapsort(HighsInt* heap_v,  //!< HighsInt values to be sorted
+                 HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Sort values[1..n] of an array by increasing value with corresponding
  * indices
  */
-void maxheapsort(int* heap_v,  //!< Values to be sorted
-                 int* heap_i,  //!< Indices corrresponding to (sorted) values
-                 int n         //!< Number of values to be sorted
+void maxheapsort(
+    HighsInt* heap_v,  //!< Values to be sorted
+    HighsInt* heap_i,  //!< Indices corrresponding to (sorted) values
+    HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Sort values[1..n] of an array by increasing value with corresponding
  * indices
  */
-void maxheapsort(double* heap_v,  //!< Values to be sorted
-                 int* heap_i,     //!< Indices corrresponding to (sorted) values
-                 int n            //!< Number of values to be sorted
+void maxheapsort(
+    double* heap_v,    //!< Values to be sorted
+    HighsInt* heap_i,  //!< Indices corrresponding to (sorted) values
+    HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Build a value heap for sorting values[1..n] of an array by increasing
  * value
  */
-void buildMaxheap(int* heap_v,  //!< Int values to be sorted
-                  int n         //!< Number of values to be sorted
+void buildMaxheap(HighsInt* heap_v,  //!< HighsInt values to be sorted
+                  HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Build a value-index heap for sorting values[1..n] of an array by
  * increasing value
  */
-void buildMaxheap(int* heap_v,  //!< Values to be sorted
-                  int* heap_i,  //!< Indices corrresponding to (sorted) values
-                  int n         //!< Number of values to be sorted
+void buildMaxheap(
+    HighsInt* heap_v,  //!< Values to be sorted
+    HighsInt* heap_i,  //!< Indices corrresponding to (sorted) values
+    HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Build a value-index heap for sorting values[1..n] of an array by
  * increasing value
  */
-void buildMaxheap(double* heap_v,  //!< Values to be sorted
-                  int* heap_i,  //!< Indices corrresponding to (sorted) values
-                  int n         //!< Number of values to be sorted
+void buildMaxheap(
+    double* heap_v,    //!< Values to be sorted
+    HighsInt* heap_i,  //!< Indices corrresponding to (sorted) values
+    HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Sort by increasing value a heap built with buildMaxheap
  */
-void maxHeapsort(int* heap_v,  //!< Int values to be sorted
-                 int n         //!< Number of values to be sorted
+void maxHeapsort(HighsInt* heap_v,  //!< HighsInt values to be sorted
+                 HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Sort by increasing value a heap built with buildMaxheap
  */
-void maxHeapsort(int* heap_v,  //!< Values to be sorted
-                 int* heap_i,  //!< Indices corrresponding to (sorted) values
-                 int n         //!< Number of values to be sorted
+void maxHeapsort(
+    HighsInt* heap_v,  //!< Values to be sorted
+    HighsInt* heap_i,  //!< Indices corrresponding to (sorted) values
+    HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Sort by increasing value a heap built with buildMaxheap
  */
-void maxHeapsort(double* heap_v,  //!< Values to be sorted
-                 int* heap_i,     //!< Indices corrresponding to (sorted) values
-                 int n            //!< Number of values to be sorted
+void maxHeapsort(
+    double* heap_v,    //!< Values to be sorted
+    HighsInt* heap_i,  //!< Indices corrresponding to (sorted) values
+    HighsInt n         //!< Number of values to be sorted
 );
 /**
  * @brief Heapify function for sorting by increasing value
  */
-void maxHeapify(int* heap_v, int i, int n);
+void maxHeapify(HighsInt* heap_v, HighsInt i, HighsInt n);
 
 /**
  * @brief Heapify function for sorting by increasing value
  */
-void maxHeapify(int* heap_v, int* heap_i, int i, int n);
+void maxHeapify(HighsInt* heap_v, HighsInt* heap_i, HighsInt i, HighsInt n);
 
 /**%
  * @brief Heapify function for sorting by increasing value
  */
-void maxHeapify(double* heap_v, int* heap_i, int i, int n);
+void maxHeapify(double* heap_v, HighsInt* heap_i, HighsInt i, HighsInt n);
 
 /**
  * @brief Check that a set of integers is in increasing order and in bounds
  */
-bool increasingSetOk(const int* set, const int set_num_entries,
-                     const int set_entry_lower, const int set_entry_upper,
-                     bool strict);
+bool increasingSetOk(const HighsInt* set, const HighsInt set_num_entries,
+                     const HighsInt set_entry_lower,
+                     const HighsInt set_entry_upper, bool strict);
 
 /**
  * @brief Check that a set of doubles is in increasing order and in bounds
  */
-bool increasingSetOk(const double* set, const int set_num_entries,
+bool increasingSetOk(const double* set, const HighsInt set_num_entries,
                      const double set_entry_lower, const double set_entry_upper,
                      bool strict);
 
-void sortSetData(const int num_set_entries, int* set, const double* data0,
-                 const double* data1, const double* data2, double* sorted_data0,
-                 double* sorted_data1, double* sorted_data2);
+void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+                 const double* data0, const double* data1, const double* data2,
+                 double* sorted_data0, double* sorted_data1,
+                 double* sorted_data2);
+
+void sortSetData(const HighsInt num_set_entries, HighsInt* set,
+                 const HighsVarType* data0, HighsVarType* sorted_data0);
 
 #endif /* UTIL_HIGHSSORT_H_ */

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HEkkDebug.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HEKKDEBUG_H_
 #define SIMPLEX_HEKKDEBUG_H_
@@ -20,7 +22,7 @@
 HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
-                                 const int phase,
+                                 const HighsInt phase,
                                  const bool initialise = false);
 
 HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance);
@@ -30,17 +32,18 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance);
 
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
-                                    const int phase,
-                                    const HighsModelStatus scaled_model_status);
+                                    const HighsInt phase,
+                                    const HighsModelStatus model_status);
 
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const SimplexAlgorithm algorithm, const int phase,
-                          const HighsModelStatus scaled_model_status);
+                          const SimplexAlgorithm algorithm,
+                          const HighsInt phase,
+                          const HighsModelStatus model_status);
 
 bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
-                                           const int var);
+                                           const HighsInt var);
 
 void ekkDebugReportReinvertOnNumericalTrouble(
     const std::string method_name, const HEkk& ekk_instance,
@@ -53,7 +56,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
                                      const double computed_dual);
 
 HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
-    const HEkk& ekk_instance, const int num_free_col,
+    const HEkk& ekk_instance, const HighsInt num_free_col,
     const HSet nonbasic_free_col_set);
 
 HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance);

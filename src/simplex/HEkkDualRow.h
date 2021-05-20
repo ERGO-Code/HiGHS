@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkkDualRow.h
  * @brief Dual simplex ratio test for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HEKKDUALROW_H_
 #define SIMPLEX_HEKKDUALROW_H_
@@ -46,7 +48,7 @@ class HEkkDualRow {
    * Done either for the whole pivotal row (see HEkkDualRow::setup), or
    * just for a slice (see HEkkDual::initSlice)
    */
-  void setupSlice(int size  //!< Dimension of slice
+  void setupSlice(HighsInt size  //!< Dimension of slice
   );
   /**
    * @brief Clear the packed data by zeroing packCount and workCount
@@ -58,8 +60,8 @@ class HEkkDualRow {
    *
    * Offset of numCol is used when packing row_ep
    */
-  void chooseMakepack(const HVector* row,  //!< Row to be packed
-                      const int offset     //!< Offset for indices
+  void chooseMakepack(const HVector* row,    //!< Row to be packed
+                      const HighsInt offset  //!< Offset for indices
   );
   /**
    * @brief Determine the possible variables - candidates for CHUZC
@@ -82,7 +84,7 @@ class HEkkDualRow {
    * perturbation not being relatively too small, returns positive if
    * dual uboundedness is suspected
    */
-  int chooseFinal();
+  HighsInt chooseFinal();
 
   /**
    * @brief Identifies the groups of degenerate nodes in BFRT after a
@@ -92,14 +94,14 @@ class HEkkDualRow {
   bool chooseFinalWorkGroupHeap();
 
   void chooseFinalLargeAlpha(
-      int& breakIndex, int& breakGroup, int pass_workCount,
-      const std::vector<std::pair<int, double>>& pass_workData,
-      const std::vector<int>& pass_workGroup);
+      HighsInt& breakIndex, HighsInt& breakGroup, HighsInt pass_workCount,
+      const std::vector<std::pair<HighsInt, double>>& pass_workData,
+      const std::vector<HighsInt>& pass_workGroup);
 
   void reportWorkDataAndGroup(
-      const std::string message, const int reportWorkCount,
-      const std::vector<std::pair<int, double>>& reportWorkData,
-      const std::vector<int>& reportWorkGroup);
+      const std::string message, const HighsInt reportWorkCount,
+      const std::vector<std::pair<HighsInt, double>>& reportWorkData,
+      const std::vector<HighsInt>& reportWorkGroup);
   bool compareWorkDataAndGroup();
 
   /**
@@ -112,8 +114,8 @@ class HEkkDualRow {
    * @brief Update the dual values
    */
   void updateDual(
-      double theta  //!< Multiple of pivotal row to add int to duals
-                    //      int variable_out  //!< Index of leaving column
+      double theta  //!< Multiple of pivotal row to add HighsInt to duals
+                    //      HighsInt variable_out  //!< Index of leaving column
   );
   /**
    * @brief Create a list of nonbasic free columns
@@ -135,58 +137,56 @@ class HEkkDualRow {
   /**
    * @brief Delete the list of nonbasic free columns
    */
-  void deleteFreelist(int iColumn  //!< Index of column to remove from Freelist
+  void deleteFreelist(
+      HighsInt iColumn  //!< Index of column to remove from Freelist
   );
 
   /**
    * @brief Compute (contribution to) the Devex weight
    */
-  void computeDevexWeight(const int slice = -1);
+  void computeDevexWeight(const HighsInt slice = -1);
 
   // References:
   HEkk& ekk_instance_;
 
-  int workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it here to
-                      //!< avoid compiler warning
-  const int*
+  HighsInt workSize = -1;  //!< Size of the HEkkDualRow slice: Initialise it
+                           //!< here to avoid compiler warning
+  const HighsInt*
       workNumTotPermutation;  //!< Pointer to ekk_instance_.numTotPermutation();
-  const int*
-      workMove;  //!< Pointer to ekk_instance_.simplex_basis_.nonbasicMove_;
-  const double*
-      workDual;  //!< Pointer to ekk_instance_.simplex_info_.workDual_;
-  const double*
-      workRange;  //!< Pointer to ekk_instance_.simplex_info_.workRange_;
-  const int* work_devex_index;  //!< Pointer to
-                                //!< ekk_instance_.simplex_info_.devex_index_;
+  const int8_t* workMove;   //!< Pointer to ekk_instance_.basis_.nonbasicMove_;
+  const double* workDual;   //!< Pointer to ekk_instance_.info_.workDual_;
+  const double* workRange;  //!< Pointer to ekk_instance_.info_.workRange_;
+  const HighsInt* work_devex_index;  //!< Pointer to
+                                     //!< ekk_instance_.info_.devex_index_;
 
   // Freelist:
-  std::set<int> freeList;  //!< Freelist itself
+  std::set<HighsInt> freeList;  //!< Freelist itself
 
   // packed data:
-  int packCount;                  //!< number of packed indices/values
-  std::vector<int> packIndex;     //!< Packed indices
-  std::vector<double> packValue;  //!< Packed values
+  HighsInt packCount;               //!< number of packed indices/values
+  std::vector<HighsInt> packIndex;  //!< Packed indices
+  std::vector<double> packValue;    //!< Packed values
 
   // (Local) value of computed weight
   double computed_edge_weight;
 
-  double workDelta;  //!< Local copy of dual.delta_primal
-  double workAlpha;  //!< Original copy of pivotal computed row-wise
-  double workTheta;  //!< Original copy of dual step workDual[workPivot] /
-                     //!< workAlpha;
-  int workPivot;     //!< Index of the column entering the basis
-  int workCount;     //!< Number of BFRT flips
+  double workDelta;    //!< Local copy of dual.delta_primal
+  double workAlpha;    //!< Original copy of pivotal computed row-wise
+  double workTheta;    //!< Original copy of dual step workDual[workPivot] /
+                       //!< workAlpha;
+  HighsInt workPivot;  //!< Index of the column entering the basis
+  HighsInt workCount;  //!< Number of BFRT flips
 
-  std::vector<std::pair<int, double>>
+  std::vector<std::pair<HighsInt, double>>
       workData;  //!< Index-Value pairs for ratio test
-  std::vector<int>
+  std::vector<HighsInt>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 
   // Independent identifiers for heap-based sort in BFRT
-  int alt_workCount;
-  std::vector<std::pair<int, double>> original_workData;
-  std::vector<std::pair<int, double>> sorted_workData;
-  std::vector<int> alt_workGroup;
+  HighsInt alt_workCount;
+  std::vector<std::pair<HighsInt, double>> original_workData;
+  std::vector<std::pair<HighsInt, double>> sorted_workData;
+  std::vector<HighsInt> alt_workGroup;
 
   HighsSimplexAnalysis* analysis;
 };

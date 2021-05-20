@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsUtils.cpp
  * @brief Class-independent utilities for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "lp_data/HighsModelUtils.h"
@@ -22,16 +24,16 @@
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
 
-void analyseModelBounds(const char* message, int numBd,
-                        const std::vector<double>& lower,
+void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
+                        HighsInt numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper) {
   if (numBd == 0) return;
-  int numFr = 0;
-  int numLb = 0;
-  int numUb = 0;
-  int numBx = 0;
-  int numFx = 0;
-  for (int ix = 0; ix < numBd; ix++) {
+  HighsInt numFr = 0;
+  HighsInt numLb = 0;
+  HighsInt numUb = 0;
+  HighsInt numBx = 0;
+  HighsInt numFx = 0;
+  for (HighsInt ix = 0; ix < numBd; ix++) {
     if (highs_isInfinity(-lower[ix])) {
       // Infinite lower bound
       if (highs_isInfinity(upper[ix])) {
@@ -58,49 +60,64 @@ void analyseModelBounds(const char* message, int numBd,
       }
     }
   }
-  printf("Analysing %d %s bounds\n", numBd, message);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "Analysing %" HIGHSINT_FORMAT " %s bounds\n", numBd, message);
   if (numFr > 0)
-    printf("   Free:  %7d (%3d%%)\n", numFr, (100 * numFr) / numBd);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "   Free:  %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
+                numFr, (100 * numFr) / numBd);
   if (numLb > 0)
-    printf("   LB:    %7d (%3d%%)\n", numLb, (100 * numLb) / numBd);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "   LB:    %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
+                numLb, (100 * numLb) / numBd);
   if (numUb > 0)
-    printf("   UB:    %7d (%3d%%)\n", numUb, (100 * numUb) / numBd);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "   UB:    %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
+                numUb, (100 * numUb) / numBd);
   if (numBx > 0)
-    printf("   Boxed: %7d (%3d%%)\n", numBx, (100 * numBx) / numBd);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "   Boxed: %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
+                numBx, (100 * numBx) / numBd);
   if (numFx > 0)
-    printf("   Fixed: %7d (%3d%%)\n", numFx, (100 * numFx) / numBd);
-  printf("grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
-  printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
-         numFx);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "   Fixed: %7" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT "%%)\n",
+                numFx, (100 * numFx) / numBd);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "grep_CharMl,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
+              ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
+              ",%" HIGHSINT_FORMAT "\n",
+              numBd, numFr, numLb, numUb, numBx, numFx);
 }
 
-std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
-                         const double upper) {
+std::string statusToString(const HighsBasisStatus status, const double lower,
+                           const double upper) {
   switch (status) {
-    case HighsBasisStatus::LOWER:
+    case HighsBasisStatus::kLower:
       if (lower == upper) {
         return "FX";
       } else {
         return "LB";
       }
       break;
-    case HighsBasisStatus::BASIC:
+    case HighsBasisStatus::kBasic:
       return "BS";
       break;
-    case HighsBasisStatus::UPPER:
+    case HighsBasisStatus::kUpper:
       return "UB";
       break;
-    case HighsBasisStatus::ZERO:
+    case HighsBasisStatus::kZero:
       return "FR";
       break;
-    case HighsBasisStatus::NONBASIC:
+    case HighsBasisStatus::kNonbasic:
       return "NB";
       break;
   }
   return "";
 }
 
-void writeModelBoundSol(FILE* file, const bool columns, const int dim,
+void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper,
                         const std::vector<std::string>& names,
@@ -108,10 +125,14 @@ void writeModelBoundSol(FILE* file, const bool columns, const int dim,
                         const std::vector<double>& dual,
                         const std::vector<HighsBasisStatus>& status) {
   const bool have_names = names.size() > 0;
-  const bool have_basis = status.size() > 0;
   const bool have_primal = primal.size() > 0;
   const bool have_dual = dual.size() > 0;
-  std::string ch4_var_status;
+  const bool have_basis = status.size() > 0;
+  if (have_names) assert((int)names.size() >= dim);
+  if (have_primal) assert((int)primal.size() >= dim);
+  if (have_dual) assert((int)dual.size() >= dim);
+  if (have_basis) assert((int)status.size() >= dim);
+  std::string var_status_string;
   if (columns) {
     fprintf(file, "Columns\n");
   } else {
@@ -125,14 +146,14 @@ void writeModelBoundSol(FILE* file, const bool columns, const int dim,
   } else {
     fprintf(file, "\n");
   }
-  for (int ix = 0; ix < dim; ix++) {
+  for (HighsInt ix = 0; ix < dim; ix++) {
     if (have_basis) {
-      ch4_var_status = ch4VarStatus(status[ix], lower[ix], upper[ix]);
+      var_status_string = statusToString(status[ix], lower[ix], upper[ix]);
     } else {
-      ch4_var_status = "";
+      var_status_string = "";
     }
-    fprintf(file, "%9d   %4s %12g %12g", ix, ch4_var_status.c_str(), lower[ix],
-            upper[ix]);
+    fprintf(file, "%9" HIGHSINT_FORMAT "   %4s %12g %12g", ix,
+            var_status_string.c_str(), lower[ix], upper[ix]);
     if (have_primal) {
       fprintf(file, " %12g", primal[ix]);
     } else {
@@ -151,40 +172,43 @@ void writeModelBoundSol(FILE* file, const bool columns, const int dim,
   }
 }
 
-bool namesWithSpaces(const int num_name, const std::vector<std::string>& names,
-                     const bool report) {
+bool namesWithSpaces(const HighsInt num_name,
+                     const std::vector<std::string>& names, const bool report) {
   bool names_with_spaces = false;
-  for (int ix = 0; ix < num_name; ix++) {
-    int space_pos = names[ix].find(" ");
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    HighsInt space_pos = names[ix].find(" ");
     if (space_pos >= 0) {
       if (report)
-        printf("Name |%s| contains a space character in position %d\n",
-               names[ix].c_str(), space_pos);
+        printf(
+            "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
+            "\n",
+            names[ix].c_str(), space_pos);
       names_with_spaces = true;
     }
   }
   return names_with_spaces;
 }
 
-int maxNameLength(const int num_name, const std::vector<std::string>& names) {
-  int max_name_length = 0;
-  for (int ix = 0; ix < num_name; ix++)
-    max_name_length = std::max((int)names[ix].length(), max_name_length);
+HighsInt maxNameLength(const HighsInt num_name,
+                       const std::vector<std::string>& names) {
+  HighsInt max_name_length = 0;
+  for (HighsInt ix = 0; ix < num_name; ix++)
+    max_name_length = std::max((HighsInt)names[ix].length(), max_name_length);
   return max_name_length;
 }
 
-HighsStatus normaliseNames(const HighsOptions& options,
-                           const std::string name_type, const int num_name,
+HighsStatus normaliseNames(const HighsLogOptions& log_options,
+                           const std::string name_type, const HighsInt num_name,
                            std::vector<std::string>& names,
-                           int& max_name_length) {
+                           HighsInt& max_name_length) {
   // Record the desired maximum name length
-  int desired_max_name_length = max_name_length;
+  HighsInt desired_max_name_length = max_name_length;
   // First look for empty names
-  int num_empty_name = 0;
+  HighsInt num_empty_name = 0;
   std::string name_prefix = name_type.substr(0, 1);
   bool names_with_spaces = false;
-  for (int ix = 0; ix < num_name; ix++) {
-    if ((int)names[ix].length() == 0) num_empty_name++;
+  for (HighsInt ix = 0; ix < num_name; ix++) {
+    if ((HighsInt)names[ix].length() == 0) num_empty_name++;
   }
   // If there are no empty names - in which case they will all be
   // replaced - find the maximum name length
@@ -195,11 +219,11 @@ HighsStatus normaliseNames(const HighsOptions& options,
     // Construct names, either because they are empty names, or
     // because the existing names are too long
 
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "There are empty or excessively-long %s names: using "
-                    "constructed names with prefix %s",
-                    name_type.c_str(), name_prefix.c_str());
-    for (int ix = 0; ix < num_name; ix++)
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "There are empty or excessively-long %s names: using "
+                 "constructed names with prefix %s\n",
+                 name_type.c_str(), name_prefix.c_str());
+    for (HighsInt ix = 0; ix < num_name; ix++)
       names[ix] = name_prefix + std::to_string(ix);
   } else {
     // Using original names, so look to see whether there are names with spaces
@@ -208,29 +232,29 @@ HighsStatus normaliseNames(const HighsOptions& options,
   // Find the final maximum name length
   max_name_length = maxNameLength(num_name, names);
   // Can't have names with spaces and more than 8 characters
-  if (max_name_length > 8 && names_with_spaces) return HighsStatus::Error;
-  if (construct_names) return HighsStatus::Warning;
-  return HighsStatus::OK;
+  if (max_name_length > 8 && names_with_spaces) return HighsStatus::kError;
+  if (construct_names) return HighsStatus::kWarning;
+  return HighsStatus::kOk;
 }
 
 HighsBasisStatus checkedVarHighsNonbasicStatus(
     const HighsBasisStatus ideal_status, const double lower,
     const double upper) {
   HighsBasisStatus checked_status;
-  if (ideal_status == HighsBasisStatus::LOWER ||
-      ideal_status == HighsBasisStatus::ZERO) {
+  if (ideal_status == HighsBasisStatus::kLower ||
+      ideal_status == HighsBasisStatus::kZero) {
     // Looking to give status LOWER or ZERO
     if (highs_isInfinity(-lower)) {
       // Lower bound is infinite
       if (highs_isInfinity(upper)) {
         // Upper bound is infinite
-        checked_status = HighsBasisStatus::ZERO;
+        checked_status = HighsBasisStatus::kZero;
       } else {
         // Upper bound is finite
-        checked_status = HighsBasisStatus::UPPER;
+        checked_status = HighsBasisStatus::kUpper;
       }
     } else {
-      checked_status = HighsBasisStatus::LOWER;
+      checked_status = HighsBasisStatus::kLower;
     }
   } else {
     // Looking to give status UPPER
@@ -238,102 +262,91 @@ HighsBasisStatus checkedVarHighsNonbasicStatus(
       // Upper bound is infinite
       if (highs_isInfinity(-lower)) {
         // Lower bound is infinite
-        checked_status = HighsBasisStatus::ZERO;
+        checked_status = HighsBasisStatus::kZero;
       } else {
         // Upper bound is finite
-        checked_status = HighsBasisStatus::LOWER;
+        checked_status = HighsBasisStatus::kLower;
       }
     } else {
-      checked_status = HighsBasisStatus::UPPER;
+      checked_status = HighsBasisStatus::kUpper;
     }
   }
   return checked_status;
 }
 
-// Return a string representation of PrimalDualStatus
-std::string utilPrimalDualStatusToString(const int primal_dual_status) {
-  switch (primal_dual_status) {
-    case PrimalDualStatus::STATUS_NOTSET:
-      return "Not set";
+// Return a string representation of SolutionStatus
+std::string utilSolutionStatusToString(const HighsInt solution_status) {
+  switch (solution_status) {
+    case kSolutionStatusNone:
+      return "None";
       break;
-    case PrimalDualStatus::STATUS_NO_SOLUTION:
-      return "No solution";
+    case kSolutionStatusInfeasible:
+      return "Infeasible";
       break;
-    case PrimalDualStatus::STATUS_UNKNOWN:
-      return "Point of unknown feasibility";
-      break;
-    case PrimalDualStatus::STATUS_INFEASIBLE_POINT:
-      return "Infeasible point";
-      break;
-    case PrimalDualStatus::STATUS_FEASIBLE_POINT:
-      return "Feasible point";
+    case kSolutionStatusFeasible:
+      return "Feasible";
       break;
     default:
-#ifdef HiGHSDEV
-      printf("Primal/dual status %d not recognised\n", primal_dual_status);
-#endif
-      return "Unrecognised primal/dual status";
-      break;
+      assert(1 == 0);
+      return "Unrecognised solution status";
   }
-  return "";
 }
 
 // Return a string representation of HighsModelStatus.
-std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
+std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::NOTSET:
+    case HighsModelStatus::kNotset:
       return "Not Set";
       break;
-    case HighsModelStatus::LOAD_ERROR:
+    case HighsModelStatus::kLoadError:
       return "Load error";
       break;
-    case HighsModelStatus::MODEL_ERROR:
+    case HighsModelStatus::kModelError:
       return "Model error";
       break;
-    case HighsModelStatus::PRESOLVE_ERROR:
+    case HighsModelStatus::kPresolveError:
       return "Presolve error";
       break;
-    case HighsModelStatus::SOLVE_ERROR:
+    case HighsModelStatus::kSolveError:
       return "Solve error";
       break;
-    case HighsModelStatus::POSTSOLVE_ERROR:
+    case HighsModelStatus::kPostsolveError:
       return "Postsolve error";
       break;
-    case HighsModelStatus::MODEL_EMPTY:
+    case HighsModelStatus::kModelEmpty:
       return "Model empty";
       break;
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
-      return "Infeasible";  //"Primal infeasible";
-      break;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
-      return "Unbounded";  //"Primal unbounded";
-      break;
-    case HighsModelStatus::OPTIMAL:
+    case HighsModelStatus::kOptimal:
       return "Optimal";
       break;
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return "Reached dual objective upper bound";
+    case HighsModelStatus::kInfeasible:
+      return "Infeasible";
       break;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      return "Primal infeasible or unbounded";
+      break;
+    case HighsModelStatus::kUnbounded:
+      return "Unbounded";
+      break;
+    case HighsModelStatus::kObjectiveBound:
+      return "Reached objective bound";
+      break;
+    case HighsModelStatus::kObjectiveTarget:
+      return "Reached objective target";
+      break;
+    case HighsModelStatus::kTimeLimit:
       return "Reached time limit";
       break;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    case HighsModelStatus::kIterationLimit:
       return "Reached iteration limit";
       break;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
-      return "Primal and dual infeasible";
-      break;
-    case HighsModelStatus::DUAL_INFEASIBLE:
-      return "Dual infeasible";
+    case HighsModelStatus::kUnknown:
+      return "Unknown";
       break;
     default:
-#ifdef HiGHSDEV
-      printf("HiGHS model status %d not recognised\n", (int)model_status);
-#endif
+      assert(1 == 0);
       return "Unrecognised HiGHS model status";
-      break;
   }
-  return "";
 }
 
 void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts) {
@@ -342,60 +355,42 @@ void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts) {
   iteration_counts.crossover = 0;
 }
 
-void zeroHighsIterationCounts(HighsInfo& info) {
-  info.simplex_iteration_count = 0;
-  info.ipm_iteration_count = 0;
-  info.crossover_iteration_count = 0;
-}
-
-void copyHighsIterationCounts(const HighsIterationCounts& iteration_counts,
-                              HighsInfo& info) {
-  info.simplex_iteration_count = iteration_counts.simplex;
-  info.ipm_iteration_count = iteration_counts.ipm;
-  info.crossover_iteration_count = iteration_counts.crossover;
-}
-
-void copyHighsIterationCounts(const HighsInfo& info,
-                              HighsIterationCounts& iteration_counts) {
-  iteration_counts.simplex = info.simplex_iteration_count;
-  iteration_counts.ipm = info.ipm_iteration_count;
-  iteration_counts.crossover = info.crossover_iteration_count;
-}
-
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {
-    case HighsModelStatus::NOTSET:
-      return HighsStatus::Error;
-    case HighsModelStatus::LOAD_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::MODEL_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::PRESOLVE_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::SOLVE_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::POSTSOLVE_ERROR:
-      return HighsStatus::Error;
-    case HighsModelStatus::MODEL_EMPTY:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_INFEASIBLE:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_UNBOUNDED:
-      return HighsStatus::OK;
-    case HighsModelStatus::OPTIMAL:
-      return HighsStatus::OK;
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
-      return HighsStatus::OK;
-    case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return HighsStatus::OK;
-    case HighsModelStatus::REACHED_TIME_LIMIT:
-      return HighsStatus::Warning;
-    case HighsModelStatus::REACHED_ITERATION_LIMIT:
-      return HighsStatus::Warning;
-    case HighsModelStatus::DUAL_INFEASIBLE:
-      return HighsStatus::Warning;
+    case HighsModelStatus::kNotset:
+      return HighsStatus::kError;
+    case HighsModelStatus::kLoadError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kModelError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kPresolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kSolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kPostsolveError:
+      return HighsStatus::kError;
+    case HighsModelStatus::kModelEmpty:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kOptimal:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kInfeasible:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kUnboundedOrInfeasible:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kUnbounded:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kObjectiveBound:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kObjectiveTarget:
+      return HighsStatus::kOk;
+    case HighsModelStatus::kTimeLimit:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kIterationLimit:
+      return HighsStatus::kWarning;
+    case HighsModelStatus::kUnknown:
+      return HighsStatus::kWarning;
     default:
-      return HighsStatus::Error;
+      return HighsStatus::kError;
   }
 }

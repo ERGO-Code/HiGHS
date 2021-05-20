@@ -6,18 +6,19 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsSeparator.h
  * @brief Base class for separators
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_SEPARATOR_H_
 #define MIP_HIGHS_SEPARATOR_H_
 
-#include <cstddef>
-#include <cstdint>
+#include "util/HighsInt.h"
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -29,8 +30,8 @@ class HighsMipSolver;
 /// relaxation by substituting bounds and aggregating rows
 class HighsSeparator {
  private:
-  std::size_t numCutsFound;
-  std::size_t numCalls;
+  HighsInt numCutsFound;
+  HighsInt numCalls;
   int clockIndex;
 
  public:
@@ -45,11 +46,11 @@ class HighsSeparator {
   void run(HighsLpRelaxation& lpRelaxation, HighsLpAggregator& lpAggregator,
            HighsTransformedLp& transLp, HighsCutPool& cutpool);
 
-  std::size_t getNumCutsFound() const { return numCutsFound; }
+  HighsInt getNumCutsFound() const { return numCutsFound; }
 
-  std::size_t getNumCalls() const { return numCalls; }
+  HighsInt getNumCalls() const { return numCalls; }
 
-  int getClockIndex() const { return clockIndex; }
+  HighsInt getClockIndex() const { return clockIndex; }
 
   virtual ~HighsSeparator() {}
 };

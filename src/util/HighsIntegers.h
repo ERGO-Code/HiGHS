@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_UTIL_INTEGERS_H_
 #define HIGHS_UTIL_INTEGERS_H_
@@ -17,6 +20,7 @@
 #include <vector>
 
 #include "util/HighsCDouble.h"
+#include "util/HighsInt.h"
 
 class HighsIntegers {
  public:
@@ -77,14 +81,13 @@ class HighsIntegers {
     return m[3];
   }
 
-  static double integralScale(const std::vector<double>& vals, double deltadown,
-                              double deltaup) {
-    if (vals.empty()) return 0.0;
+  static double integralScale(const double* vals, HighsInt numVals,
+                              double deltadown, double deltaup) {
+    if (numVals == 0) return 0.0;
 
     double minval = *std::min_element(
-        vals.begin(), vals.end(),
+        vals, vals + numVals,
         [](double a, double b) { return std::abs(a) < std::abs(b); });
-    int numVals = vals.size();
 
     int expshift;
 
@@ -115,7 +118,7 @@ class HighsIntegers {
 
     uint64_t currgcd = (uint64_t)std::abs(double(downval));
 
-    for (int i = 1; i != numVals; ++i) {
+    for (HighsInt i = 1; i != numVals; ++i) {
       val = denom * HighsCDouble(vals[i]);
       downval = floor(val + deltaup);
       fraction = val - downval;
@@ -144,6 +147,11 @@ class HighsIntegers {
     }
 
     return denom / (double)currgcd;
+  }
+
+  static double integralScale(const std::vector<double>& vals, double deltadown,
+                              double deltaup) {
+    return integralScale(vals.data(), vals.size(), deltadown, deltaup);
   }
 };
 

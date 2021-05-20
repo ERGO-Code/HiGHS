@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/HPreData.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "presolve/HPreData.h"
 
@@ -23,15 +25,15 @@ namespace presolve {
 
 HPreData::HPreData() {}
 
-double HPreData::getRowValue(int i) {
+double HPreData::getRowValue(HighsInt i) {
   double sum = 0;
-  for (int k = ARstart[i]; k < ARstart[i + 1]; k++)
+  for (HighsInt k = ARstart[i]; k < ARstart[i + 1]; k++)
     if (flagRow[ARindex[k]]) sum += ARvalue[k] * valuePrimal[ARindex[k]];
   return sum;
 }
 
-double HPreData::getaij(int i, int j) {
-  int k = ARstart[i];
+double HPreData::getaij(HighsInt i, HighsInt j) {
+  HighsInt k = ARstart[i];
   while (j != ARindex[k] && k <= ARstart[i + 1]) k++;
   if (k == ARstart[i + 1]) {
     // cout<<"Error: No such element in A: row "<<i<<", column "<<j<<endl;
@@ -40,8 +42,8 @@ double HPreData::getaij(int i, int j) {
   return ARvalue[k];
 }
 
-bool HPreData::isZeroA(int i, int j) {
-  int k = ARstart[i];
+bool HPreData::isZeroA(HighsInt i, HighsInt j) {
+  HighsInt k = ARstart[i];
   while (k < ARstart[i + 1] && j != ARindex[k]) k++;
   if (k == ARstart[i + 1]) {
     return true;
@@ -58,21 +60,21 @@ void HPreData::makeARCopy() {
 void HPreData::makeACopy() {
   // Make a A copy
 
-  vector<int> iwork(numColOriginal, 0);
+  vector<HighsInt> iwork(numColOriginal, 0);
   Astart.assign(numColOriginal + 1, 0);
-  const int AcountX = ARindex.size();
+  const HighsInt AcountX = ARindex.size();
   Aindex.resize(AcountX);
   Avalue.resize(AcountX);
-  for (int k = 0; k < AcountX; k++)
+  for (HighsInt k = 0; k < AcountX; k++)
     if (ARindex[k] < numColOriginal) iwork[ARindex[k]]++;
-  for (int i = 1; i <= numColOriginal; i++)
+  for (HighsInt i = 1; i <= numColOriginal; i++)
     Astart[i] = Astart[i - 1] + iwork[i - 1];
-  for (int i = 0; i < numColOriginal; i++) iwork[i] = Astart[i];
-  for (int iRow = 0; iRow < numRowOriginal; iRow++) {
-    for (int k = ARstart[iRow]; k < ARstart[iRow + 1]; k++) {
-      const int iColumn = ARindex[k];
+  for (HighsInt i = 0; i < numColOriginal; i++) iwork[i] = Astart[i];
+  for (HighsInt iRow = 0; iRow < numRowOriginal; iRow++) {
+    for (HighsInt k = ARstart[iRow]; k < ARstart[iRow + 1]; k++) {
+      const HighsInt iColumn = ARindex[k];
       if (iColumn != numColOriginal) {
-        int iPut = iwork[iColumn]++;
+        HighsInt iPut = iwork[iColumn]++;
         Aindex[iPut] = iRow;
         Avalue[iPut] = ARvalue[k];
       }
@@ -80,7 +82,7 @@ void HPreData::makeACopy() {
   }
 
   Aend.resize(numColOriginal + 1, 0);
-  for (int i = 0; i < numColOriginal; i++) Aend[i] = Astart[i + 1];
+  for (HighsInt i = 0; i < numColOriginal; i++) Aend[i] = Astart[i + 1];
 }
 
 void initPresolve(PresolveStats& stats) {

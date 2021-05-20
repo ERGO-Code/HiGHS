@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_IMPLICATIONS_H_
 #define HIGHS_IMPLICATIONS_H_
@@ -25,12 +28,12 @@ class HighsImplications {
   std::vector<HighsDomainChange> implications;
 
   struct Implics {
-    int start;
-    int num;
+    HighsInt start;
+    HighsInt num;
   };
   std::vector<Implics> implicationmap;
 
-  bool computeImplications(int col, bool val);
+  bool computeImplications(HighsInt col, bool val);
 
  public:
   struct VarBound {
@@ -42,15 +45,15 @@ class HighsImplications {
   };
 
  private:
-  std::vector<std::map<int, VarBound>> vubs;
-  std::vector<std::map<int, VarBound>> vlbs;
+  std::vector<std::map<HighsInt, VarBound>> vubs;
+  std::vector<std::map<HighsInt, VarBound>> vlbs;
 
  public:
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<uint8_t> colsubstituted;
   HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
-    int numcol = mipsolver.numCol();
+    HighsInt numcol = mipsolver.numCol();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
@@ -63,7 +66,7 @@ class HighsImplications {
     implicationmap.clear();
     implicationmap.shrink_to_fit();
 
-    int numcol = mipsolver.numCol();
+    HighsInt numcol = mipsolver.numCol();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
     vubs.clear();
@@ -74,10 +77,10 @@ class HighsImplications {
     vlbs.resize(numcol);
   }
 
-  int getImplications(int col, bool val,
-                      const HighsDomainChange*& implicationsstart,
-                      bool& infeasible) {
-    int loc = 2 * col + val;
+  HighsInt getImplications(HighsInt col, bool val,
+                           const HighsDomainChange*& implicationsstart,
+                           bool& infeasible) {
+    HighsInt loc = 2 * col + val;
     if (implicationmap[loc].start == -1) {
       infeasible = computeImplications(col, val);
 
@@ -87,34 +90,42 @@ class HighsImplications {
 
     assert(implicationmap[loc].start != -1);
 
-    implicationsstart = &implications[implicationmap[loc].start];
+    implicationsstart = implications.data() + implicationmap[loc].start;
 
     return implicationmap[loc].num;
   }
 
-  bool implicationsCached(int col, bool val) {
-    int loc = 2 * col + val;
+  bool implicationsCached(HighsInt col, bool val) {
+    HighsInt loc = 2 * col + val;
     return implicationmap[loc].start != -1;
   }
 
-  void addVUB(int col, int vubcol, double vubcoef, double vubconstant);
+  void addVUB(HighsInt col, HighsInt vubcol, double vubcoef,
+              double vubconstant);
 
-  void addVLB(int col, int vlbcol, double vlbcoef, double vlbconstant);
+  void addVLB(HighsInt col, HighsInt vlbcol, double vlbcoef,
+              double vlbconstant);
 
-  const std::map<int, VarBound>& getVUBs(int col) const { return vubs[col]; }
+  const std::map<HighsInt, VarBound>& getVUBs(HighsInt col) const {
+    return vubs[col];
+  }
 
-  const std::map<int, VarBound>& getVLBs(int col) const { return vlbs[col]; }
+  const std::map<HighsInt, VarBound>& getVLBs(HighsInt col) const {
+    return vlbs[col];
+  }
 
-  bool runProbing(int col, int& numboundchgs);
+  bool runProbing(HighsInt col, HighsInt& numReductions);
 
-  void rebuild(int ncols, const std::vector<int>& cIndex,
-               const std::vector<int>& rIndex);
+  void rebuild(HighsInt ncols, const std::vector<HighsInt>& cIndex,
+               const std::vector<HighsInt>& rIndex);
+
+  void buildFrom(const HighsImplications& init);
 
   void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
                              const std::vector<double>& sol,
                              HighsCutPool& cutpool, double feastol);
 
-  void cleanupVarbounds(int col);
+  void cleanupVarbounds(HighsInt col);
 };
 
 #endif

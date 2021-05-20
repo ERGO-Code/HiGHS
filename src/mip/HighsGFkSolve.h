@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsGFkLU.h
  * @brief linear system solve in GF(k) for mod-k cut separation
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_GFk_SOLVE_H_
@@ -25,7 +27,7 @@
 
 // helper struct to compute the multipicative inverse by using fermats
 // theorem and recursive repeated squaring.
-// Under the assumption that k is a small prime and an 32bit int is enough
+// Under the assumption that k is a small prime and an 32bit HighsInt is enough
 // to hold the number (k-1)^(k-2) good compilers should be able to optimize this
 // code by inlining and unfolding the recursion to code that uses the fewest
 // amount of integer multiplications and optimize the single integer division
@@ -33,7 +35,7 @@
 // purpose of separating maximally violated mod-k cuts the assumption that k is
 // a small constant prime number is not restrictive.
 
-template <int k>
+template <HighsInt k>
 struct HighsGFk;
 
 template <>
@@ -48,7 +50,7 @@ struct HighsGFk<3> {
   static constexpr unsigned int inverse(unsigned int a) { return a; }
 };
 
-template <int k>
+template <HighsInt k>
 struct HighsGFk {
   static constexpr unsigned int powk(unsigned int a) {
     return (k & 1) == 0 ? HighsGFk<2>::powk(HighsGFk<k / 2>::powk(a))
@@ -61,68 +63,78 @@ struct HighsGFk {
 };
 
 class HighsGFkSolve {
-  int numCol;
-  int numRow;
+  HighsInt numCol;
+  HighsInt numRow;
 
   // triplet format
-  std::vector<int> Arow;
-  std::vector<int> Acol;
+  std::vector<HighsInt> Arow;
+  std::vector<HighsInt> Acol;
   std::vector<unsigned int> Avalue;
 
   // sizes of rows and columns
-  std::vector<int> rowsize;
-  std::vector<int> colsize;
+  std::vector<HighsInt> rowsize;
+  std::vector<HighsInt> colsize;
 
   // linked list links for column based links for each nonzero
-  std::vector<int> colhead;
-  std::vector<int> Anext;
-  std::vector<int> Aprev;
+  std::vector<HighsInt> colhead;
+  std::vector<HighsInt> Anext;
+  std::vector<HighsInt> Aprev;
 
   // splay tree links for row based iteration and lookup
-  std::vector<int> rowroot;
-  std::vector<int> ARleft;
-  std::vector<int> ARright;
+  std::vector<HighsInt> rowroot;
+  std::vector<HighsInt> ARleft;
+  std::vector<HighsInt> ARright;
 
   // right hand side vector
   std::vector<unsigned int> rhs;
 
   // column permutation for the factorization required for backwards solve
-  std::vector<int> factorColPerm;
-  std::vector<int> factorRowPerm;
+  std::vector<HighsInt> factorColPerm;
+  std::vector<HighsInt> factorRowPerm;
   std::vector<int8_t> colBasisStatus;
   std::vector<int8_t> rowUsed;
 
   // working memory
-  std::vector<int> iterstack;
-  std::vector<int> rowpositions;
-  std::vector<int> rowposColsizes;
+  std::vector<HighsInt> iterstack;
+  std::vector<HighsInt> rowpositions;
+  std::vector<HighsInt> rowposColsizes;
 
   // priority queue to reuse free slots
-  std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
+  std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
+      freeslots;
 
-  void link(int pos);
+  void link(HighsInt pos);
 
-  void unlink(int pos);
+  void unlink(HighsInt pos);
 
-  void dropIfZero(int pos) {
+  void dropIfZero(HighsInt pos) {
     if (Avalue[pos] == 0) unlink(pos);
   }
 
-  void storeRowPositions(int pos);
+  void storeRowPositions(HighsInt pos);
 
-  void addNonzero(int row, int col, unsigned int val);
+  void addNonzero(HighsInt row, HighsInt col, unsigned int val);
 
  public:
+  struct SolutionEntry {
+    HighsInt index;
+    HighsUInt weight;
+
+    bool operator<(const SolutionEntry& other) const {
+      return index < other.index;
+    }
+  };
+
   // access to triplets and find nonzero function for unit test
-  const std::vector<int>& getArow() const { return Arow; }
-  const std::vector<int>& getAcol() const { return Acol; }
+  const std::vector<HighsInt>& getArow() const { return Arow; }
+  const std::vector<HighsInt>& getAcol() const { return Acol; }
   const std::vector<unsigned>& getAvalue() const { return Avalue; }
-  int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
-  int findNonzero(int row, int col);
+  HighsInt numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
+  HighsInt findNonzero(HighsInt row, HighsInt col);
 
   template <unsigned int k, typename T>
-  void fromCSC(const std::vector<T>& Aval, const std::vector<int>& Aindex,
-               const std::vector<int>& Astart, int numRow) {
+  void fromCSC(const std::vector<T>& Aval, const std::vector<HighsInt>& Aindex,
+               const std::vector<HighsInt>& Astart, HighsInt numRow) {
     Avalue.clear();
     Acol.clear();
     Arow.clear();
@@ -143,8 +155,8 @@ class HighsGFkSolve {
     Acol.reserve(Aval.size());
     Arow.reserve(Aval.size());
 
-    for (int i = 0; i != numCol; ++i) {
-      for (int j = Astart[i]; j != Astart[i + 1]; ++j) {
+    for (HighsInt i = 0; i != numCol; ++i) {
+      for (HighsInt j = Astart[i]; j != Astart[i + 1]; ++j) {
         assert(Aval[j] == (int64_t)Aval[j]);
         int64_t val = ((int64_t)Aval[j]) % k;
         if (val == 0) continue;
@@ -158,43 +170,44 @@ class HighsGFkSolve {
       }
     }
 
-    int nnz = Avalue.size();
+    HighsInt nnz = Avalue.size();
     Anext.resize(nnz);
     Aprev.resize(nnz);
     ARleft.resize(nnz);
     ARright.resize(nnz);
-    for (int pos = 0; pos != nnz; ++pos) link(pos);
+    for (HighsInt pos = 0; pos != nnz; ++pos) link(pos);
   }
 
   template <unsigned int k, typename T>
-  void setRhs(int row, T val) {
+  void setRhs(HighsInt row, T val) {
     rhs[row] = ((unsigned int)std::abs(val)) % k;
   }
 
   template <unsigned int k, typename ReportSolution>
   void solve(ReportSolution&& reportSolution) {
-    auto cmpPrio = [](const std::pair<int, int>& a,
-                      const std::pair<int, int>& b) {
+    auto cmpPrio = [](const std::pair<HighsInt, HighsInt>& a,
+                      const std::pair<HighsInt, HighsInt>& b) {
       return a.first > b.first;
     };
-    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>,
+    std::priority_queue<std::pair<HighsInt, HighsInt>,
+                        std::vector<std::pair<HighsInt, HighsInt>>,
                         decltype(cmpPrio)>
         pqueue(cmpPrio);
 
-    for (int i = 0; i != numCol; ++i) pqueue.emplace(colsize[i], i);
+    for (HighsInt i = 0; i != numCol; ++i) pqueue.emplace(colsize[i], i);
 
-    int maxPivot = std::min(numRow, numCol);
+    HighsInt maxPivot = std::min(numRow, numCol);
     factorColPerm.clear();
     factorRowPerm.clear();
     factorColPerm.reserve(maxPivot);
     factorRowPerm.reserve(maxPivot);
     colBasisStatus.assign(numCol, 0);
     rowUsed.assign(numRow, 0);
-    int numPivot = 0;
+    HighsInt numPivot = 0;
 
     while (!pqueue.empty()) {
-      int pivotCol;
-      int oldColSize;
+      HighsInt pivotCol;
+      HighsInt oldColSize;
 
       std::tie(oldColSize, pivotCol) = pqueue.top();
       pqueue.pop();
@@ -208,12 +221,12 @@ class HighsGFkSolve {
         continue;
       }
 
-      int pivot = -1;
-      int pivotRow = -1;
-      int pivotRowLen = HIGHS_CONST_I_INF;
-      for (int coliter = colhead[pivotCol]; coliter != -1;
+      HighsInt pivot = -1;
+      HighsInt pivotRow = -1;
+      HighsInt pivotRowLen = kHighsIInf;
+      for (HighsInt coliter = colhead[pivotCol]; coliter != -1;
            coliter = Anext[coliter]) {
-        int row = Arow[coliter];
+        HighsInt row = Arow[coliter];
         if (rowUsed[row]) continue;
         if (rowsize[row] < pivotRowLen) {
           pivotRowLen = rowsize[row];
@@ -234,9 +247,10 @@ class HighsGFkSolve {
       rowpositions.clear();
       rowposColsizes.clear();
       storeRowPositions(rowroot[pivotRow]);
-      assert(pivotRowLen == (int)rowpositions.size());
-      int next;
-      for (int coliter = colhead[pivotCol]; coliter != -1; coliter = next) {
+      assert(pivotRowLen == (HighsInt)rowpositions.size());
+      HighsInt next;
+      for (HighsInt coliter = colhead[pivotCol]; coliter != -1;
+           coliter = next) {
         next = Anext[coliter];
         if (coliter == pivot) continue;
 
@@ -244,15 +258,15 @@ class HighsGFkSolve {
         assert(Arow[coliter] != pivotRow);
         assert(Avalue[coliter] != 0);
 
-        int row = Arow[coliter];
+        HighsInt row = Arow[coliter];
         if (rowUsed[row]) continue;
 
         unsigned int pivotRowScale = pivotInverse * (k - Avalue[coliter]);
 
         rhs[row] = (rhs[row] + pivotRowScale * rhs[pivotRow]) % k;
 
-        for (int pivotRowPos : rowpositions) {
-          int nonzeroPos = findNonzero(Arow[coliter], Acol[pivotRowPos]);
+        for (HighsInt pivotRowPos : rowpositions) {
+          HighsInt nonzeroPos = findNonzero(Arow[coliter], Acol[pivotRowPos]);
 
           if (nonzeroPos == -1) {
             assert(Acol[pivotRowPos] != pivotCol);
@@ -274,10 +288,10 @@ class HighsGFkSolve {
       rowUsed[pivotRow] = 1;
       if (numPivot == maxPivot) break;
 
-      for (int i = 0; i != pivotRowLen; ++i) {
+      for (HighsInt i = 0; i != pivotRowLen; ++i) {
         assert(Arow[rowpositions[i]] == pivotRow);
-        int col = Acol[rowpositions[i]];
-        int oldsize = rowposColsizes[i];
+        HighsInt col = Acol[rowpositions[i]];
+        HighsInt oldsize = rowposColsizes[i];
 
         // we only want to count rows that are not used so far, so we need to
         // decrease the counter for all columns in the pivot row by one
@@ -301,7 +315,7 @@ class HighsGFkSolve {
 
     // check if a solution exists by scanning the linearly dependent rows for
     // nonzero right hand sides
-    for (int i = 0; i != numRow; ++i) {
+    for (HighsInt i = 0; i != numRow; ++i) {
       // if the row was used it is linearly independent
       if (rowUsed[i] == 1) continue;
 
@@ -314,28 +328,28 @@ class HighsGFkSolve {
     // When a column leaves the basis we do not allow it to enter again so that
     // we iterate at most one solution for each nonbasic column
 
-    std::vector<std::pair<int, unsigned int>> solution;
+    std::vector<SolutionEntry> solution;
     solution.reserve(numCol);
-    int numFactorRows = factorRowPerm.size();
+    HighsInt numFactorRows = factorRowPerm.size();
 
     // create vector for swapping different columns into the basis
     // For each column we want to iterate one basic solution where the
     // column is basic
-    std::vector<std::pair<int, int>> basisSwaps;
+    std::vector<std::pair<HighsInt, int>> basisSwaps;
     assert(iterstack.empty());
-    for (int i = numFactorRows - 1; i >= 0; --i) {
-      int row = factorRowPerm[i];
+    for (HighsInt i = numFactorRows - 1; i >= 0; --i) {
+      HighsInt row = factorRowPerm[i];
       iterstack.push_back(rowroot[row]);
 
       while (!iterstack.empty()) {
-        int rowpos = iterstack.back();
+        HighsInt rowpos = iterstack.back();
         iterstack.pop_back();
         assert(rowpos != -1);
 
         if (ARleft[rowpos] != -1) iterstack.push_back(ARleft[rowpos]);
         if (ARright[rowpos] != -1) iterstack.push_back(ARright[rowpos]);
 
-        int col = Acol[rowpos];
+        HighsInt col = Acol[rowpos];
         if (colBasisStatus[col] != 0) continue;
 
         colBasisStatus[col] = -1;
@@ -343,27 +357,27 @@ class HighsGFkSolve {
       }
     }
 
-    int basisSwapPos = 0;
+    HighsInt basisSwapPos = 0;
 
     bool performedBasisSwap;
     do {
       performedBasisSwap = false;
       solution.clear();
 
-      for (int i = numFactorRows - 1; i >= 0; --i) {
-        int row = factorRowPerm[i];
+      for (HighsInt i = numFactorRows - 1; i >= 0; --i) {
+        HighsInt row = factorRowPerm[i];
 
         unsigned int solval = 0;
 
-        for (const std::pair<int, unsigned int>& solentry : solution) {
-          int pos = findNonzero(row, solentry.first);
-          if (pos != -1) solval += Avalue[pos] * solentry.second;
+        for (const SolutionEntry& solentry : solution) {
+          HighsInt pos = findNonzero(row, solentry.index);
+          if (pos != -1) solval += Avalue[pos] * solentry.weight;
         }
 
         solval = rhs[row] + k - (solval % k);
 
-        int col = factorColPerm[i];
-        int pos = findNonzero(row, col);
+        HighsInt col = factorColPerm[i];
+        HighsInt pos = findNonzero(row, col);
         assert(pos != -1);
         unsigned int colValInverse = HighsGFk<k>::inverse(Avalue[pos]);
 
@@ -375,15 +389,15 @@ class HighsGFkSolve {
         assert(solval >= 0 && solval < k);
 
         // only record nonzero solution values
-        if (solval != 0) solution.emplace_back(col, solval);
+        if (solval != 0) solution.emplace_back(SolutionEntry{col, solval});
       }
 
       reportSolution(solution);
 
-      if (basisSwapPos < (int)basisSwaps.size()) {
-        int basisIndex = basisSwaps[basisSwapPos].first;
-        int enteringCol = basisSwaps[basisSwapPos].second;
-        int leavingCol = factorColPerm[basisIndex];
+      if (basisSwapPos < (HighsInt)basisSwaps.size()) {
+        HighsInt basisIndex = basisSwaps[basisSwapPos].first;
+        HighsInt enteringCol = basisSwaps[basisSwapPos].second;
+        HighsInt leavingCol = factorColPerm[basisIndex];
         assert(colBasisStatus[leavingCol] == 1);
         factorColPerm[basisIndex] = enteringCol;
         colBasisStatus[enteringCol] = 1;

@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderLp.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #ifndef IO_FILEREADER_LP_H_
@@ -29,6 +31,7 @@
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const HighsOptions& options,
+                                      const std::string filename,
                                       HighsLp& model);
 
   HighsStatus writeModelToFile(const HighsOptions& options,
@@ -37,7 +40,7 @@ class FilereaderLp : public Filereader {
 
  private:
   // functions to write files
-  int linelength;
+  HighsInt linelength;
   void writeToFile(FILE* file, const char* format, ...);
   void writeToFileLineend(FILE* file);
 };

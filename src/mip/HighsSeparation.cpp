@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsSeparation.h"
 
@@ -45,11 +48,11 @@ class AggregationHeuristic {
 
   std::vector<RowType> rowtype;
   std::vector<uint8_t> rowusable;
-  std::vector<int> numcontinuous;
+  std::vector<HighsInt> numcontinuous;
 
-  std::vector<int> colubtype;
+  std::vector<HighsInt> colubtype;
   std::vector<double> colubscale;
-  std::vector<int> collbtype;
+  std::vector<HighsInt> collbtype;
   std::vector<double> collbscale;
   std::vector<double> bounddistance;
 
@@ -58,38 +61,38 @@ class AggregationHeuristic {
 
   // current indices and values and rhs for the aggregated row we are looking
   // at
-  std::vector<int> baseinds;
+  std::vector<HighsInt> baseinds;
   std::vector<double> basevals;
   HighsCDouble baserhs;
 
   // position of continuous variables with positive bound distance
-  std::vector<int> bounddistpos;
+  std::vector<HighsInt> bounddistpos;
 
   // temporary indices and values for the row aggregating the next row
-  std::vector<int> tmpinds;
+  std::vector<HighsInt> tmpinds;
   std::vector<double> tmpvals;
 
   // current transformed row we are looking at
   HighsCDouble rhs;
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
   std::vector<double> upper;
   std::vector<double> solvals;
   std::vector<int8_t> complementation;
-  int ncont;
-  int nbin;
-  int nint;
-  int nunbndint;
+  HighsInt ncont;
+  HighsInt nbin;
+  HighsInt nint;
+  HighsInt nunbndint;
   bool freevar;
 
   // maximal number of aggregations we allow
-  static constexpr int maxAggr = 6;
+  static constexpr HighsInt maxAggr = 6;
   // array for the current path and its length
-  int currpath[maxAggr];
+  HighsInt currpath[maxAggr];
   double currpathweights[maxAggr];
-  int currpathlen;
+  HighsInt currpathlen;
 
-  int numcuts;
+  HighsInt numcuts;
 
  public:
   AggregationHeuristic(const HighsLpRelaxation& lprelaxation,
@@ -101,51 +104,51 @@ class AggregationHeuristic {
         propdomain(propdomain),
         mip(lprelaxation.getMipSolver()),
         lpsol(lprelaxation.getLpSolver().getSolution()),
-        lp(lprelaxation.getLpSolver().getLp()) {
+        lp(lprelaxation.getLpSolver().getModel()) {
     numcuts = 0;
   }
 
   void determineRowTypes() {
     rowtype.resize(lp.numRow_);
     rowusable.resize(lp.numRow_);
-    for (int i = 0; i != lp.numRow_; ++i) {
+    for (HighsInt i = 0; i != lp.numRow_; ++i) {
       if (lp.rowLower_[i] == lp.rowUpper_[i]) {
-        rowtype[i] = RowType::Eq;
+        rowtype[i] = RowType::kEq;
         rowusable[i] = true;
         continue;
       }
 
-      double lowerslack = HIGHS_CONST_INF;
-      double upperslack = HIGHS_CONST_INF;
+      double lowerslack = kHighsInf;
+      double upperslack = kHighsInf;
 
-      if (lp.rowLower_[i] != -HIGHS_CONST_INF)
+      if (lp.rowLower_[i] != -kHighsInf)
         lowerslack = lpsol.row_value[i] - lp.rowLower_[i];
 
-      if (lp.rowUpper_[i] != HIGHS_CONST_INF)
+      if (lp.rowUpper_[i] != kHighsInf)
         upperslack = lp.rowUpper_[i] - lpsol.row_value[i];
 
       if (lowerslack > mip.mipdata_->feastol &&
           upperslack > mip.mipdata_->feastol)
-        rowtype[i] = RowType::Unusuable;
+        rowtype[i] = RowType::kUnusuable;
       else if (lowerslack < upperslack)
-        rowtype[i] = RowType::Geq;
+        rowtype[i] = RowType::kGeq;
       else
-        rowtype[i] = RowType::Leq;
+        rowtype[i] = RowType::kLeq;
 
-      rowusable[i] = rowtype[i] != RowType::Unusuable;
+      rowusable[i] = rowtype[i] != RowType::kUnusuable;
     }
   }
 
   void detectContinuousBounds() {
     // count number of continuous variables
     numcontinuous.assign(lp.numRow_, 0);
-    for (int i : mip.mipdata_->continuous_cols) {
-      assert(mip.variableType(i) == HighsVarType::CONTINUOUS);
+    for (HighsInt i : mip.mipdata_->continuous_cols) {
+      assert(mip.variableType(i) == HighsVarType::kContinuous);
 
-      int start = lp.Astart_[i];
-      int end = lp.Astart_[i + 1];
+      HighsInt start = lp.Astart_[i];
+      HighsInt end = lp.Astart_[i + 1];
 
-      for (int j = start; j != end; ++j) ++numcontinuous[lp.Aindex_[j]];
+      for (HighsInt j = start; j != end; ++j) ++numcontinuous[lp.Aindex_[j]];
     }
 
     // now detect variable bound constraints with one or multiple integral
@@ -157,25 +160,25 @@ class AggregationHeuristic {
     collbscale.resize(lp.numCol_);
     bounddistance.assign(lp.numCol_, 0.0);
 
-    for (int i : mip.mipdata_->continuous_cols) {
-      assert(mip.variableType(i) == HighsVarType::CONTINUOUS);
+    for (HighsInt i : mip.mipdata_->continuous_cols) {
+      assert(mip.variableType(i) == HighsVarType::kContinuous);
 
-      int start = lp.Astart_[i];
-      int end = lp.Astart_[i + 1];
+      HighsInt start = lp.Astart_[i];
+      HighsInt end = lp.Astart_[i + 1];
 
-      int lblen = HIGHS_CONST_I_INF;
-      int ublen = HIGHS_CONST_I_INF;
+      HighsInt lblen = kHighsIInf;
+      HighsInt ublen = kHighsIInf;
 
-      for (int j = start; j != end; ++j) {
-        int row = lp.Aindex_[j];
+      for (HighsInt j = start; j != end; ++j) {
+        HighsInt row = lp.Aindex_[j];
         if (numcontinuous[row] != 1) continue;
 
-        int rowlen = lprelaxation.getRowLen(row);
+        HighsInt rowlen = lprelaxation.getRowLen(row);
         if (rowlen != 2) continue;
         switch (rowtype[row]) {
-          case RowType::Unusuable:
+          case RowType::kUnusuable:
             break;
-          case RowType::Leq:
+          case RowType::kLeq:
             if (lp.Avalue_[j] < 0 && rowlen < lblen) {
               lblen = rowlen;
               collbtype[i] = row;
@@ -186,7 +189,7 @@ class AggregationHeuristic {
               colubscale[i] = lp.Avalue_[j];
             }
             break;
-          case RowType::Geq:
+          case RowType::kGeq:
             if (lp.Avalue_[j] > 0 && rowlen < lblen) {
               lblen = rowlen;
               collbtype[i] = row;
@@ -197,7 +200,7 @@ class AggregationHeuristic {
               colubscale[i] = lp.Avalue_[j];
             }
             break;
-          case RowType::Eq:
+          case RowType::kEq:
             if (rowlen < ublen) {
               ublen = rowlen;
               colubtype[i] = row;
@@ -220,17 +223,17 @@ class AggregationHeuristic {
         lbdist = 0.0;
         rowusable[collbtype[i]] = false;
       } else
-        lbdist = domain.colLower_[i] != -HIGHS_CONST_INF
+        lbdist = domain.colLower_[i] != -kHighsInf
                      ? lpsol.col_value[i] - domain.colLower_[i]
-                     : HIGHS_CONST_INF;
+                     : kHighsInf;
 
       if (colubtype[i] != -1) {
         ubdist = 0.0;
         rowusable[colubtype[i]] = false;
       } else
-        ubdist = domain.colUpper_[i] != HIGHS_CONST_INF
+        ubdist = domain.colUpper_[i] != kHighsInf
                      ? domain.colUpper_[i] - lpsol.col_value[i]
-                     : HIGHS_CONST_INF;
+                     : kHighsInf;
 
       bounddistance[i] = std::min(lbdist, ubdist);
       if (bounddistance[i] < mip.mipdata_->feastol) bounddistance[i] = 0;
@@ -243,13 +246,13 @@ class AggregationHeuristic {
     // now only count the number of continuous variables
     // not at their bound
     numcontinuous.assign(lp.numRow_, 0);
-    for (int i : mip.mipdata_->continuous_cols) {
+    for (HighsInt i : mip.mipdata_->continuous_cols) {
       if (bounddistance[i] == 0.0) continue;
 
-      int start = lp.Astart_[i];
-      int end = lp.Astart_[i + 1];
+      HighsInt start = lp.Astart_[i];
+      HighsInt end = lp.Astart_[i + 1];
 
-      for (int j = start; j != end; ++j) ++numcontinuous[lp.Aindex_[j]];
+      for (HighsInt j = start; j != end; ++j) ++numcontinuous[lp.Aindex_[j]];
     }
 
     // mark each of the variables that has an equation row where it is the
@@ -257,21 +260,21 @@ class AggregationHeuristic {
     // will be substituted in the aggregation heuristic first
   }
 
-  void setupStartRow(int row) {
+  void setupStartRow(HighsInt row) {
     baseinds.clear();
     basevals.clear();
 
     currpath[0] = row;
     currpathlen = 1;
 
-    const int* Rindex;
+    const HighsInt* Rindex;
     const double* Rvalue;
-    int Rlen;
+    HighsInt Rlen;
     lprelaxation.getRow(row, Rlen, Rindex, Rvalue);
 
     baseinds.insert(baseinds.end(), Rindex, Rindex + Rlen);
 
-    if (rowtype[row] == RowType::Leq) {
+    if (rowtype[row] == RowType::kLeq) {
       baserhs = lp.rowUpper_[row];
       basevals.insert(basevals.end(), Rvalue, Rvalue + Rlen);
       currpathweights[0] = 1.0;
@@ -279,7 +282,7 @@ class AggregationHeuristic {
       baserhs = -lp.rowLower_[row];
       basevals.resize(Rlen);
       currpathweights[0] = -1.0;
-      for (int i = 0; i != Rlen; ++i) basevals[i] = -Rvalue[i];
+      for (HighsInt i = 0; i != Rlen; ++i) basevals[i] = -Rvalue[i];
     }
   }
 
@@ -299,13 +302,13 @@ class AggregationHeuristic {
     double basescale;
 
     if (negate) {
-      for (int i = 0; i < currpathlen; ++i) {
-        if (rowtype[currpath[i]] == RowType::Eq) continue;
+      for (HighsInt i = 0; i < currpathlen; ++i) {
+        if (rowtype[currpath[i]] == RowType::kEq) continue;
         // add a slack variable for the rows in the path if they are not
         // equations
         inds.push_back(lp.numCol_ + currpath[i]);
         vals.push_back(-std::abs(currpathweights[i]));
-        upper.push_back(HIGHS_CONST_INF);
+        upper.push_back(kHighsInf);
         complementation.push_back(0);
         solvals.push_back(0);
       }
@@ -316,7 +319,7 @@ class AggregationHeuristic {
     rhs = basescale * baserhs;
 
     for (size_t j = 0; j != baseinds.size(); ++j) {
-      int col = baseinds[j];
+      HighsInt col = baseinds[j];
       double baseval = basescale * basevals[j];
 
       // add things to the vectorsum
@@ -325,7 +328,7 @@ class AggregationHeuristic {
       // as variable bound usage can alter things
 
       // we first need to complement the continuous variables
-      if (mip.variableType(col) != HighsVarType::CONTINUOUS) {
+      if (mip.variableType(col) != HighsVarType::kContinuous) {
         vectorsum.add(col, baseval);
         continue;
       }
@@ -335,24 +338,24 @@ class AggregationHeuristic {
       // bounds adjust the right hand side accordingly
       if (bounddistance[col] > mip.mipdata_->feastol) bounddistpos.push_back(j);
 
-      if (bounddistance[col] == HIGHS_CONST_INF) freevar = true;
+      if (bounddistance[col] == kHighsInf) freevar = true;
 
       if (freevar) continue;
 
-      double simplelbdist = domain.colLower_[col] != -HIGHS_CONST_INF
+      double simplelbdist = domain.colLower_[col] != -kHighsInf
                                 ? lpsol.col_value[col] - domain.colLower_[col]
-                                : HIGHS_CONST_INF;
-      double simpleubdist = domain.colUpper_[col] != HIGHS_CONST_INF
+                                : kHighsInf;
+      double simpleubdist = domain.colUpper_[col] != kHighsInf
                                 ? domain.colUpper_[col] - lpsol.col_value[col]
-                                : HIGHS_CONST_INF;
+                                : kHighsInf;
 
       if (baseval < 0) {
         if (colubtype[col] != -1) {
           // use variable upper bound
-          int UBrow = colubtype[col];
+          HighsInt UBrow = colubtype[col];
           double UBscale = colubscale[col];
-          int UBlen;
-          const int* UBindex;
+          HighsInt UBlen;
+          const HighsInt* UBindex;
           const double* UBvalue;
           double UBconst;
 
@@ -370,7 +373,7 @@ class AggregationHeuristic {
 
           rhs += scale * UBconst;
 
-          for (int k = 0; k != UBlen; ++k) {
+          for (HighsInt k = 0; k != UBlen; ++k) {
             if (UBindex[k] == col)  // the column cancels out
             {
               assert(std::abs(double(baseval + scale * UBvalue[k])) < 1e-10);
@@ -382,7 +385,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[UBindex[k]] *
                      (scale * UBvalue[k]);
             } else {
-              assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(UBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(UBindex[k], scale * UBvalue[k]);
             }
           }
@@ -394,8 +397,8 @@ class AggregationHeuristic {
         } else if (simplelbdist - mip.mipdata_->feastol <= bounddistance[col]) {
           inds.push_back(col);
           complementation.push_back(1);
-          if (domain.colUpper_[col] == HIGHS_CONST_INF)
-            upper.push_back(HIGHS_CONST_INF);
+          if (domain.colUpper_[col] == kHighsInf)
+            upper.push_back(kHighsInf);
           else
             upper.push_back(domain.colUpper_[col] - domain.colLower_[col]);
           vals.push_back(
@@ -405,10 +408,10 @@ class AggregationHeuristic {
           assert(collbtype[col] != -1);
 
           // use variable lower bound
-          int LBrow = collbtype[col];
+          HighsInt LBrow = collbtype[col];
           double LBscale = collbscale[col];
-          int LBlen;
-          const int* LBindex;
+          HighsInt LBlen;
+          const HighsInt* LBindex;
           const double* LBvalue;
           double LBconst;
 
@@ -433,10 +436,10 @@ class AggregationHeuristic {
 
           inds.push_back(lp.numCol_ + LBrow);
           complementation.push_back(0);
-          upper.push_back(HIGHS_CONST_INF);
+          upper.push_back(kHighsInf);
           solvals.push_back(0);
 
-          for (int k = 0; k != LBlen; ++k) {
+          for (HighsInt k = 0; k != LBlen; ++k) {
             if (LBindex[k] == col)  // the column cancels out
             {
               assert(std::abs(double(baseval + scale * LBvalue[k])) < 1e-10);
@@ -448,7 +451,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[LBindex[k]] *
                      (scale * LBvalue[k]);
             } else {
-              assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(LBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(LBindex[k], scale * LBvalue[k]);
             }
           }
@@ -456,10 +459,10 @@ class AggregationHeuristic {
       } else {
         assert(baseval > 0);
         if (collbtype[col] != -1) {
-          int LBrow = collbtype[col];
+          HighsInt LBrow = collbtype[col];
           double LBscale = collbscale[col];
-          int LBlen;
-          const int* LBindex;
+          HighsInt LBlen;
+          const HighsInt* LBindex;
           const double* LBvalue;
           double LBconst;
 
@@ -480,7 +483,7 @@ class AggregationHeuristic {
           // need to remember as the inequalities match in orientation and
           // the positive slack variable is relaxed out
 
-          for (int k = 0; k != LBlen; ++k) {
+          for (HighsInt k = 0; k != LBlen; ++k) {
             if (LBindex[k] == col)  // the column cancels out
             {
               assert(std::abs(double(baseval + scale * LBvalue[k])) < 1e-10);
@@ -492,7 +495,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[LBindex[k]] *
                      (scale * LBvalue[k]);
             } else {
-              assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(LBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(LBindex[k], scale * LBvalue[k]);
             }
           }
@@ -506,8 +509,8 @@ class AggregationHeuristic {
           // variable
           inds.push_back(col);
           complementation.push_back(-1);
-          if (domain.colLower_[col] == -HIGHS_CONST_INF)
-            upper.push_back(HIGHS_CONST_INF);
+          if (domain.colLower_[col] == -kHighsInf)
+            upper.push_back(kHighsInf);
           else
             upper.push_back(domain.colUpper_[col] - domain.colLower_[col]);
           solvals.push_back(domain.colUpper_[col] - lpsol.col_value[col]);
@@ -517,10 +520,10 @@ class AggregationHeuristic {
         } else {
           assert(colubtype[col] != -1);
           // use variable upper bound
-          int UBrow = colubtype[col];
+          HighsInt UBrow = colubtype[col];
           double UBscale = colubscale[col];
-          int UBlen;
-          const int* UBindex;
+          HighsInt UBlen;
+          const HighsInt* UBindex;
           const double* UBvalue;
           double UBconst;
 
@@ -543,11 +546,11 @@ class AggregationHeuristic {
 
           inds.push_back(lp.numCol_ + UBrow);
           complementation.push_back(0);
-          upper.push_back(HIGHS_CONST_INF);
+          upper.push_back(kHighsInf);
           solvals.push_back(0);
           rhs += scale * UBconst;
 
-          for (int k = 0; k != UBlen; ++k) {
+          for (HighsInt k = 0; k != UBlen; ++k) {
             if (UBindex[k] == col)  // the column cancels out
             {
               assert(std::abs(double(baseval + scale * UBvalue[k])) < 1e-10);
@@ -559,7 +562,7 @@ class AggregationHeuristic {
               rhs -= mip.mipdata_->domain.colLower_[UBindex[k]] *
                      (scale * UBvalue[k]);
             } else {
-              assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
+              assert(mip.variableType(UBindex[k]) != HighsVarType::kContinuous);
               vectorsum.add(UBindex[k], scale * UBvalue[k]);
             }
           }
@@ -575,7 +578,7 @@ class AggregationHeuristic {
     nunbndint = 0;
 
     // now we add the integer variables and complement them to be positive
-    for (int col : vectorsum.getNonzeros()) {
+    for (HighsInt col : vectorsum.getNonzeros()) {
       double val = vectorsum.getValue(col);
 
       if (std::abs(val) <= 1e-10) continue;
@@ -587,13 +590,13 @@ class AggregationHeuristic {
           rhs -= domain.colLower_[col] * val;
       }
 
-      assert(mip.variableType(col) != HighsVarType::CONTINUOUS);
-      assert(domain.colLower_[col] != -HIGHS_CONST_INF ||
-             domain.colUpper_[col] != HIGHS_CONST_INF);
+      assert(mip.variableType(col) != HighsVarType::kContinuous);
+      assert(domain.colLower_[col] != -kHighsInf ||
+             domain.colUpper_[col] != kHighsInf);
 
-      if (domain.colLower_[col] == -HIGHS_CONST_INF ||
-          domain.colUpper_[col] == HIGHS_CONST_INF)
-        upper.push_back(HIGHS_CONST_INF);
+      if (domain.colLower_[col] == -kHighsInf ||
+          domain.colUpper_[col] == kHighsInf)
+        upper.push_back(kHighsInf);
       else
         upper.push_back(
             std::floor(domain.colUpper_[col] - domain.colLower_[col] + 0.5));
@@ -602,11 +605,11 @@ class AggregationHeuristic {
 
       if (upper.back() == 1.0)
         ++nbin;
-      else if (upper.back() == HIGHS_CONST_INF)
+      else if (upper.back() == kHighsInf)
         ++nunbndint;
       else
         ++nint;
-      if (val < 0 && domain.colUpper_[col] != HIGHS_CONST_INF) {
+      if (val < 0 && domain.colUpper_[col] != kHighsInf) {
         solvals.push_back(domain.colUpper_[col] - lpsol.col_value[col]);
         complementation.push_back(-1);
         vals.push_back(complementWithUpper(val, domain.colUpper_[col], rhs));
@@ -618,11 +621,11 @@ class AggregationHeuristic {
     }
 
     // perform coefficient tightening on the transformed row
-    int len = inds.size();
+    HighsInt len = inds.size();
     HighsCDouble maxact = 0.0;
     bool unbnd = false;
-    for (int i = 0; i != len; ++i) {
-      if (upper[i] == HIGHS_CONST_INF) {
+    for (HighsInt i = 0; i != len; ++i) {
+      if (upper[i] == kHighsInf) {
         unbnd = true;
         break;
       }
@@ -631,10 +634,10 @@ class AggregationHeuristic {
 
     HighsCDouble maxabscoef = maxact - rhs;
     if (!unbnd && maxabscoef > mip.mipdata_->feastol) {
-      int ntightened = 0;
-      for (int i = 0; i != len; ++i) {
+      HighsInt ntightened = 0;
+      for (HighsInt i = 0; i != len; ++i) {
         if (inds[i] >= mip.numCol() ||
-            mip.variableType(inds[i]) == HighsVarType::CONTINUOUS)
+            mip.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
 
         if (vals[i] > maxabscoef) {
@@ -657,23 +660,23 @@ class AggregationHeuristic {
       vectorsum.clear();
       vectorsum.setDimension(mip.numCol());
 
-      int cutlen = inds.size();
+      HighsInt cutlen = inds.size();
 
-      for (int i = 0; i != cutlen; ++i) {
+      for (HighsInt i = 0; i != cutlen; ++i) {
         if (vals[i] == 0.0) continue;
 
         if (inds[i] >= mip.numCol()) {
-          int row = inds[i] - mip.numCol();
+          HighsInt row = inds[i] - mip.numCol();
 
-          const int* Rindex;
+          const HighsInt* Rindex;
           const double* Rvalue;
-          int Rlen;
+          HighsInt Rlen;
           double Rside;
 
-          assert(rowtype[row] == RowType::Leq || rowtype[row] == RowType::Geq);
+          assert(rowtype[row] == RowType::kLeq || rowtype[row] == RowType::kGeq);
 
           lprelaxation.getRow(row, Rlen, Rindex, Rvalue);
-          if (rowtype[row] == RowType::Leq)
+          if (rowtype[row] == RowType::kLeq)
             Rside = lp.rowUpper_[row];
           else
             Rside = -lp.rowLower_[row];
@@ -682,7 +685,7 @@ class AggregationHeuristic {
 
           double slackval = -int(rowtype[row]) * vals[i];
 
-          for (int j = 0; j != Rlen; ++j)
+          for (HighsInt j = 0; j != Rlen; ++j)
             vectorsum.add(Rindex[j], slackval * Rvalue[j]);
 
           continue;
@@ -703,7 +706,7 @@ class AggregationHeuristic {
 
       vectorsum.sort();
 
-      for (int col : vectorsum.getNonzeros()) {
+      for (HighsInt col : vectorsum.getNonzeros()) {
         double val = vectorsum.getValue(col);
 
         if (std::abs(val) > 1e-10) {
@@ -725,24 +728,24 @@ class AggregationHeuristic {
     if (currpathlen == maxAggr || bounddistpos.empty()) return false;
 
     // sort by decreasing bound distance
-    std::sort(bounddistpos.begin(), bounddistpos.end(), [&](int a, int b) {
-      int col1 = baseinds[a];
-      int col2 = baseinds[b];
+    std::sort(bounddistpos.begin(), bounddistpos.end(), [&](HighsInt a, HighsInt b) {
+      HighsInt col1 = baseinds[a];
+      HighsInt col2 = baseinds[b];
       return bounddistance[col1] > bounddistance[col2];
     });
 
-    int nextaggrow = -1;
+    HighsInt nextaggrow = -1;
     HighsCDouble nextaggscale;
-    int naggbounddist = HIGHS_CONST_I_INF;
+    HighsInt naggbounddist = kHighsIInf;
 
-    for (int pos : bounddistpos) {
-      int col = baseinds[pos];
+    for (HighsInt pos : bounddistpos) {
+      HighsInt col = baseinds[pos];
 
-      int start = lp.Astart_[col];
-      int end = lp.Astart_[col + 1];
+      HighsInt start = lp.Astart_[col];
+      HighsInt end = lp.Astart_[col + 1];
 
-      for (int j = start; j != end; ++j) {
-        int row = lp.Aindex_[j];
+      for (HighsInt j = start; j != end; ++j) {
+        HighsInt row = lp.Aindex_[j];
         // if the row is marked as unusable or the inequality orientation does
         // not match we skip it
         if (!rowusable[row] ||
@@ -750,7 +753,7 @@ class AggregationHeuristic {
           continue;
 
         bool incurrentpath = false;
-        for (int k = 0; k < currpathlen; ++k) {
+        for (HighsInt k = 0; k < currpathlen; ++k) {
           if (currpath[k] == row) {
             incurrentpath = true;
             break;
@@ -768,7 +771,7 @@ class AggregationHeuristic {
           nextaggscale = HighsCDouble(-basevals[pos]) / lp.Avalue_[j];
           nextaggrow = row;
           naggbounddist = numcontinuous[row];
-          if (numcontinuous[row] == 1 && rowtype[row] == RowType::Eq) break;
+          if (numcontinuous[row] == 1 && rowtype[row] == RowType::kEq) break;
         }
       }
 
@@ -777,15 +780,15 @@ class AggregationHeuristic {
 
     if (nextaggrow == -1) return false;
 
-    const int* nextRindex;
+    const HighsInt* nextRindex;
     const double* nextRvalue;
-    int nextRlen;
+    HighsInt nextRlen;
 
-    if (rowtype[nextaggrow] == RowType::Geq) {
+    if (rowtype[nextaggrow] == RowType::kGeq) {
       baserhs += nextaggscale * lp.rowLower_[nextaggrow];
       assert(nextaggscale < 0);
     } else {
-      assert(rowtype[nextaggrow] == RowType::Eq || nextaggscale > 0);
+      assert(rowtype[nextaggrow] == RowType::kEq || nextaggscale > 0);
       baserhs += nextaggscale * lp.rowUpper_[nextaggrow];
     }
 
@@ -793,10 +796,10 @@ class AggregationHeuristic {
     tmpinds.clear();
     tmpvals.clear();
 
-    int a = 0;
-    int b = 0;
+    HighsInt a = 0;
+    HighsInt b = 0;
 
-    int baselen = baseinds.size();
+    HighsInt baselen = baseinds.size();
 
     while (a != nextRlen && b != baselen) {
       if (nextRindex[a] < baseinds[b]) {
@@ -814,12 +817,12 @@ class AggregationHeuristic {
         if (std::abs(val) > 1e-10) {
           if (std::abs(val) <= mip.mipdata_->feastol) {
             if (val < 0) {
-              if (domain.colUpper_[baseinds[b]] == HIGHS_CONST_INF)
+              if (domain.colUpper_[baseinds[b]] == kHighsInf)
                 return false;
 
               rhs -= val * domain.colUpper_[baseinds[b]];
             } else {
-              if (domain.colLower_[baseinds[b]] == -HIGHS_CONST_INF)
+              if (domain.colLower_[baseinds[b]] == -kHighsInf)
                 return false;
 
               rhs -= val * domain.colLower_[baseinds[b]];
@@ -859,10 +862,10 @@ class AggregationHeuristic {
     determineRowTypes();
     detectContinuousBounds();
 
-    for (int row = 0; row != lp.numRow_; ++row) {
+    for (HighsInt row = 0; row != lp.numRow_; ++row) {
       if (!rowusable[row]) continue;
 
-      int currnumcuts = numcuts;
+      HighsInt currnumcuts = numcuts;
       setupStartRow(row);
 
       do {
@@ -885,29 +888,43 @@ class AggregationHeuristic {
 };
 #endif
 
-int HighsSeparation::separationRound(HighsDomain& propdomain,
-                                     HighsLpRelaxation::Status& status) {
+HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
+                                          HighsLpRelaxation::Status& status) {
   const HighsSolution& sol = lp->getLpSolver().getSolution();
 
   HighsMipSolverData& mipdata = *lp->getMipSolver().mipdata_;
 
   auto propagateAndResolve = [&]() {
-    propdomain.propagate();
-    mipdata.cliquetable.cleanupFixed(mipdata.domain);
-
     if (propdomain.infeasible() || mipdata.domain.infeasible()) {
-      status = HighsLpRelaxation::Status::Infeasible;
+      status = HighsLpRelaxation::Status::kInfeasible;
       propdomain.clearChangedCols();
-      return true;
+      return -1;
     }
+
+    propdomain.propagate();
+    if (propdomain.infeasible()) {
+      status = HighsLpRelaxation::Status::kInfeasible;
+      propdomain.clearChangedCols();
+      return -1;
+    }
+
+    mipdata.cliquetable.cleanupFixed(mipdata.domain);
+    if (mipdata.domain.infeasible()) {
+      status = HighsLpRelaxation::Status::kInfeasible;
+      propdomain.clearChangedCols();
+      return -1;
+    }
+
+    int numBoundChgs = (int)propdomain.getChangedCols().size();
 
     if (!propdomain.getChangedCols().empty()) {
+      lp->setObjectiveLimit(mipdata.upper_limit);
       status = lp->resolveLp(&propdomain);
 
-      if (!lp->scaledOptimal(status)) return true;
+      if (!lp->scaledOptimal(status)) return -1;
     }
 
-    return false;
+    return numBoundChgs;
   };
 
   lp->getMipSolver().timer_.start(implBoundClock);
@@ -915,18 +932,27 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
                                              mipdata.cutpool, mipdata.feastol);
   lp->getMipSolver().timer_.stop(implBoundClock);
 
-  if (propagateAndResolve()) return 0;
+  HighsInt ncuts = 0;
+  HighsInt numboundchgs = propagateAndResolve();
+  if (numboundchgs == -1)
+    return 0;
+  else
+    ncuts += numboundchgs;
 
   lp->getMipSolver().timer_.start(cliqueClock);
   mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
                                       mipdata.cutpool, mipdata.feastol);
   lp->getMipSolver().timer_.stop(cliqueClock);
 
-  if (propagateAndResolve()) return 0;
+  numboundchgs = propagateAndResolve();
+  if (numboundchgs == -1)
+    return 0;
+  else
+    ncuts += numboundchgs;
 
   HighsTransformedLp transLp(*lp, mipdata.implications);
   if (mipdata.domain.infeasible()) {
-    status = HighsLpRelaxation::Status::Infeasible;
+    status = HighsLpRelaxation::Status::kInfeasible;
     return 0;
   }
   HighsLpAggregator lpAggregator(*lp);
@@ -934,117 +960,24 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   for (const std::unique_ptr<HighsSeparator>& separator : separators)
     separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
 
-  if (propagateAndResolve()) return 0;
+  numboundchgs = propagateAndResolve();
+  if (numboundchgs == -1)
+    return 0;
+  else
+    ncuts += numboundchgs;
 
   mipdata.cutpool.separate(sol.col_value, propdomain, cutset, mipdata.feastol);
 
-  int ncuts = cutset.numCuts();
-
-  if (ncuts > 0) {
+  if (cutset.numCuts() > 0) {
+    ncuts += cutset.numCuts();
     lp->addCuts(cutset);
     status = lp->resolveLp(&propdomain);
     lp->performAging();
   }
+
   return ncuts;
 }
 
-#if 0
-void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
-                                               HighsDomain& localdomain,
-                                               std::vector<int>& inds,
-                                               std::vector<double>& vals,
-                                               double rowupper) {
-  int len = inds.size();
-  std::vector<double> solvals(len);
-  std::vector<int8_t> complementation(len);
-  std::vector<double> upper(len);
-  HighsCDouble rhs = rowupper;
-
-  mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
-                                             inds.size(), rowupper);
-
-  int nbin = 0;
-  int nint = 0;
-  int ncont = 0;
-  int nunbndint = 0;
-
-  const HighsDomain& globaldomain = mipsolver.mipdata_->domain;
-
-  double minact = 0.0;
-
-  for (int i = 0; i != len; ++i) {
-    int col = inds[i];
-    assert(globaldomain.colUpper_[col] != HIGHS_CONST_INF ||
-           globaldomain.colLower_[col] != -HIGHS_CONST_INF);
-
-    if (globaldomain.colUpper_[col] == HIGHS_CONST_INF ||
-        globaldomain.colLower_[col] == -HIGHS_CONST_INF) {
-      upper[i] = HIGHS_CONST_INF;
-    } else {
-      upper[i] = globaldomain.colUpper_[col] - globaldomain.colLower_[col];
-    }
-
-    if (mipsolver.variableType(col) != HighsVarType::CONTINUOUS) {
-      if (upper[i] < 1.5) {
-        upper[i] = 1.0;
-        ++nbin;
-      } else if (upper[i] != HIGHS_CONST_INF) {
-        upper[i] = std::floor(upper[i] + 0.5);
-        ++nint;
-      } else {
-        ++nunbndint;
-      }
-    } else {
-      ++ncont;
-    }
-
-    if (vals[i] < 0 && globaldomain.colUpper_[col] != HIGHS_CONST_INF) {
-      vals[i] = complementWithUpper(vals[i], globaldomain.colUpper_[col], rhs);
-      complementation[i] = -1;
-      solvals[i] = globaldomain.colUpper_[col] - localdomain.colUpper_[col];
-    } else {
-      vals[i] = complementWithLower(vals[i], globaldomain.colLower_[col], rhs);
-      complementation[i] = 1;
-      solvals[i] = localdomain.colLower_[col] - globaldomain.colLower_[col];
-    }
-
-    minact += solvals[i] * vals[i];
-  }
-
-  bool cutintegral;
-  bool success =
-      generateCut(mipsolver, upper, nbin, nint, ncont, nunbndint, solvals,
-                  complementation, inds, vals, rhs, cutintegral);
-
-  if (success) {
-    int offset = 0;
-
-    for (int i = 0; i != len; ++i) {
-      // skip zeros
-      if (vals[i] == 0) continue;
-
-      // undo complementation
-      if (complementation[i] == 1)
-        rhs += vals[i] * globaldomain.colLower_[inds[i]];
-      else {
-        assert(complementation[i] == -1);
-        vals[i] = -vals[i];
-        rhs += vals[i] * globaldomain.colUpper_[inds[i]];
-      }
-
-      // store back
-      if (offset < i) {
-        vals[offset] = vals[i];
-        inds[offset] = inds[i];
-      }
-      ++offset;
-    }
-
-    mipsolver.mipdata_->cutpool.addCut(mipsolver, inds.data(), vals.data(),
-                                       offset, double(rhs), cutintegral);
-  }
-}
-#endif
 void HighsSeparation::separate(HighsDomain& propdomain) {
   HighsLpRelaxation::Status status = lp->getStatus();
   const HighsMipSolver& mipsolver = lp->getMipSolver();
@@ -1057,17 +990,17 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       double lastobj = lp->getObjective();
 
       size_t nlpiters = -lp->getNumLpIterations();
-      int ncuts = separationRound(propdomain, status);
+      HighsInt ncuts = separationRound(propdomain, status);
       nlpiters += lp->getNumLpIterations();
       mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
       mipsolver.mipdata_->total_lp_iterations += nlpiters;
-      // printf("separated %d cuts\n", ncuts);
+      // printf("separated %" HIGHSINT_FORMAT " cuts\n", ncuts);
 
       // printf(
-      //     "separation round %d at node %d added %d cuts objective changed "
-      //     "from %g to %g, first obj is %g\n",
-      //     nrounds, (int)nnodes, ncuts, lastobj, lp->getObjective(),
-      //     firstobj);
+      //     "separation round %" HIGHSINT_FORMAT " at node %" HIGHSINT_FORMAT "
+      //     added %" HIGHSINT_FORMAT " cuts objective changed " "from %g to %g,
+      //     first obj is %g\n", nrounds, (HighsInt)nnodes, ncuts, lastobj,
+      //     lp->getObjective(), firstobj);
       if (ncuts == 0 || !lp->scaledOptimal(status) ||
           lp->getFractionalIntegers().empty())
         break;
@@ -1080,8 +1013,9 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
 
     // printf("done separating\n");
   } else {
-    // printf("no separation, just aging. status: %d\n", (int)status);
-    lp->performAging();
+    // printf("no separation, just aging. status: %" HIGHSINT_FORMAT "\n",
+    // (HighsInt)status);
+    lp->performAging(false);
     mipsolver.mipdata_->cutpool.performAging();
   }
 }

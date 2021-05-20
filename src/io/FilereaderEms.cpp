@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderEms.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #include "io/FilereaderEms.h"
@@ -18,18 +20,19 @@
 #include <iomanip>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsLpUtils.h"
 #include "util/stringutil.h"
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
+                                                   const std::string filename,
                                                    HighsLp& model) {
   std::ifstream f;
-  int i;
+  HighsInt i;
 
-  const std::string filename = options.model_file;
   f.open(filename, std::ios::in);
   if (f.is_open()) {
     std::string line;
-    int numCol, numRow, AcountX, num_int;
+    HighsInt numCol, numRow, AcountX, num_int;
     bool indices_from_one = false;
 
     // counts
@@ -39,27 +42,27 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       indices_from_one = true;
     }
     if (!f) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "n_rows not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "n_rows not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     f >> numRow;
 
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "n_columns") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "n_columns not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "n_columns not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     f >> numCol;
 
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "n_matrix_elements") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "n_matrix_elements not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "n_matrix_elements not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     f >> AcountX;
 
@@ -70,9 +73,9 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "matrix") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "matrix not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "matrix not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     model.Astart_.resize(numCol + 1);
     model.Aindex_.resize(AcountX);
@@ -94,15 +97,15 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "column_bounds") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "column_bounds not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "column_bounds not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     model.colLower_.reserve(numCol);
     model.colUpper_.reserve(numCol);
 
-    model.colLower_.assign(numCol, -HIGHS_CONST_INF);
-    model.colUpper_.assign(numCol, HIGHS_CONST_INF);
+    model.colLower_.assign(numCol, -kHighsInf);
+    model.colUpper_.assign(numCol, kHighsInf);
 
     for (i = 0; i < numCol; i++) {
       f >> model.colLower_[i];
@@ -115,14 +118,14 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "row_bounds") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "row_bounds not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "row_bounds not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     model.rowLower_.reserve(numRow);
     model.rowUpper_.reserve(numRow);
-    model.rowLower_.assign(numRow, -HIGHS_CONST_INF);
-    model.rowUpper_.assign(numRow, HIGHS_CONST_INF);
+    model.rowLower_.assign(numRow, -kHighsInf);
+    model.rowUpper_.assign(numRow, kHighsInf);
 
     for (i = 0; i < numRow; i++) {
       f >> model.rowLower_[i];
@@ -135,9 +138,9 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "column_costs") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "column_costs not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "column_costs not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     model.colCost_.reserve(numCol);
     model.colCost_.assign(numCol, 0);
@@ -152,12 +155,12 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "integer_columns") {
       f >> num_int;
       if (num_int) {
-        model.integrality_.resize(model.numCol_, HighsVarType::CONTINUOUS);
-        int iCol;
+        model.integrality_.resize(model.numCol_, HighsVarType::kContinuous);
+        HighsInt iCol;
         for (i = 0; i < num_int; i++) {
           f >> iCol;
           if (indices_from_one) iCol--;
-          model.integrality_[iCol] = HighsVarType::INTEGER;
+          model.integrality_[iCol] = HighsVarType::kInteger;
         }
       }
       // Get the next keyword. If there's no integer_columns section
@@ -170,7 +173,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "end_linear") {
       // File read completed OK
       f.close();
-      return FilereaderRetcode::OK;
+      setOrientation(model);
+      return FilereaderRetcode::kOk;
     }
 
     // Act if the next keyword is names
@@ -178,7 +182,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       // Ignore length since we support any length.
       std::getline(f, line);
       if (trim(line) != "columns") std::getline(f, line);
-      if (trim(line) != "columns") return FilereaderRetcode::PARSERERROR;
+      if (trim(line) != "columns") return FilereaderRetcode::kParserError;
 
       model.row_names_.resize(numRow);
       model.col_names_.resize(numCol);
@@ -189,7 +193,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       }
 
       std::getline(f, line);
-      if (trim(line) != "rows") return FilereaderRetcode::PARSERERROR;
+      if (trim(line) != "rows") return FilereaderRetcode::kParserError;
 
       for (i = 0; i < numRow; i++) {
         std::getline(f, line);
@@ -198,18 +202,22 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     } else {
       // OK if file just ends after the integer_columns section without
       // end_linear
-      if (!f) return FilereaderRetcode::OK;
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "names not found in EMS file");
-      return FilereaderRetcode::PARSERERROR;
+      if (!f) {
+        setOrientation(model);
+        return FilereaderRetcode::kOk;
+      }
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "names not found in EMS file\n");
+      return FilereaderRetcode::kParserError;
     }
     f.close();
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "EMS file not found");
-    return FilereaderRetcode::FILENOTFOUND;
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "EMS file not found\n");
+    return FilereaderRetcode::kFileNotFound;
   }
-  return FilereaderRetcode::OK;
+  setOrientation(model);
+  return FilereaderRetcode::kOk;
 }
 
 HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
@@ -217,7 +225,7 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
                                             const HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
-  int num_nz = model.Astart_[model.numCol_];
+  HighsInt num_nz = model.Astart_[model.numCol_];
 
   // counts
   f << "n_rows" << std::endl;
@@ -229,57 +237,58 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
 
   // matrix
   f << "matrix" << std::endl;
-  for (int i = 0; i < model.numCol_ + 1; i++) f << model.Astart_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_ + 1; i++) f << model.Astart_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < num_nz; i++) f << model.Aindex_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << model.Aindex_[i] << " ";
   f << std::endl;
 
   f << std::setprecision(9);
-  for (int i = 0; i < num_nz; i++) f << model.Avalue_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << model.Avalue_[i] << " ";
   f << std::endl;
 
   // cost and bounds
   f << std::setprecision(9);
 
   f << "column_bounds" << std::endl;
-  for (int i = 0; i < model.numCol_; i++) f << model.colLower_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_; i++) f << model.colLower_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < model.numCol_; i++) f << model.colUpper_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_; i++) f << model.colUpper_[i] << " ";
   f << std::endl;
 
   f << "row_bounds" << std::endl;
   f << std::setprecision(9);
-  for (int i = 0; i < model.numRow_; i++) f << model.rowLower_[i] << " ";
+  for (HighsInt i = 0; i < model.numRow_; i++) f << model.rowLower_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < model.numRow_; i++) f << model.rowUpper_[i] << " ";
+  for (HighsInt i = 0; i < model.numRow_; i++) f << model.rowUpper_[i] << " ";
   f << std::endl;
 
   f << "column_costs" << std::endl;
-  for (int i = 0; i < model.numCol_; i++)
-    f << (int)model.sense_ * model.colCost_[i] << " ";
+  for (HighsInt i = 0; i < model.numCol_; i++)
+    f << (HighsInt)model.sense_ * model.colCost_[i] << " ";
   f << std::endl;
 
   if (model.row_names_.size() > 0 && model.col_names_.size() > 0) {
     f << "names" << std::endl;
 
     f << "columns" << std::endl;
-    for (int i = 0; i < (int)model.col_names_.size(); i++)
+    for (HighsInt i = 0; i < (HighsInt)model.col_names_.size(); i++)
       f << model.col_names_[i] << std::endl;
 
     f << "rows" << std::endl;
-    for (int i = 0; i < (int)model.row_names_.size(); i++)
+    for (HighsInt i = 0; i < (HighsInt)model.row_names_.size(); i++)
       f << model.row_names_[i] << std::endl;
   }
 
   // todo: integer variables.
 
   if (model.offset_ != 0)
-    f << "shift" << std::endl << (int)model.sense_ * model.offset_ << std::endl;
+    f << "shift" << std::endl
+      << (HighsInt)model.sense_ * model.offset_ << std::endl;
 
   f << std::endl;
   f.close();
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

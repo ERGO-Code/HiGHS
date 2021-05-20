@@ -6,9 +6,11 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsModKSeparator.cpp
- * @author Leona Gottwald
  */
 
 #include "mip/HighsModkSeparator.h"
@@ -24,11 +26,11 @@
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
-template <int k, typename FoundModKCut>
+template <HighsInt k, typename FoundModKCut>
 static void separateModKCuts(const std::vector<int64_t>& intSystemValue,
-                             const std::vector<int>& intSystemIndex,
-                             const std::vector<int>& intSystemStart, int numCol,
-                             FoundModKCut&& foundModKCut) {
+                             const std::vector<HighsInt>& intSystemIndex,
+                             const std::vector<HighsInt>& intSystemStart,
+                             HighsInt numCol, FoundModKCut&& foundModKCut) {
   HighsGFkSolve GFkSolve;
 
   GFkSolve.fromCSC<k>(intSystemValue, intSystemIndex, intSystemStart,
@@ -42,33 +44,33 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                             HighsTransformedLp& transLp,
                                             HighsCutPool& cutpool) {
   const HighsMipSolver& mipsolver = lpRelaxation.getMipSolver();
-  const HighsLp& lp = lpRelaxation.getLp();
+  const HighsLp& lp = lpRelaxation.getModel();
 
   std::vector<uint8_t> skipRow(lp.numRow_);
 
   // mark all rows that have continuous variables with a nonzero solution value
   // in the transformed LP to be skipped
-  for (int col : mipsolver.mipdata_->continuous_cols) {
+  for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0) continue;
 
-    const int start = lp.Astart_[col];
-    const int end = lp.Astart_[col + 1];
+    const HighsInt start = lp.Astart_[col];
+    const HighsInt end = lp.Astart_[col + 1];
 
-    for (int i = start; i != end; ++i) skipRow[lp.Aindex_[i]] = true;
+    for (HighsInt i = start; i != end; ++i) skipRow[lp.Aindex_[i]] = true;
   }
 
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
 
-  std::vector<std::pair<int, double>> integralScales;
+  std::vector<std::pair<HighsInt, double>> integralScales;
   std::vector<int64_t> intSystemValue;
-  std::vector<int> intSystemIndex;
-  std::vector<int> intSystemStart;
+  std::vector<HighsInt> intSystemIndex;
+  std::vector<HighsInt> intSystemStart;
 
   intSystemValue.reserve(lp.Avalue_.size() + lp.numRow_);
   intSystemIndex.reserve(intSystemValue.size());
   intSystemStart.reserve(lp.numRow_ + 1);
   intSystemStart.push_back(0);
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
   std::vector<double> scaleVals;
 
@@ -78,7 +80,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
-  for (int row = 0; row != lp.numRow_; ++row) {
+  for (HighsInt row = 0; row != lp.numRow_; ++row) {
     if (skipRow[row]) continue;
 
     bool leqRow;
@@ -91,8 +93,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     else
       continue;
 
-    int rowlen;
-    const int* rowinds;
+    HighsInt rowlen;
+    const HighsInt* rowinds;
     const double* rowvals;
 
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
@@ -112,7 +114,9 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                      [](double x) { return -x; });
     }
 
-    if (!transLp.transform(vals, upper, solval, inds, rhs, false, true))
+    bool integralPositive = false;
+    if (!transLp.transform(vals, upper, solval, inds, rhs, integralPositive,
+                           true))
       continue;
 
     rowlen = inds.size();
@@ -121,8 +125,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     int64_t intrhs;
 
     if (!lpRelaxation.isRowIntegral(row)) {
-      for (int i = 0; i != rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::CONTINUOUS)
+      for (HighsInt i = 0; i != rowlen; ++i) {
+        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (transLp.boundDistance(inds[i]) > 0) scaleVals.push_back(vals[i]);
       }
@@ -134,8 +138,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       intrhs = std::round(intscale * rhs);
 
-      for (int i = 0; i != rowlen; ++i) {
-        if (mipsolver.variableType(inds[i]) == HighsVarType::CONTINUOUS)
+      for (HighsInt i = 0; i != rowlen; ++i) {
+        if (mipsolver.variableType(inds[i]) == HighsVarType::kContinuous)
           continue;
         if (transLp.boundDistance(inds[i]) > 0) {
           intSystemIndex.push_back(inds[i]);
@@ -146,7 +150,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       intscale = 1.0;
       intrhs = (int64_t)std::round(rhs);
 
-      for (int i = 0; i != rowlen; ++i) {
+      for (HighsInt i = 0; i != rowlen; ++i) {
         if (transLp.boundDistance(inds[i]) > 0) {
           intSystemIndex.push_back(inds[i]);
           intSystemValue.push_back((int64_t)std::round(vals[i]));
@@ -162,15 +166,15 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   if (integralScales.empty()) return;
 
-  std::vector<int> tmpinds;
+  std::vector<HighsInt> tmpinds;
   std::vector<double> tmpvals;
 
-  HighsHashTable<std::vector<std::pair<int, unsigned int>>> usedWeights;
-  // std::unordered_set<std::vector<std::pair<int, unsigned int>>,
+  HighsHashTable<std::vector<HighsGFkSolve::SolutionEntry>> usedWeights;
+  // std::unordered_set<std::vector<HighsGFkSolve::SolutionEntry>,
   //                   HighsVectorHasher, HighsVectorEqual>
   //    usedWeights;
-  int k;
-  auto foundCut = [&](std::vector<std::pair<int, unsigned int>>& weights) {
+  HighsInt k;
+  auto foundCut = [&](std::vector<HighsGFkSolve::SolutionEntry>& weights) {
     // cuts which come from a single row can already be found with the
     // aggregation heuristic
     if (weights.size() <= 1) return;
@@ -179,8 +183,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     if (!usedWeights.insert(weights)) return;
 
     for (const auto& w : weights) {
-      int row = integralScales[w.first].first;
-      double weight = (integralScales[w.first].second * w.second) / k;
+      HighsInt row = integralScales[w.index].first;
+      double weight = (integralScales[w.index].second * w.weight) / k;
       lpAggregator.addRow(row, weight);
     }
 
@@ -196,7 +200,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   };
 
   k = 2;
-  int numCuts = -cutpool.getNumCuts();
+  HighsInt numCuts = -cutpool.getNumCuts();
   separateModKCuts<2>(intSystemValue, intSystemIndex, intSystemStart,
                       lp.numCol_, foundCut);
   numCuts += cutpool.getNumCuts();

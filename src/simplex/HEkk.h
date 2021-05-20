@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HEkk.h
- * @brief Phase 2 primal simplex solver for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ * @brief Primal simplex solver for HiGHS
  */
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
@@ -35,50 +37,54 @@ class HEkk {
   HighsTimer& timer_;
   HighsSimplexAnalysis analysis_;
 
-  HighsStatus passLp(const HighsLp& lp);
+  HighsStatus passLp(const HighsLp& pass_lp);
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
-  HighsStatus setBasis(const HighsBasis& basis);
+  HighsStatus setBasis(const HighsBasis& highs_basis);
   HighsStatus setBasis(const SimplexBasis& basis);
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis();
-  const SimplexBasis& getSimplexBasis() { return simplex_basis_; }
+  const SimplexBasis& getSimplexBasis() { return basis_; }
 
-  int initialiseSimplexLpBasisAndFactor(
+  HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
-  // This will go when only using HEkk
-  HighsSolutionParams getSolutionParams();
 
   // Interface methods
-  void appendColsToVectors(const int num_new_col, const vector<double>& colCost,
+  void appendColsToVectors(const HighsInt num_new_col,
+                           const vector<double>& colCost,
                            const vector<double>& colLower,
                            const vector<double>& colUpper);
-  void appendRowsToVectors(const int num_new_row,
+  void appendRowsToVectors(const HighsInt num_new_row,
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
-  void appendColsToMatrix(const int num_new_col, const int num_new_nz,
-                          const int* XAstart, const int* XAindex,
+  void appendColsToMatrix(const HighsInt num_new_col, const HighsInt num_new_nz,
+                          const HighsInt* XAstart, const HighsInt* XAindex,
                           const double* XAvalue);
-  void appendRowsToMatrix(const int num_new_row, const int num_new_nz,
-                          const int* XARstart, const int* XARindex,
+  void appendRowsToMatrix(const HighsInt num_new_row, const HighsInt num_new_nz,
+                          const HighsInt* XARstart, const HighsInt* XARindex,
                           const double* XARvalue);
 
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
-                                    HighsSimplexInfo& simplex_info);
+                                    HighsSimplexInfo& info);
 
   double cost_scale_ = 1;
-  int iteration_count_ = 0;
-  bool solve_bailout_ = false;
+  HighsInt iteration_count_ = 0;
 
-  HighsLp simplex_lp_;
-  HighsSimplexLpStatus simplex_lp_status_;
-  HighsSimplexInfo simplex_info_;
-  HighsModelStatus scaled_model_status_;
-  SimplexBasis simplex_basis_;
+  bool solve_bailout_;
+  bool called_return_from_solve_;
+  SimplexAlgorithm exit_algorithm;
+  HighsInt return_primal_solution_status;
+  HighsInt return_dual_solution_status;
+
+  HighsLp lp_;
+  HighsSimplexStatus status_;
+  HighsSimplexInfo info_;
+  HighsModelStatus model_status_;
+  SimplexBasis basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
@@ -87,38 +93,41 @@ class HEkk {
   HMatrix matrix_;
   HFactor factor_;
 
-  double build_syntheticTick_;
-  double total_syntheticTick_;
+  double build_synthetic_tick_;
+  double total_synthetic_tick_;
 
  private:
   void initialiseForNewLp();
+  bool isUnconstrainedLp();
   HighsStatus initialiseForSolve();
   void setSimplexOptions();
+  void updateSimplexOptions();
   void initialiseSimplexLpRandomVectors();
   void setNonbasicMove();
-  bool getNonsingularInverse(const int solve_phase = 0);
+  bool getNonsingularInverse(const HighsInt solve_phase = 0);
   bool getBacktrackingBasis(double* scattered_edge_weights);
   void putBacktrackingBasis();
-  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
-                            double* scattered_edge_weights);
+  void putBacktrackingBasis(
+      const vector<HighsInt>& basicIndex_before_compute_factor,
+      double* scattered_edge_weights);
   void computePrimalObjectiveValue();
-  void computeDualObjectiveValue(const int phase = 2);
-  int computeFactor();
+  void computeDualObjectiveValue(const HighsInt phase = 2);
+  HighsInt computeFactor();
   void initialiseMatrix();
   void allocateWorkAndBaseArrays();
-  void initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase,
-                      const bool perturb = false);
-  void initialiseBound(const SimplexAlgorithm algorithm, const int solvePhase,
-                       const bool perturb = false);
+  void initialiseCost(const SimplexAlgorithm algorithm,
+                      const HighsInt solve_phase, const bool perturb = false);
+  void initialiseBound(const SimplexAlgorithm algorithm,
+                       const HighsInt solve_phase, const bool perturb = false);
   void initialiseLpColCost();
   void initialiseLpRowCost();
   void initialiseLpColBound();
   void initialiseLpRowBound();
   void initialiseNonbasicValueAndMove();
-  void pivotColumnFtran(const int iCol, HVector& col_aq);
-  void unitBtran(const int iRow, HVector& row_ep);
+  void pivotColumnFtran(const HighsInt iCol, HVector& col_aq);
+  void unitBtran(const HighsInt iRow, HVector& row_ep);
   void fullBtran(HVector& buffer);
-  void choosePriceTechnique(const int price_strategy,
+  void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
   void tableauRowPrice(const HVector& row_ep, HVector& row_ap);
@@ -126,32 +135,34 @@ class HEkk {
   void computePrimal();
   void computeDual();
   void computeDualInfeasibleWithFlips();
-  double computeDualForTableauColumn(const int iVar,
+  double computeDualForTableauColumn(const HighsInt iVar,
                                      const HVector& tableau_column);
-  void correctDual(int* free_infeasibility_count);
+  bool correctDual(HighsInt* free_infeasibility_count);
   bool reinvertOnNumericalTrouble(const std::string method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,
                                   const double alpha_from_row,
                                   const double numerical_trouble_tolerance);
 
-  void flipBound(const int iCol);
-  void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
-  void updatePivots(const int variable_in, const int row_out,
-                    const int move_out);
-  void updateMatrix(const int variable_in, const int variable_out);
+  void flipBound(const HighsInt iCol);
+  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
+                    HighsInt* hint);
+
+  void updatePivots(const HighsInt variable_in, const HighsInt row_out,
+                    const HighsInt move_out);
+  void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
   void computeSimplexPrimalInfeasible();
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
-  bool sparseLoopStyle(const int count, const int dim, int& to_entry);
+  bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
+                       HighsInt& to_entry);
   void invalidatePrimalInfeasibilityRecord();
   void invalidatePrimalMaxSumInfeasibilityRecord();
   void invalidateDualInfeasibilityRecord();
   void invalidateDualMaxSumInfeasibilityRecord();
-  bool bailoutReturn();
   bool bailoutOnTimeIterations();
   HighsStatus returnFromSolve(const HighsStatus return_status);
 

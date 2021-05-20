@@ -6,16 +6,20 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HVector.h
  * @brief Vector structure for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HVECTOR_H_
 #define SIMPLEX_HVECTOR_H_
 
 #include <map>
 #include <vector>
+
+#include "util/HighsInt.h"
 
 // using std::map;
 using std::vector;
@@ -28,7 +32,7 @@ class HVector {
   /**
    * @brief Initialise a vector
    */
-  void setup(int size_  //!< Dimension of the vector to be initialised
+  void setup(HighsInt size_  //!< Dimension of the vector to be initialised
   );
 
   /**
@@ -37,20 +41,20 @@ class HVector {
    */
   void clear();
 
-  int size;              //!< Dimension of the vector
-  int count;             //!< Number of nonzeros
-  vector<int> index;     //!< Packed indices of nonzeros
-  vector<double> array;  //!< Full-length array of values
+  HighsInt size;           //!< Dimension of the vector
+  HighsInt count;          //!< Number of nonzeros
+  vector<HighsInt> index;  //!< Packed indices of nonzeros
+  vector<double> array;    //!< Full-length array of values
 
-  double syntheticTick;  //!< Synthetic clock for operations with this vector
+  double synthetic_tick;  //!< Synthetic clock for operations with this vector
 
   // For update
-  vector<char> cwork;  //!< char working buffer for UPDATE
-  vector<int> iwork;   //!< integer working buffer for UPDATE
-  HVector* next;       //!< Allows vectors to be linked for PAMI
+  vector<char> cwork;      //!< char working buffer for UPDATE
+  vector<HighsInt> iwork;  //!< integer working buffer for UPDATE
+  HVector* next;           //!< Allows vectors to be linked for PAMI
 
   /**
-   * @brief Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY
+   * @brief Packing: Zero values in Vector.array which exceed kHighsTiny
    * in magnitude
    *
    */
@@ -62,10 +66,10 @@ class HVector {
    *
    */
   void pack();
-  bool packFlag;             //!< Flag to indicate whether to pack or not
-  int packCount;             //!< Number of nonzeros packed
-  vector<int> packIndex;     //!< Packed indices
-  vector<double> packValue;  //!< Packed values
+  bool packFlag;               //!< Flag to indicate whether to pack or not
+  HighsInt packCount;          //!< Number of nonzeros packed
+  vector<HighsInt> packIndex;  //!< Packed indices
+  vector<double> packValue;    //!< Packed values
 
   /**
    * @brief Copy from another HVector structure to this instance

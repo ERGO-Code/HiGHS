@@ -9,7 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/Avgas.cpp
  * @brief Utilities for tests with AVGAS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "Avgas.h"
 
@@ -18,9 +17,9 @@
 
 const bool dev_run = false;
 
-void Avgas::row(int row, int& num_row, int& num_row_nz,
+void Avgas::row(HighsInt row, HighsInt& num_row, HighsInt& num_row_nz,
                 std::vector<double>& rowLower, std::vector<double>& rowUpper,
-                std::vector<int>& ARstart, std::vector<int>& ARindex,
+                std::vector<HighsInt>& ARstart, std::vector<HighsInt>& ARindex,
                 std::vector<double>& ARvalue) {
   rowLower.resize(num_row + 1);
   rowUpper.resize(num_row + 1);
@@ -29,7 +28,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   if (row == 0) {
     rowLower[num_row] = -1;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 2;
+    HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 0;
@@ -41,7 +40,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 1) {
     rowLower[num_row] = -1;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 2;
+    HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 2;
@@ -53,7 +52,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 2) {
     rowLower[num_row] = -1;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 2;
+    HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 4;
@@ -65,7 +64,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 3) {
     rowLower[num_row] = -1;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 2;
+    HighsInt num_new_nz = 2;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 6;
@@ -77,7 +76,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 4) {
     rowLower[num_row] = -2;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 4;
+    HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 0;
@@ -95,7 +94,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 5) {
     rowLower[num_row] = -2;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 4;
+    HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 1;
@@ -113,7 +112,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 6) {
     rowLower[num_row] = 0;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 3;
+    HighsInt num_new_nz = 3;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 0;
@@ -128,7 +127,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 7) {
     rowLower[num_row] = 0;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 4;
+    HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 0;
@@ -146,7 +145,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 8) {
     rowLower[num_row] = 0;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 4;
+    HighsInt num_new_nz = 4;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 1;
@@ -164,7 +163,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
   } else if (row == 9) {
     rowLower[num_row] = 0;
     rowUpper[num_row] = 1e31;
-    int num_new_nz = 3;
+    HighsInt num_new_nz = 3;
     ARindex.resize(num_row_nz + num_new_nz);
     ARvalue.resize(num_row_nz + num_new_nz);
     ARindex[num_row_nz] = 1;
@@ -177,21 +176,21 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
     ARvalue[num_row_nz] = -2;
     num_row_nz++;
   } else {
-    if (dev_run) printf("Avgas: row %d out of range\n", row);
+    if (dev_run) printf("Avgas: row %" HIGHSINT_FORMAT " out of range\n", row);
   }
   num_row++;
 }
 
-void Avgas::col(int col, int& num_col, int& num_col_nz,
+void Avgas::col(HighsInt col, HighsInt& num_col, HighsInt& num_col_nz,
                 std::vector<double>& colCost, std::vector<double>& colLower,
-                std::vector<double>& colUpper, std::vector<int>& Astart,
-                std::vector<int>& Aindex, std::vector<double>& Avalue) {
+                std::vector<double>& colUpper, std::vector<HighsInt>& Astart,
+                std::vector<HighsInt>& Aindex, std::vector<double>& Avalue) {
   colCost.resize(num_col + 1);
   colLower.resize(num_col + 1);
   colUpper.resize(num_col + 1);
   Astart.resize(num_col + 1);
   Astart[num_col] = num_col_nz;
-  int num_new_nz = 4;
+  HighsInt num_new_nz = 4;
   if (col == 0) {
     colCost[num_col] = 0;
     colLower[num_col] = 0;
@@ -333,7 +332,7 @@ void Avgas::col(int col, int& num_col, int& num_col_nz,
     Avalue[num_col_nz] = -2;
     num_col_nz++;
   } else {
-    if (dev_run) printf("Avgas: col %d out of range\n", col);
+    if (dev_run) printf("Avgas: col %" HIGHSINT_FORMAT " out of range\n", col);
   }
   num_col++;
 }

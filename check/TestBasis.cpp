@@ -24,7 +24,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Read and solve a different model
   highs.readModel(model1_file);
@@ -36,7 +36,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Clear and load original model and basis
   highs.clearModel();
@@ -46,12 +46,12 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Ensure that no simplex iterations are required when solved from
   // the optimal basis
   highs.run();
-  REQUIRE(highs.getSimplexIterationCount() == 0);
+  REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 void testBasisRestart(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
@@ -62,16 +62,17 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // highs.writeSolution("", true);
   // Change a bound and resolve
 
-  const HighsLp& lp = highs.getLp();
+  const HighsLp& lp = highs.getModel();
   const HighsBasis& basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
+  const HighsInfo& info = highs.getInfo();
   // Find the first basic variable
-  int iCol;
+  HighsInt iCol;
   for (iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC) break;
+    if (basis.col_status[iCol] == HighsBasisStatus::kBasic) break;
   }
   assert(iCol < lp.numCol_);
-  const int changeCol = iCol;
+  const HighsInt changeCol = iCol;
   const double old_lower_bound = lp.colLower_[changeCol];
   const double old_upper_bound = lp.colUpper_[changeCol];
   const double new_lower_bound = solution.col_value[changeCol] + 0.1;
@@ -80,16 +81,16 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   return_status = highs.run();
 
   if (dev_run) {
-    printf(
-        "After modifying lower bound of column %d from %g to %g, solving the "
-        "LP "
-        "requires %d iterations and objective is %g\n",
-        changeCol, old_lower_bound, new_lower_bound,
-        highs.getSimplexIterationCount(), highs.getObjectiveValue());
+    printf("After modifying lower bound of column %" HIGHSINT_FORMAT
+           " from %g to %g, solving the "
+           "LP "
+           "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
+           changeCol, old_lower_bound, new_lower_bound,
+           info.simplex_iteration_count, highs.getObjectiveValue());
     //  highs.writeSolution("", true);
   }
   // Make sure that the test requires iterations
-  assert(highs.getSimplexIterationCount() > 0);
+  assert(info.simplex_iteration_count > 0);
 
   // Recover bound, load optimal basis and resolve
 
@@ -100,50 +101,48 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   } else {
     return_status = highs.setBasis(basis_data);
   }
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   if (dev_run) {
-    printf(
-        "After restoring lower bound of column %d from %g to %g, solving the "
-        "LP "
-        "requires %d iterations and objective is %g\n",
-        changeCol, new_lower_bound, old_lower_bound,
-        highs.getSimplexIterationCount(), highs.getObjectiveValue());
+    printf("After restoring lower bound of column %" HIGHSINT_FORMAT
+           " from %g to %g, solving the "
+           "LP "
+           "requires %" HIGHSINT_FORMAT " iterations and objective is %g\n",
+           changeCol, new_lower_bound, old_lower_bound,
+           info.simplex_iteration_count, highs.getObjectiveValue());
   }
 
-  REQUIRE(highs.getSimplexIterationCount() == 0);
+  REQUIRE(info.simplex_iteration_count == 0);
 }
 
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
-  HighsOptions options;
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setOptionValue("output_flag", false);
   }
   assert(model0_file != model1_file);
 
   return_status = highs.readModel(model0_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.writeBasis(basis_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.readBasis("Nobasis.bas");
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Check error return for some invalid basis files
   std::string invalid_basis_file = "InvalidBasis.bas";
@@ -153,7 +152,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "HiGHS Version 0" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);
@@ -161,7 +160,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << highs.getNumCols() - 1 << " " << highs.getNumRows() << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for incompatible number of rows
   f.open(invalid_basis_file, std::ios::out);
@@ -169,7 +168,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << highs.getNumCols() << " " << 0 << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Write and read a file for incomplete basis
   f.open(invalid_basis_file, std::ios::out);
@@ -178,7 +177,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   f << "1 1" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::kError);
 
   testBasisRestart(highs, true);
   testBasisReloadModel(highs, true);
@@ -189,28 +188,26 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 
 // No commas in test case name.
 TEST_CASE("Basis-data", "[highs_basis_data]") {
-  HighsOptions options;
   HighsStatus return_status;
   std::string model0_file =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   std::string model1_file =
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
-  Highs highs(options);
+  Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
+    highs.setOptionValue("output_flag", false);
   }
   assert(model0_file != model1_file);
 
   return_status = highs.readModel(model0_file);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   return_status = highs.run();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   basis_data = highs.getBasis();
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   testBasisRestart(highs, false);
   testBasisReloadModel(highs, false);

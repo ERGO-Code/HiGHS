@@ -6,11 +6,13 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsTableauSeparator.h
  * @brief Class for separating cuts from the LP tableaux rows
  *
- * @author Leona Gottwald
  */
 
 #ifndef MIP_HIGHS_TABLEAU_SEPARATOR_H_

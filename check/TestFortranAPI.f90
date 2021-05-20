@@ -7,6 +7,7 @@ program fortrantest
   integer ( c_int ), parameter :: n = 2
   integer ( c_int ), parameter :: m = 2
   integer ( c_int ), parameter :: nz = 4
+!  integer ( c_int ), parameter :: rowwise = 0
 
   real ( c_double ) cc(n)
   real ( c_double ) cl(n)

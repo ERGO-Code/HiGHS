@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file mip/HighsDebugSol.h
  * @brief Debug solution for MIP solver
- * @author Leona Gottwald
  */
 
 #ifndef HIGHS_DEBUG_SOL_H_
@@ -54,13 +56,19 @@ struct HighsDebugSol {
 
   void nodePruned(const HighsDomain& localdomain);
 
-  void checkCut(const int* Rindex, const double* Rvalue, int Rlen, double rhs);
+  void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
+                double rhs);
 
-  void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen);
+  void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
+                double Rlower, double Rupper);
 
-  void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const;
+  void checkClique(const HighsCliqueTable::CliqueVar* clq, HighsInt clqlen);
 
-  void checkVlb(int col, int vlbcol, double vlbcoef, double vlbconstant) const;
+  void checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
+                double vubconstant) const;
+
+  void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
+                double vlbconstant) const;
 };
 
 #else
@@ -84,16 +92,20 @@ struct HighsDebugSol {
 
   void nodePruned(const HighsDomain& localdomain) {}
 
-  void checkCut(const int* Rindex, const double* Rvalue, int Rlen,
+  void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double rhs) const {}
 
-  void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen) const {}
+  void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
+                double Rlower, double Rupper) {}
 
-  void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const {
-  }
+  void checkClique(const HighsCliqueTable::CliqueVar* clq,
+                   HighsInt clqlen) const {}
 
-  void checkVlb(int col, int vlbcol, double vlbcoef, double vlbconstant) const {
-  }
+  void checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
+                double vubconstant) const {}
+
+  void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
+                double vlbconstant) const {}
 };
 #endif
 

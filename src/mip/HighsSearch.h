@@ -6,6 +6,9 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_SEARCH_H_
 #define HIGHS_SEARCH_H_
@@ -32,27 +35,35 @@ class HighsSearch {
   HighsDomain localdom;
   HighsPseudocost pseudocost;
   HighsRandom random;
-  size_t nnodes;
-  size_t lpiterations;
-  size_t heurlpiterations;
-  size_t sblpiterations;
+  int64_t nnodes;
+  int64_t lpiterations;
+  int64_t heurlpiterations;
+  int64_t sblpiterations;
   double upper_limit;
-  std::vector<int> inds;
+  std::vector<HighsInt> inds;
   std::vector<double> vals;
-  int depthoffset;
+  HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
 
  public:
   enum class ChildSelectionRule {
-    Up,
-    Down,
-    RootSol,
-    Obj,
-    Random,
-    BestCost,
-    WorstCost,
-    Disjunction,
+    kUp,
+    kDown,
+    kRootSol,
+    kObj,
+    kRandom,
+    kBestCost,
+    kWorstCost,
+    kDisjunction,
+  };
+
+  enum class NodeResult {
+    kBoundExceeding,
+    kDomainInfeasible,
+    kLpInfeasible,
+    kBranched,
+    kOpen,
   };
 
  private:
@@ -64,36 +75,41 @@ class HighsSearch {
     double lower_bound;
     double estimate;
     double branching_point;
-    HighsDomainChange branchingdecision;
-    uint8_t opensubtrees;
     // we store the lp objective separately to the lower bound since the lower
     // bound could be above the LP objective when cuts age out or below when the
     // LP is unscaled dual infeasible and it is not set. We still want to use
     // the objective for pseudocost updates and tiebreaking of best bound node
     // selection
     double lp_objective;
+    HighsDomainChange branchingdecision;
+    HighsInt domgchgStackPos;
+    uint8_t opensubtrees;
 
-    NodeData(double parentlb = -HIGHS_CONST_INF,
-             double parentestimate = -HIGHS_CONST_INF)
+    NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf)
         : lower_bound(parentlb),
           estimate(parentestimate),
-          opensubtrees(2),
-          lp_objective(-HIGHS_CONST_INF) {}
+          lp_objective(-kHighsInf),
+          domgchgStackPos(-1),
+          opensubtrees(2) {}
   };
 
   std::vector<NodeData> nodestack;
-  HighsHashTable<int, int> reliableatnode;
+  HighsHashTable<HighsInt, int> reliableatnode;
 
-  bool branchingVarReliableAtNode(int col) const {
+  bool branchingVarReliableAtNode(HighsInt col) const {
     auto it = reliableatnode.find(col);
     if (it == nullptr || *it != 3) return false;
 
     return true;
   }
 
-  void markBranchingVarUpReliableAtNode(int col) { reliableatnode[col] |= 1; }
+  void markBranchingVarUpReliableAtNode(HighsInt col) {
+    reliableatnode[col] |= 1;
+  }
 
-  void markBranchingVarDownReliableAtNode(int col) { reliableatnode[col] |= 2; }
+  void markBranchingVarDownReliableAtNode(HighsInt col) {
+    reliableatnode[col] |= 2;
+  }
 
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
@@ -113,11 +129,11 @@ class HighsSearch {
 
   void cutoffNode();
 
-  void branchDownwards(int col, double newub, double branchpoint);
+  void branchDownwards(HighsInt col, double newub, double branchpoint);
 
-  void branchUpwards(int col, double newlb, double branchpoint);
+  void branchUpwards(HighsInt col, double newlb, double branchpoint);
 
-  void setMinReliable(int minreliable);
+  void setMinReliable(HighsInt minreliable);
 
   void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
 
@@ -125,16 +141,13 @@ class HighsSearch {
 
   void resetLocalDomain();
 
-  void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper,
-                   int maxleaves, int maxnodes);
+  int64_t getHeuristicLpIterations() const;
 
-  size_t getHeuristicLpIterations() const;
+  int64_t getTotalLpIterations() const;
 
-  size_t getTotalLpIterations() const;
+  int64_t getLocalLpIterations() const;
 
-  size_t getLocalLpIterations() const;
-
-  size_t getStrongBranchingLpIterations() const;
+  int64_t getStrongBranchingLpIterations() const;
 
   bool hasNode() const { return !nodestack.empty(); }
 
@@ -144,7 +157,7 @@ class HighsSearch {
 
   double getCurrentLowerBound() const { return nodestack.back().lower_bound; }
 
-  int getCurrentDepth() const { return nodestack.size() + depthoffset; }
+  HighsInt getCurrentDepth() const { return nodestack.size() + depthoffset; }
 
   void openNodesToQueue(HighsNodeQueue& nodequeue);
 
@@ -156,23 +169,25 @@ class HighsSearch {
 
   void addInfeasibleConflict();
 
-  double solve();
-
-  int selectBranchingCandidate();
+  HighsInt selectBranchingCandidate(int64_t maxSbIters);
 
   void evalUnreliableBranchCands();
 
   const NodeData* getParentNodeData() const;
 
-  void evaluateNode();
+  NodeResult evaluateNode();
 
-  bool branch();
+  NodeResult branch();
 
   bool backtrack();
 
+  /// for heuristics. Will discard nodes above targetDepth regardless of their
+  /// status
+  bool backtrackUntilDepth(HighsInt targetDepth);
+
   void printDisplayLine(char first, bool header = false);
 
-  void dive();
+  NodeResult dive();
 
   HighsDomain& getLocalDomain() { return localdom; }
 
@@ -182,7 +197,7 @@ class HighsSearch {
 
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
-  void solveDepthFirst(size_t maxbacktracks = 1);
+  void solveDepthFirst(int64_t maxbacktracks = 1);
 };
 
 #endif

@@ -19,7 +19,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=DEBUG -DFAST_BUILD=OFF
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=OFF
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
@@ -28,7 +28,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --parallel --config DEBUG
+         cmake --build . --parallel --config Debug
 
 
     - name: Test
@@ -53,7 +53,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RELEASE
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
@@ -62,7 +62,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --parallel --config RELEASE
+         cmake --build . --parallel --config Release
 
 
     - name: Test
@@ -70,4 +70,72 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C RELEASE --output-on-failure
+      run: ctest -C Release --output-on-failure
+
+  debug64:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DFAST_BUILD=OFF -DHIGHSINT64=on
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: |
+         export CC=clang
+         export CC=clang++
+         cmake --build . --parallel --config Debug
+
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest -C $BUILD_TYPE --output-on-failure
+
+  release64:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DHIGHSINT64=on
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: |
+         export CC=clang
+         export CC=clang++
+         cmake --build . --parallel --config Release
+
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest -C Release --output-on-failure

@@ -6,31 +6,37 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef HIGHS_C_API
 #define HIGHS_C_API
+
+#include "util/HighsInt.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*
- * @brief runs a model using HiGHS
+ * @brief solves an LP using HiGHS
  */
-int Highs_call(
-    const int numcol,       //!< number of columns
-    const int numrow,       //!< number of rows
-    const int numnz,        //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
+HighsInt Highs_lpCall(
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
         colupper,  //!< array of length [numcol] with upper column bounds
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
-    const int*
+    const HighsInt*
         astart,  //!< array of length [numcol+1] with column start indices
-    const int*
+    const HighsInt*
         aindex,  //!< array of length [numnz] with row indices of matrix entries
     const double*
         avalue,        //!< array of length [numnz] with value of matrix entries
@@ -38,11 +44,46 @@ int Highs_call(
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
     double* rowdual,   //!< array of length [numrow], filled with row duals
-    int* colbasisstatus,  //!< array of length [numcol], filled with column
-                          //!< basis stati
-    int* rowbasisstatus,  //!< array of length [numrow], filled with row basis
-                          //!< stati
-    int* modelstatus      //!< status of the model will be saved here
+    HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
+                               //!< basis status
+    HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
+                               //!< basis status
+    HighsInt* modelstatus      //!< status of the model will be saved here
+);
+
+/*
+ * @brief solves a MIP using HiGHS
+ */
+HighsInt Highs_mipCall(
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const HighsInt*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const HighsInt*
+        integrality,   //!< array of length [numcol] indicating whether
+                       //!< variables are continuous (0) or integer (1)
+    double* colvalue,  //!< array of length [numcol], filled with column values
+    double* coldual,   //!< array of length [numcol], filled with column duals
+    double* rowvalue,  //!< array of length [numrow], filled with row values
+    double* rowdual,   //!< array of length [numrow], filled with row duals
+    HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
+                               //!< basis stati
+    HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
+                               //!< basis status
+    int* modelstatus           //!< status of the model will be saved here
 );
 
 /*
@@ -53,161 +94,139 @@ void* Highs_create(void);
 /*
  * @brief destroys a HiGHS object
  */
-void Highs_destroy(void* highs  //!< HiGHS object reference
+void Highs_destroy(void* highs);
+
+/*
+ * @brief
+ */
+HighsInt Highs_readModel(void* highs,
+                         const char* filename  //!< filename
 );
 
 /*
  * @brief
  */
-int Highs_readModel(void* highs,          //!< HiGHS object reference
-                    const char* filename  //!< filename
+HighsInt Highs_writeModel(void* highs,
+                          const char* filename  //!< filename
 );
 
 /*
  * @brief
  */
-int Highs_writeModel(void* highs,          //!< HiGHS object reference
-                     const char* filename  //!< filename
-);
-
-/*
- * @brief
- */
-int Highs_clearModel(void* highs  //!< HiGHS object reference
-);
-
-/*
- * @brief Sets the Logfile and Output to NULL
- */
-int Highs_runQuiet(void* highs  //!< HiGHS object reference
-);
-
-/*
- * @brief Sets the logfile for printing.
- */
-int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
-                          void* logfile  //!< File handle of the logfile
-);
-
-/*
- * @brief Sets the output for printing.
- */
-int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
-                         void* outputfile  //!< File handle of the output file
-);
+HighsInt Highs_clearModel(void* highs);
 
 /*
  * @brief Runs HiGHS
  */
-int Highs_run(void* highs  //!< HiGHS object reference
-);
+HighsInt Highs_run(void* highs);
 
 /*
  * @brief Reports the solution and basis status
  */
-int Highs_writeSolution(void* highs,          //!< HiGHS object reference
-                        const char* filename  //!< filename
+HighsInt Highs_writeSolution(void* highs,
+                             const char* filename  //!< filename
 );
 
 /*
  * @brief Reports the solution and basis status in a human-readable fashion
  */
-int Highs_writeSolutionPretty(void* highs,          //!< HiGHS object reference
-                              const char* filename  //!< filename
+HighsInt Highs_writeSolutionPretty(void* highs,
+                                   const char* filename  //!< filename
 );
 
 /*
  * @brief pass an LP to HiGHS
  */
-int Highs_passLp(
-    void* highs,            //!< HiGHS object reference
-    const int numcol,       //!< number of columns
-    const int numrow,       //!< number of rows
-    const int numnz,        //!< number of entries in the constraint matrix
-    const double* colcost,  //!< array of length [numcol] with column costs
+HighsInt Highs_passLp(
+    void* highs,
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
         colupper,  //!< array of length [numcol] with upper column bounds
     const double* rowlower,  //!< array of length [numrow] with lower row bounds
     const double* rowupper,  //!< array of length [numrow] with upper row bounds
-    const int*
-        astart,  //!< array of length [numcol+1] with column start indices
-    const int*
-        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const HighsInt* astart,  //!< array of length [numcol or numrow if(rowwise)]
+                             //!< with start indices
+    const HighsInt*
+        aindex,  //!< array of length [numnz] with indices of matrix entries
     const double*
         avalue  //!< array of length [numnz] with value of matrix entries
 );
 
 /*
- * @brief
+ * @brief pass a MIP to HiGHS
  */
-int Highs_setHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
-                                  const char* option,  //!< name of the option
-                                  const int value      //!< new value of option
+HighsInt Highs_passMip(
+    void* highs,
+    const HighsInt numcol,   //!< number of columns
+    const HighsInt numrow,   //!< number of rows
+    const HighsInt numnz,    //!< number of entries in the constraint matrix
+    const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const double* colcost,   //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt* astart,  //!< array of length [numcol or numrow if(rowwise)]
+                             //!< with start indices
+    const HighsInt*
+        aindex,  //!< array of length [numnz] with indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const HighsInt*
+        integrality  //!< array of length [numcol] indicating whether
+                     //!< variables are continuous (0) or integer (1)
 );
 
-/*
- * @brief
- */
-int Highs_setHighsIntOptionValue(void* highs,  //!< HiGHS object reference
-                                 const char* option,  //!< name of the option
-                                 const int value      //!< new value of option
+HighsInt Highs_setBoolOptionValue(void* highs,
+                                  const char* option,   //!< name of the option
+                                  const HighsInt value  //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+HighsInt Highs_setIntOptionValue(void* highs,
+                                 const char* option,   //!< name of the option
+                                 const HighsInt value  //!< new value of option
+);
+
+HighsInt Highs_setDoubleOptionValue(void* highs,
                                     const char* option,  //!< name of the option
                                     const double value  //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsStringOptionValue(void* highs,  //!< HiGHS object reference
+HighsInt Highs_setStringOptionValue(void* highs,
                                     const char* option,  //!< name of the option
                                     const char* value  //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
+HighsInt Highs_setOptionValue(void* highs,
                               const char* option,  //!< name of the option
                               const char* value    //!< new value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
+HighsInt Highs_getBoolOptionValue(void* highs,
                                   const char* option,  //!< name of the option
-                                  int* value           //!< value of option
+                                  HighsInt* value      //!< value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+HighsInt Highs_getIntOptionValue(void* highs,
                                  const char* option,  //!< name of the option
-                                 int* value           //!< value of option
+                                 HighsInt* value      //!< value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+HighsInt Highs_getDoubleOptionValue(void* highs,
                                     const char* option,  //!< name of the option
                                     double* value        //!< value of option
 );
 
-/*
- * @brief
- */
-int Highs_getHighsStringOptionValue(
-    void* highs,         //!< HiGHS object reference
+HighsInt Highs_getStringOptionValue(
+    void* highs,
     const char* option,  //!< name of the option
     char* value  //!< pointer to allocated memory to store value of option
 );
@@ -215,29 +234,28 @@ int Highs_getHighsStringOptionValue(
 /*
  * @brief Get the type expected by an option
  */
-int Highs_getHighsOptionType(void* highs,         //!< HiGHS object reference
+HighsInt Highs_getOptionType(void* highs,
                              const char* option,  //!< The name of the option
-                             int* type            //!< The type of the option.
+                             HighsInt* type       //!< The type of the option.
 );
 
 /*
  * @brief
  */
-int Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
-);
+HighsInt Highs_resetOptions(void* highs);
 
 /*
  * @brief
  */
-int Highs_getHighsIntInfoValue(void* highs,       //!< HiGHS object reference
+HighsInt Highs_getIntInfoValue(void* highs,
                                const char* info,  //!< The info name
-                               int* value         //!< The info value
+                               HighsInt* value    //!< The info value
 );
 
 /*
  * @brief
  */
-int Highs_getHighsDoubleInfoValue(void* highs,       //!< HiGHS object reference
+HighsInt Highs_getDoubleInfoValue(void* highs,
                                   const char* info,  //!< The info name
                                   double* value      //!< The info value
 );
@@ -245,7 +263,7 @@ int Highs_getHighsDoubleInfoValue(void* highs,       //!< HiGHS object reference
  * @brief
  */
 void Highs_getSolution(
-    void* highs,       //!< HiGHS object reference
+    void* highs,
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
@@ -255,59 +273,49 @@ void Highs_getSolution(
 /*
  * @brief
  */
-void Highs_getBasis(
-    void* highs,     //!< HiGHS object reference
-    int* colstatus,  //!< array of length [numcol], filled with column basis
-                     //!< stati
-    int* rowstatus   //!< array of length [numrow], filled with row basis stati
+void Highs_getBasis(void* highs,
+                    HighsInt* colstatus,  //!< array of length [numcol], filled
+                                          //!< with column basis stati
+                    HighsInt* rowstatus   //!< array of length [numrow], filled
+                                          //!< with row basis stati
 );
 
 /**
- * @brief Returns the status of the (scaled) model
+ * @brief Returns the status of the model
  */
-int Highs_getModelStatus(
-    void* highs,            //!< HiGHS object reference
-    const int scaled_model  //!< 0 (nonzero) for status of (scaled) model
-);
+HighsInt Highs_getModelStatus(void* highs);
+
+/**
+ * @brief Returns the status of the scaled model
+ */
+HighsInt Highs_getScaledModelStatus(void* highs);
 
 /**
  * @brief Returns an unbounded dual ray that is a certificate of primal
  * infeasibility.
  */
-int Highs_getDualRay(void* highs,            //!< HiGHS object reference
-                     int* has_dual_ray,      //!< TRUE if the dual ray exists
-                     double* dual_ray_value  //!< array of length [numrow],
-                                             //!< filled with an unbounded ray
+HighsInt Highs_getDualRay(
+    void* highs,
+    HighsInt* has_dual_ray,  //!< TRUE if the dual ray exists
+    double* dual_ray_value   //!< array of length [numrow],
+                             //!< filled with an unbounded ray
 );
 
 /**
  * @brief Returns an unbounded primal ray that is a certificate of dual
  * infeasibility.
  */
-int Highs_getPrimalRay(
-    void* highs,              //!< HiGHS object reference
-    int* has_primal_ray,      //!< TRUE if the primal ray exists
-    double* primal_ray_value  //!< array of length [numcol], filled with an
-                              //!< unbounded ray
+HighsInt Highs_getPrimalRay(
+    void* highs,
+    HighsInt* has_primal_ray,  //!< TRUE if the primal ray exists
+    double* primal_ray_value   //!< array of length [numcol], filled with an
+                               //!< unbounded ray
 );
 
 /**
  * @brief Returns the objective function value (if known)
  */
-double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
-);
-
-/**
- * @brief Returns the simplex iteration count (if known)
- */
-int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
-);
-
-/**
- * @brief Returns the simplex iteration count (if known)
- */
-int Highs_getSimplexIterationCount(void* highs  //!< HiGHS object reference,
-);
+double Highs_getObjectiveValue(void* highs);
 
 /**
  * @brief Gets the basic variables in the order corresponding to
@@ -316,117 +324,119 @@ int Highs_getSimplexIterationCount(void* highs  //!< HiGHS object reference,
  * required by SCIP, non-negative entries are indices of columns,
  * and negative entries are -(row_index+1).
  */
-int Highs_getBasicVariables(void* highs,          //!< HiGHS object reference,
-                            int* basic_variables  //!< Basic variables
+HighsInt Highs_getBasicVariables(void* highs,
+                                 HighsInt* basic_variables  //!< Basic variables
 );
 
 /**
  * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
  */
-int Highs_getBasisInverseRow(void* highs,         //!< HiGHS object reference
-                             const int row,       //!< Index of row required
-                             double* row_vector,  //!< Row required
-                             int* row_num_nz,     //!< Number of nonzeros
-                             int* row_indices     //!< Indices of nonzeros
+HighsInt Highs_getBasisInverseRow(
+    void* highs,
+    const HighsInt row,    //!< Index of row required
+    double* row_vector,    //!< Row required
+    HighsInt* row_num_nz,  //!< Number of nonzeros
+    HighsInt* row_indices  //!< Indices of nonzeros
 );
 
 /**
  * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
  */
-int Highs_getBasisInverseCol(void* highs,         //!< HiGHS object reference
-                             const int col,       //!< Index of column required
-                             double* col_vector,  //!< Column required
-                             int* col_num_nz,     //!< Number of nonzeros
-                             int* col_indices     //!< Indices of nonzeros
+HighsInt Highs_getBasisInverseCol(
+    void* highs,
+    const HighsInt col,    //!< Index of column required
+    double* col_vector,    //!< Column required
+    HighsInt* col_num_nz,  //!< Number of nonzeros
+    HighsInt* col_indices  //!< Indices of nonzeros
 );
 
 /**
  * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
  * \f$\mathbf{b}\f$
  */
-int Highs_getBasisSolve(void* highs,              //!< HiGHS object reference
-                        const double* rhs,        //!< RHS \f$\mathbf{b}\f$
-                        double* solution_vector,  //!< Solution \f$\mathbf{x}\f$
-                        int* solution_num_nz,     //!< Number of nonzeros
-                        int* solution_indices     //!< Indices of nonzeros
+HighsInt Highs_getBasisSolve(
+    void* highs,
+    const double* rhs,          //!< RHS \f$\mathbf{b}\f$
+    double* solution_vector,    //!< Solution \f$\mathbf{x}\f$
+    HighsInt* solution_num_nz,  //!< Number of nonzeros
+    HighsInt* solution_indices  //!< Indices of nonzeros
 );
 
 /**
  * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
  * \f$\mathbf{b}\f$
  */
-int Highs_getBasisTransposeSolve(
-    void* highs,              //!< HiGHS object reference
-    const double* rhs,        //!< RHS \f$\mathbf{b}\f$
-    double* solution_vector,  //!< Solution  \f$\mathbf{x}\f$
-    int* solution_nz,         //!< Number of nonzeros
-    int* solution_indices     //!< Indices of nonzeros
+HighsInt Highs_getBasisTransposeSolve(
+    void* highs,
+    const double* rhs,          //!< RHS \f$\mathbf{b}\f$
+    double* solution_vector,    //!< Solution  \f$\mathbf{x}\f$
+    HighsInt* solution_nz,      //!< Number of nonzeros
+    HighsInt* solution_indices  //!< Indices of nonzeros
 );
 
 /**
  * @brief Forms a row of \f$B^{-1}A\f$
  */
-int Highs_getReducedRow(void* highs,         //!< HiGHS object reference
-                        const int row,       //!< Index of row required
-                        double* row_vector,  //!< Row required
-                        int* row_num_nz,     //!< Number of nonzeros
-                        int* row_indices     //!< Indices of nonzeros
+HighsInt Highs_getReducedRow(void* highs,
+                             const HighsInt row,    //!< Index of row required
+                             double* row_vector,    //!< Row required
+                             HighsInt* row_num_nz,  //!< Number of nonzeros
+                             HighsInt* row_indices  //!< Indices of nonzeros
 );
 
 /**
  * @brief Forms a column of \f$B^{-1}A\f$
  */
-int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
-                           const int col,       //!< Index of column required
-                           double* col_vector,  //!< Column required
-                           int* col_num_nz,     //!< Number of nonzeros
-                           int* col_indices     //!< Indices of nonzeros
+HighsInt Highs_getReducedColumn(
+    void* highs,
+    const HighsInt col,    //!< Index of column required
+    double* col_vector,    //!< Column required
+    HighsInt* col_num_nz,  //!< Number of nonzeros
+    HighsInt* col_indices  //!< Indices of nonzeros
 );
 
 /**
  * @brief Passes a basis to HiGHS
  */
-int Highs_setBasis(void* highs,           //!< HiGHS object reference
-                   const int* colstatus,  //!< Column status
-                   const int* rowstatus   //!< Row status
+HighsInt Highs_setBasis(void* highs,
+                        const HighsInt* colstatus,  //!< Column status
+                        const HighsInt* rowstatus   //!< Row status
 );
 
 /**
  * @brief Sets up a logical basis in HiGHS
  */
-int Highs_setLogicalBasis(void* highs  //!< HiGHS object reference
-);
+HighsInt Highs_setLogicalBasis(void* highs);
 
 /**
  * @brief Returns the cumulative wall-clock time spent in Highs_run();
  */
-double Highs_getHighsRunTime(void* highs  //!< HiGHS object reference
-);
+double Highs_getRunTime(void* highs);
 
 /**
  * @brief Adds a row to the model
  */
-int Highs_addRow(
-    void* highs,           //!< HiGHS object reference
-    const double lower,    //!< Lower bound of the row
-    const double upper,    //!< Upper bound of the row
-    const int num_new_nz,  //!< Number of nonzeros in the row
-    const int* indices,    //!< Array of size num_new_nz with column indices
-    const double* values   //!< Array of size num_new_nz with column values
+HighsInt Highs_addRow(
+    void* highs,
+    const double lower,         //!< Lower bound of the row
+    const double upper,         //!< Upper bound of the row
+    const HighsInt num_new_nz,  //!< Number of nonzeros in the row
+    const HighsInt* indices,  //!< Array of size num_new_nz with column indices
+    const double* values      //!< Array of size num_new_nz with column values
 );
 
 /**
  * @brief Adds multiple rows to the model
  */
-int Highs_addRows(
-    void* highs,            //!< HiGHS object reference
-    const int num_new_row,  //!< Number of new rows
-    const double* lower,    //!< Array of size num_new_row with lower bounds
-    const double* upper,    //!< Array of size num_new_row with upper bounds
-    const int num_new_nz,   //!< Number of new nonzeros
-    const int*
+HighsInt Highs_addRows(
+    void* highs,
+    const HighsInt num_new_row,  //!< Number of new rows
+    const double* lower,        //!< Array of size num_new_row with lower bounds
+    const double* upper,        //!< Array of size num_new_row with upper bounds
+    const HighsInt num_new_nz,  //!< Number of new nonzeros
+    const HighsInt*
         starts,  //!< Array of size num_new_row with start indices of the rows
-    const int*
+    const HighsInt*
         indices,  //!< Array of size num_new_nz with column indices for all rows
     const double*
         values  //!< Array of size num_new_nz with column values for all rows
@@ -435,30 +445,30 @@ int Highs_addRows(
 /**
  * @brief Adds a column to the model
  */
-int Highs_addCol(
-    void* highs,           //!< HiGHS object reference
-    const double cost,     //!< Cost of the column
-    const double lower,    //!< Lower bound of the column
-    const double upper,    //!< Upper bound of the column
-    const int num_new_nz,  //!< Number of nonzeros in the column
-    const int* indices,    //!< Array of size num_new_nz with row indices
-    const double* values   //!< Array of size num_new_nz with row values
+HighsInt Highs_addCol(
+    void* highs,
+    const double cost,          //!< Cost of the column
+    const double lower,         //!< Lower bound of the column
+    const double upper,         //!< Upper bound of the column
+    const HighsInt num_new_nz,  //!< Number of nonzeros in the column
+    const HighsInt* indices,    //!< Array of size num_new_nz with row indices
+    const double* values        //!< Array of size num_new_nz with row values
 );
 
 /**
  * @brief Adds multiple columns to the model
  */
-int Highs_addCols(
-    void* highs,            //!< HiGHS object reference
-    const int num_new_col,  //!< Number of new columns
-    const double* costs,    //!< Array of size num_new_col with costs
-    const double* lower,    //!< Array of size num_new_col with lower bounds
-    const double* upper,    //!< Array of size num_new_col with upper bounds
-    const int num_new_nz,   //!< Number of new nonzeros
-    const int* starts,      //!< Array of size num_new_row with start indices of
-                            //!< the columns
-    const int* indices,     //!< Array of size num_new_nz with row indices for
-                            //!< all columns
+HighsInt Highs_addCols(
+    void* highs,
+    const HighsInt num_new_col,  //!< Number of new columns
+    const double* costs,         //!< Array of size num_new_col with costs
+    const double* lower,        //!< Array of size num_new_col with lower bounds
+    const double* upper,        //!< Array of size num_new_col with upper bounds
+    const HighsInt num_new_nz,  //!< Number of new nonzeros
+    const HighsInt* starts,   //!< Array of size num_new_row with start indices
+                              //!< of the columns
+    const HighsInt* indices,  //!< Array of size num_new_nz with row indices for
+                              //!< all columns
     const double*
         values  //!< Array of size num_new_nz with row values for all columns
 );
@@ -466,45 +476,102 @@ int Highs_addCols(
 /**
  * @brief Change the objective sense of the model
  */
-int Highs_changeObjectiveSense(void* highs,     //!< HiGHS object reference
-                               const int sense  //!< New objective sense
+HighsInt Highs_changeObjectiveSense(
+    void* highs,
+    const HighsInt sense  //!< New objective sense
+);
+
+/**
+ * @brief Change the integrality of a column
+ */
+HighsInt Highs_changeColIntegrality(
+    void* highs,
+    const HighsInt
+        col,  //!< The index of the column whose integrality is to change
+    const HighsInt integrality  //!< The new integrality
+);
+
+/**
+ * @brief Change the integrality of multiple columns given by an interval
+ */
+HighsInt Highs_changeColsIntegralityByRange(
+    void* highs,
+    const HighsInt
+        from_col,  //!< The index of the first column whose integrality changes
+    const HighsInt to_col,  //!< One more than the index of the last column
+                            //!< whose integrality changes
+    const HighsInt*
+        integrality  //!< Array of size num_set_entries with new integralitys
+);
+
+/**
+ * @brief Change the integrality of multiple columns given by a set of indices
+ */
+HighsInt Highs_changeColsIntegralityBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,  //!< Array of size num_set_entries with indices of
+                          //!< columns whose integralitys change
+    const HighsInt*
+        integrality  //!< Array of size num_set_entries with new integralitys
+);
+
+/**
+ * @brief Change the integrality of multiple columns given by a mask
+ */
+HighsInt Highs_changeColsIntegralityByMask(
+    void* highs,
+    const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+    const HighsInt* integrality  //!< Full length array of new integralitys
 );
 
 /**
  * @brief Change the cost of a column
  */
-int Highs_changeColCost(
-    void* highs,       //!< HiGHS object reference
-    const int col,     //!< The index of the column whose cost is to change
-    const double cost  //!< The new cost
+HighsInt Highs_changeColCost(
+    void* highs,
+    const HighsInt col,  //!< The index of the column whose cost is to change
+    const double cost    //!< The new cost
+);
+
+/**
+ * @brief Change the cost of multiple columns given by an interval
+ */
+HighsInt Highs_changeColsCostByRange(
+    void* highs,
+    const HighsInt
+        from_col,  //!< The index of the first column whose cost changes
+    const HighsInt to_col,  //!< One more than the index of the last column
+                            //!< whose cost changes
+    const double* cost      //!< Array of size num_set_entries with new costs
 );
 
 /**
  * @brief Change the cost of multiple columns given by a set of indices
  */
-int Highs_changeColsCostBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set,     //!< Array of size num_set_entries with indices of
-                        //!< columns whose costs change
-    const double* cost  //!< Array of size num_set_entries with new costs
+HighsInt Highs_changeColsCostBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,  //!< Array of size num_set_entries with indices of
+                          //!< columns whose costs change
+    const double* cost    //!< Array of size num_set_entries with new costs
 );
 
 /**
  * @brief Change the cost of multiple columns given by a mask
  */
-int Highs_changeColsCostByMask(
-    void* highs,        //!< HiGHS object reference
-    const int* mask,    //!< Full length array with 1 => change; 0 => not
-    const double* cost  //!< Full length array of new costs
+HighsInt Highs_changeColsCostByMask(
+    void* highs,
+    const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+    const double* cost     //!< Full length array of new costs
 );
 
 /**
  * @brief Change the bounds of a column
  */
-int Highs_changeColBounds(
-    void* highs,         //!< HiGHS object reference
-    const int col,       //!< The index of the column whose bounds are to change
+HighsInt Highs_changeColBounds(
+    void* highs,
+    const HighsInt col,  //!< The index of the column whose bounds are to change
     const double lower,  //!< The new lower bound
     const double upper   //!< The new upper bound
 );
@@ -512,11 +579,12 @@ int Highs_changeColBounds(
 /**
  * @brief Change the bounds of multiple columns given by an interval
  */
-int Highs_changeColsBoundsByRange(
-    void* highs,         //!< HiGHS object reference
-    const int from_col,  //!< The index of the first column whose bounds change
-    const int to_col,    //!< One more than the index of the last column whose
-                         //!< bounds change
+HighsInt Highs_changeColsBoundsByRange(
+    void* highs,
+    const HighsInt
+        from_col,  //!< The index of the first column whose bounds change
+    const HighsInt to_col,  //!< One more than the index of the last column
+                            //!< whose bounds change
     const double*
         lower,  //!< Array of size to_col-from_col with new lower bounds
     const double*
@@ -526,11 +594,11 @@ int Highs_changeColsBoundsByRange(
 /**
  * @brief Change the bounds of multiple columns given by a set of indices
  */
-int Highs_changeColsBoundsBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set,  //!< Array of size num_set_entries with indices of
-                     //!< columns whose bounds change
+HighsInt Highs_changeColsBoundsBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,  //!< Array of size num_set_entries with indices of
+                          //!< columns whose bounds change
     const double*
         lower,  //!< Array of size num_set_entries with new lower bounds
     const double*
@@ -540,19 +608,19 @@ int Highs_changeColsBoundsBySet(
 /**
  * @brief Change the cost of multiple columns given by a mask
  */
-int Highs_changeColsBoundsByMask(
-    void* highs,          //!< HiGHS object reference
-    const int* mask,      //!< Full length array with 1 => change; 0 => not
-    const double* lower,  //!< Full length array of new lower bounds
-    const double* upper   //!< Full length array of new upper bounds
+HighsInt Highs_changeColsBoundsByMask(
+    void* highs,
+    const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+    const double* lower,   //!< Full length array of new lower bounds
+    const double* upper    //!< Full length array of new upper bounds
 );
 
 /**
  * @brief Change the bounds of a row
  */
-int Highs_changeRowBounds(
-    void* highs,         //!< HiGHS object reference
-    const int row,       //!< The index of the row whose bounds are to change
+HighsInt Highs_changeRowBounds(
+    void* highs,
+    const HighsInt row,  //!< The index of the row whose bounds are to change
     const double lower,  //!< The new lower bound
     const double upper   //!< The new upper bound
 );
@@ -560,11 +628,11 @@ int Highs_changeRowBounds(
 /**
  * @brief Change the bounds of multiple rows given by a set of indices
  */
-int Highs_changeRowsBoundsBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set,  //!< Array of size num_set_entries with indices of rows
-                     //!< whose bounds change
+HighsInt Highs_changeRowsBoundsBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,  //!< Array of size num_set_entries with indices of
+                          //!< rows whose bounds change
     const double*
         lower,  //!< Array of size num_set_entries with new lower bounds
     const double*
@@ -574,103 +642,105 @@ int Highs_changeRowsBoundsBySet(
 /**
  * @brief Change the cost of multiple rows given by a mask
  */
-int Highs_changeRowsBoundsByMask(
-    void* highs,          //!< HiGHS object reference
-    const int* mask,      //!< Full length array with 1 => change; 0 => not
-    const double* lower,  //!< Full length array of new lower bounds
-    const double* upper   //!< Full length array of new upper bounds
+HighsInt Highs_changeRowsBoundsByMask(
+    void* highs,
+    const HighsInt* mask,  //!< Full length array with 1 => change; 0 => not
+    const double* lower,   //!< Full length array of new lower bounds
+    const double* upper    //!< Full length array of new upper bounds
 );
 
 /**
  * @brief Change a coefficient in the constraint matrix.
  */
-int Highs_changeCoeff(void* highs,        //!< HiGHS object reference
-                      const int row,      //!< The index of the row to change
-                      const int col,      //!< The index of the column to change
-                      const double value  //!< The new coefficient
+HighsInt Highs_changeCoeff(
+    void* highs,
+    const HighsInt row,  //!< The index of the row to change
+    const HighsInt col,  //!< The index of the column to change
+    const double value   //!< The new coefficient
 );
 
 /**
  * @brief Get the objective sense
  */
-int Highs_getObjectiveSense(void* highs, int* sense);
+HighsInt Highs_getObjectiveSense(void* highs, HighsInt* sense);
 /**
  * @brief Get multiple columns from the model given by an interval
  */
-int Highs_getColsByRange(
-    void* highs,          //!< HiGHS object reference
-    const int from_col,   //!< The index of the first column to
-                          //!< get from the model
-    const int to_col,     //!< One more than the last column to get
-                          //!< from the model
-    int* num_col,         //!< Number of columns got from the model
-    double* costs,        //!< Array of size num_col with costs
-    double* lower,        //!< Array of size num_col with lower bounds
-    double* upper,        //!< Array of size num_col with upper bounds
-    int* num_nz,          //!< Number of nonzeros got from the model
-    int* matrix_start,    //!< Array of size num_col with start
-                          //!< indices of the columns
-    int* matrix_index,    //!< Array of size num_nz with row
-                          //!< indices for the columns
-    double* matrix_value  //!< Array of size num_nz with row
-                          //!< values for the columns
+HighsInt Highs_getColsByRange(
+    void* highs,
+    const HighsInt from_col,  //!< The index of the first column to
+                              //!< get from the model
+    const HighsInt to_col,    //!< One more than the last column to get
+                              //!< from the model
+    HighsInt* num_col,        //!< Number of columns got from the model
+    double* costs,            //!< Array of size num_col with costs
+    double* lower,            //!< Array of size num_col with lower bounds
+    double* upper,            //!< Array of size num_col with upper bounds
+    HighsInt* num_nz,         //!< Number of nonzeros got from the model
+    HighsInt* matrix_start,   //!< Array of size num_col with start
+                              //!< indices of the columns
+    HighsInt* matrix_index,   //!< Array of size num_nz with row
+                              //!< indices for the columns
+    double* matrix_value      //!< Array of size num_nz with row
+                              //!< values for the columns
 );
 
 /**
  * @brief Get multiple columns from the model given by a set
  */
-int Highs_getColsBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set,             //!< Array of size num_set_entries with indices
-                                //!< of columns to get
-    int* num_col,               //!< Number of columns got from the model
-    double* costs,              //!< Array of size num_col with costs
-    double* lower,              //!< Array of size num_col with lower bounds
-    double* upper,              //!< Array of size num_col with upper bounds
-    int* num_nz,                //!< Number of nonzeros got from the model
-    int* matrix_start,          //!< Array of size num_col with start indices
-                                //!< of the columns
-    int* matrix_index,          //!< Array of size num_nz with row indices
-                                //!< for the columns
-    double* matrix_value        //!< Array of size num_nz with row values
-                                //!< for the columns
+HighsInt Highs_getColsBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,     //!< Array of size num_set_entries with indices
+                             //!< of columns to get
+    HighsInt* num_col,       //!< Number of columns got from the model
+    double* costs,           //!< Array of size num_col with costs
+    double* lower,           //!< Array of size num_col with lower bounds
+    double* upper,           //!< Array of size num_col with upper bounds
+    HighsInt* num_nz,        //!< Number of nonzeros got from the model
+    HighsInt* matrix_start,  //!< Array of size num_col with start indices
+                             //!< of the columns
+    HighsInt* matrix_index,  //!< Array of size num_nz with row indices
+                             //!< for the columns
+    double* matrix_value     //!< Array of size num_nz with row values
+                             //!< for the columns
 );
 
 /**
  * @brief Get multiple columns from the model given by a mask
  */
-int Highs_getColsByMask(
-    void* highs,          //!< HiGHS object reference
-    const int* mask,      //!< Full length array with 1 => get; 0 => not
-    int* num_col,         //!< Number of columns got from the model
-    double* costs,        //!< Array of size num_col with costs
-    double* lower,        //!< Array of size num_col with lower bounds
-    double* upper,        //!< Array of size num_col with upper bounds
-    int* num_nz,          //!< Number of nonzeros got from the model
-    int* matrix_start,    //!<  Array of size num_col with start
-                          //!<  indices of the columns
-    int* matrix_index,    //!<  Array of size num_nz with row indices
-                          //!<  for the columns
-    double* matrix_value  //!<  Array of size num_nz with row values
-                          //!<  for the columns
+HighsInt Highs_getColsByMask(
+    void* highs,
+    const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
+    HighsInt* num_col,       //!< Number of columns got from the model
+    double* costs,           //!< Array of size num_col with costs
+    double* lower,           //!< Array of size num_col with lower bounds
+    double* upper,           //!< Array of size num_col with upper bounds
+    HighsInt* num_nz,        //!< Number of nonzeros got from the model
+    HighsInt* matrix_start,  //!<  Array of size num_col with start
+                             //!<  indices of the columns
+    HighsInt* matrix_index,  //!<  Array of size num_nz with row indices
+                             //!<  for the columns
+    double* matrix_value     //!<  Array of size num_nz with row values
+                             //!<  for the columns
 );
 
 /**
  * @brief Get multiple rows from the model given by an interval
  */
-int Highs_getRowsByRange(
-    void* highs,          //!< HiGHS object reference
-    const int from_row,   //!< The index of the first row to get from the model
-    const int to_row,     //!< One more than the last row get from the model
-    int* num_row,         //!< Number of rows got from the model
-    double* lower,        //!< Array of size num_row with lower bounds
-    double* upper,        //!< Array of size num_row with upper bounds
-    int* num_nz,          //!< Number of nonzeros got from the model
-    int* matrix_start,    //!< Array of size num_row with start indices of the
-                          //!< rows
-    int* matrix_index,    //!< Array of size num_nz with column indices for the
-                          //!< rows
+HighsInt Highs_getRowsByRange(
+    void* highs,
+    const HighsInt
+        from_row,  //!< The index of the first row to get from the model
+    const HighsInt to_row,   //!< One more than the last row get from the model
+    HighsInt* num_row,       //!< Number of rows got from the model
+    double* lower,           //!< Array of size num_row with lower bounds
+    double* upper,           //!< Array of size num_row with upper bounds
+    HighsInt* num_nz,        //!< Number of nonzeros got from the model
+    HighsInt* matrix_start,  //!< Array of size num_row with start indices of
+                             //!< the rows
+    HighsInt* matrix_index,  //!< Array of size num_nz with column indices for
+                             //!< the rows
     double* matrix_value  //!< Array of size num_nz with column values for the
                           //!< rows
 );
@@ -678,178 +748,242 @@ int Highs_getRowsByRange(
 /**
  * @brief Get multiple rows from the model given by a set
  */
-int Highs_getRowsBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set,             //!< Array of size num_set_entries with indices
-                                //!< of rows to get
-    int* num_row,               //!< Number of rows got from the model
-    double* lower,              //!< Array of size num_row with lower bounds
-    double* upper,              //!< Array of size num_row with upper bounds
-    int* num_nz,                //!< Number of nonzeros got from the model
-    int* matrix_start,          //!< Array of size num_row with start indices
-                                //!< of the rows
-    int* matrix_index,          //!< Array of size num_nz with column indices
-                                //!< for the rows
-    double* matrix_value        //!< Array of size num_nz with column
-                                //!< values for the rows
+HighsInt Highs_getRowsBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set,     //!< Array of size num_set_entries with indices
+                             //!< of rows to get
+    HighsInt* num_row,       //!< Number of rows got from the model
+    double* lower,           //!< Array of size num_row with lower bounds
+    double* upper,           //!< Array of size num_row with upper bounds
+    HighsInt* num_nz,        //!< Number of nonzeros got from the model
+    HighsInt* matrix_start,  //!< Array of size num_row with start indices
+                             //!< of the rows
+    HighsInt* matrix_index,  //!< Array of size num_nz with column indices
+                             //!< for the rows
+    double* matrix_value     //!< Array of size num_nz with column
+                             //!< values for the rows
 );
 
 /**
  * @brief Get multiple rows from the model given by a mask
  */
-int Highs_getRowsByMask(
-    void* highs,          //!< HiGHS object reference
-    const int* mask,      //!< Full length array with 1 => get; 0 => not
-    int* num_row,         //!< Number of rows got from the model
-    double* lower,        //!< Array of size num_row with lower bounds
-    double* upper,        //!< Array of size num_row with upper bounds
-    int* num_nz,          //!< Number of nonzeros got from the model
-    int* matrix_start,    //!< Array of size num_row with start indices
-                          //!< of the rows
-    int* matrix_index,    //!< Array of size num_nz with column indices
-                          //!< for the rows
-    double* matrix_value  //!< Array of size num_nz with column
-                          //!< values for the rows
+HighsInt Highs_getRowsByMask(
+    void* highs,
+    const HighsInt* mask,    //!< Full length array with 1 => get; 0 => not
+    HighsInt* num_row,       //!< Number of rows got from the model
+    double* lower,           //!< Array of size num_row with lower bounds
+    double* upper,           //!< Array of size num_row with upper bounds
+    HighsInt* num_nz,        //!< Number of nonzeros got from the model
+    HighsInt* matrix_start,  //!< Array of size num_row with start indices
+                             //!< of the rows
+    HighsInt* matrix_index,  //!< Array of size num_nz with column indices
+                             //!< for the rows
+    double* matrix_value     //!< Array of size num_nz with column
+                             //!< values for the rows
 );
 
 /**
  * @brief Delete multiple columns from the model given by an interval
  */
-int Highs_deleteColsByRange(
-    void* highs,         //!< HiGHS object reference
-    const int from_col,  //!< The index of the first column
-                         //!< to delete from the model
-    const int to_col     //!< One more than the last column to
-                         //!< delete from the model
+HighsInt Highs_deleteColsByRange(
+    void* highs,
+    const HighsInt from_col,  //!< The index of the first column
+                              //!< to delete from the model
+    const HighsInt to_col     //!< One more than the last column to
+                              //!< delete from the model
 );
 
 /**
  * @brief Delete multiple columns from the model given by a set
  */
-int Highs_deleteColsBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set  //!< Array of size num_set_entries with indices of columns
-                    //!< to delete
+HighsInt Highs_deleteColsBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set  //!< Array of size num_set_entries with indices of
+                         //!< columns to delete
 );
 
 /**
  * @brief Delete multiple columns from the model given by a mask
  */
-int Highs_deleteColsByMask(
-    void* highs,  //!< HiGHS object reference
-    int* mask     //!< Full length array with 1 => delete; 0 => not
+HighsInt Highs_deleteColsByMask(
+    void* highs,
+    HighsInt* mask  //!< Full length array with 1 => delete; 0 => not
 );
 
 /**
  * @brief Delete multiple rows from the model given by an interval
  */
-int Highs_deleteRowsByRange(
-    void* highs,  //!< HiGHS object reference
+HighsInt Highs_deleteRowsByRange(
+    void* highs,
     const int
-        from_row,     //!< The index of the first row to delete from the model
-    const int to_row  //!< One more than the last row delete from the model
+        from_row,  //!< The index of the first row to delete from the model
+    const HighsInt to_row  //!< One more than the last row delete from the model
 );
 
 /**
  * @brief Delete multiple rows from the model given by a set
  */
-int Highs_deleteRowsBySet(
-    void* highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int* set  //!< Array of size num_set_entries with indices of columns
-                    //!< to delete
+HighsInt Highs_deleteRowsBySet(
+    void* highs,
+    const HighsInt num_set_entries,  //!< The number of indides in the set
+    const HighsInt* set  //!< Array of size num_set_entries with indices of
+                         //!< columns to delete
 );
 
 /**
  * @brief Delete multiple rows from the model given by a mask
  */
-int Highs_deleteRowsByMask(
-    void* highs,  //!< HiGHS object reference
-    int* mask     //!< Full length array with 1 => delete; 0 => not
+HighsInt Highs_deleteRowsByMask(
+    void* highs,
+    HighsInt* mask  //!< Full length array with 1 => delete; 0 => not
 );
 
 /**
  * @brief Returns the value of infinity used by HiGHS
  */
-double Highs_getHighsInfinity(void* highs  //!< HiGHS object reference
-);
+double Highs_getInfinity(void* highs);
 
 /**
  * @brief Returns the number of columns of the current model
  */
-int Highs_getNumCols(void* highs  //!< HiGHS object reference
-);
+HighsInt Highs_getNumCols(void* highs);
 
 /**
  * @brief Returns the number of rows of the current model
  */
-int Highs_getNumRows(void* highs  //!< HiGHS object reference
-);
+HighsInt Highs_getNumRows(void* highs);
 
 /**
  * @brief Returns the number of nonzeroes of the current model
  */
-int Highs_getNumNz(void* highs  //!< HiGHS object reference
-);
+HighsInt Highs_getNumNz(void* highs);
 
-/**
- * @brief Returns a pointer to a character representation of a HiGHS model
- * status
- */
-const char* Highs_highsModelStatusToChar(
-    void* highs,                //!< HiGHS object reference
-    int int_highs_model_status  //!< Status to interpret
-);
-
-/**
- * @brief Returns a pointer to a character representation of a primal/dual
- * status
- */
-const char* Highs_primalDualStatusToChar(
-    void* highs,                //!< HiGHS object reference
-    int int_primal_dual_status  //!< Status to interpret
-);
-
+// Fails on Windows and MacOS since string_model_status is destroyed
+// after the method returns, so what's returned is a pointer to
+// something that no longer exists.
+//
 // /**
-//  * @brief Returns the current model
+//  * @brief Returns a pointer to a character representation of a model
+//  * status
 //  */
-// void Highs_getLp(
-//     void *highs,       //!< HiGHS object reference
-//     int* numcol,        //!< number of columns
-//     int* numrow,        //!< number of rows
-//     int* numnz,         //!< number of entries in the constraint matrix
-//     double *colcost,   //!< array of length [numcol] with column costs
-//     double *collower,  //!< array of length [numcol] with lower column bounds
-//     double *colupper,  //!< array of length [numcol] with upper column bounds
-//     double *rowlower,  //!< array of length [numrow] with lower row bounds
-//     double *rowupper,  //!< array of length [numrow] with upper row bounds
-//     int *astart,       //!< array of length [numcol+1] with column start
-//     indices int *
-//         aindex,  //!< array of length [numnz] with row indices of matrix
-//         entries
-//     double *avalue  //!< array of length [numnz] with value of matrix entries
+// const char* Highs_modelStatusToChar(
+//     void* highs,
+//     HighsInt int_model_status  //!< Status to interpret
+// );
+//
+// Fails on Windows and MacOS since string_solution_status is
+// destroyed after the method returns, so what's returned is a pointer
+// to something that no longer exists.
+//
+// /**
+//  * @brief Returns a pointer to a character representation of a
+//  * solution status
+//  */
+// const char* Highs_solutionStatusToChar(
+//     void* highs,
+//     HighsInt int_solution_status  //!< Status to interpret
 // );
 
-// Highs(HighsOptions &options) { options_ = options; }
+// *********************
+// * Deprecated methods*
+// *********************
 
-// /**
-//  * @brief Clears the vector of HighsModelObjects (hmos), creates a
-//  * HighsModelObject for this LP and makes it the first of the vector
-//  * of HighsModelObjects
-//  */
-// HighsStatus passModel(
-//     const HighsLp &lp  //!< The HighsLp instance for this LP
-// );
+HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
+                    const HighsInt numnz, const double* colcost,
+                    const double* collower, const double* colupper,
+                    const double* rowlower, const double* rowupper,
+                    const HighsInt* astart, const HighsInt* aindex,
+                    const double* avalue, double* colvalue, double* coldual,
+                    double* rowvalue, double* rowdual, HighsInt* colbasisstatus,
+                    HighsInt* rowbasisstatus, HighsInt* modelstatus);
 
-// HighsStatus setSolution(const HighsSolution &solution);
+HighsInt Highs_runQuiet(void* highs);
 
-// /**
-//  * @brief Uses the HighsBasis passed to set the basis for the
-//  * LP of the (first?) HighsModelObject
-//  */
-// HighsStatus setBasis(const HighsBasis &basis);
+HighsInt Highs_setHighsLogfile(void* highs,
+                               void* logfile  //!< File handle of the logfile
+);
+
+HighsInt Highs_setHighsOutput(
+    void* highs,
+    void* outputfile  //!< File handle of the output file
+);
+
+HighsInt Highs_getIterationCount(void* highs);
+
+HighsInt Highs_getSimplexIterationCount(void* highs);
+
+HighsInt Highs_setHighsBoolOptionValue(
+    void* highs,
+    const char* option,   //!< name of the option
+    const HighsInt value  //!< new value of option
+);
+
+HighsInt Highs_setHighsIntOptionValue(
+    void* highs,
+    const char* option,   //!< name of the option
+    const HighsInt value  //!< new value of option
+);
+
+HighsInt Highs_setHighsDoubleOptionValue(
+    void* highs,
+    const char* option,  //!< name of the option
+    const double value   //!< new value of option
+);
+
+HighsInt Highs_setHighsStringOptionValue(
+    void* highs,
+    const char* option,  //!< name of the option
+    const char* value    //!< new value of option
+);
+
+HighsInt Highs_setHighsOptionValue(void* highs,
+                                   const char* option,  //!< name of the option
+                                   const char* value    //!< new value of option
+);
+
+HighsInt Highs_getHighsBoolOptionValue(
+    void* highs,
+    const char* option,  //!< name of the option
+    HighsInt* value      //!< value of option
+);
+
+HighsInt Highs_getHighsIntOptionValue(
+    void* highs,
+    const char* option,  //!< name of the option
+    HighsInt* value      //!< value of option
+);
+
+HighsInt Highs_getHighsDoubleOptionValue(
+    void* highs,
+    const char* option,  //!< name of the option
+    double* value        //!< value of option
+);
+
+HighsInt Highs_getHighsStringOptionValue(
+    void* highs,
+    const char* option,  //!< name of the option
+    char* value  //!< pointer to allocated memory to store value of option
+);
+
+HighsInt Highs_getHighsOptionType(void* highs, const char* option,
+                                  HighsInt* type);
+
+HighsInt Highs_resetHighsOptions(void* highs);
+
+HighsInt Highs_getHighsIntInfoValue(void* highs, const char* info,
+                                    HighsInt* value);
+
+HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
+                                       double* value);
+
+double Highs_getHighsInfinity(void* highs);
+
+double Highs_getHighsRunTime(void* highs);
+
+// const char* Highs_highsModelStatusToChar(void* highs,
+//                                          HighsInt int_model_status);
 
 #ifdef __cplusplus
 }

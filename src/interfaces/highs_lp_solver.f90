@@ -1,26 +1,31 @@
 module highs_lp_solver
   interface
-    function Highs_call (n,m,nz,cc,cl,cu,rl,ru,as,ai,av, cv, cd, rv, rd, cbs, rbs, ms) result(s) bind (c, name='Highs_call')
+     function Highs_call (numcol, numrow, numnz, &
+          colcost, collower, colupper, rowlower, rowupper, &
+          astart, aindex, avalue, &
+          colvalue, coldual, rowvalue, rowdual, &
+          colbasisstatus, rowbasisstatus, modelstatus) &
+          result(s) bind (c, name='Highs_call')
       use iso_c_binding
-      integer ( c_int ), VALUE :: n
-      integer ( c_int ), VALUE :: m
-      integer ( c_int ), VALUE :: nz
-      real ( c_double ) :: cc(*)
-      real ( c_double ) :: cl(*)
-      real ( c_double ) :: cu(*)
-      real ( c_double ) :: rl(*)
-      real ( c_double ) :: ru(*)
-      integer ( c_int ) :: as(*)
-      integer ( c_int ) :: ai(*)
-      real ( c_double ) :: av(*)
-      real ( c_double ) :: cv(*)
-      real ( c_double ) :: cd(*)
-      real ( c_double ) :: rv(*)
-      real ( c_double ) :: rd(*)
-      integer ( c_int ) :: cbs(*)
-      integer ( c_int ) :: rbs(*)
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      real ( c_double ) :: colvalue(*)
+      real ( c_double ) :: coldual(*)
+      real ( c_double ) :: rowvalue(*)
+      real ( c_double ) :: rowdual(*)
+      integer ( c_int ) :: colbasisstatus(*)
+      integer ( c_int ) :: rowbasisstatus(*)
       integer ( c_int ) :: s
-      integer ( c_int ) :: ms
+      integer ( c_int ) :: modelstatus
     end function Highs_call
 
     function Highs_create () result ( h ) bind( c, name='Highs_create' )
@@ -60,22 +65,85 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_writeSolution
 
-    function Highs_passLp ( h, n, m, nz, cc, cl, cu, rl, ru, as, ai, av) result ( s ) bind ( c, name='Highs_passLp' )
+    function Highs_writeSolutionPretty ( h, f ) result ( s ) bind ( c, name='Highs_writeSolutionPretty' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
-      integer ( c_int ), VALUE :: n
-      integer ( c_int ), VALUE :: m
-      integer ( c_int ), VALUE :: nz
-      real ( c_double ) :: cc(*)
-      real ( c_double ) :: cl(*)
-      real ( c_double ) :: cu(*)
-      real ( c_double ) :: rl(*)
-      real ( c_double ) :: ru(*)
-      integer ( c_int ) :: as(*)
-      integer ( c_int ) :: ai(*)
-      real ( c_double ) :: av(*)
+      character( c_char ) :: f(*)
+      integer ( c_int ) :: s
+    end function Highs_writeSolutionPretty
+
+    function Highs_passLp ( h, numcol, numrow, numnz, rowwise,&
+         colcost, collower, colupper, rowlower, rowupper, &
+         astart, aindex, avalue) result ( s ) bind ( c, name='Highs_passLp' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: rowwise
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
       integer ( c_int ) :: s
     end function Highs_passLp
+
+    function Highs_passMip ( h, numcol, numrow, numnz, rowwise,&
+         colcost, collower, colupper, rowlower, rowupper, &
+         astart, aindex, avalue, integrality) result ( s ) bind ( c, name='Highs_passMip' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: rowwise
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_passMip
+
+    function Highs_setBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setBoolOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      logical ( c_bool ), VALUE :: v
+      integer ( c_int ) :: s
+    end function Highs_setBoolOptionValue
+
+    function Highs_setIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setIntOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ), VALUE :: v
+      integer ( c_int ) :: s
+    end function Highs_setIntOptionValue
+
+    function Highs_setDoubleOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setDoubleOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      real ( c_double ), VALUE :: v
+      integer ( c_int ) :: s
+    end function Highs_setDoubleOptionValue
+
+   function Highs_setStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setStringOptionValue' )
+     use iso_c_binding
+     type(c_ptr), VALUE :: h
+     character( c_char ) :: o(*)
+     character( c_char ) :: v(*)
+     integer ( c_int ) :: s
+   end function Highs_setStringOptionValue
 
     function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
       use iso_c_binding
@@ -84,6 +152,62 @@ module highs_lp_solver
       character( c_char ) :: v(*)
       integer ( c_int ) :: s
     end function Highs_setOptionValue
+
+    function Highs_getIntOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getIntOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getIntOptionValue
+
+    function Highs_getBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getBoolOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      logical ( c_bool ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getBoolOptionValue
+
+    function Highs_getDoubleOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getDoubleOptionValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      real ( c_double ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getDoubleOptionValue
+
+   function Highs_getStringOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_getStringOptionValue' )
+     use iso_c_binding
+     type(c_ptr), VALUE :: h
+     character( c_char ) :: o(*)
+     character( c_char ) :: v(*)
+     integer ( c_int ) :: s
+   end function Highs_getStringOptionValue
+
+    function Highs_getOptionType ( h, o, v ) result( s ) bind ( c, name='Highs_getOptionType' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getOptionType
+
+    function Highs_getIntInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getIntInfoValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      integer ( c_int ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getIntInfoValue
+
+    function Highs_getDoubleInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getDoubleInfoValue' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: o(*)
+      real ( c_double ) :: v
+      integer ( c_int ) :: s
+    end function Highs_getDoubleInfoValue
 
     function Highs_getSolution (h, cv, cd, rv, rd) result ( s ) bind ( c, name='Highs_getSolution' )
       use iso_c_binding
@@ -102,6 +226,18 @@ module highs_lp_solver
       integer ( c_int ) :: rbs(*)
       integer ( c_int ) :: s
     end function Highs_getBasis
+    
+    function Highs_getModelStatus (h) result(model_status) bind(c, name='Highs_getModelStatus')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: model_status
+    end function Highs_getModelStatus
+
+    function Highs_getScaledModelStatus (h) result(model_status) bind(c, name='Highs_getScaledModelStatus')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: model_status
+    end function Highs_getScaledModelStatus
 
     function Highs_getObjectiveValue (h) result(ov) bind(c, name='Highs_getObjectiveValue')
       use iso_c_binding
@@ -172,6 +308,43 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_changeObjectiveSense
     
+    function Highs_changeColIntegrality (h, c, integrality) result(s) bind(c, name='Highs_changeColIntegrality')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: c
+      integer ( c_int ), VALUE :: integrality
+      integer ( c_int ) :: s
+    end function Highs_changeColIntegrality
+
+    function Highs_changeColsIntegralityByRange (h, from, to, integrality) result(s) &
+         bind(c, name='Highs_changeColsIntegralityByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      integer ( c_int ) :: integrality(*)
+      integer(c_int) :: s
+    end function Highs_changeColsIntegralityByRange
+
+    function Highs_changeColsIntegralityBySet (h, nse, set, integrality) result(s) &
+         bind(c, name='Highs_changeColsIntegralityBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: nse
+      integer ( c_int ) :: set(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_changeColsIntegralityBySet
+
+    function Highs_changeColsIntegralityByMask (h, mask, integrality) result(s) &
+         bind(c, name='Highs_changeColsIntegralityByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: mask(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+    end function Highs_changeColsIntegralityByMask
+
     function Highs_changeColCost (h, c, co) result(s) bind(c, name='Highs_changeColCost')
       use iso_c_binding
       type(c_ptr), VALUE :: h
@@ -179,6 +352,15 @@ module highs_lp_solver
       real ( c_double ), VALUE :: co
       integer ( c_int ) :: s
     end function Highs_changeColCost
+
+    function Highs_changeColsCostByRange (h, from, to, cost) result(s) bind(c, name='Highs_changeColsCostByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      real(c_double) :: cost(*)
+      integer(c_int) :: s
+    end function Highs_changeColsCostByRange
 
     function Highs_changeColsCostBySet (h, nse, set, cost) result(s) bind(c, name='Highs_changeColsCostBySet')
       use iso_c_binding
@@ -327,7 +509,19 @@ module highs_lp_solver
       integer(c_int) :: nnz
     end function Highs_getNumNz
 
-  
+    function Highs_getObjectiveSense (h, sense) result(s) bind(c, name='Highs_getObjectiveSense')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: sense
+      integer ( c_int ) :: s
+    end function Highs_getObjectiveSense
+
+    function Highs_runQuiet (h) result(s) bind(c, name='Highs_runQuiet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: s
+    end function Highs_runQuiet
+
 ! int Highs_getColsByRange(
 !     void *highs,          //!< HiGHS object reference
 !     const int from_col,   //!< The index of the first column to
