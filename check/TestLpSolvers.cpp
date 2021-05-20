@@ -185,19 +185,25 @@ void testSolver(Highs& highs, const std::string solver,
 void testSolversSetup(const std::string model,
                       IterationCount& model_iteration_count,
                       vector<HighsInt>& simplex_strategy_iteration_count) {
+  const HighsInt dual_iterations_with_presolve = 86;
+  const HighsInt dual_iterations_without_presolve = 83;
+  const HighsInt ipm_iterations_with_presolve = 13;
+  const HighsInt ipm_iterations_without_presolve = 14;
+  const HighsInt crossover_iterations_with_presolve = 2;
+  const HighsInt crossover_iterations_without_presolve = 1;
   if (model.compare("adlittle") == 0) {
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyChoose] = 86;  // 75;
+        int)SimplexStrategy::kSimplexStrategyChoose] = dual_iterations_without_presolve;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyDualPlain] = 86;  // 75;
+        int)SimplexStrategy::kSimplexStrategyDualPlain] = dual_iterations_without_presolve;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualTasks] = 72;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualMulti] = 73;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyPrimal] = 94;
-    model_iteration_count.ipm = 13;       // 19;
-    model_iteration_count.crossover = 2;  // 3;
+    model_iteration_count.ipm = ipm_iterations_without_presolve;
+    model_iteration_count.crossover = crossover_iterations_without_presolve;
   }
 }
 
@@ -281,7 +287,9 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 1);
 
-  REQUIRE(info.simplex_iteration_count == 529);  // 403);
+  const HighsInt simplex_iterations_with_presolve_with_scaling = 529;
+  const HighsInt simplex_iterations_without_presolve_with_scaling = 502;
+  REQUIRE(info.simplex_iteration_count == simplex_iterations_without_presolve_with_scaling);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kNotset);
@@ -297,7 +305,9 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 605);  // 598);
+  const HighsInt simplex_iterations_with_presolve_without_scaling = 605;
+  const HighsInt simplex_iterations_without_presolve_without_scaling = 725;
+  REQUIRE(info.simplex_iteration_count == simplex_iterations_without_presolve_without_scaling);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

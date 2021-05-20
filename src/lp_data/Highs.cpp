@@ -1913,6 +1913,13 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.presolve == kHighsOffString)
     return HighsPresolveStatus::kNotPresolved;
 
+  // @FlipRowDual Side-stpe presolve until @leona has fixed it wrt row dual flip
+  const bool force_no_presolve = true;
+  if (force_no_presolve) {
+    printf("Forcing no presolve!!\n");
+    return HighsPresolveStatus::kNotPresolved;
+  }
+
   // Ensure that the LP is column-wise
   // setOrientation(lp_);
 
