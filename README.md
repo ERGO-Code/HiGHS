@@ -88,9 +88,7 @@ Language interfaces and further documentation
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in
 HiGHS/src/interfaces, with example driver files in
-HiGHS/examples. Documentation beyond what is in this file is "work in
-progress", but we expect to have some available before summer
-2020. However, we are happy to give a reasonable level of support via
+HiGHS/examples. Documentation is availble via https://www.highs.dev/, and we are happy to give a reasonable level of support via
 email sent to highsopt@gmail.com.
 
 Parallel code
