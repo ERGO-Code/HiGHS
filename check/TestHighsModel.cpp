@@ -9,7 +9,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   HighsStatus status;
   Highs highs;
-  highs.readModel("filename");
+  highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
   HighsModel model;
   model.lp_ = lp;
