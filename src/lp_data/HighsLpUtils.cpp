@@ -84,23 +84,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
     // Assess the LP matrix
-    //
-    // The start of column 0 must be zero. It's possible to make
-    // everything consistent with the start being positive but, in
-    // particular, this means that the number of nonzeros is no longer
-    // lp.Astart_[lp.numCol_], a real banana skin to avoid just for
-    // the few wierdos who want lp.Astart_[0] to be positive. Hence
-    // it's not permitted!
-    if (lp.Astart_[0]) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has nonzero value (%" HIGHSINT_FORMAT
-                   ") for the start of column 0\n",
-                   lp.Astart_[0]);
-      return HighsStatus::kError;
-    }
-    call_status = assessMatrix(
-        options, lp.numRow_, lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_,
-        options.small_matrix_value, options.large_matrix_value);
+    call_status =
+        assessMatrix(options.log_options, "LP", lp.numRow_, lp.numCol_,
+                     lp.Astart_, lp.Aindex_, lp.Avalue_,
+                     options.small_matrix_value, options.large_matrix_value);
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
@@ -114,11 +101,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     return_status = HighsStatus::kError;
   else
     return_status = HighsStatus::kOk;
-#ifdef HiGHSDEV
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "assess_lp returns HighsStatus = %s\n",
-               HighsStatusToString(return_status).c_str());
-#endif
+  if (return_status != HighsStatus::kOk)
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "assessLp returns HighsStatus = %s\n",
+                HighsStatusToString(return_status).c_str());
   return return_status;
 }
 
@@ -169,16 +155,6 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
                    col_upper_size, lp.numCol_);
       error_found = true;
     }
-    if (check_matrix_start_size) {
-      bool legal_matrix_start_size = matrix_start_size >= lp.numCol_ + 1;
-      if (!legal_matrix_start_size) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "LP has illegal Astart size = %" HIGHSINT_FORMAT
-                     " < %" HIGHSINT_FORMAT "\n",
-                     matrix_start_size, lp.numCol_ + 1);
-        error_found = true;
-      }
-    }
   }
 
   // Assess row-related dimensions
@@ -210,35 +186,11 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   }
 
   // Assess matrix-related dimensions
-  if (check_matrix_start_size) {
-    HighsInt lp_num_nz = lp.Astart_[lp.numCol_];
-    bool legal_num_nz = lp_num_nz >= 0;
-    if (!legal_num_nz) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal number of nonzeros = %" HIGHSINT_FORMAT "\n",
-                   lp_num_nz);
-      error_found = true;
-    } else {
-      HighsInt matrix_index_size = lp.Aindex_.size();
-      HighsInt matrix_value_size = lp.Avalue_.size();
-      bool legal_matrix_index_size = matrix_index_size >= lp_num_nz;
-      bool legal_matrix_value_size = matrix_value_size >= lp_num_nz;
-      if (!legal_matrix_index_size) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "LP has illegal Aindex size = %" HIGHSINT_FORMAT
-                     " < %" HIGHSINT_FORMAT "\n",
-                     matrix_index_size, lp_num_nz);
-        error_found = true;
-      }
-      if (!legal_matrix_value_size) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "LP has illegal Avalue size = %" HIGHSINT_FORMAT
-                     " < %" HIGHSINT_FORMAT "\n",
-                     matrix_value_size, lp_num_nz);
-        error_found = true;
-      }
-    }
+  if (assessMatrixDimensions(options.log_options, "LP", lp.numCol_, lp.Astart_,
+                             lp.Aindex_, lp.Avalue_) == HighsStatus::kError) {
+    error_found = true;
   }
+  assert(!error_found);
   if (error_found)
     return_status = HighsStatus::kError;
   else
@@ -443,182 +395,6 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                  type, num_infinite_upper_bound, infinite_bound);
   }
 
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else if (warning_found)
-    return_status = HighsStatus::kWarning;
-  else
-    return_status = HighsStatus::kOk;
-
-  return return_status;
-}
-
-HighsStatus assessMatrix(const HighsOptions& options, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& Astart,
-                         vector<HighsInt>& Aindex, vector<double>& Avalue,
-                         const double small_matrix_value,
-                         const double large_matrix_value) {
-  HighsInt num_nz = Astart[num_vec];
-  if (num_nz > 0 && vec_dim <= 0) return HighsStatus::kError;
-  if (num_nz <= 0) return HighsStatus::kOk;
-
-  HighsStatus return_status = HighsStatus::kOk;
-  bool error_found = false;
-  bool warning_found = false;
-
-  // Return a error if the first start is not zero
-  if (Astart[0]) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Matrix starts do not begin with 0\n");
-    return HighsStatus::kError;
-  }
-  // Assess the starts
-  // Set up previous_start for a fictitious previous empty packed vector
-  HighsInt previous_start = Astart[0];
-  for (HighsInt ix = 0; ix < num_vec; ix++) {
-    HighsInt this_start = Astart[ix];
-    bool this_start_too_small = this_start < previous_start;
-    if (this_start_too_small) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Matrix packed vector %" HIGHSINT_FORMAT
-                   " has illegal start of %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT
-                   " = "
-                   "previous start\n",
-                   ix, this_start, previous_start);
-      return HighsStatus::kError;
-    }
-    bool this_start_too_big = this_start > num_nz;
-    if (this_start_too_big) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Matrix packed vector %" HIGHSINT_FORMAT
-                   " has illegal start of %" HIGHSINT_FORMAT
-                   " > %" HIGHSINT_FORMAT
-                   " = "
-                   "number of nonzeros\n",
-                   ix, this_start, num_nz);
-      return HighsStatus::kError;
-    }
-  }
-
-  // Assess the indices and values
-  // Count the number of acceptable indices/values
-  HighsInt num_new_nz = 0;
-  HighsInt num_small_values = 0;
-  double max_small_value = 0;
-  double min_small_value = kHighsInf;
-  // Set up a zeroed vector to detect duplicate indices
-  vector<HighsInt> check_vector;
-  if (vec_dim > 0) check_vector.assign(vec_dim, 0);
-  for (HighsInt ix = 0; ix < num_vec; ix++) {
-    HighsInt from_el = Astart[ix];
-    HighsInt to_el = Astart[ix + 1];
-    // Account for any index-value pairs removed so far
-    Astart[ix] = num_new_nz;
-    for (HighsInt el = from_el; el < to_el; el++) {
-      // Check the index
-      HighsInt component = Aindex[el];
-      // Check that the index is non-negative
-      bool legal_component = component >= 0;
-      if (!legal_component) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "Matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is illegal index %" HIGHSINT_FORMAT "\n",
-                     ix, el, component);
-        return HighsStatus::kError;
-      }
-      // Check that the index does not exceed the vector dimension
-      legal_component = component < vec_dim;
-      if (!legal_component) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "Matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is illegal index "
-                     "%12" HIGHSINT_FORMAT " >= %" HIGHSINT_FORMAT
-                     " = vector dimension\n",
-                     ix, el, component, vec_dim);
-        return HighsStatus::kError;
-      }
-      // Check that the index has not already ocurred
-      legal_component = check_vector[component] == 0;
-      if (!legal_component) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "Matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is duplicate index %" HIGHSINT_FORMAT "\n",
-                     ix, el, component);
-        return HighsStatus::kError;
-      }
-      // Indicate that the index has occurred
-      check_vector[component] = 1;
-      // Check the value
-      double abs_value = fabs(Avalue[el]);
-      /*
-      // Check that the value is not zero
-      bool zero_value = abs_value == 0;
-      if (zero_value) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                        "Matrix packed vector %" HIGHSINT_FORMAT ", entry %"
-      HIGHSINT_FORMAT ", is zero\n", ix, el); return HighsStatus::kError;
-      }
-      */
-      // Check that the value is not too large
-      bool large_value = abs_value > large_matrix_value;
-      if (large_value) {
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "Matrix packed vector %" HIGHSINT_FORMAT
-                     ", entry %" HIGHSINT_FORMAT
-                     ", is large value |%g| >= %g\n",
-                     ix, el, abs_value, large_matrix_value);
-        return HighsStatus::kError;
-      }
-      bool ok_value = abs_value > small_matrix_value;
-      if (!ok_value) {
-        if (max_small_value < abs_value) max_small_value = abs_value;
-        if (min_small_value > abs_value) min_small_value = abs_value;
-        num_small_values++;
-      }
-      if (ok_value) {
-        // Shift the index and value of the OK entry to the new
-        // position in the index and value vectors, and increment
-        // the new number of nonzeros
-        Aindex[num_new_nz] = Aindex[el];
-        Avalue[num_new_nz] = Avalue[el];
-        num_new_nz++;
-      } else {
-        // Zero the check_vector entry since the small value
-        // _hasn't_ occurred
-        check_vector[component] = 0;
-      }
-    }
-    // Zero check_vector
-    for (HighsInt el = Astart[ix]; el < num_new_nz; el++)
-      check_vector[Aindex[el]] = 0;
-#ifdef HiGHSDEV
-    // NB This is very expensive so shouldn't be true
-    const bool check_check_vector = false;
-    if (check_check_vector) {
-      // Check zeroing of check vector
-      for (HighsInt component = 0; component < vec_dim; component++) {
-        if (check_vector[component]) error_found = true;
-      }
-      if (error_found)
-        highsLogUser(options.log_options, HighsLogType::kError,
-                     "assessMatrix: check_vector not zeroed\n");
-    }
-#endif
-  }
-  if (num_small_values) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Matrix packed vector contains %" HIGHSINT_FORMAT
-                 " |values| in [%g, %g] "
-                 "less than %g: ignored\n",
-                 num_small_values, min_small_value, max_small_value,
-                 small_matrix_value);
-    warning_found = true;
-  }
-  Astart[num_vec] = num_new_nz;
   if (error_found)
     return_status = HighsStatus::kError;
   else if (warning_found)

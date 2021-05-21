@@ -125,6 +125,7 @@ set(sources
     mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
     model/HighsHessian.cpp
+    model/HighsHessianUtils.cpp
     model/HighsModel.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -220,6 +221,7 @@ set(headers
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
     model/HighsHessian.h
+    model/HighsHessianUtils.h
     model/HighsModel.h
     simplex/HApp.h
     simplex/FactorTimer.h
@@ -528,6 +530,7 @@ target_sources(libhighs PRIVATE
     mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
     model/HighsHessian.cpp
+    model/HighsHessianUtils.cpp
     model/HighsModel.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -637,7 +640,8 @@ set(headers_fast_build_
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
     model/HighsHessian.h
-    model/HighsModel.h
+    model/HighsHessianUtils.h
+    model/HighsModelUtils.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h

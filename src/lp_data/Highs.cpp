@@ -31,6 +31,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
+#include "model/HighsHessianUtils.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -236,6 +237,11 @@ HighsStatus Highs::passModel(const HighsModel model) {
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  // Check validity of the Hessian, normalising its entries
+  return_status = interpretCallStatus(assessHessian(hessian, options_),
+                                      return_status, "assessHessian");
+  if (return_status == HighsStatus::kError) return return_status;
+
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
@@ -244,22 +250,6 @@ HighsStatus Highs::passModel(const HighsModel model) {
 }
 
 HighsStatus Highs::passModel(const HighsLp lp) {
-  /*
-  HighsStatus return_status = HighsStatus::kOk;
-  // move the copy of the LP to the internal LP
-  lp_ = std::move(lp);
-  // Ensure that the LP is column-wise
-  setOrientation(lp_);
-  // Check validity of the LP, normalising its values
-  return_status =
-      interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
-  if (return_status == HighsStatus::kError) return return_status;
-  // Clear solver status, solution, basis and info associated with any
-  // previous model; clear any HiGHS model object; create a HiGHS
-  // model object for this LP
-  return_status = interpretCallStatus(reset(), return_status, "reset");
-  return returnFromHighs(return_status);
-  */
   HighsModel model;
   model.lp_ = std::move(lp);
   return passModel(model);
@@ -267,24 +257,15 @@ HighsStatus Highs::passModel(const HighsLp lp) {
 
 HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const HighsInt num_nz, const bool rowwise,
-                             const double* costs, const double* col_lower,
-                             const double* col_upper, const double* row_lower,
-                             const double* row_upper, const HighsInt* astart,
-                             const HighsInt* aindex, const double* avalue,
-                             const HighsInt* q_start, const HighsInt* q_index,
-                             const double* q_value,
+                             const HighsInt hessian_num_nz, const double* costs,
+                             const double* col_lower, const double* col_upper,
+                             const double* row_lower, const double* row_upper,
+                             const HighsInt* astart, const HighsInt* aindex,
+                             const double* avalue, const HighsInt* q_start,
+                             const HighsInt* q_index, const double* q_value,
                              const HighsInt* integrality) {
-  return HighsStatus::kError;
-}
-
-HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
-                             const HighsInt num_nz, const bool rowwise,
-                             const double* costs, const double* col_lower,
-                             const double* col_upper, const double* row_lower,
-                             const double* row_upper, const HighsInt* astart,
-                             const HighsInt* aindex, const double* avalue,
-                             const HighsInt* integrality) {
-  HighsLp lp;
+  HighsModel model;
+  HighsLp& lp = model.lp_;
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
   if (num_col > 0) {
@@ -333,7 +314,32 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }
-  return passModel(std::move(lp));
+  if (hessian_num_nz > 0) {
+    assert(num_col > 0);
+    assert(q_start != NULL);
+    assert(q_index != NULL);
+    assert(q_value != NULL);
+    HighsHessian& hessian = model.hessian_;
+    hessian.dim_ = num_col;
+    hessian.q_start_.assign(q_start, q_start + num_col);
+    hessian.q_start_.resize(num_col + 1);
+    hessian.q_start_[num_col] = hessian_num_nz;
+    hessian.q_index_.assign(q_index, q_index + hessian_num_nz);
+    hessian.q_value_.assign(q_value, q_value + hessian_num_nz);
+  }
+  return passModel(std::move(model));
+}
+
+HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
+                             const HighsInt num_nz, const bool rowwise,
+                             const double* costs, const double* col_lower,
+                             const double* col_upper, const double* row_lower,
+                             const double* row_upper, const HighsInt* astart,
+                             const HighsInt* aindex, const double* avalue,
+                             const HighsInt* integrality) {
+  return passModel(num_col, num_row, num_nz, rowwise, 0, costs, col_lower,
+                   col_upper, row_lower, row_upper, astart, aindex, avalue,
+                   NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::readModel(const std::string filename) {

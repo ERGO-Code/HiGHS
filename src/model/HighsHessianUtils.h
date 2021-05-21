@@ -10,25 +10,25 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file model/HighsHessian.h
- * @brief
+/**@file model/HighsHessianUtils.h
+ * @brief Class-independent utilities for HiGHS
  */
-#ifndef MODEL_HIGHS_HESSIAN_H_
-#define MODEL_HIGHS_HESSIAN_H_
+#ifndef MODEL_HIGHSHESSIANUTILS_H_
+#define MODEL_HIGHSHESSIANUTILS_H_
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
+#include "model/HighsHessian.h"
 
-class HighsHessian;
+//class HighsHessian;
+//class HighsOptions;
 
-class HighsHessian {
- public:
-  HighsInt dim_ = 0;
-  std::vector<HighsInt> q_start_;
-  std::vector<HighsInt> q_index_;
-  std::vector<double> q_value_;
-  void clear();
-};
+using std::vector;
 
-#endif
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
+HighsStatus assessHessianDimensions(const HighsOptions& options, HighsHessian& hessian);
+HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian);
+
+#endif  // MODEL_HIGHSHESSIANUTILS_H_

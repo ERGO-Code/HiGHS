@@ -52,12 +52,12 @@ class Highs {
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const bool rowwise,
-                        const double* costs, const double* col_lower,
-                        const double* col_upper, const double* row_lower,
-                        const double* row_upper, const HighsInt* astart,
-                        const HighsInt* aindex, const double* avalue,
-                        const HighsInt* q_start, const HighsInt* q_index,
-                        const double* q_value,
+                        const HighsInt hessian_num_nz, const double* costs,
+                        const double* col_lower, const double* col_upper,
+                        const double* row_lower, const double* row_upper,
+                        const HighsInt* astart, const HighsInt* aindex,
+                        const double* avalue, const HighsInt* q_start,
+                        const HighsInt* q_index, const double* q_value,
                         const HighsInt* integrality = NULL);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,

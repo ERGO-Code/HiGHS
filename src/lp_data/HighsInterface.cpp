@@ -16,6 +16,7 @@
 #include "HConfig.h"
 #include "Highs.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsSort.h"
 
@@ -127,9 +128,9 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     local_Astart[XnumNewCol] = XnumNewNZ;
     // Assess the matrix columns
     return_status = interpretCallStatus(
-        assessMatrix(options, lp.numRow_, XnumNewCol, local_Astart,
-                     local_Aindex, local_Avalue, options.small_matrix_value,
-                     options.large_matrix_value),
+        assessMatrix(options.log_options, "LP", lp.numRow_, XnumNewCol,
+                     local_Astart, local_Aindex, local_Avalue,
+                     options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
     local_num_new_nz = local_Astart[XnumNewCol];
@@ -307,9 +308,9 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     local_ARstart[XnumNewRow] = XnumNewNZ;
     // Assess the matrix columns
     return_status = interpretCallStatus(
-        assessMatrix(options, lp.numCol_, XnumNewRow, local_ARstart,
-                     local_ARindex, local_ARvalue, options.small_matrix_value,
-                     options.large_matrix_value),
+        assessMatrix(options.log_options, "LP", lp.numCol_, XnumNewRow,
+                     local_ARstart, local_ARindex, local_ARvalue,
+                     options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
     local_num_new_nz = local_ARstart[XnumNewRow];

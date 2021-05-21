@@ -53,11 +53,6 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound);
 
-HighsStatus assessMatrix(const HighsOptions& options, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& Astart,
-                         vector<HighsInt>& Aindex, vector<double>& Avalue,
-                         const double small_matrix_value,
-                         const double large_matrix_value);
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
