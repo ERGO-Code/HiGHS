@@ -441,14 +441,14 @@ void HPresolve::updateRowDualImpliedBounds(HighsInt row, HighsInt col,
               (implColLower[col] >
                model->colLower_[col] + options->primal_feasibility_tolerance)
           ? model->colCost_[col]
-          : kHighsInf;
+          : -kHighsInf;
 
   double dualRowUpper =
       (model->colUpper_[col] == kHighsInf) ||
               (implColUpper[col] <
                model->colUpper_[col] - options->primal_feasibility_tolerance)
           ? model->colCost_[col]
-          : -kHighsInf;
+          : kHighsInf;
 
   if (dualRowUpper != kHighsInf) {
     // get minimal value of other row duals in the column
@@ -4574,13 +4574,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           if (newUpper < model->rowUpper_[parallelRowCand]) {
             rowUpperTightened = true;
             if (rowScale > 0) {
-              double tmp = rowDualUpper[i] / rowScale;
-              rowDualUpper[i] = rowDualUpper[parallelRowCand] * rowScale;
-              rowDualUpper[parallelRowCand] = tmp;
-            } else {
               double tmp = rowDualLower[i] / rowScale;
-              rowDualLower[i] = rowDualUpper[parallelRowCand] * rowScale;
-              rowDualUpper[parallelRowCand] = tmp;
+              rowDualLower[i] = rowDualLower[parallelRowCand] * rowScale;
+              rowDualLower[parallelRowCand] = tmp;
+            } else {
+              double tmp = rowDualUpper[i] / rowScale;
+              rowDualUpper[i] = rowDualLower[parallelRowCand] * rowScale;
+              rowDualLower[parallelRowCand] = tmp;
             }
 
             model->rowUpper_[parallelRowCand] = newUpper;
@@ -4610,13 +4610,13 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             // swap with the negated upper bound of the row dual of row i.
             rowLowerTightened = true;
             if (rowScale > 0) {
-              double tmp = rowDualLower[i] / rowScale;
-              rowDualLower[i] = rowDualLower[parallelRowCand] * rowScale;
-              rowDualLower[parallelRowCand] = tmp;
-            } else {
               double tmp = rowDualUpper[i] / rowScale;
-              rowDualUpper[i] = rowDualLower[parallelRowCand] * rowScale;
-              rowDualLower[parallelRowCand] = tmp;
+              rowDualUpper[i] = rowDualUpper[parallelRowCand] * rowScale;
+              rowDualUpper[parallelRowCand] = tmp;
+            } else {
+              double tmp = rowDualLower[i] / rowScale;
+              rowDualLower[i] = rowDualUpper[parallelRowCand] * rowScale;
+              rowDualUpper[parallelRowCand] = tmp;
             }
 
             model->rowLower_[parallelRowCand] = newLower;
