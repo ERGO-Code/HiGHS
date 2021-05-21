@@ -747,7 +747,8 @@ HighsStatus Highs::getCoefficientInterface(const HighsInt Xrow,
   value = 0;
   // Ensure that the LP is column-wise
   setOrientation(model_.lp_);
-  for (HighsInt el = model_.lp_.Astart_[Xcol]; el < model_.lp_.Astart_[Xcol + 1]; el++) {
+  for (HighsInt el = model_.lp_.Astart_[Xcol];
+       el < model_.lp_.Astart_[Xcol + 1]; el++) {
     if (model_.lp_.Aindex_[el] == Xrow) {
       value = model_.lp_.Avalue_[el];
       break;
@@ -759,7 +760,8 @@ HighsStatus Highs::getCoefficientInterface(const HighsInt Xrow,
 HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   HighsModelObject& highs_model_object = hmos_[0];
   // If the sense doesn't change, just return
-  if ((Xsense == ObjSense::kMinimize) == (model_.lp_.sense_ == ObjSense::kMinimize))
+  if ((Xsense == ObjSense::kMinimize) ==
+      (model_.lp_.sense_ == ObjSense::kMinimize))
     return HighsStatus::kOk;
   // Assume that objective sense changes
   // Set the LP objective sense

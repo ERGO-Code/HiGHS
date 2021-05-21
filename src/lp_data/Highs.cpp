@@ -271,8 +271,8 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const double* col_upper, const double* row_lower,
                              const double* row_upper, const HighsInt* astart,
                              const HighsInt* aindex, const double* avalue,
-			     const HighsInt* q_start,
-			     const HighsInt* q_index, const double* q_value,
+                             const HighsInt* q_start, const HighsInt* q_index,
+                             const double* q_value,
                              const HighsInt* integrality) {
   return HighsStatus::kError;
 }
@@ -453,8 +453,8 @@ HighsStatus Highs::run() {
                 "from %" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT "\n",
                 options_.highs_debug_level, min_highs_debug_level);
     //  writeModel("HighsRunModel.mps");
-    //  if (model_.lp_.numRow_>0 && model_.lp_.numCol_>0) writeLpMatrixPicToFile(options_,
-    //  "LpMatrix", model_.lp_);
+    //  if (model_.lp_.numRow_>0 && model_.lp_.numCol_>0)
+    //  writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
 #endif
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
@@ -1224,14 +1224,16 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::kOk;
   // Check if primal solution is valid.
-  if (model_.lp_.numCol_ > 0 && solution.col_value.size() >= model_.lp_.numCol_) {
+  if (model_.lp_.numCol_ > 0 &&
+      solution.col_value.size() >= model_.lp_.numCol_) {
     // Worth considering the column values
     solution_.col_value = solution.col_value;
     if (model_.lp_.numRow_ > 0) {
       // Worth computing the row values
       solution_.row_value.resize(model_.lp_.numRow_);
-      return_status = interpretCallStatus(calculateRowValues(model_.lp_, solution_),
-                                          return_status, "calculateRowValues");
+      return_status =
+          interpretCallStatus(calculateRowValues(model_.lp_, solution_),
+                              return_status, "calculateRowValues");
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.value_valid = true;
@@ -1240,14 +1242,16 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     solution_.value_valid = false;
   }
   // Check if dual solution is valid.
-  if (model_.lp_.numRow_ > 0 && solution.row_dual.size() >= model_.lp_.numRow_) {
+  if (model_.lp_.numRow_ > 0 &&
+      solution.row_dual.size() >= model_.lp_.numRow_) {
     // Worth considering the row duals
     solution_.row_dual = solution.row_dual;
     if (model_.lp_.numCol_ > 0) {
       // Worth computing the column duals
       solution_.col_dual.resize(model_.lp_.numCol_);
-      return_status = interpretCallStatus(calculateColDuals(model_.lp_, solution_),
-                                          return_status, "calculateColDuals");
+      return_status =
+          interpretCallStatus(calculateColDuals(model_.lp_, solution_),
+                              return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }
     solution_.dual_valid = true;
@@ -2005,8 +2009,8 @@ HighsPresolveStatus Highs::runPresolve() {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
       presolve_.info_.n_cols_removed = model_.lp_.numCol_ - reduced_lp.numCol_;
       presolve_.info_.n_rows_removed = model_.lp_.numRow_ - reduced_lp.numRow_;
-      presolve_.info_.n_nnz_removed =
-          (HighsInt)model_.lp_.Avalue_.size() - (HighsInt)reduced_lp.Avalue_.size();
+      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.Avalue_.size() -
+                                      (HighsInt)reduced_lp.Avalue_.size();
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
@@ -2102,8 +2106,8 @@ HighsStatus Highs::callSolveMip() {
     solution_.row_value.assign(model_.lp_.numRow_, 0);
     for (HighsInt iCol = 0; iCol < model_.lp_.numCol_; iCol++) {
       double value = solver.solution_[iCol];
-      for (HighsInt iEl = model_.lp_.Astart_[iCol]; iEl < model_.lp_.Astart_[iCol + 1];
-           iEl++) {
+      for (HighsInt iEl = model_.lp_.Astart_[iCol];
+           iEl < model_.lp_.Astart_[iCol + 1]; iEl++) {
         HighsInt iRow = model_.lp_.Aindex_[iEl];
         solution_.row_value[iRow] += value * model_.lp_.Avalue_[iEl];
       }
@@ -2499,8 +2503,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }
-  if (debugHighsSolution("Return from run()", options_, model_.lp_, solution_, basis_,
-                         model_status_,
+  if (debugHighsSolution("Return from run()", options_, model_.lp_, solution_,
+                         basis_, model_status_,
                          info_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   //  getReportKktFailures(options_, model_.lp_, solution_, basis_);

@@ -43,7 +43,8 @@ class Highs {
    * of HighsModelObjects (hmos), creates a HighsModelObject for the
    * LP and makes it the first of the vector of HighsModelObjects
    */
-  HighsStatus passModel(HighsModel model  //!< The HighsModel instance for this model
+  HighsStatus passModel(
+      HighsModel model  //!< The HighsModel instance for this model
   );
 
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
@@ -55,8 +56,8 @@ class Highs {
                         const double* col_upper, const double* row_lower,
                         const double* row_upper, const HighsInt* astart,
                         const HighsInt* aindex, const double* avalue,
-			const HighsInt* q_start,
-                        const HighsInt* q_index, const double* q_value,
+                        const HighsInt* q_start, const HighsInt* q_index,
+                        const double* q_value,
                         const HighsInt* integrality = NULL);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
