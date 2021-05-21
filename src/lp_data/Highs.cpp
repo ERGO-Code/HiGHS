@@ -1914,7 +1914,7 @@ HighsPresolveStatus Highs::runPresolve() {
     return HighsPresolveStatus::kNotPresolved;
 
   // @FlipRowDual Side-stpe presolve until @leona has fixed it wrt row dual flip
-  const bool force_no_presolve = true;
+  const bool force_no_presolve = false;
   if (force_no_presolve) {
     printf("Forcing no presolve!!\n");
     return HighsPresolveStatus::kNotPresolved;
