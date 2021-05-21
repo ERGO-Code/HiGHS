@@ -198,7 +198,7 @@ class Highs {
   /**
    * @brief Returns the HighsLp instance of the model in HiGHS
    */
-  const HighsLp& getModel() const { return lp_; }
+  const HighsLp& getModel() const { return model_.lp_; }
 
   /**
    * @brief Returns the HighsSolution
@@ -320,20 +320,20 @@ class Highs {
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
    */
-  HighsInt getNumCols() const { return lp_.numCol_; }
+  HighsInt getNumCols() const { return model_.lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the LP of the (first?)
    * HighsModelObject
    */
-  HighsInt getNumRows() const { return lp_.numRow_; }
+  HighsInt getNumRows() const { return model_.lp_.numRow_; }
 
   /**
    * @brief Get the number of entries in the LP of the (first?)
    * HighsModelObject
    */
   HighsInt getNumEntries() {
-    if (lp_.numCol_) return lp_.Astart_[lp_.numCol_];
+    if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
     return 0;
   }
 
@@ -956,7 +956,8 @@ class Highs {
  private:
   HighsSolution solution_;
   HighsBasis basis_;
-  HighsLp lp_;
+  HighsModel model_;
+  //  HighsLp lp_;
 
   HighsTimer timer_;
 

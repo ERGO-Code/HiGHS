@@ -13,5 +13,5 @@ TEST_CASE("HighsModel", "[highs_model]") {
   const HighsLp& lp = highs.getLp();
   HighsModel model;
   model.lp_ = lp;
-  REQUIRE(highs.passModel(model) == HighsStatus::kError);
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
 }
