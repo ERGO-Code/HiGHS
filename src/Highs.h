@@ -202,9 +202,9 @@ class Highs {
   const HighsLp& getLp() const { return model_.lp_; }
 
   /**
-   * @brief Returns the HighsLp instance of the model in HiGHS
+   * @brief Returns the model in HiGHS
    */
-  const HighsLp& getModel() const { return model_.lp_; }
+  const HighsModel& getModel() const { return model_; }
 
   /**
    * @brief Returns the HighsSolution

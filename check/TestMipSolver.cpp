@@ -106,7 +106,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.run();
   highs.readModel(filename);
-  const HighsLp& lp = highs.getModel();
+  const HighsLp& lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
   vector<HighsVarType> integrality;
   integrality.resize(lp.numCol_);
