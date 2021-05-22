@@ -3354,8 +3354,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       rowType = HighsPostsolveStack::RowType::kEq;
       rhs = model->rowUpper_[row];
     } else if ((model->rowUpper_[row] != kHighsInf &&
-                implRowDualUpper[row] <=
-                    options->dual_feasibility_tolerance)) {
+                implRowDualUpper[row] <= options->dual_feasibility_tolerance)) {
       rowType = HighsPostsolveStack::RowType::kLeq;
       rhs = model->rowUpper_[row];
       changeRowDualUpper(row, kHighsInf);
