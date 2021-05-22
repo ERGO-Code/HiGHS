@@ -14,6 +14,7 @@
  * @brief
  */
 #include "model/HighsHessianUtils.h"
+#include "util/HighsSort.h"
 
 #include <algorithm>
 //#include <cassert>
@@ -84,13 +85,13 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
   HighsStatus return_status = HighsStatus::kOk;
   const HighsInt dim = hessian.dim_;
   const HighsInt hessian_num_nz = hessian.q_start_[dim];
-  if (hessian_num_nz > 0 && dim <= 0) return HighsStatus::kError;
   if (hessian_num_nz <= 0) return HighsStatus::kOk;
-
-  bool error_found = false;
+  printf("\nOriginal\n");
+  hessian.print();
   bool warning_found = false;
 
   HighsHessian transpose;
+  transpose.dim_ = dim;
   transpose.q_start_.resize(dim+1);
   transpose.q_index_.resize(hessian_num_nz);
   transpose.q_value_.resize(hessian_num_nz);
@@ -116,14 +117,16 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
   transpose.q_start_[0] = 0;
   for (HighsInt iRow = 0; iRow < dim; iRow++)
     transpose.q_start_[iRow+1] = transpose.q_start_[iRow] + qr_length[iRow];
-							  
+  printf("\nTransposed\n");
+  transpose.print();
+
   HighsHessian normalised;
   HighsInt normalised_num_nz = 0;
   HighsInt normalised_size = hessian_num_nz;
+  normalised.dim_ = dim;
   normalised.q_start_.resize(dim+1);
   normalised.q_index_.resize(normalised_size);
   normalised.q_value_.resize(normalised_size);
-  HighsInt column_num_nz = 0;
   vector<double> column_value;
   vector<HighsInt> column_index;
   column_index.resize(dim);
@@ -134,6 +137,7 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
   double min_small_value = kHighsInf;
   normalised.q_start_[0] = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt column_num_nz = 0;
     for (HighsInt iEl = hessian.q_start_[iCol]; iEl < hessian.q_start_[iCol+1]; iEl++) {
       HighsInt iRow = hessian.q_index_[iEl];
       column_value[iRow] = hessian.q_value_[iEl];
@@ -155,23 +159,51 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
       normalised.q_index_.resize(normalised_size);
       normalised.q_value_.resize(normalised_size);
     }
-    for (HighsInt iEl = 0; iEl < column_num_nz; iEl++) {
-      // Check the value
-      HighsInt iRow = column_index[iEl];
-      double abs_value = std::fabs(0.5 * column_value[iRow]);
+    // Halve the values, zeroing and accounting for any small ones
+    for (HighsInt ix = 0; ix < column_num_nz; ix++) {
+      HighsInt iRow = column_index[ix];
+      double value = 0.5 * column_value[iRow];
+      double abs_value = std::fabs(value);
       bool ok_value = abs_value > small_matrix_value;
       if (!ok_value) {
+	value = 0;
         if (max_small_value < abs_value) max_small_value = abs_value;
         if (min_small_value > abs_value) min_small_value = abs_value;
         num_small_values++;
       }
-      if (ok_value) {
-        normalised.q_index_[normalised_num_nz] = iRow;
-        normalised.q_value_[normalised_num_nz] = column_value[iRow];
-        normalised_num_nz++;
-      }
-      column_value[iRow] = 0;
+      column_value[iRow] = value;
+    }    
+    // Decide whether to exploit sparsity in extracting the indices
+    // and values of nonzeros
+    const HighsInt kDimTolerance = 10;
+    const double kDensityTolerance = 0.1;
+    const double density = (1.0 * column_num_nz) / (1.0 * dim);
+    HighsInt to_ix = dim;
+    const bool exploit_sparsity = dim > kDimTolerance && density < kDensityTolerance;
+    if (exploit_sparsity) {
+      // Exploit sparsity
+      to_ix = column_num_nz;
+      sortSetData(column_num_nz, &column_index[0], NULL, NULL);
+    } else {
+      to_ix = dim;
     }
+    printf("Exploit sparsity = %d\n", exploit_sparsity);
+    for (HighsInt ix = 0; ix < to_ix; ix++) {
+      HighsInt iRow;
+      if (exploit_sparsity) {
+	iRow = column_index[ix];
+      } else {
+	iRow = ix;
+      }
+      double value = column_value[iRow];
+      if (value) {
+	normalised.q_index_[normalised_num_nz] = iRow;
+	normalised.q_value_[normalised_num_nz] = value;
+	normalised_num_nz++;
+	column_value[iRow] = 0;
+      }
+    }
+    for (HighsInt iRow = 0; iRow < dim; iRow++) assert(column_value[iRow] ==0);
     normalised.q_start_[iCol+1] = normalised_num_nz;
   }
   if (num_small_values) {
@@ -184,10 +216,10 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
     warning_found = true;
   }
   // Replace the Hessian by the normalised form
+	 printf("\nNormalised\n");
+  normalised.print();
   hessian = normalised;
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else if (warning_found)
+  if (warning_found)
     return_status = HighsStatus::kWarning;
   else
     return_status = HighsStatus::kOk;

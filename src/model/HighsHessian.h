@@ -28,7 +28,9 @@ class HighsHessian {
   std::vector<HighsInt> q_start_;
   std::vector<HighsInt> q_index_;
   std::vector<double> q_value_;
+  bool operator==(const HighsHessian& hessian);
   void clear();
+  void print();
 };
 
 #endif
