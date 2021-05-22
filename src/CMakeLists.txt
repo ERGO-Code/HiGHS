@@ -641,7 +641,6 @@ set(headers_fast_build_
     mip/HighsTransformedLp.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
-    model/HighsModelUtils.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
