@@ -15,6 +15,20 @@
  */
 #include "model/HighsModel.h"
 
+#include <cassert>
+
+bool HighsModel::isQp() {
+  HighsInt dim = this->hessian_.dim_;
+  HighsInt num_col = this->lp_.numCol_;
+  if (dim) {
+    // If there's a Hessian then it's a QP, but its dimension should
+    // be the same as the number of LP columns
+    assert(dim == num_col);
+    return true;
+  }
+  return false;
+}
+
 void HighsModel::clear() {
   this->lp_.clear();
   this->hessian_.clear();

@@ -15,6 +15,18 @@
  */
 #include "lp_data/HighsLp.h"
 
+#include <cassert>
+
+bool HighsLp::isMip() {
+  HighsInt integrality_size = this->integrality_.size();
+  if (integrality_size) {
+    assert(integrality_size == this->numCol_);
+    for (HighsInt iCol = 0; iCol < this->numCol_; iCol++)
+      if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
+  }
+  return false;
+}
+
 bool HighsLp::operator==(const HighsLp& lp) {
   bool equal = equalButForNames(lp);
   equal = this->row_names_ == lp.row_names_ && equal;

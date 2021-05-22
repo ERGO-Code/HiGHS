@@ -27,16 +27,6 @@
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
 
-bool isMip(HighsLp& lp) {
-  HighsInt integrality_size = lp.integrality_.size();
-  if (integrality_size) {
-    assert(integrality_size == lp.numCol_);
-    for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
-      if (lp.integrality_[iCol] != HighsVarType::kContinuous) return true;
-  }
-  return false;
-}
-
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;

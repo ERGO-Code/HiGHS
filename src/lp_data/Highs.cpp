@@ -546,7 +546,7 @@ HighsStatus Highs::run() {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
 
-  if (!options_.solver.compare(kHighsChooseString) && isMip(model_.lp_)) {
+  if (!options_.solver.compare(kHighsChooseString) && model_.isMip()) {
     // Solve the model as a MIP
     call_status = callSolveMip();
     return_status =

@@ -37,8 +37,6 @@ HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename);
 
 // Methods taking HighsLp as an argument
-bool isMip(HighsLp& lp);
-
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);

@@ -27,7 +27,8 @@ class HighsModel {
  public:
   HighsLp lp_;
   HighsHessian hessian_;
-  bool isQp() { return this->hessian_.dim_ == this->lp_.numCol_;}
+  bool isQp();
+  bool isMip() { return this->lp_.isMip(); }
   void clear();
 };
 
