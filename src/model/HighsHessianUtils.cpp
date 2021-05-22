@@ -86,8 +86,6 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
   const HighsInt dim = hessian.dim_;
   const HighsInt hessian_num_nz = hessian.q_start_[dim];
   if (hessian_num_nz <= 0) return HighsStatus::kOk;
-  printf("\nOriginal\n");
-  hessian.print();
   bool warning_found = false;
 
   HighsHessian transpose;
@@ -117,8 +115,6 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
   transpose.q_start_[0] = 0;
   for (HighsInt iRow = 0; iRow < dim; iRow++)
     transpose.q_start_[iRow+1] = transpose.q_start_[iRow] + qr_length[iRow];
-  printf("\nTransposed\n");
-  transpose.print();
 
   HighsHessian normalised;
   HighsInt normalised_num_nz = 0;
@@ -187,7 +183,6 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
     } else {
       to_ix = dim;
     }
-    printf("Exploit sparsity = %d\n", exploit_sparsity);
     for (HighsInt ix = 0; ix < to_ix; ix++) {
       HighsInt iRow;
       if (exploit_sparsity) {
@@ -216,8 +211,6 @@ HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian)
     warning_found = true;
   }
   // Replace the Hessian by the normalised form
-	 printf("\nNormalised\n");
-  normalised.print();
   hessian = normalised;
   if (warning_found)
     return_status = HighsStatus::kWarning;
