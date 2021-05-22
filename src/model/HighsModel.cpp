@@ -19,3 +19,4 @@ void HighsModel::clear() {
   this->lp_.clear();
   this->hessian_.clear();
 }
+

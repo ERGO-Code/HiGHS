@@ -26,5 +26,8 @@ TEST_CASE("HighsModel", "[highs_model]") {
     hessian.q_value_[iCol] = 1.0;
   }
   hessian.q_start_[dim] = dim;
-  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+  status = highs.passModel(model);
+  REQUIRE(status == HighsStatus::kOk);
+  status = highs.run();
+  REQUIRE(status == HighsStatus::kError);
 }

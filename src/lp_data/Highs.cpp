@@ -511,6 +511,13 @@ HighsStatus Highs::run() {
     setHighsModelStatusAndInfo(HighsModelStatus::kInfeasible);
     return returnFromRun(return_status);
   }
+  if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
+    // Solve the model as a QP
+    call_status = callSolveQp();
+    return_status =
+        interpretCallStatus(call_status, return_status, "callSolveQp");
+    return returnFromRun(return_status);
+  }
 
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   setOrientation(model_.lp_);
@@ -2077,6 +2084,105 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
   // Copy this model's iteration counts to the LP solver iteration counts so
   // that they are updated
   iteration_counts_ = hmos_[model_index].iteration_counts_;
+  return return_status;
+}
+
+HighsStatus Highs::callSolveQp() {
+  HighsStatus return_status = HighsStatus::kOk;
+  // Check that the model isn't row-wise - not yet in master
+  HighsLp& lp = model_.lp_;
+  HighsHessian& hessian = model_.hessian_;
+  assert(lp.orientation_ != MatrixOrientation::kRowwise);
+  //
+  // Run the QP solver
+  return_status = HighsStatus::kError;
+  /*
+  Instance instance(lp.numCol_, lp.numRow_);
+
+
+  instance.num_con = lp.numRow_;
+  instance.num_var = lp.numCol_;
+
+  instance.A.mat.num_col = lp.numCol_;
+  instance.A.mat.num_row = lp.numRow_;
+  instance.A.mat.start = lp.Astart_;
+  instance.A.mat.index = lp.Aindex_;
+  instance.A.mat.value = lp.Avalue_;
+  instance.c.value = lp.colCost_;
+  instance.con_lo = lp.rowLower_;
+  instance.con_up = lp.rowUpper_;
+  instance.var_lo = lp.colLower_;
+  instance.var_up = lp.colUpper_;
+  instance.Q.mat.num_col = lp.numCol_;
+  instance.Q.mat.num_row = lp.numCol_;
+  instance.Q.mat.start = hessian.q_start_;
+  instance.Q.mat.index = hessian.q_index_;
+  instance.Q.mat.value = hessian.q_value_;
+
+  if (lp.sense_ != ObjSense::kMinimize) {
+    for (double& i : instance.c.value) {
+      i *= -1.0;
+    }
+  }
+
+  Runtime runtime(instance);
+
+  runtime.settings.reportingfequency = 1000;
+  runtime.endofiterationevent.subscribe(reportIteration);
+  runtime.settings.iterationlimit = std::numeric_limits<int>::max();
+  runtime.settings.ratiotest = new RatiotestTwopass(instance, 0.000000001,
+  0.000001); Solver solver(runtime); solver.solve();
+
+
+
+
+
+  //
+  // Cheating now, but need to set this honestly!
+  HighsStatus call_status = HighsStatus::kOk;
+  return_status =
+      interpretCallStatus(call_status, return_status, "QpSolver");
+  if (return_status == HighsStatus::kError) return return_status;
+  // Cheating now, but need to set this honestly!
+  scaled_model_status_ = runtime.status == ProblemStatus::OPTIMAL ?
+  HighsModelStatus::kOptimal : runtime.status == ProblemStatus::UNBOUNDED ?
+  HighsModelStatus::kUnbounded : HighsModelStatus::kInfeasible; model_status_ =
+  scaled_model_status_;
+  // Set the values in HighsInfo instance info_
+  info_.qp_iteration_count = runtime.statistics.num_iterations;
+  info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
+  info_.ipm_iteration_count = -1;
+  info_.crossover_iteration_count = -1;
+  info_.primal_status = runtime.status == ProblemStatus::OPTIMAL ?
+  SolutionStatus::kSolutionStatusFeasible :
+  SolutionStatus::kSolutionStatusInfeasible; info_.dual_status = runtime.status
+  == ProblemStatus::OPTIMAL ? SolutionStatus::kSolutionStatusFeasible :
+  SolutionStatus::kSolutionStatusInfeasible; info_.objective_function_value =
+  runtime.instance.objval(runtime.primal); info_.num_primal_infeasibilities =
+  -1;  // Not known
+  // Are the violations max or sum?
+  info_.max_primal_infeasibility =0.0; //
+  info_.sum_primal_infeasibilities = -1;  // Not known
+  info_.num_dual_infeasibilities = -1;    // Not known
+  info_.max_dual_infeasibility = -1;      // Not known
+  info_.sum_dual_infeasibilities = -1;    // Not known
+  // The solution needs to be here, but just resize it for now
+
+  info_.primal_status = SolutionStatus::kSolutionStatusFeasible;
+  solution_.col_value.resize(lp.numCol_);
+  solution_.col_dual.resize(lp.numCol_);
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    solution_.col_value[iCol] = runtime.primal.value[iCol]; //
+    solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
+  }
+
+  solution_.row_value.resize(lp.numRow_);
+  solution_.row_dual.resize(lp.numRow_);
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
+    solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
+  }
+  */
   return return_status;
 }
 

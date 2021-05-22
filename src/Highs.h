@@ -984,6 +984,7 @@ class Highs {
   bool called_return_from_run = true;
 
   HighsStatus callSolveLp(const HighsInt model_index, const string message);
+  HighsStatus callSolveQp();
   HighsStatus callSolveMip();
 
   PresolveComponent presolve_;
