@@ -44,6 +44,27 @@ Highs::Highs() {
   hmos_.push_back(HighsModelObject(model_.lp_, options_, timer_));
 }
 
+HighsStatus Highs::clear() {
+  resetOptions();
+  return clearModel();
+}
+
+HighsStatus Highs::clearModel() {
+  model_.clear();
+  return clearSolver();
+}
+
+HighsStatus Highs::clearSolver() {
+  HighsStatus return_status = HighsStatus::kOk;
+  clearPresolve();
+  clearUserSolverData();
+  hmos_.clear();
+  // Clear any HighsModelObject instances and create a fresh one for
+  // the incumbent model
+  hmos_.push_back(HighsModelObject(model_.lp_, options_, timer_));
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
@@ -207,23 +228,6 @@ HighsStatus Highs::writeInfo(const std::string filename) {
 // Methods below change the incumbent model or solver infomation
 // associated with it. Hence returnFromHighs is called at the end of
 // each
-HighsStatus Highs::reset() {
-  HighsStatus return_status = HighsStatus::kOk;
-  clearPresolve();
-  clearSolver();
-  hmos_.clear();
-  // Clear any HighsModelObject instances and create a fresh one for
-  // the incumbent model
-  hmos_.push_back(HighsModelObject(model_.lp_, options_, timer_));
-  return returnFromHighs(return_status);
-}
-
-HighsStatus Highs::clearModel() {
-  // Clears the model then resets HiGHS
-  model_.clear();
-  return reset();
-}
-
 HighsStatus Highs::passModel(const HighsModel model) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
@@ -245,7 +249,7 @@ HighsStatus Highs::passModel(const HighsModel model) {
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
-  return_status = interpretCallStatus(reset(), return_status, "reset");
+  return_status = interpretCallStatus(clearSolver(), return_status, "clearSolver");
   return returnFromHighs(return_status);
 }
 
@@ -2057,12 +2061,32 @@ HighsPostsolveStatus Highs::runPostsolve() {
   return HighsPostsolveStatus::kSolutionRecovered;
 }
 
-void Highs::clearSolver() {
+void Highs::clearPresolve() {
+  model_presolve_status_ = HighsPresolveStatus::kNotPresolved;
+  presolve_.clear();
+}
+
+void Highs::clearUserSolverData() {
   clearModelStatus();
   clearSolution();
   clearBasis();
   clearInfo();
 }
+
+void Highs::clearModelStatus() {
+  model_status_ = HighsModelStatus::kNotset;
+  scaled_model_status_ = HighsModelStatus::kNotset;
+}
+
+void Highs::clearSolution() {
+  info_.primal_solution_status = kSolutionStatusNone;
+  info_.dual_solution_status = kSolutionStatusNone;
+  clearSolutionUtil(solution_);
+}
+
+void Highs::clearBasis() { clearBasisUtil(basis_); }
+
+void Highs::clearInfo() { info_.clear(); }
 
 // The method below runs calls solveLp to solve the LP associated with
 // a particular model, integrating the iteration counts into the
@@ -2198,8 +2222,9 @@ HighsStatus Highs::callSolveQp() {
 
 HighsStatus Highs::callSolveMip() {
   HighsStatus return_status = HighsStatus::kOk;
-  // Clear the solver
-  clearSolver();
+  // Ensure that any solver data for users in Highs class members are
+  // cleared
+  clearUserSolverData();
   // Run the MIP solver
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
@@ -2308,19 +2333,18 @@ void Highs::forceHighsSolutionBasisSize() {
 }
 
 void Highs::setHighsModelStatusAndInfo(const HighsModelStatus model_status) {
-  clearSolver();
+  clearUserSolverData();
   model_status_ = model_status;
   scaled_model_status_ = model_status_;
-  noSolution();
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
   info_.crossover_iteration_count = iteration_counts_.crossover;
-  assert(info_.valid);
+  info_.valid = true;
 }
 
 void Highs::setHighsModelStatusBasisSolutionAndInfo() {
   assert(haveHmo("setHighsModelStatusBasisSolutionAndInfo"));
-  clearSolver();
+  clearUserSolverData();
 
   model_status_ = hmos_[0].unscaled_model_status_;
   scaled_model_status_ = hmos_[0].scaled_model_status_;
@@ -2450,31 +2474,6 @@ bool Highs::haveHmo(const string method_name) const {
   return have_hmo;
 }
 
-void Highs::clearModelStatus() {
-  model_status_ = HighsModelStatus::kNotset;
-  scaled_model_status_ = HighsModelStatus::kNotset;
-}
-
-void Highs::clearPresolve() {
-  model_presolve_status_ = HighsPresolveStatus::kNotPresolved;
-  presolve_.clear();
-}
-
-void Highs::clearSolution() {
-  info_.primal_solution_status = kSolutionStatusNone;
-  info_.dual_solution_status = kSolutionStatusNone;
-  clearSolutionUtil(solution_);
-}
-
-void Highs::clearBasis() { clearBasisUtil(basis_); }
-
-void Highs::clearInfo() { info_.clear(); }
-
-void Highs::noSolution() {
-  clearSolution();
-  info_.valid = true;
-}
-
 // Applies checks before returning from run()
 HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(!called_return_from_run);
@@ -2483,9 +2482,9 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   assert(return_status == run_return_status);
   //  return_status = run_return_status;
   if (hmos_.size() == 0) {
-    // No model has been loaded: ensure that the status, solution,
-    // basis and info associated with any previous model are cleared
-    clearSolver();
+    // No model has been loaded: ensure that any solver data for users
+    // in Highs class members are cleared
+    clearUserSolverData();
     // Record that returnFromRun() has been called, and stop the Highs
     // run clock
     called_return_from_run = true;
@@ -2512,7 +2511,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kPresolveError:
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
-      clearSolver();
+      clearUserSolverData();
       assert(return_status == HighsStatus::kError);
       break;
 

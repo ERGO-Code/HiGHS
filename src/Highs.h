@@ -34,14 +34,21 @@ class Highs {
   virtual ~Highs() {}
 
   /**
-   * @brief Clears model and resets HiGHS for the empty model
+   * @brief Resets options and then calls clearModel()
+   */
+  HighsStatus clear();
+
+  /**
+   * @brief Clears model and then calls clearSolver()
    */
   HighsStatus clearModel();
 
   /**
-   * @brief Resets HiGHS for the incumbent model
+   * @brief Clears solver, and creates a HiGHS model object for the LP
+   * in HiGHS
    */
-  HighsStatus reset();
+  HighsStatus clearSolver();
+
 
   /**
    * Methods for model input
@@ -1005,7 +1012,6 @@ class Highs {
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
 
-  void clearSolver();
   HighsStatus callSolveLp(const HighsInt model_index, const string message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
@@ -1031,15 +1037,41 @@ class Highs {
 
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
+  //
+  // For cases where there is no solution data for the model, but its
+  // status is proved otherwise. Calls clearSolver(), then sets
+  // unscaled and scaled model status to model_status and copies in
+  // the iteration counts.
   void setHighsModelStatusAndInfo(const HighsModelStatus model_status);
+  //
+  // Sets unscaled and scaled model status, basis, solution and info
+  // from the highs_model_object
   void setHighsModelStatusBasisSolutionAndInfo();
-
-  void clearModelStatus();
+  //
+  // Clears the presolved model and its status
   void clearPresolve();
+  //
+  // Methods to clear solver data for users in Highs class members
+  // before (possibly) updating them with data from trying to solve
+  // the inumcumbent model.
+  //
+  // Clears all solver data in Highs class members by calling
+  // clearModelStatus(), clearSolution(), clearBasis() and
+  // clearInfo().
+  void clearUserSolverData();
+  //
+  // Sets unscaled and scaled model status to HighsModelStatus::kNotset
+  void clearModelStatus();
+  //
+  // Sets primal and dual solution status to
+  // kSolutionStatusNone, and clears solution_ vectors
   void clearSolution();
+  //
+  // Invalidates basis and clears basis_ vectors
   void clearBasis();
+  //
+  // Invalidates info_ and resets the values of its members
   void clearInfo();
-  void noSolution();
 
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
@@ -1109,9 +1141,6 @@ class Highs {
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
 
-  friend class HighsMipSolver;
-  friend class HighsLpRelaxation;
-  friend class HighsSearch;
 };
 
 #endif
