@@ -249,7 +249,8 @@ HighsStatus Highs::passModel(const HighsModel model) {
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
-  return_status = interpretCallStatus(clearSolver(), return_status, "clearSolver");
+  return_status =
+      interpretCallStatus(clearSolver(), return_status, "clearSolver");
   return returnFromHighs(return_status);
 }
 
