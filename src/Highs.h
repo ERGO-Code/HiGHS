@@ -76,6 +76,11 @@ class Highs {
   HighsStatus run();
 
   /**
+   * @brief Presolve the model
+   */
+  HighsStatus presolve();
+
+  /**
    * @brief writes the current solution to a file
    */
   HighsStatus writeSolution(const std::string filename,  //!< the filename
@@ -180,6 +185,11 @@ class Highs {
   /**
    * Methods for model output
    */
+
+  /**
+   * @brief Returns the presolved HighsModel instance in HiGHS
+   */
+  const HighsLp& getPresolvedModel() const { return presolved_lp_; }
 
   /**
    * @brief Returns the HighsLp instance in the HiGHS model
@@ -943,6 +953,7 @@ class Highs {
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
+  HighsLp presolved_lp_;
 
   HighsTimer timer_;
 
