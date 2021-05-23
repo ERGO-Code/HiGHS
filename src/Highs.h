@@ -986,7 +986,8 @@ class Highs {
   HighsIterationCounts iteration_counts_;
   HighsInfo info_;
 
-  HighsPresolveStatus model_presolve_status_ = HighsPresolveStatus::kNotPresolved;
+  HighsPresolveStatus model_presolve_status_ =
+      HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 

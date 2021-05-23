@@ -749,7 +749,8 @@ HighsStatus Highs::run() {
         // case HighsPresolveStatus::kError
         setHighsModelStatusAndInfo(HighsModelStatus::kPresolveError);
         highsLogDev(options_.log_options, HighsLogType::kError,
-                    "Presolve returned status %d\n", (int)model_presolve_status_);
+                    "Presolve returned status %d\n",
+                    (int)model_presolve_status_);
         return returnFromRun(HighsStatus::kError);
       }
     }
