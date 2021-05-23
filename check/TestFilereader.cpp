@@ -60,7 +60,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
-  REQUIRE(info.simplex_iteration_count == 86);  // 75);
+  REQUIRE(info.simplex_iteration_count == 86);
 
   model = "garbage";
   if (test_garbage_mps) {

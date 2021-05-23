@@ -1924,8 +1924,8 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
       const HighsInt row = lp.Aindex_[i];
       assert(row >= 0);
       assert(row < lp.numRow_);
-
-      solution.col_dual[col] -= solution.row_dual[row] * lp.Avalue_[i];
+      // @FlipRowDual -= became +=
+      solution.col_dual[col] += solution.row_dual[row] * lp.Avalue_[i];
     }
     solution.col_dual[col] += lp.colCost_[col];
   }
