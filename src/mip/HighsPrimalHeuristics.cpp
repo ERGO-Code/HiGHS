@@ -386,7 +386,7 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  if (!solveSubMip(heurlp.getModel(), heurlp.getLpSolver().getBasis(),
+  if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(),
                    getFixingRate(), localdom.colLower_, localdom.colUpper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
@@ -670,7 +670,7 @@ retry:
   }
 
   heurlp.removeObsoleteRows(false);
-  if (!solveSubMip(heurlp.getModel(), heurlp.getLpSolver().getBasis(),
+  if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(),
                    getFixingRate(), localdom.colLower_, localdom.colUpper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
@@ -957,7 +957,7 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setOptionValue("presolve", "off");
   ipm.setOptionValue("output_flag", false);
   HighsLp lpmodel(
-      *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getModel());
+      *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   // lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
   // lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);

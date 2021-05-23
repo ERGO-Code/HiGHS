@@ -148,7 +148,7 @@ void testBasisSolve(Highs& highs) {
   vector<HighsInt> basic_variables, solution_row_indices, solution_col_indices;
   vector<double> rhs, known_solution, solution_row, solution_col;
 
-  HighsLp lp = highs.getModel();
+  HighsLp lp = highs.getLp();
   HighsInt numRow = lp.numRow_;
   HighsInt numCol = lp.numCol_;
   basic_variables.resize(numRow);

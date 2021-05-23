@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   //
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
-  reportModelStatsOrError(options.log_options, read_status, highs.getModel());
+  reportModelStatsOrError(options.log_options, read_status, highs.getLp());
   if (read_status == HighsStatus::kError)
     return 1;  // todo: change to read error
   //

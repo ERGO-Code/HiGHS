@@ -25,6 +25,8 @@ set(TEST_SOURCES
     TestBasis.cpp
     TestBasisSolves.cpp
     TestHighsIntegers.cpp
+    TestHighsHessian.cpp
+    TestHighsModel.cpp
     TestHSet.cpp
     TestLpValidation.cpp
     TestLpModification.cpp

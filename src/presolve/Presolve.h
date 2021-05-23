@@ -41,18 +41,6 @@ enum class HighsPostsolveStatus {
   kBasisError
 };
 
-enum class HighsPresolveStatus {
-  kNotPresolved = -1,
-  kNotReduced,
-  kInfeasible,
-  kUnboundedOrInfeasible,
-  kReduced,
-  kReducedToEmpty,
-  kTimeout,
-  kNullError,
-  kOptionsError,
-};
-
 namespace presolve {
 
 enum class Presolver {

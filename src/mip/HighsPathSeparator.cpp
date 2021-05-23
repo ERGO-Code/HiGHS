@@ -33,7 +33,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                             HighsTransformedLp& transLp,
                                             HighsCutPool& cutpool) {
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
-  const HighsLp& lp = lpRelaxation.getModel();
+  const HighsLp& lp = lpRelaxation.getLp();
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
   randgen.initialise(mip.options_mip_->highs_random_seed +

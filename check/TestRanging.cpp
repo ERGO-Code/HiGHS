@@ -76,7 +76,7 @@ void testRanging(Highs& highs) {
   vector<double>& row_value = solution.row_value;
   vector<double>& row_dual = solution.row_dual;
 
-  lp = highs.getModel();
+  lp = highs.getLp();
   HighsInt numRow = lp.numRow_;
   HighsInt numCol = lp.numCol_;
 

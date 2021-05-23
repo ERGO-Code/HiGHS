@@ -22,6 +22,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "model/HighsModel.h"
 #include "presolve/PresolveComponent.h"
 
 /**
@@ -33,17 +34,41 @@ class Highs {
   virtual ~Highs() {}
 
   /**
+   * @brief Clears model and resets HiGHS for the empty model
+   */
+  HighsStatus clearModel();
+
+  /**
+   * @brief Resets HiGHS for the incumbent model
+   */
+  HighsStatus reset();
+
+  /**
    * Methods for model input
    */
 
   /**
-   * @brief Every model loading module eventually uses passModel to
-   * communicate the model to HiGHS. It clears the vector of
-   * HighsModelObjects (hmos), creates a HighsModelObject for this LP
-   * and makes it the first of the vector of HighsModelObjects
+   * @brief Every model loading module eventually uses the first
+   * passModel to communicate the model to HiGHS. It clears the vector
+   * of HighsModelObjects (hmos), creates a HighsModelObject for the
+   * LP and makes it the first of the vector of HighsModelObjects
    */
+  HighsStatus passModel(
+      HighsModel model  //!< The HighsModel instance for this model
+  );
+
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
+
+  HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
+                        const HighsInt num_nz, const bool rowwise,
+                        const HighsInt hessian_num_nz, const double* costs,
+                        const double* col_lower, const double* col_upper,
+                        const double* row_lower, const double* row_upper,
+                        const HighsInt* astart, const HighsInt* aindex,
+                        const double* avalue, const HighsInt* q_start,
+                        const HighsInt* q_index, const double* q_value,
+                        const HighsInt* integrality = NULL);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const bool rowwise,
@@ -66,9 +91,9 @@ class Highs {
   );
 
   /**
-   * @brief Clears the current model
+   * @brief Presolve the model
    */
-  HighsStatus clearModel();
+  HighsStatus presolve();
 
   /**
    * @brief Solves the model according to the specified options
@@ -76,9 +101,9 @@ class Highs {
   HighsStatus run();
 
   /**
-   * @brief Presolve the model
+   * @brief Postsolve the model
    */
-  HighsStatus presolve();
+  HighsStatus postsolve(const HighsSolution& solution, const HighsBasis& basis);
 
   /**
    * @brief writes the current solution to a file
@@ -189,17 +214,22 @@ class Highs {
   /**
    * @brief Returns the presolved HighsModel instance in HiGHS
    */
-  const HighsLp& getPresolvedModel() const { return presolved_lp_; }
+  const HighsLp& getPresolvedLp() const { return presolved_model_.lp_; }
+
+  /**
+   * @brief Returns the presolved HighsModel instance in HiGHS
+   */
+  const HighsModel& getPresolvedModel() const { return presolved_model_; }
 
   /**
    * @brief Returns the HighsLp instance in the HiGHS model
    */
-  const HighsLp& getLp() const { return lp_; }
+  const HighsLp& getLp() const { return model_.lp_; }
 
   /**
-   * @brief Returns the HighsLp instance of the model in HiGHS
+   * @brief Returns the model in HiGHS
    */
-  const HighsLp& getModel() const { return lp_; }
+  const HighsModel& getModel() const { return model_; }
 
   /**
    * @brief Returns the HighsSolution
@@ -321,20 +351,20 @@ class Highs {
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
    */
-  HighsInt getNumCols() const { return lp_.numCol_; }
+  HighsInt getNumCols() const { return model_.lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the LP of the (first?)
    * HighsModelObject
    */
-  HighsInt getNumRows() const { return lp_.numRow_; }
+  HighsInt getNumRows() const { return model_.lp_.numRow_; }
 
   /**
    * @brief Get the number of entries in the LP of the (first?)
    * HighsModelObject
    */
   HighsInt getNumEntries() {
-    if (lp_.numCol_) return lp_.Astart_[lp_.numCol_];
+    if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
     return 0;
   }
 
@@ -819,11 +849,6 @@ class Highs {
    * @brief Gets the run time of HiGHS
    */
   double getRunTime();
-  /**
-   * @brief Clear data associated with solving the model: basis, solution and
-   * internal data etc
-   */
-  HighsStatus clearSolver();
 
 #ifdef HiGHSDEV
   /**
@@ -952,15 +977,16 @@ class Highs {
  private:
   HighsSolution solution_;
   HighsBasis basis_;
-  HighsLp lp_;
-  HighsLp presolved_lp_;
-
+  HighsModel model_;
+  HighsModel presolved_model_;
+  //  HighsModel presolve_;
   HighsTimer timer_;
 
   HighsOptions options_;
   HighsIterationCounts iteration_counts_;
   HighsInfo info_;
 
+  HighsPresolveStatus model_presolve_status_ = HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
@@ -978,7 +1004,9 @@ class Highs {
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
 
+  void clearSolver();
   HighsStatus callSolveLp(const HighsInt model_index, const string message);
+  HighsStatus callSolveQp();
   HighsStatus callSolveMip();
 
   PresolveComponent presolve_;
@@ -1005,9 +1033,8 @@ class Highs {
   void setHighsModelStatusAndInfo(const HighsModelStatus model_status);
   void setHighsModelStatusBasisSolutionAndInfo();
 
-  HighsStatus reset();
-
   void clearModelStatus();
+  void clearPresolve();
   void clearSolution();
   void clearBasis();
   void clearInfo();
@@ -1082,6 +1109,8 @@ class Highs {
                                     double* primal_ray_value);
 
   friend class HighsMipSolver;
+  friend class HighsLpRelaxation;
+  friend class HighsSearch;
 };
 
 #endif

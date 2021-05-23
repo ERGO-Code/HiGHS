@@ -10,50 +10,25 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsLp.h
- * @brief
+/**@file model/HighsHessianUtils.h
+ * @brief Class-independent utilities for HiGHS
  */
-#ifndef LP_DATA_HIGHS_LP_H_
-#define LP_DATA_HIGHS_LP_H_
+#ifndef MODEL_HIGHSHESSIANUTILS_H_
+#define MODEL_HIGHSHESSIANUTILS_H_
 
-#include <string>
 #include <vector>
 
-#include "lp_data/HConst.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
+#include "model/HighsHessian.h"
 
-class HighsLp;
+//class HighsHessian;
+//class HighsOptions;
 
-class HighsLp {
- public:
-  // Model data
-  HighsInt numCol_ = 0;
-  HighsInt numRow_ = 0;
+using std::vector;
 
-  std::vector<HighsInt> Astart_;
-  std::vector<HighsInt> Aindex_;
-  std::vector<double> Avalue_;
-  std::vector<double> colCost_;
-  std::vector<double> colLower_;
-  std::vector<double> colUpper_;
-  std::vector<double> rowLower_;
-  std::vector<double> rowUpper_;
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
+HighsStatus assessHessianDimensions(const HighsOptions& options, HighsHessian& hessian);
+HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian);
 
-  MatrixOrientation orientation_ = MatrixOrientation::kNone;
-  ObjSense sense_ = ObjSense::kMinimize;
-  double offset_ = 0;
-
-  std::string model_name_ = "";
-  std::string lp_name_ = "";
-
-  std::vector<std::string> col_names_;
-  std::vector<std::string> row_names_;
-
-  std::vector<HighsVarType> integrality_;
-
-  bool operator==(const HighsLp& lp);
-  bool equalButForNames(const HighsLp& lp);
-  bool isMip();
-  void clear();
-};
-
-#endif
+#endif  // MODEL_HIGHSHESSIANUTILS_H_
