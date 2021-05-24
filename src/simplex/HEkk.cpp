@@ -362,8 +362,9 @@ HighsSolution HEkk::getSolution() {
   }
   for (HighsInt iRow = 0; iRow < lp_.numRow_; iRow++) {
     solution.row_value[iRow] = -info_.workValue_[lp_.numCol_ + iRow];
+    // @FlipRowDual negate RHS
     solution.row_dual[iRow] =
-        (HighsInt)lp_.sense_ * info_.workDual_[lp_.numCol_ + iRow];
+        -(HighsInt)lp_.sense_ * info_.workDual_[lp_.numCol_ + iRow];
   }
   solution.value_valid = true;
   solution.dual_valid = true;

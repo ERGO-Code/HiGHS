@@ -993,7 +993,7 @@ const double* OsiHiGHSSolverInterface::getReducedCost() const {
           assert(row >= 0);
           assert(row < lp.numRow_);
 
-          dummy_solution->col_dual[col] +=
+          dummy_solution->col_dual[col] -=
               dummy_solution->row_dual[row] * lp.Avalue_[i];
         }
       }

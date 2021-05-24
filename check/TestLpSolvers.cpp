@@ -187,17 +187,17 @@ void testSolversSetup(const std::string model,
                       vector<HighsInt>& simplex_strategy_iteration_count) {
   if (model.compare("adlittle") == 0) {
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyChoose] = 86;  // 75;
+        int)SimplexStrategy::kSimplexStrategyChoose] = 86;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyDualPlain] = 86;  // 75;
+        int)SimplexStrategy::kSimplexStrategyDualPlain] = 86;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualTasks] = 72;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualMulti] = 73;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyPrimal] = 94;
-    model_iteration_count.ipm = 13;       // 19;
-    model_iteration_count.crossover = 2;  // 3;
+    model_iteration_count.ipm = 13;
+    model_iteration_count.crossover = 2;
   }
 }
 
@@ -281,7 +281,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   const HighsInfo& info = highs.getInfo();
   REQUIRE(info.num_dual_infeasibilities == 1);
 
-  REQUIRE(info.simplex_iteration_count == 529);  // 403);
+  REQUIRE(info.simplex_iteration_count == 529);
 
   HighsModelStatus model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kNotset);
@@ -297,7 +297,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  REQUIRE(info.simplex_iteration_count == 605);  // 598);
+  REQUIRE(info.simplex_iteration_count == 605);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

@@ -217,8 +217,7 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   gmoGetVarL(gh->gmo, &sol.col_value[0]);
   gmoGetVarM(gh->gmo, &sol.col_dual[0]);
   gmoGetEquL(gh->gmo, &sol.row_value[0]);
-  gmoGetEquM(gh->gmo, &sol.row_dual[0]);  // TODO do they need to be negated,
-                                          // like in processSolve()?
+  gmoGetEquM(gh->gmo, &sol.row_dual[0]);
   gh->highs->setSolution(sol);
 
   if (gmoHaveBasis(gh->gmo)) {
@@ -387,9 +386,8 @@ static HighsInt processSolve(gamshighs_t* gh) {
       // TODO change when we can process infeasible or unbounded solutions
       gmoVarEquStatus stat = gmoCstat_OK;
 
-      // somehow, row duals returns by HiGHS have the wrong sign
-      gmoSetSolutionEquRec(gmo, i, sol.row_value[i], -sol.row_dual[i],
-                           basisstat, stat);
+      gmoSetSolutionEquRec(gmo, i, sol.row_value[i], sol.row_dual[i], basisstat,
+                           stat);
     }
 
     // if there were =N= rows (lp08), then gmoCompleteObjective wouldn't get

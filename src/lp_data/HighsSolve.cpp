@@ -181,6 +181,10 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);
   basis.col_status.assign(lp.numCol_, HighsBasisStatus::kNonbasic);
+  // No rows for primal solution, dual solution or basis
+  solution.row_value.clear();
+  solution.row_dual.clear();
+  basis.row_status.clear();
 
   double primal_feasibility_tolerance =
       solution_params.primal_feasibility_tolerance;
