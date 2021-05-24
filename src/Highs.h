@@ -31,7 +31,13 @@
 class Highs {
  public:
   Highs();
-  virtual ~Highs() {}
+  virtual ~Highs() {
+    FILE* log_file_stream = options_.log_options.log_file_stream;
+    if (log_file_stream != NULL) {
+      assert(log_file_stream != stdout);
+      fclose(log_file_stream);
+    }
+  }
 
   /**
    * @brief Resets options and then calls clearModel()
