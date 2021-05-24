@@ -157,6 +157,7 @@ HighsStatus Highs::writeOptions(const std::string filename,
       writeOptionsToFile(file, options_.records, report_only_non_default_values,
                          html),
       return_status, "writeOptionsToFile");
+  fclose(file);
   return return_status;
 }
 
@@ -200,6 +201,7 @@ HighsStatus Highs::writeInfo(const std::string filename) {
   return_status = interpretCallStatus(
       writeInfoToFile(file, info_.valid, info_.records, html), return_status,
       "writeInfoToFile");
+  fclose(file);
   return return_status;
 }
 
@@ -2109,6 +2111,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
   writeSolutionToFile(file, lp, basis, solution, pretty);
+  fclose(file);
   return HighsStatus::kOk;
 }
 
