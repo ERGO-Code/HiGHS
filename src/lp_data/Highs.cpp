@@ -2101,9 +2101,6 @@ HighsStatus Highs::writeSolution(const std::string filename,
                                  const bool pretty) const {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  //  HighsLp lp = lp_;
-  //  HighsBasis basis = basis_;
-  //  HighsSolution solution = solution_;
   FILE* file;
   bool html;
   call_status = openWriteFile(filename, "writeSolution", file, html);
