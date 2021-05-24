@@ -49,7 +49,6 @@ class Highs {
    */
   HighsStatus clearSolver();
 
-
   /**
    * Methods for model input
    */
@@ -1140,7 +1139,6 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
-
 };
 
 #endif
