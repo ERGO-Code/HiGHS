@@ -17,7 +17,8 @@ namespace free_format_parser {
 
 FreeFormatParserReturnCode HMpsFF::loadProblem(
     const HighsLogOptions& log_options, const std::string filename,
-    HighsLp& lp) {
+    HighsModel& model) {
+  HighsLp& lp = model.lp_;
   FreeFormatParserReturnCode result = parse(log_options, filename);
   if (result != FreeFormatParserReturnCode::kSuccess) return result;
 

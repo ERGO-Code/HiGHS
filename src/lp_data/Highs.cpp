@@ -358,7 +358,7 @@ HighsStatus Highs::readModel(const std::string filename) {
     return HighsStatus::kError;
   }
 
-  HighsLp model;
+  HighsModel model;
   FilereaderRetcode call_code =
       reader->readModelFromFile(options_, filename, model);
   delete reader;
@@ -369,7 +369,7 @@ HighsStatus Highs::readModel(const std::string filename) {
                                         "readModelFromFile");
     if (return_status == HighsStatus::kError) return return_status;
   }
-  model.model_name_ = extractModelName(filename);
+  model.lp_.model_name_ = extractModelName(filename);
   return_status =
       interpretCallStatus(passModel(model), return_status, "passModel");
   return returnFromHighs(return_status);
@@ -401,13 +401,12 @@ HighsStatus Highs::readBasis(const std::string filename) {
 
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsLp model = model_.lp_;
 
   // Ensure that the LP is column-wise
-  setOrientation(model);
+  setOrientation(model_.lp_);
   if (filename == "") {
-    // Empty file name: report model on stdout
-    reportLp(options_.log_options, model, HighsLogType::kVerbose);
+    // Empty file name: report model on logging stream
+    reportModel();
     return_status = HighsStatus::kOk;
   } else {
     Filereader* writer = Filereader::getFilereader(filename);
@@ -416,9 +415,9 @@ HighsStatus Highs::writeModel(const std::string filename) {
                    "Model file %s not supported\n", filename.c_str());
       return HighsStatus::kError;
     }
-    return_status =
-        interpretCallStatus(writer->writeModelToFile(options_, filename, model),
-                            return_status, "writeModelToFile");
+    return_status = interpretCallStatus(
+        writer->writeModelToFile(options_, filename, model_), return_status,
+        "writeModelToFile");
     delete writer;
   }
   return returnFromHighs(return_status);
@@ -2307,6 +2306,11 @@ HighsStatus Highs::writeSolution(const std::string filename,
   writeSolutionToFile(file, model_.lp_, basis_, solution_, pretty);
   if (file != stdout) fclose(file);
   return HighsStatus::kOk;
+}
+
+void Highs::reportModel() {
+  reportLp(options_.log_options, model_.lp_, HighsLogType::kVerbose);
+  //  reportHessian();
 }
 
 // Actions to take if there is a new Highs basis

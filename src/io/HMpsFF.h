@@ -34,8 +34,8 @@
 #include <vector>
 
 #include "io/HighsIO.h"
-#include "lp_data/HighsLp.h"  // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
-#include "util/HighsInt.h"
+#include "model/HighsModel.h"
+//#include "util/HighsInt.h"
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<HighsInt, HighsInt, double>;
@@ -61,7 +61,7 @@ class HMpsFF {
   HMpsFF() {}
   FreeFormatParserReturnCode loadProblem(const HighsLogOptions& log_options,
                                          const std::string filename,
-                                         HighsLp& lp);
+                                         HighsModel& model);
 
   double time_limit = kHighsInf;
 

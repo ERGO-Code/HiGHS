@@ -1040,6 +1040,7 @@ class Highs {
 
   bool haveHmo(const string method_name) const;
 
+  void reportModel();
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
   //

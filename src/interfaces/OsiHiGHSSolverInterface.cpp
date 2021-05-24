@@ -868,16 +868,16 @@ void OsiHiGHSSolverInterface::loadProblem(
 //   highsLogDev(options.log_options, HighsLogType::kInfo,
 //                     "Calling OsiHiGHSSolverInterface::readMps()\n");
 
-//   HighsLp lp;
+//   HighsModel model;
 
 //   highs->options_.filename = std::string(filename) + "." +
 //   std::string(extension);
 
 //   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_,
-//   lp); if (rc != FilereaderRetcode::kOk)
+//   model); if (rc != FilereaderRetcode::kOk)
 // 	  return (HighsInt)rc;
-//   this->setDblParam(OsiDblParam::OsiObjOffset, lp.offset_);
-//   highs->passModel(lp);
+//   this->setDblParam(OsiDblParam::OsiObjOffset, model.lp_.offset_);
+//   highs->passModel(model);
 
 //   return 0;
 // }
@@ -902,7 +902,7 @@ void OsiHiGHSSolverInterface::writeMps(const char* filename,
 
   FilereaderMps frmps;
   HighsStatus rc =
-      frmps.writeModelToFile(highs->options_, fullname, highs->lp_);
+      frmps.writeModelToFile(highs->options_, fullname, highs->model_);
 
   if (rc != HighsStatus::kOk)
     throw CoinError("Creating MPS file failed", "writeMps",

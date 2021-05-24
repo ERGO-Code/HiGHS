@@ -23,10 +23,10 @@ class FilereaderMps : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const HighsOptions& options,
                                       const std::string filename,
-                                      HighsLp& model);
+                                      HighsModel& model);
   HighsStatus writeModelToFile(const HighsOptions& options,
                                const std::string filename,
-                               const HighsLp& model);
+                               const HighsModel& model);
 };
 
 #endif
