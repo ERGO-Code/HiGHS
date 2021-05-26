@@ -20,7 +20,6 @@
 
 #include "util/HighsHash.h"
 
-
 /**
  * @brief Class for HiGHS random number generators
  */
