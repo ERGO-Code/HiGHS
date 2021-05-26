@@ -31,10 +31,9 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
+#include "presolve/ICrashX.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
-
-#include "presolve/ICrashX.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -2524,20 +2523,18 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
 
 HighsStatus Highs::crossover() {
 #ifdef IPX_ON
+  std::cout << "Loading crossover...\n";
+  HighsBasis basis;
+  bool x_status = callCrossover(lp_, options_, solution_, basis);
+  if (!x_status) return HighsStatus::kError;
+
+  setBasis(basis);
+#else
+  // No IPX available so end here at approximate solve.
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                    "Loading crossover...\n");
-    HighsBasis basis;
-    bool x_status = callCrossover(lp_, options_, solution_, basis);
-    if (!x_status)
-      return HighsStatus::Error;
-     
-    setBasis(basis);
-#else 
-    // No IPX available so end here at approximate solve.
-    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
                     "No ipx code available. Error.\n");
-    return HighsStatus::Error;
+  return HighsStatus::kError;
 #endif
 
-  return HighsStatus::OK;
+  return HighsStatus::kOk;
 }

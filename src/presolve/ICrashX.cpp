@@ -1,7 +1,9 @@
+#include "presolve/ICrashX.h"
+
 #include <algorithm>
 #include <iostream>
 
-#include "presolve/ICrashX.h"
+#include "ipm/IpxWrapper.h"
 #include "HConfig.h"
 
 #ifndef IPX_ON
@@ -22,9 +24,9 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   std::vector<double> objective, col_lb, col_ub, Av, rhs;
   std::vector<char> constraint_type;
 
-  IpxStatus res = fillInIpxData(lp, num_col, objective, col_lb, col_ub, num_row,
+  fillInIpxData(lp, num_col, num_row, objective, col_lb, col_ub,
                                 Ap, Ai, Av, rhs, constraint_type);
-  if (res != IpxStatus::OK) return false;
+  // if (res != IpxStatus::OK) return false;
 
   ipx::Parameters parameters;
   parameters.crossover = true;
@@ -101,11 +103,11 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
   }
 
   // Convert the IPX basic solution to a HiGHS basic solution
-  HighsStatus status = ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
+  HighsStatus status = ipxBasicSolutionToHighsBasicSolution(options.log_options, lp, rhs,
                                        constraint_type, ipx_solution,
                                        basis, solution);
 
-  if (status != HighsStatus::OK)
+  if (status != HighsStatus::kOk)
     return false;
 
   std::cout << "Crossover basic solution >>>" << std::endl;

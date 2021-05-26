@@ -920,7 +920,6 @@ HighsInt Highs_setHighsBoolOptionValue(
     const HighsInt value  //!< new value of option
 );
 
-<<<<<<< HEAD
 /**
  * @brief Runs crossover and loads basis. If no basis is found, the values of
  * Highs solution will not be modified. If basis is found they are updated
@@ -950,13 +949,11 @@ int Highs_crossover(
 //         entries
 //     double *avalue  //!< array of length [numnz] with value of matrix entries
 // );
-=======
 HighsInt Highs_setHighsIntOptionValue(
     void* highs,
     const char* option,   //!< name of the option
     const HighsInt value  //!< new value of option
 );
->>>>>>> master
 
 HighsInt Highs_setHighsDoubleOptionValue(
     void* highs,
