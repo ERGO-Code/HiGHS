@@ -20,7 +20,7 @@ TEST_CASE("irash-qap04", "[highs_presolve]") {
 
   options.icrash = true;
   options.icrash_starting_weight = 10;
-  options.icrash_approximate_minimization_iterations = 100;
+  options.icrash_approx_iter = 100;
 
   // highs.options_ is now private!
   // highs.options_ = options;

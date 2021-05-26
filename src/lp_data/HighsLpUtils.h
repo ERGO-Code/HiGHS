@@ -286,4 +286,10 @@ void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation =
                                      MatrixOrientation::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
+
+HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual);
+
+HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
+                                         HighsLp& equality_lp);
+
 #endif  // LP_DATA_HIGHSLPUTILS_H_

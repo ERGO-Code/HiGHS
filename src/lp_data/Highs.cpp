@@ -540,7 +540,7 @@ HighsStatus Highs::run() {
         strategy,
         options_.icrash_starting_weight,
         options_.icrash_iterations,
-        options_.icrash_approximate_minimization_iterations,
+        options_.icrash_approx_iter,
         options_.icrash_exact,
         options_.icrash_breakpoints,
         options_.log_options};

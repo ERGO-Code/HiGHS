@@ -325,7 +325,7 @@ struct HighsOptionsStruct {
   std::string icrash_strategy;
   double icrash_starting_weight;
   int icrash_iterations;
-  int icrash_approximate_minimization_iterations;
+  int icrash_approx_iter;
   bool icrash_exact;
   bool icrash_breakpoints;
 
@@ -635,9 +635,9 @@ class HighsOptions : public HighsOptionsStruct {
 				     false);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt("icrash_approximate_minimization_iterations",
+    record_int = new OptionRecordInt("icrash_approx_iter",
 				     "iCrash approximate minimization iterations",
-				     advanced, &icrash_approximate_minimization_iterations,
+				     advanced, &icrash_approx_iter,
 				     0, 50, 100);
 
     record_int = new OptionRecordInt("mip_max_nodes",

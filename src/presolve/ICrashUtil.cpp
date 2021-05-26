@@ -25,7 +25,7 @@
 
 
 void convertToMinimization(HighsLp& lp) {
-  if (lp.sense_ != ObjSense::MINIMIZE) {
+  if (lp.sense_ != ObjSense::kMinimize) {
     for (int col = 0; col < lp.numCol_; col++)
       lp.colCost_[col] = -lp.colCost_[col];
   }
