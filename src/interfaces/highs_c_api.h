@@ -76,14 +76,8 @@ HighsInt Highs_mipCall(
         integrality,   //!< array of length [numcol] indicating whether
                        //!< variables are continuous (0) or integer (1)
     double* colvalue,  //!< array of length [numcol], filled with column values
-    double* coldual,   //!< array of length [numcol], filled with column duals
     double* rowvalue,  //!< array of length [numrow], filled with row values
-    double* rowdual,   //!< array of length [numrow], filled with row duals
-    HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
-                               //!< basis stati
-    HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
-                               //!< basis status
-    int* modelstatus           //!< status of the model will be saved here
+    int* modelstatus   //!< status of the model will be saved here
 );
 
 /*
