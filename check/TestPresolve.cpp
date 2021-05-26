@@ -2,19 +2,18 @@
 
 #include "Highs.h"
 #include "catch.hpp"
-#include "io/LoadProblem.h"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
 const double kOptimalQap04 = 32;
 
 // No commas in test case name.
-TEST_CASE("irash-qap04", "[highs_presolve]") {
+TEST_CASE("icrash-qap04", "[highs_presolve]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
 
   Highs highs;
   HighsStatus highs_status = highs.readModel(filename);
-  REQUIRE(highs_status==HighsStatus::OK);
+  REQUIRE(highs_status==HighsStatus::kOk);
 
   HighsOptions options;
 
@@ -22,13 +21,11 @@ TEST_CASE("irash-qap04", "[highs_presolve]") {
   options.icrash_starting_weight = 10;
   options.icrash_approx_iter = 100;
 
-  // highs.options_ is now private!
-  // highs.options_ = options;
   highs_status = highs.passHighsOptions(options);
-  REQUIRE(highs_status==HighsStatus::OK);
+  REQUIRE(highs_status==HighsStatus::kOk);
 
   HighsStatus run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::OK);
+  REQUIRE(run_status == HighsStatus::kOk);
 
   ICrashInfo info = highs.getICrashInfo();
 

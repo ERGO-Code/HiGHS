@@ -623,6 +623,12 @@ class HighsOptions : public HighsOptionsStruct {
 				     0, 30, 200);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("icrash_approx_iter",
+				     "iCrash approximate minimization iterations",
+				     advanced, &icrash_approx_iter,
+				     0, 50, 100);
+    records.push_back(record_int);
+
     record_bool = new OptionRecordBool("icrash_exact",
 				     "Exact subproblem solution for iCrash",
 				     advanced, &icrash_exact,
@@ -634,11 +640,6 @@ class HighsOptions : public HighsOptionsStruct {
 				     advanced, &icrash_breakpoints,
 				     false);
     records.push_back(record_bool);
-
-    record_int = new OptionRecordInt("icrash_approx_iter",
-				     "iCrash approximate minimization iterations",
-				     advanced, &icrash_approx_iter,
-				     0, 50, 100);
 
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
