@@ -24,7 +24,7 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       double* rowdual, HighsInt* colbasisstatus,
                       HighsInt* rowbasisstatus, HighsInt* modelstatus) {
   Highs highs;
-
+  highs.setOptionValue("output_flag", false);
   HighsInt status =
       Highs_passLp(&highs, numcol, numrow, numnz, rowwise, colcost, collower,
                    colupper, rowlower, rowupper, astart, aindex, avalue);
@@ -66,10 +66,9 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
                        const double* rowupper, const HighsInt* astart,
                        const HighsInt* aindex, const double* avalue,
                        const HighsInt* integrality, double* colvalue,
-                       double* coldual, double* rowvalue, double* rowdual,
-                       HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
-                       HighsInt* modelstatus) {
+                       double* rowvalue, HighsInt* modelstatus) {
   Highs highs;
+  highs.setOptionValue("output_flag", false);
   HighsInt status = Highs_passMip(
       &highs, numcol, numrow, numnz, rowwise, colcost, collower, colupper,
       rowlower, rowupper, astart, aindex, avalue, integrality);
@@ -81,24 +80,12 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
 
   if (status == 0) {
     HighsSolution solution;
-    HighsBasis basis;
     solution = highs.getSolution();
-    basis = highs.getBasis();
     *modelstatus = (HighsInt)highs.getModelStatus();
 
-    for (HighsInt i = 0; i < numcol; i++) {
-      colvalue[i] = solution.col_value[i];
-      coldual[i] = solution.col_dual[i];
+    for (HighsInt i = 0; i < numcol; i++) colvalue[i] = solution.col_value[i];
 
-      colbasisstatus[i] = (HighsInt)basis.col_status[i];
-    }
-
-    for (HighsInt i = 0; i < numrow; i++) {
-      rowvalue[i] = solution.row_value[i];
-      rowdual[i] = solution.row_dual[i];
-
-      rowbasisstatus[i] = (HighsInt)basis.row_status[i];
-    }
+    for (HighsInt i = 0; i < numrow; i++) rowvalue[i] = solution.row_value[i];
   }
 
   return status;
