@@ -122,6 +122,7 @@ set(sources
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsPseudocost.cpp
+    mip/HighsRedcostFixing.cpp
     mip/HighsNodeQueue.cpp
     presolve/ICrashX.cpp
     #presolve/HPreData.cpp
