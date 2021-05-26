@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/LoadOptions.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
 #ifndef IO_LOAD_OPTIONS_H_
@@ -17,8 +19,7 @@
 
 #include "lp_data/HighsOptions.h"
 
-// For extended options to be parsed from a file. Assuming options file is
-// specified.
-bool loadOptionsFromFile(HighsOptions& options);
+// For extended options to be parsed from filename
+bool loadOptionsFromFile(HighsOptions& options, const std::string filename);
 
 #endif

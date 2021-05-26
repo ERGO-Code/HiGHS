@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsLp.h"
 
@@ -35,6 +37,7 @@ bool HighsLp::equalButForNames(const HighsLp& lp) {
   equal = this->Astart_ == lp.Astart_ && equal;
   equal = this->Aindex_ == lp.Aindex_ && equal;
   equal = this->Avalue_ == lp.Avalue_ && equal;
+  equal = this->orientation_ == lp.orientation_ && equal;
   return equal;
 }
 
@@ -51,8 +54,9 @@ void HighsLp::clear() {
   this->rowLower_.clear();
   this->rowUpper_.clear();
 
-  this->sense_ = ObjSense::MINIMIZE;
+  this->sense_ = ObjSense::kMinimize;
   this->offset_ = 0;
+  this->orientation_ = MatrixOrientation::kNone;
 
   this->model_name_ = "";
   this->lp_name_ = "";

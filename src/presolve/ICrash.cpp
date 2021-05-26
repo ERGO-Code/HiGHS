@@ -52,34 +52,33 @@ bool parseICrashStrategy(const std::string& strategy,
 
 bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
   if (options.exact) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+    std::cout << 
                       "ICrashError: exact subproblem solution not available "
-                      "at the moment.\n");
+                      "at the moment." << std::endl;
     return false;
   }
 
   if (options.breakpoints) {
     if (options.exact) {
-      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+    std::cout << 
                         "ICrashError: exact strategy not allowed for "
-                        "breakpoints minimization.\n");
+                        "breakpoints minimization."<< std::endl;
       return false;
     }
     if (options.dualize) {
-      HighsPrintMessage(
+    std::cout << 
           options.output, options.message_level, ML_ALWAYS,
-          "ICrashError: breakpoints does not support dualize option.\n");
+          "ICrashError: breakpoints does not support dualize option."<< std::endl;
       return false;
     }
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "ICrashError: breakpoints not implemented yet.\n");
+    std::cout << 
+                      "ICrashError: breakpoints not implemented yet."<< std::endl;
     return false;
   }
 
   if (options.strategy == ICrashStrategy::kPenalty)
-    HighsPrintMessage(
-        options.output, options.message_level, ML_ALWAYS,
-        "ICrash Warning: Using solveSubproblemICA with lambda = 0.\n");
+    std::cout << 
+        "ICrash Warning: Using solveSubproblemICA with lambda = 0."<< std::endl;
 
   return true;
 }

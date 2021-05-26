@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HStruct.h
  * @brief Structs for HiGHS
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
@@ -19,19 +21,21 @@
 #include "lp_data/HConst.h"
 
 struct HighsIterationCounts {
-  int simplex = 0;
-  int ipm = 0;
-  int crossover = 0;
+  HighsInt simplex = 0;
+  HighsInt ipm = 0;
+  HighsInt crossover = 0;
 };
 
 struct HighsScale {
-  bool is_scaled_ = false;
-  double cost_;
-  std::vector<double> col_;
-  std::vector<double> row_;
+  bool is_scaled = false;
+  double cost;
+  std::vector<double> col;
+  std::vector<double> row;
 };
 
 struct HighsSolution {
+  bool value_valid = false;
+  bool dual_valid = false;
   std::vector<double> col_value;
   std::vector<double> col_dual;
   std::vector<double> row_value;
@@ -39,7 +43,7 @@ struct HighsSolution {
 };
 
 struct HighsBasis {
-  bool valid_ = false;
+  bool valid = false;
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
 };
@@ -48,15 +52,15 @@ struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  int primal_status = PrimalDualStatus::STATUS_NOTSET;
-  int dual_status = PrimalDualStatus::STATUS_NOTSET;
+  HighsInt primal_solution_status;
+  HighsInt dual_solution_status;
   // Output from solution analysis method
   double objective_function_value;
-  int num_primal_infeasibilities;
-  double sum_primal_infeasibilities;
+  HighsInt num_primal_infeasibility;
+  double sum_primal_infeasibility;
   double max_primal_infeasibility;
-  int num_dual_infeasibilities;
-  double sum_dual_infeasibilities;
+  HighsInt num_dual_infeasibility;
+  double sum_dual_infeasibility;
   double max_dual_infeasibility;
 };
 

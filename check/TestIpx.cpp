@@ -19,17 +19,17 @@ const bool dev_run = false;
 
 using Int = ipxint;
 
-constexpr Int num_var = 12;
-constexpr Int num_constr = 9;
+constexpr HighsInt num_var = 12;
+constexpr HighsInt num_constr = 9;
 const double obj[] = {-0.2194, 0.0, 0.0,   0.0,     0.0, 0.0,
                       0.0,     0.0, -0.32, -0.5564, 0.6, -0.48};
 const double lb[num_var] = {0.0};
 const double ub[] = {80.0,     283.303,  283.303, 312.813, 349.187, INFINITY,
                      INFINITY, INFINITY, 57.201,  500.0,   500.501, 357.501};
 // Constraint matrix in CSC format with 0-based indexing.
-const Int Ap[] = {0, 2, 6, 10, 14, 18, 20, 22, 24, 26, 28, 30, 32};
-const Int Ai[] = {0, 5, 1, 6, 7, 8, 2, 6, 7, 8, 3, 6, 7, 8, 4, 6,
-                  7, 8, 1, 2, 2, 3, 2, 4, 0, 6, 0, 5, 2, 5, 5, 7};
+const HighsInt Ap[] = {0, 2, 6, 10, 14, 18, 20, 22, 24, 26, 28, 30, 32};
+const HighsInt Ai[] = {0, 5, 1, 6, 7, 8, 2, 6, 7, 8, 3, 6, 7, 8, 4, 6,
+                       7, 8, 1, 2, 2, 3, 2, 4, 0, 6, 0, 5, 2, 5, 5, 7};
 const double Ax[] = {-1.0,      0.301,   1.0,   -1.0, 0.301, 1.06,    1.0,
                      -1.0,      0.313,   1.06,  1.0,  -1.0,  0.313,   0.96,
                      1.0,       -1.0,    0.326, 0.86, -1.0,  0.99078, 1.00922,

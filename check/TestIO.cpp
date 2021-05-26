@@ -10,53 +10,59 @@ char printedmsg[100000];
 void* receiveddata = NULL;
 
 // callback that saves message away for comparison
-static void myprintmsgcb(int level, const char* msg, void* msgcb_data) {
+static void myprintmsgcb(HighsInt level, const char* msg, void* msgcb_data) {
   strcpy(printedmsg, msg);
   receiveddata = msgcb_data;
 }
 
-static void mylogmsgcb(HighsMessageType type, const char* msg,
-                       void* msgcb_data) {
+static void mylogmsgcb(HighsLogType type, const char* msg, void* msgcb_data) {
   strcpy(printedmsg, msg);
   receiveddata = msgcb_data;
 }
 
 TEST_CASE("msgcb", "[highs_io]") {
   int dummydata = 42;
+  bool output_flag = true;
+  bool log_to_console = false;
+  HighsInt log_dev_level = kHighsLogDevLevelInfo;
+  HighsLogOptions log_options;
+  log_options.log_file_stream = stdout;
+  log_options.output_flag = &output_flag;
+  log_options.log_to_console = &log_to_console;
+  log_options.log_dev_level = &log_dev_level;
+  highsSetLogCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
-  HighsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
-
-  int message_level = ML_MINIMAL;
-  HighsPrintMessage(stdout, message_level, 4, "Hi %s!", "HiGHS");
+  highsLogDev(log_options, HighsLogType::kInfo, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);
   REQUIRE(receiveddata == &dummydata);
 
-  /* printed at level 4 when level is 3 should not print */
+  // Check that nothing is printed if the type is VERBOSE when
+  // log_dev_level is kHighsLogDevLevelInfo;
   *printedmsg = '\0';
-  message_level = 3;
-  HighsPrintMessage(stdout, message_level, 4, "Hi %s!", "HiGHS");
+  highsLogDev(log_options, HighsLogType::kVerbose, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 
   {
     char longmsg[sizeof(printedmsg)];
     memset(longmsg, 'H', sizeof(longmsg));
-    longmsg[sizeof(longmsg) - 1] = '\0';
-    HighsPrintMessage(stdout, message_level, 2, longmsg);
+    longmsg[sizeof(longmsg) - 2] = '\0';
+    longmsg[sizeof(longmsg) - 1] = '\n';
+    highsLogDev(log_options, HighsLogType::kInfo, longmsg);
     REQUIRE(strncmp(printedmsg, "HHHH", 4) == 0);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }
 
-  HighsLogMessage(stdout, HighsMessageType::INFO, "Hello %s!", "HiGHS");
-  REQUIRE(strlen(printedmsg) > 8);
-  REQUIRE(strcmp(printedmsg + 8, " [INFO   ] Hello HiGHS!\n") ==
-          0);  // begin of printedmsg is a timestamp, which we skip over
+  highsLogUser(log_options, HighsLogType::kInfo, "Hello %s!\n", "HiGHS");
+  REQUIRE(strlen(printedmsg) > 9);
+  REQUIRE(strcmp(printedmsg, "         Hello HiGHS!\n") == 0);
   REQUIRE(receiveddata == &dummydata);
 
   {
     char longmsg[sizeof(printedmsg)];
     memset(longmsg, 'H', sizeof(longmsg));
-    longmsg[sizeof(longmsg) - 1] = '\0';
-    HighsLogMessage(stdout, HighsMessageType::WARNING, longmsg);
+    longmsg[sizeof(longmsg) - 2] = '\0';
+    longmsg[sizeof(longmsg) - 1] = '\n';
+    highsLogUser(log_options, HighsLogType::kWarning, longmsg);
     REQUIRE(strstr(printedmsg, "HHHH") != NULL);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }

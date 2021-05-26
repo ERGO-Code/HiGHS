@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_LP_H_
 #define LP_DATA_HIGHS_LP_H_
@@ -24,11 +26,11 @@ class HighsLp;
 class HighsLp {
  public:
   // Model data
-  int numCol_ = 0;
-  int numRow_ = 0;
+  HighsInt numCol_ = 0;
+  HighsInt numRow_ = 0;
 
-  std::vector<int> Astart_;
-  std::vector<int> Aindex_;
+  std::vector<HighsInt> Astart_;
+  std::vector<HighsInt> Aindex_;
   std::vector<double> Avalue_;
   std::vector<double> colCost_;
   std::vector<double> colLower_;
@@ -36,7 +38,8 @@ class HighsLp {
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
 
-  ObjSense sense_ = ObjSense::MINIMIZE;
+  MatrixOrientation orientation_ = MatrixOrientation::kNone;
+  ObjSense sense_ = ObjSense::kMinimize;
   double offset_ = 0;
 
   std::string model_name_ = "";

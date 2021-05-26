@@ -7,16 +7,17 @@ linear programming (LP) problems of the form
 
     Minimize c^Tx subject to L <= Ax <= U; l <= x <= u
 
-It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. Note that HiGHS requires (at least) version 4.9 of the GNU compiler. It has no third-party dependencies.
+and mixed integer programming (MIP) problems of the same form, for whch some of the variables must take integer values. It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. Note that HiGHS requires (at least) version 4.9 of the GNU compiler. It has no third-party dependencies.
 
-HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
+HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier. The MIP solver has been written by Leona Gottwald.
 
 Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
 Reference
 ---------
-
-Parallelizing the dual revised simplex method
+If you use HiGHS in an academic context, please acknowledge this and cite the following article.
+P
+arallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
 Mathematical Programming Computation, 10 (1), 119-142, 2018.
 DOI: 10.1007/s12532-017-0130-5
@@ -31,7 +32,7 @@ The performance of HiGHS relative to some commercial and open-source simplex sol
 Documentation
 -------------
 
-The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available from https://www.highs.dev.
+The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available via https://www.highs.dev.
 
 Compilation
 -----------
@@ -87,9 +88,7 @@ Language interfaces and further documentation
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in
 HiGHS/src/interfaces, with example driver files in
-HiGHS/examples. Documentation beyond what is in this file is "work in
-progress", but we expect to have some available before summer
-2020. However, we are happy to give a reasonable level of support via
+HiGHS/examples. Documentation is availble via https://www.highs.dev/, and we are happy to give a reasonable level of support via
 email sent to highsopt@gmail.com.
 
 Parallel code
@@ -102,10 +101,7 @@ instructions. However, performance gain with the simplex solver is
 unlikely to be significant. At best, speed-up is limited to the number
 of memory channels, rather than the number of cores.
 
-In order to use OpenMP if available, set`-DOPENMP=ON` during the configuration
-step (`cmake ..`).
-
-When compiled with the parallel option on, the number of threads used at run
+If OpenMP is found by CMake, the parallel code may be used. The number of threads used at run
 time is the value of the environment variable `OMP_NUM_THREADS`. For example,
 to use HiGHS with eight threads to solve `ml.mps` execute
 
@@ -120,13 +116,13 @@ executing the command
 then all available threads will be used.
 
 If run with `OMP_NUM_THREADS=1`, HiGHS is serial. The `--parallel` run-time
-option will cause HiGHS to use serial minor iterations and, although this
+option will cause the HiGHS parallel dual simplex solver to run in serial. Although this
 could lead to better performance on some problems, performance will typically be
 diminished.
 
 When compiled with the parallel option and `OMP_NUM_THREADS>1` or unset, HiGHS
 will use multiple threads. If `OMP_NUM_THREADS` is unset, HiGHS will try to use
-all available threads so performance may be very slow. Although the best value
+all available threads, so performance may be very slow. Although the best value
 will be problem and architecture dependent, `OMP_NUM_THREADS=8` is typically a
 good choice. Although HiGHS is slower when run in parallel than in serial for
 some problems, it is typically faster in parallel.
@@ -156,7 +152,7 @@ and add the correct path to HIGHS_DIR.
 Compiling and linking without CMake
 -----------------------------------
 
-An executable defined in the file `use_highs.cpp` is linked with the HiGHS library as follows. After running the code above, compile and run with
+An executable defined in the file `use_highs.cpp` (for example) is linked with the HiGHS library as follows. After running the code above, compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 

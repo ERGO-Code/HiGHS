@@ -9,6 +9,7 @@
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HiGHSRELEASE
 #cmakedefine IPX_ON
+#cmakedefine HIGHSINT64
 
 #define HIGHS_GITHASH "@GITHASH@"
 #define HIGHS_COMPILATION_DATE "@TODAY@"

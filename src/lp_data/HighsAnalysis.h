@@ -6,10 +6,12 @@
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
+/*    Authors: Julian Hall, Ivet Galabova, Qi Huangfu, Leona Gottwald    */
+/*    and Michael Feldmeier                                              */
+/*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsAnalysis.h
  * @brief
- * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_ANALYSIS_H_
 #define LP_DATA_HIGHS_ANALYSIS_H_
@@ -24,7 +26,7 @@ struct HighsTimerClock {
   HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
 
   HighsTimer& timer_;
-  std::vector<int> clock_;
+  std::vector<HighsInt> clock_;
 };
 //#endif
 
