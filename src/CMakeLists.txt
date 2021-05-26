@@ -711,12 +711,11 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
+target_include_directories(libhighs PUBLIC ipm/ipx/src
+    ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
 if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
-
-    target_include_directories(libhighs PUBLIC ipm/ipx/src
-        ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
     if (UNIX)
         target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
