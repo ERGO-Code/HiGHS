@@ -197,7 +197,7 @@ class Highs {
    */
   const HighsSolution& getSolution() const { return solution_; }
 
-  const ICrashInfo& getICrashInfo() const;
+  const ICrashInfo& getICrashInfo() const { return icrash_info_; };
 
   /**
    * @brief Returns the HighsBasis

@@ -531,9 +531,9 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                        "ICrash error: unknown strategy.\n");
-      return HighsStatus::Error;
+      std::cout << 
+                        "ICrash error: unknown strategy." << std::endl;
+      return HighsStatus::kError;
     }
     ICrashOptions icrash_options{
         options_.icrash_dualize,
@@ -543,18 +543,16 @@ HighsStatus Highs::run() {
         options_.icrash_approximate_minimization_iterations,
         options_.icrash_exact,
         options_.icrash_breakpoints,
-        options_.logfile,
-        options_.output,
-        options_.message_level};
+        options_.log_options};
 
     // todo: timing. some strange compile issue.
     HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
 
-    if (icrash_status != HighsStatus::OK) return icrash_status;
+    if (icrash_status != HighsStatus::kOk) return icrash_status;
 
     // for now set the solution_.col_value
-    solution_.col_value = icrash_info.x_values;
-    return HighsStatus::OK;
+    solution_.col_value = icrash_info_.x_values;
+    return HighsStatus::kOk;
   }
 
   if (basis_.valid || options_.presolve == kHighsOffString) {
@@ -953,14 +951,6 @@ HighsStatus Highs::run() {
   return_status = interpretCallStatus(call_status, return_status);
   return returnFromRun(return_status);
 }
-
-const HighsLp& Highs::getLp() const { return lp_; }
-
-const HighsSolution& Highs::getSolution() const { return solution_; }
-
-const ICrashInfo& Highs::getICrashInfo() const { return icrash_info_; }
-
-const HighsBasis& Highs::getBasis() const { return basis_; }
 
 const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
   if (scaled_model) {

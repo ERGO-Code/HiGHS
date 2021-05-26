@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "HighsOptions.h"
+#include "io/HighsIO.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
@@ -65,9 +66,7 @@ struct ICrashOptions {
   int approximate_minimization_iterations;
   bool exact;
   bool breakpoints;  // gets ignored if exact is set to true
-  FILE* logfile;
-  FILE* output;
-  int message_level;
+  HighsLogOptions log_options;
 };
 
 struct Quadratic {
