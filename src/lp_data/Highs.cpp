@@ -16,7 +16,7 @@
 #include "Highs.h"
 
 #include <algorithm>
-//#include <string>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -31,6 +31,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
+#include "presolve/ICrashX.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -2518,4 +2519,21 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
                method_name.c_str());
+}
+
+HighsStatus Highs::crossover() {
+#ifdef IPX_ON
+  std::cout << "Loading crossover...\n";
+  HighsBasis basis;
+  bool x_status = callCrossover(lp_, options_, solution_, basis);
+  if (!x_status) return HighsStatus::kError;
+
+  setBasis(basis);
+#else
+  // No IPX available so end here at approximate solve.
+  std::cout << "No ipx code available. Error." << std::endl;
+  return HighsStatus::kError;
+#endif
+
+  return HighsStatus::kOk;
 }
