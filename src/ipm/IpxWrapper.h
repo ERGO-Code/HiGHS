@@ -17,6 +17,7 @@
 #define IPM_IPX_WRAPPER_H_
 
 #include <algorithm>
+#include <cassert>
 
 #include "ipm/IpxSolution.h"
 #include "ipm/ipx/include/ipx_status.h"

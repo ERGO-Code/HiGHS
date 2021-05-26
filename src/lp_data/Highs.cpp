@@ -16,7 +16,7 @@
 #include "Highs.h"
 
 #include <algorithm>
-//#include <string>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>

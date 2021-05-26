@@ -18,6 +18,7 @@
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 
 #include <sstream>
+#include <cassert>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
