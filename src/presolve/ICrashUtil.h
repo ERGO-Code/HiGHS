@@ -19,6 +19,14 @@
 
 class HighsLp;
 struct HighsSolution;
+                     
+
+void convertToMinimization(HighsLp& lp);
+
+bool isEqualityProblem(const HighsLp& lp);
+
+double vectorProduct(const std::vector<double>& v1,
+                     const std::vector<double>& v2);
 
 // Calculates value of A^t*v in result.
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,

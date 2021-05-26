@@ -118,6 +118,10 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
   return Quadratic{ilp, options};
 }
 
+
+
+
+
 double getQuadraticObjective(const Quadratic& idata) {
   // c'x
   double quadratic = vectorProduct(idata.lp.colCost_, idata.xk.col_value);
