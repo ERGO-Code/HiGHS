@@ -20,6 +20,8 @@ HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
                                        HighsCutPool& cutpool)
     : lpRelaxation(lpRelaxation),
       cutpool(cutpool),
+      randgen(lpRelaxation.getMipSolver().options_mip_->highs_random_seed +
+              lpRelaxation.getNumLpIterations() + cutpool.getNumCuts()),
       feastol(lpRelaxation.getMipSolver().mipdata_->feastol),
       epsilon(lpRelaxation.getMipSolver().mipdata_->epsilon) {}
 
@@ -39,6 +41,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 
   HighsInt maxCoverSize = cover.size();
   HighsInt coversize = 0;
+  HighsInt r = randgen.integer();
   coverweight = 0.0;
   if (lpSol) {
     // take all variables that sit at their upper bound always into the cover
@@ -55,33 +58,58 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 
       coverweight += vals[j] * upper[j];
     }
+
+    const auto& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
+    // sort the remaining variables by the contribution to the rows activity in
+    // the current solution
+    std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
+              [&](HighsInt i, HighsInt j) {
+                if (upper[i] < 1.5 && upper[j] > 1.5) return true;
+                if (upper[i] > 1.5 && upper[j] < 1.5) return false;
+
+                double contributionA = solval[i] * vals[i];
+                double contributionB = solval[j] * vals[j];
+
+                // for equal contributions take the larger coefficients first
+                // because this makes some of the lifting functions more likely
+                // to generate a facet
+                if (std::abs(contributionA - contributionB) <= feastol) {
+                  // if the value is equal too, choose a random tiebreaker based
+                  // on hashing the column index and the current number of pool
+                  // cuts
+                  if (std::abs(vals[i] - vals[j]) <= feastol)
+                    return HighsHashHelpers::hash(std::make_pair(inds[i], r)) >
+                           HighsHashHelpers::hash(std::make_pair(inds[j], r));
+                  return vals[i] > vals[j];
+                }
+
+                return contributionA > contributionB;
+              });
+  } else {
+    // urandgen.shuffle(cover.data(), maxCoverSize);
+    // the current solution
+    const auto& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
+
+    std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
+              [&](HighsInt i, HighsInt j) {
+                int64_t numNodesA =
+                    nodequeue.numNodesUp(inds[i],
+                                         lpRelaxation.colLower(inds[i]) - 0.5) +
+                    nodequeue.numNodesDown(
+                        inds[i], lpRelaxation.colUpper(inds[i]) + 0.5);
+                int64_t numNodesB =
+                    nodequeue.numNodesUp(inds[j],
+                                         lpRelaxation.colLower(inds[j]) - 0.5) +
+                    nodequeue.numNodesDown(
+                        inds[j], lpRelaxation.colUpper(inds[j]) + 0.5);
+
+                if (numNodesA > numNodesB) return true;
+                if (numNodesA < numNodesB) return false;
+
+                return HighsHashHelpers::hash(std::make_pair(inds[i], r)) >
+                       HighsHashHelpers::hash(std::make_pair(inds[j], r));
+              });
   }
-
-  // sort the remaining variables by the contribution to the rows activity in
-  // the current solution
-  std::sort(
-      cover.begin() + coversize, cover.begin() + maxCoverSize,
-      [&](HighsInt i, HighsInt j) {
-        double contributionA = solval[i] * vals[i];
-        double contributionB = solval[j] * vals[j];
-
-        // for equal contributions take the larger coefficients first
-        // because this makes some of the lifting functions more likely to
-        // generate a facet
-        if (std::abs(contributionA - contributionB) <= feastol) {
-          // if the value is equal too, choose a random tiebreaker based
-          // on hashing the column index and the current number of pool
-          // cuts
-          if (std::abs(vals[i] - vals[j]) <= feastol)
-            return HighsHashHelpers::hash(std::make_pair(
-                       uint32_t(inds[i]), uint32_t(cutpool.getNumCuts()))) >
-                   HighsHashHelpers::hash(std::make_pair(
-                       uint32_t(inds[j]), uint32_t(cutpool.getNumCuts())));
-          return vals[i] > vals[j];
-        }
-
-        return contributionA > contributionB;
-      });
 
   const double minlambda =
       std::max(10 * feastol, feastol * std::abs(double(rhs)));
