@@ -396,7 +396,7 @@ try_again:
         mipsolver.integrality_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance;
+            mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kWarning,
         "Untransformed solution with objective %g is violated by %.12g for the "
