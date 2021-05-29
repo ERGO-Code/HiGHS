@@ -16,6 +16,7 @@
 
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/HighsRedcostFixing.h"
 #include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
