@@ -358,8 +358,8 @@ try_again:
     for (HighsInt i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
       if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
         double solval = std::round(solution.col_value[i]);
-        fixedModel.colLower_[i] = solval;
-        fixedModel.colUpper_[i] = solval;
+        fixedModel.colLower_[i] = std::max(fixedModel.colLower_[i], solval);
+        fixedModel.colUpper_[i] = std::min(fixedModel.colUpper_[i], solval);
       }
     }
     Highs tmpSolver;
