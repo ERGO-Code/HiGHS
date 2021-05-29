@@ -305,6 +305,8 @@ double HighsMipSolverData::transformNewIncumbent(
 
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
   calculateRowValues(*mipsolver.orig_model_, solution);
+  bool allow_try_again = true;
+try_again:
 
   // compute the objective value in the original space
   double bound_violation_ = 0;
@@ -344,6 +346,28 @@ double HighsMipSolverData::transformNewIncumbent(
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
       row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+
+  if (!feasible && allow_try_again) {
+    HighsLp fixedModel = *mipsolver.orig_model_;
+    fixedModel.integrality_.clear();
+    for (HighsInt i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
+      if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
+        double solval = std::round(solution.col_value[i]);
+        fixedModel.colLower_[i] = solval;
+        fixedModel.colUpper_[i] = solval;
+      }
+    }
+    Highs tmpSolver;
+    tmpSolver.setOptionValue("output_flag", false);
+    tmpSolver.passModel(std::move(fixedModel));
+    tmpSolver.run();
+
+    if (tmpSolver.getInfo().primal_solution_status == 2) {
+      solution = tmpSolver.getSolution();
+      allow_try_again = false;
+      goto try_again;
+    }
+  }
   // store the solution as incumbent in the original space if there is no
   // solution or if it is feasible
   if (feasible) {
