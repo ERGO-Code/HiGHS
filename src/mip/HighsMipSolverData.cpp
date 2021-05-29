@@ -345,9 +345,14 @@ try_again:
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
-      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+      row_violation_ <=
+          mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
 
   if (!feasible && allow_try_again) {
+    // printf(
+    //     "trying to repair sol that is violated by %.12g bounds, %.12g "
+    //     "integrality, %.12g rows\n",
+    //     bound_violation_, integrality_violation_, row_violation_);
     HighsLp fixedModel = *mipsolver.orig_model_;
     fixedModel.integrality_.clear();
     for (HighsInt i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
@@ -359,6 +364,10 @@ try_again:
     }
     Highs tmpSolver;
     tmpSolver.setOptionValue("output_flag", false);
+    tmpSolver.setOptionValue("simplex_scale_strategy", 0);
+    tmpSolver.setOptionValue("presolve", "off");
+    tmpSolver.setOptionValue("primal_feasibility_tolerance",
+                             mipsolver.options_mip_->mip_feasibility_tolerance);
     tmpSolver.passModel(std::move(fixedModel));
     tmpSolver.run();
 
@@ -371,6 +380,8 @@ try_again:
   // store the solution as incumbent in the original space if there is no
   // solution or if it is feasible
   if (feasible) {
+    // if (!allow_try_again)
+    //   printf("repaired solution with value %g\n", double(obj));
     // store
     mipsolver.row_violation_ = row_violation_;
     mipsolver.bound_violation_ = bound_violation_;
