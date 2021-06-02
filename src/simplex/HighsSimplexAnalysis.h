@@ -96,7 +96,8 @@ class HighsSimplexAnalysis {
   HighsTimer& timer_reference;
   HighsTimer* timer_;
 
-  void setup(const HighsLp& lp, const HighsOptions& options,
+  void setup(const std::string lp_name, const HighsLp& lp,
+             const HighsOptions& options,
              const HighsInt simplex_iteration_count);
   void messaging(const HighsLogOptions& log_options_);
   void iterationReport();

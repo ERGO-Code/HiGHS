@@ -43,7 +43,6 @@ class HighsLp {
   double offset_ = 0;
 
   std::string model_name_ = "";
-  std::string lp_name_ = "";
 
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;

@@ -71,7 +71,6 @@ void HighsLp::clear() {
   this->orientation_ = MatrixOrientation::kNone;
 
   this->model_name_ = "";
-  this->lp_name_ = "";
 
   this->col_names_.clear();
   this->row_names_.clear();
