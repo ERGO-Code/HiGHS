@@ -98,7 +98,6 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
       error_found = true;
     }
   }
-  assert(!error_found);
   if (error_found)
     return_status = HighsStatus::kError;
   else

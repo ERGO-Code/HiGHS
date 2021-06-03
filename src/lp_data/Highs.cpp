@@ -243,10 +243,20 @@ HighsStatus Highs::passModel(const HighsModel model) {
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
-  // Check validity of the Hessian, normalising its entries
+  // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.q_start_[hessian.dim_] == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
 
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS

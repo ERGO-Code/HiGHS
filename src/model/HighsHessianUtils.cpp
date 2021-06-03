@@ -58,21 +58,47 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
     interpretCallStatus(call_status, return_status, "normaliseHessian");
   if (return_status == HighsStatus::kError) return return_status;
 
+
   HighsInt hessian_num_nz = hessian.q_start_[hessian.dim_];
+  // If the Hessian has nonzeros, check its diagonal. It's OK to be
+  // identically zero, since it will be ignored.
+  if (hessian_num_nz)
+    if (!positiveHessianDiagonal(options, hessian)) return_status = HighsStatus::kError;
+
   // If entries have been removed from the matrix, resize the index
   // and value vectors
   if ((HighsInt)hessian.q_index_.size() > hessian_num_nz) hessian.q_index_.resize(hessian_num_nz);
   if ((HighsInt)hessian.q_value_.size() > hessian_num_nz) hessian.q_value_.resize(hessian_num_nz);
 
-  if (return_status == HighsStatus::kError)
-    return_status = HighsStatus::kError;
-  else
+  if (return_status != HighsStatus::kError)
     return_status = HighsStatus::kOk;
   if (return_status != HighsStatus::kOk)
     highsLogDev(options.log_options, HighsLogType::kInfo,
 		"assessHessian returns HighsStatus = %s\n",
 		HighsStatusToString(return_status).c_str());
   return return_status;
+}
+
+bool positiveHessianDiagonal(const HighsOptions& options, HighsHessian& hessian) {
+  const double kSmallHessianDiagonalValue = 1e-3;
+  const HighsInt dim = hessian.dim_;
+  HighsInt num_small_diagonal_value = 0;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    double diagonal_value = 0;
+    for (HighsInt iEl = hessian.q_start_[iCol]; iEl < hessian.q_start_[iCol+1]; iEl++) {
+      if (hessian.q_index_[iEl] == iCol) {
+	diagonal_value = hessian.q_value_[iEl];
+	continue;
+      }
+    }
+    if (diagonal_value <= kSmallHessianDiagonalValue) num_small_diagonal_value++;
+  }
+  
+  if (num_small_diagonal_value)
+    highsLogUser(options.log_options, HighsLogType::kError,
+		 "Hessian has %" HIGHSINT_FORMAT " diagonal entries less than %g\n",
+		 num_small_diagonal_value, kSmallHessianDiagonalValue);
+  return num_small_diagonal_value == 0;
 }
 
 HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian) {
