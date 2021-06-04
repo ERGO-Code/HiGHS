@@ -313,6 +313,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     return best;
   };
 
+  bool resetBasis = false;
   lp->storeBasis();
   auto basis = lp->getStoredBasis();
 
@@ -325,8 +326,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
       lp->setStoredBasis(std::move(basis));
-      lp->recoverBasis();
-      lp->run();
+      if (resetBasis) {
+        lp->recoverBasis();
+        lp->run();
+      }
       return candidate;
     }
 
@@ -357,6 +360,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
       lp->flushDomain(localdom);
 
+      resetBasis = true;
       int64_t numiters = lp->getNumLpIterations();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
@@ -475,6 +479,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       pseudocost.addInferenceObservation(col, inferences, true);
       lp->flushDomain(localdom);
 
+      resetBasis = true;
       int64_t numiters = lp->getNumLpIterations();
       HighsLpRelaxation::Status status = lp->run(false);
       numiters = lp->getNumLpIterations() - numiters;
