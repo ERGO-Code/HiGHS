@@ -325,8 +325,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
-      lp->setStoredBasis(std::move(basis));
       if (resetBasis) {
+        lp->setStoredBasis(std::move(basis));
         lp->recoverBasis();
         lp->run();
       }
