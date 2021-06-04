@@ -979,6 +979,11 @@ HighsSearch::NodeResult HighsSearch::branch() {
       if (localdom.colUpper_[i] - localdom.colLower_[i] < 0.5) continue;
 
       double fracval;
+      if (localdom.colLower_[i] != -kHighsInf &&
+          localdom.colUpper_[i] != kHighsInf)
+        fracval = std::floor(0.5 * (localdom.colLower_[i] +
+                                    localdom.colUpper_[i] + 0.5)) +
+                  0.5;
       if (localdom.colLower_[i] != -kHighsInf)
         fracval = localdom.colLower_[i] + 0.5;
       else if (localdom.colUpper_[i] != kHighsInf)
@@ -988,13 +993,22 @@ HighsSearch::NodeResult HighsSearch::branch() {
 
       double score = pseudocost.getScore(i, fracval);
       assert(score >= 0.0);
+
       if (score > bestscore) {
         bestscore = score;
-        double upval = std::ceil(fracval);
-        currnode.branching_point = upval;
-        currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-        currnode.branchingdecision.column = i;
-        currnode.branchingdecision.boundval = upval;
+        if (mipsolver.colCost(i) >= 0) {
+          double upval = std::ceil(fracval);
+          currnode.branching_point = upval;
+          currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+          currnode.branchingdecision.column = i;
+          currnode.branchingdecision.boundval = upval;
+        } else {
+          double downval = std::floor(fracval);
+          currnode.branching_point = downval;
+          currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+          currnode.branchingdecision.column = i;
+          currnode.branchingdecision.boundval = downval;
+        }
       }
     }
   }
