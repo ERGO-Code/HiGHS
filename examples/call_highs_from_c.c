@@ -64,6 +64,8 @@ void minimal_api() {
   const int numcol = 2;
   const int numrow = 3;
   const int numnz = 5;
+  const int sense = 1;
+  const double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[numcol] = {2.0, 3.0};
@@ -89,7 +91,7 @@ void minimal_api() {
 
   const int rowwise = 0;
   int runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
-			       colcost, collower, colupper, rowlower, rowupper,
+			       sense, offset, colcost, collower, colupper, rowlower, rowupper,
 			       astart, aindex, avalue,
 			       colvalue, coldual, rowvalue, rowdual,
 			       colbasisstatus, rowbasisstatus,

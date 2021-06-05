@@ -7,12 +7,12 @@
 #include <assert.h>
 
 HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
-  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array0[ix]) return 0;
+  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
   return 1;
 }
 
 HighsInt doubleArraysEqual(const double dim, const double* array0, const double* array1) {
-  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array0[ix]) return 0;
+  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
   return 1;
 }
 
@@ -189,7 +189,7 @@ void full_api() {
   HighsInt numcol = 2;
   HighsInt numrow = 2;
   HighsInt numnz = 4;
-  HighsInt orientation = 1;
+  HighsInt orientation = 2; //Row-wise
   HighsInt sense = 1;
   double offset = 0;
   double cc[2] = {1.0, -2.0};

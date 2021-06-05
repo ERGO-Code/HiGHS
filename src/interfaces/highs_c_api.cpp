@@ -712,12 +712,6 @@ void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
   const HighsModel& model = ((Highs*)highs)->getModel();
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
-  MatrixOrientation original_orientation = lp.orientation_;
-  MatrixOrientation desired_orientation = MatrixOrientation::kColwise;
-  if (orientation == (HighsInt)MatrixOrientation::kRowwise)
-    desired_orientation = MatrixOrientation::kRowwise;
-  ((Highs*)highs)->setMatrixOrientation(desired_orientation);
-
   ObjSense obj_sense = ObjSense::kMinimize;
   *sense = (HighsInt)obj_sense;
   *offset = lp.offset_;
@@ -732,8 +726,22 @@ void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
     memcpy(rowlower, &lp.rowLower_[0], *numrow * sizeof(double));
     memcpy(rowupper, &lp.rowUpper_[0], *numrow * sizeof(double));
   }
+
+  // Save the original orientation so that it is recovered
+  MatrixOrientation original_orientation = lp.orientation_;
+  // Determine the desired orientation and number of start entries to
+  // be copied
+  MatrixOrientation desired_orientation = MatrixOrientation::kColwise;
+  HighsInt num_start_entries = *numcol;
+  if (orientation == (HighsInt)MatrixOrientation::kRowwise) {
+    desired_orientation = MatrixOrientation::kRowwise;
+    num_start_entries = *numrow;
+  }
+  // Ensure the desired orientation
+  ((Highs*)highs)->setMatrixOrientation(desired_orientation);
+
   if (*numcol > 0 && *numrow > 0) {
-    memcpy(astart, &lp.Astart_[0], *numcol * sizeof(HighsInt));
+    memcpy(astart, &lp.Astart_[0], num_start_entries * sizeof(HighsInt));
     *numnz = lp.Astart_[*numcol];
     memcpy(aindex, &lp.Aindex_[0], *numnz * sizeof(HighsInt));
     memcpy(avalue, &lp.Avalue_[0], *numnz * sizeof(double));
@@ -748,7 +756,7 @@ void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
     for (int iCol = 0; iCol < *numcol; iCol++)
       integrality[iCol] = (HighsInt)lp.integrality_[iCol];
   }
-  // Restore the original orientaition
+  // Restore the original orientation
   ((Highs*)highs)->setMatrixOrientation(original_orientation);
 }
 
