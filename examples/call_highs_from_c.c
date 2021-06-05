@@ -253,7 +253,7 @@ void full_api() {
   Highs_destroy(highs);
 
   // Define the constraint matrix col-wise to pass to the LP
-  int sense = 1;
+  sense = 1;
   double offset = 0;
   int rowwise = 0;
   int astart[numcol] = {0, 2};
