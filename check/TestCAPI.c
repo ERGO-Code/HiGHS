@@ -11,6 +11,8 @@ void minimal_api() {
   HighsInt numrow = 2;
   HighsInt nnz = 4;
   HighsInt rowwise = 0;
+  HighsInt sense = 1;
+  double offset = 0;
   HighsInt i;
 
   double cc[2] = {1.0, -2.0};
@@ -32,8 +34,9 @@ void minimal_api() {
 
   HighsInt modelstatus;
 
-  HighsInt status = Highs_lpCall(numcol, numrow, nnz, rowwise, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
-            cd, rv, rd, cbs, rbs, &modelstatus);
+  HighsInt status = Highs_lpCall(numcol, numrow, nnz, rowwise, sense, offset,
+				 cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
+				 cd, rv, rd, cbs, rbs, &modelstatus);
   assert(status == 0);
 
   for (i = 0; i < numcol; i++) {
@@ -107,6 +110,8 @@ void minimal_api_lp() {
   const HighsInt numrow = 3;
   const HighsInt numnz = 5;
   HighsInt rowwise = 0;
+  HighsInt sense = 1;
+  double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[2] = {2.0, 3.0};
@@ -131,7 +136,7 @@ void minimal_api_lp() {
   HighsInt modelstatus;
 
   HighsInt runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
-				    colcost, collower, colupper, rowlower, rowupper,
+				    sense, offset, colcost, collower, colupper, rowlower, rowupper,
 				    astart, aindex, avalue,
 				    colvalue, coldual, rowvalue, rowdual,
 				    colbasisstatus, rowbasisstatus,
@@ -318,11 +323,13 @@ void full_api_lp() {
 
   // Define the constraint matrix col-wise to pass to the LP
   HighsInt rowwise = 0;
+  sense = 1;
+  double offset = 0;
   HighsInt astart[2] = {0, 2};
   HighsInt aindex[5] = {1, 2, 0, 1, 2};
   double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise,
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise, sense, offset,
 			   colcost, collower, colupper,
 			   rowlower, rowupper,
 			   astart, aindex, avalue);

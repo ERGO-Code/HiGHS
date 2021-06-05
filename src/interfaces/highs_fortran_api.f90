@@ -1,15 +1,17 @@
 module highs_lp_solver
   interface
-     function Highs_call (numcol, numrow, numnz, &
-          colcost, collower, colupper, rowlower, rowupper, &
+     function Highs_lpCall (numcol, numrow, numnz,  &
+          sense, offset, colcost, collower, colupper, rowlower, rowupper, &
           astart, aindex, avalue, &
           colvalue, coldual, rowvalue, rowdual, &
           colbasisstatus, rowbasisstatus, modelstatus) &
-          result(s) bind (c, name='Highs_call')
+          result(s) bind (c, name='Highs_lpCall')
       use iso_c_binding
       integer ( c_int ), VALUE :: numcol
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: sense
+      real ( c_double ) :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -26,7 +28,33 @@ module highs_lp_solver
       integer ( c_int ) :: rowbasisstatus(*)
       integer ( c_int ) :: s
       integer ( c_int ) :: modelstatus
-    end function Highs_call
+    end function Highs_lpCall
+
+     function Highs_mipCall (numcol, numrow, numnz, &
+          sense, offset, colcost, collower, colupper, rowlower, rowupper, &
+          astart, aindex, avalue, integrality, &
+          colvalue, rowvalue, modelstatus) &
+          result(s) bind (c, name='Highs_lpCall')
+      use iso_c_binding
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: sense
+      real ( c_double ) :: offset
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      real ( c_double ) :: colvalue(*)
+      real ( c_double ) :: rowvalue(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: s
+      integer ( c_int ) :: modelstatus
+    end function Highs_mipCall
 
     function Highs_create () result ( h ) bind( c, name='Highs_create' )
       use iso_c_binding
@@ -73,7 +101,7 @@ module highs_lp_solver
     end function Highs_writeSolutionPretty
 
     function Highs_passLp ( h, numcol, numrow, numnz, rowwise,&
-         colcost, collower, colupper, rowlower, rowupper, &
+         sense, offset, colcost, collower, colupper, rowlower, rowupper, &
          astart, aindex, avalue) result ( s ) bind ( c, name='Highs_passLp' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
@@ -81,6 +109,8 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
       integer ( c_int ), VALUE :: rowwise
+      integer ( c_int ), VALUE :: sense
+      real ( c_double ) :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -93,7 +123,7 @@ module highs_lp_solver
     end function Highs_passLp
 
     function Highs_passMip ( h, numcol, numrow, numnz, rowwise,&
-         colcost, collower, colupper, rowlower, rowupper, &
+         sense, offset, colcost, collower, colupper, rowlower, rowupper, &
          astart, aindex, avalue, integrality) result ( s ) bind ( c, name='Highs_passMip' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
@@ -101,6 +131,8 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
       integer ( c_int ), VALUE :: rowwise
+      integer ( c_int ), VALUE :: sense
+      real ( c_double ) :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -515,6 +547,35 @@ module highs_lp_solver
       integer(c_int) :: sense
       integer ( c_int ) :: s
     end function Highs_getObjectiveSense
+
+! Deprecated methods
+     function Highs_call (numcol, numrow, numnz, &
+          colcost, collower, colupper, rowlower, rowupper, &
+          astart, aindex, avalue, &
+          colvalue, coldual, rowvalue, rowdual, &
+          colbasisstatus, rowbasisstatus, modelstatus) &
+          result(s) bind (c, name='Highs_call')
+      use iso_c_binding
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      real ( c_double ) :: colvalue(*)
+      real ( c_double ) :: coldual(*)
+      real ( c_double ) :: rowvalue(*)
+      real ( c_double ) :: rowdual(*)
+      integer ( c_int ) :: colbasisstatus(*)
+      integer ( c_int ) :: rowbasisstatus(*)
+      integer ( c_int ) :: s
+      integer ( c_int ) :: modelstatus
+    end function Highs_call
 
     function Highs_runQuiet (h) result(s) bind(c, name='Highs_runQuiet')
       use iso_c_binding

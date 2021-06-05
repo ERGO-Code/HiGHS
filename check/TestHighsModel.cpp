@@ -52,7 +52,12 @@ TEST_CASE("HighsModel", "[highs_model]") {
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kOk);
 
-  // A Hessian with small diagonal entries should cause an error
+  // A Hessian with small diagonal entries should cause an error. The
+  // first is eliminated when normalising the Hessian - due to being
+  // too small - and the second when checking the diagonal entries -
+  // for being less than small_matrix_value.
+  const double illegal_small_hessian_diagonal_entry = 1e-12;
+  const double illegal_negative_hessian_diagonal_entry = -1;
   assert(dim == 2);
   hessian.q_start_[1] = 1;
   hessian.q_start_[2] = 2;
@@ -60,8 +65,8 @@ TEST_CASE("HighsModel", "[highs_model]") {
   hessian.q_index_[0] = 0;
   hessian.q_index_[1] = 1;
   hessian.q_value_.resize(dim);
-  hessian.q_value_[0] = 1e-6;
-  hessian.q_value_[1] = 1e-6;
+  hessian.q_value_[0] = illegal_small_hessian_diagonal_entry;
+  hessian.q_value_[1] = illegal_negative_hessian_diagonal_entry;
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kError);
 }

@@ -74,7 +74,8 @@ class Highs {
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const bool rowwise,
-                        const HighsInt hessian_num_nz, const double* costs,
+                        const HighsInt hessian_num_nz, const HighsInt sense,
+                        const double offset, const double* costs,
                         const double* col_lower, const double* col_upper,
                         const double* row_lower, const double* row_upper,
                         const HighsInt* astart, const HighsInt* aindex,
@@ -84,6 +85,7 @@ class Highs {
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
                         const HighsInt num_nz, const bool rowwise,
+                        const HighsInt sense, const double offset,
                         const double* costs, const double* col_lower,
                         const double* col_upper, const double* row_lower,
                         const double* row_upper, const HighsInt* astart,

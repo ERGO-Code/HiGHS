@@ -27,6 +27,8 @@ HighsInt Highs_lpCall(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -59,6 +61,8 @@ HighsInt Highs_mipCall(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -137,6 +141,8 @@ HighsInt Highs_passLp(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -161,6 +167,8 @@ HighsInt Highs_passMip(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds

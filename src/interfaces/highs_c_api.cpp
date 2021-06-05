@@ -16,6 +16,7 @@
 
 HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       const HighsInt numnz, const HighsInt rowwise,
+                      const HighsInt sense, const double offset,
                       const double* colcost, const double* collower,
                       const double* colupper, const double* rowlower,
                       const double* rowupper, const HighsInt* astart,
@@ -25,9 +26,9 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       HighsInt* rowbasisstatus, HighsInt* modelstatus) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
-  HighsInt status =
-      Highs_passLp(&highs, numcol, numrow, numnz, rowwise, colcost, collower,
-                   colupper, rowlower, rowupper, astart, aindex, avalue);
+  HighsInt status = Highs_passLp(&highs, numcol, numrow, numnz, rowwise, sense,
+                                 offset, colcost, collower, colupper, rowlower,
+                                 rowupper, astart, aindex, avalue);
   if (status != 0) {
     return status;
   }
@@ -61,6 +62,7 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
 
 HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
                        const HighsInt numnz, const HighsInt rowwise,
+                       const HighsInt sense, const double offset,
                        const double* colcost, const double* collower,
                        const double* colupper, const double* rowlower,
                        const double* rowupper, const HighsInt* astart,
@@ -70,8 +72,8 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsInt status = Highs_passMip(
-      &highs, numcol, numrow, numnz, rowwise, colcost, collower, colupper,
-      rowlower, rowupper, astart, aindex, avalue, integrality);
+      &highs, numcol, numrow, numnz, rowwise, sense, offset, colcost, collower,
+      colupper, rowlower, rowupper, astart, aindex, avalue, integrality);
   if (status != 0) {
     return status;
   }
@@ -115,28 +117,31 @@ HighsInt Highs_writeSolutionPretty(void* highs, const char* filename) {
 
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
                       const HighsInt numnz, const HighsInt rowwise,
+                      const HighsInt sense, const double offset,
                       const double* colcost, const double* collower,
                       const double* colupper, const double* rowlower,
                       const double* rowupper, const HighsInt* astart,
                       const HighsInt* aindex, const double* avalue) {
   const bool bool_rowwise = rowwise;
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, bool_rowwise, colcost, collower,
-                  colupper, rowlower, rowupper, astart, aindex, avalue);
+      ->passModel(numcol, numrow, numnz, bool_rowwise, sense, offset, colcost,
+                  collower, colupper, rowlower, rowupper, astart, aindex,
+                  avalue);
 }
 
 HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                        const HighsInt numrow, const HighsInt numnz,
-                       const HighsInt rowwise, const double* colcost,
+                       const HighsInt rowwise, const HighsInt sense,
+                       const double offset, const double* colcost,
                        const double* collower, const double* colupper,
                        const double* rowlower, const double* rowupper,
                        const HighsInt* astart, const HighsInt* aindex,
                        const double* avalue, const HighsInt* integrality) {
   const bool bool_rowwise = rowwise;
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, bool_rowwise, colcost, collower,
-                  colupper, rowlower, rowupper, astart, aindex, avalue,
-                  integrality);
+      ->passModel(numcol, numrow, numnz, bool_rowwise, sense, offset, colcost,
+                  collower, colupper, rowlower, rowupper, astart, aindex,
+                  avalue, integrality);
 }
 
 HighsInt Highs_clearModel(void* highs) {
@@ -720,10 +725,12 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
   printf(
       "Method Highs_call is deprecated: alternative method is Highs_lpCall\n");
   const HighsInt rowwise = 0;
-  return Highs_lpCall(numcol, numrow, numnz, rowwise, colcost, collower,
-                      colupper, rowlower, rowupper, astart, aindex, avalue,
-                      colvalue, coldual, rowvalue, rowdual, colbasisstatus,
-                      rowbasisstatus, modelstatus);
+  const HighsInt sense = 1;
+  const double offset = 0;
+  return Highs_lpCall(numcol, numrow, numnz, rowwise, sense, offset, colcost,
+                      collower, colupper, rowlower, rowupper, astart, aindex,
+                      avalue, colvalue, coldual, rowvalue, rowdual,
+                      colbasisstatus, rowbasisstatus, modelstatus);
 }
 
 HighsInt Highs_runQuiet(void* highs) {

@@ -92,6 +92,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
 
 bool positiveHessianDiagonal(const HighsOptions& options, HighsHessian& hessian) {
   const double kSmallHessianDiagonalValue = options.small_matrix_value;
+  double min_illegal_diagonal_value = kHighsInf;
+  double max_illegal_diagonal_value = -kHighsInf;
   const HighsInt dim = hessian.dim_;
   HighsInt num_small_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
@@ -102,13 +104,20 @@ bool positiveHessianDiagonal(const HighsOptions& options, HighsHessian& hessian)
 	continue;
       }
     }
-    if (diagonal_value <= kSmallHessianDiagonalValue) num_small_diagonal_value++;
+    if (diagonal_value <= kSmallHessianDiagonalValue) {
+      min_illegal_diagonal_value = std::min(diagonal_value, min_illegal_diagonal_value);
+      max_illegal_diagonal_value = std::max(diagonal_value, max_illegal_diagonal_value);
+      num_small_diagonal_value++;
+    }
   }
   
   if (num_small_diagonal_value)
     highsLogUser(options.log_options, HighsLogType::kError,
-		 "Hessian has %" HIGHSINT_FORMAT " diagonal entries less than %g\n",
-		 num_small_diagonal_value, kSmallHessianDiagonalValue);
+		 "Hessian has %" HIGHSINT_FORMAT " diagonal entries in [%g, %g] less than %g\n",
+		 num_small_diagonal_value, 
+		 min_illegal_diagonal_value,
+		 max_illegal_diagonal_value,
+		 kSmallHessianDiagonalValue);
   return num_small_diagonal_value == 0;
 }
 

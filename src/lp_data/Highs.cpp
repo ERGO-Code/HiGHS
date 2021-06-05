@@ -272,15 +272,14 @@ HighsStatus Highs::passModel(const HighsLp lp) {
   return passModel(model);
 }
 
-HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
-                             const HighsInt num_nz, const bool rowwise,
-                             const HighsInt hessian_num_nz, const double* costs,
-                             const double* col_lower, const double* col_upper,
-                             const double* row_lower, const double* row_upper,
-                             const HighsInt* astart, const HighsInt* aindex,
-                             const double* avalue, const HighsInt* q_start,
-                             const HighsInt* q_index, const double* q_value,
-                             const HighsInt* integrality) {
+HighsStatus Highs::passModel(
+    const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
+    const bool rowwise, const HighsInt hessian_num_nz, const HighsInt sense,
+    const double offset, const double* costs, const double* col_lower,
+    const double* col_upper, const double* row_lower, const double* row_upper,
+    const HighsInt* astart, const HighsInt* aindex, const double* avalue,
+    const HighsInt* q_start, const HighsInt* q_index, const double* q_value,
+    const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
   lp.numCol_ = num_col;
@@ -322,6 +321,12 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
     lp.Astart_[num_col] = num_nz;
     lp.orientation_ = MatrixOrientation::kColwise;
   }
+  if (sense == (HighsInt)ObjSense::kMaximize) {
+    lp.sense_ = ObjSense::kMaximize;
+  } else {
+    lp.sense_ = ObjSense::kMinimize;
+  }
+  lp.offset_ = offset;
   if (num_col > 0 && integrality != NULL) {
     lp.integrality_.resize(num_col);
     for (HighsInt iCol = 0; iCol < num_col; iCol++) {
@@ -349,14 +354,15 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
 
 HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const HighsInt num_nz, const bool rowwise,
+                             const HighsInt sense, const double offset,
                              const double* costs, const double* col_lower,
                              const double* col_upper, const double* row_lower,
                              const double* row_upper, const HighsInt* astart,
                              const HighsInt* aindex, const double* avalue,
                              const HighsInt* integrality) {
-  return passModel(num_col, num_row, num_nz, rowwise, 0, costs, col_lower,
-                   col_upper, row_lower, row_upper, astart, aindex, avalue,
-                   NULL, NULL, NULL, integrality);
+  return passModel(num_col, num_row, num_nz, rowwise, 0, sense, offset, costs,
+                   col_lower, col_upper, row_lower, row_upper, astart, aindex,
+                   avalue, NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::readModel(const std::string filename) {
