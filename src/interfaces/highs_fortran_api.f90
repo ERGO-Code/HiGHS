@@ -145,6 +145,33 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_passMip
 
+    function Highs_passModel ( h, numcol, numrow, numnz, hessian_num_nz, rowwise,&
+         sense, offset, colcost, collower, colupper, rowlower, rowupper, &
+         astart, aindex, avalue, integrality, qstart, qindex, qvalue) result ( s ) bind ( c, name='Highs_passModel' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: hessian_num_nz
+      integer ( c_int ), VALUE :: rowwise
+      integer ( c_int ), VALUE :: sense
+      real ( c_double ) :: offset
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      integer ( c_int ) :: integrality(*)
+      integer ( c_int ) :: qstart(*)
+      integer ( c_int ) :: qindex(*)
+      real ( c_double ) :: qvalue(*)
+      integer ( c_int ) :: s
+    end function Highs_passModel
+
     function Highs_setBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setBoolOptionValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h

@@ -144,6 +144,23 @@ HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                   avalue, integrality);
 }
 
+HighsInt Highs_passModel(void* highs, const HighsInt numcol,
+                         const HighsInt numrow, const HighsInt numnz,
+                         const HighsInt hessian_num_nz, const HighsInt rowwise,
+                         const HighsInt sense, const double offset,
+                         const double* colcost, const double* collower,
+                         const double* colupper, const double* rowlower,
+                         const double* rowupper, const HighsInt* astart,
+                         const HighsInt* aindex, const double* avalue,
+                         const HighsInt* qstart, const HighsInt* qindex,
+                         const double* qvalue, const HighsInt* integrality) {
+  const bool bool_rowwise = rowwise;
+  return (HighsInt)((Highs*)highs)
+      ->passModel(numcol, numrow, numnz, hessian_num_nz, bool_rowwise, sense,
+                  offset, colcost, collower, colupper, rowlower, rowupper,
+                  astart, aindex, avalue, qstart, qindex, qvalue, integrality);
+}
+
 HighsInt Highs_clearModel(void* highs) {
   return (HighsInt)((Highs*)highs)->clearModel();
 }
@@ -677,6 +694,33 @@ HighsInt Highs_getNumNz(void* highs) {
   HighsInt numCol = Highs_getNumCols(highs);
   if (numCol <= 0) return 0;
   return ((Highs*)highs)->getLp().Astart_[numCol];
+}
+
+void Highs_getModel(void* highs, HighsInt* numcol, HighsInt* numrow,
+                    HighsInt* numnz, HighsInt* hessian_num_nz,
+                    HighsInt* rowwise, HighsInt* sense, double* offset,
+                    double* colcost, double* collower, double* colupper,
+                    double* rowlower, double* rowupper, HighsInt* astart,
+                    HighsInt* aindex, double* avalue, HighsInt* qstart,
+                    HighsInt* qindex, double* qvalue, HighsInt* integrality) {
+  const HighsModel& model = ((Highs*)highs)->getModel();
+  const HighsLp& lp = model.lp_;
+  const HighsHessian& hessian = model.hessian_;
+  MatrixOrientation orientation = MatrixOrientation::kColwise;
+  ObjSense obj_sense = ObjSense::kMinimize;
+  *numcol = lp.numCol_;
+  *numrow = lp.numRow_;
+  if (*numcol <= 0) {
+    *numnz = 0;
+  } else {
+    *numnz = lp.Astart_[*numcol];
+    memcpy(colcost, &lp.colCost_[0], *numcol * sizeof(double));
+    memcpy(collower, &lp.colLower_[0], *numcol * sizeof(double));
+    memcpy(colupper, &lp.colUpper_[0], *numcol * sizeof(double));
+    memcpy(astart, &lp.Astart_[0], *numcol * sizeof(HighsInt));
+  }
+  *rowwise = (HighsInt)orientation;
+  *sense = (HighsInt)obj_sense;
 }
 
 // Fails on Windows and MacOS since string_model_status is destroyed

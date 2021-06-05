@@ -187,6 +187,44 @@ HighsInt Highs_passMip(
                      //!< variables are continuous (0) or integer (1)
 );
 
+/*
+ * @brief pass a general model to HiGHS
+ */
+HighsInt Highs_passModel(
+    void* highs,
+    const HighsInt numcol,  //!< number of columns
+    const HighsInt numrow,  //!< number of rows
+    const HighsInt numnz,   //!< number of entries in the constraint matrix
+    const HighsInt hessian_num_nz,  //!< number of nonzeros in Hessian
+    const HighsInt rowwise,         //!< whether the matrix is rowwise
+    const HighsInt sense,           //!< sense of the optimization
+    const double offset,            //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt* astart,  //!< array of length [numcol or numrow if(rowwise)]
+                             //!< with start indices
+    const HighsInt*
+        aindex,  //!< array of length [numnz] with indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const HighsInt* qstart,  //!< array of length [numcol] with Hessian start
+                             //!< indices - or NULL if model is linear
+    const HighsInt*
+        qindex,  //!< array of length [hessian_num_nz] with indices of Hessian
+                 //!< entries - or NULL if model is linear
+    const double* qvalue,  //!< array of length [hessian_num_nz] with values of
+                           //!< Hessian entries - or NULL if model is linear
+    const HighsInt*
+        integrality  //!< array of length [numcol] indicating whether
+                     //!< variables are continuous (0) or integer (1) - or NULL
+                     //!< if model is continuous
+);
+
 HighsInt Highs_setBoolOptionValue(void* highs,
                                   const char* option,   //!< name of the option
                                   const HighsInt value  //!< new value of option
@@ -861,6 +899,14 @@ HighsInt Highs_getNumRows(void* highs);
  * @brief Returns the number of nonzeroes of the current model
  */
 HighsInt Highs_getNumNz(void* highs);
+
+void Highs_getModel(void* highs, HighsInt* numcol, HighsInt* numrow,
+                    HighsInt* numnz, HighsInt* hessian_num_nz,
+                    HighsInt* rowwise, HighsInt* sense, double* offset,
+                    double* colcost, double* collower, double* colupper,
+                    double* rowlower, double* rowupper, HighsInt* astart,
+                    HighsInt* aindex, double* avalue, HighsInt* qstart,
+                    HighsInt* qindex, double* qvalue, HighsInt* integrality);
 
 // Fails on Windows and MacOS since string_model_status is destroyed
 // after the method returns, so what's returned is a pointer to
