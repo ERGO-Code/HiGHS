@@ -696,31 +696,60 @@ HighsInt Highs_getNumNz(void* highs) {
   return ((Highs*)highs)->getLp().Astart_[numCol];
 }
 
-void Highs_getModel(void* highs, HighsInt* numcol, HighsInt* numrow,
-                    HighsInt* numnz, HighsInt* hessian_num_nz,
-                    HighsInt* rowwise, HighsInt* sense, double* offset,
-                    double* colcost, double* collower, double* colupper,
-                    double* rowlower, double* rowupper, HighsInt* astart,
-                    HighsInt* aindex, double* avalue, HighsInt* qstart,
-                    HighsInt* qindex, double* qvalue, HighsInt* integrality) {
+HighsInt Highs_getHessianNumNz(void* highs) {
+  HighsInt hessian_dim = ((Highs*)highs)->getModel().hessian_.dim_;
+  if (hessian_dim <= 0) return 0;
+  return ((Highs*)highs)->getModel().hessian_.q_start_[hessian_dim];
+}
+
+void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
+                    HighsInt* numrow, HighsInt* numnz, HighsInt* hessian_num_nz,
+                    HighsInt* sense, double* offset, double* colcost,
+                    double* collower, double* colupper, double* rowlower,
+                    double* rowupper, HighsInt* astart, HighsInt* aindex,
+                    double* avalue, HighsInt* qstart, HighsInt* qindex,
+                    double* qvalue, HighsInt* integrality) {
   const HighsModel& model = ((Highs*)highs)->getModel();
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
-  MatrixOrientation orientation = MatrixOrientation::kColwise;
+  MatrixOrientation original_orientation = lp.orientation_;
+  MatrixOrientation desired_orientation = MatrixOrientation::kColwise;
+  if (orientation == (HighsInt)MatrixOrientation::kRowwise)
+    desired_orientation = MatrixOrientation::kRowwise;
+  ((Highs*)highs)->setMatrixOrientation(desired_orientation);
+
   ObjSense obj_sense = ObjSense::kMinimize;
+  *sense = (HighsInt)obj_sense;
+  *offset = lp.offset_;
   *numcol = lp.numCol_;
   *numrow = lp.numRow_;
-  if (*numcol <= 0) {
-    *numnz = 0;
-  } else {
-    *numnz = lp.Astart_[*numcol];
+  if (*numcol > 0) {
     memcpy(colcost, &lp.colCost_[0], *numcol * sizeof(double));
     memcpy(collower, &lp.colLower_[0], *numcol * sizeof(double));
     memcpy(colupper, &lp.colUpper_[0], *numcol * sizeof(double));
-    memcpy(astart, &lp.Astart_[0], *numcol * sizeof(HighsInt));
   }
-  *rowwise = (HighsInt)orientation;
-  *sense = (HighsInt)obj_sense;
+  if (*numrow > 0) {
+    memcpy(rowlower, &lp.rowLower_[0], *numrow * sizeof(double));
+    memcpy(rowupper, &lp.rowUpper_[0], *numrow * sizeof(double));
+  }
+  if (*numcol > 0 && *numrow > 0) {
+    memcpy(astart, &lp.Astart_[0], *numcol * sizeof(HighsInt));
+    *numnz = lp.Astart_[*numcol];
+    memcpy(aindex, &lp.Aindex_[0], *numnz * sizeof(HighsInt));
+    memcpy(avalue, &lp.Avalue_[0], *numnz * sizeof(double));
+  }
+  if (hessian.dim_ > 0) {
+    memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));
+    *hessian_num_nz = hessian.q_start_[*numcol];
+    memcpy(qindex, &hessian.q_index_[0], *hessian_num_nz * sizeof(HighsInt));
+    memcpy(qvalue, &hessian.q_value_[0], *hessian_num_nz * sizeof(double));
+  }
+  if ((HighsInt)lp.integrality_.size()) {
+    for (int iCol = 0; iCol < *numcol; iCol++)
+      integrality[iCol] = (HighsInt)lp.integrality_[iCol];
+  }
+  // Restore the original orientaition
+  ((Highs*)highs)->setMatrixOrientation(original_orientation);
 }
 
 // Fails on Windows and MacOS since string_model_status is destroyed

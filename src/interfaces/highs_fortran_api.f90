@@ -568,6 +568,37 @@ module highs_lp_solver
       integer(c_int) :: nnz
     end function Highs_getNumNz
 
+    function Highs_getHessianNumNz (h) result(hessian_nnz) bind(c, name='Highs_getHessianNumNz')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: hessian_nnz
+    end function Highs_getHessianNumNz
+
+    function Highs_getModel (h, orientation, numcol, numrow, numnz, hessian_num_nz, &
+         colcost, collower, colupper, rowlower, rowupper, &
+         astart, aindex, avalue, &
+         qstart, qindex, qvalue, integrality) bind(c, name='Highs_getModel')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: orientation
+      integer ( c_int ), VALUE :: numcol
+      integer ( c_int ), VALUE :: numrow
+      integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: hessian_num_nz
+      real ( c_double ) :: colcost(*)
+      real ( c_double ) :: collower(*)
+      real ( c_double ) :: colupper(*)
+      real ( c_double ) :: rowlower(*)
+      real ( c_double ) :: rowupper(*)
+      integer ( c_int ) :: astart(*)
+      integer ( c_int ) :: aindex(*)
+      real ( c_double ) :: avalue(*)
+      integer ( c_int ) :: qstart(*)
+      integer ( c_int ) :: qindex(*)
+      real ( c_double ) :: qvalue(*)
+      integer ( c_int ) :: integrality(*)
+    end function Highs_getModel
+
     function Highs_getObjectiveSense (h, sense) result(s) bind(c, name='Highs_getObjectiveSense')
       use iso_c_binding
       type(c_ptr), VALUE :: h

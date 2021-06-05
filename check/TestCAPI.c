@@ -6,6 +6,16 @@
 #undef NDEBUG
 #include <assert.h>
 
+HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
+  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array0[ix]) return 0;
+  return 1;
+}
+
+HighsInt doubleArraysEqual(const double dim, const double* array0, const double* array1) {
+  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array0[ix]) return 0;
+  return 1;
+}
+
 void minimal_api() {
   HighsInt numcol = 2;
   HighsInt numrow = 2;
@@ -176,6 +186,12 @@ void full_api() {
 
   highs = Highs_create();
 
+  HighsInt numcol = 2;
+  HighsInt numrow = 2;
+  HighsInt numnz = 4;
+  HighsInt orientation = 1;
+  HighsInt sense = 1;
+  double offset = 0;
   double cc[2] = {1.0, -2.0};
   double cl[2] = {0.0, 0.0};
   double cu[2] = {10.0, 10.0};
@@ -188,7 +204,48 @@ void full_api() {
   assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) );
   assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) );
 
+  assert( Highs_getNumCols(highs) == numcol);
+  assert( Highs_getNumRows(highs) == numrow);
+  assert( Highs_getNumNz(highs) == numnz);
+  assert( Highs_getHessianNumNz(highs) == 0);
+
+  HighsInt ck_numcol;
+  HighsInt ck_numrow;
+  HighsInt ck_numnz;
+  HighsInt ck_hessian_num_nz;
+  HighsInt ck_rowwise;
+  HighsInt ck_sense;
+  double ck_offset;
+  double ck_cc[2];
+  double ck_cl[2];
+  double ck_cu[2];
+  double ck_rl[2];
+  double ck_ru[2];
+  HighsInt ck_astart[3];
+  HighsInt ck_aindex[4];
+  double ck_avalue[4];
+
+  Highs_getModel(highs, orientation,
+		 &ck_numcol, &ck_numrow, &ck_numnz, NULL,
+		 &ck_sense, &ck_offset,
+		 ck_cc, ck_cl, ck_cu, ck_rl, ck_ru,
+		 ck_astart, ck_aindex, ck_avalue,
+		 NULL, NULL, NULL, NULL);
+  assert(ck_numcol == numcol);
+  assert(ck_numrow == numrow);
+  assert(ck_numnz == numnz);
+  assert(ck_sense == sense);
+  assert(ck_offset == offset);
+  assert(doubleArraysEqual(numcol, ck_cc, cc));
+  assert(doubleArraysEqual(numcol, ck_cl, cl));
+  assert(doubleArraysEqual(numcol, ck_cu, cu));
+  assert(doubleArraysEqual(numrow, ck_rl, rl));
+  assert(doubleArraysEqual(numrow, ck_ru, ru));
+  assert(intArraysEqual(numcol, ck_astart, astart));
+  assert(intArraysEqual(numnz, ck_aindex, aindex));
+  assert(doubleArraysEqual(numnz, ck_avalue, avalue));
   Highs_run(highs);
+
   Highs_destroy(highs);
 }
 

@@ -900,13 +900,18 @@ HighsInt Highs_getNumRows(void* highs);
  */
 HighsInt Highs_getNumNz(void* highs);
 
-void Highs_getModel(void* highs, HighsInt* numcol, HighsInt* numrow,
-                    HighsInt* numnz, HighsInt* hessian_num_nz,
-                    HighsInt* rowwise, HighsInt* sense, double* offset,
-                    double* colcost, double* collower, double* colupper,
-                    double* rowlower, double* rowupper, HighsInt* astart,
-                    HighsInt* aindex, double* avalue, HighsInt* qstart,
-                    HighsInt* qindex, double* qvalue, HighsInt* integrality);
+/**
+ * @brief Returns the number of nonzeroes of the current Hessian
+ */
+HighsInt Highs_getHessianNumNz(void* highs);
+
+void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
+                    HighsInt* numrow, HighsInt* numnz, HighsInt* hessian_num_nz,
+                    HighsInt* sense, double* offset, double* colcost,
+                    double* collower, double* colupper, double* rowlower,
+                    double* rowupper, HighsInt* astart, HighsInt* aindex,
+                    double* avalue, HighsInt* qstart, HighsInt* qindex,
+                    double* qvalue, HighsInt* integrality);
 
 // Fails on Windows and MacOS since string_model_status is destroyed
 // after the method returns, so what's returned is a pointer to
