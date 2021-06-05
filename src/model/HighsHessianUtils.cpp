@@ -45,6 +45,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
 		 hessian.q_start_[0]);
     return HighsStatus::kError;
   }
+  // Assess G, deferring the assessment of values (other than those
+  // which are identically zero)
   call_status = assessMatrix(options.log_options, "Hessian",
 			     hessian.dim_, hessian.dim_,
 			     hessian.q_start_, hessian.q_index_, hessian.q_value_,
@@ -53,11 +55,20 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
     interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
 
+  // Form Q = (G+G^T)/2
   call_status = normaliseHessian(options, hessian);
   return_status =
     interpretCallStatus(call_status, return_status, "normaliseHessian");
   if (return_status == HighsStatus::kError) return return_status;
 
+  // Assess Q
+  call_status = assessMatrix(options.log_options, "Hessian",
+			     hessian.dim_, hessian.dim_,
+			     hessian.q_start_, hessian.q_index_, hessian.q_value_,
+			     options.small_matrix_value, options.large_matrix_value);
+  return_status =
+    interpretCallStatus(call_status, return_status, "assessMatrix");
+  if (return_status == HighsStatus::kError) return return_status;
 
   HighsInt hessian_num_nz = hessian.q_start_[hessian.dim_];
   // If the Hessian has nonzeros, check its diagonal. It's OK to be
@@ -80,7 +91,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
 }
 
 bool positiveHessianDiagonal(const HighsOptions& options, HighsHessian& hessian) {
-  const double kSmallHessianDiagonalValue = 1e-3;
+  const double kSmallHessianDiagonalValue = options.small_matrix_value;
   const HighsInt dim = hessian.dim_;
   HighsInt num_small_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {

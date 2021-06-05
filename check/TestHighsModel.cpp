@@ -43,7 +43,8 @@ TEST_CASE("HighsModel", "[highs_model]") {
   special_lps.distillationLp(model.lp_, require_model_status,
                              optimal_objective);
   dim = model.lp_.numCol_;
-  // A Hessian with dimesion but no nonzeros should be ignored OK
+  // A Hessian with dimesion but no nonzeros (ie identically zero)
+  // should be ignored OK
   hessian.dim_ = dim;
   hessian.q_start_.resize(dim + 1);
   hessian.q_start_[0] = 0;
