@@ -15,7 +15,7 @@
 # in the templates via {{ site.myvariable }}.
 
 title: HiGHS Documentation
-email: galabovaa@gmail.com
+email: highsopt@gmail.com
 author: Ivet Galabova 
 description: > # this means to ignore newlines until "baseurl:"
   HiGHS is a high performance serial and parallel solver for large-scale sparse
@@ -28,13 +28,13 @@ baseurl: "/highs-docsy" # the subpath of your site, e.g. /blog
 
 # todo:ig
 # This is mostly for testing
-url: "https://galabovaa.github.io" # the base hostname & protocol for your site
+url: "https://ergo-code.github.io/HiGHS/" # the base hostname & protocol for your site
 
 # todo:ig
 # Social (First three Required)
-repo: "https://github.com/galabovaa/highs-docsy"
-github_user: "galabovaa"
-github_repo: "highs-docsy"
+repo: "https://github.com/ERGO-Code/HiGHS.git"
+github_user: "ERGO-Code"
+github_repo: "HiGHS"
 
 # Optional
 twitter: vsoch
