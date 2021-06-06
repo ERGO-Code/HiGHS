@@ -66,10 +66,10 @@ class Highs {
    * LP and makes it the first of the vector of HighsModelObjects
    */
   HighsStatus passModel(
-      HighsModel model  //!< The HighsModel instance for this model
+      const HighsModel& model  //!< The HighsModel instance for this model
   );
 
-  HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
+  HighsStatus passModel(const HighsLp& lp  //!< The HighsLp instance for this LP
   );
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
