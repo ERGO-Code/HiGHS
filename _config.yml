@@ -24,7 +24,7 @@ description: > # this means to ignore newlines until "baseurl:"
 
 # DO NOT CHANGE THE LINE OF THIS FILE without editing .circleci/circle_urls.sh
 # ig: does not matter, removed the .circleci subdirectory
-baseurl: "/highs-docsy" # the subpath of your site, e.g. /blog
+baseurl: "/HiGHS" # the subpath of your site, e.g. /blog
 
 # todo:ig
 # This is mostly for testing
