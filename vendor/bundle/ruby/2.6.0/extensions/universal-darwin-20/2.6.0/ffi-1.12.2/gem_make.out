@@ -1,0 +1,79 @@
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/ffi-1.12.2/ext/ffi_c
+/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/bin/ruby -I /System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0 -r ./siteconf20201209-39992-1siomvt.rb extconf.rb
+checking for ffi_call() in -lffi... yes
+checking for ffi_closure_alloc()... yes
+checking for shlwapi.h... no
+checking for rb_thread_call_without_gvl()... yes
+checking for ruby_native_thread_p()... yes
+checking for ruby_thread_has_gvl_p()... yes
+checking for ffi_prep_cif_var()... yes
+checking for ffi_raw_call()... yes
+checking for ffi_prep_raw_closure()... yes
+creating extconf.h
+creating Makefile
+
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/ffi-1.12.2/ext/ffi_c
+make "DESTDIR=" clean
+
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/ffi-1.12.2/ext/ffi_c
+make "DESTDIR="
+compiling AbstractMemory.c
+compiling ArrayType.c
+compiling Buffer.c
+compiling Call.c
+compiling ClosurePool.c
+compiling DynamicLibrary.c
+compiling Function.c
+Function.c:867:17: warning: 'ffi_prep_closure' is deprecated [-Wdeprecated-declarations]
+    ffiStatus = ffi_prep_closure(code, &fnInfo->ffi_cif, callback_invoke, closure);
+                ^
+/Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/ffi/ffi.h:348:18: note: 'ffi_prep_closure' has been explicitly marked deprecated here
+  __attribute__((deprecated))
+                 ^
+1 warning generated.
+compiling FunctionInfo.c
+compiling LastError.c
+compiling LongDouble.c
+compiling MappedType.c
+compiling MemoryPointer.c
+compiling MethodHandle.c
+compiling Platform.c
+compiling Pointer.c
+compiling Struct.c
+compiling StructByValue.c
+compiling StructLayout.c
+compiling Thread.c
+compiling Type.c
+compiling Types.c
+compiling Variadic.c
+compiling ffi.c
+linking shared-object ffi_c.bundle
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.0.Internal.sdk/usr/local/lib'
+ld: warning: ignoring file AbstractMemory.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file ArrayType.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Buffer.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Call.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Function.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file DynamicLibrary.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file ClosurePool.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file FunctionInfo.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file LastError.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file LongDouble.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file MemoryPointer.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file MappedType.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Platform.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ld: warning: ignoring file MethodHandle.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64ld: warning: ignoring file Pointer.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64ignoring file Struct.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+
+
+ld: warning: ignoring file Thread.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file StructByValue.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Types.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Variadic.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file Type.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file StructLayout.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file ffi.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.0.Internal.sdk/usr/local/lib'
+
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/ffi-1.12.2/ext/ffi_c
+make "DESTDIR=" install
+/usr/bin/install -c -m 0755 ffi_c.bundle ./.gem.20201209-39992-iujvg2

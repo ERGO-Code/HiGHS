@@ -1,0 +1,578 @@
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64   -lruby.2.6    "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+1: #include "ruby.h"
+2: 
+3: int main(int argc, char **argv)
+4: {
+5:   return 0;
+6: }
+/* end */
+
+"xcrun clang -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2  -arch x86_64  -c conftest.c"
+checked program was:
+/* begin */
+1: #include "ruby.h"
+2: 
+3: int main() {return 0;}
+/* end */
+
+"xcrun clang -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -Wno-error=unused-command-line-argument-hard-error-in-future  -arch x86_64  -c conftest.c"
+warning: unknown warning option '-Werror=unused-command-line-argument-hard-error-in-future'; did you mean '-Werror=unused-command-line-argument'? [-Wunknown-warning-option]
+1 warning generated.
+checked program was:
+/* begin */
+1: #include "ruby.h"
+2: 
+3: int main() {return 0;}
+/* end */
+
+have_header: checking for iconv.h... -------------------- yes
+
+"xcrun clang -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2  -arch x86_64  -c conftest.c"
+checked program was:
+/* begin */
+1: #include "ruby.h"
+2: 
+3: #include <iconv.h>
+/* end */
+
+--------------------
+
+have_library: checking for gzdopen() in -lz... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64   -lruby.2.6 -lz    "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <zlib.h>
+ 4: 
+ 5: /*top*/
+ 6: extern int t(void);
+ 7: int main(int argc, char **argv)
+ 8: {
+ 9:   if (argc > 1000000) {
+10:     int (* volatile tp)(void)=(int (*)(void))&t;
+11:     printf("%d", (*tp)());
+12:   }
+13: 
+14:   return 0;
+15: }
+16: int t(void) { void ((*volatile p)()); p = (void ((*)()))gzdopen; return !p; }
+/* end */
+
+--------------------
+
+have_iconv?: checking for iconv... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64   -lruby.2.6    "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+Undefined symbols for architecture x86_64:
+  "_iconv", referenced from:
+      _main in conftest-0a9e27.o
+  "_iconv_open", referenced from:
+      _main in conftest-0a9e27.o
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <stdlib.h>
+ 4: #include <iconv.h>
+ 5: 
+ 6: int main(void)
+ 7: {
+ 8:     iconv_t cd = iconv_open("", "");
+ 9:     iconv(cd, NULL, NULL, NULL, NULL);
+10:     return EXIT_SUCCESS;
+11: }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64   -lruby.2.6 -liconv   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <stdlib.h>
+ 4: #include <iconv.h>
+ 5: 
+ 6: int main(void)
+ 7: {
+ 8:     iconv_t cd = iconv_open("", "");
+ 9:     iconv(cd, NULL, NULL, NULL, NULL);
+10:     return EXIT_SUCCESS;
+11: }
+/* end */
+
+--------------------
+
+have_library: checking for -llzma... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT    -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64   -lruby.2.6 -llzma    "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: 
+15: int t(void) { ; return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlParseDoc() in libxml/parser.h... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <libxml/parser.h>
+ 4: 
+ 5: /*top*/
+ 6: extern int t(void);
+ 7: int main(int argc, char **argv)
+ 8: {
+ 9:   if (argc > 1000000) {
+10:     int (* volatile tp)(void)=(int (*)(void))&t;
+11:     printf("%d", (*tp)());
+12:   }
+13: 
+14:   return 0;
+15: }
+16: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlParseDoc; return !p; }
+/* end */
+
+--------------------
+
+have_func: checking for xsltParseStylesheetDoc() in libxslt/xslt.h... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:16:57: error: use of undeclared identifier 'xsltParseStylesheetDoc'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xsltParseStylesheetDoc; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <libxslt/xslt.h>
+ 4: 
+ 5: /*top*/
+ 6: extern int t(void);
+ 7: int main(int argc, char **argv)
+ 8: {
+ 9:   if (argc > 1000000) {
+10:     int (* volatile tp)(void)=(int (*)(void))&t;
+11:     printf("%d", (*tp)());
+12:   }
+13: 
+14:   return 0;
+15: }
+16: int t(void) { void ((*volatile p)()); p = (void ((*)()))xsltParseStylesheetDoc; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <libxslt/xslt.h>
+ 4: 
+ 5: /*top*/
+ 6: extern int t(void);
+ 7: int main(int argc, char **argv)
+ 8: {
+ 9:   if (argc > 1000000) {
+10:     int (* volatile tp)(void)=(int (*)(void))&t;
+11:     printf("%d", (*tp)());
+12:   }
+13: 
+14:   return 0;
+15: }
+16: extern void xsltParseStylesheetDoc();
+17: int t(void) { xsltParseStylesheetDoc(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for exsltFuncRegister() in libexslt/exslt.h... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: #include <libexslt/exslt.h>
+ 4: 
+ 5: /*top*/
+ 6: extern int t(void);
+ 7: int main(int argc, char **argv)
+ 8: {
+ 9:   if (argc > 1000000) {
+10:     int (* volatile tp)(void)=(int (*)(void))&t;
+11:     printf("%d", (*tp)());
+12:   }
+13: 
+14:   return 0;
+15: }
+16: int t(void) { void ((*volatile p)()); p = (void ((*)()))exsltFuncRegister; return !p; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlHasFeature()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlHasFeature'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlHasFeature; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlHasFeature; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlHasFeature();
+15: int t(void) { xmlHasFeature(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlFirstElementChild()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlFirstElementChild'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlFirstElementChild; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlFirstElementChild; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlFirstElementChild();
+15: int t(void) { xmlFirstElementChild(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlRelaxNGSetParserStructuredErrors()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlRelaxNGSetParserStructuredErrors'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlRelaxNGSetParserStructuredErrors; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlRelaxNGSetParserStructuredErrors; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlRelaxNGSetParserStructuredErrors();
+15: int t(void) { xmlRelaxNGSetParserStructuredErrors(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlRelaxNGSetParserStructuredErrors()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlRelaxNGSetParserStructuredErrors'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlRelaxNGSetParserStructuredErrors; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlRelaxNGSetParserStructuredErrors; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlRelaxNGSetParserStructuredErrors();
+15: int t(void) { xmlRelaxNGSetParserStructuredErrors(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlRelaxNGSetValidStructuredErrors()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlRelaxNGSetValidStructuredErrors'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlRelaxNGSetValidStructuredErrors; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlRelaxNGSetValidStructuredErrors; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlRelaxNGSetValidStructuredErrors();
+15: int t(void) { xmlRelaxNGSetValidStructuredErrors(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlSchemaSetValidStructuredErrors()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlSchemaSetValidStructuredErrors'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlSchemaSetValidStructuredErrors; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlSchemaSetValidStructuredErrors; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlSchemaSetValidStructuredErrors();
+15: int t(void) { xmlSchemaSetValidStructuredErrors(); return 0; }
+/* end */
+
+--------------------
+
+have_func: checking for xmlSchemaSetParserStructuredErrors()... -------------------- yes
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+conftest.c:14:57: error: use of undeclared identifier 'xmlSchemaSetParserStructuredErrors'
+int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlSchemaSetParserStructuredErrors; return !p; }
+                                                        ^
+1 error generated.
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: int t(void) { void ((*volatile p)()); p = (void ((*)()))xmlSchemaSetParserStructuredErrors; return !p; }
+/* end */
+
+"xcrun clang -o conftest -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/universal-darwin19 -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0/ruby/backward -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/include/ruby-2.6.0 -I. -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/include -I/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/include/libxml2 -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT   "-DNOKOGIRI_LIBXML2_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10\"" "-DNOKOGIRI_LIBXML2_PATCHES=\"0001-Revert-Do-not-URI-escape-in-server-side-includes.patch 0002-Remove-script-macro-support.patch 0003-Update-entities-to-remove-handling-of-ssi.patch 0004-libxml2.la-is-in-top_builddir.patch 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch\"" "-DNOKOGIRI_LIBXSLT_PATH=\"/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34\"" "-DNOKOGIRI_LIBXSLT_PATCHES=\"\""  -g -Os -pipe -DHAVE_GCC_ATOMIC_BUILTINS  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2 -DNOKOGIRI_USE_PACKAGED_LIBRARIES conftest.c  -L. -L/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib -L/Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib -L/usr/local/Cellar/xz/5.2.5/lib -L. -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib   -arch x86_64  /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma -lruby.2.6 /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libexslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxslt/1.1.34/lib/libxslt.a -lm -liconv -lpthread -llzma -lz /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.9/ports/x86_64-apple-darwin19/libxml2/2.9.10/lib/libxml2.a -llzma   "
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.Internal.sdk/usr/local/lib'
+checked program was:
+/* begin */
+ 1: #include "ruby.h"
+ 2: 
+ 3: /*top*/
+ 4: extern int t(void);
+ 5: int main(int argc, char **argv)
+ 6: {
+ 7:   if (argc > 1000000) {
+ 8:     int (* volatile tp)(void)=(int (*)(void))&t;
+ 9:     printf("%d", (*tp)());
+10:   }
+11: 
+12:   return 0;
+13: }
+14: extern void xmlSchemaSetParserStructuredErrors();
+15: int t(void) { xmlSchemaSetParserStructuredErrors(); return 0; }
+/* end */
+
+--------------------
+

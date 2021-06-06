@@ -1,0 +1,175 @@
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ext/nokogiri
+/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/bin/ruby -I /System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0 -r ./siteconf20201209-51731-vpmc09.rb extconf.rb
+checking if the C compiler accepts  -I /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2... yes
+checking if the C compiler accepts -Wno-error=unused-command-line-argument-hard-error-in-future... no
+Building nokogiri using packaged libraries.
+Using mini_portile version 2.4.0
+checking for iconv.h... yes
+checking for gzdopen() in -lz... yes
+checking for iconv... yes
+************************************************************************
+IMPORTANT NOTICE:
+
+Building Nokogiri with a packaged version of libxml2-2.9.10
+with the following patches applied:
+	- 0001-Revert-Do-not-URI-escape-in-server-side-includes.patch
+	- 0002-Remove-script-macro-support.patch
+	- 0003-Update-entities-to-remove-handling-of-ssi.patch
+	- 0004-libxml2.la-is-in-top_builddir.patch
+	- 0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch
+
+Team Nokogiri will keep on doing their best to provide security
+updates in a timely manner, but if this is a concern for you and want
+to use the system library instead; abort this installation process and
+reinstall nokogiri as follows:
+
+    gem install nokogiri -- --use-system-libraries
+        [--with-xml2-config=/path/to/xml2-config]
+        [--with-xslt-config=/path/to/xslt-config]
+
+If you are using Bundler, tell it to use the option:
+
+    bundle config build.nokogiri --use-system-libraries
+    bundle install
+
+Note, however, that nokogiri is not fully compatible with arbitrary
+versions of libxml2 provided by OS/package vendors.
+************************************************************************
+Extracting libxml2-2.9.10.tar.gz into tmp/x86_64-apple-darwin20/ports/libxml2/2.9.10... OK
+Running git apply with /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/patches/libxml2/0001-Revert-Do-not-URI-escape-in-server-side-includes.patch... OK
+Running git apply with /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/patches/libxml2/0002-Remove-script-macro-support.patch... OK
+Running git apply with /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/patches/libxml2/0003-Update-entities-to-remove-handling-of-ssi.patch... OK
+Running git apply with /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/patches/libxml2/0004-libxml2.la-is-in-top_builddir.patch... OK
+Running git apply with /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/patches/libxml2/0005-Fix-infinite-loop-in-xmlStringLenDecodeEntities.patch... OK
+Running 'configure' for libxml2 2.9.10... OK
+Running 'compile' for libxml2 2.9.10... OK
+Running 'install' for libxml2 2.9.10... OK
+Activating libxml2 2.9.10 (from /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ports/x86_64-apple-darwin20/libxml2/2.9.10)...
+************************************************************************
+IMPORTANT NOTICE:
+
+Building Nokogiri with a packaged version of libxslt-1.1.34.
+
+Team Nokogiri will keep on doing their best to provide security
+updates in a timely manner, but if this is a concern for you and want
+to use the system library instead; abort this installation process and
+reinstall nokogiri as follows:
+
+    gem install nokogiri -- --use-system-libraries
+        [--with-xml2-config=/path/to/xml2-config]
+        [--with-xslt-config=/path/to/xslt-config]
+
+If you are using Bundler, tell it to use the option:
+
+    bundle config build.nokogiri --use-system-libraries
+    bundle install
+************************************************************************
+Extracting libxslt-1.1.34.tar.gz into tmp/x86_64-apple-darwin20/ports/libxslt/1.1.34... OK
+Running 'configure' for libxslt 1.1.34... OK
+Running 'compile' for libxslt 1.1.34... OK
+Running 'install' for libxslt 1.1.34... OK
+Activating libxslt 1.1.34 (from /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ports/x86_64-apple-darwin20/libxslt/1.1.34)...
+checking for -llzma... yes
+checking for xmlParseDoc() in libxml/parser.h... yes
+checking for xsltParseStylesheetDoc() in libxslt/xslt.h... yes
+checking for exsltFuncRegister() in libexslt/exslt.h... yes
+checking for xmlHasFeature()... yes
+checking for xmlFirstElementChild()... yes
+checking for xmlRelaxNGSetParserStructuredErrors()... yes
+checking for xmlRelaxNGSetParserStructuredErrors()... yes
+checking for xmlRelaxNGSetValidStructuredErrors()... yes
+checking for xmlSchemaSetValidStructuredErrors()... yes
+checking for xmlSchemaSetParserStructuredErrors()... yes
+creating Makefile
+
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ext/nokogiri
+make "DESTDIR=" clean
+
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ext/nokogiri
+make "DESTDIR="
+compiling html_document.c
+compiling html_element_description.c
+compiling html_entity_lookup.c
+compiling html_sax_parser_context.c
+compiling html_sax_push_parser.c
+compiling nokogiri.c
+compiling xml_attr.c
+compiling xml_attribute_decl.c
+compiling xml_cdata.c
+compiling xml_comment.c
+compiling xml_document.c
+compiling xml_document_fragment.c
+compiling xml_dtd.c
+compiling xml_element_content.c
+compiling xml_element_decl.c
+compiling xml_encoding_handler.c
+compiling xml_entity_decl.c
+compiling xml_entity_reference.c
+compiling xml_io.c
+compiling xml_libxml2_hacks.c
+compiling xml_namespace.c
+compiling xml_node.c
+xml_node.c:304:15: warning: passing 'const xmlChar *' (aka 'const unsigned char *') to parameter of type 'void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+      xmlFree(reparentee->ns->prefix);
+              ^~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.
+compiling xml_node_set.c
+compiling xml_processing_instruction.c
+compiling xml_reader.c
+compiling xml_relax_ng.c
+compiling xml_sax_parser.c
+compiling xml_sax_parser_context.c
+compiling xml_sax_push_parser.c
+compiling xml_schema.c
+compiling xml_syntax_error.c
+compiling xml_text.c
+compiling xml_xpath_context.c
+compiling xslt_stylesheet.c
+linking shared-object nokogiri/nokogiri.bundle
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.0.Internal.sdk/usr/local/lib'
+ld: warning: ignoring file html_document.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file html_element_description.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file html_entity_lookup.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file html_sax_parser_context.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file nokogiri.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_attr.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file html_sax_push_parser.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_cdata.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_comment.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_attribute_decl.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_document.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_element_content.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_document_fragment.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_dtd.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_element_decl.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_entity_decl.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_io.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ld: warning: ignoring file xml_encoding_handler.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ignoring file xml_libxml2_hacks.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_entity_reference.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64ld: warning: ignoring file xml_node.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64ld: warning: 
+
+ignoring file xml_namespace.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_reader.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_sax_parser.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_relax_ng.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ld: warning: ld: warning: ld: warning: ignoring file xml_schema.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ignoring file xml_processing_instruction.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file xml_sax_push_parser.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ignoring file xml_text.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ignoring file xml_sax_parser_context.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ld: warning: ignoring file xml_xpath_context.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ld: warning: ignoring file xml_syntax_error.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ignoring file xslt_stylesheet.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ports/x86_64-apple-darwin20/libxslt/1.1.34/lib/libexslt.a, building for macOS-arm64e but attempting to link with file built for macOS-x86_64
+ignoring file xml_node_set.o, building for macOS-arm64e but attempting to link with file built for unknown-x86_64
+ld: warning: ignoring file /usr/local/Cellar/xz/5.2.5/lib/liblzma.dylib, building for macOS-arm64e but attempting to link with file built for macOS-x86_64
+ld: warning: ignoring file /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ports/x86_64-apple-darwin20/libxslt/1.1.34/lib/libxslt.a, building for macOS-arm64e but attempting to link with file built for macOS-x86_64
+ld: warning: ignoring file /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ports/x86_64-apple-darwin20/libxml2/2.9.10/lib/libxml2.a, building for macOS-arm64e but attempting to link with file built for macOS-x86_64
+ld: warning: directory not found for option '-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.0.Internal.sdk/usr/local/lib'
+Cleaning files only used during build.
+rm -rf /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ext/nokogiri/tmp/x86_64-apple-darwin20/ports
+rm -rf /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ports
+
+current directory: /Users/mac/projects/highs-docsy/vendor/bundle/ruby/2.6.0/gems/nokogiri-1.10.10/ext/nokogiri
+make "DESTDIR=" install
+/usr/bin/install -c -m 0755 nokogiri.bundle ./.gem.20201209-51731-5ne5pp/nokogiri

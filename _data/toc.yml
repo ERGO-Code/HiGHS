@@ -1,0 +1,23 @@
+- title: HiGHS 
+  url: "about"
+  links:
+    - title: "About"
+      url: "about"
+    - title: "Get Started"
+      url: "get-started"
+      children:
+        - title: "Download"
+          url: "get-started#download"
+        - title: "Build"
+          url: "get-started#build-highs-from-source-code-using-cmake"
+        - title: "Install"
+          url: "get-started#install"
+    - title: Running 
+      url: "run-executable"
+      children:
+        - title: "Command line options"
+          url: "run-executable#command-line-options"
+    - title: "HiGHS Interfaces"
+      url: "interfaces"
+    - title: Tags
+      url: "tags"

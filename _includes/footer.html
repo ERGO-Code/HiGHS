@@ -1,0 +1,30 @@
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+{% if site.twitter %}<ul class="list-inline mb-0">  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="" aria-label="Twitter" data-original-title="Twitter">
+    <a class="text-white" target="_blank" href="https://twitter.com/{{ site.twitter }}">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+</ul>{% endif %}
+</div>
+<div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+<ul class="list-inline mb-0">  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="" aria-label="GitHub" data-original-title="GitHub">
+    <a class="text-white" target="_blank" href="{{ site.repo }}">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+</ul>
+</div>
+<div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+  <small class="text-white">© 2019 {{ site.author }} All Rights Reserved</small>
+  {% if site.privacy %}<small class="ml-1"><a href="{{ site.privacy }}" target="_blank">Privacy Policy</a></small>{% endif %}
+  <p class="mt-2"><a href="/about/">About Docsy</a></p>	
+      </div>
+    </div>
+  </div>
+</footer>

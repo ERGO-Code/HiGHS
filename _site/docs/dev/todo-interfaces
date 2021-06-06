@@ -1,0 +1,18 @@
+
+
+Julia
+-----
+
+use to call HiGHS
+call from c_api
+
+use c_api as main talking point of interfaces : python
+
+cpp for languages with cpp support : JuMP
+
+
+OSI
+---
+https://www.wiki.ed.ac.uk/display/FASLP/Osi
+https://docs.google.com/document/d/18qfKNbv2gBCb-nUwUi9gvM-dhYdtwNbRns5b4-PRj_s/edit
+
