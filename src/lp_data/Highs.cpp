@@ -230,7 +230,7 @@ HighsStatus Highs::writeInfo(const std::string filename) {
 // Methods below change the incumbent model or solver infomation
 // associated with it. Hence returnFromHighs is called at the end of
 // each
-HighsStatus Highs::passModel(const HighsModel& model) {
+HighsStatus Highs::passModel(HighsModel model) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
@@ -266,10 +266,10 @@ HighsStatus Highs::passModel(const HighsModel& model) {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::passModel(const HighsLp& lp) {
+HighsStatus Highs::passModel(HighsLp lp) {
   HighsModel model;
   model.lp_ = std::move(lp);
-  return passModel(model);
+  return passModel(std::move(model));
 }
 
 HighsStatus Highs::passModel(
