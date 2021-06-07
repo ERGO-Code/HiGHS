@@ -683,23 +683,19 @@ HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask) {
 double Highs_getInfinity(void* highs) { return ((Highs*)highs)->getInfinity(); }
 
 HighsInt Highs_getNumCols(void* highs) {
-  return ((Highs*)highs)->getLp().numCol_;
+  return ((Highs*)highs)->getNumCols();
 }
 
 HighsInt Highs_getNumRows(void* highs) {
-  return ((Highs*)highs)->getLp().numRow_;
+  return ((Highs*)highs)->getNumRows();
 }
 
 HighsInt Highs_getNumNz(void* highs) {
-  HighsInt numCol = Highs_getNumCols(highs);
-  if (numCol <= 0) return 0;
-  return ((Highs*)highs)->getLp().Astart_[numCol];
+  return ((Highs*)highs)->getNumNz();
 }
 
 HighsInt Highs_getHessianNumNz(void* highs) {
-  HighsInt hessian_dim = ((Highs*)highs)->getModel().hessian_.dim_;
-  if (hessian_dim <= 0) return 0;
-  return ((Highs*)highs)->getModel().hessian_.q_start_[hessian_dim];
+  return ((Highs*)highs)->getHessianNumNz();
 }
 
 void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,

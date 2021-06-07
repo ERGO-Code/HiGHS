@@ -896,7 +896,7 @@ HighsInt Highs_getNumCols(void* highs);
 HighsInt Highs_getNumRows(void* highs);
 
 /**
- * @brief Returns the number of nonzeroes of the current model
+ * @brief Returns the number of nonzeros of the current model
  */
 HighsInt Highs_getNumNz(void* highs);
 

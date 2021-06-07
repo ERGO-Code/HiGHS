@@ -362,23 +362,28 @@ class Highs {
   );
 
   /**
-   * @brief Get the number of columns in the LP of the (first?)
-   * HighsModelObject
+   * @brief Get the number of columns in the incumbent model
    */
   HighsInt getNumCols() const { return model_.lp_.numCol_; }
 
   /**
-   * @brief Get the number of rows in the LP of the (first?)
-   * HighsModelObject
+   * @brief Get the number of rows in the incumbent model
    */
   HighsInt getNumRows() const { return model_.lp_.numRow_; }
 
   /**
-   * @brief Get the number of entries in the LP of the (first?)
-   * HighsModelObject
+   * @brief Get the number of (constraint matrix) nonzeros in the incumbent model
    */
-  HighsInt getNumEntries() {
+  HighsInt getNumNz() {
     if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
+    return 0;
+  }
+
+  /**
+   * @brief Get the number of Hessian matrix nonzeros in the incumbent model
+   */
+  HighsInt getHessianNumNz() {
+    if (model_.hessian_.dim_) return model_.hessian_.q_start_[model_.hessian_.dim_];
     return 0;
   }
 
@@ -884,6 +889,8 @@ class Highs {
   friend class OsiHiGHSSolverInterface;
 #endif
   // Start of deprecated methods
+
+  HighsInt getNumEntries() { return getNumNz(); }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
