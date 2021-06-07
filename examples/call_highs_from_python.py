@@ -26,7 +26,7 @@ return_code, col_value, col_dual, row_value, row_dual , col_basis, row_basis = H
                                                                                             rowlower, rowupper,
                                                                                             astart, aindex, avalue)
 
-print return_code, col_value, col_dual, row_value, row_dual, col_basis, row_basis
+print (return_code, col_value, col_dual, row_value, row_dual, col_basis, row_basis)
 
 file = "../HiGHS/src/interfaces/highs_mip_solver.py"
 exec(compile(open(file).read(), file, 'exec'))
@@ -39,4 +39,4 @@ return_code, col_value, row_value = Highs_mipCall(colcost, collower, colupper,
                                                   astart, aindex, avalue,
                                                   integrality)
 
-print return_code, col_value, row_value
+print (return_code, col_value, row_value)

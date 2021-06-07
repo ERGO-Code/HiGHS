@@ -16,7 +16,7 @@
 #include "Highs.h"
 
 #include <algorithm>
-//#include <string>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -31,6 +31,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
+#include "presolve/ICrashX.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -157,6 +158,7 @@ HighsStatus Highs::writeOptions(const std::string filename,
       writeOptionsToFile(file, options_.records, report_only_non_default_values,
                          html),
       return_status, "writeOptionsToFile");
+  if (file != stdout) fclose(file);
   return return_status;
 }
 
@@ -200,6 +202,7 @@ HighsStatus Highs::writeInfo(const std::string filename) {
   return_status = interpretCallStatus(
       writeInfoToFile(file, info_.valid, info_.records, html), return_status,
       "writeInfoToFile");
+  if (file != stdout) fclose(file);
   return return_status;
 }
 
@@ -2106,16 +2109,14 @@ HighsStatus Highs::writeSolution(const std::string filename,
                                  const bool pretty) const {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  HighsLp lp = lp_;
-  HighsBasis basis = basis_;
-  HighsSolution solution = solution_;
   FILE* file;
   bool html;
   call_status = openWriteFile(filename, "writeSolution", file, html);
   return_status =
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
-  writeSolutionToFile(file, lp, basis, solution, pretty);
+  writeSolutionToFile(file, lp_, basis_, solution_, pretty);
+  if (file != stdout) fclose(file);
   return HighsStatus::kOk;
 }
 
@@ -2525,4 +2526,21 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
                method_name.c_str());
+}
+
+HighsStatus Highs::crossover() {
+#ifdef IPX_ON
+  std::cout << "Loading crossover...\n";
+  HighsBasis basis;
+  bool x_status = callCrossover(lp_, options_, solution_, basis);
+  if (!x_status) return HighsStatus::kError;
+
+  setBasis(basis);
+#else
+  // No IPX available so end here at approximate solve.
+  std::cout << "No ipx code available. Error." << std::endl;
+  return HighsStatus::kError;
+#endif
+
+  return HighsStatus::kOk;
 }

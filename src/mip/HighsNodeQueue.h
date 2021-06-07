@@ -14,6 +14,7 @@
 #ifndef HIGHS_NODE_QUEUE_H_
 #define HIGHS_NODE_QUEUE_H_
 
+#include <cassert>
 #include <map>
 #include <queue>
 #include <vector>
@@ -113,6 +114,7 @@ class HighsNodeQueue {
   int64_t numNodesDown(HighsInt col) const { return colUpperNodes[col].size(); }
 
   int64_t numNodesUp(HighsInt col, double val) const {
+    assert((HighsInt)colLowerNodes.size() > col);
     auto it = colLowerNodes[col].upper_bound(val);
     if (it == colLowerNodes[col].begin()) return colLowerNodes[col].size();
     return std::distance(colLowerNodes[col].upper_bound(val),
@@ -120,6 +122,7 @@ class HighsNodeQueue {
   }
 
   int64_t numNodesDown(HighsInt col, double val) const {
+    assert((HighsInt)colUpperNodes.size() > col);
     auto it = colUpperNodes[col].lower_bound(val);
     if (it == colUpperNodes[col].end()) return colUpperNodes[col].size();
     return std::distance(colUpperNodes[col].begin(), it);

@@ -528,12 +528,10 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
 
-  if (!computeDualProof(mipsolver.mipdata_->domain,
-                        mipsolver.mipdata_->upper_limit, dualproofinds,
-                        dualproofvals, dualproofrhs)) {
-    dualproofrhs = kHighsInf;
-    hasdualproof = false;
-  }
+  hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
+                                  mipsolver.mipdata_->upper_limit,
+                                  dualproofinds, dualproofvals, dualproofrhs);
+  if (!hasdualproof) dualproofrhs = kHighsInf;
 }
 
 bool HighsLpRelaxation::checkDualProof() const {

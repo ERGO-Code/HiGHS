@@ -42,6 +42,7 @@ if (WIN32)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 else()
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 endif()
 
 if (NOT FAST_BUILD)
@@ -322,7 +323,7 @@ message(STATUS "FAST_BUILD set to on.
 set(HIGHS_VERSION_PATCH 0)
 
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
-option(IPX "Use interior point solver" OFF)
+option(IPX "Use interior point solver" ON)
 
 # todo: ig branch ipx-m 
 if (IPX)

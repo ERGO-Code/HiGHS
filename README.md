@@ -7,7 +7,7 @@ linear programming (LP) problems of the form
 
     Minimize c^Tx subject to L <= Ax <= U; l <= x <= u
 
-and mixed integer programming (MIP) problems of the same form, for whch some of the variables must take integer values. It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. Note that HiGHS requires (at least) version 4.9 of the GNU compiler. It has no third-party dependencies.
+and mixed integer programming (MIP) problems of the same form, for whch some of the variables must take integer values. It is mainly written in C++ with OpenMP directives, but also has some C. It has been developed and tested on various Linux, MacOS and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. Note that HiGHS requires (at least) version 4.9 of the GNU compiler. It has no third-party dependencies.
 
 HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier. The MIP solver has been written by Leona Gottwald.
 
@@ -88,9 +88,7 @@ Language interfaces and further documentation
 
 There are HiGHS interfaces for C, C#, FORTRAN, and Python in
 HiGHS/src/interfaces, with example driver files in
-HiGHS/examples. Documentation beyond what is in this file is "work in
-progress", but we expect to have some available before summer
-2020. However, we are happy to give a reasonable level of support via
+HiGHS/examples. Documentation is availble via https://www.highs.dev/, and we are happy to give a reasonable level of support via
 email sent to highsopt@gmail.com.
 
 Parallel code

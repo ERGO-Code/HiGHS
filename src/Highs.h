@@ -182,6 +182,11 @@ class Highs {
    */
 
   /**
+   * @brief Returns the HighsLp instance in the HiGHS model
+   */
+  const HighsLp& getLp() const { return lp_; }
+
+  /**
    * @brief Returns the HighsLp instance of the model in HiGHS
    */
   const HighsLp& getModel() const { return lp_; }
@@ -831,11 +836,6 @@ class Highs {
 #endif
   // Start of deprecated methods
 
-  const HighsLp& getLp() const {
-    deprecationMessage("getLp", "getModel");
-    return getModel();
-  }
-
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
       const bool value            //!< The option value
@@ -914,6 +914,9 @@ class Highs {
     deprecationMessage("getSimplexIterationCount", "None");
     return info_.simplex_iteration_count;
   }
+
+  // Runs ipx crossover and if successful loads basis into Highs::basis_
+  HighsStatus crossover();
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
