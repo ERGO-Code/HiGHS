@@ -61,11 +61,12 @@ class Highs {
 
   /**
    * @brief Every model loading module eventually uses
-   * passModel(HighsModel model) to communicate the model to HiGHS. It clears the vector
-   * of HighsModelObjects (hmos), creates a HighsModelObject for the
+   * passModel(HighsModel model) to communicate the model to HiGHS. It clears
+   * the vector of HighsModelObjects (hmos), creates a HighsModelObject for the
    * LP and makes it the first of the vector of HighsModelObjects
    */
-  HighsStatus passModel(HighsModel model  //!< The HighsModel instance for this model
+  HighsStatus passModel(
+      HighsModel model  //!< The HighsModel instance for this model
   );
 
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP

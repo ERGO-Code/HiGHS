@@ -386,8 +386,8 @@ HighsStatus Highs::readModel(const std::string filename) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
-  return_status =
-      interpretCallStatus(passModel(std::move(model)), return_status, "passModel");
+  return_status = interpretCallStatus(passModel(std::move(model)),
+                                      return_status, "passModel");
   return returnFromHighs(return_status);
 }
 
