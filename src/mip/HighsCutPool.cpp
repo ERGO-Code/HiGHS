@@ -219,23 +219,26 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     // though the cut dominates the clique cut where all those entries are
     // relaxed out.
     HighsCDouble rownorm = 0.0;
+    HighsInt numActiveNzs = 0;
     for (HighsInt j = start; j != end; ++j) {
       HighsInt col = ARindex[j];
       double solval = sol[col];
       if (ARvalue[j] > 0) {
-        if (solval - feastol > domain.colLower_[col])
+        if (solval > domain.colLower_[col] + feastol) {
           rownorm += ARvalue[j] * ARvalue[j];
+          numActiveNzs += 1;
+        }
       } else {
-        if (solval + feastol < domain.colUpper_[col])
+        if (solval < domain.colUpper_[col] - feastol) {
           rownorm += ARvalue[j] * ARvalue[j];
+          numActiveNzs += 1;
+        }
       }
     }
 
-    double sparsity =
-        1.0000001 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
     ++ageDistribution[0];
-    double score = double((sparsity) * (1e-3 + viol / sqrt(double(rownorm))));
+    double score = viol / (numActiveNzs * sqrt(double(rownorm)));
 
     efficacious_cuts.emplace_back(score, i);
   }
