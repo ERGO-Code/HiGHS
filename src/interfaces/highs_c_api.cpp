@@ -690,6 +690,16 @@ HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask) {
   return (HighsInt)((Highs*)highs)->deleteRows(mask);
 }
 
+HighsInt Highs_scaleCol(void* highs, const HighsInt col,
+                        const double scaleval) {
+  return (HighsInt)((Highs*)highs)->scaleCol(col, scaleval);
+}
+
+HighsInt Highs_scaleRow(void* highs, const HighsInt row,
+                        const double scaleval) {
+  return (HighsInt)((Highs*)highs)->scaleRow(row, scaleval);
+}
+
 double Highs_getInfinity(void* highs) { return ((Highs*)highs)->getInfinity(); }
 
 HighsInt Highs_getNumCols(void* highs) { return ((Highs*)highs)->getNumCols(); }

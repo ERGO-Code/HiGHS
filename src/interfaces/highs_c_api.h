@@ -881,6 +881,24 @@ HighsInt Highs_deleteRowsByMask(
 );
 
 /**
+ * @brief Scale a matrix column (and cost) by a constant - flipping
+ * bounds if the constant is negative
+ */
+HighsInt Highs_scaleCol(void* highs,
+                        const HighsInt col,    //!< Column to scale
+                        const double scaleval  //!< Value to scale by
+);
+
+/**
+ * @brief Scale a matrix row by a constant - flipping bounds if the
+ * constant is negative
+ */
+HighsInt Highs_scaleRow(void* highs,
+                        const HighsInt row,    //!< Row to scale
+                        const double scaleval  //!< Value to scale by
+);
+
+/**
  * @brief Returns the value of infinity used by HiGHS
  */
 double Highs_getInfinity(void* highs);

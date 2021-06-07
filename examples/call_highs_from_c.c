@@ -163,9 +163,9 @@ void full_api() {
   int* rowbasisstatus = (int*)malloc(sizeof(int) * numrow);
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) );
+  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) );
+  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) == 0);
 
   int sense;
   Highs_getObjectiveSense(highs, &sense);
