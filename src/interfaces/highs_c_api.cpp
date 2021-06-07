@@ -26,38 +26,40 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
                       HighsInt* rowbasisstatus, HighsInt* modelstatus) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
-  HighsInt status = Highs_passLp(&highs, numcol, numrow, numnz, rowwise, sense,
-                                 offset, colcost, collower, colupper, rowlower,
-                                 rowupper, astart, aindex, avalue);
-  if (status != 0) {
-    return status;
-  }
+  HighsStatus status = highs.passModel(
+      numcol, numrow, numnz, (bool)rowwise, sense, offset, colcost, collower,
+      colupper, rowlower, rowupper, astart, aindex, avalue);
+  if (status != HighsStatus::kOk) return (HighsInt)status;
 
-  status = (HighsInt)highs.run();
+  status = highs.run();
 
-  if (status == 0) {
+  if (status == HighsStatus::kOk) {
     HighsSolution solution;
     HighsBasis basis;
     solution = highs.getSolution();
     basis = highs.getBasis();
     *modelstatus = (HighsInt)highs.getModelStatus();
+    const HighsInfo& info = highs.getInfo();
+    const bool has_value =
+        info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
+    const bool has_dual =
+        info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
+    const bool has_basis = basis.valid;
 
     for (HighsInt i = 0; i < numcol; i++) {
-      colvalue[i] = solution.col_value[i];
-      coldual[i] = solution.col_dual[i];
-
-      colbasisstatus[i] = (HighsInt)basis.col_status[i];
+      if (has_value) colvalue[i] = solution.col_value[i];
+      if (has_dual) coldual[i] = solution.col_dual[i];
+      if (has_basis) colbasisstatus[i] = (HighsInt)basis.col_status[i];
     }
 
     for (HighsInt i = 0; i < numrow; i++) {
-      rowvalue[i] = solution.row_value[i];
-      rowdual[i] = solution.row_dual[i];
-
-      rowbasisstatus[i] = (HighsInt)basis.row_status[i];
+      if (has_value) rowvalue[i] = solution.row_value[i];
+      if (has_dual) rowdual[i] = solution.row_dual[i];
+      if (has_basis) rowbasisstatus[i] = (HighsInt)basis.row_status[i];
     }
   }
 
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
@@ -71,26 +73,27 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
                        double* rowvalue, HighsInt* modelstatus) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
-  HighsInt status = Highs_passMip(
-      &highs, numcol, numrow, numnz, rowwise, sense, offset, colcost, collower,
+  HighsStatus status = highs.passModel(
+      numcol, numrow, numnz, (bool)rowwise, sense, offset, colcost, collower,
       colupper, rowlower, rowupper, astart, aindex, avalue, integrality);
-  if (status != 0) {
-    return status;
-  }
+  if (status != HighsStatus::kOk) return (HighsInt)status;
 
-  status = (HighsInt)highs.run();
+  status = highs.run();
 
-  if (status == 0) {
+  if (status == HighsStatus::kOk) {
     HighsSolution solution;
     solution = highs.getSolution();
     *modelstatus = (HighsInt)highs.getModelStatus();
+    const bool has_value = highs.getInfo().primal_solution_status !=
+                           SolutionStatus::kSolutionStatusNone;
 
-    for (HighsInt i = 0; i < numcol; i++) colvalue[i] = solution.col_value[i];
-
-    for (HighsInt i = 0; i < numrow; i++) rowvalue[i] = solution.row_value[i];
+    if (has_value) {
+      for (HighsInt i = 0; i < numcol; i++) colvalue[i] = solution.col_value[i];
+      for (HighsInt i = 0; i < numrow; i++) rowvalue[i] = solution.row_value[i];
+    }
   }
 
-  return status;
+  return (HighsInt)status;
 }
 
 void* Highs_create() { return new Highs(); }
@@ -407,21 +410,22 @@ double Highs_getRunTime(void* highs) {
 HighsInt Highs_addRow(void* highs, const double lower, const double upper,
                       const HighsInt num_new_nz, const HighsInt* indices,
                       const double* values) {
-  return ((Highs*)highs)->addRow(lower, upper, num_new_nz, indices, values);
+  return (HighsInt)((Highs*)highs)
+      ->addRow(lower, upper, num_new_nz, indices, values);
 }
 
 HighsInt Highs_addRows(void* highs, const HighsInt num_new_row,
                        const double* lower, const double* upper,
                        const HighsInt num_new_nz, const HighsInt* starts,
                        const HighsInt* indices, const double* values) {
-  return ((Highs*)highs)
+  return (HighsInt)((Highs*)highs)
       ->addRows(num_new_row, lower, upper, num_new_nz, starts, indices, values);
 }
 
 HighsInt Highs_addCol(void* highs, const double cost, const double lower,
                       const double upper, const HighsInt num_new_nz,
                       const HighsInt* indices, const double* values) {
-  return ((Highs*)highs)
+  return (HighsInt)((Highs*)highs)
       ->addCol(cost, lower, upper, num_new_nz, indices, values);
 }
 
@@ -430,7 +434,7 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
                        const double* upper, const HighsInt num_new_nz,
                        const HighsInt* starts, const HighsInt* indices,
                        const double* values) {
-  return ((Highs*)highs)
+  return (HighsInt)((Highs*)highs)
       ->addCols(num_new_col, costs, lower, upper, num_new_nz, starts, indices,
                 values);
 }
@@ -438,12 +442,13 @@ HighsInt Highs_addCols(void* highs, const HighsInt num_new_col,
 HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
   ObjSense pass_sense = ObjSense::kMinimize;
   if (sense == (HighsInt)ObjSense::kMaximize) pass_sense = ObjSense::kMaximize;
-  return ((Highs*)highs)->changeObjectiveSense(pass_sense);
+  return (HighsInt)((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
 HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
                                     const HighsInt integrality) {
-  return ((Highs*)highs)->changeColIntegrality(col, (HighsVarType)integrality);
+  return (HighsInt)((Highs*)highs)
+      ->changeColIntegrality(col, (HighsVarType)integrality);
 }
 
 HighsInt Highs_changeColsIntegralityByRange(void* highs,
@@ -458,7 +463,7 @@ HighsInt Highs_changeColsIntegralityByRange(void* highs,
       pass_integrality[ix] = (HighsVarType)integrality[ix];
     }
   }
-  return ((Highs*)highs)
+  return (HighsInt)((Highs*)highs)
       ->changeColsIntegrality(from_col, to_col, &pass_integrality[0]);
 }
 
@@ -473,7 +478,7 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
       pass_integrality[ix] = (HighsVarType)integrality[ix];
     }
   }
-  return ((Highs*)highs)
+  return (HighsInt)((Highs*)highs)
       ->changeColsIntegrality(num_set_entries, set, &pass_integrality[0]);
 }
 
@@ -487,83 +492,87 @@ HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
       pass_integrality[iCol] = (HighsVarType)integrality[iCol];
     }
   }
-  return ((Highs*)highs)->changeColsIntegrality(mask, &pass_integrality[0]);
+  return (HighsInt)((Highs*)highs)
+      ->changeColsIntegrality(mask, &pass_integrality[0]);
 }
 
 HighsInt Highs_changeColCost(void* highs, const HighsInt col,
                              const double cost) {
-  return ((Highs*)highs)->changeColCost(col, cost);
+  return (HighsInt)((Highs*)highs)->changeColCost(col, cost);
 }
 
 HighsInt Highs_changeColsCostByRange(void* highs, const HighsInt from_col,
                                      const HighsInt to_col,
                                      const double* cost) {
-  return ((Highs*)highs)->changeColsCost(from_col, to_col, cost);
+  return (HighsInt)((Highs*)highs)->changeColsCost(from_col, to_col, cost);
 }
 
 HighsInt Highs_changeColsCostBySet(void* highs, const HighsInt num_set_entries,
                                    const HighsInt* set, const double* cost) {
-  return ((Highs*)highs)->changeColsCost(num_set_entries, set, cost);
+  return (HighsInt)((Highs*)highs)->changeColsCost(num_set_entries, set, cost);
 }
 
 HighsInt Highs_changeColsCostByMask(void* highs, const HighsInt* mask,
                                     const double* cost) {
-  return ((Highs*)highs)->changeColsCost(mask, cost);
+  return (HighsInt)((Highs*)highs)->changeColsCost(mask, cost);
 }
 
 HighsInt Highs_changeColBounds(void* highs, const HighsInt col,
                                const double lower, const double upper) {
-  return ((Highs*)highs)->changeColBounds(col, lower, upper);
+  return (HighsInt)((Highs*)highs)->changeColBounds(col, lower, upper);
 }
 
 HighsInt Highs_changeColsBoundsByRange(void* highs, const HighsInt from_col,
                                        const HighsInt to_col,
                                        const double* lower,
                                        const double* upper) {
-  return ((Highs*)highs)->changeColsBounds(from_col, to_col, lower, upper);
+  return (HighsInt)((Highs*)highs)
+      ->changeColsBounds(from_col, to_col, lower, upper);
 }
 
 HighsInt Highs_changeColsBoundsBySet(void* highs,
                                      const HighsInt num_set_entries,
                                      const HighsInt* set, const double* lower,
                                      const double* upper) {
-  return ((Highs*)highs)->changeColsBounds(num_set_entries, set, lower, upper);
+  return (HighsInt)((Highs*)highs)
+      ->changeColsBounds(num_set_entries, set, lower, upper);
 }
 
 HighsInt Highs_changeColsBoundsByMask(void* highs, const HighsInt* mask,
                                       const double* lower,
                                       const double* upper) {
-  return ((Highs*)highs)->changeColsBounds(mask, lower, upper);
+  return (HighsInt)((Highs*)highs)->changeColsBounds(mask, lower, upper);
 }
 
 HighsInt Highs_changeRowBounds(void* highs, const HighsInt row,
                                const double lower, const double upper) {
-  return ((Highs*)highs)->changeRowBounds(row, lower, upper);
+  return (HighsInt)((Highs*)highs)->changeRowBounds(row, lower, upper);
 }
 
 HighsInt Highs_changeRowsBoundsBySet(void* highs,
                                      const HighsInt num_set_entries,
                                      const HighsInt* set, const double* lower,
                                      const double* upper) {
-  return ((Highs*)highs)->changeRowsBounds(num_set_entries, set, lower, upper);
+  return (HighsInt)((Highs*)highs)
+      ->changeRowsBounds(num_set_entries, set, lower, upper);
 }
 
 HighsInt Highs_changeRowsBoundsByMask(void* highs, const HighsInt* mask,
                                       const double* lower,
                                       const double* upper) {
-  return ((Highs*)highs)->changeRowsBounds(mask, lower, upper);
+  return (HighsInt)((Highs*)highs)->changeRowsBounds(mask, lower, upper);
 }
 
 HighsInt Highs_changeCoeff(void* highs, const HighsInt row, const HighsInt col,
                            const double value) {
-  return ((Highs*)highs)->changeCoeff(row, col, value);
+  return (HighsInt)((Highs*)highs)->changeCoeff(row, col, value);
 }
 
 HighsInt Highs_getObjectiveSense(void* highs, HighsInt* sense) {
   ObjSense get_sense;
-  HighsInt status = ((Highs*)highs)->getObjectiveSense(get_sense);
+  HighsStatus status = ((Highs*)highs)->getObjectiveSense(get_sense);
   *sense = (HighsInt)get_sense;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_getColsByRange(void* highs, const HighsInt from_col,
@@ -572,13 +581,13 @@ HighsInt Highs_getColsByRange(void* highs, const HighsInt from_col,
                               HighsInt* num_nz, HighsInt* matrix_start,
                               HighsInt* matrix_index, double* matrix_value) {
   HighsInt numcol, numnz;
-  HighsInt status =
+  HighsStatus status =
       ((Highs*)highs)
           ->getCols(from_col, to_col, numcol, costs, lower, upper, numnz,
                     matrix_start, matrix_index, matrix_value);
   *num_col = numcol;
   *num_nz = numnz;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_getColsBySet(void* highs, const HighsInt num_set_entries,
@@ -587,13 +596,13 @@ HighsInt Highs_getColsBySet(void* highs, const HighsInt num_set_entries,
                             HighsInt* num_nz, HighsInt* matrix_start,
                             HighsInt* matrix_index, double* matrix_value) {
   HighsInt numcol, numnz;
-  HighsInt status =
+  HighsStatus status =
       ((Highs*)highs)
           ->getCols(num_set_entries, set, numcol, costs, lower, upper, numnz,
                     matrix_start, matrix_index, matrix_value);
   *num_col = numcol;
   *num_nz = numnz;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_getColsByMask(void* highs, const HighsInt* mask,
@@ -602,12 +611,12 @@ HighsInt Highs_getColsByMask(void* highs, const HighsInt* mask,
                              HighsInt* matrix_start, HighsInt* matrix_index,
                              double* matrix_value) {
   HighsInt numcol, numnz;
-  HighsInt status = ((Highs*)highs)
-                        ->getCols(mask, numcol, costs, lower, upper, numnz,
-                                  matrix_start, matrix_index, matrix_value);
+  HighsStatus status = ((Highs*)highs)
+                           ->getCols(mask, numcol, costs, lower, upper, numnz,
+                                     matrix_start, matrix_index, matrix_value);
   *num_col = numcol;
   *num_nz = numnz;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_getRowsByRange(void* highs, const HighsInt from_row,
@@ -616,12 +625,13 @@ HighsInt Highs_getRowsByRange(void* highs, const HighsInt from_row,
                               HighsInt* matrix_start, HighsInt* matrix_index,
                               double* matrix_value) {
   HighsInt numrow, numnz;
-  HighsInt status = ((Highs*)highs)
-                        ->getRows(from_row, to_row, numrow, lower, upper, numnz,
-                                  matrix_start, matrix_index, matrix_value);
+  HighsStatus status =
+      ((Highs*)highs)
+          ->getRows(from_row, to_row, numrow, lower, upper, numnz, matrix_start,
+                    matrix_index, matrix_value);
   *num_row = numrow;
   *num_nz = numnz;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_getRowsBySet(void* highs, const HighsInt num_set_entries,
@@ -630,13 +640,13 @@ HighsInt Highs_getRowsBySet(void* highs, const HighsInt num_set_entries,
                             HighsInt* matrix_start, HighsInt* matrix_index,
                             double* matrix_value) {
   HighsInt numrow, numnz;
-  HighsInt status =
+  HighsStatus status =
       ((Highs*)highs)
           ->getRows(num_set_entries, set, numrow, lower, upper, numnz,
                     matrix_start, matrix_index, matrix_value);
   *num_row = numrow;
   *num_nz = numnz;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_getRowsByMask(void* highs, const HighsInt* mask,
@@ -644,55 +654,49 @@ HighsInt Highs_getRowsByMask(void* highs, const HighsInt* mask,
                              HighsInt* num_nz, HighsInt* matrix_start,
                              HighsInt* matrix_index, double* matrix_value) {
   HighsInt numrow, numnz;
-  HighsInt status = ((Highs*)highs)
-                        ->getRows(mask, numrow, lower, upper, numnz,
-                                  matrix_start, matrix_index, matrix_value);
+  HighsStatus status = ((Highs*)highs)
+                           ->getRows(mask, numrow, lower, upper, numnz,
+                                     matrix_start, matrix_index, matrix_value);
   *num_row = numrow;
   *num_nz = numnz;
-  return status;
+  return (HighsInt)status;
 }
 
 HighsInt Highs_deleteColsByRange(void* highs, const HighsInt from_col,
                                  const HighsInt to_col) {
-  return ((Highs*)highs)->deleteCols(from_col, to_col);
+  return (HighsInt)((Highs*)highs)->deleteCols(from_col, to_col);
 }
 
 HighsInt Highs_deleteColsBySet(void* highs, const HighsInt num_set_entries,
                                const HighsInt* set) {
-  return ((Highs*)highs)->deleteCols(num_set_entries, set);
+  return (HighsInt)((Highs*)highs)->deleteCols(num_set_entries, set);
 }
 
 HighsInt Highs_deleteColsByMask(void* highs, HighsInt* mask) {
-  return ((Highs*)highs)->deleteCols(mask);
+  return (HighsInt)((Highs*)highs)->deleteCols(mask);
 }
 
 HighsInt Highs_deleteRowsByRange(void* highs, const HighsInt from_row,
                                  const HighsInt to_row) {
-  return ((Highs*)highs)->deleteRows(from_row, to_row);
+  return (HighsInt)((Highs*)highs)->deleteRows(from_row, to_row);
 }
 
 HighsInt Highs_deleteRowsBySet(void* highs, const HighsInt num_set_entries,
                                const HighsInt* set) {
-  return ((Highs*)highs)->deleteRows(num_set_entries, set);
+  return (HighsInt)((Highs*)highs)->deleteRows(num_set_entries, set);
 }
 
 HighsInt Highs_deleteRowsByMask(void* highs, HighsInt* mask) {
-  return ((Highs*)highs)->deleteRows(mask);
+  return (HighsInt)((Highs*)highs)->deleteRows(mask);
 }
 
 double Highs_getInfinity(void* highs) { return ((Highs*)highs)->getInfinity(); }
 
-HighsInt Highs_getNumCols(void* highs) {
-  return ((Highs*)highs)->getNumCols();
-}
+HighsInt Highs_getNumCols(void* highs) { return ((Highs*)highs)->getNumCols(); }
 
-HighsInt Highs_getNumRows(void* highs) {
-  return ((Highs*)highs)->getNumRows();
-}
+HighsInt Highs_getNumRows(void* highs) { return ((Highs*)highs)->getNumRows(); }
 
-HighsInt Highs_getNumNz(void* highs) {
-  return ((Highs*)highs)->getNumNz();
-}
+HighsInt Highs_getNumNz(void* highs) { return ((Highs*)highs)->getNumNz(); }
 
 HighsInt Highs_getHessianNumNz(void* highs) {
   return ((Highs*)highs)->getHessianNumNz();

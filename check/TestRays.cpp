@@ -258,7 +258,7 @@ void testUnboundedMps(const std::string model,
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kUnbounded;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(highs.changeObjectiveSense(sense));
+  REQUIRE(highs.changeObjectiveSense(sense) == HighsStatus::kOk);
   lp = highs.getLp();
   lp.model_name_ = model;
   REQUIRE(highs.setBasis() == HighsStatus::kOk);

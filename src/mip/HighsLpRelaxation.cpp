@@ -201,7 +201,8 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
     bool success =
         lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
                          cutset.ARvalue_.size(), cutset.ARstart_.data(),
-                         cutset.ARindex_.data(), cutset.ARvalue_.data());
+                         cutset.ARindex_.data(),
+                         cutset.ARvalue_.data()) == HighsStatus::kOk;
     assert(success);
     (void)success;
     assert(lpsolver.getLp().numRow_ ==

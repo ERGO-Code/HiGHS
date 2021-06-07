@@ -201,8 +201,8 @@ void full_api() {
   HighsInt aindex[4] = {0, 1, 0, 1};
   double avalue[4] = {1.0, 2.0, 1.0, 3.0};
 
-  assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) );
-  assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) );
+  assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) == 0);
+  assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) == 0);
 
   assert( Highs_getNumCols(highs) == numcol);
   assert( Highs_getNumRows(highs) == numrow);
@@ -288,9 +288,9 @@ void full_api_lp() {
   HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(int) * numrow);
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) );
+  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) );
+  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) == 0);
 
   HighsInt sense;
   Highs_getObjectiveSense(highs, &sense);
