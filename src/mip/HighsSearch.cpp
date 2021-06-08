@@ -245,19 +245,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
   std::iota(evalqueue.begin(), evalqueue.end(), 0);
 
   auto numNodesUp = [&](HighsInt k) {
-    if (mipsolver.mipdata_->domain.isBinary(fracints[k].first))
-      return mipsolver.mipdata_->nodequeue.numNodesUp(fracints[k].first);
-
-    return mipsolver.mipdata_->nodequeue.numNodesUp(fracints[k].first,
-                                                    fracints[k].second);
+    return mipsolver.mipdata_->nodequeue.numNodesUp(fracints[k].first);
   };
 
   auto numNodesDown = [&](HighsInt k) {
-    if (mipsolver.mipdata_->domain.isBinary(fracints[k].first))
-      return mipsolver.mipdata_->nodequeue.numNodesDown(fracints[k].first);
-
-    return mipsolver.mipdata_->nodequeue.numNodesDown(fracints[k].first,
-                                                      fracints[k].second);
+    return mipsolver.mipdata_->nodequeue.numNodesDown(fracints[k].first);
   };
 
   double minScore = mipsolver.mipdata_->feastol;
@@ -921,19 +913,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
         case ChildSelectionRule::kDisjunction: {
           int64_t numnodesup;
           int64_t numnodesdown;
-          if (mipsolver.mipdata_->domain.isBinary(col)) {
-            // this is faster for binary variables as the overload that gets a
-            // value may be linear in the number of open nodes in the worst case
-            // (if every node has tightened local bounds on this column)
-            numnodesup = mipsolver.mipdata_->nodequeue.numNodesUp(col);
-            numnodesdown = mipsolver.mipdata_->nodequeue.numNodesDown(col);
-          } else {
-            numnodesup = mipsolver.mipdata_->nodequeue.numNodesUp(
-                col, currnode.branching_point);
-            numnodesdown = mipsolver.mipdata_->nodequeue.numNodesDown(
-                col, currnode.branching_point);
-          }
-          if (numnodesup > numnodesdown) {  // > -> neos*-inde sehr schnell
+          numnodesup = mipsolver.mipdata_->nodequeue.numNodesUp(col);
+          numnodesdown = mipsolver.mipdata_->nodequeue.numNodesDown(col);
+          if (numnodesup > numnodesdown) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);

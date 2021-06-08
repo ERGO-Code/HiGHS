@@ -92,33 +92,11 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
                 int64_t numNodesA;
                 int64_t numNodesB;
 
-                if (complementation[i]) {
-                  numNodesA =
-                      upper[i] < 1.5
-                          ? nodequeue.numNodesDown(inds[i])
-                          : nodequeue.numNodesDown(
-                                inds[i], lpRelaxation.colUpper(inds[i]) + 0.5);
-                } else {
-                  numNodesA =
-                      upper[i] < 1.5
-                          ? nodequeue.numNodesUp(inds[i])
-                          : nodequeue.numNodesUp(
-                                inds[i], lpRelaxation.colLower(inds[i]) - 0.5);
-                }
+                numNodesA = complementation[i] ? nodequeue.numNodesDown(inds[i])
+                                               : nodequeue.numNodesUp(inds[i]);
 
-                if (complementation[j]) {
-                  numNodesB =
-                      upper[j] < 1.5
-                          ? nodequeue.numNodesDown(inds[j])
-                          : nodequeue.numNodesDown(
-                                inds[j], lpRelaxation.colUpper(inds[j]) + 0.5);
-                } else {
-                  numNodesB =
-                      upper[j] < 1.5
-                          ? nodequeue.numNodesUp(inds[j])
-                          : nodequeue.numNodesUp(
-                                inds[j], lpRelaxation.colLower(inds[j]) - 0.5);
-                }
+                numNodesB = complementation[j] ? nodequeue.numNodesDown(inds[j])
+                                               : nodequeue.numNodesUp(inds[j]);
 
                 if (numNodesA > numNodesB) return true;
                 if (numNodesA < numNodesB) return false;
