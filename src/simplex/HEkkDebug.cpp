@@ -24,7 +24,7 @@
 #include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
 
-using std::fabs;
+using std::abs;
 using std::max;
 
 const double ok_feasibility_difference = 1e-3;
@@ -107,7 +107,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     double dual_infeasibility = 0;
     HighsInt move;
     if (lower == upper) {
-      primal_error = fabs(lower - value);
+      primal_error = abs(lower - value);
       move = kNonbasicMoveZe;
     } else if (value == lower) {
       move = kNonbasicMoveUp;
@@ -117,9 +117,9 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       dual_infeasibility = max(dual, 0.);
     } else {
       // If not fixed or at a bound, only valid status can be zero and free
-      primal_error = fabs(value);
+      primal_error = abs(value);
       move = kNonbasicMoveZe;
-      dual_infeasibility = fabs(dual);
+      dual_infeasibility = abs(dual);
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility > dual_feasibility_tolerance) {
@@ -210,7 +210,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       assert(!baseBound_error);
       return HighsDebugStatus::kLogicalError;
     }
-    max_basic_dual = max(fabs(dual), max_basic_dual);
+    max_basic_dual = max(abs(dual), max_basic_dual);
     HighsInt bound_violated = 0;
     if (value < lower - primal_feasibility_tolerance) {
       bound_violated = -1;
@@ -220,7 +220,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     if (algorithm == SimplexAlgorithm::kPrimal && phase == 1) {
       double primal_phase1_cost = bound_violated;
       if (base) primal_phase1_cost *= 1 + base * info.numTotRandomValue_[iRow];
-      bool primal_phase1_cost_error = fabs(cost - primal_phase1_cost);
+      bool primal_phase1_cost_error = abs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
         highsLogUser(options.log_options, HighsLogType::kError,
                      "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
@@ -294,7 +294,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       ekk_instance.info_.max_primal_infeasibility;
   if (info_max_primal_infeasibility >= 0) {
     const bool illegal_max_primal_infeasibility =
-        fabs(max_primal_infeasibility - info_max_primal_infeasibility) >
+        abs(max_primal_infeasibility - info_max_primal_infeasibility) >
         ok_feasibility_difference;
     if (illegal_max_primal_infeasibility) {
       highsLogUser(options.log_options, HighsLogType::kError,
@@ -311,7 +311,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       ekk_instance.info_.sum_primal_infeasibility;
   if (info_sum_primal_infeasibility >= 0) {
     const bool illegal_sum_primal_infeasibility =
-        fabs(sum_primal_infeasibility - info_sum_primal_infeasibility) >
+        abs(sum_primal_infeasibility - info_sum_primal_infeasibility) >
         ok_feasibility_difference;
     if (illegal_sum_primal_infeasibility) {
       highsLogUser(options.log_options, HighsLogType::kError,
@@ -345,7 +345,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       ekk_instance.info_.max_dual_infeasibility;
   if (info_max_dual_infeasibility >= 0) {
     const bool illegal_max_dual_infeasibility =
-        fabs(max_dual_infeasibility - info_max_dual_infeasibility) >
+        abs(max_dual_infeasibility - info_max_dual_infeasibility) >
         ok_feasibility_difference;
     if (illegal_max_dual_infeasibility) {
       highsLogUser(options.log_options, HighsLogType::kError,
@@ -362,7 +362,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       ekk_instance.info_.sum_dual_infeasibility;
   if (info_sum_dual_infeasibility >= 0) {
     const bool illegal_sum_dual_infeasibility =
-        fabs(sum_dual_infeasibility - info_sum_dual_infeasibility) >
+        abs(sum_dual_infeasibility - info_sum_dual_infeasibility) >
         ok_feasibility_difference;
     if (illegal_sum_dual_infeasibility) {
       highsLogUser(options.log_options, HighsLogType::kError,
@@ -455,14 +455,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       primal_activity[iRow] += value * Avalue;
       dual += dual_value[iVar] * Avalue;
     }
-    double dual_residual = fabs(dual - info.workDual_[iCol]);
+    double dual_residual = abs(dual - info.workDual_[iCol]);
     max_dual_residual = max(dual_residual, max_dual_residual);
   }
   // Remember that simplex row values are the negated row activities
   double max_primal_residual = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
-    double primal_residual = fabs(primal_activity[iRow] + primal_value[iVar]);
+    double primal_residual = abs(primal_activity[iRow] + primal_value[iVar]);
     max_primal_residual = max(primal_residual, max_primal_residual);
   }
   if (max_primal_residual > excessive_residual_error) {
@@ -1089,9 +1089,9 @@ void ekkDebugReportReinvertOnNumericalTrouble(
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert) {
   if (ekk_instance.options_.highs_debug_level < kHighsDebugLevelCheap) return;
-  const double abs_alpha_from_col = fabs(alpha_from_col);
-  const double abs_alpha_from_row = fabs(alpha_from_row);
-  const double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
+  const double abs_alpha_from_col = abs(alpha_from_col);
+  const double abs_alpha_from_row = abs(alpha_from_row);
+  const double abs_alpha_diff = abs(abs_alpha_from_col - abs_alpha_from_row);
   const HighsInt iteration_count = ekk_instance.iteration_count_;
   const HighsInt update_count = ekk_instance.info_.update_count;
   const std::string model_name = ekk_instance.lp_.model_name_;
@@ -1138,7 +1138,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
   std::string error_adjective;
   HighsLogType report_level;
-  double updated_dual_absolute_error = fabs(updated_dual - computed_dual);
+  double updated_dual_absolute_error = abs(updated_dual - computed_dual);
   double updated_dual_relative_error =
       updated_dual_absolute_error / max(abs(computed_dual), 1.0);
   bool sign_error = updated_dual * computed_dual <= 0;
