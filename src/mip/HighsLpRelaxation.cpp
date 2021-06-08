@@ -300,13 +300,15 @@ void HighsLpRelaxation::performAging(bool useBasis) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
     if (!useBasis ||
         lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
-      if (mipsolver.mipdata_->cutpool.ageLpCut(lprows[i].index, agelimit)) {
+      lprows[i].age += 1;
+      if (lprows[i].age > agelimit) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
         ++ndelcuts;
         deletemask[i] = 1;
+        mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
       }
     } else {
-      mipsolver.mipdata_->cutpool.resetAge(lprows[i].index);
+      lprows[i].age = 0;
     }
   }
 

@@ -88,21 +88,7 @@ class HighsCutPool {
   const std::vector<double>& getRhs() const { return rhs_; }
 
   void resetAge(HighsInt cut) {
-    if (ages_[cut] < 0)
-      ages_[cut] = -1;
-    else
-      ages_[cut] = 0;
-  }
-
-  bool ageLpCut(HighsInt cut, HighsInt agelimit) {
-    assert(ages_[cut] < 0);
-    --ages_[cut];
-    if (ages_[cut] < -agelimit) {
-      ages_[cut] = 1;
-      return true;
-    }
-
-    return false;
+    if (ages_[cut] >= 0) ages_[cut] = 0;
   }
 
   double getParallelism(HighsInt row1, HighsInt row2) const;

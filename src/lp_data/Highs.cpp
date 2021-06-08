@@ -226,7 +226,7 @@ HighsStatus Highs::reset() {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::passModel(const HighsLp lp) {
+HighsStatus Highs::passModel(HighsLp lp) {
   HighsStatus return_status = HighsStatus::kOk;
   // move the copy of the LP to the internal LP
   lp_ = std::move(lp);
