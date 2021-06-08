@@ -1991,10 +1991,6 @@ std::string Highs::solutionStatusToString(const HighsInt solution_status) {
   return utilSolutionStatusToString(solution_status);
 }
 
-void Highs::setMatrixOrientation(const MatrixOrientation& desired_orientation) {
-  setOrientation(model_.lp_, desired_orientation);
-}
-
 // Private methods
 HighsPresolveStatus Highs::runPresolve() {
   presolve_.clear();

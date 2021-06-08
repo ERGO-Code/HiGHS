@@ -2357,8 +2357,9 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation) {
-  if (lp.orientation_ == desired_orientation) return;
+HighsStatus setOrientation(HighsLp& lp,
+                           const MatrixOrientation desired_orientation) {
+  if (lp.orientation_ == desired_orientation) return HighsStatus::kOk;
   if (lp.numCol_ == 0 && lp.numRow_ == 0) {
     // No rows or columns, so either orientation is possible and has
     // identical data: just requires the start of the fictitious
@@ -2369,7 +2370,7 @@ void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation) {
     if (lp.orientation_ == MatrixOrientation::kNone) {
       // Assume matrix data are already COLWISE
       lp.orientation_ = MatrixOrientation::kColwise;
-      return;
+      return HighsStatus::kOk;
     }
     assert(lp.orientation_ == MatrixOrientation::kRowwise);
     ensureColWise(lp);
@@ -2377,11 +2378,12 @@ void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation) {
     if (lp.orientation_ == MatrixOrientation::kNone) {
       // Assume matrix data are already ROWWISE
       lp.orientation_ = MatrixOrientation::kRowwise;
-      return;
+      return HighsStatus::kOk;
     }
     assert(lp.orientation_ == MatrixOrientation::kColwise);
     ensureRowWise(lp);
   }
+  return HighsStatus::kOk;
 }
 
 void ensureColWise(HighsLp& lp) {

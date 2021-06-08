@@ -891,8 +891,10 @@ class Highs {
 
   std::string solutionStatusToString(const HighsInt solution_status);
 
-  void setMatrixOrientation(const MatrixOrientation& desired_orientation =
-                                MatrixOrientation::kColwise);
+  HighsStatus setMatrixOrientation(const MatrixOrientation desired_orientation =
+                                       MatrixOrientation::kColwise) {
+    return setOrientation(model_.lp_, desired_orientation);
+  }
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
