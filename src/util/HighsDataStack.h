@@ -35,8 +35,7 @@ class HighsDataStack {
   void resetPosition() { position = data.size(); }
 
   template <typename T,
-            typename std::enable_if<IS_TRIVIALLY_COPYABLE(T),
-                                    int>::type = 0>
+            typename std::enable_if<IS_TRIVIALLY_COPYABLE(T), int>::type = 0>
   void push(const T& r) {
     HighsInt dataSize = data.size();
     data.resize(dataSize + sizeof(T));
@@ -44,8 +43,7 @@ class HighsDataStack {
   }
 
   template <typename T,
-            typename std::enable_if<IS_TRIVIALLY_COPYABLE(T),
-                                    int>::type = 0>
+            typename std::enable_if<IS_TRIVIALLY_COPYABLE(T), int>::type = 0>
   void pop(T& r) {
     position -= sizeof(T);
     std::memcpy(&r, data.data() + position, sizeof(T));
