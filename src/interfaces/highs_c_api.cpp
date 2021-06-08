@@ -247,7 +247,7 @@ HighsInt Highs_getDoubleInfoValue(void* highs, const char* info,
 }
 
 HighsInt Highs_getSolution(void* highs, double* colvalue, double* coldual,
-                       double* rowvalue, double* rowdual) {
+                           double* rowvalue, double* rowdual) {
   HighsSolution solution = ((Highs*)highs)->getSolution();
 
   for (HighsInt i = 0; i < (HighsInt)solution.col_value.size(); i++) {
@@ -714,13 +714,14 @@ HighsInt Highs_getHessianNumNz(void* highs) {
   return ((Highs*)highs)->getHessianNumNz();
 }
 
-HighsInt Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
-			HighsInt* numrow, HighsInt* numnz, HighsInt* hessian_num_nz,
-			HighsInt* sense, double* offset, double* colcost,
-			double* collower, double* colupper, double* rowlower,
-			double* rowupper, HighsInt* astart, HighsInt* aindex,
-			double* avalue, HighsInt* qstart, HighsInt* qindex,
-			double* qvalue, HighsInt* integrality) {
+HighsInt Highs_getModel(void* highs, const HighsInt orientation,
+                        HighsInt* numcol, HighsInt* numrow, HighsInt* numnz,
+                        HighsInt* hessian_num_nz, HighsInt* sense,
+                        double* offset, double* colcost, double* collower,
+                        double* colupper, double* rowlower, double* rowupper,
+                        HighsInt* astart, HighsInt* aindex, double* avalue,
+                        HighsInt* qstart, HighsInt* qindex, double* qvalue,
+                        HighsInt* integrality) {
   const HighsModel& model = ((Highs*)highs)->getModel();
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
@@ -751,7 +752,8 @@ HighsInt Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numco
   }
   // Ensure the desired orientation
   HighsInt return_status;
-  return_status = (HighsInt)((Highs*)highs)->setMatrixOrientation(desired_orientation);
+  return_status =
+      (HighsInt)((Highs*)highs)->setMatrixOrientation(desired_orientation);
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
@@ -771,7 +773,8 @@ HighsInt Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numco
       integrality[iCol] = (HighsInt)lp.integrality_[iCol];
   }
   // Restore the original orientation
-  return_status = (HighsInt)((Highs*)highs)->setMatrixOrientation(original_orientation);
+  return_status =
+      (HighsInt)((Highs*)highs)->setMatrixOrientation(original_orientation);
   if (return_status != HighsStatuskOk) return return_status;
   return HighsStatuskOk;
 }

@@ -278,7 +278,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_getSolution
 
-    function Highs_getBasis (h, cbs, rbs) result(s) bind (c, name='Highs_getBasis')
+    function Highs_getBasis (h, cbs, rbs) result( s ) bind (c, name='Highs_getBasis')
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer ( c_int ) :: cbs(*)

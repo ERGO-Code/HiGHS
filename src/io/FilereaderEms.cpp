@@ -78,7 +78,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                    "matrix not found in EMS file\n");
       return FilereaderRetcode::kParserError;
     }
-    lp.orientation_= MatrixOrientation::kColwise;
+    lp.orientation_ = MatrixOrientation::kColwise;
     lp.Astart_.resize(numCol + 1);
     lp.Aindex_.resize(AcountX);
     lp.Avalue_.resize(AcountX);
@@ -175,7 +175,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "end_linear") {
       // File read completed OK
       f.close();
-      setOrientation(lp);
+      if (setOrientation(lp) != HighsStatus::kOk)
+        return FilereaderRetcode::kParserError;
       return FilereaderRetcode::kOk;
     }
 
@@ -205,7 +206,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       // OK if file just ends after the integer_columns section without
       // end_linear
       if (!f) {
-        setOrientation(lp);
+        if (setOrientation(lp) != HighsStatus::kOk)
+          return FilereaderRetcode::kParserError;
         return FilereaderRetcode::kOk;
       }
       highsLogUser(options.log_options, HighsLogType::kError,
@@ -218,7 +220,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                  "EMS file not found\n");
     return FilereaderRetcode::kFileNotFound;
   }
-  setOrientation(lp);
+  if (setOrientation(lp) != HighsStatus::kOk)
+    return FilereaderRetcode::kParserError;
   return FilereaderRetcode::kOk;
 }
 

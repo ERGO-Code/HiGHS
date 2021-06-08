@@ -238,7 +238,9 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
   // Ensure that the LP is column-wise
-  setOrientation(lp);
+  return_status =
+      interpretCallStatus(setOrientation(lp), return_status, "setOrientation");
+  if (return_status == HighsStatus::kError) return return_status;
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
@@ -419,7 +421,9 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  setOrientation(model_.lp_);
+  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
+                                      "setOrientation");
+  if (return_status == HighsStatus::kError) return return_status;
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel();
@@ -529,9 +533,15 @@ HighsStatus Highs::run() {
   }
 
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  setOrientation(model_.lp_);
-  if (hmos_[0].ekk_instance_.status_.valid)
-    setOrientation(hmos_[0].ekk_instance_.lp_);
+  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
+                                      "setOrientation");
+  if (return_status == HighsStatus::kError) return return_status;
+  if (hmos_[0].ekk_instance_.status_.valid) {
+    return_status =
+        interpretCallStatus(setOrientation(hmos_[0].ekk_instance_.lp_),
+                            return_status, "setOrientation");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -1155,7 +1165,10 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
-  setOrientation(model_.lp_);
+  HighsStatus return_status = HighsStatus::kOk;
+  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
+                                      "setOrientation");
+  if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (row_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -1213,7 +1226,10 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                                     HighsInt* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
-  setOrientation(model_.lp_);
+  HighsStatus return_status = HighsStatus::kOk;
+  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
+                                      "setOrientation");
+  if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (col_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,

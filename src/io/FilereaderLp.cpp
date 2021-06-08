@@ -87,7 +87,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::kParserError;
   }
-  setOrientation(lp);
+  if (setOrientation(lp) != HighsStatus::kOk)
+    return FilereaderRetcode::kParserError;
   return FilereaderRetcode::kOk;
 }
 

@@ -316,11 +316,12 @@ HighsInt Highs_getSolution(
 /*
  * @brief
  */
-HighsInt Highs_getBasis(void* highs,
-                    HighsInt* colstatus,  //!< array of length [numcol], filled
-                                          //!< with column basis stati
-                    HighsInt* rowstatus   //!< array of length [numrow], filled
-                                          //!< with row basis stati
+HighsInt Highs_getBasis(
+    void* highs,
+    HighsInt* colstatus,  //!< array of length [numcol], filled
+                          //!< with column basis stati
+    HighsInt* rowstatus   //!< array of length [numrow], filled
+                          //!< with row basis stati
 );
 
 /**
@@ -926,13 +927,14 @@ HighsInt Highs_getNumNz(void* highs);
  */
 HighsInt Highs_getHessianNumNz(void* highs);
 
-HighsInt Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
-			HighsInt* numrow, HighsInt* numnz, HighsInt* hessian_num_nz,
-			HighsInt* sense, double* offset, double* colcost,
-			double* collower, double* colupper, double* rowlower,
-			double* rowupper, HighsInt* astart, HighsInt* aindex,
-			double* avalue, HighsInt* qstart, HighsInt* qindex,
-			double* qvalue, HighsInt* integrality);
+HighsInt Highs_getModel(void* highs, const HighsInt orientation,
+                        HighsInt* numcol, HighsInt* numrow, HighsInt* numnz,
+                        HighsInt* hessian_num_nz, HighsInt* sense,
+                        double* offset, double* colcost, double* collower,
+                        double* colupper, double* rowlower, double* rowupper,
+                        HighsInt* astart, HighsInt* aindex, double* avalue,
+                        HighsInt* qstart, HighsInt* qindex, double* qvalue,
+                        HighsInt* integrality);
 
 // Fails on Windows and MacOS since string_model_status is destroyed
 // after the method returns, so what's returned is a pointer to

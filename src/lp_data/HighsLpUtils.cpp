@@ -2359,7 +2359,8 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 
 HighsStatus setOrientation(HighsLp& lp,
                            const MatrixOrientation desired_orientation) {
-  if (desired_orientation == MatrixOrientation::kNone) return HighsStatus::kError;
+  if (desired_orientation == MatrixOrientation::kNone)
+    return HighsStatus::kError;
   if (lp.orientation_ == desired_orientation) return HighsStatus::kOk;
   if (lp.numCol_ == 0 && lp.numRow_ == 0) {
     // No rows or columns, so either orientation is possible and has

@@ -152,7 +152,7 @@ public unsafe class HighsLpSolver
    private static extern int Highs_setOptionValue(void* highs, string option, string value);
 
    [DllImport(highslibname)]
-   private static extern void Highs_getSolution(void* highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
+   private static extern int Highs_getSolution(void* highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
 
    [DllImport(highslibname)]
    private static extern int Highs_getNumCols(void* highs);
@@ -164,7 +164,7 @@ public unsafe class HighsLpSolver
    private static extern int Highs_getNumNz(void* highs);
 
    [DllImport(highslibname)]
-   private static extern void Highs_getBasis(void* highs, int[] colstatus, int[] rowstatus);
+   private static extern int Highs_getBasis(void* highs, int[] colstatus, int[] rowstatus);
 
    [DllImport(highslibname)]
    private static extern double Highs_getObjectiveValue(void* highs);

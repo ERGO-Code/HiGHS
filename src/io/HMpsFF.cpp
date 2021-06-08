@@ -33,7 +33,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
-  lp.orientation_= MatrixOrientation::kColwise;
+  lp.orientation_ = MatrixOrientation::kColwise;
   lp.Astart_ = std::move(Astart);
   lp.Aindex_ = std::move(Aindex);
   lp.Avalue_ = std::move(Avalue);
