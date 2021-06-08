@@ -189,10 +189,11 @@ struct HighsHashHelpers {
     const char* dataend = (const char*)(vals + numvals);
 
     while (dataptr != dataend) {
+      using std::size_t;
       size_t numBytes = std::min(size_t(dataend - dataptr), size_t{64});
       size_t numPairs = (numBytes + 7) / 8;
       size_t lastPairBytes = numBytes - (numPairs - 1) * 8;
-      size_t chunkhash = 0;
+      u64 chunkhash = 0;
       switch (numPairs) {
         case 8:
           if (hash != 0) hash = multiply_modM61(hash, c[k++ & 15] & M61());
