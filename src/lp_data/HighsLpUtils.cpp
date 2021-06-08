@@ -2359,6 +2359,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
 
 HighsStatus setOrientation(HighsLp& lp,
                            const MatrixOrientation desired_orientation) {
+  if (desired_orientation == MatrixOrientation::kNone) return HighsStatus::kError;
   if (lp.orientation_ == desired_orientation) return HighsStatus::kOk;
   if (lp.numCol_ == 0 && lp.numRow_ == 0) {
     // No rows or columns, so either orientation is possible and has
@@ -2366,23 +2367,16 @@ HighsStatus setOrientation(HighsLp& lp,
     // row/column 0
     lp.Astart_.assign(1, 0);
     lp.orientation_ = desired_orientation;
-  } else if (desired_orientation == MatrixOrientation::kColwise) {
-    if (lp.orientation_ == MatrixOrientation::kNone) {
-      // Assume matrix data are already COLWISE
-      lp.orientation_ = MatrixOrientation::kColwise;
-      return HighsStatus::kOk;
-    }
-    assert(lp.orientation_ == MatrixOrientation::kRowwise);
-    ensureColWise(lp);
   } else {
-    if (lp.orientation_ == MatrixOrientation::kNone) {
-      // Assume matrix data are already ROWWISE
-      lp.orientation_ = MatrixOrientation::kRowwise;
-      return HighsStatus::kOk;
+    // Any LP with positive numbers of rows or columns must have an orientation
+    assert(lp.orientation_ != MatrixOrientation::kNone);
+    if (desired_orientation == MatrixOrientation::kColwise) {
+      ensureColWise(lp);
+    } else {
+      ensureRowWise(lp);
     }
-    assert(lp.orientation_ == MatrixOrientation::kColwise);
-    ensureRowWise(lp);
   }
+  assert(lp.orientation_ == desired_orientation);
   return HighsStatus::kOk;
 }
 

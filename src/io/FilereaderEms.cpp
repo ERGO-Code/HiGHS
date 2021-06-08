@@ -78,6 +78,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                    "matrix not found in EMS file\n");
       return FilereaderRetcode::kParserError;
     }
+    lp.orientation_= MatrixOrientation::kColwise;
     lp.Astart_.resize(numCol + 1);
     lp.Aindex_.resize(AcountX);
     lp.Avalue_.resize(AcountX);

@@ -63,7 +63,10 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_, lp.col_names_,
       lp.row_names_, options.keep_n_rows);
-  if (return_code == FilereaderRetcode::kOk) setOrientation(lp);
+  if (return_code == FilereaderRetcode::kOk) {
+    lp.orientation_ = MatrixOrientation::kColwise;
+    setOrientation(lp);
+  }
   if (namesWithSpaces(lp.numCol_, lp.col_names_)) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has column names with spaces\n");

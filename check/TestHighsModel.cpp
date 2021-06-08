@@ -4,7 +4,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 // No commas in test case name.
 TEST_CASE("HighsModel", "[highs_model]") {
@@ -12,6 +12,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   HighsStatus status;
   Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
   HighsModel model;
@@ -49,6 +50,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   hessian.q_start_.resize(dim + 1);
   hessian.q_start_[0] = 0;
   hessian.q_start_[dim] = 0;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kOk);
 
