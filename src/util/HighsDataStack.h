@@ -21,6 +21,12 @@
 #include <type_traits>
 #include <vector>
 
+#if __GNUG__ && __GNUC__ < 5
+#define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
+#else
+#define IS_TRIVIALLY_COPYABLE(T) std::is_trivially_copyable<T>::value
+#endif
+
 class HighsDataStack {
   std::vector<char> data;
   HighsInt position;
@@ -29,7 +35,7 @@ class HighsDataStack {
   void resetPosition() { position = data.size(); }
 
   template <typename T,
-            typename std::enable_if<std::is_trivially_copyable<T>::value,
+            typename std::enable_if<IS_TRIVIALLY_COPYABLE(T),
                                     int>::type = 0>
   void push(const T& r) {
     HighsInt dataSize = data.size();
@@ -38,7 +44,7 @@ class HighsDataStack {
   }
 
   template <typename T,
-            typename std::enable_if<std::is_trivially_copyable<T>::value,
+            typename std::enable_if<IS_TRIVIALLY_COPYABLE(T),
                                     int>::type = 0>
   void pop(T& r) {
     position -= sizeof(T);
