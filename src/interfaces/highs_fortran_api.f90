@@ -577,7 +577,7 @@ module highs_lp_solver
     function Highs_getModel (h, orientation, numcol, numrow, numnz, hessian_num_nz, &
          colcost, collower, colupper, rowlower, rowupper, &
          astart, aindex, avalue, &
-         qstart, qindex, qvalue, integrality) bind(c, name='Highs_getModel')
+         qstart, qindex, qvalue, integrality) result(s) bind(c, name='Highs_getModel')
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer ( c_int ), VALUE :: orientation
@@ -597,6 +597,7 @@ module highs_lp_solver
       integer ( c_int ) :: qindex(*)
       real ( c_double ) :: qvalue(*)
       integer ( c_int ) :: integrality(*)
+      integer(c_int) :: s
     end function Highs_getModel
 
     function Highs_getObjectiveSense (h, sense) result(s) bind(c, name='Highs_getObjectiveSense')

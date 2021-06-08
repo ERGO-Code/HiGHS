@@ -14,6 +14,9 @@
 #define HIGHS_C_API
 
 #include "util/HighsInt.h"
+const HighsInt HighsStatuskError = -1;
+const HighsInt HighsStatuskOk = 0;
+const HighsInt HighsStatuskWarning = 1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -302,7 +305,7 @@ HighsInt Highs_getDoubleInfoValue(void* highs,
 /*
  * @brief
  */
-void Highs_getSolution(
+HighsInt Highs_getSolution(
     void* highs,
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
@@ -313,7 +316,7 @@ void Highs_getSolution(
 /*
  * @brief
  */
-void Highs_getBasis(void* highs,
+HighsInt Highs_getBasis(void* highs,
                     HighsInt* colstatus,  //!< array of length [numcol], filled
                                           //!< with column basis stati
                     HighsInt* rowstatus   //!< array of length [numrow], filled
@@ -923,13 +926,13 @@ HighsInt Highs_getNumNz(void* highs);
  */
 HighsInt Highs_getHessianNumNz(void* highs);
 
-void Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
-                    HighsInt* numrow, HighsInt* numnz, HighsInt* hessian_num_nz,
-                    HighsInt* sense, double* offset, double* colcost,
-                    double* collower, double* colupper, double* rowlower,
-                    double* rowupper, HighsInt* astart, HighsInt* aindex,
-                    double* avalue, HighsInt* qstart, HighsInt* qindex,
-                    double* qvalue, HighsInt* integrality);
+HighsInt Highs_getModel(void* highs, const HighsInt orientation, HighsInt* numcol,
+			HighsInt* numrow, HighsInt* numnz, HighsInt* hessian_num_nz,
+			HighsInt* sense, double* offset, double* colcost,
+			double* collower, double* colupper, double* rowlower,
+			double* rowupper, HighsInt* astart, HighsInt* aindex,
+			double* avalue, HighsInt* qstart, HighsInt* qindex,
+			double* qvalue, HighsInt* integrality);
 
 // Fails on Windows and MacOS since string_model_status is destroyed
 // after the method returns, so what's returned is a pointer to
