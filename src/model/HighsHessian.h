@@ -10,26 +10,27 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/FilereaderEms.h
+/**@file model/HighsHessian.h
  * @brief
  */
+#ifndef MODEL_HIGHS_HESSIAN_H_
+#define MODEL_HIGHS_HESSIAN_H_
 
-#ifndef IO_FILEREADER_EMS_H_
-#define IO_FILEREADER_EMS_H_
+#include <vector>
 
-#include <list>
+#include "util/HighsInt.h"
 
-#include "io/Filereader.h"
-#include "io/HighsIO.h"  // For messages.
+class HighsHessian;
 
-class FilereaderEms : public Filereader {
+class HighsHessian {
  public:
-  FilereaderRetcode readModelFromFile(const HighsOptions& options,
-                                      const std::string filename,
-                                      HighsModel& model);
-  HighsStatus writeModelToFile(const HighsOptions& options,
-                               const std::string filename,
-                               const HighsModel& model);
+  HighsInt dim_ = 0;
+  std::vector<HighsInt> q_start_;
+  std::vector<HighsInt> q_index_;
+  std::vector<double> q_value_;
+  bool operator==(const HighsHessian& hessian);
+  void clear();
+  void print();
 };
 
 #endif

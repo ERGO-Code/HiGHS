@@ -10,26 +10,26 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/FilereaderEms.h
+/**@file model/HighsModel.h
  * @brief
  */
+#ifndef MODEL_HIGHS_MODEL_H_
+#define MODEL_HIGHS_MODEL_H_
 
-#ifndef IO_FILEREADER_EMS_H_
-#define IO_FILEREADER_EMS_H_
+#include <vector>
 
-#include <list>
+#include "lp_data/HighsLp.h"
+#include "model/HighsHessian.h"
 
-#include "io/Filereader.h"
-#include "io/HighsIO.h"  // For messages.
+class HighsModel;
 
-class FilereaderEms : public Filereader {
+class HighsModel {
  public:
-  FilereaderRetcode readModelFromFile(const HighsOptions& options,
-                                      const std::string filename,
-                                      HighsModel& model);
-  HighsStatus writeModelToFile(const HighsOptions& options,
-                               const std::string filename,
-                               const HighsModel& model);
+  HighsLp lp_;
+  HighsHessian hessian_;
+  bool isQp();
+  bool isMip() { return this->lp_.isMip(); }
+  void clear();
 };
 
 #endif

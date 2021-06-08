@@ -48,7 +48,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   } else {
     highs.setOptionValue("log_dev_level", kHighsLogDevLevelVerbose);
   }
-  const HighsLp& highs_lp = highs.getModel();
+  const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs_lp.orientation_ == MatrixOrientation::kNone);
@@ -71,13 +71,13 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Make the external LP row-wise then pass and solve it
-  setOrientation(lp, MatrixOrientation::kRowwise);
+  REQUIRE(setOrientation(lp, MatrixOrientation::kRowwise) == HighsStatus::kOk);
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Make the external LP col-wise then pass and solve it
-  setOrientation(lp);
+  REQUIRE(setOrientation(lp) == HighsStatus::kOk);
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
@@ -85,9 +85,10 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   // Clear the internal LP
   highs.clearModel();
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
-                        NULL, NULL, NULL));
+                        NULL, NULL, NULL) == HighsStatus::kOk);
   REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                        &ARstart[0], &ARindex[0], &ARvalue[0]));
+                        &ARstart[0], &ARindex[0],
+                        &ARvalue[0]) == HighsStatus::kOk);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
@@ -107,7 +108,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
               one_row_start, one_row_index, one_row_value);
     REQUIRE(highs.addRows(1, &one_row_Lower[0], &one_row_Upper[0],
                           one_row_numnz, &one_row_start[0], &one_row_index[0],
-                          &one_row_value[0]));
+                          &one_row_value[0]) == HighsStatus::kOk);
   }
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);

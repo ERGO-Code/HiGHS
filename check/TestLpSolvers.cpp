@@ -399,7 +399,8 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   // Solve as maximization and ensure that the dual objective value upper bound
   // isn't used
-  bool_status = highs.changeObjectiveSense(ObjSense::kMaximize);
+  bool_status =
+      highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk;
   REQUIRE(bool_status);
 
   status = highs.setOptionValue("objective_bound", use_max_objective_bound);

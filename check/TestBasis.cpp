@@ -62,7 +62,7 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   // highs.writeSolution("", true);
   // Change a bound and resolve
 
-  const HighsLp& lp = highs.getModel();
+  const HighsLp& lp = highs.getLp();
   const HighsBasis& basis = highs.getBasis();
   const HighsSolution& solution = highs.getSolution();
   const HighsInfo& info = highs.getInfo();

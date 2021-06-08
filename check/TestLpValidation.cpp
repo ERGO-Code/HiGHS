@@ -11,7 +11,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsLp lp;
   HighsOptions options;
   HighsStatus return_status;
-  bool return_bool;
   options.log_dev_level = kHighsLogDevLevelVerbose;
   if (!dev_run) options.output_flag = false;
 
@@ -53,13 +52,14 @@ TEST_CASE("LP-validation", "[highs_data]") {
   highs.passOptions(options);
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
-  return_bool =
+  return_status =
       highs.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(return_status == HighsStatus::kOk);
 
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
-  REQUIRE(return_bool);
+  return_status =
+      highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
+                    num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Create an empty column
   HighsInt XnumNewCol = 1;
@@ -78,31 +78,31 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<HighsInt> XAindex;
   vector<double> XAvalue;
   // Add an empty column
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(return_status == HighsStatus::kOk);
   XcolUpper[0] = my_infinity;
   //  reportLp(lp, HighsLogType::kVerbose);
 
   // Try to add a column with illegal cost
-  bool require_return_bool;
+  HighsStatus require_return_status;
   if (kHighsAllowInfiniteCosts) {
-    require_return_bool = true;
+    require_return_status = HighsStatus::kOk;
   } else {
-    require_return_bool = false;
+    require_return_status = HighsStatus::kError;
   }
   XcolCost[0] = my_infinity;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_bool == require_return_bool);
+  REQUIRE(return_status == require_return_status);
 
   XcolCost[0] = -my_infinity;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_bool == require_return_bool);
+  REQUIRE(return_status == require_return_status);
 
   // Reset to a legitimate cost
   XcolCost[0] = 1;
@@ -110,42 +110,42 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Add a column with bound inconsistency due to upper
   XcolLower[0] = 0;
   XcolUpper[0] = -1;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(return_status == HighsStatus::kWarning);
 
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = 1;
   XcolUpper[0] = 0;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(return_status == HighsStatus::kWarning);
 
   // Add a column with illegal bound due to lower
   XcolLower[0] = my_infinity;
   XcolUpper[0] = 0;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(!return_bool);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Add a column with illegal bound due to upper
   XcolLower[0] = 0;
   XcolUpper[0] = -my_infinity;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(!return_bool);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Add a legitimate column
   XcolLower[0] = 0;
   XcolUpper[0] = 0;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   //  reportLp(lp, HighsLogType::kVerbose);
 
@@ -180,37 +180,41 @@ TEST_CASE("LP-validation", "[highs_data]") {
   XAvalue[4] = -1e60;
   XAvalue[5] = 1e100;
   XAvalue[6] = -1;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
-  REQUIRE(!return_bool);
+  REQUIRE(return_status == HighsStatus::kError);
 
   // Legitimise large matrix entries. Small entries now cause warning
   XAvalue[4] = -1;
   XAvalue[5] = 1;
-  return_bool =
+  return_status =
       highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                     XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
-  REQUIRE(return_bool);
+  REQUIRE(return_status == HighsStatus::kWarning);
 
   if (!dev_run) {
     highs.setOptionValue("output_flag", false);
   }
 
-  const HighsLp& internal_lp = highs.getModel();
+  const HighsLp& internal_lp = highs.getLp();
   double check_value;
-  REQUIRE(!highs.getCoeff(-1, 0, check_value));
-  REQUIRE(!highs.getCoeff(0, -1, check_value));
-  REQUIRE(!highs.getCoeff(internal_lp.numRow_, 0, check_value));
-  REQUIRE(!highs.getCoeff(0, internal_lp.numCol_, check_value));
+  REQUIRE(highs.getCoeff(-1, 0, check_value) == HighsStatus::kError);
+  REQUIRE(highs.getCoeff(0, -1, check_value) == HighsStatus::kError);
+  REQUIRE(highs.getCoeff(internal_lp.numRow_, 0, check_value) ==
+          HighsStatus::kError);
+  REQUIRE(highs.getCoeff(0, internal_lp.numCol_, check_value) ==
+          HighsStatus::kError);
 
   const HighsInt check_col = 4;
   const HighsInt check_row = 7;
-  REQUIRE(highs.getCoeff(check_col, check_row, check_value));
+  REQUIRE(highs.getCoeff(check_col, check_row, check_value) ==
+          HighsStatus::kOk);
   REQUIRE(check_value == 0);
 
   const double value = -3;
-  REQUIRE(highs.getCoeff(check_row, check_col, check_value));
+  REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
+          HighsStatus::kOk);
   REQUIRE(check_value == value);
 
   // This is a highly anomalous LP. It has two pairs of inconsistent
@@ -228,13 +232,17 @@ TEST_CASE("LP-validation", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
 
-  REQUIRE(!highs.changeCoeff(-1, 0, check_value));
-  REQUIRE(!highs.changeCoeff(0, -1, check_value));
-  REQUIRE(!highs.changeCoeff(internal_lp.numRow_, 0, check_value));
-  REQUIRE(!highs.changeCoeff(0, internal_lp.numCol_, check_value));
+  REQUIRE(highs.changeCoeff(-1, 0, check_value) == HighsStatus::kError);
+  REQUIRE(highs.changeCoeff(0, -1, check_value) == HighsStatus::kError);
+  REQUIRE(highs.changeCoeff(internal_lp.numRow_, 0, check_value) ==
+          HighsStatus::kError);
+  REQUIRE(highs.changeCoeff(0, internal_lp.numCol_, check_value) ==
+          HighsStatus::kError);
 
   const double to_value = 99;
-  REQUIRE(highs.changeCoeff(check_row, check_col, to_value));
-  REQUIRE(highs.getCoeff(check_row, check_col, check_value));
+  REQUIRE(highs.changeCoeff(check_row, check_col, to_value) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.getCoeff(check_row, check_col, check_value) ==
+          HighsStatus::kOk);
   REQUIRE(check_value == to_value);
 }

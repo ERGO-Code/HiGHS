@@ -64,6 +64,8 @@ void minimal_api() {
   const int numcol = 2;
   const int numrow = 3;
   const int numnz = 5;
+  const int sense = 1;
+  const double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[numcol] = {2.0, 3.0};
@@ -89,7 +91,7 @@ void minimal_api() {
 
   const int rowwise = 0;
   int runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
-			       colcost, collower, colupper, rowlower, rowupper,
+			       sense, offset, colcost, collower, colupper, rowlower, rowupper,
 			       astart, aindex, avalue,
 			       colvalue, coldual, rowvalue, rowdual,
 			       colbasisstatus, rowbasisstatus,
@@ -161,9 +163,9 @@ void full_api() {
   int* rowbasisstatus = (int*)malloc(sizeof(int) * numrow);
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) );
+  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) );
+  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) == 0);
 
   int sense;
   Highs_getObjectiveSense(highs, &sense);
@@ -251,12 +253,14 @@ void full_api() {
   Highs_destroy(highs);
 
   // Define the constraint matrix col-wise to pass to the LP
+  sense = 1;
+  double offset = 0;
   int rowwise = 0;
   int astart[numcol] = {0, 2};
   int aindex[numnz] = {1, 2, 0, 1, 2};
   double avalue[numnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise,
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise, sense, offset,
 			colcost, collower, colupper,
 			rowlower, rowupper,
 			astart, aindex, avalue);

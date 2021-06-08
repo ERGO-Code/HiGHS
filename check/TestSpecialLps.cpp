@@ -23,7 +23,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
 
   if (dev_run)
     printf("Solved %s with presolve: status = %s\n",
-           highs.getModel().model_name_.c_str(),
+           highs.getLp().model_name_.c_str(),
            highs.modelStatusToString(highs.getModelStatus()).c_str());
   REQUIRE(highs.getModelStatus() == require_model_status);
 
@@ -175,14 +175,15 @@ void issue316(Highs& highs) {
   const double max_optimal_objective = 12;
   REQUIRE(highs.clearModel() == HighsStatus::kOk);
 
-  bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
+  bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL) == HighsStatus::kOk;
   REQUIRE(bool_status);
 
   // Presolve reduces to empty
   solve(highs, "on", "simplex", require_model_status, min_optimal_objective);
   solve(highs, "off", "simplex", require_model_status, min_optimal_objective);
 
-  bool_status = highs.changeObjectiveSense(ObjSense::kMaximize);
+  bool_status =
+      highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk;
   REQUIRE(bool_status);
 
   solve(highs, "on", "simplex", require_model_status, max_optimal_objective);
@@ -268,7 +269,7 @@ void mpsUnbounded(Highs& highs) {
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
 
-  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
+  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
 
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
@@ -431,16 +432,16 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == 1);
-  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize));
+  REQUIRE(highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
-  REQUIRE(highs.changeColCost(0, -1));
+  REQUIRE(highs.changeColCost(0, -1) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getObjectiveValue() == -6);
-  REQUIRE(highs.changeColBounds(0, 4, 1));
+  REQUIRE(highs.changeColBounds(0, 4, 1) == HighsStatus::kOk);
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);

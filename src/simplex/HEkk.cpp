@@ -2316,5 +2316,5 @@ double HEkk::computeBasisCondition() {
 }
 
 void HEkk::initialiseAnalysis() {
-  analysis_.setup(lp_, options_, iteration_count_);
+  analysis_.setup(lp_name_, lp_, options_, iteration_count_);
 }

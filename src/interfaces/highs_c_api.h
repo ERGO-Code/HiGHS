@@ -14,6 +14,9 @@
 #define HIGHS_C_API
 
 #include "util/HighsInt.h"
+const HighsInt HighsStatuskError = -1;
+const HighsInt HighsStatuskOk = 0;
+const HighsInt HighsStatuskWarning = 1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +30,8 @@ HighsInt Highs_lpCall(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -59,6 +64,8 @@ HighsInt Highs_mipCall(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -137,6 +144,8 @@ HighsInt Highs_passLp(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -161,6 +170,8 @@ HighsInt Highs_passMip(
     const HighsInt numrow,   //!< number of rows
     const HighsInt numnz,    //!< number of entries in the constraint matrix
     const HighsInt rowwise,  //!< whether the matrix is rowwise
+    const HighsInt sense,    //!< sense of the optimization
+    const double offset,     //!< objective constant
     const double* colcost,   //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
@@ -177,6 +188,44 @@ HighsInt Highs_passMip(
     const HighsInt*
         integrality  //!< array of length [numcol] indicating whether
                      //!< variables are continuous (0) or integer (1)
+);
+
+/*
+ * @brief pass a general model to HiGHS
+ */
+HighsInt Highs_passModel(
+    void* highs,
+    const HighsInt numcol,  //!< number of columns
+    const HighsInt numrow,  //!< number of rows
+    const HighsInt numnz,   //!< number of entries in the constraint matrix
+    const HighsInt hessian_num_nz,  //!< number of nonzeros in Hessian
+    const HighsInt rowwise,         //!< whether the matrix is rowwise
+    const HighsInt sense,           //!< sense of the optimization
+    const double offset,            //!< objective constant
+    const double* colcost,  //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt* astart,  //!< array of length [numcol or numrow if(rowwise)]
+                             //!< with start indices
+    const HighsInt*
+        aindex,  //!< array of length [numnz] with indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const HighsInt* qstart,  //!< array of length [numcol] with Hessian start
+                             //!< indices - or NULL if model is linear
+    const HighsInt*
+        qindex,  //!< array of length [hessian_num_nz] with indices of Hessian
+                 //!< entries - or NULL if model is linear
+    const double* qvalue,  //!< array of length [hessian_num_nz] with values of
+                           //!< Hessian entries - or NULL if model is linear
+    const HighsInt*
+        integrality  //!< array of length [numcol] indicating whether
+                     //!< variables are continuous (0) or integer (1) - or NULL
+                     //!< if model is continuous
 );
 
 HighsInt Highs_setBoolOptionValue(void* highs,
@@ -256,7 +305,7 @@ HighsInt Highs_getDoubleInfoValue(void* highs,
 /*
  * @brief
  */
-void Highs_getSolution(
+HighsInt Highs_getSolution(
     void* highs,
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* coldual,   //!< array of length [numcol], filled with column duals
@@ -267,11 +316,12 @@ void Highs_getSolution(
 /*
  * @brief
  */
-void Highs_getBasis(void* highs,
-                    HighsInt* colstatus,  //!< array of length [numcol], filled
-                                          //!< with column basis stati
-                    HighsInt* rowstatus   //!< array of length [numrow], filled
-                                          //!< with row basis stati
+HighsInt Highs_getBasis(
+    void* highs,
+    HighsInt* colstatus,  //!< array of length [numcol], filled
+                          //!< with column basis stati
+    HighsInt* rowstatus   //!< array of length [numrow], filled
+                          //!< with row basis stati
 );
 
 /**
@@ -835,6 +885,24 @@ HighsInt Highs_deleteRowsByMask(
 );
 
 /**
+ * @brief Scale a matrix column (and cost) by a constant - flipping
+ * bounds if the constant is negative
+ */
+HighsInt Highs_scaleCol(void* highs,
+                        const HighsInt col,    //!< Column to scale
+                        const double scaleval  //!< Value to scale by
+);
+
+/**
+ * @brief Scale a matrix row by a constant - flipping bounds if the
+ * constant is negative
+ */
+HighsInt Highs_scaleRow(void* highs,
+                        const HighsInt row,    //!< Row to scale
+                        const double scaleval  //!< Value to scale by
+);
+
+/**
  * @brief Returns the value of infinity used by HiGHS
  */
 double Highs_getInfinity(void* highs);
@@ -850,9 +918,23 @@ HighsInt Highs_getNumCols(void* highs);
 HighsInt Highs_getNumRows(void* highs);
 
 /**
- * @brief Returns the number of nonzeroes of the current model
+ * @brief Returns the number of nonzeros of the current model
  */
 HighsInt Highs_getNumNz(void* highs);
+
+/**
+ * @brief Returns the number of nonzeroes of the current Hessian
+ */
+HighsInt Highs_getHessianNumNz(void* highs);
+
+HighsInt Highs_getModel(void* highs, const HighsInt orientation,
+                        HighsInt* numcol, HighsInt* numrow, HighsInt* numnz,
+                        HighsInt* hessian_num_nz, HighsInt* sense,
+                        double* offset, double* colcost, double* collower,
+                        double* colupper, double* rowlower, double* rowupper,
+                        HighsInt* astart, HighsInt* aindex, double* avalue,
+                        HighsInt* qstart, HighsInt* qindex, double* qvalue,
+                        HighsInt* integrality);
 
 // Fails on Windows and MacOS since string_model_status is destroyed
 // after the method returns, so what's returned is a pointer to
@@ -920,8 +1002,7 @@ HighsInt Highs_setHighsBoolOptionValue(
  * to reflect the corresponding Highs basis.
  * status
  */
-int Highs_crossover(
-    void* highs                 //!< HiGHS object reference
+int Highs_crossover(void* highs  //!< HiGHS object reference
 );
 
 // /**

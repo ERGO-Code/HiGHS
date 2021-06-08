@@ -29,7 +29,7 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(const HighsLogOptions& log_options,
+FilereaderRetcode readMps(const HighsLogOptions& log_options,
                           const std::string filename, HighsInt mxNumRow,
                           HighsInt mxNumCol, HighsInt& numRow, HighsInt& numCol,
                           ObjSense& objSense, double& objOffset,
@@ -471,10 +471,11 @@ bool load_mpsLine(FILE* file, HighsVarType& integerVar, HighsInt lmax,
   return true;
 }
 
-HighsStatus writeLpAsMPS(const HighsOptions& options,
-                         const std::string filename, const HighsLp& lp,
-                         const bool free_format) {
+HighsStatus writeModelAsMps(const HighsOptions& options,
+                            const std::string filename, const HighsModel& model,
+                            const bool free_format) {
   bool warning_found = false;
+  const HighsLp& lp = model.lp_;
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
@@ -517,7 +518,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
       warning_found = true;
     }
   }
-  HighsStatus write_status = writeMPS(
+  HighsStatus write_status = writeMps(
       options.log_options, filename, lp.numRow_, lp.numCol_, lp.sense_,
       lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
@@ -527,7 +528,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   return write_status;
 }
 
-HighsStatus writeMPS(
+HighsStatus writeMps(
     const HighsLogOptions& log_options, const std::string filename,
     const HighsInt& numRow, const HighsInt& numCol, const ObjSense& objSense,
     const double& objOffset, const vector<HighsInt>& Astart,

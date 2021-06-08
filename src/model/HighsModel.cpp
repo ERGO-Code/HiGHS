@@ -10,26 +10,27 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/FilereaderEms.h
+/**@file lp_data/HighsModel.cpp
  * @brief
  */
+#include "model/HighsModel.h"
 
-#ifndef IO_FILEREADER_EMS_H_
-#define IO_FILEREADER_EMS_H_
+#include <cassert>
 
-#include <list>
+bool HighsModel::isQp() {
+  HighsInt dim = this->hessian_.dim_;
+  HighsInt num_col = this->lp_.numCol_;
+  if (dim) {
+    // If there's a Hessian then it's a QP, but its dimension should
+    // be the same as the number of LP columns
+    assert(dim == num_col);
+    return true;
+  }
+  return false;
+}
 
-#include "io/Filereader.h"
-#include "io/HighsIO.h"  // For messages.
+void HighsModel::clear() {
+  this->lp_.clear();
+  this->hessian_.clear();
+}
 
-class FilereaderEms : public Filereader {
- public:
-  FilereaderRetcode readModelFromFile(const HighsOptions& options,
-                                      const std::string filename,
-                                      HighsModel& model);
-  HighsStatus writeModelToFile(const HighsOptions& options,
-                               const std::string filename,
-                               const HighsModel& model);
-};
-
-#endif

@@ -106,7 +106,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.run();
   highs.readModel(filename);
-  const HighsLp& lp = highs.getModel();
+  const HighsLp& lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
   vector<HighsVarType> integrality;
   integrality.resize(lp.numCol_);
@@ -129,8 +129,10 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
     mask[iCol] = 1;
     integrality[ix] = HighsVarType::kInteger;
   }
-  REQUIRE(highs.changeColsIntegrality(from_col0, to_col0, &integrality[0]));
-  REQUIRE(highs.changeColsIntegrality(from_col1, to_col1, &integrality[0]));
+  REQUIRE(highs.changeColsIntegrality(from_col0, to_col0, &integrality[0]) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.changeColsIntegrality(from_col1, to_col1, &integrality[0]) ==
+          HighsStatus::kOk);
   if (dev_run) {
     highs.setOptionValue("log_dev_level", 3);
   } else {
@@ -145,8 +147,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   highs.clearModel();
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);
-  REQUIRE(
-      highs.changeColsIntegrality(num_set_entries, &set[0], &integrality[0]));
+  REQUIRE(highs.changeColsIntegrality(num_set_entries, &set[0],
+                                      &integrality[0]) == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
   if (dev_run) highs.writeSolution("", true);
@@ -161,7 +163,8 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   highs.clearModel();
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.readModel(filename);
-  REQUIRE(highs.changeColsIntegrality(&mask[0], &integrality[0]));
+  REQUIRE(highs.changeColsIntegrality(&mask[0], &integrality[0]) ==
+          HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   highs.run();
   if (dev_run) highs.writeSolution("", true);

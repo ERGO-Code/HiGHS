@@ -43,7 +43,6 @@ class HighsLp {
   double offset_ = 0;
 
   std::string model_name_ = "";
-  std::string lp_name_ = "";
 
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
@@ -52,6 +51,7 @@ class HighsLp {
 
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp);
+  bool isMip();
   void clear();
 };
 

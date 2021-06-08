@@ -24,6 +24,263 @@
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
 
+HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
+                                   const std::string matrix_name,
+                                   const HighsInt num_vec,
+                                   const vector<HighsInt>& matrix_start,
+                                   const vector<HighsInt>& matrix_index,
+                                   const vector<double>& matrix_value) {
+  HighsStatus return_status = HighsStatus::kOk;
+  // Use error_found to track whether an error has been found in multiple tests
+  bool error_found = false;
+  // Assess main dimensions
+  bool legal_num_vec = num_vec >= 0;
+  if (!legal_num_vec) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "%s matrix has illegal number of vectors = %" HIGHSINT_FORMAT
+                 "\n",
+                 matrix_name.c_str(), num_vec);
+    error_found = true;
+  }
+  HighsInt matrix_start_size = matrix_start.size();
+  bool legal_matrix_start_size = false;
+  // Don't expect the matrix_start_size to be legal if there are no vectors
+  if (num_vec > 0) {
+    legal_matrix_start_size = matrix_start_size >= num_vec + 1;
+    if (!legal_matrix_start_size) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s matrix has illegal start vector size = %" HIGHSINT_FORMAT
+                   " < %" HIGHSINT_FORMAT "\n",
+                   matrix_name.c_str(), matrix_start_size, num_vec + 1);
+      error_found = true;
+    }
+  }
+  if (matrix_start_size > 0) {
+    // Check whether the first start is zero
+    if (matrix_start[0]) {
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s matrix start vector does not begin with 0\n",
+                   matrix_name.c_str());
+      error_found = true;
+    }
+  }
+  // Possibly check the sizes of the index and value vectors. Can only
+  // do this with the number of nonzeros, and this is only known if
+  // the start vector has a legal size. Setting num_nz = 0 otherwise
+  // means that all tests pass, as they just check that the sizes of
+  // the index and value vectors are non-negative.
+  HighsInt num_nz = 0;
+  if (legal_matrix_start_size) num_nz = matrix_start[num_vec];
+  bool legal_num_nz = num_nz >= 0;
+  if (!legal_num_nz) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "%s matrix has illegal number of nonzeros = %" HIGHSINT_FORMAT
+                 "\n",
+                 matrix_name.c_str(), num_nz);
+    error_found = true;
+  } else {
+    HighsInt matrix_index_size = matrix_index.size();
+    HighsInt matrix_value_size = matrix_value.size();
+    bool legal_matrix_index_size = matrix_index_size >= num_nz;
+    bool legal_matrix_value_size = matrix_value_size >= num_nz;
+    if (!legal_matrix_index_size) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s matrix has illegal index vector size = %" HIGHSINT_FORMAT
+                   " < %" HIGHSINT_FORMAT "\n",
+                   matrix_name.c_str(), matrix_index_size, num_nz);
+      error_found = true;
+    }
+    if (!legal_matrix_value_size) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s matrix has illegal value vector size = %" HIGHSINT_FORMAT
+                   " < %" HIGHSINT_FORMAT "\n",
+                   matrix_name.c_str(), matrix_value_size, num_nz);
+      error_found = true;
+    }
+  }
+  if (error_found)
+    return_status = HighsStatus::kError;
+  else
+    return_status = HighsStatus::kOk;
+  return return_status;
+}
+
+HighsStatus assessMatrix(const HighsLogOptions& log_options,
+                         const std::string matrix_name, const HighsInt vec_dim,
+                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
+                         vector<HighsInt>& matrix_index,
+                         vector<double>& matrix_value,
+                         const double small_matrix_value,
+                         const double large_matrix_value) {
+  if (assessMatrixDimensions(log_options, matrix_name, num_vec, matrix_start,
+                             matrix_index, matrix_value) == HighsStatus::kError)
+    return HighsStatus::kError;
+  const HighsInt num_nz = matrix_start[num_vec];
+  if (num_vec <= 0) return HighsStatus::kOk;
+  if (num_nz <= 0) return HighsStatus::kOk;
+
+  HighsStatus return_status = HighsStatus::kOk;
+  bool error_found = false;
+  bool warning_found = false;
+
+  // Assess the starts
+  // Set up previous_start for a fictitious previous empty packed vector
+  HighsInt previous_start = matrix_start[0];
+  for (HighsInt ix = 0; ix < num_vec; ix++) {
+    HighsInt this_start = matrix_start[ix];
+    bool this_start_too_small = this_start < previous_start;
+    if (this_start_too_small) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s matrix packed vector %" HIGHSINT_FORMAT
+                   " has illegal start of %" HIGHSINT_FORMAT
+                   " < %" HIGHSINT_FORMAT
+                   " = "
+                   "previous start\n",
+                   matrix_name.c_str(), ix, this_start, previous_start);
+      return HighsStatus::kError;
+    }
+    bool this_start_too_big = this_start > num_nz;
+    if (this_start_too_big) {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "%s matrix packed vector %" HIGHSINT_FORMAT
+                   " has illegal start of %" HIGHSINT_FORMAT
+                   " > %" HIGHSINT_FORMAT
+                   " = "
+                   "number of nonzeros\n",
+                   matrix_name.c_str(), ix, this_start, num_nz);
+      return HighsStatus::kError;
+    }
+  }
+
+  // Assess the indices and values
+  // Count the number of acceptable indices/values
+  HighsInt num_new_nz = 0;
+  HighsInt num_small_values = 0;
+  double max_small_value = 0;
+  double min_small_value = kHighsInf;
+  // Set up a zeroed vector to detect duplicate indices
+  vector<HighsInt> check_vector;
+  if (vec_dim > 0) check_vector.assign(vec_dim, 0);
+  for (HighsInt ix = 0; ix < num_vec; ix++) {
+    HighsInt from_el = matrix_start[ix];
+    HighsInt to_el = matrix_start[ix + 1];
+    // Account for any index-value pairs removed so far
+    matrix_start[ix] = num_new_nz;
+    for (HighsInt el = from_el; el < to_el; el++) {
+      // Check the index
+      HighsInt component = matrix_index[el];
+      // Check that the index is non-negative
+      bool legal_component = component >= 0;
+      if (!legal_component) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "%s matrix packed vector %" HIGHSINT_FORMAT
+                     ", entry %" HIGHSINT_FORMAT
+                     ", is illegal index %" HIGHSINT_FORMAT "\n",
+                     matrix_name.c_str(), ix, el, component);
+        return HighsStatus::kError;
+      }
+      // Check that the index does not exceed the vector dimension
+      legal_component = component < vec_dim;
+      if (!legal_component) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "%s matrix packed vector %" HIGHSINT_FORMAT
+                     ", entry %" HIGHSINT_FORMAT
+                     ", is illegal index "
+                     "%12" HIGHSINT_FORMAT " >= %" HIGHSINT_FORMAT
+                     " = vector dimension\n",
+                     matrix_name.c_str(), ix, el, component, vec_dim);
+        return HighsStatus::kError;
+      }
+      // Check that the index has not already ocurred
+      legal_component = check_vector[component] == 0;
+      if (!legal_component) {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "%s matrix packed vector %" HIGHSINT_FORMAT
+                     ", entry %" HIGHSINT_FORMAT
+                     ", is duplicate index %" HIGHSINT_FORMAT "\n",
+                     matrix_name.c_str(), ix, el, component);
+        return HighsStatus::kError;
+      }
+      // Indicate that the index has occurred
+      check_vector[component] = 1;
+      // Check the value
+      double abs_value = fabs(matrix_value[el]);
+      /*
+      // Check that the value is not zero
+      bool zero_value = abs_value == 0;
+      if (zero_value) {
+        highsLogUser(log_options, HighsLogType::kError,
+                        "%s matrix packed vector %" HIGHSINT_FORMAT ", entry %"
+      HIGHSINT_FORMAT ", is zero\n", matrix_name.c_str(),  ix, el); return
+      HighsStatus::kError;
+      }
+      */
+      // Check that the value is not too large
+      bool large_value = abs_value > large_matrix_value;
+      if (large_value) {
+        highsLogUser(
+            log_options, HighsLogType::kError,
+            "%s matrix packed vector %" HIGHSINT_FORMAT
+            ", entry %" HIGHSINT_FORMAT ", is large value |%g| >= %g\n",
+            matrix_name.c_str(), ix, el, abs_value, large_matrix_value);
+        return HighsStatus::kError;
+      }
+      bool ok_value = abs_value > small_matrix_value;
+      if (!ok_value) {
+        if (max_small_value < abs_value) max_small_value = abs_value;
+        if (min_small_value > abs_value) min_small_value = abs_value;
+        num_small_values++;
+      }
+      if (ok_value) {
+        // Shift the index and value of the OK entry to the new
+        // position in the index and value vectors, and increment
+        // the new number of nonzeros
+        matrix_index[num_new_nz] = matrix_index[el];
+        matrix_value[num_new_nz] = matrix_value[el];
+        num_new_nz++;
+      } else {
+        // Zero the check_vector entry since the small value
+        // _hasn't_ occurred
+        check_vector[component] = 0;
+      }
+    }
+    // Zero check_vector
+    for (HighsInt el = matrix_start[ix]; el < num_new_nz; el++)
+      check_vector[matrix_index[el]] = 0;
+#ifdef HiGHSDEV
+    // NB This is very expensive so shouldn't be true
+    const bool check_check_vector = false;
+    if (check_check_vector) {
+      // Check zeroing of check vector
+      for (HighsInt component = 0; component < vec_dim; component++) {
+        if (check_vector[component]) error_found = true;
+      }
+      if (error_found)
+        highsLogUser(log_options, HighsLogType::kError,
+                     "assessMatrix: check_vector not zeroed\n");
+    }
+#endif
+  }
+  if (num_small_values) {
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "%s matrix packed vector contains %" HIGHSINT_FORMAT
+                 " |values| in [%g, %g] "
+                 "less than %g: ignored\n",
+                 matrix_name.c_str(), num_small_values, min_small_value,
+                 max_small_value, small_matrix_value);
+    warning_found = true;
+  }
+  matrix_start[num_vec] = num_new_nz;
+  if (error_found)
+    return_status = HighsStatus::kError;
+  else if (warning_found)
+    return_status = HighsStatus::kWarning;
+  else
+    return_status = HighsStatus::kOk;
+
+  return return_status;
+}
+
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,
                         const std::vector<double>& upper) {

@@ -10,26 +10,26 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/FilereaderEms.h
- * @brief
+/**@file model/HighsHessianUtils.h
+ * @brief Class-independent utilities for HiGHS
  */
+#ifndef MODEL_HIGHSHESSIANUTILS_H_
+#define MODEL_HIGHSHESSIANUTILS_H_
 
-#ifndef IO_FILEREADER_EMS_H_
-#define IO_FILEREADER_EMS_H_
+#include <vector>
 
-#include <list>
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
+#include "model/HighsHessian.h"
 
-#include "io/Filereader.h"
-#include "io/HighsIO.h"  // For messages.
+//class HighsHessian;
+//class HighsOptions;
 
-class FilereaderEms : public Filereader {
- public:
-  FilereaderRetcode readModelFromFile(const HighsOptions& options,
-                                      const std::string filename,
-                                      HighsModel& model);
-  HighsStatus writeModelToFile(const HighsOptions& options,
-                               const std::string filename,
-                               const HighsModel& model);
-};
+using std::vector;
 
-#endif
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
+HighsStatus assessHessianDimensions(const HighsOptions& options, HighsHessian& hessian);
+HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian);
+bool positiveHessianDiagonal(const HighsOptions& options, HighsHessian& hessian);
+
+#endif  // MODEL_HIGHSHESSIANUTILS_H_

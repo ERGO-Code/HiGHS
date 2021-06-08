@@ -20,6 +20,21 @@
 #include "Highs.h"
 #include "lp_data/HighsStatus.h"
 
+HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
+                                   const std::string matrix_name,
+                                   const HighsInt num_vec,
+                                   const vector<HighsInt>& matrix_start,
+                                   const vector<HighsInt>& matrix_index,
+                                   const vector<double>& matrix_value);
+
+HighsStatus assessMatrix(const HighsLogOptions& log_options,
+                         const std::string matrix_name, const HighsInt vec_dim,
+                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
+                         vector<HighsInt>& matrix_index,
+                         vector<double>& matrix_value,
+                         const double small_matrix_value,
+                         const double large_matrix_value);
+
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,
                         HighsInt numBd, const std::vector<double>& lower,

@@ -440,13 +440,13 @@ void HighsMipSolverData::performRestart() {
   ++numRestarts;
   num_leaves_before_run = num_leaves;
   num_nodes_before_run = num_nodes;
-  HighsInt numLpRows = lp.getModel().numRow_;
+  HighsInt numLpRows = lp.getLp().numRow_;
   HighsInt numModelRows = mipsolver.numRow();
   HighsInt numCuts = numLpRows - numModelRows;
   if (numCuts > 0) postSolveStack.appendCutsToModel(numCuts);
   auto integrality = std::move(presolvedModel.integrality_);
   double offset = presolvedModel.offset_;
-  presolvedModel = lp.getModel();
+  presolvedModel = lp.getLp();
   presolvedModel.offset_ = offset;
   presolvedModel.integrality_ = std::move(integrality);
   const HighsBasis& basis = lp.getLpSolver().getBasis();

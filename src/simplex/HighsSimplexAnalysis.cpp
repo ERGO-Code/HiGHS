@@ -28,14 +28,15 @@
 #include "omp.h"
 #endif
 
-void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
+void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
+                                 const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
   // Copy Problem size
   numRow = lp.numRow_;
   numCol = lp.numCol_;
   numTot = numRow + numCol;
   model_name_ = lp.model_name_;
-  lp_name_ = lp.lp_name_;
+  lp_name_ = lp_name;
   // Set up analysis logic short-cuts
   analyse_lp_data = kHighsAnalysisLevelModelData & options.highs_analysis_level;
   analyse_simplex_data =

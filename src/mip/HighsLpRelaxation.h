@@ -117,7 +117,7 @@ class HighsLpRelaxation {
     return lprows[row].getMaxAbsVal(mipsolver);
   }
 
-  const HighsLp& getModel() const { return lpsolver.getModel(); }
+  const HighsLp& getLp() const { return lpsolver.getLp(); }
 
   const HighsSolution& getSolution() const { return lpsolver.getSolution(); }
 
@@ -126,35 +126,35 @@ class HighsLpRelaxation {
   double slackLower(HighsInt row) const;
 
   double rowLower(HighsInt row) const {
-    return lpsolver.getModel().rowLower_[row];
+    return lpsolver.getLp().rowLower_[row];
   }
 
   double rowUpper(HighsInt row) const {
-    return lpsolver.getModel().rowUpper_[row];
+    return lpsolver.getLp().rowUpper_[row];
   }
 
   double colLower(HighsInt col) const {
-    return col < lpsolver.getModel().numCol_
-               ? lpsolver.getModel().colLower_[col]
-               : slackLower(col - lpsolver.getModel().numCol_);
+    return col < lpsolver.getLp().numCol_
+               ? lpsolver.getLp().colLower_[col]
+               : slackLower(col - lpsolver.getLp().numCol_);
   }
 
   double colUpper(HighsInt col) const {
-    return col < lpsolver.getModel().numCol_
-               ? lpsolver.getModel().colUpper_[col]
-               : slackUpper(col - lpsolver.getModel().numCol_);
+    return col < lpsolver.getLp().numCol_
+               ? lpsolver.getLp().colUpper_[col]
+               : slackUpper(col - lpsolver.getLp().numCol_);
   }
 
   bool isColIntegral(HighsInt col) const {
-    return col < lpsolver.getModel().numCol_
+    return col < lpsolver.getLp().numCol_
                ? mipsolver.variableType(col) != HighsVarType::kContinuous
-               : isRowIntegral(col - lpsolver.getModel().numCol_);
+               : isRowIntegral(col - lpsolver.getLp().numCol_);
   }
 
   double solutionValue(HighsInt col) const {
-    return col < lpsolver.getModel().numCol_
+    return col < lpsolver.getLp().numCol_
                ? getSolution().col_value[col]
-               : getSolution().row_value[col - lpsolver.getModel().numCol_];
+               : getSolution().row_value[col - lpsolver.getLp().numCol_];
   }
 
   Status getStatus() const { return status; }
@@ -234,7 +234,7 @@ class HighsLpRelaxation {
 
   HighsInt numCols() const { return lpsolver.getNumCols(); }
 
-  HighsInt numNonzeros() const { return lpsolver.getModel().Avalue_.size(); }
+  HighsInt numNonzeros() const { return lpsolver.getLp().Avalue_.size(); }
 
   void addCuts(HighsCutSet& cutset);
 
