@@ -28,8 +28,15 @@
 
 #include "util/HighsInt.h"
 
+#if __GNUG__ && __GNUC__ < 5
+#define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
+#else
+#define IS_TRIVIALLY_COPYABLE(T) std::is_trivially_copyable<T>::value
+#endif
+
 template <typename T>
-struct HighsHashable : public std::is_trivially_copyable<T> {};
+struct HighsHashable : std::integral_constant<bool, IS_TRIVIALLY_COPYABLE(T)> {
+};
 
 template <typename U, typename V>
 struct HighsHashable<std::pair<U, V>>
