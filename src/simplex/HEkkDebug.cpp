@@ -16,7 +16,7 @@
 
 #include "simplex/HEkkDebug.h"
 
-#include <math.h>
+#include <cmath>
 
 #include <cassert>
 #include <string>
