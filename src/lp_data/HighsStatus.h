@@ -16,7 +16,7 @@
 #include <string>
 
 // HiGHS status
-enum class HighsStatus { kOk = 0, kWarning, kError };
+enum class HighsStatus { kError = -1, kOk = 0, kWarning = 1 };
 
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status);
