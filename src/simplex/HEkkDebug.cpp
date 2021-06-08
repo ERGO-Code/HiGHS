@@ -16,9 +16,8 @@
 
 #include "simplex/HEkkDebug.h"
 
-#include <cmath>
-
 #include <cassert>
+#include <cmath>
 #include <string>
 
 #include "lp_data/HighsDebug.h"
