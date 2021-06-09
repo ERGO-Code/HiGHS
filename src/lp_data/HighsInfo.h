@@ -132,6 +132,7 @@ struct HighsInfoStruct {
   int64_t mip_node_count;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
+  HighsInt qp_iteration_count;
   HighsInt crossover_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
@@ -202,6 +203,11 @@ class HighsInfo : public HighsInfoStruct {
     record_int = new InfoRecordInt("ipm_iteration_count",
                                    "Iteration count for IPM solver", advanced,
                                    &ipm_iteration_count, 0);
+    records.push_back(record_int);
+
+    record_int = new InfoRecordInt("qp_iteration_count",
+                                   "Iteration count for QP solver", advanced,
+                                   &qp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt("crossover_iteration_count",

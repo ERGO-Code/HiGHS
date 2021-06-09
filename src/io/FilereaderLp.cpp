@@ -27,6 +27,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   const std::string filename,
                                                   HighsModel& model) {
   HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
   try {
     Model m = readinstance(filename);
 
@@ -49,6 +50,34 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
       lp.colCost_[varindex[lt->var->name]] = lt->coef;
     }
+
+    std::map<std::shared_ptr<Variable>, std::vector<std::shared_ptr<Variable>>>
+        mat;
+    std::map<std::shared_ptr<Variable>, std::vector<double>> mat2;
+    for (std::shared_ptr<QuadTerm> qt : m.objective->quadterms) {
+      if (qt->var1 != qt->var2) {
+        mat[qt->var1].push_back(qt->var2);
+        mat2[qt->var1].push_back(qt->coef / 2);
+        mat[qt->var2].push_back(qt->var1);
+        mat2[qt->var2].push_back(qt->coef / 2);
+      } else {
+        mat[qt->var1].push_back(qt->var2);
+        mat2[qt->var1].push_back(qt->coef);
+        hessian.dim_++;
+      }
+    }
+
+    unsigned int qnnz = 0;
+    for (std::shared_ptr<Variable> var : m.variables) {
+      hessian.q_start_.push_back(qnnz);
+
+      for (unsigned int i = 0; i < mat[var].size(); i++) {
+        hessian.q_index_.push_back(varindex[mat[var][i]->name]);
+        hessian.q_value_.push_back(mat2[var][i]);
+        qnnz++;
+      }
+    }
+    hessian.q_start_.push_back(qnnz);
 
     // handle constraints
     std::map<std::shared_ptr<Variable>, std::vector<unsigned int>>

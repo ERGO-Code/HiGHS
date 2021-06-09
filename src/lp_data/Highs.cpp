@@ -34,6 +34,7 @@
 #include "model/HighsHessianUtils.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
+#include "qpsolver/solver.hpp"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -2175,10 +2176,7 @@ HighsStatus Highs::callSolveQp() {
   assert(lp.orientation_ != MatrixOrientation::kRowwise);
   //
   // Run the QP solver
-  return_status = HighsStatus::kError;
-  /*
   Instance instance(lp.numCol_, lp.numRow_);
-
 
   instance.num_con = lp.numRow_;
   instance.num_var = lp.numCol_;
@@ -2199,6 +2197,12 @@ HighsStatus Highs::callSolveQp() {
   instance.Q.mat.index = hessian.q_index_;
   instance.Q.mat.value = hessian.q_value_;
 
+  for (HighsInt i=0; i<instance.c.value.size(); i++) {
+    if (instance.c.value[i] != 0.0) {
+      instance.c.index[instance.c.num_nz++] = i;
+    }
+  }
+
   if (lp.sense_ != ObjSense::kMinimize) {
     for (double& i : instance.c.value) {
       i *= -1.0;
@@ -2208,10 +2212,25 @@ HighsStatus Highs::callSolveQp() {
   Runtime runtime(instance);
 
   runtime.settings.reportingfequency = 1000;
-  runtime.endofiterationevent.subscribe(reportIteration);
+  runtime.endofiterationevent.subscribe([](Runtime& rt) {
+   int rep = rt.statistics.iteration.size() -1;
+    //  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+    //                 "Solving %s\n", lp_.model_name_.c_str());
+
+   printf("%u, %lf, %u, %lf, %lf, %u, %lf, %lf\n", 
+      rt.statistics.iteration[rep],
+      rt.statistics.objval[rep],
+      rt.statistics.nullspacedimension[rep],
+      rt.statistics.time[rep],
+      rt.statistics.sum_primal_infeasibilities[rep],
+      rt.statistics.num_primal_infeasibilities[rep],
+      rt.statistics.density_nullspace[rep],
+      rt.statistics.density_factor[rep]);
+});
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
-  runtime.settings.ratiotest = new RatiotestTwopass(instance, 0.000000001,
-  0.000001); Solver solver(runtime); solver.solve();
+  runtime.settings.ratiotest = new RatiotestTwopass(instance, 0.000000001, 0.000001); 
+  Solver solver(runtime); 
+  solver.solve();
 
 
 
@@ -2233,9 +2252,9 @@ HighsStatus Highs::callSolveQp() {
   info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
   info_.ipm_iteration_count = -1;
   info_.crossover_iteration_count = -1;
-  info_.primal_status = runtime.status == ProblemStatus::OPTIMAL ?
+  info_.primal_solution_status = runtime.status == ProblemStatus::OPTIMAL ?
   SolutionStatus::kSolutionStatusFeasible :
-  SolutionStatus::kSolutionStatusInfeasible; info_.dual_status = runtime.status
+  SolutionStatus::kSolutionStatusInfeasible; info_.dual_solution_status = runtime.status
   == ProblemStatus::OPTIMAL ? SolutionStatus::kSolutionStatusFeasible :
   SolutionStatus::kSolutionStatusInfeasible; info_.objective_function_value =
   runtime.instance.objval(runtime.primal); info_.num_primal_infeasibilities =
@@ -2246,9 +2265,10 @@ HighsStatus Highs::callSolveQp() {
   info_.num_dual_infeasibilities = -1;    // Not known
   info_.max_dual_infeasibility = -1;      // Not known
   info_.sum_dual_infeasibilities = -1;    // Not known
+  info_.valid = true;
   // The solution needs to be here, but just resize it for now
 
-  info_.primal_status = SolutionStatus::kSolutionStatusFeasible;
+  info_.primal_solution_status = SolutionStatus::kSolutionStatusFeasible;
   solution_.col_value.resize(lp.numCol_);
   solution_.col_dual.resize(lp.numCol_);
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
@@ -2262,7 +2282,7 @@ HighsStatus Highs::callSolveQp() {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
     solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
   }
-  */
+
   return return_status;
 }
 
