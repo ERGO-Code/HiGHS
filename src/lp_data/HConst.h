@@ -95,6 +95,13 @@ enum SolutionStatus {
   kSolutionStatusMax = kSolutionStatusFeasible
 };
 
+enum BasisStatus {
+  kBasisStatusNone = 0,
+  kBasisStatusValid,
+  kBasisStatusMin = kBasisStatusNone,
+  kBasisStatusMax = kBasisStatusValid
+};
+
 const std::string kHighsFilenameDefault = "";
 
 // Need to allow infinite costs to pass SCIP LPI unit tests

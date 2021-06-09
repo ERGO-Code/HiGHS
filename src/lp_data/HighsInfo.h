@@ -133,8 +133,10 @@ struct HighsInfoStruct {
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
   HighsInt crossover_iteration_count;
+  HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
+  HighsInt basis_status;
   double objective_function_value;
   double mip_dual_bound;
   double mip_gap;
@@ -209,6 +211,11 @@ class HighsInfo : public HighsInfoStruct {
                                    &crossover_iteration_count, 0);
     records.push_back(record_int);
 
+    record_int = new InfoRecordInt("qp_iteration_count",
+                                   "Iteration count for QP solver", advanced,
+                                   &qp_iteration_count, 0);
+    records.push_back(record_int);
+
     record_int = new InfoRecordInt(
         "primal_solution_status",
         "Primal status of the model: 0 => No solution; 1 => Infeasible point; "
@@ -221,6 +228,12 @@ class HighsInfo : public HighsInfoStruct {
         "Dual status of the model: 0 => No solution; 1 => Infeasible point; 2 "
         "=> Feasible point",
         advanced, &dual_solution_status, kSolutionStatusNone);
+    records.push_back(record_int);
+
+    record_int = new InfoRecordInt(
+        "basis_status",
+        "Basis status of the model: 0 => No basis; 1 => Valid basis",
+        advanced, &basis_status, kBasisStatusNone);
     records.push_back(record_int);
 
     record_double = new InfoRecordDouble("objective_function_value",

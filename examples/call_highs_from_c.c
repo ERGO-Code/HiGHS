@@ -132,9 +132,7 @@ void full_api() {
   //        8 <= 2x_0 +  x_1
   // 0 <= x_0 <= 3; 1 <= x_1
 
-  void* highs;
-
-  highs = Highs_create();
+  void* highs = Highs_create();
 
   const int numcol = 2;
   const int numrow = 3;
