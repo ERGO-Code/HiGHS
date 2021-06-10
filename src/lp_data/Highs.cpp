@@ -2271,14 +2271,14 @@ HighsStatus Highs::callSolveQp() {
   info_.primal_solution_status = SolutionStatus::kSolutionStatusFeasible;
   solution_.col_value.resize(lp.numCol_);
   solution_.col_dual.resize(lp.numCol_);
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     solution_.col_value[iCol] = runtime.primal.value[iCol]; //
     solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
   }
 
   solution_.row_value.resize(lp.numRow_);
   solution_.row_dual.resize(lp.numRow_);
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
     solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
   }
