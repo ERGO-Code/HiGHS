@@ -373,23 +373,19 @@ void full_api() {
 
   // Illustrate a change of option
 
+  // Check what type of option value you should provide
+  int option_type;
+  const char* option_string = "primal_feasibility_tolerance";
+  run_status = Highs_getOptionType(highs, option_string, &option_type);
+  printf("Option %s is of type %d\n", option_string, option_type);
+  assert(run_status == 0);
+  assert(option_type == 2);
+
   double primal_feasibility_tolerance;
   Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
   printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
   primal_feasibility_tolerance = 1e-6;
   Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
-
-  // There are some functions to check what type of option value you should
-  // provide.
-  int option_type;
-  const char* option_string = "solver";
-  run_status = Highs_getOptionType(highs, option_string, &option_type);
-  printf("Option %s is of type %d\n", option_string, option_type);
-  assert(run_status == 0);
-  assert(option_type == 3);
-
-  // Switch to interior point solver.
-  Highs_setOptionValue(highs, "solver", "ipm");
 
   // Illustrate how HiGHS can run quietly
   Highs_setBoolOptionValue(highs, "output_flag", 0);
@@ -398,6 +394,7 @@ void full_api() {
   run_status = Highs_run(highs);
   printf("Running loudly...\n");
   Highs_setBoolOptionValue(highs, "output_flag", 1);
+
   assert(run_status==0);
   // Get the model status - which must be optimal
   model_status = Highs_getModelStatus(highs);
@@ -437,12 +434,8 @@ void full_api() {
   int integrality[2] = {1, 1};
   Highs_changeColsIntegralityByRange(highs, 0, 1, integrality);
 
-  // Switch to choosing solver - otherwise HiGHS will treat MIP as LP
-  // and use interior point solver
-  Highs_setOptionValue(highs, "solver", "choose");
-
+  // Solve the incumbent model quietly
   Highs_setBoolOptionValue(highs, "output_flag", 0);
-  // Solve the incumbent model
   run_status = Highs_run(highs);
   Highs_setBoolOptionValue(highs, "output_flag", 1);
 
