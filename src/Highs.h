@@ -169,7 +169,7 @@ class Highs {
   HighsStatus passOptions(const HighsOptions& options  //!< The options
   );
 
-  const HighsOptions& getOptions();
+  const HighsOptions& getOptions() const { return options_; }
 
   /**
    * @brief Gets an option value as bool/int/double/string and, for
@@ -198,8 +198,6 @@ class Highs {
                             HighsOptionType& type       //!< The option type
   );
 
-  const HighsOptions& getOptions() const;
-
   HighsStatus resetOptions();
 
   HighsStatus writeOptions(const std::string filename,  //!< The filename
@@ -210,7 +208,7 @@ class Highs {
    * type.
    */
 
-  const HighsInfo& getInfo() const;
+  const HighsInfo& getInfo() const { return info_; }
 
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            HighsInt& value           //!< The info value
@@ -258,7 +256,10 @@ class Highs {
   /**
    * @brief Returns the current model status
    */
-  const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
+  const HighsModelStatus& getModelStatus(
+      const bool scaled_model = false) const {
+    return scaled_model ? scaled_model_status_ : model_status_;
+  }
 
   /**
    * @brief Indicates whether a dual unbounded ray exdists, and gets
@@ -871,12 +872,12 @@ class Highs {
   /**
    * @brief Gets the value of infinity used by HiGHS
    */
-  double getInfinity();
+  double getInfinity() { return kHighsInf; }
 
   /**
    * @brief Gets the run time of HiGHS
    */
-  double getRunTime();
+  double getRunTime() { return timer_.readRunHighsClock(); }
 
 #ifdef HiGHSDEV
   /**

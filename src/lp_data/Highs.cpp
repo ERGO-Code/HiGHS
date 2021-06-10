@@ -121,8 +121,6 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-const HighsOptions& Highs::getOptions() { return options_; }
-
 HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
@@ -182,10 +180,6 @@ HighsStatus Highs::writeOptions(const std::string filename,
   if (file != stdout) fclose(file);
   return return_status;
 }
-
-const HighsOptions& Highs::getOptions() const { return options_; }
-
-const HighsInfo& Highs::getInfo() const { return info_; }
 
 HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
   InfoStatus status =
@@ -991,14 +985,6 @@ HighsStatus Highs::run() {
   call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
   return_status = interpretCallStatus(call_status, return_status);
   return returnFromRun(return_status);
-}
-
-const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
-  if (scaled_model) {
-    return scaled_model_status_;
-  } else {
-    return model_status_;
-  }
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
@@ -1939,10 +1925,6 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
-
-double Highs::getInfinity() { return kHighsInf; }
-
-double Highs::getRunTime() { return timer_.readRunHighsClock(); }
 
 void Highs::deprecationMessage(const std::string method_name,
                                const std::string alt_method_name) const {
