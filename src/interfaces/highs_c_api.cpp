@@ -360,7 +360,7 @@ HighsInt Highs_getReducedColumn(void* highs, const HighsInt col,
 HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
                         const HighsInt* rowstatus) {
   HighsBasis basis;
-  const HighsInt num_col = Highs_getNumCols(highs);
+  const HighsInt num_col = Highs_getNumCol(highs);
   if (num_col > 0) {
     basis.col_status.resize(num_col);
     for (HighsInt i = 0; i < num_col; i++) {
@@ -379,7 +379,7 @@ HighsInt Highs_setBasis(void* highs, const HighsInt* colstatus,
       }
     }
   }
-  const HighsInt num_row = Highs_getNumRows(highs);
+  const HighsInt num_row = Highs_getNumRow(highs);
   if (num_row > 0) {
     basis.row_status.resize(num_row);
     for (HighsInt i = 0; i < num_row; i++) {
@@ -486,7 +486,7 @@ HighsInt Highs_changeColsIntegralityBySet(void* highs,
 
 HighsInt Highs_changeColsIntegralityByMask(void* highs, const HighsInt* mask,
                                            const HighsInt* integrality) {
-  const HighsInt num_col = Highs_getNumCols(highs);
+  const HighsInt num_col = Highs_getNumCol(highs);
   vector<HighsVarType> pass_integrality;
   if (num_col > 0) {
     pass_integrality.resize(num_col);
@@ -704,9 +704,9 @@ HighsInt Highs_scaleRow(void* highs, const HighsInt row,
 
 double Highs_getInfinity(void* highs) { return ((Highs*)highs)->getInfinity(); }
 
-HighsInt Highs_getNumCols(void* highs) { return ((Highs*)highs)->getNumCols(); }
+HighsInt Highs_getNumCol(void* highs) { return ((Highs*)highs)->getNumCol(); }
 
-HighsInt Highs_getNumRows(void* highs) { return ((Highs*)highs)->getNumRows(); }
+HighsInt Highs_getNumRow(void* highs) { return ((Highs*)highs)->getNumRow(); }
 
 HighsInt Highs_getNumNz(void* highs) { return ((Highs*)highs)->getNumNz(); }
 
@@ -960,6 +960,9 @@ HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
                            "Highs_getDoubleInfoValue");
   return Highs_getDoubleInfoValue(highs, info, value);
 }
+
+HighsInt Highs_getNumCols(void* highs) { return Highs_getNumCol(highs); }
+HighsInt Highs_getNumRows(void* highs) { return Highs_getNumRow(highs); }
 
 double Highs_getHighsRunTime(void* highs) {
   ((Highs*)highs)

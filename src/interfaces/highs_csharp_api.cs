@@ -155,10 +155,10 @@ public unsafe class HighsLpSolver
    private static extern int Highs_getSolution(void* highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getNumCols(void* highs);
+   private static extern int Highs_getNumCol(void* highs);
 
    [DllImport(highslibname)]
-   private static extern int Highs_getNumRows(void* highs);
+   private static extern int Highs_getNumRow(void* highs);
 
    [DllImport(highslibname)]
    private static extern int Highs_getNumNz(void* highs);
@@ -345,14 +345,14 @@ public unsafe class HighsLpSolver
       return (HighsStatus)HighsLpSolver.Highs_setOptionValue(this.highs, option, value);
    }
 
-   public int getNumCols()
+   public int getNumCol()
    {
-      return HighsLpSolver.Highs_getNumCols(this.highs);
+      return HighsLpSolver.Highs_getNumCol(this.highs);
    }
 
-   public int getNumRows()
+   public int getNumRow()
    {
-      return HighsLpSolver.Highs_getNumRows(this.highs);
+      return HighsLpSolver.Highs_getNumRow(this.highs);
    }
 
    public int getNumNz()
@@ -362,8 +362,8 @@ public unsafe class HighsLpSolver
 
    public HighsSolution getSolution()
    {
-      int nc = this.getNumCols();
-      int nr = this.getNumRows();
+      int nc = this.getNumCol();
+      int nr = this.getNumRow();
 
       HighsSolution sol = new HighsSolution(nc, nr);
       HighsLpSolver.Highs_getSolution(this.highs, sol.colvalue, sol.coldual, sol.rowvalue, sol.rowdual);
@@ -372,8 +372,8 @@ public unsafe class HighsLpSolver
 
    public HighsBasis getBasis()
    {
-      int nc = this.getNumCols();
-      int nr = this.getNumRows();
+      int nc = this.getNumCol();
+      int nr = this.getNumRow();
 
       int[] colbasstat = new int[nc];
       int[] rowbasstat = new int[nr];

@@ -4,184 +4,396 @@
 #include <stdlib.h>
 #include <assert.h>
 
-// gcc call_highs_from_c.c -o highstest -I ../build/install_folder/include/ -L ../build/install_folder/lib/ -lhighs
+// gcc call_highs_from_c.c -o highstest -I install_folder/include/ -L install_folder/lib/ -lhighs
 
 void minimal_api() {
-  // This illustrates the use of Highs_call, the simple C interface to
+  // This illustrates the use of Highs_lpCall, the simple C interface to
   // HiGHS. It's designed to solve the general LP problem
   //
-  // Min c^Tx subject to L <= Ax <= U; l <= x <= u
+  // Min c^Tx + d subject to L <= Ax <= U; l <= x <= u
   //
   // where A is a matrix with m rows and n columns
   //
-  // The scalar n is numcol
-  // The scalar m is numrow
+  // The scalar n is num_col
+  // The scalar m is num_row
   //
-  // The vector c is colcost
-  // The vector l is collower
-  // The vector u is colupper
-  // The vector L is rowlower
-  // The vector U is rowupper
+  // The vector c is col_cost
+  // The scalar d is offset
+  // The vector l is col_lower
+  // The vector u is col_upper
+  // The vector L is row_lower
+  // The vector U is row_upper
   //
   // The matrix A is represented in packed column-wise form: only its
   // nonzeros are stored
   //
-  // * The number of nonzeros in A is numnz
+  // * The number of nonzeros in A is num_nz
   //
   // * The row indices of the nonnzeros in A are stored column-by-column
-  // in aindex
+  // in a_index
   //
   // * The values of the nonnzeros in A are stored column-by-column in
-  // avalue
+  // a_value
   //
-  // * The position in aindex/avalue of the index/value of the first
-  // nonzero in each column is stored in astart
+  // * The position in a_index/a_value of the index/value of the first
+  // nonzero in each column is stored in a_start
   //
-  // Note that astart[0] must be zero
+  // Note that a_start[0] must be zero
   //
-  // After a successful call to Highs_call, the primal and dual
+  // After a successful call to Highs_lpCall, the primal and dual
   // solution, and the simplex basis are returned as follows
   //
   // The vector x is colvalue
-  // The vector Ax is rowvalue
-  // The vector of dual values for the variables x is coldual
-  // The vector of dual values for the variables Ax is rowdual
-  // The basic/nonbasic status of the variables x is colbasisstatus
-  // The basic/nonbasic status of the variables Ax is rowbasisstatus
+  // The vector Ax is row_value
+  // The vector of dual values for the variables x is col_dual
+  // The vector of dual values for the variables Ax is row_dual
+  // The basic/nonbasic status of the variables x is col_basis_status
+  // The basic/nonbasic status of the variables Ax is row_basis_status
   //
   // The status of the solution obtained is modelstatus
   //
-  // To solve maximization problems, the values in c must be negated
+  // The use of Highs_lpCall is illustrated for the LP
   //
-  // The use of Highs_call is illustrated for the LP
+  // Min    f  =  x_0 +  x_1 + 3
+  // s.t.                x_1 <= 7
+  //        5 <=  x_0 + 2x_1 <= 15
+  //        6 <= 3x_0 + 2x_1
+  // 0 <= x_0 <= 4; 1 <= x_1
   //
-  // Min    f  = 2x_0 + 3x_1
-  // s.t.                x_1 <= 6
-  //       10 <=  x_0 + 2x_1 <= 14
-  //        8 <= 2x_0 +  x_1
-  // 0 <= x_0 <= 3; 1 <= x_1
+  // Although the first constraint could be expressed as an upper
+  // bound on x_1, it serves to illustrate a non-trivial packed
+  // column-wise matrix.
+  //
+  const int sense_minimization = 1;
+  const int sense_maximization = -1;
 
-  const int numcol = 2;
-  const int numrow = 3;
-  const int numnz = 5;
-  const int sense = 1;
-  const double offset = 0;
+  const int num_col = 2;
+  const int num_row = 3;
+  const int num_nz = 5;
+  // Define the optimization sense and objective offset
+  int sense = sense_minimization;
+  const double offset = 3;
 
   // Define the column costs, lower bounds and upper bounds
-  double colcost[numcol] = {2.0, 3.0};
-  double collower[numcol] = {0.0, 1.0};
-  double colupper[numcol] = {3.0, 1.0e30};
+  const double col_cost[2] = {1.0, 1.0};
+  const double col_lower[2] = {0.0, 1.0};
+  const double col_upper[2] = {4.0, 1.0e30};
   // Define the row lower bounds and upper bounds
-  double rowlower[numrow] = {-1.0e30, 10.0, 8.0};
-  double rowupper[numrow] = {6.0, 14.0, 1.0e30};
+  const double row_lower[3] = {-1.0e30, 5.0, 6.0};
+  const double row_upper[3] = {7.0, 15.0, 1.0e30};
   // Define the constraint matrix column-wise
-  int astart[numcol] = {0, 2};
-  int aindex[numnz] = {1, 2, 0, 1, 2};
-  double avalue[numnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  const int orientation = 0;
+  const int a_start[2] = {0, 2};
+  const int a_index[5] = {1, 2, 0, 1, 2};
+  const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
 
-  double* colvalue = (double*)malloc(sizeof(double) * numcol);
-  double* coldual = (double*)malloc(sizeof(double) * numcol);
-  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
-  double* rowdual = (double*)malloc(sizeof(double) * numrow);
+  double objective_value;
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
 
-  int* colbasisstatus = (int*)malloc(sizeof(int) * numcol);
-  int* rowbasisstatus = (int*)malloc(sizeof(int) * numrow);
+  int* col_basis_status = (int*)malloc(sizeof(int) * num_col);
+  int* row_basis_status = (int*)malloc(sizeof(int) * num_row);
 
-  int modelstatus;
+  int model_status;
+  int run_status;
 
-  const int rowwise = 0;
-  int runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
-			       sense, offset, colcost, collower, colupper, rowlower, rowupper,
-			       astart, aindex, avalue,
-			       colvalue, coldual, rowvalue, rowdual,
-			       colbasisstatus, rowbasisstatus,
-			       &modelstatus);
+  run_status = Highs_lpCall(num_col, num_row, num_nz, orientation,
+			   sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+			   a_start, a_index, a_value,
+			   col_value, col_dual, row_value, row_dual,
+			   col_basis_status, row_basis_status,
+			   &model_status);
+  // The run must be successful, and the model status optimal
+  assert(run_status == 0);
+  assert(model_status == 7);
 
-  assert(runstatus == 0);
+  printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
 
-  printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
-
-  int i;
-  if (modelstatus == 9) {
-    double objective_value = 0;
-    // Report the column primal and dual values, and basis status
-    for (i = 0; i < numcol; i++) {
-      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, colvalue[i], coldual[i], colbasisstatus[i]);
-      objective_value += colvalue[i]*colcost[i];
-    }
-    // Report the row primal and dual values, and basis status
-    for (i = 0; i < numrow; i++) {
-      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
-    }
-    printf("Optimal objective value = %g\n", objective_value);
+  objective_value = offset;
+  // Report the column primal and dual values, and basis status
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf; dual = %lf; status = %d\n", i, col_value[i], col_dual[i], col_basis_status[i]);
+    objective_value += col_value[i]*col_cost[i];
   }
+  // Report the row primal and dual values, and basis status
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf; dual = %lf; status = %d\n", i, row_value[i], row_dual[i], row_basis_status[i]);
+  }
+  printf("Optimal objective value = %g\n", objective_value);
 
-  free(colvalue);
-  free(coldual);
-  free(rowvalue);
-  free(rowdual);
-  free(colbasisstatus);
-  free(rowbasisstatus);
+  // Switch the sense to maximization and solve the LP again
+  sense = sense_maximization;
+  run_status = Highs_lpCall(num_col, num_row, num_nz, orientation,
+			   sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+			   a_start, a_index, a_value,
+			   col_value, col_dual, row_value, row_dual,
+			   col_basis_status, row_basis_status,
+			   &model_status);
+  // The run must be successful, and the model status optimal
+  assert(run_status == 0);
+  assert(model_status == 7);
+
+  printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
+
+  objective_value = offset;
+  // Report the column primal and dual values, and basis status
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf; dual = %lf; status = %d\n", i, col_value[i], col_dual[i], col_basis_status[i]);
+    objective_value += col_value[i]*col_cost[i];
+  }
+  // Report the row primal and dual values, and basis status
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf; dual = %lf; status = %d\n", i, row_value[i], row_dual[i], row_basis_status[i]);
+  }
+  printf("Optimal objective value = %g\n", objective_value);
+  // 
+  // Indicate that the optimal solution for both columns must be
+  // integer valued and solve the model as a MIP
+  int integrality[2] = {1, 1};
+  run_status = Highs_mipCall(num_col, num_row, num_nz, orientation,
+			     sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+			     a_start, a_index, a_value,
+			     integrality,
+			     col_value, row_value, 
+			     &model_status);
+  // The run must be successful, and the model status optimal
+  assert(run_status == 0);
+  assert(model_status == 7);
+
+  printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
+
+  objective_value = offset;
+  // Report the column primal values
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf\n", i, col_value[i]);
+    objective_value += col_value[i]*col_cost[i];
+  }
+  // Report the row primal values
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf\n", i, row_value[i]);
+  }
+  printf("Optimal objective value = %g\n", objective_value);
+  
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+  free(col_basis_status);
+  free(row_basis_status);
 }
 
 void full_api() {
-  // Form and solve the LP
-  // Min    f  = 2x_0 + 3x_1
-  // s.t.                x_1 <= 6
-  //       10 <=  x_0 + 2x_1 <= 14
-  //        8 <= 2x_0 +  x_1
-  // 0 <= x_0 <= 3; 1 <= x_1
-
-  void* highs;
-
-  highs = Highs_create();
-
-  const int numcol = 2;
-  const int numrow = 3;
-  const int numnz = 5;
-  int i;
+  // This example does exactly the same as the minimal example above,
+  // but illustrates the full C API.  It first forms and solves the LP
+  //
+  // Min    f  =  x_0 +  x_1 + 3
+  // s.t.                x_1 <= 7
+  //        5 <=  x_0 + 2x_1 <= 15
+  //        6 <= 3x_0 + 2x_1
+  // 0 <= x_0 <= 4; 1 <= x_1
+  //
+  // It then solves it as a maximization, then as a MIP.
+  //
+  const int sense_minimization = 1;
+  const int sense_maximization = -1;
+  //
+  const int num_col = 2;
+  const int num_row = 3;
+  const int num_nz = 5;
+  // Define the optimization sense (minimize) and objective offset
+  int sense = sense_minimization;
+  const double offset = 3;
 
   // Define the column costs, lower bounds and upper bounds
-  double colcost[numcol] = {2.0, 3.0};
-  double collower[numcol] = {0.0, 1.0};
-  double colupper[numcol] = {3.0, 1.0e30};
+  const double col_cost[2] = {1.0, 1.0};
+  const double col_lower[2] = {0.0, 1.0};
+  const double col_upper[2] = {4.0, 1.0e30};
   // Define the row lower bounds and upper bounds
-  double rowlower[numrow] = {-1.0e30, 10.0, 8.0};
-  double rowupper[numrow] = {6.0, 14.0, 1.0e30};
+  const double row_lower[3] = {-1.0e30, 5.0, 6.0};
+  const double row_upper[3] = {7.0, 15.0, 1.0e30};
+  // Define the constraint matrix column-wise
+  const int orientation = 0;
+  const int a_start[2] = {0, 2};
+  const int a_index[5] = {1, 2, 0, 1, 2};
+  const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
+
+  int run_status;
+  int model_status;
+  double objective_function_value;
+  int simplex_iteration_count;
+  int primal_solution_status;
+  int dual_solution_status;
+
+  // Create a Highs instance
+  void* highs = Highs_create();
+
+  // Pass the LP to HiGHS
+  run_status = Highs_passLp(highs, num_col, num_row, num_nz, rowwise, sense, offset,
+			    col_cost, col_lower, col_upper,
+			    row_lower, row_upper,
+			    a_start, a_index, a_value);
+  assert(run_status == 0);
+
+  // Solve the incumbent model
+  run_status = Highs_run(highs);
+  // The run must be successful
+  assert(run_status == 0);
+  // Get the model status - which must be optimal
+  model_status = Highs_getModel_Status(highs);
+  assert(model_status == 7);
+
+  printf("Run status = %d; Model status = %d\n", run_status, model_status);
+
+  // Get scalar information about the solution
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
+  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+
+  // The primal and dual solution status values should indicate feasibility
+  assert(primal_solution_status == 2);
+  assert(dual_solution_status == 2);
+
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
+
+  int* col_basis_status = (int*)malloc(sizeof(int) * num_col);
+  int* row_basis_status = (int*)malloc(sizeof(int) * num_row);
+
+  // Get the primal and dual solution
+  Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
+  // Get the basis
+  Highs_getBasis(highs, col_basis_status, row_basis_status);
+
+  // Report the column primal and dual values, and basis status
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
+  }
+  // Report the row primal and dual values, and basis status
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
+  }
+  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
+
+  // Illustrate extraction of model data
+  int check_sense;
+  run_status = Highs_getObjectiveSense(highs, &check_sense);
+  assert(run_status==0);
+  printf("LP problem has objective sense = %d\n", check_sense);
+  assert(check_sense == sense);
+ 
+  // Illustrate change of model data
+  Highs_changeObjectiveSense(highs, sense_maximization);
+
+  // Solve the incumbent model
+  run_status = Highs_run(highs);
+  // The run must be successful
+  assert(run_status == 0);
+  // Get the model status - which must be optimal
+  model_status = Highs_getModel_Status(highs);
+  assert(model_status == 7);
+
+  printf("Run status = %d; Model status = %d\n", run_status, model_status);
+
+  // Get scalar information about the solution
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
+  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+
+  // The primal and dual solution status values should indicate feasibility
+  assert(primal_solution_status == 2);
+  assert(dual_solution_status == 2);
+
+  // Get the primal and dual solution
+  Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
+  // Get the basis
+  Highs_getBasis(highs, col_basis_status, row_basis_status);
+
+  // Report the column primal and dual values, and basis status
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
+  }
+  // Report the row primal and dual values, and basis status
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
+  }
+  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
+  
+  // Now illustrate how LPs can be built within HiGHS by constructing
+  // the same maximization problem. First clear the incumbent model
+  Highs_clearModel(highs);
+
+  // Demonstrate that the incumbent model is empty
+  const int check_num_col = Highs_getNumCol(highs);
+  const int check_num_row = Highs_getNumRow(highs);
+  const int check_num_nz = Highs_getNumNz(highs);
+  assert(check_num_col == 0);
+  assert(check_num_row == 0);
+  assert(check_num_nz == 0);
+  printf("\n Cleared model has %d columns, %d rows and %d nonzeros\n",
+	 check_num_col, check_num_row, check_num_nz);
+
   // Define the constraint matrix row-wise, as it is added to the LP
   // with the rows
-  int arstart[numrow] = {0, 1, 3};
-  int arindex[numnz] = {1, 0, 1, 0, 1};
-  double arvalue[numnz] = {1.0, 1.0, 2.0, 2.0, 1.0};
-
-  double* colvalue = (double*)malloc(sizeof(double) * numcol);
-  double* coldual = (double*)malloc(sizeof(double) * numcol);
-  double* rowvalue = (double*)malloc(sizeof(double) * numrow);
-  double* rowdual = (double*)malloc(sizeof(double) * numrow);
-
-  int* colbasisstatus = (int*)malloc(sizeof(int) * numcol);
-  int* rowbasisstatus = (int*)malloc(sizeof(int) * numrow);
+  const int ar_start[2] = {0, 1, 3};
+  const int ar_index[5] = {1, 0, 1, 0, 1};
+  const double ar_value[5] = {1.0, 1.0, 2.0, 3.0, 2.0};
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
+  run_status = Highs_addCols(highs, num_col, col_cost, col_lower, col_upper, 0, NULL, NULL, NULL);
+  assert(run_status==0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) == 0);
+  run_status = Highs_addRows(highs, num_row, row_lower, row_upper, num_nz, ar_start, ar_index, ar_value);
+  assert(run_status==0);
 
-  int sense;
-  Highs_getObjectiveSense(highs, &sense);
-  printf("LP problem has objective sense = %d\n", sense);
-  assert(sense == 1);
+  // By default, the optimization sense is minimization, and the
+  // objective offset is zero, so these need to be changed
+  Highs_changeObjectiveSense(highs, sense_maximization);
 
-  sense *= -1;
-  Highs_changeObjectiveSense(highs, sense);
-  assert(sense == -1);
+  // Illustrate extraction of model data
+  int check_sense;
+  run_status = Highs_getObjectiveSense(highs, &check_sense);
+  assert(run_status==0);
+  printf("LP problem has objective sense = %d\n", check_sense);
+  assert(check_sense == sense);
 
-  sense *= -1;
-  Highs_changeObjectiveSense(highs, sense);
+  // Solve the incumbent model
+  run_status = Highs_run(highs);
 
-  Highs_getObjectiveSense(highs, &sense);
-  printf("LP problem has old objective sense = %d\n", sense);
-  assert(sense == 1);
+  double objective_function_value;
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  int simplex_iteration_count = 0;
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  int primal_solution_status = 0;
+  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
+  int dual_solution_status = 0;
+  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+
+  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
+  if (model_status == 7) {
+    printf("Solution primal status = %d\n", primal_solution_status);
+    printf("Solution dual status = %d\n", dual_solution_status);
+    // Get the primal and dual solution
+    Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
+    // Get the basis
+    Highs_getBasis(highs, col_basis_status, row_basis_status);
+    // Report the column primal and dual values, and basis status
+    for (i = 0; i < num_col; i++) {
+      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
+    }
+    // Report the row primal and dual values, and basis status
+    for (i = 0; i < num_row; i++) {
+      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
+    }
+  }
+
+
+  
 
   int simplex_scale_strategy;
   Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
@@ -207,14 +419,14 @@ void full_api() {
 
   Highs_setBoolOptionValue(highs, "output_flag", 0);
   printf("Running quietly...\n");
-  int runstatus = Highs_run(highs);
+  run_status = Highs_run(highs);
   printf("Running loudly...\n");
   Highs_setBoolOptionValue(highs, "output_flag", 1);
 
   // Get the model status
-  int modelstatus = Highs_getModelStatus(highs);
+  int model_status = Highs_getModel_Status(highs);
 
-  printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
+  printf("Run status = %d; Model status = %d\n", run_status, model_status);
 
   double objective_function_value;
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
@@ -226,29 +438,29 @@ void full_api() {
   Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
 
   printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
-  if (modelstatus == 7) {
+  if (model_status == 7) {
     printf("Solution primal status = %d\n", primal_solution_status);
     printf("Solution dual status = %d\n", dual_solution_status);
     // Get the primal and dual solution
-    Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
+    Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
     // Get the basis
-    Highs_getBasis(highs, colbasisstatus, rowbasisstatus);
+    Highs_getBasis(highs, col_basis_status, row_basis_status);
     // Report the column primal and dual values, and basis status
-    for (i = 0; i < numcol; i++) {
-      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, colvalue[i], coldual[i], colbasisstatus[i]);
+    for (i = 0; i < num_col; i++) {
+      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
     }
     // Report the row primal and dual values, and basis status
-    for (i = 0; i < numrow; i++) {
-      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rowvalue[i], rowdual[i], rowbasisstatus[i]);
+    for (i = 0; i < num_row; i++) {
+      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
     }
   }
 
-  free(colvalue);
-  free(coldual);
-  free(rowvalue);
-  free(rowdual);
-  free(colbasisstatus);
-  free(rowbasisstatus);
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+  free(col_basis_status);
+  free(row_basis_status);
 
   Highs_destroy(highs);
 
@@ -256,17 +468,17 @@ void full_api() {
   sense = 1;
   double offset = 0;
   int rowwise = 0;
-  int astart[numcol] = {0, 2};
-  int aindex[numnz] = {1, 2, 0, 1, 2};
-  double avalue[numnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  int a_start[num_col] = {0, 2};
+  int a_index[num_nz] = {1, 2, 0, 1, 2};
+  double a_value[num_nz] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise, sense, offset,
-			colcost, collower, colupper,
-			rowlower, rowupper,
-			astart, aindex, avalue);
-  runstatus = Highs_run(highs);
-  modelstatus = Highs_getModelStatus(highs);
-  printf("Run status = %d; Model status = %d\n", runstatus, modelstatus);
+  run_status = Highs_passLp(highs, num_col, num_row, num_nz, rowwise, sense, offset,
+			col_cost, col_lower, col_upper,
+			row_lower, row_upper,
+			a_start, a_index, a_value);
+  run_status = Highs_run(highs);
+  model_status = Highs_getModel_Status(highs);
+  printf("Run status = %d; Model status = %d\n", run_status, model_status);
   int iteration_count;
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count);
   printf("Iteration count = %d\n", iteration_count);
@@ -275,6 +487,6 @@ void full_api() {
 
 int main() {
   minimal_api();
-  full_api();
+  //  full_api();
   return 0;
 }

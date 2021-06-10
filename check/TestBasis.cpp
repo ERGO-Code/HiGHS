@@ -157,7 +157,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   // Write and read a file for incompatible number of columns
   f.open(invalid_basis_file, std::ios::out);
   f << "HiGHS Version 1" << std::endl;
-  f << highs.getNumCols() - 1 << " " << highs.getNumRows() << std::endl;
+  f << highs.getNumCol() - 1 << " " << highs.getNumRow() << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
   REQUIRE(return_status == HighsStatus::kError);
@@ -165,7 +165,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   // Write and read a file for incompatible number of rows
   f.open(invalid_basis_file, std::ios::out);
   f << "HiGHS Version 1" << std::endl;
-  f << highs.getNumCols() << " " << 0 << std::endl;
+  f << highs.getNumCol() << " " << 0 << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);
   REQUIRE(return_status == HighsStatus::kError);
@@ -173,7 +173,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   // Write and read a file for incomplete basis
   f.open(invalid_basis_file, std::ios::out);
   f << "HiGHS Version 1" << std::endl;
-  f << highs.getNumCols() << " " << highs.getNumRows() << std::endl;
+  f << highs.getNumCol() << " " << highs.getNumRow() << std::endl;
   f << "1 1" << std::endl;
   f.close();
   return_status = highs.readBasis(invalid_basis_file);

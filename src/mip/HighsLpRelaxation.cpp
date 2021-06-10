@@ -236,7 +236,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
          (HighsInt)lpsolver.getLp().rowLower_.size());
   if (ndelcuts > 0) {
     HighsBasis basis = lpsolver.getBasis();
-    HighsInt nlprows = lpsolver.getNumRows();
+    HighsInt nlprows = lpsolver.getNumRow();
     lpsolver.deleteRows(deletemask.data());
     for (HighsInt i = mipsolver.numRow(); i != nlprows; ++i) {
       if (deletemask[i] >= 0) {
@@ -260,7 +260,7 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
 void HighsLpRelaxation::removeCuts() {
   assert(lpsolver.getLp().numRow_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
-  HighsInt nlprows = lpsolver.getNumRows();
+  HighsInt nlprows = lpsolver.getNumRow();
   HighsInt modelrows = mipsolver.numRow();
 
   lpsolver.deleteRows(modelrows, nlprows - 1);
@@ -427,7 +427,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 void HighsLpRelaxation::storeDualInfProof() {
   assert(lpsolver.getModelStatus(true) == HighsModelStatus::kInfeasible);
 
-  HighsInt numrow = lpsolver.getNumRows();
+  HighsInt numrow = lpsolver.getNumRow();
   hasdualproof = false;
   lpsolver.getDualRay(hasdualproof);
 

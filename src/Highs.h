@@ -365,18 +365,18 @@ class Highs {
   /**
    * @brief Get the number of columns in the incumbent model
    */
-  HighsInt getNumCols() const { return model_.lp_.numCol_; }
+  HighsInt getNumCol() const { return model_.lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the incumbent model
    */
-  HighsInt getNumRows() const { return model_.lp_.numRow_; }
+  HighsInt getNumRow() const { return model_.lp_.numRow_; }
 
   /**
    * @brief Get the number of (constraint matrix) nonzeros in the incumbent
    * model
    */
-  HighsInt getNumNz() {
+  HighsInt getNumNz() const {
     if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
     return 0;
   }
@@ -902,7 +902,18 @@ class Highs {
 #endif
   // Start of deprecated methods
 
-  HighsInt getNumEntries() { return getNumNz(); }
+  HighsInt getNumCols() const {
+    deprecationMessage("getNumCols", "getNumCol");
+    return getNumCol();
+  }
+  HighsInt getNumRows() const {
+    deprecationMessage("getNumRows", "getNumRow");
+    return getNumRow();
+  }
+  HighsInt getNumEntries() {
+    deprecationMessage("getNumEntries", "getNumNz");
+    return getNumNz();
+  }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name

@@ -910,12 +910,12 @@ double Highs_getInfinity(void* highs);
 /**
  * @brief Returns the number of columns of the current model
  */
-HighsInt Highs_getNumCols(void* highs);
+HighsInt Highs_getNumCol(void* highs);
 
 /**
  * @brief Returns the number of rows of the current model
  */
-HighsInt Highs_getNumRows(void* highs);
+HighsInt Highs_getNumRow(void* highs);
 
 /**
  * @brief Returns the number of nonzeros of the current model
@@ -1082,6 +1082,10 @@ HighsInt Highs_getHighsIntInfoValue(void* highs, const char* info,
 
 HighsInt Highs_getHighsDoubleInfoValue(void* highs, const char* info,
                                        double* value);
+
+HighsInt Highs_getNumCols(void* highs);
+
+HighsInt Highs_getNumRows(void* highs);
 
 double Highs_getHighsInfinity(void* highs);
 

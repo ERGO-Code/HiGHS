@@ -482,8 +482,8 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.writeModel("");
   REQUIRE(highs_status == HighsStatus::kOk);
 
-  HighsInt numRow = highs.getNumRows();
-  HighsInt numCol = highs.getNumCols();
+  HighsInt numRow = highs.getNumRow();
+  HighsInt numCol = highs.getNumCol();
   basic_variables.resize(numRow);
   rhs.resize(numRow);
   solution_row.resize(numCol);
