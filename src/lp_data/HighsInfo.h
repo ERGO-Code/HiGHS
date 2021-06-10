@@ -211,9 +211,9 @@ class HighsInfo : public HighsInfoStruct {
                                    &crossover_iteration_count, 0);
     records.push_back(record_int);
 
-    record_int = new InfoRecordInt("qp_iteration_count",
-                                   "Iteration count for QP solver", advanced,
-                                   &qp_iteration_count, 0);
+    record_int =
+        new InfoRecordInt("qp_iteration_count", "Iteration count for QP solver",
+                          advanced, &qp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
@@ -232,8 +232,8 @@ class HighsInfo : public HighsInfoStruct {
 
     record_int = new InfoRecordInt(
         "basis_status",
-        "Basis status of the model: 0 => No basis; 1 => Valid basis",
-        advanced, &basis_status, kBasisStatusNone);
+        "Basis status of the model: 0 => No basis; 1 => Valid basis", advanced,
+        &basis_status, kBasisStatusNone);
     records.push_back(record_int);
 
     record_double = new InfoRecordDouble("objective_function_value",

@@ -2714,11 +2714,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     assert(consistent);
     return_status = HighsStatus::kError;
   }
+  /*
   if (basis_.valid) {
     assert(info_.basis_status == kBasisStatusValid);
   } else {
     assert(info_.basis_status == kBasisStatusNone);
   }
+  */
 
   if (hmos_.size()) {
     bool simplex_lp_ok =
