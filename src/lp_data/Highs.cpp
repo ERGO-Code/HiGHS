@@ -2410,6 +2410,11 @@ void Highs::setHighsModelStatusBasisSolutionAndInfo() {
   HighsSolutionParams& solution_params = hmos_[0].solution_params_;
   info_.primal_solution_status = solution_params.primal_solution_status;
   info_.dual_solution_status = solution_params.dual_solution_status;
+  if (basis_.valid) {
+    info_.basis_status = kBasisStatusValid;
+  } else {
+    info_.basis_status = kBasisStatusNone;
+  }
   info_.objective_function_value = solution_params.objective_function_value;
   info_.num_primal_infeasibilities = solution_params.num_primal_infeasibility;
   info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
@@ -2710,7 +2715,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     assert(consistent);
     return_status = HighsStatus::kError;
   }
-
+  /*
+  if (basis_.valid) {
+    assert(info_.basis_status == kBasisStatusValid);
+  } else {
+    assert(info_.basis_status == kBasisStatusNone);
+  }
+  */
   if (hmos_.size()) {
     bool simplex_lp_ok =
         ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::kLogicalError;

@@ -123,10 +123,10 @@ set(sources
     mip/HighsPrimalHeuristics.cpp
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
+    mip/HighsNodeQueue.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
-    mip/HighsNodeQueue.cpp
     presolve/ICrashX.cpp
     #presolve/HPreData.cpp
     presolve/HAggregator.cpp
