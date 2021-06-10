@@ -983,6 +983,9 @@ class Highs {
     return info_.simplex_iteration_count;
   }
 
+  // Runs ipx crossover and if successful loads basis into Highs::basis_
+  HighsStatus crossover();
+
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
   HighsStatus setHighsOutput(FILE* output = NULL);
