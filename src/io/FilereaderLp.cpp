@@ -20,7 +20,7 @@
 #include <exception>
 #include <map>
 
-#include "../external/filereaderlp/reader.hpp"
+#include "../extern/filereaderlp/reader.hpp"
 #include "lp_data/HighsLpUtils.h"
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,

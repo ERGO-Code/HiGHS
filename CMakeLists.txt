@@ -90,14 +90,6 @@ message(STATUS "Git hash: " ${GITHASH})
 string(TIMESTAMP TODAY "%Y-%m-%d")
 message(STATUS "Compilation date: " ${TODAY})
 
-set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
-if(EXT_PRESOLVE_DIR)
-    message(STATUS "External presolve: " ${EXT_PRESOLVE_DIR})
-    include_directories(${EXT_PRESOLVE_DIR}/src)
-    include_directories(${EXT_PRESOLVE_DIR}/external)
-endif()
-
-
 option(DEBUGSOL "check the debug solution" OFF)
 
 if(DEBUGSOL)
@@ -245,7 +237,7 @@ configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.
 include_directories(
     ${HIGHS_BINARY_DIR}
     ${HIGHS_SOURCE_DIR}/app
-    ${HIGHS_SOURCE_DIR}/external
+    ${HIGHS_SOURCE_DIR}/extern
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
     ${HIGHS_SOURCE_DIR}/src/ipm/ipx
@@ -476,7 +468,7 @@ if (EXP)
         target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
     endif()
 
-    target_include_directories(doctest PRIVATE external)
+    target_include_directories(doctest PRIVATE extern)
     target_link_libraries(doctest libhighs)
 endif()
 
