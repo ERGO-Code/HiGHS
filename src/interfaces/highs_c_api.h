@@ -1010,8 +1010,7 @@ HighsInt Highs_setHighsBoolOptionValue(
  * to reflect the corresponding Highs basis.
  * status
  */
-int Highs_crossover(
-    void* highs                 //!< HiGHS object reference
+int Highs_crossover(void* highs  //!< HiGHS object reference
 );
 
 // /**
