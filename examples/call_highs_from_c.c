@@ -24,19 +24,17 @@ void minimal_api() {
   // The vector L is row_lower
   // The vector U is row_upper
   //
-  // The matrix A is represented in packed column-wise form: only its
-  // nonzeros are stored
+  // The matrix A is represented in packed vector form, either
+  // row-wise or column-wise: only its nonzeros are stored
   //
   // * The number of nonzeros in A is num_nz
   //
-  // * The row indices of the nonnzeros in A are stored column-by-column
-  // in a_index
+  // * The indices of the nonnzeros in the vectors of A are stored in a_index
   //
-  // * The values of the nonnzeros in A are stored column-by-column in
-  // a_value
+  // * The values of the nonnzeros in the vectors of A are stored in a_value
   //
   // * The position in a_index/a_value of the index/value of the first
-  // nonzero in each column is stored in a_start
+  // nonzero in each vector is stored in a_start
   //
   // Note that a_start[0] must be zero
   //

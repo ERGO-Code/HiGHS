@@ -902,7 +902,11 @@ class Highs {
 
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
-  std::string solutionStatusToString(const HighsInt solution_status);
+  std::string solutionStatusToString(const HighsInt solution_status) const;
+
+  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
+
+  std::string basisValidityToString(const HighsInt basis_validity) const;
 
   HighsStatus setMatrixOrientation(const MatrixOrientation desired_orientation =
                                        MatrixOrientation::kColwise) {

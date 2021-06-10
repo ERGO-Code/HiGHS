@@ -2004,8 +2004,18 @@ std::string Highs::modelStatusToString(
   return utilModelStatusToString(model_status);
 }
 
-std::string Highs::solutionStatusToString(const HighsInt solution_status) {
+std::string Highs::solutionStatusToString(
+    const HighsInt solution_status) const {
   return utilSolutionStatusToString(solution_status);
+}
+
+std::string Highs::basisStatusToString(
+    const HighsBasisStatus basis_status) const {
+  return utilBasisStatusToString(basis_status);
+}
+
+std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
+  return utilBasisValidityToString(basis_validity);
 }
 
 // Private methods
