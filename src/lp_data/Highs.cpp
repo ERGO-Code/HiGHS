@@ -1376,6 +1376,18 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::changeObjectiveOffset(const double offset) {
+  HighsStatus return_status = HighsStatus::kOk;
+  clearPresolve();
+  if (!haveHmo("changeObjectiveOffset")) return HighsStatus::kError;
+  HighsStatus call_status;
+  call_status = changeObjectiveOffsetInterface(offset);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeObjectiveOffset");
+  if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::changeColIntegrality(const HighsInt col,
                                         const HighsVarType integrality) {
   return changeColsIntegrality(1, &col, &integrality);
@@ -1659,6 +1671,12 @@ HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
 HighsStatus Highs::getObjectiveSense(ObjSense& sense) {
   if (!haveHmo("getObjectiveSense")) return HighsStatus::kError;
   sense = model_.lp_.sense_;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::getObjectiveOffset(double& offset) {
+  if (!haveHmo("getObjectiveOffset")) return HighsStatus::kError;
+  offset = model_.lp_.offset_;
   return HighsStatus::kOk;
 }
 

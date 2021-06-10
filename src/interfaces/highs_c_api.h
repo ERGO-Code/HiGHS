@@ -526,6 +526,14 @@ HighsInt Highs_changeObjectiveSense(
 );
 
 /**
+ * @brief Change the objective offset of the model
+ */
+HighsInt Highs_changeObjectiveOffset(
+    void* highs,
+    const double offset  //!< New objective offset
+);
+
+/**
  * @brief Change the integrality of a column
  */
 HighsInt Highs_changeColIntegrality(

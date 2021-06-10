@@ -396,6 +396,11 @@ class Highs {
   HighsStatus getObjectiveSense(ObjSense& sense);
 
   /**
+   * @brief Get the objective offset of the model
+   */
+  HighsStatus getObjectiveOffset(double& offset);
+
+  /**
    * @brief Get multiple columns from the model given by an interval
    */
   HighsStatus getCols(
@@ -538,6 +543,13 @@ class Highs {
    */
   HighsStatus changeObjectiveSense(
       const ObjSense sense  //!< New objective sense
+  );
+
+  /**
+   * @brief Change the objective offset of the model
+   */
+  HighsStatus changeObjectiveOffset(
+      const double offset  //!< New objective offset
   );
 
   /**
@@ -1153,6 +1165,7 @@ class Highs {
                                       double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
+  HighsStatus changeObjectiveOffsetInterface(const double Xoffset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,

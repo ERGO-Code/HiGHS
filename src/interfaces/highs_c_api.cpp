@@ -447,6 +447,10 @@ HighsInt Highs_changeObjectiveSense(void* highs, const HighsInt sense) {
   return (HighsInt)((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
+HighsInt Highs_changeObjectiveOffset(void* highs, const double offset) {
+  return (HighsInt)((Highs*)highs)->changeObjectiveOffset(offset);
+}
+
 HighsInt Highs_changeColIntegrality(void* highs, const HighsInt col,
                                     const HighsInt integrality) {
   return (HighsInt)((Highs*)highs)

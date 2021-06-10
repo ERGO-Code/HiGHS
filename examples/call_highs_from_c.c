@@ -225,12 +225,13 @@ void full_api() {
   int simplex_iteration_count;
   int primal_solution_status;
   int dual_solution_status;
+  //  int basis_status;
 
   // Create a Highs instance
   void* highs = Highs_create();
 
   // Pass the LP to HiGHS
-  run_status = Highs_passLp(highs, num_col, num_row, num_nz, rowwise, sense, offset,
+  run_status = Highs_passLp(highs, num_col, num_row, num_nz, orientation, sense, offset,
 			    col_cost, col_lower, col_upper,
 			    row_lower, row_upper,
 			    a_start, a_index, a_value);
@@ -241,7 +242,7 @@ void full_api() {
   // The run must be successful
   assert(run_status == 0);
   // Get the model status - which must be optimal
-  model_status = Highs_getModel_Status(highs);
+  model_status = Highs_getModelStatus(highs);
   assert(model_status == 7);
 
   printf("Run status = %d; Model status = %d\n", run_status, model_status);
@@ -251,10 +252,13 @@ void full_api() {
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
   Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
   Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+  //  Highs_getIntInfoValue(highs, "basis_status", &basis_status);
 
   // The primal and dual solution status values should indicate feasibility
   assert(primal_solution_status == 2);
   assert(dual_solution_status == 2);
+  // The basis status should indicate validity
+  //  assert(basis_status == 1);
 
   double* col_value = (double*)malloc(sizeof(double) * num_col);
   double* col_dual = (double*)malloc(sizeof(double) * num_col);
@@ -294,7 +298,7 @@ void full_api() {
   // The run must be successful
   assert(run_status == 0);
   // Get the model status - which must be optimal
-  model_status = Highs_getModel_Status(highs);
+  model_status = Highs_getModelStatus(highs);
   assert(model_status == 7);
 
   printf("Run status = %d; Model status = %d\n", run_status, model_status);
@@ -304,10 +308,14 @@ void full_api() {
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
   Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
   Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+  //  Highs_getIntInfoValue(highs, "basis_status", &basis_status);
+
 
   // The primal and dual solution status values should indicate feasibility
   assert(primal_solution_status == 2);
   assert(dual_solution_status == 2);
+  // The basis status should indicate validity
+  //  assert(basis_status == 1);
 
   // Get the primal and dual solution
   Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
@@ -340,7 +348,7 @@ void full_api() {
 
   // Define the constraint matrix row-wise, as it is added to the LP
   // with the rows
-  const int ar_start[2] = {0, 1, 3};
+  const int ar_start[3] = {0, 1, 3};
   const int ar_index[5] = {1, 0, 1, 0, 1};
   const double ar_value[5] = {1.0, 1.0, 2.0, 3.0, 2.0};
 
@@ -354,62 +362,15 @@ void full_api() {
   // By default, the optimization sense is minimization, and the
   // objective offset is zero, so these need to be changed
   Highs_changeObjectiveSense(highs, sense_maximization);
+  Highs_changeObjectiveOffset(highs, offset);
 
   // Illustrate extraction of model data
-  int check_sense;
   run_status = Highs_getObjectiveSense(highs, &check_sense);
   assert(run_status==0);
   printf("LP problem has objective sense = %d\n", check_sense);
-  assert(check_sense == sense);
+  assert(check_sense == sense_maximization);
 
-  // Solve the incumbent model
-  run_status = Highs_run(highs);
-
-  double objective_function_value;
-  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
-  int simplex_iteration_count = 0;
-  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
-  int primal_solution_status = 0;
-  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
-  int dual_solution_status = 0;
-  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
-
-  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
-  if (model_status == 7) {
-    printf("Solution primal status = %d\n", primal_solution_status);
-    printf("Solution dual status = %d\n", dual_solution_status);
-    // Get the primal and dual solution
-    Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
-    // Get the basis
-    Highs_getBasis(highs, col_basis_status, row_basis_status);
-    // Report the column primal and dual values, and basis status
-    for (i = 0; i < num_col; i++) {
-      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
-    }
-    // Report the row primal and dual values, and basis status
-    for (i = 0; i < num_row; i++) {
-      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
-    }
-  }
-
-
-  
-
-  int simplex_scale_strategy;
-  Highs_getIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
-  printf("simplex_scale_strategy = %d: setting it to 3\n", simplex_scale_strategy);
-  simplex_scale_strategy = 3;
-  Highs_setIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
-
-  // There are some functions to check what type of option value you should
-  // provide.
-  int option_type;
-  int ret;
-  ret = Highs_getOptionType(highs, "simplex_scale_strategy", &option_type);
-  assert(ret == 0);
-  assert(option_type == 1);
-  ret = Highs_getOptionType(highs, "bad_option", &option_type);
-  assert(ret != 0);
+  // Illustrate a change of option
 
   double primal_feasibility_tolerance;
   Highs_getDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
@@ -417,43 +378,102 @@ void full_api() {
   primal_feasibility_tolerance = 1e-6;
   Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
-  Highs_setBoolOptionValue(highs, "output_flag", 0);
-  printf("Running quietly...\n");
-  run_status = Highs_run(highs);
-  printf("Running loudly...\n");
-  Highs_setBoolOptionValue(highs, "output_flag", 1);
+  // There are some functions to check what type of option value you should
+  // provide.
+  int option_type;
+  const char* option_string = "solver";
+  run_status = Highs_getOptionType(highs, option_string, &option_type);
+  printf("Option %s is of type %d\n", option_string, option_type);
+  assert(run_status == 0);
+  assert(option_type == 3);
 
-  // Get the model status
-  int model_status = Highs_getModel_Status(highs);
+  // Switch to IPM solver
+  Highs_setOptionValue(highs, "solver", "ipm");
+
+  // Solve the incumbent model
+  run_status = Highs_run(highs);
+  assert(run_status==0);
+
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
+  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+  //  Highs_getIntInfoValue(highs, "basis_status", &basis_status);
+
+  // The primal and dual solution status values should indicate feasibility
+  assert(primal_solution_status == 2);
+  assert(dual_solution_status == 2);
+  // The basis status should indicate validity
+  //  assert(basis_status == 1);
+
+  // Get the primal
+  Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
+  Highs_getBasis(highs, col_basis_status, row_basis_status);
+
+  // Report the column primal and dual values, and basis status
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
+  }
+  // Report the row primal and dual values, and basis status
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
+  }
+  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
+  
+  // 
+  // Indicate that the optimal solution for both columns must be
+  // integer valued and solve the model as a MIP
+  int integrality[2] = {1, 1};
+  Highs_changeColsIntegralityByRange(highs, 0, 1, integrality);
+
+  //  Highs_setBoolOptionValue(highs, "output_flag", 0);  printf("Running quietly...\n");
+  // Solve the incumbent model
+  run_status = Highs_run(highs);
+  //  printf("Running loudly...\n");  Highs_setBoolOptionValue(highs, "output_flag", 1);
+
+  assert(run_status == 0);
+  // Get the model status - which must be optimal
+  model_status = Highs_getModelStatus(highs);
+  assert(model_status == 7);
 
   printf("Run status = %d; Model status = %d\n", run_status, model_status);
 
-  double objective_function_value;
+  // Get scalar information about the solution
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
-  int simplex_iteration_count = 0;
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
-  int primal_solution_status = 0;
   Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
-  int dual_solution_status = 0;
+  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
+  //  Highs_getIntInfoValue(highs, "basis_status", &basis_status);
+
+  // The primal solution status value should indicate feasibility
+  assert(primal_solution_status == 2);
+  // The dual solution status value should indicate no solution
+  assert(dual_solution_status == 0);
+  // The basis status value should indicate invalidity
+  //  assert(basis_status == 0);
+
+  // Get the primal and dual solution
+  Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
+
+ // Get the model status
+  model_status = Highs_getModelStatus(highs);
+
+  printf("Run status = %d; Model status = %d\n", run_status, model_status);
+
+  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
   Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
 
-  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
-  if (model_status == 7) {
-    printf("Solution primal status = %d\n", primal_solution_status);
-    printf("Solution dual status = %d\n", dual_solution_status);
-    // Get the primal and dual solution
-    Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
-    // Get the basis
-    Highs_getBasis(highs, col_basis_status, row_basis_status);
-    // Report the column primal and dual values, and basis status
-    for (i = 0; i < num_col; i++) {
-      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, col_value[i], col_dual[i], col_basis_status[i]);
-    }
-    // Report the row primal and dual values, and basis status
-    for (i = 0; i < num_row; i++) {
-      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, row_value[i], row_dual[i], row_basis_status[i]);
-    }
+  // Report the column primal values
+  for (int i = 0; i < num_col; i++) {
+    printf("Col%d = %lf\n", i, col_value[i]);
   }
+  // Report the row primal values
+  for (int i = 0; i < num_row; i++) {
+    printf("Row%d = %lf\n", i, row_value[i]);
+  }
+  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
 
   free(col_value);
   free(col_dual);
@@ -463,30 +483,10 @@ void full_api() {
   free(row_basis_status);
 
   Highs_destroy(highs);
-
-  // Define the constraint matrix col-wise to pass to the LP
-  sense = 1;
-  double offset = 0;
-  int rowwise = 0;
-  int a_start[num_col] = {0, 2};
-  int a_index[num_nz] = {1, 2, 0, 1, 2};
-  double a_value[num_nz] = {1.0, 2.0, 1.0, 2.0, 1.0};
-  highs = Highs_create();
-  run_status = Highs_passLp(highs, num_col, num_row, num_nz, rowwise, sense, offset,
-			col_cost, col_lower, col_upper,
-			row_lower, row_upper,
-			a_start, a_index, a_value);
-  run_status = Highs_run(highs);
-  model_status = Highs_getModel_Status(highs);
-  printf("Run status = %d; Model status = %d\n", run_status, model_status);
-  int iteration_count;
-  Highs_getIntInfoValue(highs, "simplex_iteration_count", &iteration_count);
-  printf("Iteration count = %d\n", iteration_count);
-  Highs_destroy(highs);
 }
 
 int main() {
   minimal_api();
-  //  full_api();
+  full_api();
   return 0;
 }
