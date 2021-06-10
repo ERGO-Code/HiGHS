@@ -2316,6 +2316,7 @@ HighsStatus Highs::callSolveMip() {
   assert(!solution_.dual_valid);
   // There is no basis: should be so by default
   assert(!basis_.valid);
+  // NB getKktFailures sets the primal and dual solution status
   getKktFailures(model_.lp_, solution_, basis_, solution_params);
   // Set the values in HighsInfo instance info_.
   solution_params.objective_function_value = solver.solution_objective_;

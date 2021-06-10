@@ -223,6 +223,7 @@ void full_api() {
   int model_status;
   double objective_function_value;
   int simplex_iteration_count;
+  int mip_node_count;
   int primal_solution_status;
   int dual_solution_status;
   //  int basis_status;
@@ -343,7 +344,7 @@ void full_api() {
   assert(check_num_col == 0);
   assert(check_num_row == 0);
   assert(check_num_nz == 0);
-  printf("\n Cleared model has %d columns, %d rows and %d nonzeros\n",
+  printf("\nCleared model has %d columns, %d rows and %d nonzeros\n",
 	 check_num_col, check_num_row, check_num_nz);
 
   // Define the constraint matrix row-wise, as it is added to the LP
@@ -387,12 +388,22 @@ void full_api() {
   assert(run_status == 0);
   assert(option_type == 3);
 
-  // Switch to IPM solver
+  // Switch to interior point solver.
   Highs_setOptionValue(highs, "solver", "ipm");
 
+  // Illustrate how HiGHS can run quietly
+  Highs_setBoolOptionValue(highs, "output_flag", 0);
+  printf("Running quietly...\n");
   // Solve the incumbent model
   run_status = Highs_run(highs);
+  printf("Running loudly...\n");
+  Highs_setBoolOptionValue(highs, "output_flag", 1);
   assert(run_status==0);
+  // Get the model status - which must be optimal
+  model_status = Highs_getModelStatus(highs);
+  assert(model_status == 7);
+
+  printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
 
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
@@ -426,21 +437,26 @@ void full_api() {
   int integrality[2] = {1, 1};
   Highs_changeColsIntegralityByRange(highs, 0, 1, integrality);
 
-  //  Highs_setBoolOptionValue(highs, "output_flag", 0);  printf("Running quietly...\n");
+  // Switch to choosing solver - otherwise HiGHS will treat MIP as LP
+  // and use interior point solver
+  Highs_setOptionValue(highs, "solver", "choose");
+
+  Highs_setBoolOptionValue(highs, "output_flag", 0);
   // Solve the incumbent model
   run_status = Highs_run(highs);
-  //  printf("Running loudly...\n");  Highs_setBoolOptionValue(highs, "output_flag", 1);
+  Highs_setBoolOptionValue(highs, "output_flag", 1);
 
   assert(run_status == 0);
   // Get the model status - which must be optimal
   model_status = Highs_getModelStatus(highs);
   assert(model_status == 7);
 
-  printf("Run status = %d; Model status = %d\n", run_status, model_status);
+  printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
 
   // Get scalar information about the solution
   Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  //  Highs_getIntInfoValue(highs, "mip_node_count", &mip_node_count);
   Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
   Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
   //  Highs_getIntInfoValue(highs, "basis_status", &basis_status);
@@ -454,16 +470,6 @@ void full_api() {
 
   // Get the primal and dual solution
   Highs_getSolution(highs, col_value, col_dual, row_value, row_dual);
-
- // Get the model status
-  model_status = Highs_getModelStatus(highs);
-
-  printf("Run status = %d; Model status = %d\n", run_status, model_status);
-
-  Highs_getDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
-  Highs_getIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
-  Highs_getIntInfoValue(highs, "primal_solution_status", &primal_solution_status);
-  Highs_getIntInfoValue(highs, "dual_solution_status", &dual_solution_status);
 
   // Report the column primal values
   for (int i = 0; i < num_col; i++) {

@@ -1318,6 +1318,9 @@ HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
   // technique
   HighsInt lp_col;
   HighsInt usr_col = -1;
+  // May be adding integrality to a pure LP for which lp.integrality_
+  // is of size 0.
+  lp.integrality_.resize(lp.numCol_);
   for (HighsInt k = from_k; k < to_k + 1; k++) {
     if (interval || mask) {
       lp_col = k;
