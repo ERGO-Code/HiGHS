@@ -2184,6 +2184,7 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   assert(lp.orientation_ != MatrixOrientation::kRowwise);
+  assert(hessian.dim_ == lp.numCol_);
   //
   // Run the QP solver
   return_status = HighsStatus::kError;
@@ -2400,6 +2401,7 @@ void Highs::setHighsModelStatusAndInfo(const HighsModelStatus model_status) {
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
   info_.crossover_iteration_count = iteration_counts_.crossover;
+  info_.qp_iteration_count = iteration_counts_.qp;
   info_.valid = true;
 }
 
@@ -2416,14 +2418,15 @@ void Highs::setHighsModelStatusBasisSolutionAndInfo() {
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
   info_.crossover_iteration_count = iteration_counts_.crossover;
+  info_.qp_iteration_count = iteration_counts_.qp;
 
   HighsSolutionParams& solution_params = hmos_[0].solution_params_;
   info_.primal_solution_status = solution_params.primal_solution_status;
   info_.dual_solution_status = solution_params.dual_solution_status;
   if (basis_.valid) {
-    info_.basis_status = kBasisStatusValid;
+    info_.basis_validity = kBasisValidityValid;
   } else {
-    info_.basis_status = kBasisStatusNone;
+    info_.basis_validity = kBasisValidityInvalid;
   }
   info_.objective_function_value = solution_params.objective_function_value;
   info_.num_primal_infeasibilities = solution_params.num_primal_infeasibility;
@@ -2727,9 +2730,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
   /*
   if (basis_.valid) {
-    assert(info_.basis_status == kBasisStatusValid);
+    assert(info_.basis_validity == kBasisValidityValid);
   } else {
-    assert(info_.basis_status == kBasisStatusNone);
+    assert(info_.basis_validity == kBasisValidityInvalid);
   }
   */
   if (hmos_.size()) {

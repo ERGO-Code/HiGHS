@@ -136,7 +136,7 @@ struct HighsInfoStruct {
   HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
-  HighsInt basis_status;
+  HighsInt basis_validity;
   double objective_function_value;
   double mip_dual_bound;
   double mip_gap;
@@ -216,24 +216,25 @@ class HighsInfo : public HighsInfoStruct {
                           advanced, &qp_iteration_count, 0);
     records.push_back(record_int);
 
-    record_int = new InfoRecordInt(
-        "primal_solution_status",
-        "Primal status of the model: 0 => No solution; 1 => Infeasible point; "
-        "2 => Feasible point",
-        advanced, &primal_solution_status, kSolutionStatusNone);
+    record_int = new InfoRecordInt("primal_solution_status",
+                                   "Model primal solution status: 0 => No "
+                                   "solution; 1 => Infeasible point; "
+                                   "2 => Feasible point",
+                                   advanced, &primal_solution_status,
+                                   kSolutionStatusNone);
+    records.push_back(record_int);
+
+    record_int =
+        new InfoRecordInt("dual_solution_status",
+                          "Model dual solution status: 0 => No solution; 1 => "
+                          "Infeasible point; 2 "
+                          "=> Feasible point",
+                          advanced, &dual_solution_status, kSolutionStatusNone);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt(
-        "dual_solution_status",
-        "Dual status of the model: 0 => No solution; 1 => Infeasible point; 2 "
-        "=> Feasible point",
-        advanced, &dual_solution_status, kSolutionStatusNone);
-    records.push_back(record_int);
-
-    record_int = new InfoRecordInt(
-        "basis_status",
-        "Basis status of the model: 0 => No basis; 1 => Valid basis", advanced,
-        &basis_status, kBasisStatusNone);
+        "basis_validity", "Model basis validity: 0 => Invalid; 1 => Valid",
+        advanced, &basis_validity, kBasisValidityInvalid);
     records.push_back(record_int);
 
     record_double = new InfoRecordDouble("objective_function_value",

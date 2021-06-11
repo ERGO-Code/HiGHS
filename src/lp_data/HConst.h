@@ -95,11 +95,11 @@ enum SolutionStatus {
   kSolutionStatusMax = kSolutionStatusFeasible
 };
 
-enum BasisStatus {
-  kBasisStatusNone = 0,
-  kBasisStatusValid,
-  kBasisStatusMin = kBasisStatusNone,
-  kBasisStatusMax = kBasisStatusValid
+enum BasisValidity {
+  kBasisValidityInvalid = 0,
+  kBasisValidityValid,
+  kBasisValidityMin = kBasisValidityInvalid,
+  kBasisValidityMax = kBasisValidityValid
 };
 
 const std::string kHighsFilenameDefault = "";

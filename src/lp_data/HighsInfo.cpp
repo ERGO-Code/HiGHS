@@ -26,7 +26,7 @@ void HighsInfo::clear() {
   qp_iteration_count = -1;
   primal_solution_status = kSolutionStatusNone;
   dual_solution_status = kSolutionStatusNone;
-  basis_status = kBasisStatusNone;
+  basis_validity = kBasisValidityInvalid;
   objective_function_value = 0;
   mip_dual_bound = 0;
   mip_gap = kHighsInf;
