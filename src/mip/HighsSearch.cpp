@@ -306,8 +306,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
   };
 
   bool resetBasis = false;
-  lp->storeBasis();
-  auto basis = lp->getStoredBasis();
 
   while (true) {
     bool mustStop = getStrongBranchingLpIterations() >= maxSbIters ||
@@ -318,7 +316,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     if ((upscorereliable[candidate] && downscorereliable[candidate]) ||
         mustStop) {
       if (resetBasis) {
-        lp->setStoredBasis(std::move(basis));
+        lp->setStoredBasis(nodestack.back().nodeBasis);
         lp->recoverBasis();
         lp->run();
       }
@@ -344,7 +342,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         localdom.clearChangedCols();
         localdom.changeBound(HighsBoundType::kLower, col, upval,
                              HighsDomain::Reason::unspecified());
-        lp->setStoredBasis(std::move(basis));
+        lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
       }
 
@@ -409,7 +407,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kLower, col, upval,
                                  HighsDomain::Reason::unspecified());
-            lp->setStoredBasis(std::move(basis));
+            lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
@@ -422,7 +420,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kLower, col, upval,
                                  HighsDomain::Reason::unspecified());
-            lp->setStoredBasis(std::move(basis));
+            lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
@@ -434,7 +432,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         lp->flushDomain(localdom);
         localdom.changeBound(HighsBoundType::kLower, col, upval,
                              HighsDomain::Reason::unspecified());
-        lp->setStoredBasis(std::move(basis));
+        lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
       } else {
@@ -464,7 +462,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         localdom.clearChangedCols();
         localdom.changeBound(HighsBoundType::kUpper, col, downval,
                              HighsDomain::Reason::unspecified());
-        lp->setStoredBasis(std::move(basis));
+        lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
       }
 
@@ -531,7 +529,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kUpper, col, downval,
                                  HighsDomain::Reason::unspecified());
-            lp->setStoredBasis(std::move(basis));
+            lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
@@ -544,7 +542,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kUpper, col, downval,
                                  HighsDomain::Reason::unspecified());
-            lp->setStoredBasis(std::move(basis));
+            lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
@@ -556,7 +554,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         lp->flushDomain(localdom);
         localdom.changeBound(HighsBoundType::kUpper, col, downval,
                              HighsDomain::Reason::unspecified());
-        lp->setStoredBasis(std::move(basis));
+        lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
       } else {
@@ -1105,6 +1103,8 @@ bool HighsSearch::backtrack() {
                          currnode.nodeBasis);
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
+  lp->setStoredBasis(nodestack.back().nodeBasis);
+  lp->recoverBasis();
 
   return true;
 }
@@ -1157,6 +1157,8 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
                          currnode.nodeBasis);
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
+  lp->setStoredBasis(nodestack.back().nodeBasis);
+  lp->recoverBasis();
 
   return true;
 }
