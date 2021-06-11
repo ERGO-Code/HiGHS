@@ -96,6 +96,7 @@ class HighsSearch {
           opensubtrees(2) {}
   };
 
+  std::vector<double> subrootsol;
   std::vector<NodeData> nodestack;
   HighsHashTable<HighsInt, int> reliableatnode;
 

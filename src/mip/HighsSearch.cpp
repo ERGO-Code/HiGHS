@@ -673,6 +673,7 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
   localdom.setDomainChangeStack(std::move(node.domchgstack));
   nodestack.emplace_back(node.lower_bound, node.estimate);
   depthoffset = node.depth - 1;
+  subrootsol.clear();
 }
 
 HighsSearch::NodeResult HighsSearch::evaluateNode() {
@@ -861,11 +862,18 @@ HighsSearch::NodeResult HighsSearch::branch() {
                             mipsolver.mipdata_->epsilon;
           double upPrio =
               pseudocost.getAvgInferencesUp(col) + mipsolver.mipdata_->epsilon;
-          if (!mipsolver.mipdata_->rootlpsol.empty()) {
-            upPrio *= (1.0 + (currnode.branching_point -
-                              mipsolver.mipdata_->rootlpsol[col]));
-            downPrio *= (1.0 + (mipsolver.mipdata_->rootlpsol[col] -
-                                currnode.branching_point));
+          if (!subrootsol.empty()) {
+            upPrio *= (1.0 + (currnode.branching_point - subrootsol[col]));
+            downPrio *= (1.0 + (subrootsol[col] - currnode.branching_point));
+          } else {
+            if (currnode.lp_objective != -kHighsInf)
+              subrootsol = lp->getSolution().col_value;
+            if (!mipsolver.mipdata_->rootlpsol.empty()) {
+              upPrio *= (1.0 + (currnode.branching_point -
+                                mipsolver.mipdata_->rootlpsol[col]));
+              downPrio *= (1.0 + (mipsolver.mipdata_->rootlpsol[col] -
+                                  currnode.branching_point));
+            }
           }
           if (upPrio + mipsolver.mipdata_->epsilon >= downPrio) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
