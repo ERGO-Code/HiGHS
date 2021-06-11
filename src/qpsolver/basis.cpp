@@ -4,11 +4,11 @@
 #include <memory>
 
 Basis::Basis(Runtime& rt, std::vector<int> active, std::vector<BasisStatus> lower, std::vector<int> inactive) : runtime(rt), buffer_column_aq(rt.instance.num_var), buffer_row_ep(rt.instance.num_var) {
-   for (int i=0; i<active.size(); i++) {
+   for (HighsInt i=0; i<active.size(); i++) {
       activeconstraintidx.push_back(active[i]);
       basisstatus[activeconstraintidx[i]] = lower[i];
    }
-   for (int i : inactive) {
+   for (HighsInt i : inactive) {
       nonactiveconstraintsidx.push_back(i);
    }
 
@@ -28,11 +28,11 @@ void Basis::build() {
    constraintindexinbasisfactor.assign(Atran.num_row + Atran.num_col, -1);
    assert(nonactiveconstraintsidx.size() + activeconstraintidx.size() == Atran.num_row);
    
-   int counter = 0;
-   for (int i : nonactiveconstraintsidx) {
+   HighsInt counter = 0;
+   for (HighsInt i : nonactiveconstraintsidx) {
       baseindex[counter++] = i;
    }
-   for (int i : activeconstraintidx) {
+   for (HighsInt i : activeconstraintidx) {
       baseindex[counter++] = i;
    }
 
@@ -62,19 +62,19 @@ void Basis::rebuild() {
 
 void Basis::report() {
    printf("basis: ");
-   for (int a_ : activeconstraintidx) {
+   for (HighsInt a_ : activeconstraintidx) {
       printf("%u ", a_);
    }
    printf(" - ");
-   for (int n_ : nonactiveconstraintsidx) {
+   for (HighsInt n_ : nonactiveconstraintsidx) {
       printf("%u ", n_);
    }
    printf("\n");
 }
 
-   // move that constraint into V section basis (will correspond to Nullspace from
+   // move that constraHighsInt into V section basis (will correspond to Nullspace from
    // now on)
-void Basis::deactivate(int conid) {
+void Basis::deactivate(HighsInt conid) {
    // printf("deact %u\n", conid);
    assert(contains(activeconstraintidx, conid));
    basisstatus.erase(conid);
@@ -82,20 +82,20 @@ void Basis::deactivate(int conid) {
    nonactiveconstraintsidx.push_back(conid);
 }
 
-void Basis::activate(Runtime& rt, int conid,
-                        BasisStatus atlower, int nonactivetoremove, Pricing* pricing) {
+void Basis::activate(Runtime& rt, HighsInt conid,
+                        BasisStatus atlower, HighsInt nonactivetoremove, Pricing* pricing) {
    // printf("activ %u\n", conid);
    if (!contains(activeconstraintidx, (int)conid)) {
       basisstatus[conid] = atlower;
       activeconstraintidx.push_back(conid);
    } else {
-      printf("Degeneracy? constraint %u already in basis\n", conid);
+      printf("Degeneracy? constraHighsInt %u already in basis\n", conid);
       exit(1);
    }
 
    // printf("drop %d\n", nonactivetoremove);
    // remove non-active row from basis
-   int rowtoremove = constraintindexinbasisfactor[nonactivetoremove];
+   HighsInt rowtoremove = constraintindexinbasisfactor[nonactivetoremove];
       
    baseindex[rowtoremove] = conid;
    remove(nonactiveconstraintsidx, nonactivetoremove);
@@ -107,12 +107,12 @@ void Basis::activate(Runtime& rt, int conid,
    } 
 }
 
-void Basis::updatebasis(Runtime& rt, int newactivecon, int droppedcon, Pricing* pricing) {
+void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon, Pricing* pricing) {
    if (newactivecon == droppedcon) {
       return;
    }
 
-   int droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
+   HighsInt droppedcon_rowindex = constraintindexinbasisfactor[droppedcon];
    Atran.extractcol(newactivecon, buffer_column_aq);
    // column.report("col_pre_ftran");
 
@@ -129,12 +129,12 @@ void Basis::updatebasis(Runtime& rt, int newactivecon, int droppedcon, Pricing* 
 
    pricing->update_weights(hvec2vec(column_aq_hvec), hvec2vec(row_ep_hvec), droppedcon, newactivecon);
 
-   int hint = 99999;
-   int row_out = droppedcon_rowindex;
+   HighsInt hHighsInt = 99999;
+   HighsInt row_out = droppedcon_rowindex;
 
    updatessinceinvert++;
    basisfactor.update(&column_aq_hvec, &row_ep_hvec, &row_out, &hint);
-   if (updatessinceinvert >= rt.settings.reinvertfrequency || hint != 99999) {
+   if (updatessinceinvert >= rt.settings.reinvertfrequency || hHighsInt != 99999) {
       rebuild();
       // printf("Hint: %d\n", hint);
       // printf("reinvert\n");
@@ -172,8 +172,8 @@ Vector Basis::recomputex(const Instance& inst) {
    assert(activeconstraintidx.size() == inst.num_var);
    Vector rhs(inst.num_var);
 
-   for (int i=0; i<inst.num_var; i++) {
-      int con = activeconstraintidx[i];
+   for (HighsInt i=0; i<inst.num_var; i++) {
+      HighsInt con = activeconstraintidx[i];
       if (constraintindexinbasisfactor[con] == -1) {
          printf("error\n");
       }
@@ -206,10 +206,10 @@ Vector Basis::recomputex(const Instance& inst) {
    //    FILE* file = fopen(filename.c_str(), "w");
 
    //    fprintf(file, "%lu %lu\n", activeconstraintidx.size(), nonactiveconstraintsidx.size());
-   //    for (int i=0; i<activeconstraintidx.size(); i++) {
+   //    for (HighsInt i=0; i<activeconstraintidx.size(); i++) {
    //       fprintf(file, "%u %u\n", activeconstraintidx[i], (int)rowstatus[i]);
    //    }
-   //    for (int i=0; i<nonactiveconstraintsidx.size(); i++) {
+   //    for (HighsInt i=0; i<nonactiveconstraintsidx.size(); i++) {
    //       fprintf(file, "%u %u\n", nonactiveconstraintsidx[i], (int)rowstatus[i]);
    //    }
    //    // TODO

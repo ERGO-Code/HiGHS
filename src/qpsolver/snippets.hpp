@@ -17,7 +17,7 @@ bool remove(std::vector<T>& vec, const T& element) {
 }
 
 template<typename T>
-int indexof(const std::vector<T>& vec, const T& element) {
+HighsInt indexof(const std::vector<T>& vec, const T& element) {
    auto it = std::find(vec.begin(), vec.end(), element);
    if (it != vec.end()) {
       return distance(vec.begin(), it);

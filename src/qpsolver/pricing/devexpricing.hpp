@@ -16,14 +16,14 @@ private:
 
    std::vector<double> weights;
 
-   int chooseconstrainttodrop(const Vector& lambda) {
+   HighsInt chooseconstrainttodrop(const Vector& lambda) {
       auto activeconstraintidx = basis.getactive();
       auto constraintindexinbasisfactor = basis.getindexinfactor(); 
       
-      int minidx = -1;
+      HighsInt minidx = -1;
       double maxabslambda = 0.0;
-      for (int i = 0; i < activeconstraintidx.size(); i++) {
-         int indexinbasis = constraintindexinbasisfactor[activeconstraintidx[i]];
+      for (HighsInt i = 0; i < activeconstraintidx.size(); i++) {
+         HighsInt indexinbasis = constraintindexinbasisfactor[activeconstraintidx[i]];
          if (indexinbasis == -1) {
             printf("error\n");
          }
@@ -61,16 +61,16 @@ public:
    // dual values updated as:
    // c_N^T  += alpha_D * a_p^T (pivotal row)
    // alpha_D = -c_q / a_pq
-   int price(const Vector& x, const Vector& gradient) {
+   HighsInt price(const Vector& x, const Vector& gradient) {
       Vector& lambda = redcosts.getReducedCosts();
-		int minidx = chooseconstrainttodrop(lambda);
+		HighsInt minidx = chooseconstrainttodrop(lambda);
       return minidx;
    }
 
-   void update_weights(const Vector& aq, const Vector& ep, int p, int q) {
-      int rowindex_p = basis.getindexinfactor()[p];
+   void update_weights(const Vector& aq, const Vector& ep, HighsInt p, HighsInt q) {
+      HighsInt rowindex_p = basis.getindexinfactor()[p];
       double weight_p = weights[rowindex_p];
-      for (int i=0; i<runtime.instance.num_var; i++) {
+      for (HighsInt i=0; i<runtime.instance.num_var; i++) {
          if (i == rowindex_p) {
             weights[i] = weight_p / (aq.value[rowindex_p] * aq.value[rowindex_p]);
          } else {

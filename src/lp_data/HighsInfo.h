@@ -134,7 +134,6 @@ struct HighsInfoStruct {
   HighsInt ipm_iteration_count;
   HighsInt qp_iteration_count;
   HighsInt crossover_iteration_count;
-  HighsInt qp_iteration_count;
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
   HighsInt basis_status;

@@ -14,14 +14,14 @@ private:
    Basis& basis; 
    ReducedCosts& redcosts;
 
-   int chooseconstrainttodrop(const Vector& lambda) {
+   HighsInt chooseconstrainttodrop(const Vector& lambda) {
       auto activeconstraintidx = basis.getactive();
       auto constraintindexinbasisfactor = basis.getindexinfactor(); 
       
-      int minidx = -1;
+      HighsInt minidx = -1;
       double maxabslambda = 0.0;
-      for (int i = 0; i < activeconstraintidx.size(); i++) {
-         int indexinbasis = constraintindexinbasisfactor[activeconstraintidx[i]];
+      for (HighsInt i = 0; i < activeconstraintidx.size(); i++) {
+         HighsInt indexinbasis = constraintindexinbasisfactor[activeconstraintidx[i]];
          if (indexinbasis == -1) {
             printf("error\n");
          }
@@ -50,13 +50,13 @@ private:
 public:  
    DantzigPricing(Runtime& rt, Basis& bas, ReducedCosts& rc) : runtime(rt), basis(bas), redcosts(rc) {};
    
-int price(const Vector& x, const Vector& gradient) {
+HighsInt price(const Vector& x, const Vector& gradient) {
       // Vector lambda = basis.ftran(gradient);
-		int minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
+		HighsInt minidx = chooseconstrainttodrop(redcosts.getReducedCosts());
       return minidx;
    }
 
-   void update_weights(const Vector& aq, const Vector& ep, int p, int q) {
+   void update_weights(const Vector& aq, const Vector& ep, HighsInt p, HighsInt q) {
       // does nothing
    }
 

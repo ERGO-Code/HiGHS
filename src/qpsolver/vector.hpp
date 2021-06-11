@@ -5,14 +5,15 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <util/HighsInt.h>
 
 struct Vector {
-   int num_nz;
-   int dim;
+   HighsInt num_nz;
+   HighsInt dim;
    std::vector<int> index;
    std::vector<double> value;
 
-   Vector(int d) : dim(d) {
+   Vector(HighsInt d) : dim(d) {
       index.resize(dim);
       value.resize(dim, 0.0);
       num_nz = 0;
@@ -23,7 +24,7 @@ struct Vector {
    }
 
    void reset() {
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          value[index[i]] = 0;
          index[i] = 0;
       }
@@ -32,7 +33,7 @@ struct Vector {
 
    Vector& repopulate(const Vector& other) {
       reset();
-      for (int i=0; i<other.num_nz; i++) {
+      for (HighsInt i=0; i<other.num_nz; i++) {
          index[i] = other.index[i];
          value[index[i]] = other.value[index[i]];
       }
@@ -48,7 +49,7 @@ struct Vector {
       return *this;
    }
 
-   static Vector& unit(int dim, int u, Vector& target) {
+   static Vector& unit(HighsInt dim, HighsInt u, Vector& target) {
       target.reset();
       target.index[0] = u;
       target.value[u] = 1.0;
@@ -56,7 +57,7 @@ struct Vector {
       return target;
    }
 
-   static Vector unit(int dim, int u) {
+   static Vector unit(HighsInt dim, HighsInt u) {
       Vector vec(dim);
       vec.index[0] = u;
       vec.value[u] = 1.0;
@@ -68,7 +69,7 @@ struct Vector {
       if (name != "") {
          printf("%s: ", name.c_str());
       }
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          printf("[%u] %lf ", index[i], value[index[i]]);
       }
       printf("\n");
@@ -77,7 +78,7 @@ struct Vector {
    double norm2() {
       double  val = 0.0;
 
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          val += value[index[i]] * value[index[i]];
       }
 
@@ -85,9 +86,9 @@ struct Vector {
    }
 
    void sanitize(double threshold = 10E-15) {
-      int new_idx = 0;
+      HighsInt new_idx = 0;
 
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          if (fabs(value[index[i]]) > threshold) {
             index[new_idx++] = index[i];
          } else {
@@ -100,7 +101,7 @@ struct Vector {
 
    void resparsify() {
       num_nz = 0;
-      for (int i=0; i<dim; i++) {
+      for (HighsInt i=0; i<dim; i++) {
          if (value[i] != 0.0) {
             index[num_nz++] = i;
          }
@@ -108,7 +109,7 @@ struct Vector {
    }
 
    Vector& scale(double a) {
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          value[index[i]] *= a;
       }
       return *this;
@@ -122,7 +123,7 @@ struct Vector {
 
    Vector& saxpy(double a, const Vector& x) {
       sanitize(0.0);
-      for (int i=0; i<x.num_nz; i++) {
+      for (HighsInt i=0; i<x.num_nz; i++) {
          if (value[x.index[i]] == 0.0) {
             index[num_nz++] = x.index[i];
          }
@@ -133,8 +134,8 @@ struct Vector {
       return *this;
    }
 
-   // void saxpy(double a, int* idx, double* val, int nnz) {
-   //    for (int i=0; i<nnz; i++) {
+   // void saxpy(double a, int* idx, double* val, HighsInt nnz) {
+   //    for (HighsInt i=0; i<nnz; i++) {
    //       value[idx[i]] += a * val[i];
    //    }
    //    resparsify();
@@ -143,7 +144,7 @@ struct Vector {
    Vector operator +(const Vector& other) const {
       Vector result(dim);
 
-      for (int i=0; i<dim; i++) {
+      for (HighsInt i=0; i<dim; i++) {
          result.value[i] = value[i] + other.value[i];
          if (result.value[i] != 0.0) {
             result.index[result.num_nz++] = i;
@@ -156,7 +157,7 @@ struct Vector {
    Vector operator -(const Vector& other) const {
       Vector result(dim);
 
-      for (int i=0; i<dim; i++) {
+      for (HighsInt i=0; i<dim; i++) {
          result.value[i] = value[i] - other.value[i];
          if (result.value[i] != 0.0) {
             result.index[result.num_nz++] = i;
@@ -169,7 +170,7 @@ struct Vector {
    Vector operator -() const {
       Vector result(dim);
 
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          result.index[i] = index[i];
          result.value[index[i]] = -value[index[i]];
       }
@@ -181,7 +182,7 @@ struct Vector {
    Vector operator *(const double d) const {
       Vector result(dim);
 
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          result.index[i] = index[i];
          result.value[index[i]] = d * value[index[i]];
       }
@@ -192,7 +193,7 @@ struct Vector {
 
    double dot(const Vector& other) const {
       double dot = 0.0;
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          dot += value[index[i]] * other.value[index[i]];
       }
 
@@ -203,9 +204,9 @@ struct Vector {
       return dot(other);
    }
 
-   double dot(const int* idx, const double* val, int nnz) const {
+   double dot(const int* idx, const double* val, HighsInt nnz) const {
       double dot = 0.0;
-      for (int i=0; i<nnz; i++) {
+      for (HighsInt i=0; i<nnz; i++) {
          dot += value[idx[i]] * val[i];
       }
 
@@ -214,7 +215,7 @@ struct Vector {
 
    Vector& operator +=(const Vector& other) {
       // sanitize();
-      for (int i=0; i<other.num_nz; i++) {
+      for (HighsInt i=0; i<other.num_nz; i++) {
          // if (value[other.index[i]] == 0.0) {
          //    index[num_nz++] = other.index[i];
          // }
@@ -225,7 +226,7 @@ struct Vector {
    }
 
    Vector& operator *=(const double d) {
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          value[index[i]] *= d;
       }
 

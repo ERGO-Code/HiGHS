@@ -8,12 +8,12 @@
 
 struct SumNum {
    double sum = 0.0;
-   int num = 0;
+   HighsInt num = 0;
 };
 
 struct Instance {
-   int num_var = 0;
-   int num_con = 0;
+   HighsInt num_var = 0;
+   HighsInt num_con = 0;
    double offset = 0;
    Vector c;
    Matrix Q;
@@ -23,7 +23,7 @@ struct Instance {
    std::vector<double> var_lo;
    std::vector<double> var_up;
 
-   Instance(int nv=0, int nc=0) : num_var(nv), num_con(nc), c(Vector(nv)), Q(Matrix(nv, nv)), A(Matrix(nc, nv)) {
+   Instance(HighsInt nv=0, HighsInt nc=0) : num_var(nv), num_con(nc), c(Vector(nv)), Q(Matrix(nv, nv)), A(Matrix(nc, nv)) {
       
    }
 
@@ -33,7 +33,7 @@ struct Instance {
 
    SumNum sumnumprimalinfeasibilities(const Vector& x, const Vector& rowactivity) {
       SumNum res;
-      for (int row = 0; row<num_con; row++) {
+      for (HighsInt row = 0; row<num_con; row++) {
          if (rowactivity.value[row] < con_lo[row]) {
             res.sum += (con_lo[row] - rowactivity.value[row]);
             res.num++;
@@ -42,7 +42,7 @@ struct Instance {
             res.num++;
          }
       }
-      for (int var = 0; var<num_var; var++) {
+      for (HighsInt var = 0; var<num_var; var++) {
          if (x.value[var] < var_lo[var]) {
             res.sum += (var_lo[var] - x.value[var]);
             res.num++;

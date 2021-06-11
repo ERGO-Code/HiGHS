@@ -68,7 +68,7 @@ void computerowmove(Runtime& runtime, Basis& basis, Vector& p, Vector& rowmove) 
 	MatrixBase& Atran = runtime.instance.A.t();
 	Atran.vec_mat(p, rowmove);
 	return;
-	for (int i=0; i<runtime.instance.num_con; i++) {
+	for (HighsInt i=0; i<runtime.instance.num_con; i++) {
 		if (basis.getstatus(i) == BasisStatus::Default) {
 			// check with assertions, is it really the same?
 			double val = p.dot(&Atran.index[Atran.start[i]], &Atran.value[Atran.start[i]], Atran.start[i+1] - Atran.start[i]);
@@ -147,7 +147,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
 		double maxsteplength = 1.0;
 		if (atfsep) {
-			int minidx = pricing->price(runtime.primal, gradient.getGradient());
+			HighsInt minidx = pricing->price(runtime.primal, gradient.getGradient());
 			// printf("%u -> ", minidx);
 			if (minidx == -1) {
 				runtime.status = ProblemStatus::OPTIMAL;
@@ -188,7 +188,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 		} else {
 			RatiotestResult stepres = runtime.settings.ratiotest->ratiotest(runtime.primal, p, runtime.rowactivity, rowmove, runtime.instance, maxsteplength);
 			// printf("%u, alpha= %lf\n", stepres.limitingconstraint,stepres.alpha);
-			if (stepres.limitingconstraint != -1) {
+			if (stepres.limitingconstraHighsInt != -1) {
 				// Vector d = computed(runtime, ns, basis, stepres.limitingconstraint);
 				NullspaceReductionResult nrr = ns.reduce(runtime, stepres.limitingconstraint);
 				if (runtime.instance.Q.mat.value.size() > 0) {
@@ -203,7 +203,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 					atfsep = false;
 				}
 			} else {
-				if (stepres.limitingconstraint == std::numeric_limits<double>::infinity()) {
+				if (stepres.limitingconstraHighsInt == std::numeric_limits<double>::infinity()) {
 					// unbounded
 					runtime.status = ProblemStatus::UNBOUNDED;
 				}
@@ -225,10 +225,10 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 
 	Vector lambda =redcosts.getReducedCosts();
 	for (auto e: basis.getactive()) {
-		int indexinbasis = basis.getindexinfactor()[e];
+		HighsInt indexinbasis = basis.getindexinfactor()[e];
 		if (e >= runtime.instance.num_con) {
 			// active variable bound
-			int var = e - runtime.instance.num_con;
+			HighsInt var = e - runtime.instance.num_con;
 			runtime.dualvar.value[var] = lambda.value[indexinbasis];
 		} else {
 			runtime.dualcon.value[e] = lambda.value[indexinbasis];

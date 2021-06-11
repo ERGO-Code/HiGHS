@@ -15,7 +15,7 @@ struct Result {
    Vector primalsolution;
    Vector dualsolution;
 
-   Result(int num_var, int num_con) : primalsolution(num_var), dualsolution(num_con) {
+   Result(HighsInt num_var, HighsInt num_con) : primalsolution(num_var), dualsolution(num_con) {
       
    }
 };

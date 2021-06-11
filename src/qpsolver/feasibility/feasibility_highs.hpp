@@ -44,14 +44,14 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 
 	Vector x0(runtime.instance.num_var);
 	Vector ra(runtime.instance.num_con);
-	for (int i=0; i<x0.dim; i++) {
+	for (HighsInt i=0; i<x0.dim; i++) {
 		if (fabs(sol.col_value[i]) > 10E-5) {
 			x0.value[i] = sol.col_value[i];
 			x0.index[x0.num_nz++] = i;
 		}
 	}
 
-	for (int i=0; i<ra.dim; i++) {
+	for (HighsInt i=0; i<ra.dim; i++) {
 		if (fabs(sol.row_value[i]) > 10E-5) {
 			ra.value[i] = sol.row_value[i];
 			ra.index[ra.num_nz++] = i;
@@ -61,7 +61,7 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 	std::vector<int> initialactive;
    std::vector<int> initialinactive;
 	std::vector<BasisStatus> atlower;
-	for (int i=0; i<bas.row_status.size(); i++) {
+	for (HighsInt i=0; i<bas.row_status.size(); i++) {
 		if (bas.row_status[i] == HighsBasisStatus::kLower) {
 			initialactive.push_back(i);
 			atlower.push_back(BasisStatus::ActiveAtLower);
@@ -76,7 +76,7 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
       }
 	}
 
-	for (int i=0; i<bas.col_status.size(); i++) {
+	for (HighsInt i=0; i<bas.col_status.size(); i++) {
 		if (bas.col_status[i] == HighsBasisStatus::kLower) {
 			initialactive.push_back(i + runtime.instance.num_con);
 			atlower.push_back(BasisStatus::ActiveAtLower);

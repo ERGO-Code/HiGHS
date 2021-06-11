@@ -9,7 +9,7 @@ class Gradient {
 
    Vector gradient;
    bool uptodate;
-   int numupdates = 0;
+   HighsInt numupdates = 0;
 
    Vector buffer_temp;
 

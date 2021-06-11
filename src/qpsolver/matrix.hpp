@@ -10,8 +10,8 @@
 #include "omp.h"
 
 struct MatrixBase {
-   int num_row;
-   int num_col;
+   HighsInt num_row;
+   HighsInt num_col;
    std::vector<int> start;
    std::vector<int> index;
    std::vector<double> value;
@@ -20,16 +20,16 @@ struct MatrixBase {
       target.reset();
 
       std::vector<omp_lock_t> row_locks(num_row);
-      for (int i=0; i<num_row; i++) {
+      for (HighsInt i=0; i<num_row; i++) {
          omp_init_lock(&(row_locks[i]));
       }
 
       #pragma omp parallel for shared(target, other, row_locks) default(none)
-      for (int i=0; i<other.num_nz; i++) {
-         int col = other.index[i];
+      for (HighsInt i=0; i<other.num_nz; i++) {
+         HighsInt col = other.index[i];
          // #pragma omp parallel for shared(target, other, col, row_locks) default(none)
-         for (int idx = start[col]; idx < start[col+1]; idx++) {
-            int row = index[idx];
+         for (HighsInt idx = start[col]; idx < start[col+1]; idx++) {
+            HighsInt row = index[idx];
             omp_set_lock(&row_locks[row]);
             target.value[row] += value[idx] * other.value[col];
             omp_unset_lock(&row_locks[row]);
@@ -53,14 +53,14 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       std::vector<Vector> results(nb_threads, num_row);
 
       for(unsigned i = 0; i < nb_threads; ++i) {
-         int batch_start = i * batch_size;
-         my_threads[i] = std::thread([&](int tid, int thread_start) {
+         HighsInt batch_start = i * batch_size;
+         my_threads[i] = std::thread([&](HighsInt tid, HighsInt thread_start) {
             // thread i: compute for columns start-start+batch_size
 
-            for (int nz=thread_start; nz<thread_start+batch_size; nz++) {
-               int col = other.index[nz];
-               for (int idx = start[col]; idx < start[col+1]; idx++) {
-                  int row = index[idx];
+            for (HighsInt nz=thread_start; nz<thread_start+batch_size; nz++) {
+               HighsInt col = other.index[nz];
+               for (HighsInt idx = start[col]; idx < start[col+1]; idx++) {
+                  HighsInt row = index[idx];
                   results[tid].value[row] += value[idx] * other.value[col];
                }
             }
@@ -69,17 +69,17 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
          }, i, batch_start);
       }
       
-      for (int nz=nb_threads * batch_size; nz<other.num_nz; nz++) {
-         int col = other.index[nz];
-         for (int idx = start[col]; idx < start[col+1]; idx++) {
-            int row = index[idx];
+      for (HighsInt nz=nb_threads * batch_size; nz<other.num_nz; nz++) {
+         HighsInt col = other.index[nz];
+         for (HighsInt idx = start[col]; idx < start[col+1]; idx++) {
+            HighsInt row = index[idx];
             target.value[row] += value[idx] * other.value[col];
          }
       }
 
       std::for_each(my_threads.begin(), my_threads.end(), std::mem_fn(&std::thread::join));
             
-      for (int i=0; i<nb_threads; i++) {
+      for (HighsInt i=0; i<nb_threads; i++) {
          target += results[i];
       }
       target.resparsify();
@@ -95,16 +95,16 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       target.reset();
 
       // omp_lock_t row_locks[num_row];
-      // for (int i=0; i<num_row; i++) {
+      // for (HighsInt i=0; i<num_row; i++) {
       //    omp_init_lock(&(row_locks[i]));
       // }
 
       // #pragma omp parallel for shared(target, other, row_locks) default(none)
-      for (int i=0; i<other.num_nz; i++) {
-         int col = other.index[i];
+      for (HighsInt i=0; i<other.num_nz; i++) {
+         HighsInt col = other.index[i];
          // #pragma omp parallel for shared(target, other, col) default(none)
-         for (int idx = start[col]; idx < start[col+1]; idx++) {
-            int row = index[idx];
+         for (HighsInt idx = start[col]; idx < start[col+1]; idx++) {
+            HighsInt row = index[idx];
             // omp_set_lock(&row_locks[row]);
             target.value[row] += value[idx] * other.value[col];
             // omp_unset_lock(&row_locks[row]);
@@ -120,12 +120,12 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       return result;
    }
 
-   Vector vec_mat(int* idx, double* val, int nnz) {
+   Vector vec_mat(int* idx, double* val, HighsInt nnz) {
       Vector result(num_col);
-      for (int i=0; i<num_col; i++) {
+      for (HighsInt i=0; i<num_col; i++) {
          double dot = 0.0;
-         // int idx_other = 0;
-         // int idx_this = start[i];
+         // HighsInt idx_other = 0;
+         // HighsInt idx_this = start[i];
          // while (idx_this < start[i+1] && idx_other < nnz) {
          //    if (idx[idx_other] == index[idx_this]) {
          //       dot += val[idx_other] * value[idx_this];
@@ -136,10 +136,10 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
          //    }
          // }
 
-         for (int j=start[i]; j<start[i+1]; j++) {
+         for (HighsInt j=start[i]; j<start[i+1]; j++) {
             // does the vector have an entry for index index[j]?
             double other_value = 0.0;
-            for (int k=0; k<nnz; k++) {
+            for (HighsInt k=0; k<nnz; k++) {
                if (idx[k] == index[j]) {
                   other_value = val[k];
                   break;
@@ -165,27 +165,27 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
    Vector& vec_mat_2(const Vector& other, Vector& target) const {
       target.reset();
 
-      // int col = 0;
-      // for (int i=0; i<index.size(); i++) {
+      // HighsInt col = 0;
+      // for (HighsInt i=0; i<index.size(); i++) {
       //    if (i >= start[col+1]) {
       //       col++;
       //    }
       //    target.value[col] += other.value[index[i]] * value[i];
       // }
-      parallel_for_frac(num_col, [&](int first, int last){
-         for (int i=first; i<last; i++) {
+      parallel_for_frac(num_col, [&](HighsInt first, HighsInt last){
+         for (HighsInt i=first; i<last; i++) {
             target.value[i] = other.dot(&index[start[i]], &value[start[i]], start[i+1]-start[i]);
          }
       });
 
-      // parallel_for_obo(num_col, [&](int i) {
+      // parallel_for_obo(num_col, [&](HighsInt i) {
       //    target.value[i] = other.dot(&index[start[i]], &value[start[i]], start[i+1]-start[i]);
       // });
 
 
-      // for (int i=0; i<num_col; i++) {
+      // for (HighsInt i=0; i<num_col; i++) {
       //    double dot = 0.0;
-      //    for (int j=start[i]; j<start[i+1]; j++) {
+      //    for (HighsInt j=start[i]; j<start[i+1]; j++) {
       //       dot += other.value[index[j]] * value[j];
       //    }
 
@@ -200,10 +200,10 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       // #pragma omp parallel for shared(target)
       // TODO: loop over idx array, not start
       PARALLELISM_SETTING par = num_col > 9999999 ? PARALLELISM_SETTING::BUILTIN : PARALLELISM_SETTING::NONE;
-      parallel_for(num_col, [&](int starts, int end) {
-         for (int i=starts; i<end; i++) {
+      parallel_for(num_col, [&](HighsInt starts, HighsInt end) {
+         for (HighsInt i=starts; i<end; i++) {
             double dot = 0.0;
-            for (int j=start[i]; j<start[i+1]; j++) {
+            for (HighsInt j=start[i]; j<start[i+1]; j++) {
                dot += other.value[index[j]] * value[j];
             }
 
@@ -229,11 +229,11 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       res.start.push_back(0);
       Vector buffer_col(other.num_row);
       Vector buffer_col_res(num_col);
-      for (int r=0; r<other.num_col; r++) {
+      for (HighsInt r=0; r<other.num_col; r++) {
          other.extractcol(r, buffer_col);
 
          vec_mat(buffer_col, buffer_col_res);
-         for (int i=0; i<buffer_col_res.num_nz; i++) {
+         for (HighsInt i=0; i<buffer_col_res.num_nz; i++) {
             res.index.push_back(buffer_col_res.index[i]);
             res.value.push_back(buffer_col_res.value[buffer_col_res.index[i]]);
          }
@@ -243,7 +243,7 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       return res;
    }
 
-   Vector& extractcol(int col, Vector& target) const {
+   Vector& extractcol(HighsInt col, Vector& target) const {
       assert(target.dim == num_row);
       target.reset();
       
@@ -253,7 +253,7 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
          target.num_nz = 1;
       } else {
          
-         for (int i=0; i< start[col+1] - start[col]; i++) {
+         for (HighsInt i=0; i< start[col+1] - start[col]; i++) {
             target.index[i] = index[start[col] + i];
             target.value[target.index[i]] = value[start[col]+i];
          }
@@ -263,7 +263,7 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       return target;
    }
 
-   Vector extractcol(int col) const {
+   Vector extractcol(HighsInt col) const {
       Vector res(num_row);
 
       return extractcol(col, res);
@@ -280,9 +280,9 @@ private:
          std::vector<std::vector<int>> row_indices(mat.num_row);
          std::vector<std::vector<double>> row_values(mat.num_row);
 
-         for (int col=0; col<mat.num_col; col++) {
-            for (int entry=mat.start[col]; entry<mat.start[col+1]; entry++) {
-               int row = mat.index[entry];
+         for (HighsInt col=0; col<mat.num_col; col++) {
+            for (HighsInt entry=mat.start[col]; entry<mat.start[col+1]; entry++) {
+               HighsInt row = mat.index[entry];
                double val = mat.value[entry];
                row_indices[row].push_back(col);
                row_values[row].push_back(val);
@@ -296,7 +296,7 @@ private:
          tran.value.reserve(mat.value.size());
 
          tran.start.push_back(0);
-         for (int row=0; row<mat.num_row; row++) {
+         for (HighsInt row=0; row<mat.num_row; row++) {
             tran.index.insert(tran.index.end(), row_indices[row].begin(), row_indices[row].end());
             tran.value.insert(tran.value.end(), row_values[row].begin(), row_values[row].end());
 
@@ -311,7 +311,7 @@ private:
 public:
    MatrixBase mat;
 
-   Matrix(int nr, int nc) {
+   Matrix(HighsInt nr, HighsInt nc) {
       mat.num_row = nr;
       mat.num_col = nc;
    };
@@ -327,7 +327,7 @@ public:
       if (mat.num_col == 0 && mat.start.size() == 0) {
          mat.start.push_back(0);
       }
-      for (int i=0; i<vec.num_nz; i++) {
+      for (HighsInt i=0; i<vec.num_nz; i++) {
          mat.index.push_back(vec.index[i]);
          mat.value.push_back(vec.value[vec.index[i]]);
       }
@@ -336,11 +336,11 @@ public:
       has_transpose = false;
    }
 
-   void append(int* idx, double* val, int nnz) {
+   void append(int* idx, double* val, HighsInt nnz) {
       if (mat.num_col == 0 && mat.start.size() == 0) {
          mat.start.push_back(0);
       }
-      for (int i=0; i<nnz; i++) {
+      for (HighsInt i=0; i<nnz; i++) {
          mat.index.push_back(idx[i]);
          mat.value.push_back(val[i]);
       }
@@ -349,11 +349,11 @@ public:
       has_transpose = false;
    }
 
-   void append(int num_nz, int* index, double* value) {
+   void append(HighsInt num_nz, int* index, double* value) {
       if (mat.num_col == 0 && mat.start.size() == 0) {
          mat.start.push_back(0);
       }
-      for (int i=0; i<num_nz; i++) {
+      for (HighsInt i=0; i<num_nz; i++) {
          mat.index.push_back(index[i]);
          mat.value.push_back(value[i]);
       }
@@ -362,14 +362,14 @@ public:
       has_transpose = false;
    }
 
-   void dropcol(int col) {
+   void dropcol(HighsInt col) {
       assert(col < mat.num_col);
       has_transpose = false;
 
       mat.index.erase(mat.index.begin() + mat.start[col], mat.index.begin() + mat.start[col+1]);
       mat.value.erase(mat.value.begin() + mat.start[col], mat.value.begin() + mat.start[col+1]);
 
-      int num_elements_in_col = mat.start[col+1] - mat.start[col];
+      HighsInt num_elements_in_col = mat.start[col+1] - mat.start[col];
       for (; col<mat.num_col; col++) {
          mat.start[col] = mat.start[col+1] - num_elements_in_col;
       }
@@ -390,7 +390,7 @@ public:
 
       Vector buffer(other.mat.num_row);
       Vector buffer2(mat.num_col);
-      for (int col=0; col<other.mat.num_col; col++) {
+      for (HighsInt col=0; col<other.mat.num_col; col++) {
          res.append(vec_mat(other.mat.extractcol(col, buffer), buffer2));
       }
 
@@ -402,7 +402,7 @@ public:
 
       Vector buffer(other.mat.num_row);
       Vector buffer2(mat.num_row);
-      for (int col=0; col<other.mat.num_col; col++) {
+      for (HighsInt col=0; col<other.mat.num_col; col++) {
          res.append(mat_vec(other.mat.extractcol(col, buffer), buffer2));
       }
       return res;
@@ -436,7 +436,7 @@ public:
       return mat.vec_mat(other, target);
    }
 
-   Vector vec_mat(int* index, double* value, int num_nz) {
+   Vector vec_mat(int* index, double* value, HighsInt num_nz) {
       return mat.vec_mat(index, value, num_nz);
    }
 
@@ -446,13 +446,13 @@ public:
       }
       printf("[%u x %u]\n", mat.num_row, mat.num_col);
       printf("start: ");
-      for (int i : mat.start) {
+      for (HighsInt i : mat.start) {
          printf("%u ", i);
       }
       printf("\n");
 
       printf("index: ");
-      for (int i : mat.index) {
+      for (HighsInt i : mat.index) {
          printf("%u ", i);
       }
       printf("\n");

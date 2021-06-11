@@ -5,8 +5,8 @@
 #include <vector>
 
 struct Statistics {
-   int phase1_iterations = 0;
-   int num_iterations = 0;
+   HighsInt phase1_iterations = 0;
+   HighsInt num_iterations = 0;
    std::chrono::high_resolution_clock::time_point time_start;
    std::chrono::high_resolution_clock::time_point time_end; 
 

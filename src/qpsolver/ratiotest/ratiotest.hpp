@@ -8,7 +8,7 @@
 
 struct RatiotestResult {
    double alpha;
-   int limitingconstraint;
+   HighsInt limitingconstraint;
    bool nowactiveatlower;
 };
 

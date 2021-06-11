@@ -19,7 +19,7 @@ enum class PARALLELISM_SETTING {
 /// "start" is the first index to process (included) until the index "end"
 /// (excluded)
 /// @code
-///     for(int i = start; i < end; ++i)
+///     for(HighsInt i = start; i < end; ++i)
 ///         computation(i);
 /// @endcode
 /// @param use_threads : enable / disable threads.
@@ -27,7 +27,7 @@ enum class PARALLELISM_SETTING {
 ///
 static
 void parallel_for(unsigned nb_elements,
-                  std::function<void (int start, int end)> functor,
+                  std::function<void (HighsInt start, HighsInt end)> functor,
                   PARALLELISM_SETTING mode = PARALLELISM_SETTING::NONE)
 {
     // -------
@@ -38,7 +38,7 @@ void parallel_for(unsigned nb_elements,
     unsigned batch_remainder = nb_elements % nb_threads;
 
     std::vector< std::thread > my_threads(nb_threads);
-    int start;
+    HighsInt start;
     switch (mode) {
         case PARALLELISM_SETTING::NONE:
             functor( 0, nb_elements );
@@ -63,19 +63,19 @@ void parallel_for(unsigned nb_elements,
     }
 }
 
-static void parallel_for_obo(int nb_elements,
-                  std::function<void (int idx)> functor) {
+static void parallel_for_obo(HighsInt nb_elements,
+                  std::function<void (HighsInt idx)> functor) {
     // -------
-    unsigned nb_threads_hint = std::thread::hardware_concurrency();
-    unsigned nb_threads = 1;//nb_threads_hint == 0 ? 8 : (nb_threads_hint);
+    unsigned nb_threads_hHighsInt = std::thread::hardware_concurrency();
+    unsigned nb_threads = 1;//nb_threads_hHighsInt == 0 ? 8 : (nb_threads_hint);
 
     std::vector< std::thread > my_threads(nb_threads);
     
-    int assigned = 0;
+    HighsInt assigned = 0;
     std::vector<int> current (nb_threads, 0);
     std::mutex lock;
-    for (int i=0; i<nb_threads; i++) {
-        my_threads[i] = std::thread([&](int tid)
+    for (HighsInt i=0; i<nb_threads; i++) {
+        my_threads[i] = std::thread([&](HighsInt tid)
         {
             while (true) {
                 lock.lock();
@@ -94,25 +94,25 @@ static void parallel_for_obo(int nb_elements,
     std::for_each(my_threads.begin(), my_threads.end(), std::mem_fn(&std::thread::join));
 }
 
-static void parallel_for_frac(int nb_elements,
-                  std::function<void (int start, int end)> functor) {
+static void parallel_for_frac(HighsInt nb_elements,
+                  std::function<void (HighsInt start, HighsInt end)> functor) {
     // -------
     unsigned nb_threads_hint = std::thread::hardware_concurrency();
     unsigned nb_threads = nb_threads_hint == 0 ? 8 : (nb_threads_hint);
 
     std::vector< std::thread > my_threads(nb_threads);
     
-    int assigned = 0;
+    HighsInt assigned = 0;
     std::vector<int> current_start(nb_threads, 0);
     std::vector<int> current_end(nb_threads, 0);
     std::mutex lock;
-    for (int i=0; i<nb_threads; i++) {
-        my_threads[i] = std::thread([&](int tid) {
+    for (HighsInt i=0; i<nb_threads; i++) {
+        my_threads[i] = std::thread([&](HighsInt tid) {
             while (true) {
                 lock.lock();
                 if (assigned < nb_elements) {
-                    int left = nb_elements - assigned;
-                    int assign = left / (3* nb_threads) + 1;
+                    HighsInt left = nb_elements - assigned;
+                    HighsInt assign = left / (3* nb_threads) + 1;
                     current_start[tid] = assigned;
                     assigned = std::min(nb_elements, assigned + assign);
                     current_end[tid] = assigned;

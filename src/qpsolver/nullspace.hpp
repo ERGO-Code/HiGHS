@@ -7,13 +7,13 @@
 #include "runtime.hpp"
 
 struct NullspaceReductionResult {
-   int maxabsd;
-   int constrainttodrop;
+   HighsInt maxabsd;
+   HighsInt constrainttodrop;
    Vector& d;
 
    bool p_in_v;
 
-   NullspaceReductionResult(bool pinv, int mad, Vector& d_, int ctd) : maxabsd(mad), constrainttodrop(ctd), d(d_), p_in_v(pinv) {;
+   NullspaceReductionResult(bool pinv, HighsInt mad, Vector& d_, HighsInt ctd) : maxabsd(mad), constrainttodrop(ctd), d(d_), p_in_v(pinv) {;
    }
 };
 
@@ -34,14 +34,14 @@ class Nullspace {
    Vector buffer_unit;
 
    void recompute() {
-      int nvar = basis.getnumactive() + basis.getnuminactive();
+      HighsInt nvar = basis.getnumactive() + basis.getnuminactive();
       Matrix Z(nvar, 0);
 
       const std::vector<int>& nonactive = basis.getinactive(); 
       const std::vector<int>& indexinfactor = basis.getindexinfactor();
       
-      for (int i = 0; i < nonactive.size(); i++) {
-         int unit =
+      for (HighsInt i = 0; i < nonactive.size(); i++) {
+         HighsInt unit =
             indexinfactor[nonactive[i]];
 
          Vector::unit(nvar, unit, temp_unit);
@@ -54,18 +54,18 @@ class Nullspace {
       uptodateZ = true;
    }
 
-   Vector& aq_Z_prod(Runtime& rt, int q, Vector& target) {
+   Vector& aq_Z_prod(Runtime& rt, HighsInt q, Vector& target) {
       target.reset();
       Matrix& Z = getNullspace();
 
       if (q >= rt.instance.num_con) {
          // Vector aq = rt.instance.A.t().extractcol(q);
          // return Z.vec_mat(aq);
-         int ep = q - rt.instance.num_con;
+         HighsInt ep = q - rt.instance.num_con;
          // 
-         for (int col=0; col<Z.mat.num_col; col++) {
+         for (HighsInt col=0; col<Z.mat.num_col; col++) {
             double dot = 0.0;
-            for (int idx=Z.mat.start[col]; idx<Z.mat.start[col+1]; idx++) {
+            for (HighsInt idx=Z.mat.start[col]; idx<Z.mat.start[col+1]; idx++) {
                if (Z.mat.index[idx] == ep) {
                   dot += Z.mat.value[idx];
                   break;
@@ -96,9 +96,9 @@ public:
       uptodateZ = true;
    }
 
-   Vector& expand_computenewcol(int conid, Vector& target) {
+   Vector& expand_computenewcol(HighsInt conid, Vector& target) {
       if (uptodateZ) {
-         int unit = basis.getindexinfactor()[conid];
+         HighsInt unit = basis.getindexinfactor()[conid];
          Vector::unit(bufferZ.mat.num_row, unit, target);
 
          basis.btran(target, target);
@@ -114,10 +114,10 @@ public:
       } 
    }
 
-   NullspaceReductionResult reduce(Runtime& rt, int newactivecon) { 
+   NullspaceReductionResult reduce(Runtime& rt, HighsInt newactivecon) { 
       Matrix& Z = getNullspace();
 
-      int idx = indexof(basis.getinactive(), newactivecon);
+      HighsInt idx = indexof(basis.getinactive(), newactivecon);
       if (idx != -1) {
          bufferZ.dropcol(idx);
          buffer_unit.dim = Z.mat.num_col+1;
@@ -130,15 +130,15 @@ public:
       // Vector d = Z.vec_mat(aq);
       aq_Z_prod(rt, newactivecon, buffer_d);
 
-      int maxabs = 0;
-      for (int i = 0; i < buffer_d.num_nz; i++) {
+      HighsInt maxabs = 0;
+      for (HighsInt i = 0; i < buffer_d.num_nz; i++) {
          if (fabs(buffer_d.value[buffer_d.index[i]]) > fabs(buffer_d.value[maxabs])) {
             maxabs = buffer_d.index[i];
          }
       }
 
       if (fabs(buffer_d.value[maxabs]) < rt.settings.d_zero_threshold) {
-         printf("degeneracy? not possible to find non-active constraint to leave basis. max: log(d[%u]) = %lf\n", maxabs, log10(fabs(buffer_d.value[maxabs])));
+         printf("degeneracy? not possible to find non-active constraHighsInt to leave basis. max: log(d[%u]) = %lf\n", maxabs, log10(fabs(buffer_d.value[maxabs])));
          exit(1);
       }
 
@@ -146,7 +146,7 @@ public:
 
       Z.mat.extractcol(maxabs, buffer_col_p);
       // assert(col_p == row_ep);
-      for (int i=0; i<Z.mat.num_col; i++) {
+      for (HighsInt i=0; i<Z.mat.num_col; i++) {
          if (i == maxabs) {
             continue;
          }
@@ -179,9 +179,9 @@ public:
          Vector res_ = basis.ftran(rhs);
          
          target.reset();
-         for (int i=0; i<Z.mat.num_col; i++) {
-            int nonactive = basis.getinactive()[i];
-            int idx = basis.getindexinfactor()[nonactive];
+         for (HighsInt i=0; i<Z.mat.num_col; i++) {
+            HighsInt nonactive = basis.getinactive()[i];
+            HighsInt idx = basis.getindexinfactor()[nonactive];
             target.index[i] = i;
             target.value[i] = res_.value[idx];
          }
@@ -202,9 +202,9 @@ public:
       Matrix& Z = getNullspace();
       bool test = false;
       if (test) {
-         for (int i=0; i<rhs.num_nz; i++) {
-            int nonactive = basis.getinactive()[i];
-            int idx = basis.getindexinfactor()[nonactive];
+         for (HighsInt i=0; i<rhs.num_nz; i++) {
+            HighsInt nonactive = basis.getinactive()[i];
+            HighsInt idx = basis.getindexinfactor()[nonactive];
             target.index[i] = idx;
             target.value[idx] = rhs.value[i];
          }

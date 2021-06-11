@@ -17,7 +17,7 @@
 inline HVector vec2hvec(const Vector& vec) {
    HVector hvec;
    hvec.setup(vec.dim);
-   for (int i = 0; i < vec.num_nz; i++) {
+   for (HighsInt i = 0; i < vec.num_nz; i++) {
       hvec.index[i] = vec.index[i];
       hvec.array[vec.index[i]] = vec.value[vec.index[i]];
    }
@@ -28,7 +28,7 @@ inline HVector vec2hvec(const Vector& vec) {
 
 inline Vector& hvec2vec(const HVector& hvec, Vector& target) {
    target.reset();
-   for (int i = 0; i < hvec.count; i++) {
+   for (HighsInt i = 0; i < hvec.count; i++) {
       target.index[i] = hvec.index[i];
       target.value[target.index[i]] = hvec.array[hvec.index[i]];
    }
@@ -53,7 +53,7 @@ enum class BasisStatus {
 class Basis {
    Runtime& runtime;
    HFactor basisfactor;
-   int updatessinceinvert = 0;
+   HighsInt updatessinceinvert = 0;
 
    MatrixBase Atran;
 
@@ -70,7 +70,7 @@ class Basis {
 
    std::map<int, BasisStatus> basisstatus;
 
-   // index i: -1 if constraint not in basis, [0, num_var] if constraint in basis (active or not)
+   // index i: -1 if constraHighsInt not in basis, [0, num_var] if constraHighsInt in basis (active or not)
 	std::vector<int> constraintindexinbasisfactor;
 
    void build();
@@ -83,13 +83,13 @@ class Basis {
 public:
    Basis(Runtime& rt, std::vector<int> active, std::vector<BasisStatus> atlower, std::vector<int> inactive);
 
-   int getnupdatessinceinvert() {
+   HighsInt getnupdatessinceinvert() {
       return updatessinceinvert;
    }
 
-   int getnumactive() const { return activeconstraintidx.size(); };
+   HighsInt getnumactive() const { return activeconstraintidx.size(); };
 
-   int getnuminactive() const { return nonactiveconstraintsidx.size(); };
+   HighsInt getnuminactive() const { return nonactiveconstraintsidx.size(); };
 
    const std::vector<int>& getactive() const { return activeconstraintidx; };
 
@@ -97,16 +97,16 @@ public:
 
    const std::vector<int>& getindexinfactor() const { return constraintindexinbasisfactor; };
 
-   BasisStatus getstatus(int conid) { return basisstatus[conid]; };
+   BasisStatus getstatus(HighsInt conid) { return basisstatus[conid]; };
 
    void report();
 
-   // move that constraint into V section basis (will correspond to Nullspace from now on)
-   void deactivate(int conid);
+   // move that constraHighsInt into V section basis (will correspond to Nullspace from now on)
+   void deactivate(HighsInt conid);
 
-   void activate(Runtime& rt, int conid, BasisStatus atlower, int nonactivetoremove, Pricing* pricing);
+   void activate(Runtime& rt, HighsInt conid, BasisStatus atlower, HighsInt nonactivetoremove, Pricing* pricing);
 
-   void updatebasis(Runtime& rt, int newactivecon, int droppedcon, Pricing* pricing);
+   void updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon, Pricing* pricing);
 
    Vector btran(const Vector& rhs) const;
 
