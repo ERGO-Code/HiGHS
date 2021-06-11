@@ -81,14 +81,17 @@ class HighsSearch {
     // the objective for pseudocost updates and tiebreaking of best bound node
     // selection
     double lp_objective;
+    std::shared_ptr<const HighsBasis> nodeBasis;
     HighsDomainChange branchingdecision;
     HighsInt domgchgStackPos;
     uint8_t opensubtrees;
 
-    NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf)
+    NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf,
+             std::shared_ptr<const HighsBasis> parentBasis = nullptr)
         : lower_bound(parentlb),
           estimate(parentestimate),
           lp_objective(-kHighsInf),
+          nodeBasis(parentBasis),
           domgchgStackPos(-1),
           opensubtrees(2) {}
   };

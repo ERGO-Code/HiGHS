@@ -721,6 +721,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     if (lp->scaledOptimal(status)) {
       lp->storeBasis();
 
+      currnode.nodeBasis = lp->getStoredBasis();
       currnode.estimate = lp->computeBestEstimate(pseudocost);
       currnode.lp_objective = lp->getObjective();
 
@@ -1100,7 +1101,8 @@ bool HighsSearch::backtrack() {
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
-  nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+  nodestack.emplace_back(currnode.lower_bound, currnode.estimate,
+                         currnode.nodeBasis);
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
 
@@ -1151,7 +1153,8 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
   localdom.changeBound(currnode.branchingdecision);
-  nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+  nodestack.emplace_back(currnode.lower_bound, currnode.estimate,
+                         currnode.nodeBasis);
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
 
