@@ -77,7 +77,7 @@ include_directories(ipm/basiclu/src)
 include_directories(ipm/basiclu/include)
 
 set(sources
-    ../external/filereaderlp/reader.cpp
+    ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -165,9 +165,9 @@ set(sources
     interfaces/highs_c_api.cpp)
 
 set(headers
-    ../external/filereaderlp/builder.hpp
-    ../external/filereaderlp/model.hpp
-    ../external/filereaderlp/reader.hpp
+    ../extern/filereaderlp/builder.hpp
+    ../extern/filereaderlp/model.hpp
+    ../extern/filereaderlp/reader.hpp
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -480,7 +480,7 @@ if (NOT ${BUILD_SHARED_LIBS})
 endif()
 
 target_sources(libhighs PRIVATE 
-    ../external/filereaderlp/reader.cpp
+    ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -567,7 +567,7 @@ target_sources(libhighs PRIVATE
     interfaces/highs_c_api.cpp)
 
 target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
-                           presolve/ util/ test/ interfaces/ ../external/)
+                           presolve/ util/ test/ interfaces/ ../extern/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
 # on UNIX system the 'lib' prefix is automatically added
@@ -581,9 +581,9 @@ if (UNIX)
 endif()
 
 set(headers_fast_build_
-    ../external/filereaderlp/builder.hpp
-    ../external/filereaderlp/model.hpp
-    ../external/filereaderlp/reader.hpp
+    ../extern/filereaderlp/builder.hpp
+    ../extern/filereaderlp/model.hpp
+    ../extern/filereaderlp/reader.hpp
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
