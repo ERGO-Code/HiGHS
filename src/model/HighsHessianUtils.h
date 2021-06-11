@@ -22,14 +22,17 @@
 #include "lp_data/HighsStatus.h"
 #include "model/HighsHessian.h"
 
-//class HighsHessian;
-//class HighsOptions;
+// class HighsHessian;
+// class HighsOptions;
 
 using std::vector;
 
 HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
-HighsStatus assessHessianDimensions(const HighsOptions& options, HighsHessian& hessian);
-HighsStatus normaliseHessian(const HighsOptions& options, HighsHessian& hessian);
-bool positiveHessianDiagonal(const HighsOptions& options, HighsHessian& hessian);
+HighsStatus assessHessianDimensions(const HighsOptions& options,
+                                    HighsHessian& hessian);
+HighsStatus normaliseHessian(const HighsOptions& options,
+                             HighsHessian& hessian);
+bool positiveHessianDiagonal(const HighsOptions& options,
+                             HighsHessian& hessian);
 
 #endif  // MODEL_HIGHSHESSIANUTILS_H_

@@ -14,6 +14,7 @@
  * @brief
  */
 #include "model/HighsHessian.h"
+
 #include <cstdio>
 
 void HighsHessian::clear() {
@@ -24,14 +25,15 @@ void HighsHessian::clear() {
 }
 void HighsHessian::print() {
   HighsInt num_nz = 0;
-  if (dim_>0) num_nz = this->q_start_[dim_];
-    
-  printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT " nonzeros\n", dim_,  num_nz);
+  if (dim_ > 0) num_nz = this->q_start_[dim_];
+
+  printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
+         " nonzeros\n",
+         dim_, num_nz);
   printf("Start; Index; Value of sizes %d; %d; %d\n",
-	 (int)this->q_start_.size(),
-	 (int)this->q_index_.size(),
-	 (int)this->q_value_.size());
-  if (dim_ <=0 ) return;
+         (int)this->q_start_.size(), (int)this->q_index_.size(),
+         (int)this->q_value_.size());
+  if (dim_ <= 0) return;
   printf(" Row|");
   for (int iCol = 0; iCol < dim_; iCol++) printf(" %4d", iCol);
   printf("\n");
@@ -41,12 +43,14 @@ void HighsHessian::print() {
   std::vector<double> col;
   col.assign(dim_, 0);
   for (HighsInt iCol = 0; iCol < dim_; iCol++) {
-    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol+1]; iEl++) 
+    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol + 1];
+         iEl++)
       col[this->q_index_[iEl]] = this->q_value_[iEl];
     printf("%4d|", (int)iCol);
     for (int iRow = 0; iRow < dim_; iRow++) printf(" %4g", col[iRow]);
     printf("\n");
-    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol+1]; iEl++) 
+    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol + 1];
+         iEl++)
       col[this->q_index_[iEl]] = 0;
   }
 }

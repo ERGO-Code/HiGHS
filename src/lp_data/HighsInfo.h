@@ -206,9 +206,9 @@ class HighsInfo : public HighsInfoStruct {
                                    &ipm_iteration_count, 0);
     records.push_back(record_int);
 
-    record_int = new InfoRecordInt("qp_iteration_count",
-                                   "Iteration count for QP solver", advanced,
-                                   &qp_iteration_count, 0);
+    record_int =
+        new InfoRecordInt("qp_iteration_count", "Iteration count for QP solver",
+                          advanced, &qp_iteration_count, 0);
     records.push_back(record_int);
 
     record_int = new InfoRecordInt("crossover_iteration_count",

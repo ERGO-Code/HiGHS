@@ -33,9 +33,9 @@
 #include "mip/HighsMipSolver.h"
 #include "model/HighsHessianUtils.h"
 #include "presolve/ICrashX.h"
+#include "qpsolver/solver.hpp"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
-#include "qpsolver/solver.hpp"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -2209,7 +2209,7 @@ HighsStatus Highs::callSolveQp() {
   instance.Q.mat.index = hessian.q_index_;
   instance.Q.mat.value = hessian.q_value_;
 
-  for (HighsInt i=0; i<instance.c.value.size(); i++) {
+  for (HighsInt i = 0; i < instance.c.value.size(); i++) {
     if (instance.c.value[i] != 0.0) {
       instance.c.index[instance.c.num_nz++] = i;
     }
@@ -2225,54 +2225,53 @@ HighsStatus Highs::callSolveQp() {
 
   runtime.settings.reportingfequency = 1000;
   runtime.endofiterationevent.subscribe([](Runtime& rt) {
-   int rep = rt.statistics.iteration.size() -1;
+    int rep = rt.statistics.iteration.size() - 1;
     //  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
     //                 "Solving %s\n", lp_.model_name_.c_str());
 
-   printf("%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n", 
-      rt.statistics.iteration[rep],
-      rt.statistics.objval[rep],
-      rt.statistics.nullspacedimension[rep],
-      rt.statistics.time[rep],
-      rt.statistics.sum_primal_infeasibilities[rep],
-      rt.statistics.num_primal_infeasibilities[rep],
-      rt.statistics.density_nullspace[rep],
-      rt.statistics.density_factor[rep]);
-});
+    printf("%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT
+           ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n",
+           rt.statistics.iteration[rep], rt.statistics.objval[rep],
+           rt.statistics.nullspacedimension[rep], rt.statistics.time[rep],
+           rt.statistics.sum_primal_infeasibilities[rep],
+           rt.statistics.num_primal_infeasibilities[rep],
+           rt.statistics.density_nullspace[rep],
+           rt.statistics.density_factor[rep]);
+  });
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
-  runtime.settings.ratiotest = new RatiotestTwopass(instance, 0.000000001, 0.000001); 
-  Solver solver(runtime); 
+  runtime.settings.ratiotest =
+      new RatiotestTwopass(instance, 0.000000001, 0.000001);
+  Solver solver(runtime);
   solver.solve();
-
-
-
-
 
   //
   // Cheating now, but need to set this honestly!
   HighsStatus call_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(call_status, return_status, "QpSolver");
+  return_status = interpretCallStatus(call_status, return_status, "QpSolver");
   if (return_status == HighsStatus::kError) return return_status;
   // Cheating now, but need to set this honestly!
-  scaled_model_status_ = runtime.status == ProblemStatus::OPTIMAL ?
-  HighsModelStatus::kOptimal : runtime.status == ProblemStatus::UNBOUNDED ?
-  HighsModelStatus::kUnbounded : HighsModelStatus::kInfeasible; model_status_ =
-  scaled_model_status_;
+  scaled_model_status_ = runtime.status == ProblemStatus::OPTIMAL
+                             ? HighsModelStatus::kOptimal
+                             : runtime.status == ProblemStatus::UNBOUNDED
+                                   ? HighsModelStatus::kUnbounded
+                                   : HighsModelStatus::kInfeasible;
+  model_status_ = scaled_model_status_;
   // Set the values in HighsInfo instance info_
   info_.qp_iteration_count = runtime.statistics.num_iterations;
   info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
   info_.ipm_iteration_count = -1;
   info_.crossover_iteration_count = -1;
-  info_.primal_solution_status = runtime.status == ProblemStatus::OPTIMAL ?
-  SolutionStatus::kSolutionStatusFeasible :
-  SolutionStatus::kSolutionStatusInfeasible; info_.dual_solution_status = runtime.status
-  == ProblemStatus::OPTIMAL ? SolutionStatus::kSolutionStatusFeasible :
-  SolutionStatus::kSolutionStatusInfeasible; info_.objective_function_value =
-  runtime.instance.objval(runtime.primal); info_.num_primal_infeasibilities =
-  -1;  // Not known
+  info_.primal_solution_status =
+      runtime.status == ProblemStatus::OPTIMAL
+          ? SolutionStatus::kSolutionStatusFeasible
+          : SolutionStatus::kSolutionStatusInfeasible;
+  info_.dual_solution_status = runtime.status == ProblemStatus::OPTIMAL
+                                   ? SolutionStatus::kSolutionStatusFeasible
+                                   : SolutionStatus::kSolutionStatusInfeasible;
+  info_.objective_function_value = runtime.instance.objval(runtime.primal);
+  info_.num_primal_infeasibilities = -1;  // Not known
   // Are the violations max or sum?
-  info_.max_primal_infeasibility =0.0; //
+  info_.max_primal_infeasibility = 0.0;   //
   info_.sum_primal_infeasibilities = -1;  // Not known
   info_.num_dual_infeasibilities = -1;    // Not known
   info_.max_dual_infeasibility = -1;      // Not known
@@ -2284,7 +2283,7 @@ HighsStatus Highs::callSolveQp() {
   solution_.col_value.resize(lp.numCol_);
   solution_.col_dual.resize(lp.numCol_);
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    solution_.col_value[iCol] = runtime.primal.value[iCol]; //
+    solution_.col_value[iCol] = runtime.primal.value[iCol];  //
     solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
   }
 
