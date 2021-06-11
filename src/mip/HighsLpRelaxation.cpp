@@ -356,7 +356,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
                                          double upperbound,
                                          std::vector<HighsInt>& inds,
                                          std::vector<double>& vals,
-                                         double& rhs) {
+                                         double& rhs) const {
   std::vector<double> row_dual = lpsolver.getSolution().row_dual;
 
   const HighsLp& lp = lpsolver.getModel();
@@ -365,10 +365,6 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   HighsCDouble upper = upperbound;
 
   for (HighsInt i = 0; i != lp.numRow_; ++i) {
-    if (std::abs(row_dual[i]) >
-        lpsolver.getOptions().dual_feasibility_tolerance)
-      lprows[i].age = 0;
-
     if (row_dual[i] < 0) {
       if (lp.rowLower_[i] != -kHighsInf)
         upper += row_dual[i] * lp.rowLower_[i];
@@ -480,10 +476,8 @@ void HighsLpRelaxation::storeDualInfProof() {
             mipsolver.mipdata_->feastol)
       dualray[i] = 0;
     else if (dualray[i] < 0) {
-      lprows[i].age = 0;
       if (lp.rowUpper_[i] == kHighsInf) dualray[i] = 0.0;
     } else if (dualray[i] > 0) {
-      lprows[i].age = 0;
       if (lp.rowLower_[i] == -kHighsInf) dualray[i] = 0.0;
     }
   }

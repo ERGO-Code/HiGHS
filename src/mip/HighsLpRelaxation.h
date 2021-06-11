@@ -261,7 +261,7 @@ class HighsLpRelaxation {
 
   bool computeDualProof(const HighsDomain& globaldomain, double upperbound,
                         std::vector<HighsInt>& inds, std::vector<double>& vals,
-                        double& rhs);
+                        double& rhs) const;
 
   bool computeDualInfProof(const HighsDomain& globaldomain,
                            std::vector<HighsInt>& inds,
