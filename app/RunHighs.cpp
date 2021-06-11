@@ -125,6 +125,10 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
                  highs_info.simplex_iteration_count);
+    if (highs_info.qp_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",
+                   highs_info.qp_iteration_count);
     if (highs_info.ipm_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "IPM       iterations: %" HIGHSINT_FORMAT "\n",

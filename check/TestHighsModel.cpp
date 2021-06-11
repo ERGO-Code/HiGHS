@@ -33,7 +33,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kOk);
   status = highs.run();
-  REQUIRE(status == HighsStatus::kError);
+  REQUIRE(status == HighsStatus::kOk);
 
   highs.clear();
   model.clear();

@@ -138,6 +138,9 @@ set(sources
     presolve/PresolveComponent.cpp
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
+    qpsolver/basis.cpp
+    qpsolver/solver.cpp
+    qpsolver/ratiotest/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -225,6 +228,8 @@ set(headers
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
