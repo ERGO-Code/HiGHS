@@ -307,7 +307,8 @@ void HighsLpRelaxation::performAging(bool useBasis) {
         deletemask[i] = 1;
         mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
       }
-    } else {
+    } else if (std::abs(lpsolver.getSolution().row_dual[i]) >
+               lpsolver.getOptions().dual_feasibility_tolerance) {
       lprows[i].age = 0;
     }
   }
