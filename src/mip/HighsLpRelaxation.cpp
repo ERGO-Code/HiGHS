@@ -299,7 +299,9 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
     if (!useBasis ||
-        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
+        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic ||
+        std::abs(lpsolver.getSolution().row_dual[i]) <=
+            lpsolver.getOptions().dual_feasibility_tolerance) {
       lprows[i].age += 1;
       if (lprows[i].age > agelimit) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
@@ -313,6 +315,22 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   }
 
   removeCuts(ndelcuts, deletemask);
+}
+
+void HighsLpRelaxation::resetAges() {
+  assert(lpsolver.getModel().numRow_ ==
+         (HighsInt)lpsolver.getModel().rowLower_.size());
+
+  HighsInt nlprows = numRows();
+  HighsInt nummodelrows = getNumModelRows();
+
+  for (HighsInt i = nummodelrows; i != nlprows; ++i) {
+    assert(lprows[i].origin == LpRow::Origin::kCutPool);
+    if (lpsolver.getBasis().row_status[i] != HighsBasisStatus::kBasic &&
+        std::abs(lpsolver.getSolution().row_dual[i]) >
+            lpsolver.getOptions().dual_feasibility_tolerance)
+      lprows[i].age = 0;
+  }
 }
 
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {

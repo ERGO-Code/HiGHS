@@ -718,6 +718,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     lpiterations += lp->getNumLpIterations() - oldnumiters;
     if (lp->scaledOptimal(status)) {
       lp->storeBasis();
+      lp->resetAges();
 
       currnode.nodeBasis = lp->getStoredBasis();
       currnode.estimate = lp->computeBestEstimate(pseudocost);

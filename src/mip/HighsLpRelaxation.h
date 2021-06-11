@@ -241,6 +241,8 @@ class HighsLpRelaxation {
 
   void performAging(bool useBasis = true);
 
+  void resetAges();
+
   void removeObsoleteRows(bool notifyPool = true);
 
   void removeCuts(HighsInt ndelcuts, std::vector<HighsInt>& deletemask);
