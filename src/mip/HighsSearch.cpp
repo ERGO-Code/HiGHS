@@ -358,6 +358,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
+        lp->resetAges();
+
         double delta = downval - fracval;
         bool integerfeasible;
         const std::vector<double>& sol =
@@ -365,6 +367,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
+        if (objdelta <= mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         downscore[candidate] = objdelta;
         downscorereliable[candidate] = 1;
@@ -477,6 +480,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
+        lp->resetAges();
         double delta = upval - fracval;
         bool integerfeasible;
 
@@ -485,7 +489,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
-        if (objdelta < mipsolver.mipdata_->epsilon) objdelta = 0.0;
+        if (objdelta <= mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         upscore[candidate] = objdelta;
         upscorereliable[candidate] = 1;
