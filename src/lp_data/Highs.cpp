@@ -2229,7 +2229,7 @@ HighsStatus Highs::callSolveQp() {
     //  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
     //                 "Solving %s\n", lp_.model_name_.c_str());
 
-   printf("%u, %lf, %u, %lf, %lf, %u, %lf, %lf\n", 
+   printf("%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n", 
       rt.statistics.iteration[rep],
       rt.statistics.objval[rep],
       rt.statistics.nullspacedimension[rep],

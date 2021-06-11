@@ -10,13 +10,11 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
    Highs highs;
 	
 	// set HiGHS to be silent
-	highs.setHighsOutput(NULL);
-	highs.setHighsLogfile(NULL);
-
+        highs.setOptionValue("output_flag", false);
 
 	HighsLp lp;
-	lp.Aindex_ = *((std::vector<int>*)&runtime.instance.A.mat.index);
-	lp.Astart_ = *((std::vector<int>*)&runtime.instance.A.mat.start);
+	lp.Aindex_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);
+	lp.Astart_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.start);
 	lp.Avalue_ = runtime.instance.A.mat.value;
    lp.colCost_.assign(runtime.instance.num_var, 0.0);
 	// lp.colCost_ = runtime.instance.c.value;
@@ -58,8 +56,8 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 		}
 	}
 
-	std::vector<int> initialactive;
-   std::vector<int> initialinactive;
+	std::vector<HighsInt> initialactive;
+	std::vector<HighsInt> initialinactive;
 	std::vector<BasisStatus> atlower;
 	for (HighsInt i=0; i<bas.row_status.size(); i++) {
 		if (bas.row_status[i] == HighsBasisStatus::kLower) {
@@ -84,10 +82,10 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
 			initialactive.push_back(i + runtime.instance.num_con);
 			atlower.push_back(BasisStatus::ActiveAtUpper);
 		} else if (bas.col_status[i] == HighsBasisStatus::kZero) {
-         // printf("col %u free and set to 0 %d\n", i, (int)bas.col_status[i]);
+         // printf("col %" HIGHSINT_FORMAT " free and set to 0 %" HIGHSINT_FORMAT "\n", i, (HighsInt)bas.col_status[i]);
          initialinactive.push_back(runtime.instance.num_con + i);
       } else if (bas.col_status[i] != HighsBasisStatus::kBasic) {
-         // printf("Column %d basis stus %d\n", i, (int)bas.col_status[i]);
+         // printf("Column %" HIGHSINT_FORMAT " basis stus %" HIGHSINT_FORMAT "\n", i, (HighsInt)bas.col_status[i]);
       } else {
          assert(bas.col_status[i] == HighsBasisStatus::kBasic);
       }

@@ -37,8 +37,8 @@ class Nullspace {
       HighsInt nvar = basis.getnumactive() + basis.getnuminactive();
       Matrix Z(nvar, 0);
 
-      const std::vector<int>& nonactive = basis.getinactive(); 
-      const std::vector<int>& indexinfactor = basis.getindexinfactor();
+      const std::vector<HighsInt>& nonactive = basis.getinactive(); 
+      const std::vector<HighsInt>& indexinfactor = basis.getindexinfactor();
       
       for (HighsInt i = 0; i < nonactive.size(); i++) {
          HighsInt unit =
@@ -138,7 +138,7 @@ public:
       }
 
       if (fabs(buffer_d.value[maxabs]) < rt.settings.d_zero_threshold) {
-         printf("degeneracy? not possible to find non-active constraHighsInt to leave basis. max: log(d[%u]) = %lf\n", maxabs, log10(fabs(buffer_d.value[maxabs])));
+         printf("degeneracy? not possible to find non-active constraHighsInt to leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n", maxabs, log10(fabs(buffer_d.value[maxabs])));
          exit(1);
       }
 

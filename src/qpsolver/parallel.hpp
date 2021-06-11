@@ -72,7 +72,7 @@ static void parallel_for_obo(HighsInt nb_elements,
     std::vector< std::thread > my_threads(nb_threads);
     
     HighsInt assigned = 0;
-    std::vector<int> current (nb_threads, 0);
+    std::vector<HighsInt> current (nb_threads, 0);
     std::mutex lock;
     for (HighsInt i=0; i<nb_threads; i++) {
         my_threads[i] = std::thread([&](HighsInt tid)
@@ -103,8 +103,8 @@ static void parallel_for_frac(HighsInt nb_elements,
     std::vector< std::thread > my_threads(nb_threads);
     
     HighsInt assigned = 0;
-    std::vector<int> current_start(nb_threads, 0);
-    std::vector<int> current_end(nb_threads, 0);
+    std::vector<HighsInt> current_start(nb_threads, 0);
+    std::vector<HighsInt> current_end(nb_threads, 0);
     std::mutex lock;
     for (HighsInt i=0; i<nb_threads; i++) {
         my_threads[i] = std::thread([&](HighsInt tid) {

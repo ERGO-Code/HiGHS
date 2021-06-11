@@ -10,12 +10,12 @@ struct Statistics {
    std::chrono::high_resolution_clock::time_point time_start;
    std::chrono::high_resolution_clock::time_point time_end; 
 
-   std::vector<int> iteration;
-   std::vector<int> nullspacedimension;
+   std::vector<HighsInt> iteration;
+   std::vector<HighsInt> nullspacedimension;
    std::vector<double> objval;
    std::vector<double> time; 
    std::vector<double> sum_primal_infeasibilities;
-   std::vector<int> num_primal_infeasibilities;
+   std::vector<HighsInt> num_primal_infeasibilities;
    std::vector<double> density_nullspace;
    std::vector<double> density_factor;
 };

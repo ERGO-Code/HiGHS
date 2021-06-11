@@ -188,7 +188,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 		} else {
 			RatiotestResult stepres = runtime.settings.ratiotest->ratiotest(runtime.primal, p, runtime.rowactivity, rowmove, runtime.instance, maxsteplength);
 			// printf("%u, alpha= %lf\n", stepres.limitingconstraint,stepres.alpha);
-			if (stepres.limitingconstraHighsInt != -1) {
+			if (stepres.limitingconstraint != -1) {
 				// Vector d = computed(runtime, ns, basis, stepres.limitingconstraint);
 				NullspaceReductionResult nrr = ns.reduce(runtime, stepres.limitingconstraint);
 				if (runtime.instance.Q.mat.value.size() > 0) {
@@ -203,7 +203,7 @@ void Solver::solve(const Vector& x0, const Vector& ra, Basis& b0) {
 					atfsep = false;
 				}
 			} else {
-				if (stepres.limitingconstraHighsInt == std::numeric_limits<double>::infinity()) {
+				if (stepres.limitingconstraint == std::numeric_limits<double>::infinity()) {
 					// unbounded
 					runtime.status = ProblemStatus::UNBOUNDED;
 				}

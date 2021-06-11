@@ -4,8 +4,8 @@
 #include <cstdlib>
 
 struct CrashSolution {
-   std::vector<int> active;
-   std::vector<int> inactive;
+   std::vector<HighsInt> active;
+   std::vector<HighsInt> inactive;
 	std::vector<BasisStatus> rowstatus;
    Vector primal;
    Vector rowact;

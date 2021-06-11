@@ -20,10 +20,10 @@ struct Settings {
 
    HighsInt reinvertfrequency = 100;
    HighsInt gradientrecomputefrequency = 1;
-   HighsInt reducedgradientrecomputefrequency = std::numeric_limits<int>::infinity();
-   HighsInt reducedhessianrecomputefrequency = std::numeric_limits<int>::infinity();
+   HighsInt reducedgradientrecomputefrequency = std::numeric_limits<HighsInt>::infinity();
+   HighsInt reducedhessianrecomputefrequency = std::numeric_limits<HighsInt>::infinity();
 
-   HighsInt iterationlimit = std::numeric_limits<int>::infinity();
+   HighsInt iterationlimit = std::numeric_limits<HighsInt>::infinity();
    double timelimit = std::numeric_limits<double>::infinity();
 
    bool rowscaling = true;

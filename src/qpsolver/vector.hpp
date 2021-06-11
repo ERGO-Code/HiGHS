@@ -10,7 +10,7 @@
 struct Vector {
    HighsInt num_nz;
    HighsInt dim;
-   std::vector<int> index;
+   std::vector<HighsInt> index;
    std::vector<double> value;
 
    Vector(HighsInt d) : dim(d) {
@@ -70,7 +70,7 @@ struct Vector {
          printf("%s: ", name.c_str());
       }
       for (HighsInt i=0; i<num_nz; i++) {
-         printf("[%u] %lf ", index[i], value[index[i]]);
+         printf("[%" HIGHSINT_FORMAT "] %lf ", index[i], value[index[i]]);
       }
       printf("\n");
    }
@@ -134,7 +134,7 @@ struct Vector {
       return *this;
    }
 
-   // void saxpy(double a, int* idx, double* val, HighsInt nnz) {
+   // void saxpy(double a, HighsInt* idx, double* val, HighsInt nnz) {
    //    for (HighsInt i=0; i<nnz; i++) {
    //       value[idx[i]] += a * val[i];
    //    }
@@ -204,7 +204,7 @@ struct Vector {
       return dot(other);
    }
 
-   double dot(const int* idx, const double* val, HighsInt nnz) const {
+   double dot(const HighsInt* idx, const double* val, HighsInt nnz) const {
       double dot = 0.0;
       for (HighsInt i=0; i<nnz; i++) {
          dot += value[idx[i]] * val[i];

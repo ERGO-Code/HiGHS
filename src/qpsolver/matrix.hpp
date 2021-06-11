@@ -12,8 +12,8 @@
 struct MatrixBase {
    HighsInt num_row;
    HighsInt num_col;
-   std::vector<int> start;
-   std::vector<int> index;
+   std::vector<HighsInt> start;
+   std::vector<HighsInt> index;
    std::vector<double> value;
 
    Vector& mat_vec_par_omp(const Vector& other, Vector& target) const {
@@ -120,7 +120,7 @@ Vector& mat_vec_par(const Vector& other, Vector& target) const {
       return result;
    }
 
-   Vector vec_mat(int* idx, double* val, HighsInt nnz) {
+   Vector vec_mat(HighsInt* idx, double* val, HighsInt nnz) {
       Vector result(num_col);
       for (HighsInt i=0; i<num_col; i++) {
          double dot = 0.0;
@@ -277,7 +277,7 @@ private:
 
    void transpose() {
       if (!has_transpose) {
-         std::vector<std::vector<int>> row_indices(mat.num_row);
+         std::vector<std::vector<HighsInt>> row_indices(mat.num_row);
          std::vector<std::vector<double>> row_values(mat.num_row);
 
          for (HighsInt col=0; col<mat.num_col; col++) {
@@ -336,7 +336,7 @@ public:
       has_transpose = false;
    }
 
-   void append(int* idx, double* val, HighsInt nnz) {
+   void append(HighsInt* idx, double* val, HighsInt nnz) {
       if (mat.num_col == 0 && mat.start.size() == 0) {
          mat.start.push_back(0);
       }
@@ -349,7 +349,7 @@ public:
       has_transpose = false;
    }
 
-   void append(HighsInt num_nz, int* index, double* value) {
+   void append(HighsInt num_nz, HighsInt* index, double* value) {
       if (mat.num_col == 0 && mat.start.size() == 0) {
          mat.start.push_back(0);
       }
@@ -436,7 +436,7 @@ public:
       return mat.vec_mat(other, target);
    }
 
-   Vector vec_mat(int* index, double* value, HighsInt num_nz) {
+   Vector vec_mat(HighsInt* index, double* value, HighsInt num_nz) {
       return mat.vec_mat(index, value, num_nz);
    }
 
@@ -444,16 +444,16 @@ public:
       if (name != "") {
          printf("%s:", name.c_str());
       }
-      printf("[%u x %u]\n", mat.num_row, mat.num_col);
+      printf("[%" HIGHSINT_FORMAT " x %" HIGHSINT_FORMAT "]\n", mat.num_row, mat.num_col);
       printf("start: ");
       for (HighsInt i : mat.start) {
-         printf("%u ", i);
+         printf("%" HIGHSINT_FORMAT " ", i);
       }
       printf("\n");
 
       printf("index: ");
       for (HighsInt i : mat.index) {
-         printf("%u ", i);
+         printf("%" HIGHSINT_FORMAT " ", i);
       }
       printf("\n");
 

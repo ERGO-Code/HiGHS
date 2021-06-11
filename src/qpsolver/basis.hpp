@@ -58,20 +58,20 @@ class Basis {
    MatrixBase Atran;
 
    // indices of active constraints in basis
-	std::vector<int> activeconstraintidx;
+	std::vector<HighsInt> activeconstraintidx;
 
 	// ids of constraints that are in the basis but not active
 	// I need to extract those columns to get Z
-	std::vector<int> nonactiveconstraintsidx;
+	std::vector<HighsInt> nonactiveconstraintsidx;
 
 	// ids of constraints that are in the basis 
-	// std::vector<int> baseindex;
-   int* baseindex;
+	// std::vector<HighsInt> baseindex;
+   HighsInt* baseindex;
 
    std::map<int, BasisStatus> basisstatus;
 
    // index i: -1 if constraHighsInt not in basis, [0, num_var] if constraHighsInt in basis (active or not)
-	std::vector<int> constraintindexinbasisfactor;
+	std::vector<HighsInt> constraintindexinbasisfactor;
 
    void build();
    void rebuild();
@@ -81,7 +81,7 @@ class Basis {
    Vector buffer_row_ep;
 
 public:
-   Basis(Runtime& rt, std::vector<int> active, std::vector<BasisStatus> atlower, std::vector<int> inactive);
+   Basis(Runtime& rt, std::vector<HighsInt> active, std::vector<BasisStatus> atlower, std::vector<HighsInt> inactive);
 
    HighsInt getnupdatessinceinvert() {
       return updatessinceinvert;
@@ -91,11 +91,11 @@ public:
 
    HighsInt getnuminactive() const { return nonactiveconstraintsidx.size(); };
 
-   const std::vector<int>& getactive() const { return activeconstraintidx; };
+   const std::vector<HighsInt>& getactive() const { return activeconstraintidx; };
 
-   const std::vector<int>& getinactive() const { return nonactiveconstraintsidx; };
+   const std::vector<HighsInt>& getinactive() const { return nonactiveconstraintsidx; };
 
-   const std::vector<int>& getindexinfactor() const { return constraintindexinbasisfactor; };
+   const std::vector<HighsInt>& getindexinfactor() const { return constraintindexinbasisfactor; };
 
    BasisStatus getstatus(HighsInt conid) { return basisstatus[conid]; };
 

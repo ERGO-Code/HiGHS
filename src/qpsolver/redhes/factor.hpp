@@ -70,8 +70,8 @@ void resize() {
 public:
    NewCholeskyFactor(Runtime& rt, Basis& basis, Nullspace& ns) : runtime(rt), nullspace(ns) {
       uptodate = false;
-      printf("computed size: %u, needed size: %u\n", min((int)ceil(rt.instance.num_var / 16.0), 1000), basis.getnuminactive());
-      current_k_max = max(min((int)ceil(rt.instance.num_var / 16.0), 1000), basis.getnuminactive());
+      printf("computed size: %" HIGHSINT_FORMAT ", needed size: %" HIGHSINT_FORMAT "\n", min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000), basis.getnuminactive());
+      current_k_max = max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000), basis.getnuminactive());
       L.resize(current_k_max * current_k_max);
    }
 
