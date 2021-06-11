@@ -2520,12 +2520,13 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "unpredictable\n",
                method_name.c_str());
 }
+HighsStatus Highs::crossover() { return crossover(solution_); }
 
-HighsStatus Highs::crossover() {
+HighsStatus Highs::crossover(HighsSolution& solution) {
 #ifdef IPX_ON
   std::cout << "Loading crossover...\n";
   HighsBasis basis;
-  bool x_status = callCrossover(lp_, options_, solution_, basis);
+  bool x_status = callCrossover(lp_, options_, solution, basis);
   if (!x_status) return HighsStatus::kError;
 
   setBasis(basis);

@@ -917,6 +917,7 @@ class Highs {
 
   // Runs ipx crossover and if successful loads basis into Highs::basis_
   HighsStatus crossover();
+  HighsStatus crossover(HighsSolution& solution);
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
