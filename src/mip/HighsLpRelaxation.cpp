@@ -299,9 +299,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
   for (HighsInt i = nummodelrows; i != nlprows; ++i) {
     assert(lprows[i].origin == LpRow::Origin::kCutPool);
     if (!useBasis ||
-        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic ||
-        std::abs(lpsolver.getSolution().row_dual[i]) <=
-            lpsolver.getOptions().dual_feasibility_tolerance) {
+        lpsolver.getBasis().row_status[i] == HighsBasisStatus::kBasic) {
       lprows[i].age += 1;
       if (lprows[i].age > agelimit) {
         if (ndelcuts == 0) deletemask.resize(nlprows);
