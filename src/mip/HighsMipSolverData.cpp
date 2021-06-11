@@ -276,6 +276,8 @@ void HighsMipSolverData::runSetup() {
 
   checkObjIntegrality();
   basisTransfer();
+  rootlpsol.clear();
+  firstlpsol.clear();
 
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {

@@ -34,7 +34,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   upper_limit = kHighsInf;
   inheuristic = false;
   inbranching = false;
-  childselrule = ChildSelectionRule::kDisjunction;
+  childselrule = ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
 
@@ -856,8 +856,18 @@ HighsSearch::NodeResult HighsSearch::branch() {
           currnode.branchingdecision.boundval =
               std::floor(currnode.branching_point);
           break;
-        case ChildSelectionRule::kRootSol:
-          if (currnode.branching_point >= mipsolver.mipdata_->rootlpsol[col]) {
+        case ChildSelectionRule::kRootSol: {
+          double downPrio = pseudocost.getAvgInferencesDown(col) +
+                            mipsolver.mipdata_->epsilon;
+          double upPrio =
+              pseudocost.getAvgInferencesUp(col) + mipsolver.mipdata_->epsilon;
+          if (!mipsolver.mipdata_->rootlpsol.empty()) {
+            upPrio *= (1.0 + (currnode.branching_point -
+                              mipsolver.mipdata_->rootlpsol[col]));
+            downPrio *= (1.0 + (mipsolver.mipdata_->rootlpsol[col] -
+                                currnode.branching_point));
+          }
+          if (upPrio + mipsolver.mipdata_->epsilon >= downPrio) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
             currnode.branchingdecision.boundval =
                 std::ceil(currnode.branching_point);
@@ -867,6 +877,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
                 std::floor(currnode.branching_point);
           }
           break;
+        }
         case ChildSelectionRule::kObj:
           if (mipsolver.colCost(col) >= 0) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;

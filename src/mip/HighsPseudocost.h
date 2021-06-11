@@ -235,6 +235,12 @@ class HighsPseudocost {
 
     return getScore(col, upcost, downcost);
   }
+
+  double getAvgInferencesUp(HighsInt col) const { return inferencesup[col]; }
+
+  double getAvgInferencesDown(HighsInt col) const {
+    return inferencesdown[col];
+  }
 };
 
 #endif
