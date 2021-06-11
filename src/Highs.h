@@ -169,7 +169,7 @@ class Highs {
   HighsStatus passOptions(const HighsOptions& options  //!< The options
   );
 
-  const HighsOptions& getOptions();
+  const HighsOptions& getOptions() const { return options_; }
 
   /**
    * @brief Gets an option value as bool/int/double/string and, for
@@ -198,8 +198,6 @@ class Highs {
                             HighsOptionType& type       //!< The option type
   );
 
-  const HighsOptions& getOptions() const;
-
   HighsStatus resetOptions();
 
   HighsStatus writeOptions(const std::string filename,  //!< The filename
@@ -210,7 +208,7 @@ class Highs {
    * type.
    */
 
-  const HighsInfo& getInfo() const;
+  const HighsInfo& getInfo() const { return info_; }
 
   HighsStatus getInfoValue(const std::string& info,  //!< The info name
                            HighsInt& value           //!< The info value
@@ -258,7 +256,10 @@ class Highs {
   /**
    * @brief Returns the current model status
    */
-  const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
+  const HighsModelStatus& getModelStatus(
+      const bool scaled_model = false) const {
+    return scaled_model ? scaled_model_status_ : model_status_;
+  }
 
   /**
    * @brief Indicates whether a dual unbounded ray exdists, and gets
@@ -364,18 +365,18 @@ class Highs {
   /**
    * @brief Get the number of columns in the incumbent model
    */
-  HighsInt getNumCols() const { return model_.lp_.numCol_; }
+  HighsInt getNumCol() const { return model_.lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the incumbent model
    */
-  HighsInt getNumRows() const { return model_.lp_.numRow_; }
+  HighsInt getNumRow() const { return model_.lp_.numRow_; }
 
   /**
    * @brief Get the number of (constraint matrix) nonzeros in the incumbent
    * model
    */
-  HighsInt getNumNz() {
+  HighsInt getNumNz() const {
     if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
     return 0;
   }
@@ -393,6 +394,11 @@ class Highs {
    * @brief Get the objective sense of the model
    */
   HighsStatus getObjectiveSense(ObjSense& sense);
+
+  /**
+   * @brief Get the objective offset of the model
+   */
+  HighsStatus getObjectiveOffset(double& offset);
 
   /**
    * @brief Get multiple columns from the model given by an interval
@@ -537,6 +543,13 @@ class Highs {
    */
   HighsStatus changeObjectiveSense(
       const ObjSense sense  //!< New objective sense
+  );
+
+  /**
+   * @brief Change the objective offset of the model
+   */
+  HighsStatus changeObjectiveOffset(
+      const double offset  //!< New objective offset
   );
 
   /**
@@ -871,12 +884,12 @@ class Highs {
   /**
    * @brief Gets the value of infinity used by HiGHS
    */
-  double getInfinity();
+  double getInfinity() { return kHighsInf; }
 
   /**
    * @brief Gets the run time of HiGHS
    */
-  double getRunTime();
+  double getRunTime() { return timer_.readRunHighsClock(); }
 
 #ifdef HiGHSDEV
   /**
@@ -889,7 +902,11 @@ class Highs {
 
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
-  std::string solutionStatusToString(const HighsInt solution_status);
+  std::string solutionStatusToString(const HighsInt solution_status) const;
+
+  std::string basisStatusToString(const HighsBasisStatus basis_status) const;
+
+  std::string basisValidityToString(const HighsInt basis_validity) const;
 
   HighsStatus setMatrixOrientation(const MatrixOrientation desired_orientation =
                                        MatrixOrientation::kColwise) {
@@ -901,7 +918,18 @@ class Highs {
 #endif
   // Start of deprecated methods
 
-  HighsInt getNumEntries() { return getNumNz(); }
+  HighsInt getNumCols() const {
+    deprecationMessage("getNumCols", "getNumCol");
+    return getNumCol();
+  }
+  HighsInt getNumRows() const {
+    deprecationMessage("getNumRows", "getNumRow");
+    return getNumRow();
+  }
+  HighsInt getNumEntries() {
+    deprecationMessage("getNumEntries", "getNumNz");
+    return getNumNz();
+  }
 
   HighsStatus setHighsOptionValue(
       const std::string& option,  //!< The option name
@@ -981,6 +1009,9 @@ class Highs {
     deprecationMessage("getSimplexIterationCount", "None");
     return info_.simplex_iteration_count;
   }
+
+  // Runs ipx crossover and if successful loads basis into Highs::basis_
+  HighsStatus crossover();
 
   HighsStatus setHighsLogfile(FILE* logfile = NULL);
 
@@ -1138,6 +1169,7 @@ class Highs {
                                       double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
+  HighsStatus changeObjectiveOffsetInterface(const double Xoffset);
   HighsStatus changeIntegralityInterface(HighsIndexCollection& index_collection,
                                          const HighsVarType* usr_inegrality);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,

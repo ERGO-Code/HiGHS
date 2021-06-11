@@ -16,6 +16,7 @@
 
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/HighsRedcostFixing.h"
 #include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
@@ -304,6 +305,8 @@ double HighsMipSolverData::transformNewIncumbent(
 
   postSolveStack.undoPrimal(*mipsolver.options_mip_, solution);
   calculateRowValues(*mipsolver.orig_model_, solution);
+  bool allow_try_again = true;
+try_again:
 
   // compute the objective value in the original space
   double bound_violation_ = 0;
@@ -342,10 +345,43 @@ double HighsMipSolverData::transformNewIncumbent(
       bound_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance &&
       integrality_violation_ <=
           mipsolver.options_mip_->mip_feasibility_tolerance &&
-      row_violation_ <= mipsolver.options_mip_->mip_feasibility_tolerance;
+      row_violation_ <=
+          mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
+
+  if (!feasible && allow_try_again) {
+    // printf(
+    //     "trying to repair sol that is violated by %.12g bounds, %.12g "
+    //     "integrality, %.12g rows\n",
+    //     bound_violation_, integrality_violation_, row_violation_);
+    HighsLp fixedModel = *mipsolver.orig_model_;
+    fixedModel.integrality_.clear();
+    for (HighsInt i = 0; i != mipsolver.orig_model_->numCol_; ++i) {
+      if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
+        double solval = std::round(solution.col_value[i]);
+        fixedModel.colLower_[i] = std::max(fixedModel.colLower_[i], solval);
+        fixedModel.colUpper_[i] = std::min(fixedModel.colUpper_[i], solval);
+      }
+    }
+    Highs tmpSolver;
+    tmpSolver.setOptionValue("output_flag", false);
+    tmpSolver.setOptionValue("simplex_scale_strategy", 0);
+    tmpSolver.setOptionValue("presolve", "off");
+    tmpSolver.setOptionValue("primal_feasibility_tolerance",
+                             mipsolver.options_mip_->mip_feasibility_tolerance);
+    tmpSolver.passModel(std::move(fixedModel));
+    tmpSolver.run();
+
+    if (tmpSolver.getInfo().primal_solution_status == 2) {
+      solution = tmpSolver.getSolution();
+      allow_try_again = false;
+      goto try_again;
+    }
+  }
   // store the solution as incumbent in the original space if there is no
   // solution or if it is feasible
   if (feasible) {
+    // if (!allow_try_again)
+    //   printf("repaired solution with value %g\n", double(obj));
     // store
     mipsolver.row_violation_ = row_violation_;
     mipsolver.bound_violation_ = bound_violation_;
@@ -360,7 +396,7 @@ double HighsMipSolverData::transformNewIncumbent(
         mipsolver.integrality_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance &&
         mipsolver.row_violation_ <=
-            mipsolver.options_mip_->mip_feasibility_tolerance;
+            mipsolver.options_mip_->mip_feasibility_tolerance + kHighsTiny;
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kWarning,
         "Untransformed solution with objective %g is violated by %.12g for the "

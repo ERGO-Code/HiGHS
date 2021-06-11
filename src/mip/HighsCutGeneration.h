@@ -24,6 +24,7 @@
 
 #include "util/HighsCDouble.h"
 #include "util/HighsInt.h"
+#include "util/HighsRandom.h"
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -36,6 +37,7 @@ class HighsCutGeneration {
  private:
   const HighsLpRelaxation& lpRelaxation;
   HighsCutPool& cutpool;
+  HighsRandom randgen;
   std::vector<HighsInt> cover;
   HighsCDouble coverweight;
   HighsCDouble lambda;

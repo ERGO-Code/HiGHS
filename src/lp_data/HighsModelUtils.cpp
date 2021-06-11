@@ -549,6 +549,39 @@ std::string utilSolutionStatusToString(const HighsInt solution_status) {
   }
 }
 
+// Return a string representation of HighsBasisStatus
+std::string utilBasisStatusToString(const HighsBasisStatus basis_status) {
+  switch (basis_status) {
+    case HighsBasisStatus::kLower:
+      return "At lower/fixed bound";
+      break;
+    case HighsBasisStatus::kBasic:
+      return "Basic";
+      break;
+    case HighsBasisStatus::kUpper:
+      return "At upper bound";
+      break;
+    case HighsBasisStatus::kZero:
+      return "Free at zero";
+      break;
+    case HighsBasisStatus::kNonbasic:
+      return "Nonbasic";
+      break;
+    default:
+      assert(1 == 0);
+      return "Unrecognised solution status";
+  }
+}
+
+// Return a string representation of basis validity
+std::string utilBasisValidityToString(const HighsInt basis_validity) {
+  if (basis_validity) {
+    return "Valid";
+  } else {
+    return "Not valid";
+  }
+}
+
 // Return a string representation of HighsModelStatus.
 std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {

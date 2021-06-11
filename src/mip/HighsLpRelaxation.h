@@ -230,11 +230,11 @@ class HighsLpRelaxation {
 
   HighsInt getNumModelRows() const { return mipsolver.numRow(); }
 
-  HighsInt numRows() const { return lpsolver.getNumRows(); }
+  HighsInt numRows() const { return lpsolver.getNumRow(); }
 
-  HighsInt numCols() const { return lpsolver.getNumCols(); }
+  HighsInt numCols() const { return lpsolver.getNumCol(); }
 
-  HighsInt numNonzeros() const { return lpsolver.getLp().Avalue_.size(); }
+  HighsInt numNonzeros() const { return lpsolver.getNumNz(); }
 
   void addCuts(HighsCutSet& cutset);
 

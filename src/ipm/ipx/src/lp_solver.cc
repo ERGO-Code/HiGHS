@@ -59,8 +59,11 @@ Int LpSolver::Solve() {
     try {
         InteriorPointSolve();
         if ((info_.status_ipm == IPX_STATUS_optimal ||
-             info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover())
+             info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover()) {
+            control_.Log() << "Crossover\n";
+            BuildCrossoverStartingPoint();
             RunCrossover();
+        }
         if (basis_) {
             info_.ftran_sparse = basis_->frac_ftran_sparse();
             info_.btran_sparse = basis_->frac_btran_sparse();
@@ -151,6 +154,72 @@ void LpSolver::ClearIPMStartingPoint() {
     y_start_.resize(0);
     zl_start_.resize(0);
     zu_start_.resize(0);
+}
+
+Int LpSolver::CrossoverFromStartingPoint(const double* x_start,
+                                         const double* slack_start,
+                                         const double* y_start,
+                                         const double* z_start) {
+    const Int m = model_.rows();
+    const Int n = model_.cols();
+    const Vector& lb = model_.lb();
+    const Vector& ub = model_.ub();
+    const SparseMatrix& AI = model_.AI();
+
+    ClearSolution();
+    control_.Log() << "Crossover from starting point\n";
+
+    x_crossover_.resize(n+m);
+    y_crossover_.resize(m);
+    z_crossover_.resize(n+m);
+    crossover_weights_.resize(0);
+    model_.PresolveStartingPoint(x_start, slack_start, y_start, z_start,
+                                 x_crossover_, y_crossover_, z_crossover_);
+
+    // Check that starting point is complementary and satisfies bound and sign
+    // conditions.
+    for (Int j = 0; j < n+m; j++) {
+        if (x_crossover_[j] < lb[j] || x_crossover_[j] > ub[j])
+            return IPX_ERROR_invalid_vector;
+        if (x_crossover_[j] != lb[j] && z_crossover_[j] > 0.0)
+            return IPX_ERROR_invalid_vector;
+        if (x_crossover_[j] != ub[j] && z_crossover_[j] < 0.0)
+            return IPX_ERROR_invalid_vector;
+    }
+
+    // Construct starting basis.
+    basis_.reset(new Basis(control_, model_));
+    if (control_.crash_basis()) {
+        // Take columns in the following order of priority:
+        // - free columns
+        // - columns between their bounds, in increasing number of nonzeros
+        // - columns with zero dual, in increasing number of nonzeros
+        // - Fixed columns and those with nonzero dual
+        Timer timer;
+        Vector colweight(n+m);
+        for (Int j = 0; j < n+m; j++) {
+            Int nz = AI.entries(j);
+            if (lb[j] == ub[j])
+                colweight[j] = 0.0;
+            else if (std::isinf(lb[j]) && std::isinf(ub[j]))
+                colweight[j] = INFINITY;
+            else if (z_crossover_[j] != 0.0)
+                colweight[j] = 0.0;
+            else if (x_crossover_[j] != lb[j] && x_crossover_[j] != ub[j])
+                colweight[j] = m + (m-nz+1);
+            else
+                colweight[j] = m-nz+1;
+        }
+        basis_->ConstructBasisFromWeights(&colweight[0], &info_);
+        info_.time_starting_basis += timer.Elapsed();
+        if (info_.errflag) {
+            ClearSolution();
+            return 0;
+        }
+    }
+
+    RunCrossover();
+    return 0;
 }
 
 Int LpSolver::GetIterate(double* x, double* y, double* zl, double* zu,
@@ -254,6 +323,7 @@ void LpSolver::ClearSolution() {
     x_crossover_.resize(0);
     y_crossover_.resize(0);
     z_crossover_.resize(0);
+    crossover_weights_.resize(0);
     basic_statuses_.clear();
     basic_statuses_.shrink_to_fit();
     info_ = Info();
@@ -456,14 +526,9 @@ void LpSolver::RunMainIPM(IPM& ipm) {
     info_.time_ipm2 = timer.Elapsed();
 }
 
-void LpSolver::RunCrossover() {
-    control_.Log() << "Crossover\n";
-    assert(basis_);
+void LpSolver::BuildCrossoverStartingPoint() {
     const Int m = model_.rows();
     const Int n = model_.cols();
-    const Vector& lb = model_.lb();
-    const Vector& ub = model_.ub();
-    basic_statuses_.clear();
 
     // Construct a complementary primal-dual point from the final IPM iterate.
     // This usually increases the residuals to Ax=b and A'y+z=c.
@@ -472,26 +537,40 @@ void LpSolver::RunCrossover() {
     z_crossover_.resize(n+m);
     iterate_->DropToComplementarity(x_crossover_, y_crossover_, z_crossover_);
 
-    // Run crossover. Perform dual pushes in increasing order and primal pushes
-    // in decreasing order of the scaling factors from the final IPM iterate.
-    {
-        Vector weights(n+m);
-        for (Int j = 0; j < n+m; j++)
-            weights[j] = iterate_->ScalingFactor(j);
-        Crossover crossover(control_);
-        crossover.PushAll(basis_.get(), x_crossover_, y_crossover_,
-                          z_crossover_, &weights[0], &info_);
-        info_.time_crossover =
-            crossover.time_primal() + crossover.time_dual();
-        info_.updates_crossover =
-            crossover.primal_pivots() + crossover.dual_pivots();
-        if (info_.status_crossover != IPX_STATUS_optimal) {
-            // Crossover failed. Discard solution.
-            x_crossover_.resize(0);
-            y_crossover_.resize(0);
-            z_crossover_.resize(0);
-            return;
-        }
+    // Perform dual pushes in increasing order and primal pushes in decreasing
+    // order of the scaling factors from the final IPM iterate.
+    crossover_weights_.resize(n+m);
+    for (Int j = 0; j < n+m; j++)
+        crossover_weights_[j] = iterate_->ScalingFactor(j);
+}
+
+void LpSolver::RunCrossover() {
+    assert(basis_);
+    const Int m = model_.rows();
+    const Int n = model_.cols();
+    const Vector& lb = model_.lb();
+    const Vector& ub = model_.ub();
+    const double *weights = NULL;
+    basic_statuses_.clear();
+
+    if (crossover_weights_.size()) {
+        assert(crossover_weights_.size() == n+m);
+        weights = &crossover_weights_[0];
+    }
+
+    Crossover crossover(control_);
+    crossover.PushAll(basis_.get(), x_crossover_, y_crossover_, z_crossover_,
+                      weights, &info_);
+    info_.time_crossover =
+        crossover.time_primal() + crossover.time_dual();
+    info_.updates_crossover =
+        crossover.primal_pivots() + crossover.dual_pivots();
+    if (info_.status_crossover != IPX_STATUS_optimal) {
+        // Crossover failed. Discard solution.
+        x_crossover_.resize(0);
+        y_crossover_.resize(0);
+        z_crossover_.resize(0);
+        return;
     }
 
     // Recompute vertex solution and set basic statuses.

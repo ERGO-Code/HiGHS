@@ -988,10 +988,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsInt after_num_row;
   HighsInt rm_row;
 
-  before_num_col = highs.getNumCols();
+  before_num_col = highs.getNumCol();
   rm_col = 0;
   REQUIRE(highs.deleteCols(rm_col, rm_col) == HighsStatus::kOk);
-  after_num_col = highs.getNumCols();
+  after_num_col = highs.getNumCol();
   if (dev_run)
     printf("After removing col %" HIGHSINT_FORMAT " / %" HIGHSINT_FORMAT
            " have %" HIGHSINT_FORMAT " cols\n",
@@ -1000,10 +1000,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  before_num_row = highs.getNumRows();
+  before_num_row = highs.getNumRow();
   rm_row = 0;
   REQUIRE(highs.deleteRows(rm_row, rm_row) == HighsStatus::kOk);
-  after_num_row = highs.getNumRows();
+  after_num_row = highs.getNumRow();
   if (dev_run)
     printf("After removing row %" HIGHSINT_FORMAT " / %" HIGHSINT_FORMAT
            " have %" HIGHSINT_FORMAT " rows\n",
@@ -1012,10 +1012,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  before_num_col = highs.getNumCols();
+  before_num_col = highs.getNumCol();
   rm_col = before_num_col - 1;
   REQUIRE(highs.deleteCols(rm_col, rm_col) == HighsStatus::kOk);
-  after_num_col = highs.getNumCols();
+  after_num_col = highs.getNumCol();
   if (dev_run)
     printf("After removing col %" HIGHSINT_FORMAT " / %" HIGHSINT_FORMAT
            " have %" HIGHSINT_FORMAT " cols\n",
@@ -1024,10 +1024,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  before_num_row = highs.getNumRows();
+  before_num_row = highs.getNumRow();
   rm_row = before_num_row - 1;
   REQUIRE(highs.deleteRows(rm_row, rm_row) == HighsStatus::kOk);
-  after_num_row = highs.getNumRows();
+  after_num_row = highs.getNumRow();
   if (dev_run)
     printf("After removing row %" HIGHSINT_FORMAT " / %" HIGHSINT_FORMAT
            " have %" HIGHSINT_FORMAT " rows\n",
@@ -1038,11 +1038,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.scaleCol(-1, 2.0) == HighsStatus::kError);
 
-  REQUIRE(highs.scaleCol(highs.getNumCols(), 2.0) == HighsStatus::kError);
+  REQUIRE(highs.scaleCol(highs.getNumCol(), 2.0) == HighsStatus::kError);
 
   REQUIRE(highs.scaleCol(0, 0) == HighsStatus::kError);
 
-  REQUIRE(highs.scaleCol(highs.getNumCols() - 1, 2.0) == HighsStatus::kOk);
+  REQUIRE(highs.scaleCol(highs.getNumCol() - 1, 2.0) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -1052,7 +1052,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.scaleRow(-1, 2.0) == HighsStatus::kError);
 
-  REQUIRE(highs.scaleRow(highs.getNumRows(), 2.0) == HighsStatus::kError);
+  REQUIRE(highs.scaleRow(highs.getNumRow(), 2.0) == HighsStatus::kError);
 
   REQUIRE(highs.scaleRow(0, 0) == HighsStatus::kError);
 
@@ -1060,7 +1060,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  REQUIRE(highs.scaleRow(highs.getNumRows() - 1, -2.0) == HighsStatus::kOk);
+  REQUIRE(highs.scaleRow(highs.getNumRow() - 1, -2.0) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 }

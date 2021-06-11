@@ -550,17 +550,17 @@ module highs_lp_solver
       integer(c_int) :: s
     end function Highs_deleteRowsByMask
 
-    function Highs_getNumCols (h) result(nc) bind(c, name='Highs_getNumCols')
+    function Highs_getNumCol (h) result(nc) bind(c, name='Highs_getNumCol')
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer(c_int) :: nc
-    end function Highs_getNumCols
+    end function Highs_getNumCol
 
-    function Highs_getNumRows (h) result(nr) bind(c, name='Highs_getNumRows')
+    function Highs_getNumRow (h) result(nr) bind(c, name='Highs_getNumRow')
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer(c_int) :: nr
-    end function Highs_getNumRows
+    end function Highs_getNumRow
 
     function Highs_getNumNz (h) result(nnz) bind(c, name='Highs_getNumNz')
       use iso_c_binding
@@ -641,6 +641,18 @@ module highs_lp_solver
       type(c_ptr), VALUE :: h
       integer ( c_int ) :: s
     end function Highs_runQuiet
+
+    function Highs_getNumCols (h) result(nc) bind(c, name='Highs_getNumCols')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: nc
+    end function Highs_getNumCols
+
+    function Highs_getNumRows (h) result(nr) bind(c, name='Highs_getNumRows')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: nr
+    end function Highs_getNumRows
 
 ! int Highs_getColsByRange(
 !     void *highs,          //!< HiGHS object reference

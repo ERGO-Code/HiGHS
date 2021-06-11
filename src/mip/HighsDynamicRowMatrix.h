@@ -58,7 +58,7 @@ class HighsDynamicRowMatrix {
   /// can be reused for new rows
   void removeRow(HighsInt rowindex);
 
-  size_t nonzeroCapacity() const { return ARvalue_.size(); }
+  std::size_t nonzeroCapacity() const { return ARvalue_.size(); }
 
   /// replaces a rows values but does not change the support
   void replaceRowValues(HighsInt rowindex, double* Rvalue);

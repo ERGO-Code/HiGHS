@@ -122,11 +122,13 @@ set(sources
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsPseudocost.cpp
-    mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
+    mip/HighsNodeQueue.cpp
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    presolve/ICrashX.cpp
+    #presolve/HPreData.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
@@ -248,6 +250,7 @@ set(headers
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
     simplex/HVector.h
+    presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
@@ -289,6 +292,7 @@ endif()
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
+    set(sources ${sources} ipm/IpxWrapper.cpp)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     if(HIGHSINT64)
@@ -537,6 +541,7 @@ target_sources(libhighs PRIVATE
     model/HighsHessian.cpp
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
+    presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
@@ -666,6 +671,7 @@ set(headers_fast_build_
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
     simplex/HVector.h
+    presolve/ICrashX.h
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
@@ -721,12 +727,11 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
+target_include_directories(libhighs PUBLIC ipm/ipx/src
+    ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
 if (IPX_ON)
-    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
-
-    target_include_directories(libhighs PUBLIC ipm/ipx/src
-        ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources} ipm/IpxWrapper.cpp)
 
     if (UNIX)
         target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")

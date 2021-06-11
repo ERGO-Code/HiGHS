@@ -16,7 +16,7 @@
 #include "Highs.h"
 
 #include <algorithm>
-//#include <string>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -32,6 +32,7 @@
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
 #include "model/HighsHessianUtils.h"
+#include "presolve/ICrashX.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 #include "qpsolver/solver.hpp"
@@ -122,8 +123,6 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
   return HighsStatus::kError;
 }
 
-const HighsOptions& Highs::getOptions() { return options_; }
-
 HighsStatus Highs::getOptionValue(const std::string& option, bool& value) {
   if (getLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
@@ -183,10 +182,6 @@ HighsStatus Highs::writeOptions(const std::string filename,
   if (file != stdout) fclose(file);
   return return_status;
 }
-
-const HighsOptions& Highs::getOptions() const { return options_; }
-
-const HighsInfo& Highs::getInfo() const { return info_; }
 
 HighsStatus Highs::getInfoValue(const std::string& info, HighsInt& value) {
   InfoStatus status =
@@ -994,14 +989,6 @@ HighsStatus Highs::run() {
   return returnFromRun(return_status);
 }
 
-const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
-  if (scaled_model) {
-    return scaled_model_status_;
-  } else {
-    return model_status_;
-  }
-}
-
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   if (!haveHmo("getDualRay")) return HighsStatus::kError;
   return getDualRayInterface(has_dual_ray, dual_ray_value);
@@ -1390,6 +1377,18 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::changeObjectiveOffset(const double offset) {
+  HighsStatus return_status = HighsStatus::kOk;
+  clearPresolve();
+  if (!haveHmo("changeObjectiveOffset")) return HighsStatus::kError;
+  HighsStatus call_status;
+  call_status = changeObjectiveOffsetInterface(offset);
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeObjectiveOffset");
+  if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::changeColIntegrality(const HighsInt col,
                                         const HighsVarType integrality) {
   return changeColsIntegrality(1, &col, &integrality);
@@ -1676,6 +1675,12 @@ HighsStatus Highs::getObjectiveSense(ObjSense& sense) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::getObjectiveOffset(double& offset) {
+  if (!haveHmo("getObjectiveOffset")) return HighsStatus::kError;
+  offset = model_.lp_.offset_;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
@@ -1941,10 +1946,6 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
   return returnFromHighs(return_status);
 }
 
-double Highs::getInfinity() { return kHighsInf; }
-
-double Highs::getRunTime() { return timer_.readRunHighsClock(); }
-
 void Highs::deprecationMessage(const std::string method_name,
                                const std::string alt_method_name) const {
   if (alt_method_name.compare("None") == 0) {
@@ -2004,8 +2005,18 @@ std::string Highs::modelStatusToString(
   return utilModelStatusToString(model_status);
 }
 
-std::string Highs::solutionStatusToString(const HighsInt solution_status) {
+std::string Highs::solutionStatusToString(
+    const HighsInt solution_status) const {
   return utilSolutionStatusToString(solution_status);
+}
+
+std::string Highs::basisStatusToString(
+    const HighsBasisStatus basis_status) const {
+  return utilBasisStatusToString(basis_status);
+}
+
+std::string Highs::basisValidityToString(const HighsInt basis_validity) const {
+  return utilBasisValidityToString(basis_validity);
 }
 
 // Private methods
@@ -2335,6 +2346,7 @@ HighsStatus Highs::callSolveMip() {
   assert(!solution_.dual_valid);
   // There is no basis: should be so by default
   assert(!basis_.valid);
+  // NB getKktFailures sets the primal and dual solution status
   getKktFailures(model_.lp_, solution_, basis_, solution_params);
   // Set the values in HighsInfo instance info_.
   solution_params.objective_function_value = solver.solution_objective_;
@@ -2428,6 +2440,11 @@ void Highs::setHighsModelStatusBasisSolutionAndInfo() {
   HighsSolutionParams& solution_params = hmos_[0].solution_params_;
   info_.primal_solution_status = solution_params.primal_solution_status;
   info_.dual_solution_status = solution_params.dual_solution_status;
+  if (basis_.valid) {
+    info_.basis_status = kBasisStatusValid;
+  } else {
+    info_.basis_status = kBasisStatusNone;
+  }
   info_.objective_function_value = solution_params.objective_function_value;
   info_.num_primal_infeasibilities = solution_params.num_primal_infeasibility;
   info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
@@ -2728,7 +2745,13 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     assert(consistent);
     return_status = HighsStatus::kError;
   }
-
+  /*
+  if (basis_.valid) {
+    assert(info_.basis_status == kBasisStatusValid);
+  } else {
+    assert(info_.basis_status == kBasisStatusNone);
+  }
+  */
   if (hmos_.size()) {
     bool simplex_lp_ok =
         ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::kLogicalError;
@@ -2755,4 +2778,21 @@ void Highs::underDevelopmentLogMessage(const std::string method_name) {
                "Method %s is still under development and behaviour may be "
                "unpredictable\n",
                method_name.c_str());
+}
+
+HighsStatus Highs::crossover() {
+#ifdef IPX_ON
+  std::cout << "Loading crossover...\n";
+  HighsBasis basis;
+  bool x_status = callCrossover(model_.lp_, options_, solution_, basis);
+  if (!x_status) return HighsStatus::kError;
+
+  setBasis(basis);
+#else
+  // No IPX available so end here at approximate solve.
+  std::cout << "No ipx code available. Error." << std::endl;
+  return HighsStatus::kError;
+#endif
+
+  return HighsStatus::kOk;
 }

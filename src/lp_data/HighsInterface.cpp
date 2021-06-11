@@ -787,6 +787,21 @@ HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   return HighsStatus::kOk;
 }
 
+HighsStatus Highs::changeObjectiveOffsetInterface(const double Xoffset) {
+  HighsModelObject& highs_model_object = hmos_[0];
+  // If the offset doesn't change, just return
+  if (Xoffset == model_.lp_.offset_) return HighsStatus::kOk;
+  // Assume that objective offset changes
+  // Update the objective value
+  info_.objective_function_value += (Xoffset - model_.lp_.offset_);
+  // Set the LP objective offset
+  model_.lp_.offset_ = Xoffset;
+  // Set any Simplex LP objective offset
+  if (highs_model_object.ekk_instance_.status_.valid)
+    highs_model_object.ekk_instance_.lp_.offset_ = Xoffset;
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::changeIntegralityInterface(
     HighsIndexCollection& index_collection,
     const HighsVarType* usr_integrality) {

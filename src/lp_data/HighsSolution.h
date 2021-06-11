@@ -71,7 +71,6 @@ double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution);
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis);
 
-#ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(
     const HighsLogOptions& log_options, const HighsLp& lp,
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
@@ -84,7 +83,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const std::vector<double>& rhs, const std::vector<char>& constraint_type,
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
-#endif
 
 std::string iterationsToString(const HighsIterationCounts& iterations_counts);
 

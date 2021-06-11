@@ -17,6 +17,7 @@
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 
+#include <cassert>
 #include <sstream>
 
 #include "lp_data/HighsLp.h"
