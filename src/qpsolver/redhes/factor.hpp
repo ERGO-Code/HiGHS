@@ -249,7 +249,7 @@ public:
          // |   1x| |xxxxx|       |   1| |   x |
          //         |xx  x|       |xxxx| |  xxx|
          // next: remove nonzero entries in last column except for diagonal element
-         for (HighsInt r=p-1; r>=0; r--) { // to current_k-1
+	for (HighsInt r=(HighsInt)p-1; r>=0; r--) { // to current_k-1
             eliminate(L, current_k-1, r, current_k_max, current_k);
          }
 
