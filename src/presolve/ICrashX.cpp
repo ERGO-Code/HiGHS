@@ -71,8 +71,8 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
 
   if (solution.dual_valid && solution.col_dual.size() == num_col &&
       solution.row_dual.size() == num_row) {
-    errflag = lps.CrossoverFromStartingPoint(&x[0], &slack[0], &solution.row_dual[0],
-                                             &solution.col_dual[0]);
+    errflag = lps.CrossoverFromStartingPoint(
+        &x[0], &slack[0], &solution.row_dual[0], &solution.col_dual[0]);
   } else {
     errflag = lps.CrossoverFromStartingPoint(&x[0], &slack[0], NULL, NULL);
   }
