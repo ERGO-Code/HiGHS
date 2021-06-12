@@ -19,12 +19,15 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
     const HighsLogOptions& log_options, const std::string filename,
     HighsModel& model) {
   HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
   FreeFormatParserReturnCode result = parse(log_options, filename);
   if (result != FreeFormatParserReturnCode::kSuccess) return result;
 
   colCost.assign(numCol, 0);
   for (auto i : coeffobj) colCost[i.first] = i.second;
   HighsInt status = fillMatrix();
+  if (status) return FreeFormatParserReturnCode::kParserError;
+  status = fillHessian();
   if (status) return FreeFormatParserReturnCode::kParserError;
 
   lp.numRow_ = std::move(numRow);
@@ -47,6 +50,11 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.col_names_ = std::move(colNames);
 
   lp.integrality_ = std::move(col_integrality);
+
+  hessian.dim_ = q_dim;
+  hessian.q_start_ = std::move(q_start);
+  hessian.q_index_ = std::move(q_index);
+  hessian.q_value_ = std::move(q_value);
 
   return FreeFormatParserReturnCode::kSuccess;
 }
@@ -91,6 +99,45 @@ HighsInt HMpsFF::fillMatrix() {
   return 0;
 }
 
+HighsInt HMpsFF::fillHessian() {
+  HighsInt num_entries = q_entries.size();
+  if (!num_entries) {
+    q_dim = 0;
+    return 0;
+  } else {
+    q_dim = numCol;
+  }
+
+  q_start.resize(q_dim + 1);
+  q_index.resize(num_entries);
+  q_value.resize(num_entries);
+
+  std::vector<HighsInt> q_length;
+  q_length.assign(q_dim, 0);
+
+  for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
+    HighsInt iCol = std::get<1>(q_entries[iEl]);
+    q_length[iCol]++;
+  }
+  q_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < numCol; iCol++)
+    q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
+
+  for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
+    HighsInt iRow = std::get<0>(q_entries[iEl]);
+    HighsInt iCol = std::get<1>(q_entries[iEl]);
+    double value = std::get<2>(q_entries[iEl]);
+    q_index[q_start[iCol]] = iRow;
+    q_value[q_start[iCol]] = value;
+    q_start[iCol]++;
+  }
+  q_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < numCol; iCol++)
+    q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
+
+  return 0;
+}
+
 FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
                                          const std::string& filename) {
   std::ifstream f;
@@ -123,6 +170,9 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
           break;
         case HMpsFF::Parsekey::kRanges:
           keyword = parseRanges(log_options, f);
+          break;
+        case HMpsFF::Parsekey::kQsection:
+          keyword = parseQsection(log_options, f);
           break;
         case HMpsFF::Parsekey::kFail:
           f.close();
@@ -206,6 +256,8 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
     return HMpsFF::Parsekey::kCols;
   else if (word == "BOUNDS")
     return HMpsFF::Parsekey::kBounds;
+  else if (word == "QSECTION")
+    return HMpsFF::Parsekey::kQsection;
   else if (word == "ENDATA")
     return HMpsFF::Parsekey::kEnd;
   else
@@ -1025,4 +1077,87 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
   return HMpsFF::Parsekey::kFail;
 }
 
+typename HMpsFF::Parsekey HMpsFF::parseQsection(
+    const HighsLogOptions& log_options, std::ifstream& file) {
+  std::string strline;
+  std::string col_name;
+  std::string row_name;
+  std::string coeff_name;
+  HighsInt end_row_name;
+  HighsInt end_coeff_name;
+  HighsInt colidx, rowidx, start, end;
+  double coeff;
+
+  while (getline(file, strline)) {
+    double current = getWallTime();
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::Parsekey::kTimeout;
+    if (any_first_non_blank_as_star_implies_comment) {
+      trim(strline);
+      if (strline.size() == 0 || strline[0] == '*') continue;
+    } else {
+      if (strline.size() > 0) {
+        // Just look for comment character in column 1
+        if (strline[0] == '*') continue;
+      }
+      trim(strline);
+      if (strline.size() == 0) continue;
+    }
+
+    HighsInt begin = 0;
+    HighsInt end = 0;
+    HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
+
+    // start of new section?
+    if (key != Parsekey::kNone) return key;
+
+    // Get the column name
+    auto mit = colname2idx.find(col_name);
+    if (mit == colname2idx.end()) {
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "QSECTION contains col %s not in COLS section: ignored\n",
+                   col_name.c_str());
+      continue;
+    };
+    colidx = mit->second;
+    assert(colidx >= 0 && colidx < numCol);
+
+    for (int entry = 0; entry < 2; entry++) {
+      // Get the row name
+      row_name = "";
+      row_name = first_word(strline, end);
+      end_row_name = first_word_end(strline, end);
+
+      if (row_name == "") break;
+
+      coeff_name = "";
+      coeff_name = first_word(strline, end_row_name);
+      end_coeff_name = first_word_end(strline, end_row_name);
+
+      if (coeff_name == "") {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "QSECTION has no coefficient for entry %s in column %s\n",
+                     row_name.c_str(), col_name.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
+
+      mit = colname2idx.find(row_name);
+      if (mit == colname2idx.end()) {
+        highsLogUser(log_options, HighsLogType::kWarning,
+                     "QSECTION contains entry %s not in COLS section for "
+                     "column %s: ignored\n",
+                     row_name.c_str(), col_name.c_str());
+        break;
+      };
+      rowidx = mit->second;
+      assert(rowidx >= 0 && rowidx < numCol);
+
+      double coeff = atof(coeff_name.c_str());
+      if (coeff) q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+      end = end_coeff_name;
+    }
+  }
+
+  return HMpsFF::Parsekey::kFail;
+}
 }  // namespace free_format_parser

@@ -90,6 +90,11 @@ class HMpsFF {
 
   std::vector<HighsVarType> col_integrality;
 
+  HighsInt q_dim;
+  std::vector<HighsInt> q_start;
+  std::vector<HighsInt> q_index;
+  std::vector<double> q_value;
+
   // Keep track of columns that are binary by default, being columns
   // that are defined as integer by markers in the column section, or
   // as binary by having a BV flag in the BOUNDS section, and without
@@ -99,6 +104,7 @@ class HMpsFF {
   /// load LP from MPS file as transposed triplet matrix
   HighsInt parseFile(std::string filename);
   HighsInt fillMatrix();
+  HighsInt fillHessian();
 
   const bool any_first_non_blank_as_star_implies_comment = false;
   const bool handle_bv_in_bounds = false;
@@ -113,6 +119,7 @@ class HMpsFF {
     kRhs,
     kBounds,
     kRanges,
+    kQsection,
     kNone,
     kEnd,
     kFail,
@@ -127,6 +134,7 @@ class HMpsFF {
   std::vector<HighsInt> integer_column;
 
   std::vector<Triplet> entries;
+  std::vector<Triplet> q_entries;
   std::vector<std::pair<HighsInt, double>> coeffobj;
 
   std::unordered_map<std::string, int> rowname2idx;
@@ -151,6 +159,8 @@ class HMpsFF {
                                std::ifstream& file);
   HMpsFF::Parsekey parseBounds(const HighsLogOptions& log_options,
                                std::ifstream& file);
+  HMpsFF::Parsekey parseQsection(const HighsLogOptions& log_options,
+                                 std::ifstream& file);
 };
 
 }  // namespace free_format_parser

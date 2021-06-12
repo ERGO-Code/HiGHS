@@ -520,14 +520,6 @@ HighsStatus Highs::run() {
     setHighsModelStatusAndInfo(HighsModelStatus::kInfeasible);
     return returnFromRun(return_status);
   }
-  if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
-    // Solve the model as a QP
-    call_status = callSolveQp();
-    return_status =
-        interpretCallStatus(call_status, return_status, "callSolveQp");
-    return returnFromRun(return_status);
-  }
-
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
                                       "setOrientation");
@@ -560,6 +552,14 @@ HighsStatus Highs::run() {
   if (model_.lp_.model_name_.compare(""))
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
+
+  if (!options_.solver.compare(kHighsChooseString) && model_.isQp()) {
+    // Solve the model as a QP
+    call_status = callSolveQp();
+    return_status =
+        interpretCallStatus(call_status, return_status, "callSolveQp");
+    return returnFromRun(return_status);
+  }
 
   if (!options_.solver.compare(kHighsChooseString) && model_.isMip()) {
     // Solve the model as a MIP
@@ -2256,43 +2256,60 @@ HighsStatus Highs::callSolveQp() {
                                    ? HighsModelStatus::kUnbounded
                                    : HighsModelStatus::kInfeasible;
   model_status_ = scaled_model_status_;
-  // Set the values in HighsInfo instance info_
-  info_.qp_iteration_count = runtime.statistics.num_iterations;
-  info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
-  info_.ipm_iteration_count = -1;
-  info_.crossover_iteration_count = -1;
-  info_.primal_solution_status =
-      runtime.status == ProblemStatus::OPTIMAL
-          ? SolutionStatus::kSolutionStatusFeasible
-          : SolutionStatus::kSolutionStatusInfeasible;
-  info_.dual_solution_status = runtime.status == ProblemStatus::OPTIMAL
-                                   ? SolutionStatus::kSolutionStatusFeasible
-                                   : SolutionStatus::kSolutionStatusInfeasible;
-  info_.objective_function_value = runtime.instance.objval(runtime.primal);
-  info_.num_primal_infeasibilities = -1;  // Not known
-  // Are the violations max or sum?
-  info_.max_primal_infeasibility = 0.0;   //
-  info_.sum_primal_infeasibilities = -1;  // Not known
-  info_.num_dual_infeasibilities = -1;    // Not known
-  info_.max_dual_infeasibility = -1;      // Not known
-  info_.sum_dual_infeasibilities = -1;    // Not known
-  info_.valid = true;
-  // The solution needs to be here, but just resize it for now
-
-  info_.primal_solution_status = SolutionStatus::kSolutionStatusFeasible;
   solution_.col_value.resize(lp.numCol_);
   solution_.col_dual.resize(lp.numCol_);
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    solution_.col_value[iCol] = runtime.primal.value[iCol];  //
+    solution_.col_value[iCol] = runtime.primal.value[iCol];
     solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
   }
-
   solution_.row_value.resize(lp.numRow_);
   solution_.row_dual.resize(lp.numRow_);
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
     solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
   }
+  solution_.value_valid = true;
+  solution_.dual_valid = true;
+  const double objective_function_value =
+      runtime.instance.objval(runtime.primal);
+  const bool can_get_qp_kkt_failures = false;
+  if (can_get_qp_kkt_failures) {
+    // Use generic method to set data required for info
+    HighsSolutionParams solution_params;
+    solution_params.primal_feasibility_tolerance =
+        options_.primal_feasibility_tolerance;
+    solution_params.dual_feasibility_tolerance =
+        options_.dual_feasibility_tolerance;
+    // NB getKktFailures sets the primal and dual solution status
+    getKktFailures(model_.lp_, solution_, basis_, solution_params);
+    // Set the values in HighsInfo instance info_.
+    solution_params.objective_function_value = objective_function_value;
+    //  Most come from solution_params...
+    copyFromSolutionParams(info_, solution_params);
+  } else {
+    info_.num_primal_infeasibilities = -1;  // Not known
+    info_.max_primal_infeasibility = 0.0;   //
+    info_.sum_primal_infeasibilities = -1;  // Not known
+    info_.num_dual_infeasibilities = -1;    // Not known
+    info_.max_dual_infeasibility = -1;      // Not known
+    info_.sum_dual_infeasibilities = -1;    // Not known
+    info_.objective_function_value = objective_function_value;
+    if (model_status_ == HighsModelStatus::kOptimal) {
+      info_.primal_solution_status = SolutionStatus::kSolutionStatusFeasible;
+      info_.dual_solution_status = SolutionStatus::kSolutionStatusFeasible;
+    } else {
+      info_.primal_solution_status = SolutionStatus::kSolutionStatusInfeasible;
+      info_.dual_solution_status = SolutionStatus::kSolutionStatusInfeasible;
+    }
+    info_.basis_validity = BasisValidity::kBasisValidityInvalid;
+  }
+  // ... and iteration counts...
+  info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
+  info_.ipm_iteration_count = iteration_counts_.ipm;
+  info_.crossover_iteration_count = iteration_counts_.crossover;
+  info_.qp_iteration_count = runtime.statistics.num_iterations;
+  // ... but others are QP-specific. Are there any?
+  info_.valid = true;
 
   return return_status;
 }
@@ -2316,12 +2333,6 @@ HighsStatus Highs::callSolveMip() {
   if (return_status == HighsStatus::kError) return return_status;
   scaled_model_status_ = solver.modelstatus_;
   model_status_ = scaled_model_status_;
-  // Use generic method to set data required for info
-  HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance =
-      options_.dual_feasibility_tolerance;
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = solver.solution_.size();
@@ -2346,12 +2357,23 @@ HighsStatus Highs::callSolveMip() {
   assert(!solution_.dual_valid);
   // There is no basis: should be so by default
   assert(!basis_.valid);
+  // Use generic method to set data required for info
+  HighsSolutionParams solution_params;
+  solution_params.primal_feasibility_tolerance =
+      options_.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(model_.lp_, solution_, basis_, solution_params);
   // Set the values in HighsInfo instance info_.
   solution_params.objective_function_value = solver.solution_objective_;
   //  Most come from solution_params...
   copyFromSolutionParams(info_, solution_params);
+  // ... and iteration counts...
+  info_.simplex_iteration_count = iteration_counts_.simplex;
+  info_.ipm_iteration_count = iteration_counts_.ipm;
+  info_.crossover_iteration_count = iteration_counts_.crossover;
+  info_.qp_iteration_count = iteration_counts_.qp;
   // ... but others are MIP-specific.
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;
