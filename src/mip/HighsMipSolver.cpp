@@ -142,12 +142,10 @@ restart:
 
       if (!search.backtrack()) break;
 
-      if (mipdata_->num_nodes - plungestart >=
-          std::min(100., mipdata_->num_nodes * 0.1))
-        break;
+      if (mipdata_->num_nodes - plungestart >= 100) break;
 
       while (search.hasNode() &&
-             search.getCurrentEstimate() >= mipdata_->upper_limit) {
+             search.getCurrentEstimate() > mipdata_->upper_limit) {
         search.currentNodeToQueue(mipdata_->nodequeue);
       }
 
