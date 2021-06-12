@@ -240,7 +240,7 @@ restart:
       // (HighsInt)nodequeue.size());
       assert(!search.hasNode());
 
-      if (numQueueLeaves - lastLbLeave >= 10) {
+      if (numQueueLeaves - lastLbLeave >= 2) {
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
         lastLbLeave = numQueueLeaves;
       } else {
