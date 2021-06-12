@@ -588,7 +588,10 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
 }
 
 void HighsLpRelaxation::recoverBasis() {
-  if (basischeckpoint) lpsolver.setBasis(*basischeckpoint);
+  if (basischeckpoint) {
+    lpsolver.setBasis(*basischeckpoint);
+    currentbasisstored = true;
+  }
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {

@@ -111,23 +111,22 @@ restart:
         if (search.currentNodePruned()) {
           ++mipdata_->num_leaves;
           search.flushStatistics();
-          break;
+        } else {
+          heuristicsCalled = true;
+
+          if (mipdata_->incumbent.empty())
+            mipdata_->heuristics.randomizedRounding(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+
+          if (mipdata_->incumbent.empty())
+            mipdata_->heuristics.RENS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+          else
+            mipdata_->heuristics.RINS(
+                mipdata_->lp.getLpSolver().getSolution().col_value);
+
+          mipdata_->heuristics.flushStatistics();
         }
-
-        heuristicsCalled = true;
-
-        if (mipdata_->incumbent.empty())
-          mipdata_->heuristics.randomizedRounding(
-              mipdata_->lp.getLpSolver().getSolution().col_value);
-
-        if (mipdata_->incumbent.empty())
-          mipdata_->heuristics.RENS(
-              mipdata_->lp.getLpSolver().getSolution().col_value);
-        else
-          mipdata_->heuristics.RINS(
-              mipdata_->lp.getLpSolver().getSolution().col_value);
-
-        mipdata_->heuristics.flushStatistics();
       }
 
       if (mipdata_->domain.infeasible()) break;
@@ -143,11 +142,16 @@ restart:
 
       if (!search.backtrack()) break;
 
-      if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
-
       if (mipdata_->num_nodes - plungestart >=
           std::min(100., mipdata_->num_nodes * 0.1))
         break;
+
+      while (search.hasNode() &&
+             search.getCurrentEstimate() >= mipdata_->upper_limit) {
+        search.currentNodeToQueue(mipdata_->nodequeue);
+      }
+
+      if (!search.hasNode()) break;
 
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=
@@ -261,12 +265,6 @@ restart:
         numStallNodes = 0;
 
       assert(search.hasNode());
-
-      // set the current basis if available
-      if (basis) {
-        mipdata_->lp.setStoredBasis(basis);
-        mipdata_->lp.recoverBasis();
-      }
 
       // we evaluate the node directly here instead of performing a dive
       // because we first want to check if the node is not fathomed due to

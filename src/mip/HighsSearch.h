@@ -183,7 +183,7 @@ class HighsSearch {
 
   NodeResult branch();
 
-  bool backtrack();
+  bool backtrack(bool recoverBasis = true);
 
   /// for heuristics. Will discard nodes above targetDepth regardless of their
   /// status

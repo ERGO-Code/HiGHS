@@ -598,11 +598,21 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
 
   backtrack();
   lp->flushDomain(localdom);
+  if (!nodestack.empty() && nodestack.back().nodeBasis) {
+    lp->setStoredBasis(nodestack.back().nodeBasis);
+    lp->recoverBasis();
+  }
 }
 
 void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   if (nodestack.empty()) return;
-  if (nodestack.back().opensubtrees == 0) backtrack();
+
+  std::shared_ptr<const HighsBasis> basis;
+  if (nodestack.back().opensubtrees == 0) {
+    if (nodestack.back().nodeBasis)
+      basis = std::move(nodestack.back().nodeBasis);
+    backtrack(false);
+  }
 
   while (!nodestack.empty()) {
     localdom.propagate();
@@ -615,11 +625,17 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       treeweight += std::pow(0.5, getCurrentDepth() - 1);
     }
     nodestack.back().opensubtrees = 0;
+    if (nodestack.back().nodeBasis)
+      basis = std::move(nodestack.back().nodeBasis);
 
-    backtrack();
+    backtrack(false);
   }
 
   lp->flushDomain(localdom);
+  if (basis) {
+    lp->setStoredBasis(std::move(basis));
+    lp->recoverBasis();
+  }
 }
 
 void HighsSearch::flushStatistics() {
@@ -1080,7 +1096,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
   return NodeResult::kBranched;
 }
 
-bool HighsSearch::backtrack() {
+bool HighsSearch::backtrack(bool recoverBasis) {
   if (nodestack.empty()) return false;
   assert(!nodestack.empty());
   assert(nodestack.back().opensubtrees == 0);
@@ -1127,8 +1143,10 @@ bool HighsSearch::backtrack() {
                          currnode.nodeBasis);
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
-  lp->setStoredBasis(nodestack.back().nodeBasis);
-  lp->recoverBasis();
+  if (recoverBasis && nodestack.back().nodeBasis) {
+    lp->setStoredBasis(nodestack.back().nodeBasis);
+    lp->recoverBasis();
+  }
 
   return true;
 }

@@ -223,7 +223,7 @@ class HighsLpRelaxation {
   }
 
   void setStoredBasis(std::shared_ptr<const HighsBasis> basis) {
-    basischeckpoint = basis;
+    basischeckpoint = std::move(basis);
     currentbasisstored = false;
   }
 
