@@ -254,6 +254,11 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/mip
     ${HIGHS_SOURCE_DIR}/src/model
     ${HIGHS_SOURCE_DIR}/src/presolve
+    ${HIGHS_SOURCE_DIR}/src/qpsolver
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver/feasibility
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver/pricing
+    ${HIGHS_SOURCE_DIR}/src/qpsolver/ratiotest
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver/redhes
     ${HIGHS_SOURCE_DIR}/src/simplex
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)

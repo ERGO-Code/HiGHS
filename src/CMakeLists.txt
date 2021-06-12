@@ -551,6 +551,9 @@ target_sources(libhighs PRIVATE
     presolve/PresolveComponent.cpp
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
+    qpsolver/basis.cpp
+    qpsolver/solver.cpp
+    qpsolver/ratiotest/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
