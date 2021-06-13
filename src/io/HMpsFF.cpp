@@ -175,11 +175,10 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
         case HMpsFF::Parsekey::kRanges:
           keyword = parseRanges(log_options, f);
           break;
+        case HMpsFF::Parsekey::kQsection:
         case HMpsFF::Parsekey::kQmatrix:
-          keyword = parseHessian(log_options, f, false);
-          break;
         case HMpsFF::Parsekey::kQuadobj:
-          keyword = parseHessian(log_options, f, true);
+          keyword = parseHessian(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kFail:
           f.close();
@@ -228,10 +227,12 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
                                 const HMpsFF::Parsekey keyword) {
   switch (keyword) {
       // Identify the sections that can be parsed
+    /*
     case HMpsFF::Parsekey::kQsection:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse QSECTION section\n");
       break;
+    */
     case HMpsFF::Parsekey::kQcmatrix:
       highsLogUser(log_options, HighsLogType::kError,
                    "MPS file reader cannot parse QCMATRIX section\n");
@@ -1158,11 +1159,20 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
 
 typename HMpsFF::Parsekey HMpsFF::parseHessian(
     const HighsLogOptions& log_options, std::ifstream& file,
-    const bool quadobj) {
-  // Parse Hessian information from QUADOBJ or QMATRIX section according to
-  // quadobj
-  std::string section_name = "QMATRIX";
-  if (quadobj) section_name = "QUADOBJ";
+    const HMpsFF::Parsekey keyword) {
+  // Parse Hessian information from QSECTION, QUADOBJ or QMATRIX
+  // section according to keyword
+  const bool qmatrix = keyword == HMpsFF::Parsekey::kQmatrix;
+  std::string section_name;
+  if (qmatrix) {
+    section_name = "QMATRIX";
+  } else if (keyword == HMpsFF::Parsekey::kQuadobj) {
+    section_name = "QUADOBJ";
+  } else {
+    section_name = "QSECTION";
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "QSECTION section is assumed to apply to objective\n");
+  }
   std::string strline;
   std::string col_name;
   std::string row_name;
@@ -1239,15 +1249,16 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
 
       double coeff = atof(coeff_name.c_str());
       if (coeff) {
-        if (quadobj) {
-          // QUADOBJ has the lower/upper triangle of the Hessian, so
-          // also store the transpose entry if off-diagonal
+        if (qmatrix) {
+          // QMATRIX has the whole Hessian, so store the entry
+          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+        } else {
+          // QSECTION and QUADOBJ has the lower triangle of the
+          // Hessian, so also store the transpose entry if
+          // off-diagonal
           q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
           if (rowidx != colidx)
             q_entries.push_back(std::make_tuple(colidx, rowidx, coeff));
-        } else {
-          // QMATRIX has the whole Hessian, so store the entry
-          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
         }
       }
       end = end_coeff_name;

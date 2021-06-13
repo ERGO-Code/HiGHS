@@ -172,7 +172,8 @@ class HMpsFF {
   HMpsFF::Parsekey parseBounds(const HighsLogOptions& log_options,
                                std::ifstream& file);
   HMpsFF::Parsekey parseHessian(const HighsLogOptions& log_options,
-                                std::ifstream& file, const bool quadobj);
+                                std::ifstream& file,
+                                const HMpsFF::Parsekey keyword);
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword);
 };
