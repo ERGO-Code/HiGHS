@@ -314,7 +314,7 @@ void HighsSimplexAnalysis::invertReport() {
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
-  analysis_log = std::stringstream();
+  analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
   reportAlgorithmPhaseIterationObjective(header);
   if (analyse_simplex_data) {
     if (simplex_strategy == kSimplexStrategyDualMulti) {
@@ -328,7 +328,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
   }
   reportInfeasibility(header);
   highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
-               analysis_log.str().c_str());
+               analysis_log->str().c_str());
   if (!header) num_invert_report_since_last_header++;
 }
 
@@ -1194,7 +1194,7 @@ void HighsSimplexAnalysis::reportInvertFormData() {
 }
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
-  analysis_log = std::stringstream();
+  analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
   if (!header) {
     if (dualAlgorithm()) {
       if (pivotal_row_index < 0) return;
@@ -1208,14 +1208,14 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
     reportIterationData(header);
   }
   highsLogDev(log_options, kIterationReportLogType, "%s\n",
-              analysis_log.str().c_str());
+              analysis_log->str().c_str());
   if (!header) num_iteration_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
     const bool header) {
   if (header) {
-    analysis_log << "       Iteration        Objective    ";
+    *analysis_log << "       Iteration        Objective    ";
   } else {
     std::string algorithm_name;
     if (dualAlgorithm()) {
@@ -1223,7 +1223,7 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
     } else {
       algorithm_name = "Pr";
     }
-    analysis_log << highsFormatToString(
+    *analysis_log << highsFormatToString(
         "%2sPh%1" HIGHSINT_FORMAT " %10" HIGHSINT_FORMAT " %20.10e",
         algorithm_name.c_str(), solve_phase, simplex_iteration_count,
         objective_value);
@@ -1232,21 +1232,21 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
 
 void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
   if (header) {
-    analysis_log << " Infeasibilities num(sum)";
+    *analysis_log << " Infeasibilities num(sum)";
   } else {
     if (solve_phase == 1) {
-      analysis_log << highsFormatToString(" Ph1: %" HIGHSINT_FORMAT "(%g)",
-                                          num_primal_infeasibility,
-                                          sum_primal_infeasibility);
+      *analysis_log << highsFormatToString(" Ph1: %" HIGHSINT_FORMAT "(%g)",
+                                           num_primal_infeasibility,
+                                           sum_primal_infeasibility);
     } else {
-      analysis_log << highsFormatToString(" Pr: %" HIGHSINT_FORMAT "(%g)",
-                                          num_primal_infeasibility,
-                                          sum_primal_infeasibility);
+      *analysis_log << highsFormatToString(" Pr: %" HIGHSINT_FORMAT "(%g)",
+                                           num_primal_infeasibility,
+                                           sum_primal_infeasibility);
     }
     if (sum_dual_infeasibility > 0) {
-      analysis_log << highsFormatToString("; Du: %" HIGHSINT_FORMAT "(%g)",
-                                          num_dual_infeasibility,
-                                          sum_dual_infeasibility);
+      *analysis_log << highsFormatToString("; Du: %" HIGHSINT_FORMAT "(%g)",
+                                           num_dual_infeasibility,
+                                           sum_dual_infeasibility);
     }
   }
 }
@@ -1254,27 +1254,27 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
 void HighsSimplexAnalysis::reportThreads(const bool header) {
   assert(analyse_simplex_data);
   if (header) {
-    analysis_log << highsFormatToString("  Threads");
+    *analysis_log << highsFormatToString("  Threads");
   } else if (num_threads > 0) {
-    analysis_log << highsFormatToString(
+    *analysis_log << highsFormatToString(
         " %2" HIGHSINT_FORMAT "|%2" HIGHSINT_FORMAT "|%2" HIGHSINT_FORMAT "",
         min_threads, num_threads, max_threads);
   } else {
-    analysis_log << highsFormatToString("   |  |  ");
+    *analysis_log << highsFormatToString("   |  |  ");
   }
 }
 
 void HighsSimplexAnalysis::reportMulti(const bool header) {
   assert(analyse_simplex_data);
   if (header) {
-    analysis_log << highsFormatToString("  Multi");
+    *analysis_log << highsFormatToString("  Multi");
   } else if (average_fraction_of_possible_minor_iterations_performed >= 0) {
-    analysis_log << highsFormatToString(
+    *analysis_log << highsFormatToString(
         "   %3" HIGHSINT_FORMAT "%%",
         (HighsInt)(100 *
                    average_fraction_of_possible_minor_iterations_performed));
   } else {
-    analysis_log << highsFormatToString("       ");
+    *analysis_log << highsFormatToString("       ");
   }
 }
 
@@ -1282,10 +1282,10 @@ void HighsSimplexAnalysis::reportOneDensity(const double density) {
   assert(analyse_simplex_data);
   const HighsInt log_10_density = intLog10(density);
   if (log_10_density > -99) {
-    analysis_log << highsFormatToString(" %4" HIGHSINT_FORMAT "",
-                                        log_10_density);
+    *analysis_log << highsFormatToString(" %4" HIGHSINT_FORMAT "",
+                                         log_10_density);
   } else {
-    analysis_log << highsFormatToString("     ");
+    *analysis_log << highsFormatToString("     ");
   }
 }
 
@@ -1304,11 +1304,11 @@ void HighsSimplexAnalysis::reportDensity(const bool header) {
   const bool rp_dual_steepest_edge =
       edge_weight_mode == DualEdgeWeightMode::kSteepestEdge;
   if (header) {
-    analysis_log << highsFormatToString(" C_Aq R_Ep R_Ap");
+    *analysis_log << highsFormatToString(" C_Aq R_Ep R_Ap");
     if (rp_dual_steepest_edge) {
-      analysis_log << highsFormatToString("  DSE");
+      *analysis_log << highsFormatToString("  DSE");
     } else {
-      analysis_log << highsFormatToString("     ");
+      *analysis_log << highsFormatToString("     ");
     }
   } else {
     reportOneDensity(col_aq_density);
@@ -1326,19 +1326,19 @@ void HighsSimplexAnalysis::reportDensity(const bool header) {
 
 void HighsSimplexAnalysis::reportInvert(const bool header) {
   if (header) {
-    analysis_log << highsFormatToString(" Inv");
+    *analysis_log << highsFormatToString(" Inv");
   } else {
-    analysis_log << highsFormatToString("  %2" HIGHSINT_FORMAT "",
-                                        rebuild_reason);
+    *analysis_log << highsFormatToString("  %2" HIGHSINT_FORMAT "",
+                                         rebuild_reason);
   }
 }
 /*
 void HighsSimplexAnalysis::reportCondition(const bool header) {
   assert(analyse_simplex_data);
   if (header) {
-    analysis_log << highsFormatToString("       k(B)");
+    *analysis_log << highsFormatToString("       k(B)");
   } else {
-    analysis_log << highsFormatToString(" %10.4g",
+    *analysis_log << highsFormatToString(" %10.4g",
                       basis_condition);
   }
 }
@@ -1355,17 +1355,17 @@ void HighsSimplexAnalysis::reportCondition(const bool header) {
 // * primal_step  - theta_primal
 void HighsSimplexAnalysis::reportIterationData(const bool header) {
   if (header) {
-    analysis_log << highsFormatToString(
+    *analysis_log << highsFormatToString(
         "     EnC     LvC     LvR        ThDu        ThPr        "
         "DlPr       NumCk          Aa");
   } else if (pivotal_row_index >= 0) {
-    analysis_log << highsFormatToString(
+    *analysis_log << highsFormatToString(
         " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT
         " %11.4g %11.4g %11.4g %11.4g %11.4g",
         entering_variable, leaving_variable, pivotal_row_index, dual_step,
         primal_step, primal_delta, numerical_trouble, pivot_value_from_column);
   } else {
-    analysis_log << highsFormatToString(
+    *analysis_log << highsFormatToString(
         " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT " %7" HIGHSINT_FORMAT
         " %11.4g %11.4g                                    ",
         entering_variable, leaving_variable, pivotal_row_index, dual_step,

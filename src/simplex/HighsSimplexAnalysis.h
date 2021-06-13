@@ -18,6 +18,7 @@
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 
 #include <cassert>
+#include <memory>
 #include <sstream>
 
 #include "lp_data/HighsLp.h"
@@ -74,7 +75,8 @@ const HighsLogType kIterationReportLogType = HighsLogType::kVerbose;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsTimer& timer) : timer_reference(timer) {
+  HighsSimplexAnalysis(HighsTimer& timer)
+      : timer_reference(timer), analysis_log(new std::stringstream()) {
     timer_ = &timer;
     /*
     HighsInt omp_max_threads = 1;
@@ -268,7 +270,7 @@ class HighsSimplexAnalysis {
   vector<double> predicted_density_tolerance;
   vector<TranStageAnalysis> tran_stage;
 
-  std::stringstream analysis_log;
+  std::unique_ptr<std::stringstream> analysis_log;
 
  private:
   void iterationReport(const bool header);
