@@ -7,7 +7,9 @@
 #include "parallel.hpp"
 #include "vector.hpp"
 
+#ifdef OPENMP
 #include "omp.h"
+#endif
 
 struct MatrixBase {
    HighsInt num_row;
@@ -19,6 +21,7 @@ struct MatrixBase {
    Vector& mat_vec_par_omp(const Vector& other, Vector& target) const {
       target.reset();
 
+#ifdef OPENMP
       std::vector<omp_lock_t> row_locks(num_row);
       for (HighsInt i=0; i<num_row; i++) {
          omp_init_lock(&(row_locks[i]));
@@ -36,6 +39,9 @@ struct MatrixBase {
          }
       }
       target.resparsify();
+#else
+      assert(1==0);
+#endif
       return target;
    }
 
