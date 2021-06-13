@@ -120,6 +120,18 @@ class HMpsFF {
     kBounds,
     kRanges,
     kQsection,
+    kQmatrix,
+    kQuadobj,
+    kQcmatrix,
+    kCsection,
+    kDelayedrows,
+    kModelcuts,
+    kIndicators,
+    kSets,
+    kGencons,
+    kPwlobj,
+    kPwlnam,
+    kPwlcon,
     kNone,
     kEnd,
     kFail,
@@ -159,8 +171,10 @@ class HMpsFF {
                                std::ifstream& file);
   HMpsFF::Parsekey parseBounds(const HighsLogOptions& log_options,
                                std::ifstream& file);
-  HMpsFF::Parsekey parseQsection(const HighsLogOptions& log_options,
-                                 std::ifstream& file);
+  HMpsFF::Parsekey parseHessian(const HighsLogOptions& log_options,
+                                std::ifstream& file, const bool quadobj);
+  bool cannotParseSection(const HighsLogOptions& log_options,
+                          const HMpsFF::Parsekey keyword);
 };
 
 }  // namespace free_format_parser
