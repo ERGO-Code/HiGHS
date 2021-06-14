@@ -136,6 +136,7 @@ void HighsMipSolverData::init() {
   rootlpsolobj = -kHighsInf;
   analyticCenterComputed = false;
   numRestarts = 0;
+  numRestartsRoot = 0;
   numImprovingSols = 0;
   pruned_treeweight = 0;
   avgrootlpiters = 0;
@@ -900,6 +901,7 @@ restart:
                      "%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         performRestart();
+        ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
         return;
@@ -1088,6 +1090,7 @@ restart:
                      fixingRate);
         maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         performRestart();
+        ++numRestartsRoot;
         if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
 
         return;
