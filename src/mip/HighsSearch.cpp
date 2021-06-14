@@ -882,6 +882,23 @@ HighsSearch::NodeResult HighsSearch::branch() {
           currnode.branchingdecision.boundval =
               std::floor(currnode.branching_point);
           break;
+        case ChildSelectionRule::kBestCost:
+          if (pseudocost.getNumObservationsUp(col) != 0 ||
+              pseudocost.getNumObservationsDown(col) != 0) {
+            if (pseudocost.getPseudocostUp(col, currnode.branching_point) >
+                pseudocost.getPseudocostDown(col, currnode.branching_point) +
+                    mipsolver.mipdata_->epsilon) {
+              currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+              currnode.branchingdecision.boundval =
+                  std::floor(currnode.branching_point);
+            } else {
+              currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+              currnode.branchingdecision.boundval =
+                  std::ceil(currnode.branching_point);
+            }
+            break;
+          }
+        // fall through
         case ChildSelectionRule::kRootSol: {
           double downPrio = pseudocost.getAvgInferencesDown(col) +
                             mipsolver.mipdata_->epsilon;
@@ -933,19 +950,6 @@ HighsSearch::NodeResult HighsSearch::branch() {
                 std::floor(currnode.branching_point);
           }
           break;
-        case ChildSelectionRule::kBestCost: {
-          if (pseudocost.getPseudocostUp(col, currnode.branching_point) >
-              pseudocost.getPseudocostDown(col, currnode.branching_point)) {
-            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
-            currnode.branchingdecision.boundval =
-                std::floor(currnode.branching_point);
-          } else {
-            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-            currnode.branchingdecision.boundval =
-                std::ceil(currnode.branching_point);
-          }
-          break;
-        }
         case ChildSelectionRule::kWorstCost:
           if (pseudocost.getPseudocostUp(col, currnode.branching_point) >=
               pseudocost.getPseudocostDown(col, currnode.branching_point)) {
