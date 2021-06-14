@@ -955,7 +955,8 @@ restart:
     sqrnorm = 0.0;
     HighsCDouble dotproduct = 0.0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      avgdirection[i] += scale * curdirection[i];
+      avgdirection[i] =
+          (scale * curdirection[i] - avgdirection[i]) / nseparounds;
       sqrnorm += avgdirection[i] * avgdirection[i];
       dotproduct += avgdirection[i] * curdirection[i];
     }
