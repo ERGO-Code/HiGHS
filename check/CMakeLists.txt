@@ -1,7 +1,7 @@
 include(CTest)
 
 # prepare Catch library
-set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/external/catch)
+set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/extern/catch)
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
