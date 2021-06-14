@@ -131,10 +131,13 @@ restart:
 
       if (mipdata_->domain.infeasible()) break;
 
-      search.dive();
-      ++mipdata_->num_leaves;
+      if (!search.currentNodePruned()) {
+        search.dive();
+        ++mipdata_->num_leaves;
 
-      search.flushStatistics();
+        search.flushStatistics();
+      }
+
       if (mipdata_->checkLimits()) {
         limit_reached = true;
         break;

@@ -139,7 +139,10 @@ class HighsSearch {
 
   void setMinReliable(HighsInt minreliable);
 
-  void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
+  void setHeuristic(bool inheuristic) {
+    this->inheuristic = inheuristic;
+    if (inheuristic) childselrule = ChildSelectionRule::kBestCost;
+  }
 
   void addBoundExceedingConflict();
 

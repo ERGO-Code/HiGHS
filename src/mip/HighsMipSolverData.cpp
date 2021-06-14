@@ -729,7 +729,7 @@ bool HighsMipSolverData::rootSeparationRound(
 
   const std::vector<double>& solvals = lp.getLpSolver().getSolution().col_value;
 
-  if (incumbent.empty()) {
+  if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
     heuristics.flushStatistics();
 

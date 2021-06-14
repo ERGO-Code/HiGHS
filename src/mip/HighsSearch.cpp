@@ -34,7 +34,8 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   upper_limit = kHighsInf;
   inheuristic = false;
   inbranching = false;
-  childselrule = ChildSelectionRule::kRootSol;
+  childselrule = mipsolver.submip ? ChildSelectionRule::kBestCost
+                                  : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
 
