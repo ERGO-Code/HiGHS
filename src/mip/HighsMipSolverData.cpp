@@ -243,8 +243,17 @@ void HighsMipSolverData::runSetup() {
       maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
     }
 
-    rowintegral[i] = integral;
+    if (integral) {
+      if (mipsolver.mipdata_->presolvedModel.rowLower_[i] != -kHighsInf)
+        mipsolver.mipdata_->presolvedModel.rowLower_[i] = std::ceil(
+            mipsolver.mipdata_->presolvedModel.rowLower_[i] - feastol);
 
+      if (mipsolver.mipdata_->presolvedModel.rowUpper_[i] != kHighsInf)
+        mipsolver.mipdata_->presolvedModel.rowUpper_[i] = std::floor(
+            mipsolver.mipdata_->presolvedModel.rowUpper_[i] + feastol);
+    }
+
+    rowintegral[i] = integral;
     maxAbsRowCoef[i] = maxabsval;
   }
 
