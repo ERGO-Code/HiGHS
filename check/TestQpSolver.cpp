@@ -27,7 +27,6 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(sol.col_value[0] - 1.4) < double_equal_tolerance);
   REQUIRE(fabs(sol.col_value[1] - 1.7) < double_equal_tolerance);
 }
-/*
 TEST_CASE("test-qo1", "[qpsolver]") {
   // Test passing/reading and solving the problem qo1
   //
@@ -58,8 +57,8 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   }
   lp.colUpper_ = {inf, inf, inf};
   if (!uncon) {
-    lp.rowLower_ = {1.0};  // Should be -inf
-    lp.rowUpper_ = {inf};  // Should be 2
+    lp.rowLower_ = {1.0};  // Should be -inf, but 1.0 yields memory error
+    lp.rowUpper_ = {inf};  // Should be 2, but inf yields memory error
     lp.Astart_ = {0, 1, 1, 2};
     lp.Aindex_ = {0, 0};
     lp.Avalue_ = {1.0, 1.0};
@@ -107,4 +106,3 @@ TEST_CASE("test-qo1", "[qpsolver]") {
     return_status = highs.clearModel();
   }
 }
-*/
