@@ -276,3 +276,23 @@ HighsStatus normaliseHessian(const HighsOptions& options,
 
   return return_status;
 }
+
+void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
+                   const HighsInt num_nz, const HighsInt* start,
+                   const HighsInt* index, const double* value) {
+  if (dim <= 0) return;
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Hessian Index              Value\n");
+  for (HighsInt col = 0; col < dim; col++) {
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "    %8" HIGHSINT_FORMAT " Start   %10" HIGHSINT_FORMAT "\n",
+                 col, start[col]);
+    HighsInt to_el = (col < dim - 1 ? start[col + 1] : num_nz);
+    for (HighsInt el = start[col]; el < to_el; el++)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "          %8" HIGHSINT_FORMAT " %12g\n", index[el],
+                   value[el]);
+  }
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
+}

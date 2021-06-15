@@ -73,20 +73,20 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
-    // Assess the LP matrix
-    call_status =
-        assessMatrix(options.log_options, "LP", lp.numRow_, lp.numCol_,
-                     lp.Astart_, lp.Aindex_, lp.Avalue_,
-                     options.small_matrix_value, options.large_matrix_value);
-    return_status =
-        interpretCallStatus(call_status, return_status, "assessMatrix");
-    if (return_status == HighsStatus::kError) return return_status;
-    HighsInt lp_num_nz = lp.Astart_[lp.numCol_];
-    // If entries have been removed from the matrix, resize the index
-    // and value vectors to prevent bug in presolve
-    if ((HighsInt)lp.Aindex_.size() > lp_num_nz) lp.Aindex_.resize(lp_num_nz);
-    if ((HighsInt)lp.Avalue_.size() > lp_num_nz) lp.Avalue_.resize(lp_num_nz);
   }
+  // Assess the LP matrix - even if there are no rows!
+  call_status = assessMatrix(
+      options.log_options, "LP", lp.numRow_, lp.numCol_, lp.Astart_, lp.Aindex_,
+      lp.Avalue_, options.small_matrix_value, options.large_matrix_value);
+  return_status =
+      interpretCallStatus(call_status, return_status, "assessMatrix");
+  if (return_status == HighsStatus::kError) return return_status;
+  HighsInt lp_num_nz = lp.Astart_[lp.numCol_];
+  // If entries have been removed from the matrix, resize the index
+  // and value vectors to prevent bug in presolve
+  if ((HighsInt)lp.Aindex_.size() > lp_num_nz) lp.Aindex_.resize(lp_num_nz);
+  if ((HighsInt)lp.Avalue_.size() > lp_num_nz) lp.Avalue_.resize(lp_num_nz);
+
   if (return_status == HighsStatus::kError)
     return_status = HighsStatus::kError;
   else
@@ -785,7 +785,7 @@ void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
   // starts accordingly.
   HighsInt new_num_vec = num_vec + num_new_vec;
   lp.Astart_.resize(new_num_vec + 1);
-  // If adding vectors to an empty LP then introduce the start for the
+  // If adding vectors to an empty matrix then introduce the start for the
   // fictitious vector 0
   if (num_vec == 0) lp.Astart_[0] = 0;
 
@@ -1530,33 +1530,33 @@ void reportLpDimensions(const HighsLogOptions& log_options, const HighsLp& lp) {
     lp_num_nz = 0;
   else
     lp_num_nz = lp.Astart_[lp.numCol_];
-  highsLogDev(log_options, HighsLogType::kInfo,
-              "LP has %" HIGHSINT_FORMAT " columns, %" HIGHSINT_FORMAT " rows",
-              lp.numCol_, lp.numRow_);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "LP has %" HIGHSINT_FORMAT " columns, %" HIGHSINT_FORMAT " rows",
+               lp.numCol_, lp.numRow_);
   HighsInt num_int = getNumInt(lp);
   if (num_int) {
-    highsLogDev(log_options, HighsLogType::kInfo,
-                ", %" HIGHSINT_FORMAT " nonzeros and %" HIGHSINT_FORMAT
-                " integer columns\n",
-                lp_num_nz, num_int);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 ", %" HIGHSINT_FORMAT " nonzeros and %" HIGHSINT_FORMAT
+                 " integer columns\n",
+                 lp_num_nz, num_int);
   } else {
-    highsLogDev(log_options, HighsLogType::kInfo,
-                " and %" HIGHSINT_FORMAT " nonzeros\n", lp_num_nz, num_int);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 " and %" HIGHSINT_FORMAT " nonzeros\n", lp_num_nz, num_int);
   }
 }
 
 // Report the LP objective sense
 void reportLpObjSense(const HighsLogOptions& log_options, const HighsLp& lp) {
   if (lp.sense_ == ObjSense::kMinimize)
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "Objective sense is minimize\n");
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Objective sense is minimize\n");
   else if (lp.sense_ == ObjSense::kMaximize)
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "Objective sense is maximize\n");
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Objective sense is maximize\n");
   else
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "Objective sense is ill-defined as %" HIGHSINT_FORMAT "\n",
-                lp.sense_);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Objective sense is ill-defined as %" HIGHSINT_FORMAT "\n",
+                 lp.sense_);
 }
 
 std::string getBoundType(const double lower, const double upper) {
@@ -1589,23 +1589,22 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   bool have_integer_columns = getNumInt(lp);
   bool have_col_names = lp.col_names_.size();
 
-  highsLogDev(log_options, HighsLogType::kVerbose,
-              "  Column        Lower        Upper         Cost       "
-              "Type        Count");
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "  Column        Lower        Upper         Cost       "
+               "Type        Count");
   if (have_integer_columns)
-    highsLogDev(log_options, HighsLogType::kVerbose, "  Discrete");
-  if (have_col_names)
-    highsLogDev(log_options, HighsLogType::kVerbose, "  Name");
-  highsLogDev(log_options, HighsLogType::kVerbose, "\n");
+    highsLogUser(log_options, HighsLogType::kInfo, "  Discrete");
+  if (have_col_names) highsLogUser(log_options, HighsLogType::kInfo, "  Name");
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
 
   for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
     type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
     count = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
-    highsLogDev(log_options, HighsLogType::kVerbose,
-                "%8" HIGHSINT_FORMAT
-                " %12g %12g %12g         %2s %12" HIGHSINT_FORMAT "",
-                iCol, lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol],
-                type.c_str(), count);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "%8" HIGHSINT_FORMAT
+                 " %12g %12g %12g         %2s %12" HIGHSINT_FORMAT "",
+                 iCol, lp.colLower_[iCol], lp.colUpper_[iCol],
+                 lp.colCost_[iCol], type.c_str(), count);
     if (have_integer_columns) {
       std::string integer_column = "";
       if (lp.integrality_[iCol] == HighsVarType::kInteger) {
@@ -1615,13 +1614,13 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
           integer_column = "Integer";
         }
       }
-      highsLogDev(log_options, HighsLogType::kVerbose, "  %-8s",
-                  integer_column.c_str());
+      highsLogUser(log_options, HighsLogType::kInfo, "  %-8s",
+                   integer_column.c_str());
     }
     if (have_col_names)
-      highsLogDev(log_options, HighsLogType::kVerbose, "  %-s",
-                  lp.col_names_[iCol].c_str());
-    highsLogDev(log_options, HighsLogType::kVerbose, "\n");
+      highsLogUser(log_options, HighsLogType::kInfo, "  %-s",
+                   lp.col_names_[iCol].c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "\n");
   }
 }
 
@@ -1638,24 +1637,23 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
       count[lp.Aindex_[el]]++;
   }
 
-  highsLogDev(log_options, HighsLogType::kVerbose,
-              "     Row        Lower        Upper       Type        Count");
-  if (have_row_names)
-    highsLogDev(log_options, HighsLogType::kVerbose, "  Name");
-  highsLogDev(log_options, HighsLogType::kVerbose, "\n");
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "     Row        Lower        Upper       Type        Count");
+  if (have_row_names) highsLogUser(log_options, HighsLogType::kInfo, "  Name");
+  highsLogUser(log_options, HighsLogType::kInfo, "\n");
 
   for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
     type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
     std::string name = "";
-    highsLogDev(log_options, HighsLogType::kVerbose,
-                "%8" HIGHSINT_FORMAT
-                " %12g %12g         %2s %12" HIGHSINT_FORMAT "",
-                iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(),
-                count[iRow]);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "%8" HIGHSINT_FORMAT
+                 " %12g %12g         %2s %12" HIGHSINT_FORMAT "",
+                 iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(),
+                 count[iRow]);
     if (have_row_names)
-      highsLogDev(log_options, HighsLogType::kVerbose, "  %-s",
-                  lp.row_names_[iRow].c_str());
-    highsLogDev(log_options, HighsLogType::kVerbose, "\n");
+      highsLogUser(log_options, HighsLogType::kInfo, "  %-s",
+                   lp.row_names_[iRow].c_str());
+    highsLogUser(log_options, HighsLogType::kInfo, "\n");
   }
 }
 
@@ -1679,20 +1677,20 @@ void reportMatrix(const HighsLogOptions& log_options, const std::string message,
                   const HighsInt* start, const HighsInt* index,
                   const double* value) {
   if (num_col <= 0) return;
-  highsLogDev(log_options, HighsLogType::kVerbose,
-              "%6s Index              Value\n", message.c_str());
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "%-7s Index              Value\n", message.c_str());
   for (HighsInt col = 0; col < num_col; col++) {
-    highsLogDev(log_options, HighsLogType::kVerbose,
-                "    %8" HIGHSINT_FORMAT " Start   %10" HIGHSINT_FORMAT "\n",
-                col, start[col]);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "    %8" HIGHSINT_FORMAT " Start   %10" HIGHSINT_FORMAT "\n",
+                 col, start[col]);
     HighsInt to_el = (col < num_col - 1 ? start[col + 1] : num_nz);
     for (HighsInt el = start[col]; el < to_el; el++)
-      highsLogDev(log_options, HighsLogType::kVerbose,
-                  "          %8" HIGHSINT_FORMAT " %12g\n", index[el],
-                  value[el]);
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "          %8" HIGHSINT_FORMAT " %12g\n", index[el],
+                   value[el]);
   }
-  highsLogDev(log_options, HighsLogType::kVerbose,
-              "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
 }
 
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,

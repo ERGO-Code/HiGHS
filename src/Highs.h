@@ -377,7 +377,10 @@ class Highs {
    * model
    */
   HighsInt getNumNz() const {
-    if (model_.lp_.numCol_) return model_.lp_.Astart_[model_.lp_.numCol_];
+    if (model_.lp_.numCol_) {
+      assert((int)model_.lp_.Astart_.size() >= model_.lp_.numCol_ + 1);
+      return model_.lp_.Astart_[model_.lp_.numCol_];
+    }
     return 0;
   }
 

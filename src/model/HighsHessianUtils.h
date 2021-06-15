@@ -35,4 +35,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
 bool positiveHessianDiagonal(const HighsOptions& options,
                              HighsHessian& hessian);
 
+void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
+                   const HighsInt num_nz, const HighsInt* start,
+                   const HighsInt* index, const double* value);
 #endif  // MODEL_HIGHSHESSIANUTILS_H_

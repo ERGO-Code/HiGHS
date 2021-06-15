@@ -233,6 +233,15 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
+  // A model with no rows might have no starts or orientation
+  // assigned, but HiGHS assumes that such a model will have null
+  // starts. Aribtrarily, make it column-wise
+  if (lp.numRow_ == 0) {
+    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.Astart_.assign(lp.numCol_ + 1, 0);
+    lp.Aindex_.clear();
+    lp.Avalue_.clear();
+  }
   // Ensure that the LP is column-wise
   return_status =
       interpretCallStatus(setOrientation(lp), return_status, "setOrientation");
@@ -2401,7 +2410,12 @@ HighsStatus Highs::writeSolution(const std::string filename,
 
 void Highs::reportModel() {
   reportLp(options_.log_options, model_.lp_, HighsLogType::kVerbose);
-  //  reportHessian();
+  if (model_.hessian_.dim_) {
+    const HighsInt dim = model_.hessian_.dim_;
+    reportHessian(options_.log_options, dim, model_.hessian_.q_start_[dim],
+                  &model_.hessian_.q_start_[0], &model_.hessian_.q_index_[0],
+                  &model_.hessian_.q_value_[0]);
+  }
 }
 
 // Actions to take if there is a new Highs basis
