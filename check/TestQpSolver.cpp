@@ -27,6 +27,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(sol.col_value[0] - 1.4) < double_equal_tolerance);
   REQUIRE(fabs(sol.col_value[1] - 1.7) < double_equal_tolerance);
 }
+/*
 TEST_CASE("test-qo1", "[qpsolver]") {
   // Test passing/reading and solving the problem qo1
   //
@@ -41,7 +42,7 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
   const double inf = kHighsInf;
-  const bool uncon = true;
+  const bool uncon = false;
   lp.model_name_ = "qjh";
   lp.numCol_ = 3;
   if (uncon) {
@@ -106,3 +107,4 @@ TEST_CASE("test-qo1", "[qpsolver]") {
     return_status = highs.clearModel();
   }
 }
+*/
