@@ -40,3 +40,31 @@ return_code, col_value, row_value = Highs_mipCall(colcost, collower, colupper,
                                                   integrality)
 
 print (return_code, col_value, row_value)
+
+# Illustrate the solution of a QP
+#
+# minimize -x_2 + (1/2)(2x_1^2 - 2x_1x_3 + 0.2x_2^2 + 2x_3^2)
+#
+# subject to x_1 + x_2 + x_3 >= 1; x>=0
+# Add a spurious second row so len(rowlower) is OK
+
+file = "../HiGHS/src/interfaces/highs_qp_solver.py"
+exec(compile(open(file).read(), file, 'exec'))
+
+colcost = (0.0, -1.0, 0.0)
+collower = (0.0, 0.0, 0.0)
+colupper = (inf, inf, inf)
+rowlower = (1.0, -inf)
+rowupper = (inf, inf)
+astart = (0, 1, 2)
+aindex = (0, 0, 0)
+avalue = (1.0, 1.0, 1.0)
+qstart = (0, 2, 3)
+qindex = (0, 2, 1, 0, 2)
+qvalue = (2.0, -1.0, 0.2, -1.0, 2.0)
+return_code, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_qpCall(colcost, collower, colupper,
+                                                 rowlower, rowupper,
+                                                 astart, aindex, avalue,
+                                                 qstart, qindex, qvalue)
+
+print (return_code, col_value, col_dual, row_value, row_dual, col_basis, row_basis)

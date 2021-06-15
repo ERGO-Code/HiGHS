@@ -96,6 +96,53 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
   return (HighsInt)status;
 }
 
+HighsInt Highs_qpCall(
+    const HighsInt numcol, const HighsInt numrow, const HighsInt numnz,
+    const HighsInt rowwise, const HighsInt q_numnz, const HighsInt sense,
+    const double offset, const double* colcost, const double* collower,
+    const double* colupper, const double* rowlower, const double* rowupper,
+    const HighsInt* astart, const HighsInt* aindex, const double* avalue,
+    const HighsInt* qstart, const HighsInt* qindex, const double* qvalue,
+    double* colvalue, double* coldual, double* rowvalue, double* rowdual,
+    HighsInt* colbasisstatus, HighsInt* rowbasisstatus, int* modelstatus) {
+  Highs highs;
+  highs.setOptionValue("output_flag", false);
+  HighsStatus status =
+      highs.passModel(numcol, numrow, numnz, (bool)rowwise, q_numnz, sense,
+                      offset, colcost, collower, colupper, rowlower, rowupper,
+                      astart, aindex, avalue, qstart, qindex, qvalue);
+  if (status != HighsStatus::kOk) return (HighsInt)status;
+
+  status = highs.run();
+
+  if (status == HighsStatus::kOk) {
+    HighsSolution solution;
+    HighsBasis basis;
+    solution = highs.getSolution();
+    basis = highs.getBasis();
+    *modelstatus = (HighsInt)highs.getModelStatus();
+    const HighsInfo& info = highs.getInfo();
+    const bool has_value =
+        info.primal_solution_status != SolutionStatus::kSolutionStatusNone;
+    const bool has_dual =
+        info.dual_solution_status != SolutionStatus::kSolutionStatusNone;
+    const bool has_basis = basis.valid;
+
+    for (HighsInt i = 0; i < numcol; i++) {
+      if (has_value) colvalue[i] = solution.col_value[i];
+      if (has_dual) coldual[i] = solution.col_dual[i];
+      if (has_basis) colbasisstatus[i] = (HighsInt)basis.col_status[i];
+    }
+
+    for (HighsInt i = 0; i < numrow; i++) {
+      if (has_value) rowvalue[i] = solution.row_value[i];
+      if (has_dual) rowdual[i] = solution.row_dual[i];
+      if (has_basis) rowbasisstatus[i] = (HighsInt)basis.row_status[i];
+    }
+  }
+  return (HighsInt)status;
+}
+
 void* Highs_create() { return new Highs(); }
 
 void Highs_destroy(void* highs) { delete (Highs*)highs; }
