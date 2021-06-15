@@ -114,10 +114,10 @@ int main() {
   cout << "Objective function value: " << info.objective_function_value << endl;
   cout << "Primal  solution status: " << highs.solutionStatusToString(info.primal_solution_status) << endl;
   cout << "Dual    solution status: " << highs.solutionStatusToString(info.dual_solution_status) << endl;
-  cout << "Basis: " << highs.basisValidityToString(info.basis_status) << endl;
+  cout << "Basis: " << highs.basisValidityToString(info.basis_validity) << endl;
   const bool has_values = info.primal_solution_status;
   const bool has_duals = info.dual_solution_status;
-  const bool has_basis = info.basis_status;
+  const bool has_basis = info.basis_validity;
   //
   // Get the solution values and basis
   const HighsSolution& solution = highs.getSolution();
