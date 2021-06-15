@@ -254,13 +254,59 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         HighsInt row = inArcRows[inArcRow].first;
         double weight = -outArcColVal / inArcRows[inArcRow].second;
 
+        if (std::abs(weight) <= mip.mipdata_->feastol) {
+          bool success = false;
+          for (HighsInt nextRow = inArcRow + 1;
+               nextRow < colInArcs[bestOutArcCol].second && !success;
+               ++nextRow) {
+            row = inArcRows[nextRow].first;
+            weight = -outArcColVal / inArcRows[nextRow].second;
+            success = std::abs(weight) <= mip.mipdata_->feastol;
+          }
+
+          for (HighsInt nextRow = colInArcs[bestOutArcCol].first;
+               nextRow < inArcRow && !success; ++nextRow) {
+            row = inArcRows[nextRow].first;
+            weight = -outArcColVal / inArcRows[nextRow].second;
+            success = std::abs(weight) <= mip.mipdata_->feastol;
+          }
+
+          if (!success) {
+            if (bestInArcCol == -1)
+              break;
+            else
+              goto check_out_arc_col;
+          }
+        }
+
         lpAggregator.addRow(row, weight);
       } else {
+      check_out_arc_col:
         HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
                                              colOutArcs[bestInArcCol].second);
 
         HighsInt row = outArcRows[outArcRow].first;
         double weight = -inArcColVal / outArcRows[outArcRow].second;
+
+        if (std::abs(weight) <= mip.mipdata_->feastol) {
+          bool success = false;
+          for (HighsInt nextRow = outArcRow + 1;
+               nextRow < colOutArcs[bestInArcCol].second && !success;
+               ++nextRow) {
+            row = outArcRows[nextRow].first;
+            weight = -inArcColVal / outArcRows[nextRow].second;
+            success = std::abs(weight) <= mip.mipdata_->feastol;
+          }
+
+          for (HighsInt nextRow = colOutArcs[bestInArcCol].first;
+               nextRow < outArcRow && !success; ++nextRow) {
+            row = outArcRows[nextRow].first;
+            weight = -inArcColVal / outArcRows[nextRow].second;
+            success = std::abs(weight) <= mip.mipdata_->feastol;
+          }
+
+          if (!success) break;
+        }
 
         lpAggregator.addRow(row, weight);
       }
