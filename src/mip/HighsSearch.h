@@ -56,6 +56,7 @@ class HighsSearch {
     kBestCost,
     kWorstCost,
     kDisjunction,
+    kHybridInferenceCost,
   };
 
   enum class NodeResult {
@@ -141,7 +142,7 @@ class HighsSearch {
 
   void setHeuristic(bool inheuristic) {
     this->inheuristic = inheuristic;
-    if (inheuristic) childselrule = ChildSelectionRule::kBestCost;
+    if (inheuristic) childselrule = ChildSelectionRule::kHybridInferenceCost;
   }
 
   void addBoundExceedingConflict();

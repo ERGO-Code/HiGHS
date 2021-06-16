@@ -34,7 +34,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   upper_limit = kHighsInf;
   inheuristic = false;
   inbranching = false;
-  childselrule = mipsolver.submip ? ChildSelectionRule::kBestCost
+  childselrule = mipsolver.submip ? ChildSelectionRule::kHybridInferenceCost
                                   : ChildSelectionRule::kRootSol;
   this->localdom.setDomainChangeStack(std::vector<HighsDomainChange>());
 }
@@ -985,6 +985,26 @@ HighsSearch::NodeResult HighsSearch::branch() {
             }
           }
           break;
+        }
+        case ChildSelectionRule::kHybridInferenceCost: {
+          double upVal = std::ceil(currnode.branching_point);
+          double downVal = std::floor(currnode.branching_point);
+          double upScore =
+              (1 + pseudocost.getAvgInferencesUp(col)) /
+              pseudocost.getPseudocostUp(col, currnode.branching_point,
+                                         mipsolver.mipdata_->feastol);
+          double downScore =
+              (1 + pseudocost.getAvgInferencesDown(col)) /
+              pseudocost.getPseudocostDown(col, currnode.branching_point,
+                                           mipsolver.mipdata_->feastol);
+
+          if (upScore >= downScore) {
+            currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+            currnode.branchingdecision.boundval = upVal;
+          } else {
+            currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+            currnode.branchingdecision.boundval = downVal;
+          }
         }
       }
       result = NodeResult::kBranched;

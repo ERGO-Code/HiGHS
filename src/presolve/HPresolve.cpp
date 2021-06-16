@@ -2352,7 +2352,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         double intScale =
             HighsIntegers::integralScale(rowCoefs, deltaDown, deltaUp);
 
-        if (intScale != 0.0 ) {
+        if (intScale != 0.0) {
           if (model->rowLower_[row] == -kHighsInf) {
             // <= inequality
             HighsCDouble rhs = model->rowUpper_[row] * intScale;

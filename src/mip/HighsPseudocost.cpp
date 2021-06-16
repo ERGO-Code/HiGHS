@@ -33,9 +33,7 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       minreliable(mipsolver.options_mip_->mip_pscost_minreliable) {
   if (mipsolver.pscostinit != nullptr) {
     cost_total = mipsolver.pscostinit->cost_total;
-    inferences_total = mipsolver.pscostinit->inferences_total;
     nsamplestotal = mipsolver.pscostinit->nsamplestotal;
-    ninferencestotal = mipsolver.pscostinit->ninferencestotal;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
       HighsInt origCol = mipsolver.mipdata_->postSolveStack.getOrigColIndex(i);
 
@@ -43,10 +41,6 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       nsamplesup[i] = mipsolver.pscostinit->nsamplesup[origCol];
       pseudocostdown[i] = mipsolver.pscostinit->pseudocostdown[origCol];
       nsamplesdown[i] = mipsolver.pscostinit->nsamplesdown[origCol];
-      inferencesup[i] = mipsolver.pscostinit->inferencesup[origCol];
-      ninferencesup[i] = mipsolver.pscostinit->ninferencesup[origCol];
-      inferencesdown[i] = mipsolver.pscostinit->inferencesdown[origCol];
-      ninferencesdown[i] = mipsolver.pscostinit->ninferencesdown[origCol];
     }
   }
 }
@@ -57,20 +51,12 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
       pseudocostdown(pscost.pseudocostdown),
       nsamplesup(pscost.nsamplesup),
       nsamplesdown(pscost.nsamplesdown),
-      inferencesup(pscost.inferencesup),
-      inferencesdown(pscost.inferencesdown),
-      ninferencesup(pscost.ninferencesup),
-      ninferencesdown(pscost.ninferencesdown),
       cost_total(pscost.cost_total),
-      inferences_total(pscost.inferences_total),
-      nsamplestotal(std::min(int64_t{1}, pscost.nsamplestotal)),
-      ninferencestotal(std::min(int64_t{1}, pscost.ninferencestotal)) {
+      nsamplestotal(std::min(int64_t{1}, pscost.nsamplestotal)) {
   HighsInt ncol = pseudocostup.size();
   for (HighsInt i = 0; i != ncol; ++i) {
     nsamplesup[i] = std::min(nsamplesup[i], maxCount);
     nsamplesdown[i] = std::min(nsamplesdown[i], maxCount);
-    ninferencesup[i] = std::min(ninferencesup[i], HighsInt{1});
-    ninferencesdown[i] = std::min(ninferencesdown[i], HighsInt{1});
   }
 }
 
@@ -78,17 +64,11 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
     const HighsPseudocost& pscost, HighsInt maxCount,
     const presolve::HighsPostsolveStack& postsolveStack)
     : cost_total(pscost.cost_total),
-      inferences_total(pscost.inferences_total),
-      nsamplestotal(std::min(int64_t{1}, pscost.nsamplestotal)),
-      ninferencestotal(std::min(int64_t{1}, pscost.ninferencestotal)) {
+      nsamplestotal(std::min(int64_t{1}, pscost.nsamplestotal)) {
   pseudocostup.resize(postsolveStack.getOrigNumCol());
   pseudocostdown.resize(postsolveStack.getOrigNumCol());
   nsamplesup.resize(postsolveStack.getOrigNumCol());
   nsamplesdown.resize(postsolveStack.getOrigNumCol());
-  inferencesup.resize(postsolveStack.getOrigNumCol());
-  inferencesdown.resize(postsolveStack.getOrigNumCol());
-  ninferencesup.resize(postsolveStack.getOrigNumCol());
-  ninferencesdown.resize(postsolveStack.getOrigNumCol());
 
   HighsInt ncols = pscost.pseudocostup.size();
 
@@ -100,10 +80,5 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
         std::min(maxCount, pscost.nsamplesup[i]);
     nsamplesdown[postsolveStack.getOrigColIndex(i)] =
         std::min(maxCount, pscost.nsamplesdown[i]);
-    inferencesup[postsolveStack.getOrigColIndex(i)] = pscost.inferencesup[i];
-    inferencesdown[postsolveStack.getOrigColIndex(i)] =
-        pscost.inferencesdown[i];
-    ninferencesup[postsolveStack.getOrigColIndex(i)] = 1;
-    ninferencesdown[postsolveStack.getOrigColIndex(i)] = 1;
   }
 }
