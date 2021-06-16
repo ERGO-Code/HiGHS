@@ -141,6 +141,7 @@ void HighsMipSolverData::init() {
   pruned_treeweight = 0;
   avgrootlpiters = 0;
   num_nodes = 0;
+  num_nodes_before_run = 0;
   num_leaves = 0;
   num_leaves_before_run = 0;
   total_lp_iterations = 0;
