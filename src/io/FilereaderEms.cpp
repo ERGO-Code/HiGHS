@@ -220,8 +220,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                  "EMS file not found\n");
     return FilereaderRetcode::kFileNotFound;
   }
-  if (setFormat(lp) != HighsStatus::kOk)
-    return FilereaderRetcode::kParserError;
+  if (setFormat(lp) != HighsStatus::kOk) return FilereaderRetcode::kParserError;
   return FilereaderRetcode::kOk;
 }
 

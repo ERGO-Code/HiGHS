@@ -2358,10 +2358,8 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-HighsStatus setFormat(HighsLp& lp,
-                           const MatrixFormat desired_format) {
-  if (desired_format == MatrixFormat::kNone)
-    return HighsStatus::kError;
+HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
+  if (desired_format == MatrixFormat::kNone) return HighsStatus::kError;
   if (lp.format_ == desired_format) return HighsStatus::kOk;
   if (lp.numCol_ == 0 && lp.numRow_ == 0) {
     // No rows or columns, so either orientation is possible and has

@@ -275,8 +275,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
 HighsStatus setFormat(
-    HighsLp& lp,
-    const MatrixFormat desired_format = MatrixFormat::kColwise);
+    HighsLp& lp, const MatrixFormat desired_format = MatrixFormat::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

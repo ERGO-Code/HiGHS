@@ -442,8 +442,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
-                                      "setFormat");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (filename == "") {
     // Empty file name: report model on logging stream
@@ -546,13 +546,12 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
-                                      "setFormat");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (hmos_[0].ekk_instance_.status_.valid) {
-    return_status =
-        interpretCallStatus(setFormat(hmos_[0].ekk_instance_.lp_),
-                            return_status, "setFormat");
+    return_status = interpretCallStatus(setFormat(hmos_[0].ekk_instance_.lp_),
+                                        return_status, "setFormat");
     if (return_status == HighsStatus::kError) return return_status;
   }
 #ifdef HIGHSDEV
@@ -1179,8 +1178,8 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   if (!haveHmo("getReducedRow")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
-                                      "setFormat");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (row_vector == NULL) {
@@ -1240,8 +1239,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   if (!haveHmo("getReducedColumn")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
-                                      "setFormat");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (col_vector == NULL) {

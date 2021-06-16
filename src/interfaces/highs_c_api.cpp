@@ -799,8 +799,7 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   }
   // Ensure the desired orientation
   HighsInt return_status;
-  return_status =
-      (HighsInt)((Highs*)highs)->setMatrixFormat(desired_a_format);
+  return_status = (HighsInt)((Highs*)highs)->setMatrixFormat(desired_a_format);
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
@@ -820,8 +819,7 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
       integrality[iCol] = (HighsInt)lp.integrality_[iCol];
   }
   // Restore the original orientation
-  return_status =
-      (HighsInt)((Highs*)highs)->setMatrixFormat(original_a_format);
+  return_status = (HighsInt)((Highs*)highs)->setMatrixFormat(original_a_format);
   if (return_status != HighsStatuskOk) return return_status;
   return HighsStatuskOk;
 }

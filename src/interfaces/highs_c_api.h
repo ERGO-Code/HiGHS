@@ -262,8 +262,8 @@ HighsInt Highs_passModel(
                              //!< indices - or NULL if model is linear
     const HighsInt* qindex,  //!< array of length [q_num_nz] with indices of
                              //!< Hessian entries - or NULL if model is linear
-    const double* qvalue,  //!< array of length [q_num_nz] with values of
-                           //!< Hessian entries - or NULL if model is linear
+    const double* qvalue,    //!< array of length [q_num_nz] with values of
+                             //!< Hessian entries - or NULL if model is linear
     const HighsInt*
         integrality  //!< array of length [numcol] indicating whether
                      //!< variables are continuous (0) or integer (1) - or NULL
