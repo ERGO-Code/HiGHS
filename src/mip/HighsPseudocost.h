@@ -34,9 +34,14 @@ struct HighsPseudocostInitialization {
   std::vector<double> pseudocostdown;
   std::vector<HighsInt> nsamplesup;
   std::vector<HighsInt> nsamplesdown;
-
+  std::vector<double> inferencesup;
+  std::vector<double> inferencesdown;
+  std::vector<HighsInt> ninferencesup;
+  std::vector<HighsInt> ninferencesdown;
   double cost_total;
+  double inferences_total;
   int64_t nsamplestotal;
+  int64_t ninferencestotal;
 
   HighsPseudocostInitialization(const HighsPseudocost& pscost,
                                 HighsInt maxCount);
