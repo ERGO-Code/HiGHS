@@ -34,6 +34,7 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   //
   // subject to x_1 + x_3 <= 2; x>=0
   HighsStatus return_status;
+  HighsModelStatus model_status;
   double objective_function_value;
   const double required_objective_function_value = -5.25;
 
@@ -57,8 +58,9 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   }
   lp.colUpper_ = {inf, inf, inf};
   if (!uncon) {
-    lp.rowLower_ = {1.0};  // Should be -inf, but 1.0 yields memory error
-    lp.rowUpper_ = {inf};  // Should be 2, but inf yields memory error
+    lp.rowLower_ = {
+        -inf};  //{1.0};  // Should be -inf, but 1.0 yields memory error
+    lp.rowUpper_ = {2};  //{inf};  // Should be 2, but inf yields memory error
     lp.Astart_ = {0, 1, 1, 2};
     lp.Aindex_ = {0, 0};
     lp.Avalue_ = {1.0, 1.0};
@@ -84,7 +86,19 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   highs.writeSolution("", true);
 
+  // Make the problem infeasible
+  return_status = highs.changeColBounds(0, 3, inf);
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.changeColBounds(2, 3, inf);
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
   return_status = highs.clearModel();
+  highs.writeSolution("", true);
+  model_status = highs.getModelStatus();
+  printf("Infeasible QP status: %s\n",
+         highs.modelStatusToString(model_status).c_str());
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
 
   std::string filename;
   for (HighsInt test_k = 3; test_k < 2; test_k++) {
