@@ -909,9 +909,9 @@ class Highs {
 
   std::string basisValidityToString(const HighsInt basis_validity) const;
 
-  HighsStatus setMatrixOrientation(const MatrixOrientation desired_orientation =
-                                       MatrixOrientation::kColwise) {
-    return setOrientation(model_.lp_, desired_orientation);
+  HighsStatus setMatrixFormat(const MatrixFormat desired_format =
+                                       MatrixFormat::kColwise) {
+    return setFormat(model_.lp_, desired_format);
   }
 
 #ifdef OSI_FOUND

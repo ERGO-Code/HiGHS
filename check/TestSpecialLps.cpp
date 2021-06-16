@@ -329,7 +329,7 @@ void almostNotUnbounded(Highs& highs) {
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
   lp.Avalue_ = {1 + epsilon, -1, 1, -1, 1, 1};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
 
@@ -380,7 +380,7 @@ void singularStartingBasis(Highs& highs) {
   lp.Astart_ = {0, 2, 4, 6};
   lp.Aindex_ = {0, 1, 0, 1, 0, 1};
   lp.Avalue_ = {1, 2, 2, 4, 1, 3};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
@@ -426,7 +426,7 @@ void unconstrained(Highs& highs) {
   lp.colLower_ = {4, 2};
   lp.colUpper_ = {inf, 3};
   lp.Astart_ = {0, 0, 0};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);

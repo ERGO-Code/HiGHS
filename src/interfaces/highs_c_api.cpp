@@ -788,19 +788,19 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   }
 
   // Save the original orientation so that it is recovered
-  MatrixOrientation original_a_format = lp.orientation_;
+  MatrixFormat original_a_format = lp.format_;
   // Determine the desired orientation and number of start entries to
   // be copied
-  MatrixOrientation desired_a_format = MatrixOrientation::kColwise;
+  MatrixFormat desired_a_format = MatrixFormat::kColwise;
   HighsInt num_start_entries = *numcol;
-  if (a_format == (HighsInt)MatrixOrientation::kRowwise) {
-    desired_a_format = MatrixOrientation::kRowwise;
+  if (a_format == (HighsInt)MatrixFormat::kRowwise) {
+    desired_a_format = MatrixFormat::kRowwise;
     num_start_entries = *numrow;
   }
   // Ensure the desired orientation
   HighsInt return_status;
   return_status =
-      (HighsInt)((Highs*)highs)->setMatrixOrientation(desired_a_format);
+      (HighsInt)((Highs*)highs)->setMatrixFormat(desired_a_format);
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
@@ -821,7 +821,7 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   }
   // Restore the original orientation
   return_status =
-      (HighsInt)((Highs*)highs)->setMatrixOrientation(original_a_format);
+      (HighsInt)((Highs*)highs)->setMatrixFormat(original_a_format);
   if (return_status != HighsStatuskOk) return return_status;
   return HighsStatuskOk;
 }

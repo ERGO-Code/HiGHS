@@ -52,7 +52,7 @@ void distillationMIP(Highs& highs) {
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
   lp.Avalue_ = {2, 3, 2, 2, 4, 1};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
@@ -73,7 +73,7 @@ void rowlessMIP(Highs& highs) {
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {1, 1};
   lp.Astart_ = {0, 0, 0};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};

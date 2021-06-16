@@ -62,7 +62,7 @@ TEST_CASE("test-qo1", "[qpsolver]") {
     lp.Astart_ = {0, 1, 1, 2};
     lp.Aindex_ = {0, 0};
     lp.Avalue_ = {1.0, 1.0};
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
   }
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;

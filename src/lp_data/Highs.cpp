@@ -238,7 +238,7 @@ HighsStatus Highs::passModel(HighsModel model) {
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
     lp.Astart_.assign(lp.numCol_ + 1, 0);
     lp.Aindex_.clear();
     lp.Avalue_.clear();
@@ -247,13 +247,13 @@ HighsStatus Highs::passModel(HighsModel model) {
     // there are no nonzeros. However, the number of nonzeros can only
     // be found from a valid setting of a_format! So, pass 1 as the
     // number of nonzeros to force the check of a_format
-    if (!aFormatOk(1, (HighsInt)lp.orientation_)) return HighsStatus::kError;
+    if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
   // Check that the value of q_format is valid
   //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   return_status =
-      interpretCallStatus(setOrientation(lp), return_status, "setOrientation");
+      interpretCallStatus(setFormat(lp), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of the LP, normalising its values
   return_status =
@@ -303,7 +303,7 @@ HighsStatus Highs::passModel(
   if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
 
   bool a_rowwise = false;
-  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixOrientation::kRowwise;
+  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
 
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
@@ -338,11 +338,11 @@ HighsStatus Highs::passModel(
   if (a_rowwise) {
     lp.Astart_.resize(num_row + 1);
     lp.Astart_[num_row] = num_nz;
-    lp.orientation_ = MatrixOrientation::kRowwise;
+    lp.format_ = MatrixFormat::kRowwise;
   } else {
     lp.Astart_.resize(num_col + 1);
     lp.Astart_[num_col] = num_nz;
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
     lp.sense_ = ObjSense::kMaximize;
@@ -442,8 +442,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
+                                      "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (filename == "") {
     // Empty file name: report model on logging stream
@@ -546,13 +546,13 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
+                                      "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (hmos_[0].ekk_instance_.status_.valid) {
     return_status =
-        interpretCallStatus(setOrientation(hmos_[0].ekk_instance_.lp_),
-                            return_status, "setOrientation");
+        interpretCallStatus(setFormat(hmos_[0].ekk_instance_.lp_),
+                            return_status, "setFormat");
     if (return_status == HighsStatus::kError) return return_status;
   }
 #ifdef HIGHSDEV
@@ -1179,8 +1179,8 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   if (!haveHmo("getReducedRow")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
+                                      "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (row_vector == NULL) {
@@ -1240,8 +1240,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   if (!haveHmo("getReducedColumn")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status = interpretCallStatus(setFormat(model_.lp_), return_status,
+                                      "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (col_vector == NULL) {
@@ -2059,7 +2059,7 @@ HighsPresolveStatus Highs::runPresolve() {
   }
 
   // Ensure that the LP is column-wise
-  // setOrientation(model_.lp_);
+  // setFormat(model_.lp_);
 
   if (model_.lp_.numCol_ == 0 && model_.lp_.numRow_ == 0)
     return HighsPresolveStatus::kNullError;
@@ -2187,7 +2187,7 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
 
   HighsModelObject& model = hmos_[model_index];
   // Check that the model isn't row-wise
-  assert(model_.lp_.orientation_ != MatrixOrientation::kRowwise);
+  assert(model_.lp_.format_ != MatrixFormat::kRowwise);
 
   // Copy the LP solver iteration counts to this model so that they
   // are updated
@@ -2209,7 +2209,7 @@ HighsStatus Highs::callSolveQp() {
   // Check that the model isn't row-wise - not yet in master
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
-  assert(lp.orientation_ != MatrixOrientation::kRowwise);
+  assert(lp.format_ != MatrixFormat::kRowwise);
   assert(hessian.dim_ == lp.numCol_);
   //
   // Run the QP solver
@@ -2348,7 +2348,7 @@ HighsStatus Highs::callSolveMip() {
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
-  assert(model_.lp_.orientation_ != MatrixOrientation::kRowwise);
+  assert(model_.lp_.format_ != MatrixFormat::kRowwise);
   HighsMipSolver solver(options_, model_.lp_, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
