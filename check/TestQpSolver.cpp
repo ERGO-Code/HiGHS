@@ -93,12 +93,14 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
-  return_status = highs.clearModel();
+
   highs.writeSolution("", true);
   model_status = highs.getModelStatus();
   printf("Infeasible QP status: %s\n",
          highs.modelStatusToString(model_status).c_str());
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
+
+  return_status = highs.clearModel();
 
   std::string filename;
   for (HighsInt test_k = 3; test_k < 2; test_k++) {
