@@ -434,6 +434,9 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                              inds.size(), rhs);
 
+  mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
+      mipsolver, inds.data(), vals.data(), inds.size(), rhs);
+
   return true;
 }
 
@@ -534,6 +537,10 @@ void HighsLpRelaxation::storeDualInfProof() {
   mipsolver.mipdata_->debugSolution.checkCut(
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
+
+  mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
+      mipsolver, dualproofinds.data(), dualproofvals.data(),
+      dualproofinds.size(), dualproofrhs);
 }
 
 void HighsLpRelaxation::storeDualUBProof() {
