@@ -20,7 +20,7 @@ void minimal_api() {
   HighsInt numcol = 2;
   HighsInt numrow = 2;
   HighsInt nnz = 4;
-  HighsInt rowwise = 0;
+  HighsInt a_format = 2;
   HighsInt sense = 1;
   double offset = 0;
   HighsInt i;
@@ -44,7 +44,7 @@ void minimal_api() {
 
   HighsInt modelstatus;
 
-  HighsInt status = Highs_lpCall(numcol, numrow, nnz, rowwise, sense, offset,
+  HighsInt status = Highs_lpCall(numcol, numrow, nnz, a_format, sense, offset,
 				 cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
 				 cd, rv, rd, cbs, rbs, &modelstatus);
   assert(status == 0);
@@ -119,7 +119,7 @@ void minimal_api_lp() {
   const HighsInt numcol = 2;
   const HighsInt numrow = 3;
   const HighsInt numnz = 5;
-  HighsInt rowwise = 0;
+  HighsInt a_format = 1;
   HighsInt sense = 1;
   double offset = 0;
 
@@ -145,7 +145,7 @@ void minimal_api_lp() {
 
   HighsInt modelstatus;
 
-  HighsInt runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
+  HighsInt runstatus = Highs_lpCall(numcol, numrow, numnz, a_format,
 				    sense, offset, colcost, collower, colupper, rowlower, rowupper,
 				    astart, aindex, avalue,
 				    colvalue, coldual, rowvalue, rowdual,
@@ -189,7 +189,7 @@ void full_api() {
   HighsInt numcol = 2;
   HighsInt numrow = 2;
   HighsInt numnz = 4;
-  HighsInt orientation = 2; //Row-wise
+  HighsInt a_format = 2; //Row-wise
   HighsInt sense = 1;
   double offset = 0;
   double cc[2] = {1.0, -2.0};
@@ -225,7 +225,7 @@ void full_api() {
   HighsInt ck_aindex[4];
   double ck_avalue[4];
 
-  Highs_getModel(highs, orientation,
+  Highs_getModel(highs, a_format, 0,
 		 &ck_numcol, &ck_numrow, &ck_numnz, NULL,
 		 &ck_sense, &ck_offset,
 		 ck_cc, ck_cl, ck_cu, ck_rl, ck_ru,
@@ -379,14 +379,14 @@ void full_api_lp() {
   Highs_destroy(highs);
 
   // Define the constraint matrix col-wise to pass to the LP
-  HighsInt rowwise = 0;
+  HighsInt a_format = 1;
   sense = 1;
   double offset = 0;
   HighsInt astart[2] = {0, 2};
   HighsInt aindex[5] = {1, 2, 0, 1, 2};
   double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise, sense, offset,
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz, a_format, sense, offset,
 			   colcost, collower, colupper,
 			   rowlower, rowupper,
 			   astart, aindex, avalue);

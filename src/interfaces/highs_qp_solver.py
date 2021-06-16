@@ -20,7 +20,8 @@ def Highs_qpCall(colcost, collower, colupper, rowlower, rowupper, astart, aindex
    n_row = len(rowlower)
    n_nz = len(aindex)
    hessian_n_nz = len(qindex)
-   rowwise = 0
+   aformat = 0
+   qformat = 0
    sense = 1
    offset = 0
    
@@ -56,15 +57,15 @@ def Highs_qpCall(colcost, collower, colupper, rowlower, rowupper, astart, aindex
    row_basis = int_array_type_row(*row_basis)
 
    retcode = highslib.Highs_qpCall(
-       ctypes.c_int(n_col), ctypes.c_int(n_row), ctypes.c_int(n_nz), ctypes.c_int(rowwise),
-       ctypes.c_int(hessian_n_nz), 
-       ctypes.c_int(sense), ctypes.c_double(offset),
-       dbl_array_type_col(*colcost), dbl_array_type_col(*collower), dbl_array_type_col(*colupper), 
-       dbl_array_type_row(*rowlower), dbl_array_type_row(*rowupper), 
-       int_array_type_astart(*astart), int_array_type_aindex(*aindex), dbl_array_type_avalue(*avalue),
-       int_array_type_qstart(*qstart), int_array_type_qindex(*qindex), dbl_array_type_qvalue(*qvalue),
-       col_value, col_dual, 
-       row_value, row_dual, 
-       col_basis, row_basis, ctypes.byref(ctypes.c_int(return_val)))
+      ctypes.c_int(n_col), ctypes.c_int(n_row), ctypes.c_int(n_nz), ctypes.c_int(hessian_n_nz), 
+      ctypes.c_int(aformat), ctypes.c_int(qformat),
+      ctypes.c_int(sense), ctypes.c_double(offset),
+      dbl_array_type_col(*colcost), dbl_array_type_col(*collower), dbl_array_type_col(*colupper), 
+      dbl_array_type_row(*rowlower), dbl_array_type_row(*rowupper), 
+      int_array_type_astart(*astart), int_array_type_aindex(*aindex), dbl_array_type_avalue(*avalue),
+      int_array_type_qstart(*qstart), int_array_type_qindex(*qindex), dbl_array_type_qvalue(*qvalue),
+      col_value, col_dual, 
+      row_value, row_dual, 
+      col_basis, row_basis, ctypes.byref(ctypes.c_int(return_val)))
    return retcode, list(col_value), list(col_dual), list(row_value), list(row_dual), list(col_basis), list(row_basis)
 

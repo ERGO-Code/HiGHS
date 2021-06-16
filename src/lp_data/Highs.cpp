@@ -233,15 +233,24 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
-  // A model with no rows might have no starts or orientation
-  // assigned, but HiGHS assumes that such a model will have null
-  // starts. Aribtrarily, make it column-wise
-  if (lp.numRow_ == 0) {
+  if (lp.numCol_ == 0 || lp.numRow_ == 0) {
+    // Model constraint matrix has either no columns or no
+    // rows. Clearly the matrix is empty, so may have no orientation
+    // or starts assigned. HiGHS assumes that such a model will have
+    // null starts, so make it column-wise
     lp.orientation_ = MatrixOrientation::kColwise;
     lp.Astart_.assign(lp.numCol_ + 1, 0);
     lp.Aindex_.clear();
     lp.Avalue_.clear();
+  } else {
+    // Matrix has rows and columns, so a_format must be valid, even if
+    // there are no nonzeros. However, the number of nonzeros can only
+    // be found from a valid setting of a_format! So, pass 1 as the
+    // number of nonzeros to force the check of a_format
+    if (!aFormatOk(1, (HighsInt)lp.orientation_)) return HighsStatus::kError;
   }
+  // Check that the value of q_format is valid
+  //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   return_status =
       interpretCallStatus(setOrientation(lp), return_status, "setOrientation");
@@ -281,14 +290,21 @@ HighsStatus Highs::passModel(HighsLp lp) {
 
 HighsStatus Highs::passModel(
     const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
-    const bool rowwise, const HighsInt hessian_num_nz, const HighsInt sense,
-    const double offset, const double* costs, const double* col_lower,
-    const double* col_upper, const double* row_lower, const double* row_upper,
-    const HighsInt* astart, const HighsInt* aindex, const double* avalue,
-    const HighsInt* q_start, const HighsInt* q_index, const double* q_value,
-    const HighsInt* integrality) {
+    const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
+    const HighsInt sense, const double offset, const double* costs,
+    const double* col_lower, const double* col_upper, const double* row_lower,
+    const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
+    const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
+    const double* q_value, const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
+  // Check that the values of a_format and q_format are valid
+  if (!aFormatOk(num_nz, a_format)) return HighsStatus::kError;
+  if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
+
+  bool a_rowwise = false;
+  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixOrientation::kRowwise;
+
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
   if (num_col > 0) {
@@ -311,7 +327,7 @@ HighsStatus Highs::passModel(
     assert(astart != NULL);
     assert(aindex != NULL);
     assert(avalue != NULL);
-    if (rowwise) {
+    if (a_rowwise) {
       lp.Astart_.assign(astart, astart + num_row);
     } else {
       lp.Astart_.assign(astart, astart + num_col);
@@ -319,7 +335,7 @@ HighsStatus Highs::passModel(
     lp.Aindex_.assign(aindex, aindex + num_nz);
     lp.Avalue_.assign(avalue, avalue + num_nz);
   }
-  if (rowwise) {
+  if (a_rowwise) {
     lp.Astart_.resize(num_row + 1);
     lp.Astart_[num_row] = num_nz;
     lp.orientation_ = MatrixOrientation::kRowwise;
@@ -343,7 +359,7 @@ HighsStatus Highs::passModel(
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }
-  if (hessian_num_nz > 0) {
+  if (q_num_nz > 0) {
     assert(num_col > 0);
     assert(q_start != NULL);
     assert(q_index != NULL);
@@ -352,24 +368,24 @@ HighsStatus Highs::passModel(
     hessian.dim_ = num_col;
     hessian.q_start_.assign(q_start, q_start + num_col);
     hessian.q_start_.resize(num_col + 1);
-    hessian.q_start_[num_col] = hessian_num_nz;
-    hessian.q_index_.assign(q_index, q_index + hessian_num_nz);
-    hessian.q_value_.assign(q_value, q_value + hessian_num_nz);
+    hessian.q_start_[num_col] = q_num_nz;
+    hessian.q_index_.assign(q_index, q_index + q_num_nz);
+    hessian.q_value_.assign(q_value, q_value + q_num_nz);
   }
   return passModel(std::move(model));
 }
 
 HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
-                             const HighsInt num_nz, const bool rowwise,
+                             const HighsInt num_nz, const HighsInt a_format,
                              const HighsInt sense, const double offset,
                              const double* costs, const double* col_lower,
                              const double* col_upper, const double* row_lower,
                              const double* row_upper, const HighsInt* astart,
                              const HighsInt* aindex, const double* avalue,
                              const HighsInt* integrality) {
-  return passModel(num_col, num_row, num_nz, rowwise, 0, sense, offset, costs,
-                   col_lower, col_upper, row_lower, row_upper, astart, aindex,
-                   avalue, NULL, NULL, NULL, integrality);
+  return passModel(num_col, num_row, num_nz, 0, a_format, 0, sense, offset,
+                   costs, col_lower, col_upper, row_lower, row_upper, astart,
+                   aindex, avalue, NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::readModel(const std::string filename) {

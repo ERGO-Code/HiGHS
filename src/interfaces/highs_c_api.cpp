@@ -15,7 +15,7 @@
 #include "Highs.h"
 
 HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
-                      const HighsInt numnz, const HighsInt rowwise,
+                      const HighsInt numnz, const HighsInt a_format,
                       const HighsInt sense, const double offset,
                       const double* colcost, const double* collower,
                       const double* colupper, const double* rowlower,
@@ -27,7 +27,7 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsStatus status = highs.passModel(
-      numcol, numrow, numnz, (bool)rowwise, sense, offset, colcost, collower,
+      numcol, numrow, numnz, a_format, sense, offset, colcost, collower,
       colupper, rowlower, rowupper, astart, aindex, avalue);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
@@ -63,7 +63,7 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
 }
 
 HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
-                       const HighsInt numnz, const HighsInt rowwise,
+                       const HighsInt numnz, const HighsInt a_format,
                        const HighsInt sense, const double offset,
                        const double* colcost, const double* collower,
                        const double* colupper, const double* rowlower,
@@ -74,7 +74,7 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsStatus status = highs.passModel(
-      numcol, numrow, numnz, (bool)rowwise, sense, offset, colcost, collower,
+      numcol, numrow, numnz, a_format, sense, offset, colcost, collower,
       colupper, rowlower, rowupper, astart, aindex, avalue, integrality);
   if (status != HighsStatus::kOk) return (HighsInt)status;
 
@@ -98,17 +98,18 @@ HighsInt Highs_mipCall(const HighsInt numcol, const HighsInt numrow,
 
 HighsInt Highs_qpCall(
     const HighsInt numcol, const HighsInt numrow, const HighsInt numnz,
-    const HighsInt rowwise, const HighsInt q_numnz, const HighsInt sense,
-    const double offset, const double* colcost, const double* collower,
-    const double* colupper, const double* rowlower, const double* rowupper,
-    const HighsInt* astart, const HighsInt* aindex, const double* avalue,
-    const HighsInt* qstart, const HighsInt* qindex, const double* qvalue,
-    double* colvalue, double* coldual, double* rowvalue, double* rowdual,
-    HighsInt* colbasisstatus, HighsInt* rowbasisstatus, int* modelstatus) {
+    const HighsInt q_numnz, const HighsInt a_format, const HighsInt q_format,
+    const HighsInt sense, const double offset, const double* colcost,
+    const double* collower, const double* colupper, const double* rowlower,
+    const double* rowupper, const HighsInt* astart, const HighsInt* aindex,
+    const double* avalue, const HighsInt* qstart, const HighsInt* qindex,
+    const double* qvalue, double* colvalue, double* coldual, double* rowvalue,
+    double* rowdual, HighsInt* colbasisstatus, HighsInt* rowbasisstatus,
+    int* modelstatus) {
   Highs highs;
   highs.setOptionValue("output_flag", false);
   HighsStatus status =
-      highs.passModel(numcol, numrow, numnz, (bool)rowwise, q_numnz, sense,
+      highs.passModel(numcol, numrow, numnz, q_numnz, a_format, q_format, sense,
                       offset, colcost, collower, colupper, rowlower, rowupper,
                       astart, aindex, avalue, qstart, qindex, qvalue);
   if (status != HighsStatus::kOk) return (HighsInt)status;
@@ -166,47 +167,42 @@ HighsInt Highs_writeSolutionPretty(void* highs, const char* filename) {
 }
 
 HighsInt Highs_passLp(void* highs, const HighsInt numcol, const HighsInt numrow,
-                      const HighsInt numnz, const HighsInt rowwise,
+                      const HighsInt numnz, const HighsInt a_format,
                       const HighsInt sense, const double offset,
                       const double* colcost, const double* collower,
                       const double* colupper, const double* rowlower,
                       const double* rowupper, const HighsInt* astart,
                       const HighsInt* aindex, const double* avalue) {
-  const bool bool_rowwise = rowwise;
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, bool_rowwise, sense, offset, colcost,
+      ->passModel(numcol, numrow, numnz, a_format, sense, offset, colcost,
                   collower, colupper, rowlower, rowupper, astart, aindex,
                   avalue);
 }
 
 HighsInt Highs_passMip(void* highs, const HighsInt numcol,
                        const HighsInt numrow, const HighsInt numnz,
-                       const HighsInt rowwise, const HighsInt sense,
+                       const HighsInt a_format, const HighsInt sense,
                        const double offset, const double* colcost,
                        const double* collower, const double* colupper,
                        const double* rowlower, const double* rowupper,
                        const HighsInt* astart, const HighsInt* aindex,
                        const double* avalue, const HighsInt* integrality) {
-  const bool bool_rowwise = rowwise;
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, bool_rowwise, sense, offset, colcost,
+      ->passModel(numcol, numrow, numnz, a_format, sense, offset, colcost,
                   collower, colupper, rowlower, rowupper, astart, aindex,
                   avalue, integrality);
 }
 
-HighsInt Highs_passModel(void* highs, const HighsInt numcol,
-                         const HighsInt numrow, const HighsInt numnz,
-                         const HighsInt hessian_num_nz, const HighsInt rowwise,
-                         const HighsInt sense, const double offset,
-                         const double* colcost, const double* collower,
-                         const double* colupper, const double* rowlower,
-                         const double* rowupper, const HighsInt* astart,
-                         const HighsInt* aindex, const double* avalue,
-                         const HighsInt* qstart, const HighsInt* qindex,
-                         const double* qvalue, const HighsInt* integrality) {
-  const bool bool_rowwise = rowwise;
+HighsInt Highs_passModel(
+    void* highs, const HighsInt numcol, const HighsInt numrow,
+    const HighsInt numnz, const HighsInt q_num_nz, const HighsInt a_format,
+    const HighsInt q_format, const HighsInt sense, const double offset,
+    const double* colcost, const double* collower, const double* colupper,
+    const double* rowlower, const double* rowupper, const HighsInt* astart,
+    const HighsInt* aindex, const double* avalue, const HighsInt* qstart,
+    const HighsInt* qindex, const double* qvalue, const HighsInt* integrality) {
   return (HighsInt)((Highs*)highs)
-      ->passModel(numcol, numrow, numnz, hessian_num_nz, bool_rowwise, sense,
+      ->passModel(numcol, numrow, numnz, q_num_nz, a_format, q_format, sense,
                   offset, colcost, collower, colupper, rowlower, rowupper,
                   astart, aindex, avalue, qstart, qindex, qvalue, integrality);
 }
@@ -765,14 +761,14 @@ HighsInt Highs_getHessianNumNz(void* highs) {
   return ((Highs*)highs)->getHessianNumNz();
 }
 
-HighsInt Highs_getModel(void* highs, const HighsInt orientation,
-                        HighsInt* numcol, HighsInt* numrow, HighsInt* numnz,
-                        HighsInt* hessian_num_nz, HighsInt* sense,
-                        double* offset, double* colcost, double* collower,
-                        double* colupper, double* rowlower, double* rowupper,
-                        HighsInt* astart, HighsInt* aindex, double* avalue,
-                        HighsInt* qstart, HighsInt* qindex, double* qvalue,
-                        HighsInt* integrality) {
+HighsInt Highs_getModel(void* highs, const HighsInt a_format,
+                        const HighsInt q_format, HighsInt* numcol,
+                        HighsInt* numrow, HighsInt* numnz, HighsInt* q_num_nz,
+                        HighsInt* sense, double* offset, double* colcost,
+                        double* collower, double* colupper, double* rowlower,
+                        double* rowupper, HighsInt* astart, HighsInt* aindex,
+                        double* avalue, HighsInt* qstart, HighsInt* qindex,
+                        double* qvalue, HighsInt* integrality) {
   const HighsModel& model = ((Highs*)highs)->getModel();
   const HighsLp& lp = model.lp_;
   const HighsHessian& hessian = model.hessian_;
@@ -792,19 +788,19 @@ HighsInt Highs_getModel(void* highs, const HighsInt orientation,
   }
 
   // Save the original orientation so that it is recovered
-  MatrixOrientation original_orientation = lp.orientation_;
+  MatrixOrientation original_a_format = lp.orientation_;
   // Determine the desired orientation and number of start entries to
   // be copied
-  MatrixOrientation desired_orientation = MatrixOrientation::kColwise;
+  MatrixOrientation desired_a_format = MatrixOrientation::kColwise;
   HighsInt num_start_entries = *numcol;
-  if (orientation == (HighsInt)MatrixOrientation::kRowwise) {
-    desired_orientation = MatrixOrientation::kRowwise;
+  if (a_format == (HighsInt)MatrixOrientation::kRowwise) {
+    desired_a_format = MatrixOrientation::kRowwise;
     num_start_entries = *numrow;
   }
   // Ensure the desired orientation
   HighsInt return_status;
   return_status =
-      (HighsInt)((Highs*)highs)->setMatrixOrientation(desired_orientation);
+      (HighsInt)((Highs*)highs)->setMatrixOrientation(desired_a_format);
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
@@ -815,9 +811,9 @@ HighsInt Highs_getModel(void* highs, const HighsInt orientation,
   }
   if (hessian.dim_ > 0) {
     memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));
-    *hessian_num_nz = hessian.q_start_[*numcol];
-    memcpy(qindex, &hessian.q_index_[0], *hessian_num_nz * sizeof(HighsInt));
-    memcpy(qvalue, &hessian.q_value_[0], *hessian_num_nz * sizeof(double));
+    *q_num_nz = hessian.q_start_[*numcol];
+    memcpy(qindex, &hessian.q_index_[0], *q_num_nz * sizeof(HighsInt));
+    memcpy(qvalue, &hessian.q_value_[0], *q_num_nz * sizeof(double));
   }
   if ((HighsInt)lp.integrality_.size()) {
     for (int iCol = 0; iCol < *numcol; iCol++)
@@ -825,7 +821,7 @@ HighsInt Highs_getModel(void* highs, const HighsInt orientation,
   }
   // Restore the original orientation
   return_status =
-      (HighsInt)((Highs*)highs)->setMatrixOrientation(original_orientation);
+      (HighsInt)((Highs*)highs)->setMatrixOrientation(original_a_format);
   if (return_status != HighsStatuskOk) return return_status;
   return HighsStatuskOk;
 }

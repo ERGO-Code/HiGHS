@@ -1603,3 +1603,31 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   }
   return HighsStatus::kOk;
 }
+
+bool Highs::aFormatOk(const HighsInt num_nz, const HighsInt format) {
+  if (!num_nz) return true;
+  // There are nonzeros being passed, so a_format must correspond to
+  // columnwise or rowwise
+  const bool ok_format = (format == (HighsInt)MatrixOrientation::kColwise) ||
+                         (format == (HighsInt)MatrixOrientation::kRowwise);
+  assert(ok_format);
+  if (!ok_format)
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Non-empty constraint matrix has illegal format = %" HIGHSINT_FORMAT
+        "\n",
+        format);
+  return ok_format;
+}
+
+bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
+  if (!num_nz) return true;
+  const bool ok_format = format == (HighsInt)MatrixOrientation::kColwise;
+  assert(ok_format);
+  if (!ok_format)
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Non-empty Hessian matrix has illegal format = %" HIGHSINT_FORMAT "\n",
+        format);
+  return ok_format;
+}
