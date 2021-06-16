@@ -71,9 +71,11 @@ bool callCrossover(const HighsLp& lp, const HighsOptions& options,
 
   if (solution.dual_valid && solution.col_dual.size() == num_col &&
       solution.row_dual.size() == num_row) {
+    std::cout << "Calling ipx crossover with dual values" << std::endl;
     errflag = lps.CrossoverFromStartingPoint(
         &x[0], &slack[0], &solution.row_dual[0], &solution.col_dual[0]);
   } else {
+    std::cout << "Calling ipx crossover" << std::endl;
     errflag = lps.CrossoverFromStartingPoint(&x[0], &slack[0], NULL, NULL);
   }
 

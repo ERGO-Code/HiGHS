@@ -970,6 +970,13 @@ HighsInt Highs_getModel(void* highs, const HighsInt orientation,
 //     HighsInt int_solution_status  //!< Status to interpret
 // );
 
+HighsInt Highs_crossover(void* highs  //!< HiGHS object reference
+);
+
+HighsInt Highs_crossover_set(void* highs, const int n, const int m,
+                             double* col_value, double* col_dual,
+                             double* row_dual);
+
 // *********************
 // * Deprecated methods*
 // *********************
@@ -1010,8 +1017,6 @@ HighsInt Highs_setHighsBoolOptionValue(
  * to reflect the corresponding Highs basis.
  * status
  */
-int Highs_crossover(void* highs  //!< HiGHS object reference
-);
 
 // /**
 //  * @brief Returns the current model
