@@ -821,7 +821,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.colLower_.data(),
                                            localdom.colUpper_.data());
-    //lprelax.getLpSolver().setHighsOptionValue("presolve", "on");
+    // lprelax.getLpSolver().setHighsOptionValue("presolve", "on");
     lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis);
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 

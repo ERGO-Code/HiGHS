@@ -211,13 +211,15 @@ restart:
     if (!submip) {
       auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
       double currNodeEstim =
-          numNodesLastCheck - mipdata_->num_nodes_before_run + (mipdata_->num_nodes - numNodesLastCheck) *
-                                  double(1.0 - mipdata_->pruned_treeweight) /
-                                  std::max(double(mipdata_->pruned_treeweight -
-                                                  treeweightLastCheck),
-                                           mipdata_->epsilon);
+          numNodesLastCheck - mipdata_->num_nodes_before_run +
+          (mipdata_->num_nodes - numNodesLastCheck) *
+              double(1.0 - mipdata_->pruned_treeweight) /
+              std::max(
+                  double(mipdata_->pruned_treeweight - treeweightLastCheck),
+                  mipdata_->epsilon);
 
-      if (currNodeEstim >= 1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+      if (currNodeEstim >=
+          1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
         ++numHugeTreeEstim;
         // if (!submip)
         //   printf("%" HIGHSINT_FORMAT " (nodeestim: %.1f)\n",
