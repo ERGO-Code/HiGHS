@@ -636,6 +636,7 @@ void HEkkDual::solvePhase1() {
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
+    return;
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
@@ -656,6 +657,7 @@ void HEkkDual::solvePhase1() {
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       model_status = HighsModelStatus::kSolveError;
+      return;
     }
   }
 
