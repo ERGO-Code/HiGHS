@@ -24,6 +24,7 @@ struct HighsIterationCounts {
   HighsInt simplex = 0;
   HighsInt ipm = 0;
   HighsInt crossover = 0;
+  HighsInt qp = 0;
 };
 
 struct HighsScale {

@@ -30,7 +30,7 @@ const std::string kHighsChooseString = "choose";
 const std::string kHighsOnString = "on";
 const HighsInt kHighsThreadLimit = 8;  // 32;
 const double kRunningAverageMultiplier = 0.05;
-const HighsInt kHighsPrereleaseRowDualSign = 1;
+const HighsInt kHighsPrereleaseRowDualSign = -1;
 
 enum HighsDebugLevel {
   kHighsDebugLevelNone = 0,
@@ -95,10 +95,29 @@ enum SolutionStatus {
   kSolutionStatusMax = kSolutionStatusFeasible
 };
 
+enum BasisValidity {
+  kBasisValidityInvalid = 0,
+  kBasisValidityValid,
+  kBasisValidityMin = kBasisValidityInvalid,
+  kBasisValidityMax = kBasisValidityValid
+};
+
 const std::string kHighsFilenameDefault = "";
 
 // Need to allow infinite costs to pass SCIP LPI unit tests
 const bool kHighsAllowInfiniteCosts = true;
+
+enum class HighsPresolveStatus {
+  kNotPresolved = -1,
+  kNotReduced,
+  kInfeasible,
+  kUnboundedOrInfeasible,
+  kReduced,
+  kReducedToEmpty,
+  kTimeout,
+  kNullError,
+  kOptionsError,
+};
 
 enum class HighsModelStatus {
   // NB Add new status values to the end so that int cast of status

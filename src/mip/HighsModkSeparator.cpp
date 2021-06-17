@@ -44,7 +44,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                             HighsTransformedLp& transLp,
                                             HighsCutPool& cutpool) {
   const HighsMipSolver& mipsolver = lpRelaxation.getMipSolver();
-  const HighsLp& lp = lpRelaxation.getModel();
+  const HighsLp& lp = lpRelaxation.getLp();
 
   std::vector<uint8_t> skipRow(lp.numRow_);
 

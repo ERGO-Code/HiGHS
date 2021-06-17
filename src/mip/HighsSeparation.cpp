@@ -104,7 +104,7 @@ class AggregationHeuristic {
         propdomain(propdomain),
         mip(lprelaxation.getMipSolver()),
         lpsol(lprelaxation.getLpSolver().getSolution()),
-        lp(lprelaxation.getLpSolver().getModel()) {
+        lp(lprelaxation.getLpSolver().getLp()) {
     numcuts = 0;
   }
 

@@ -51,7 +51,6 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
       std::cout << cxx_options.help({""}) << std::endl;
       exit(0);
     }
-
     if (result.count(kModelFileString)) {
       auto& v = result[kModelFileString].as<std::vector<std::string>>();
       if (v.size() > 1) {

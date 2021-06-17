@@ -15,6 +15,18 @@
  */
 #include "lp_data/HighsLp.h"
 
+#include <cassert>
+
+bool HighsLp::isMip() {
+  HighsInt integrality_size = this->integrality_.size();
+  if (integrality_size) {
+    assert(integrality_size == this->numCol_);
+    for (HighsInt iCol = 0; iCol < this->numCol_; iCol++)
+      if (this->integrality_[iCol] != HighsVarType::kContinuous) return true;
+  }
+  return false;
+}
+
 bool HighsLp::operator==(const HighsLp& lp) {
   bool equal = equalButForNames(lp);
   equal = this->row_names_ == lp.row_names_ && equal;
@@ -59,7 +71,6 @@ void HighsLp::clear() {
   this->orientation_ = MatrixOrientation::kNone;
 
   this->model_name_ = "";
-  this->lp_name_ = "";
 
   this->col_names_.clear();
   this->row_names_.clear();

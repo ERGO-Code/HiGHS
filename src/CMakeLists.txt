@@ -124,6 +124,9 @@ set(sources
     mip/HighsPseudocost.cpp
     mip/HighsRedcostFixing.cpp
     mip/HighsNodeQueue.cpp
+    model/HighsHessian.cpp
+    model/HighsHessianUtils.cpp
+    model/HighsModel.cpp
     presolve/ICrashX.cpp
     #presolve/HPreData.cpp
     presolve/HAggregator.cpp
@@ -135,6 +138,9 @@ set(sources
     presolve/PresolveComponent.cpp
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
+    qpsolver/basis.cpp
+    qpsolver/solver.cpp
+    qpsolver/ratiotest/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -219,6 +225,11 @@ set(headers
     mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    model/HighsHessian.h
+    model/HighsHessianUtils.h
+    model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -327,9 +338,9 @@ endif()
 include(CheckLanguage)
 check_language("Fortran")
 if(FORTRAN_FOUND)
-    set(fortransources interfaces/highs_lp_solver.f90)
+    set(fortransources interfaces/highs_fortran_api.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
-    add_library(FortranHighs interfaces/highs_lp_solver.f90)
+    add_library(FortranHighs interfaces/highs_fortran_api.f90)
     target_link_libraries(FortranHighs PUBLIC libhighs)
     install(TARGETS FortranHighs
         LIBRARY DESTINATION lib
@@ -527,6 +538,9 @@ target_sources(libhighs PRIVATE
     mip/HighsPseudocost.cpp
     mip/HighsNodeQueue.cpp
     mip/HighsRedcostFixing.cpp
+    model/HighsHessian.cpp
+    model/HighsHessianUtils.cpp
+    model/HighsModel.cpp
     presolve/ICrashX.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
@@ -537,6 +551,9 @@ target_sources(libhighs PRIVATE
     presolve/PresolveComponent.cpp
     presolve/Presolve.cpp
     presolve/PresolveUtils.cpp
+    qpsolver/basis.cpp
+    qpsolver/solver.cpp
+    qpsolver/ratiotest/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -566,7 +583,7 @@ target_sources(libhighs PRIVATE
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
-target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
+target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
                            presolve/ util/ test/ interfaces/ ../extern/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
@@ -635,6 +652,8 @@ set(headers_fast_build_
     mip/HighsSparseVectorSum.h
     mip/HighsTableauSeparator.h
     mip/HighsTransformedLp.h
+    model/HighsHessian.h
+    model/HighsHessianUtils.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h

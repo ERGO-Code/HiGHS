@@ -17,13 +17,17 @@ namespace free_format_parser {
 
 FreeFormatParserReturnCode HMpsFF::loadProblem(
     const HighsLogOptions& log_options, const std::string filename,
-    HighsLp& lp) {
+    HighsModel& model) {
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
   FreeFormatParserReturnCode result = parse(log_options, filename);
   if (result != FreeFormatParserReturnCode::kSuccess) return result;
 
   colCost.assign(numCol, 0);
   for (auto i : coeffobj) colCost[i.first] = i.second;
   HighsInt status = fillMatrix();
+  if (status) return FreeFormatParserReturnCode::kParserError;
+  status = fillHessian();
   if (status) return FreeFormatParserReturnCode::kParserError;
 
   lp.numRow_ = std::move(numRow);
@@ -32,6 +36,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
+  lp.orientation_ = MatrixOrientation::kColwise;
   lp.Astart_ = std::move(Astart);
   lp.Aindex_ = std::move(Aindex);
   lp.Avalue_ = std::move(Avalue);
@@ -45,6 +50,11 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.col_names_ = std::move(colNames);
 
   lp.integrality_ = std::move(col_integrality);
+
+  hessian.dim_ = q_dim;
+  hessian.q_start_ = std::move(q_start);
+  hessian.q_index_ = std::move(q_index);
+  hessian.q_value_ = std::move(q_value);
 
   return FreeFormatParserReturnCode::kSuccess;
 }
@@ -89,6 +99,45 @@ HighsInt HMpsFF::fillMatrix() {
   return 0;
 }
 
+HighsInt HMpsFF::fillHessian() {
+  HighsInt num_entries = q_entries.size();
+  if (!num_entries) {
+    q_dim = 0;
+    return 0;
+  } else {
+    q_dim = numCol;
+  }
+
+  q_start.resize(q_dim + 1);
+  q_index.resize(num_entries);
+  q_value.resize(num_entries);
+
+  std::vector<HighsInt> q_length;
+  q_length.assign(q_dim, 0);
+
+  for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
+    HighsInt iCol = std::get<1>(q_entries[iEl]);
+    q_length[iCol]++;
+  }
+  q_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < numCol; iCol++)
+    q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
+
+  for (HighsInt iEl = 0; iEl < num_entries; iEl++) {
+    HighsInt iRow = std::get<0>(q_entries[iEl]);
+    HighsInt iCol = std::get<1>(q_entries[iEl]);
+    double value = std::get<2>(q_entries[iEl]);
+    q_index[q_start[iCol]] = iRow;
+    q_value[q_start[iCol]] = value;
+    q_start[iCol]++;
+  }
+  q_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < numCol; iCol++)
+    q_start[iCol + 1] = q_start[iCol] + q_length[iCol];
+
+  return 0;
+}
+
 FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
                                          const std::string& filename) {
   std::ifstream f;
@@ -103,6 +152,10 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
     while (keyword != HMpsFF::Parsekey::kFail &&
            keyword != HMpsFF::Parsekey::kEnd &&
            keyword != HMpsFF::Parsekey::kTimeout) {
+      if (cannotParseSection(log_options, keyword)) {
+        f.close();
+        return FreeFormatParserReturnCode::kParserError;
+      }
       switch (keyword) {
         case HMpsFF::Parsekey::kObjsense:
           keyword = parseObjsense(log_options, f);
@@ -121,6 +174,11 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
           break;
         case HMpsFF::Parsekey::kRanges:
           keyword = parseRanges(log_options, f);
+          break;
+        case HMpsFF::Parsekey::kQsection:
+        case HMpsFF::Parsekey::kQmatrix:
+        case HMpsFF::Parsekey::kQuadobj:
+          keyword = parseHessian(log_options, f, keyword);
           break;
         case HMpsFF::Parsekey::kFail:
           f.close();
@@ -165,6 +223,62 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
   return FreeFormatParserReturnCode::kSuccess;
 }
 
+bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
+                                const HMpsFF::Parsekey keyword) {
+  switch (keyword) {
+      // Identify the sections that can be parsed
+    /*
+    case HMpsFF::Parsekey::kQsection:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse QSECTION section\n");
+      break;
+    */
+    case HMpsFF::Parsekey::kQcmatrix:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse QCMATRIX section\n");
+      break;
+    case HMpsFF::Parsekey::kCsection:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse CSECTION section\n");
+      break;
+    case HMpsFF::Parsekey::kDelayedrows:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse DELAYEDROWS section\n");
+      break;
+    case HMpsFF::Parsekey::kModelcuts:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse MODELCUTS section\n");
+      break;
+    case HMpsFF::Parsekey::kIndicators:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse INDICATORS section\n");
+      break;
+    case HMpsFF::Parsekey::kSets:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse SETS section\n");
+      break;
+    case HMpsFF::Parsekey::kGencons:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse GENCONS section\n");
+      break;
+    case HMpsFF::Parsekey::kPwlobj:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse PWLOBJ section\n");
+      break;
+    case HMpsFF::Parsekey::kPwlnam:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse PWLNAM section\n");
+      break;
+    case HMpsFF::Parsekey::kPwlcon:
+      highsLogUser(log_options, HighsLogType::kError,
+                   "MPS file reader cannot parse PWLCON section\n");
+      break;
+    default:
+      return false;
+  }
+  return true;
+}
+
 // Assuming string is not empty.
 HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
                                         HighsInt& end,
@@ -180,30 +294,50 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
 
   word = strline.substr(start, end - start);
 
-  if (word == "NAME") {
+  if (word == "NAME")
     return HMpsFF::Parsekey::kName;
-  } else if (word == "OBJSENSE")
+  else if (word == "OBJSENSE")
     return HMpsFF::Parsekey::kObjsense;
-  else if (word.front() == 'M') {
-    if (word == "MAX")
-      return HMpsFF::Parsekey::kMax;
-    else if (word == "MIN")
-      return HMpsFF::Parsekey::kMin;
-    else
-      return HMpsFF::Parsekey::kNone;
-  } else if (word.front() == 'R') {
-    if (word == "ROWS")
-      return HMpsFF::Parsekey::kRows;
-    else if (word == "RHS")
-      return HMpsFF::Parsekey::kRhs;
-    else if (word == "RANGES")
-      return HMpsFF::Parsekey::kRanges;
-    else
-      return HMpsFF::Parsekey::kNone;
-  } else if (word == "COLUMNS")
+  else if (word == "MAX")
+    return HMpsFF::Parsekey::kMax;
+  else if (word == "MIN")
+    return HMpsFF::Parsekey::kMin;
+  else if (word == "ROWS")
+    return HMpsFF::Parsekey::kRows;
+  else if (word == "COLUMNS")
     return HMpsFF::Parsekey::kCols;
+  else if (word == "RHS")
+    return HMpsFF::Parsekey::kRhs;
   else if (word == "BOUNDS")
     return HMpsFF::Parsekey::kBounds;
+  else if (word == "RANGES")
+    return HMpsFF::Parsekey::kRanges;
+  else if (word == "QSECTION")
+    return HMpsFF::Parsekey::kQsection;
+  else if (word == "QMATRIX")
+    return HMpsFF::Parsekey::kQmatrix;
+  else if (word == "QUADOBJ")
+    return HMpsFF::Parsekey::kQuadobj;
+  else if (word == "QCMATRIX")
+    return HMpsFF::Parsekey::kQcmatrix;
+  else if (word == "CSECTION")
+    return HMpsFF::Parsekey::kCsection;
+  else if (word == "DELAYEDROWS")
+    return HMpsFF::Parsekey::kDelayedrows;
+  else if (word == "MODELCUTS")
+    return HMpsFF::Parsekey::kModelcuts;
+  else if (word == "INDICATORS")
+    return HMpsFF::Parsekey::kIndicators;
+  else if (word == "SETS")
+    return HMpsFF::Parsekey::kSets;
+  else if (word == "GENCONS")
+    return HMpsFF::Parsekey::kGencons;
+  else if (word == "PWLOBJ")
+    return HMpsFF::Parsekey::kPwlobj;
+  else if (word == "PWLNAM")
+    return HMpsFF::Parsekey::kPwlnam;
+  else if (word == "PWLCON")
+    return HMpsFF::Parsekey::kPwlcon;
   else if (word == "ENDATA")
     return HMpsFF::Parsekey::kEnd;
   else
@@ -1023,4 +1157,116 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
   return HMpsFF::Parsekey::kFail;
 }
 
+typename HMpsFF::Parsekey HMpsFF::parseHessian(
+    const HighsLogOptions& log_options, std::ifstream& file,
+    const HMpsFF::Parsekey keyword) {
+  // Parse Hessian information from QSECTION, QUADOBJ or QMATRIX
+  // section according to keyword
+  const bool qmatrix = keyword == HMpsFF::Parsekey::kQmatrix;
+  std::string section_name;
+  if (qmatrix) {
+    section_name = "QMATRIX";
+  } else if (keyword == HMpsFF::Parsekey::kQuadobj) {
+    section_name = "QUADOBJ";
+  } else {
+    section_name = "QSECTION";
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "QSECTION section is assumed to apply to objective\n");
+  }
+  std::string strline;
+  std::string col_name;
+  std::string row_name;
+  std::string coeff_name;
+  HighsInt end_row_name;
+  HighsInt end_coeff_name;
+  HighsInt colidx, rowidx, start, end;
+  double coeff;
+
+  while (getline(file, strline)) {
+    double current = getWallTime();
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::Parsekey::kTimeout;
+    if (any_first_non_blank_as_star_implies_comment) {
+      trim(strline);
+      if (strline.size() == 0 || strline[0] == '*') continue;
+    } else {
+      if (strline.size() > 0) {
+        // Just look for comment character in column 1
+        if (strline[0] == '*') continue;
+      }
+      trim(strline);
+      if (strline.size() == 0) continue;
+    }
+
+    HighsInt begin = 0;
+    HighsInt end = 0;
+    HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
+
+    // start of new section?
+    if (key != Parsekey::kNone) return key;
+
+    // Get the column name
+    auto mit = colname2idx.find(col_name);
+    if (mit == colname2idx.end()) {
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "%s contains col %s not in COLS section: ignored\n",
+                   section_name.c_str(), col_name.c_str());
+      continue;
+    };
+    colidx = mit->second;
+    assert(colidx >= 0 && colidx < numCol);
+
+    // Loop over the maximum of two entries per row of the file
+    for (int entry = 0; entry < 2; entry++) {
+      // Get the row name
+      row_name = "";
+      row_name = first_word(strline, end);
+      end_row_name = first_word_end(strline, end);
+
+      if (row_name == "") break;
+
+      coeff_name = "";
+      coeff_name = first_word(strline, end_row_name);
+      end_coeff_name = first_word_end(strline, end_row_name);
+
+      if (coeff_name == "") {
+        highsLogUser(log_options, HighsLogType::kError,
+                     "%s has no coefficient for entry %s in column %s\n",
+                     section_name.c_str(), row_name.c_str(), col_name.c_str());
+        return HMpsFF::Parsekey::kFail;
+      }
+
+      mit = colname2idx.find(row_name);
+      if (mit == colname2idx.end()) {
+        highsLogUser(
+            log_options, HighsLogType::kWarning,
+            "%s contains entry %s not in COLS section for column %s: ignored\n",
+            section_name.c_str(), row_name.c_str(), col_name.c_str());
+        break;
+      };
+      rowidx = mit->second;
+      assert(rowidx >= 0 && rowidx < numCol);
+
+      double coeff = atof(coeff_name.c_str());
+      if (coeff) {
+        if (qmatrix) {
+          // QMATRIX has the whole Hessian, so store the entry
+          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+        } else {
+          // QSECTION and QUADOBJ has the lower triangle of the
+          // Hessian, so also store the transpose entry if
+          // off-diagonal
+          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+          if (rowidx != colidx)
+            q_entries.push_back(std::make_tuple(colidx, rowidx, coeff));
+        }
+      }
+      end = end_coeff_name;
+      // Don't read more if end of line reached
+      if (end == (HighsInt)strline.length()) break;
+    }
+  }
+
+  return HMpsFF::Parsekey::kFail;
+}
 }  // namespace free_format_parser

@@ -251,6 +251,7 @@ HighsRunModel.mps
 
 # Website
 htdocs/
+_site/
 
 # Release documents
 releaseDocs
