@@ -1658,7 +1658,8 @@ void HEkkPrimal::considerInfeasibleValueIn() {
       primal_infeasibility = value_in - upper;
     }
     info.num_primal_infeasibility++;
-    printf(
+    highsLogDev(
+        ekk_instance_.options_.log_options, HighsLogType::kWarning,
         "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
         primal_infeasibility, lower, value_in, upper);
     rebuild_reason = kRebuildReasonPrimalInfeasibleInPrimalSimplex;

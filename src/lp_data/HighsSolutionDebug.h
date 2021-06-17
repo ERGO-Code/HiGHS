@@ -48,18 +48,19 @@ void debugReportHighsSolution(const string message,
                               const HighsModelStatus model_status);
 
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
-                                     const HighsLp lp, const HighsBasis& basis);
+                                     const HighsLp& lp,
+                                     const HighsBasis& basis);
 
 HighsDebugStatus debugPrimalSolutionRightSize(const HighsOptions& options,
-                                              const HighsLp lp,
+                                              const HighsLp& lp,
                                               const HighsSolution& solution);
 
 HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
-                                            const HighsLp lp,
+                                            const HighsLp& lp,
                                             const HighsSolution& solution);
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp lp,
+                                      const HighsLp& lp,
                                       const HighsBasis& basis);
 
 // Methods below are not called externally

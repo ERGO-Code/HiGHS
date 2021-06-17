@@ -866,6 +866,14 @@ restart:
   }
 
   if (!domain.infeasible()) {
+    if (!domain.getChangedCols().empty()) {
+      auto tmpLpIters = -lp.getNumLpIterations();
+      status = lp.resolveLp(&domain);
+      tmpLpIters += lp.getNumLpIterations();
+      avgrootlpiters = lp.getAvgSolveIters();
+      total_lp_iterations += tmpLpIters;
+    }
+
     heuristics.randomizedRounding(firstlpsol);
     heuristics.flushStatistics();
   }
@@ -1088,7 +1096,7 @@ restart:
   }
 
   removeFixedIndices();
-  lp.removeObsoleteRows();
+  if (lp.getLpSolver().getBasis().valid) lp.removeObsoleteRows();
   rootlpsolobj = lp.getObjective();
 
   if (lower_bound <= upper_limit) {

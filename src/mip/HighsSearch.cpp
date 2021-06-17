@@ -596,7 +596,9 @@ const HighsSearch::NodeData* HighsSearch::getParentNodeData() const {
 }
 
 void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
+  auto oldchangedcols = localdom.getChangedCols().size();
   localdom.propagate();
+  localdom.clearChangedCols(oldchangedcols);
   if (!localdom.infeasible()) {
     nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
                           nodestack.back().lower_bound,

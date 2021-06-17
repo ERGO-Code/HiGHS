@@ -816,10 +816,13 @@ void HighsPrimalHeuristics::randomizedRounding(
   }
 
   if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
-    HighsLpRelaxation lprelax(mipsolver.mipdata_->lp);
+    HighsLpRelaxation lprelax(mipsolver);
+    lprelax.loadModel();
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
                                            localdom.colLower_.data(),
                                            localdom.colUpper_.data());
+    //lprelax.getLpSolver().setHighsOptionValue("presolve", "on");
+    lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis);
     HighsLpRelaxation::Status st = lprelax.resolveLp();
 
     if (st == HighsLpRelaxation::Status::kInfeasible) {
