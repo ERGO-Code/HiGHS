@@ -37,8 +37,6 @@ HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
                           const std::string filename);
 
 // Methods taking HighsLp as an argument
-bool isMip(HighsLp& lp);
-
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
@@ -53,11 +51,6 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound);
 
-HighsStatus assessMatrix(const HighsOptions& options, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& Astart,
-                         vector<HighsInt>& Aindex, vector<double>& Avalue,
-                         const double small_matrix_value,
-                         const double large_matrix_value);
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
@@ -281,8 +274,9 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
-void setOrientation(HighsLp& lp, const MatrixOrientation& desired_orientation =
-                                     MatrixOrientation::kColwise);
+HighsStatus setOrientation(
+    HighsLp& lp,
+    const MatrixOrientation desired_orientation = MatrixOrientation::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

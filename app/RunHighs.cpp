@@ -18,7 +18,8 @@
 
 void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,
-                             const HighsStatus read_status, const HighsLp& lp);
+                             const HighsStatus read_status,
+                             const HighsModel& model);
 void reportSolvedLpStats(const HighsLogOptions& log_options,
                          const HighsStatus run_status, Highs& highs);
 
@@ -44,9 +45,8 @@ int main(int argc, char** argv) {
   // Solve the model
   HighsStatus run_status = highs.run();
   //
-  // Report solution stats if model solved as LP
-  if (highs.getInfo().mip_node_count == -1)
-    reportSolvedLpStats(options.log_options, run_status, highs);
+  // Report solution stats
+  reportSolvedLpStats(options.log_options, run_status, highs);
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
@@ -66,21 +66,48 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options) {
 }
 
 void reportModelStatsOrError(const HighsLogOptions& log_options,
-                             const HighsStatus read_status, const HighsLp& lp) {
+                             const HighsStatus read_status,
+                             const HighsModel& model) {
+  const HighsLp& lp = model.lp_;
+  const HighsHessian& hessian = model.hessian_;
   if (read_status == HighsStatus::kError) {
     highsLogUser(log_options, HighsLogType::kInfo, "Error loading file\n");
   } else {
-    highsLogUser(log_options, HighsLogType::kInfo, "LP       : %s\n",
-                 lp.model_name_.c_str());
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Rows     : %" HIGHSINT_FORMAT "\n", lp.numRow_);
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Cols     : %" HIGHSINT_FORMAT "\n", lp.numCol_);
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Nonzeros : %" HIGHSINT_FORMAT "\n", lp.Avalue_.size());
     HighsInt num_int = 0;
     for (HighsUInt i = 0; i < lp.integrality_.size(); i++)
       if (lp.integrality_[i] != HighsVarType::kContinuous) num_int++;
+    std::string problem_type;
+    if (hessian.dim_) {
+      if (num_int) {
+        problem_type = "MIQP";
+      } else {
+        problem_type = "QP  ";
+      }
+    } else {
+      if (num_int) {
+        problem_type = "MIP ";
+      } else {
+        problem_type = "LP  ";
+      }
+    }
+    const HighsInt a_num_nz = lp.Astart_[lp.numCol_];
+    HighsInt q_num_nz = 0;
+    if (hessian.dim_) q_num_nz = hessian.q_start_[lp.numCol_];
+    highsLogUser(log_options, HighsLogType::kInfo, "%4s      : %s\n",
+                 problem_type.c_str(), lp.model_name_.c_str());
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Rows      : %" HIGHSINT_FORMAT "\n", lp.numRow_);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Cols      : %" HIGHSINT_FORMAT "\n", lp.numCol_);
+    if (q_num_nz) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
+    } else {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+    }
     if (num_int)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Integer  : %" HIGHSINT_FORMAT "\n", num_int);
@@ -125,6 +152,10 @@ void reportSolvedLpStats(const HighsLogOptions& log_options,
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
                  highs_info.simplex_iteration_count);
+    if (highs_info.qp_iteration_count)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",
+                   highs_info.qp_iteration_count);
     if (highs_info.ipm_iteration_count)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "IPM       iterations: %" HIGHSINT_FORMAT "\n",

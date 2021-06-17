@@ -83,6 +83,7 @@ class HEkk {
   HighsInt return_dual_solution_status_;
 
   HighsLp lp_;
+  std::string lp_name_;
   HighsSimplexStatus status_;
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;

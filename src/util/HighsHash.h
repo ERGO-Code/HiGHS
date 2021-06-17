@@ -28,8 +28,15 @@
 
 #include "util/HighsInt.h"
 
+#if __GNUG__ && __GNUC__ < 5
+#define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
+#else
+#define IS_TRIVIALLY_COPYABLE(T) std::is_trivially_copyable<T>::value
+#endif
+
 template <typename T>
-struct HighsHashable : public std::is_trivially_copyable<T> {};
+struct HighsHashable : std::integral_constant<bool, IS_TRIVIALLY_COPYABLE(T)> {
+};
 
 template <typename U, typename V>
 struct HighsHashable<std::pair<U, V>>
@@ -182,10 +189,11 @@ struct HighsHashHelpers {
     const char* dataend = (const char*)(vals + numvals);
 
     while (dataptr != dataend) {
+      using std::size_t;
       size_t numBytes = std::min(size_t(dataend - dataptr), size_t{64});
       size_t numPairs = (numBytes + 7) / 8;
       size_t lastPairBytes = numBytes - (numPairs - 1) * 8;
-      size_t chunkhash = 0;
+      u64 chunkhash = 0;
       switch (numPairs) {
         case 8:
           if (hash != 0) hash = multiply_modM61(hash, c[k++ & 15] & M61());

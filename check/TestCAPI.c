@@ -6,11 +6,23 @@
 #undef NDEBUG
 #include <assert.h>
 
+HighsInt intArraysEqual(const HighsInt dim, const HighsInt* array0, const HighsInt* array1) {
+  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
+  return 1;
+}
+
+HighsInt doubleArraysEqual(const double dim, const double* array0, const double* array1) {
+  for (HighsInt ix = 0; ix < dim; ix++) if (array0[ix] != array1[ix]) return 0;
+  return 1;
+}
+
 void minimal_api() {
   HighsInt numcol = 2;
   HighsInt numrow = 2;
   HighsInt nnz = 4;
   HighsInt rowwise = 0;
+  HighsInt sense = 1;
+  double offset = 0;
   HighsInt i;
 
   double cc[2] = {1.0, -2.0};
@@ -32,8 +44,9 @@ void minimal_api() {
 
   HighsInt modelstatus;
 
-  HighsInt status = Highs_lpCall(numcol, numrow, nnz, rowwise, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
-            cd, rv, rd, cbs, rbs, &modelstatus);
+  HighsInt status = Highs_lpCall(numcol, numrow, nnz, rowwise, sense, offset,
+				 cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
+				 cd, rv, rd, cbs, rbs, &modelstatus);
   assert(status == 0);
 
   for (i = 0; i < numcol; i++) {
@@ -107,6 +120,8 @@ void minimal_api_lp() {
   const HighsInt numrow = 3;
   const HighsInt numnz = 5;
   HighsInt rowwise = 0;
+  HighsInt sense = 1;
+  double offset = 0;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[2] = {2.0, 3.0};
@@ -131,7 +146,7 @@ void minimal_api_lp() {
   HighsInt modelstatus;
 
   HighsInt runstatus = Highs_lpCall(numcol, numrow, numnz, rowwise,
-				    colcost, collower, colupper, rowlower, rowupper,
+				    sense, offset, colcost, collower, colupper, rowlower, rowupper,
 				    astart, aindex, avalue,
 				    colvalue, coldual, rowvalue, rowdual,
 				    colbasisstatus, rowbasisstatus,
@@ -171,6 +186,12 @@ void full_api() {
 
   highs = Highs_create();
 
+  HighsInt numcol = 2;
+  HighsInt numrow = 2;
+  HighsInt numnz = 4;
+  HighsInt orientation = 2; //Row-wise
+  HighsInt sense = 1;
+  double offset = 0;
   double cc[2] = {1.0, -2.0};
   double cl[2] = {0.0, 0.0};
   double cu[2] = {10.0, 10.0};
@@ -180,10 +201,51 @@ void full_api() {
   HighsInt aindex[4] = {0, 1, 0, 1};
   double avalue[4] = {1.0, 2.0, 1.0, 3.0};
 
-  assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) );
-  assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) );
+  assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) == 0);
+  assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) == 0);
 
+  assert( Highs_getNumCols(highs) == numcol);
+  assert( Highs_getNumRows(highs) == numrow);
+  assert( Highs_getNumNz(highs) == numnz);
+  assert( Highs_getHessianNumNz(highs) == 0);
+
+  HighsInt ck_numcol;
+  HighsInt ck_numrow;
+  HighsInt ck_numnz;
+  HighsInt ck_hessian_num_nz;
+  HighsInt ck_rowwise;
+  HighsInt ck_sense;
+  double ck_offset;
+  double ck_cc[2];
+  double ck_cl[2];
+  double ck_cu[2];
+  double ck_rl[2];
+  double ck_ru[2];
+  HighsInt ck_astart[3];
+  HighsInt ck_aindex[4];
+  double ck_avalue[4];
+
+  Highs_getModel(highs, orientation,
+		 &ck_numcol, &ck_numrow, &ck_numnz, NULL,
+		 &ck_sense, &ck_offset,
+		 ck_cc, ck_cl, ck_cu, ck_rl, ck_ru,
+		 ck_astart, ck_aindex, ck_avalue,
+		 NULL, NULL, NULL, NULL);
+  assert(ck_numcol == numcol);
+  assert(ck_numrow == numrow);
+  assert(ck_numnz == numnz);
+  assert(ck_sense == sense);
+  assert(ck_offset == offset);
+  assert(doubleArraysEqual(numcol, ck_cc, cc));
+  assert(doubleArraysEqual(numcol, ck_cl, cl));
+  assert(doubleArraysEqual(numcol, ck_cu, cu));
+  assert(doubleArraysEqual(numrow, ck_rl, rl));
+  assert(doubleArraysEqual(numrow, ck_ru, ru));
+  assert(intArraysEqual(numcol, ck_astart, astart));
+  assert(intArraysEqual(numnz, ck_aindex, aindex));
+  assert(doubleArraysEqual(numnz, ck_avalue, avalue));
   Highs_run(highs);
+
   Highs_destroy(highs);
 }
 
@@ -226,9 +288,9 @@ void full_api_lp() {
   HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(int) * numrow);
 
   // Add two columns to the empty LP
-  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) );
+  assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
   // Add three rows to the 2-column LP
-  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) );
+  assert( Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue) == 0);
 
   HighsInt sense;
   Highs_getObjectiveSense(highs, &sense);
@@ -318,11 +380,13 @@ void full_api_lp() {
 
   // Define the constraint matrix col-wise to pass to the LP
   HighsInt rowwise = 0;
+  sense = 1;
+  double offset = 0;
   HighsInt astart[2] = {0, 2};
   HighsInt aindex[5] = {1, 2, 0, 1, 2};
   double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
   highs = Highs_create();
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise,
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz, rowwise, sense, offset,
 			   colcost, collower, colupper,
 			   rowlower, rowupper,
 			   astart, aindex, avalue);

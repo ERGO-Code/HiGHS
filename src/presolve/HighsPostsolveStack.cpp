@@ -82,7 +82,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
 
   // compute the row dual value such that reduced cost of basic column is 0
   solution.row_dual[row] = 0;
-  HighsCDouble dualval = -colCost;
+  HighsCDouble dualval = colCost;
   for (const auto& colVal : colValues)
     dualval -= colVal.value * solution.row_dual[colVal.index];
 
@@ -92,7 +92,7 @@ void HighsPostsolveStack::FreeColSubstitution::undo(
   // set basis status
   basis.col_status[col] = HighsBasisStatus::kBasic;
   if (rowType == RowType::kEq)
-    basis.row_status[row] = solution.row_dual[row] > 0
+    basis.row_status[row] = solution.row_dual[row] < 0
                                 ? HighsBasisStatus::kUpper
                                 : HighsBasisStatus::kLower;
   else if (rowType == RowType::kGeq)
@@ -140,11 +140,11 @@ void HighsPostsolveStack::DoubletonEquation::undo(
     // column must get zero reduced cost as the current bound cannot be used
     // so alter the dual multiplier of the row to make the dual multiplier of
     // column zero
-    double rowDualDelta = -solution.col_dual[col] / coef;
+    double rowDualDelta = solution.col_dual[col] / coef;
     solution.row_dual[row] = double(rowDual + rowDualDelta);
     solution.col_dual[col] = 0.0;
     solution.col_dual[colSubst] = double(
-        HighsCDouble(solution.col_dual[colSubst]) + rowDualDelta * coefSubst);
+        HighsCDouble(solution.col_dual[colSubst]) - rowDualDelta * coefSubst);
     if ((std::signbit(coef) == std::signbit(coefSubst) &&
          basis.col_status[col] == HighsBasisStatus::kUpper) ||
         (std::signbit(coef) != std::signbit(coefSubst) &&
@@ -156,11 +156,11 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   } else {
     // otherwise make the reduced cost of the subsituted column zero and make
     // that column basic
-    double rowDualDelta = -solution.col_dual[colSubst] / coefSubst;
+    double rowDualDelta = solution.col_dual[colSubst] / coefSubst;
     solution.row_dual[row] = double(rowDual + rowDualDelta);
     solution.col_dual[colSubst] = 0.0;
     solution.col_dual[col] =
-        double(HighsCDouble(solution.col_dual[col]) + rowDualDelta * coef);
+        double(HighsCDouble(solution.col_dual[col]) - rowDualDelta * coef);
     basis.col_status[colSubst] = HighsBasisStatus::kBasic;
   }
 
@@ -362,7 +362,7 @@ void HighsPostsolveStack::SingletonRow::undo(const HighsOptions& options,
   basis.col_status[col] = HighsBasisStatus::kBasic;
   // choose the row dual value such that the columns reduced cost becomes
   // zero
-  solution.row_dual[row] = -solution.col_dual[col] / coef;
+  solution.row_dual[row] = solution.col_dual[col] / coef;
   solution.col_dual[col] = 0;
 }
 
@@ -381,7 +381,7 @@ void HighsPostsolveStack::FixedCol::undo(const HighsOptions& options,
   HighsCDouble reducedCost = colCost;
   for (const auto& colVal : colValues) {
     assert((HighsInt)solution.row_dual.size() > colVal.index);
-    reducedCost += colVal.value * solution.row_dual[colVal.index];
+    reducedCost -= colVal.value * solution.row_dual[colVal.index];
   }
 
   solution.col_dual[col] = double(reducedCost);
@@ -419,24 +419,24 @@ void HighsPostsolveStack::ForcingRow::undo(
   if (rowType == RowType::kLeq) {
     for (const auto& rowVal : rowValues) {
       double colDual =
-          solution.col_dual[rowVal.index] + rowVal.value * dualDelta;
+          solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
       if (colDual * rowVal.value < 0) {
-        // column is dual infeasible, increase the row dual such that its
+        // column is dual infeasible, decrease the row dual such that its
         // reduced cost become zero and remember this column as the new basic
         // column for this row
-        dualDelta = -solution.col_dual[rowVal.index] / rowVal.value;
+        dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
         basicCol = rowVal.index;
       }
     }
   } else {
     for (const auto& rowVal : rowValues) {
       double colDual =
-          solution.col_dual[rowVal.index] + rowVal.value * dualDelta;
+          solution.col_dual[rowVal.index] - rowVal.value * dualDelta;
       if (colDual * rowVal.value > 0) {
         // column is dual infeasible, decrease the row dual such that its
         // reduced cost become zero and remember this column as the new basic
         // column for this row
-        dualDelta = -solution.col_dual[rowVal.index] / rowVal.value;
+        dualDelta = solution.col_dual[rowVal.index] / rowVal.value;
         basicCol = rowVal.index;
       }
     }
@@ -446,7 +446,7 @@ void HighsPostsolveStack::ForcingRow::undo(
     solution.row_dual[row] = solution.row_dual[row] + dualDelta;
     for (const auto& rowVal : rowValues) {
       solution.col_dual[rowVal.index] =
-          double(solution.col_dual[rowVal.index] +
+          double(solution.col_dual[rowVal.index] -
                  HighsCDouble(dualDelta) * rowVal.value);
     }
     solution.col_dual[basicCol] = 0;
@@ -469,9 +469,9 @@ void HighsPostsolveStack::DuplicateRow::undo(const HighsOptions& options,
     basis.row_status[duplicateRow] = HighsBasisStatus::kBasic;
     return;
   }
-  if (solution.row_dual[row] > options.dual_feasibility_tolerance)
+  if (solution.row_dual[row] < -options.dual_feasibility_tolerance)
     basis.row_status[row] = HighsBasisStatus::kUpper;
-  else if (solution.row_dual[row] < -options.dual_feasibility_tolerance)
+  else if (solution.row_dual[row] > options.dual_feasibility_tolerance)
     basis.row_status[row] = HighsBasisStatus::kLower;
 
   // at least one bound of the row was tightened by using the bound of the
