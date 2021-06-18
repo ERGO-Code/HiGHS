@@ -45,9 +45,8 @@ int main(int argc, char** argv) {
   // Solve the model
   HighsStatus run_status = highs.run();
   //
-  // Report solution stats if model solved as LP
-  if (highs.getInfo().mip_node_count == -1)
-    reportSolvedLpStats(options.log_options, run_status, highs);
+  // Report solution stats
+  reportSolvedLpStats(options.log_options, run_status, highs);
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file)
