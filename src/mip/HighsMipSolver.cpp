@@ -157,7 +157,7 @@ restart:
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=
             std::min(mipdata_->dispfreq,
-                     1 + int64_t(0.01 * mipdata_->num_leaves)))
+                     3 + int64_t(0.05 * mipdata_->num_leaves)))
           mipdata_->printDisplayLine();
       }
 
@@ -172,7 +172,7 @@ restart:
     if (mipdata_->dispfreq != 0) {
       if (mipdata_->num_leaves - mipdata_->last_displeave >=
           std::min(mipdata_->dispfreq,
-                   1 + int64_t(0.01 * mipdata_->num_leaves)))
+                   3 + int64_t(0.05 * mipdata_->num_leaves)))
         mipdata_->printDisplayLine();
     }
 
@@ -300,7 +300,7 @@ restart:
         if (mipdata_->dispfreq != 0) {
           if (mipdata_->num_leaves - mipdata_->last_displeave >=
               std::min(mipdata_->dispfreq,
-                       1 + int64_t(0.01 * mipdata_->num_leaves)))
+                       3 + int64_t(0.05 * mipdata_->num_leaves)))
             mipdata_->printDisplayLine();
         }
         continue;

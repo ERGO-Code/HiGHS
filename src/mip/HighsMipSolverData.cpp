@@ -159,9 +159,9 @@ void HighsMipSolverData::init() {
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
   else if (mipsolver.options_mip_->mip_report_level == 1)
-    dispfreq = 100;
+    dispfreq = 1000;
   else
-    dispfreq = 1;
+    dispfreq = 100;
 }
 
 void HighsMipSolverData::runPresolve() {
