@@ -21,7 +21,6 @@
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
-#include "util/HighsHash.h"
 #include "util/HighsRandom.h"
 
 class HEkk {
@@ -88,7 +87,6 @@ class HEkk {
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;
   SimplexBasis basis_;
-  HighsHashTable<uint64_t> visited_basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
@@ -154,7 +152,6 @@ class HEkk {
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
-  bool checkForCycling(const HighsInt variable_in, const HighsInt row_out);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);
 
   void computeSimplexInfeasible();
