@@ -341,11 +341,13 @@ retry:
 
         if (localdom.colLower_[fracint.first] < fixval) {
           heur.branchUpwards(fracint.first, fixval, fracint.second);
+          ++numBranched;
           if (localdom.infeasible()) break;
         }
 
         if (localdom.colUpper_[fracint.first] > fixval) {
           heur.branchDownwards(fracint.first, fixval, fracint.second);
+          ++numBranched;
           if (localdom.infeasible()) break;
         }
 
@@ -359,6 +361,8 @@ retry:
         if (change >= 0.5) break;
       }
     }
+
+    if (numBranched == 0) break;
     heurlp.flushDomain(localdom);
   }
 
@@ -554,9 +558,8 @@ retry:
     // no candidates left to fix for getting to the neighborhood, therefore we
     // switch to a different diving strategy until the minimal fixing rate is
     // reached
+    HighsInt numBranched = 0;
     if (heurlp.getFractionalIntegers().begin() == fixcandend) {
-      HighsInt numBranched = 0;
-
       fixingrate = getFixingRate();
       double stopFixingRate =
           std::min(maxfixingrate, 1.0 - (1.0 - getFixingRate()) * 0.9);
@@ -624,11 +627,13 @@ retry:
 
       if (localdom.colLower_[fracint.first] < fixval) {
         heur.branchUpwards(fracint.first, fixval, fracint.second);
+        ++numBranched;
         if (localdom.infeasible()) break;
       }
 
       if (localdom.colUpper_[fracint.first] > fixval) {
         heur.branchDownwards(fracint.first, fixval, fracint.second);
+        ++numBranched;
         if (localdom.infeasible()) break;
       }
 
@@ -641,6 +646,8 @@ retry:
       change += std::abs(fixval - fracint.second);
       if (change >= 0.5) break;
     }
+
+    if (numBranched == 0) break;
 
     heurlp.flushDomain(localdom);
 
