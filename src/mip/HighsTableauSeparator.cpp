@@ -126,7 +126,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
 
-    if (baseRowInds.size() - numRows > 300 + 0.15 * mip.numCol()) continue;
+    if (baseRowInds.size() - numRows > 1000 + 0.1 * mip.numCol()) continue;
 
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
