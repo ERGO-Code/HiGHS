@@ -1013,11 +1013,11 @@ void HighsPrimalHeuristics::centralRounding() {
       }
     }
     if (nfixed > 0)
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
-                   " integers) sitting at bound at "
-                   "analytic center\n",
-                   nfixed, nintfixed);
+      highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                  "Fixing %" HIGHSINT_FORMAT " columns (%" HIGHSINT_FORMAT
+                  " integers) sitting at bound at "
+                  "analytic center\n",
+                  nfixed, nintfixed);
     mipsolver.mipdata_->domain.propagate();
     if (mipsolver.mipdata_->domain.infeasible()) return;
   }

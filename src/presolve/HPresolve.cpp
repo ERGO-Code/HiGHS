@@ -3085,9 +3085,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
       if (mipsolver != nullptr) {
         HighsInt numStrenghtened = strengthenInequalities();
         if (numStrenghtened > 0)
-          highsLogUser(options->log_options, HighsLogType::kInfo,
-                       "Strengthened %" HIGHSINT_FORMAT " coefficients\n",
-                       numStrenghtened);
+          highsLogDev(options->log_options, HighsLogType::kInfo,
+                      "Strengthened %" HIGHSINT_FORMAT " coefficients\n",
+                      numStrenghtened);
       }
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));

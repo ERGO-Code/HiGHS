@@ -82,8 +82,6 @@ restart:
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
 
-  highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-               "\nstarting tree search\n");
   mipdata_->printDisplayLine();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
   int64_t numStallNodes = 0;

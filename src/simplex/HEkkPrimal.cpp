@@ -2143,11 +2143,13 @@ void HEkkPrimal::updateVerify() {
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   if (numericalTrouble > numerical_trouble_tolerance)
-    printf("Numerical check: Iter %4" HIGHSINT_FORMAT
-           ": alpha_col = %12g, (From %3s alpha_row = "
-           "%12g), aDiff = %12g: measure = %12g\n",
-           ekk_instance_.iteration_count_, alpha_col, alpha_row_source.c_str(),
-           alpha_row, abs_alpha_diff, numericalTrouble);
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+                "Numerical check: Iter %4" HIGHSINT_FORMAT
+                ": alpha_col = %12g, (From %3s alpha_row = "
+                "%12g), aDiff = %12g: measure = %12g\n",
+                ekk_instance_.iteration_count_, alpha_col,
+                alpha_row_source.c_str(), alpha_row, abs_alpha_diff,
+                numericalTrouble);
   assert(numericalTrouble < 1e-3);
   // Reinvert if the relative difference is large enough, and updates have been
   // performed

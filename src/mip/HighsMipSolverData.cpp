@@ -796,9 +796,6 @@ bool HighsMipSolverData::rootSeparationRound(
 void HighsMipSolverData::evaluateRootNode() {
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
 restart:
-  // solve the first root lp
-  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-               "\nSolving root node LP relaxation\n");
   // lp.getLpSolver().setOptionValue(
   //     "dual_simplex_cost_perturbation_multiplier", 10.0);
   lp.setIterationLimit();
@@ -808,7 +805,7 @@ restart:
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Adding %" HIGHSINT_FORMAT " cuts to LP after restart\n",
+                 "\nAdding %" HIGHSINT_FORMAT " cuts to LP after restart\n",
                  cutpool.getNumCuts());
     assert(numRestarts != 0);
     HighsCutSet cutset;
@@ -816,11 +813,15 @@ restart:
     lp.addCuts(cutset);
   }
 
+  // solve the first root lp
+  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+               "Solving root node LP relaxation\n");
   if (firstrootbasis.valid) lp.getLpSolver().setBasis(firstrootbasis);
-  lp.getLpSolver().setOptionValue("presolve", "on");
-
+  else lp.getLpSolver().setOptionValue("presolve", "on");
+#ifdef HiGHSDEV
   lp.getLpSolver().setOptionValue("output_flag",
                                   mipsolver.options_mip_->output_flag);
+#endif
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
@@ -905,8 +906,7 @@ restart:
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
-    if( lastprint < nseparounds - (1 + 0.2*nseparounds))
-    {
+    if (lastprint < nseparounds - (1 + 0.2 * nseparounds)) {
       lastprint = nseparounds;
       printDisplayLine();
     }
