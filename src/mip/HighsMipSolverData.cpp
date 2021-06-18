@@ -811,13 +811,19 @@ restart:
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);
     lp.addCuts(cutset);
+    // solve the first root lp
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "Solving root node LP relaxation\n\n");
+  } else {
+    // solve the first root lp
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "\nSolving root node LP relaxation\n\n");
   }
 
-  // solve the first root lp
-  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-               "Solving root node LP relaxation\n");
-  if (firstrootbasis.valid) lp.getLpSolver().setBasis(firstrootbasis);
-  else lp.getLpSolver().setOptionValue("presolve", "on");
+  if (firstrootbasis.valid)
+    lp.getLpSolver().setBasis(firstrootbasis);
+  else
+    lp.getLpSolver().setOptionValue("presolve", "on");
 #ifdef HiGHSDEV
   lp.getLpSolver().setOptionValue("output_flag",
                                   mipsolver.options_mip_->output_flag);
