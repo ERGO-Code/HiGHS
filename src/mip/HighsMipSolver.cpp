@@ -211,13 +211,15 @@ restart:
     if (!submip) {
       auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
       double currNodeEstim =
-          numNodesLastCheck - mipdata_->num_nodes_before_run + (mipdata_->num_nodes - numNodesLastCheck) *
-                                  double(1.0 - mipdata_->pruned_treeweight) /
-                                  std::max(double(mipdata_->pruned_treeweight -
-                                                  treeweightLastCheck),
-                                           mipdata_->epsilon);
+          numNodesLastCheck - mipdata_->num_nodes_before_run +
+          (mipdata_->num_nodes - numNodesLastCheck) *
+              double(1.0 - mipdata_->pruned_treeweight) /
+              std::max(
+                  double(mipdata_->pruned_treeweight - treeweightLastCheck),
+                  mipdata_->epsilon);
 
-      if (currNodeEstim >= 1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+      if (currNodeEstim >=
+          1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
         ++numHugeTreeEstim;
         // if (!submip)
         //   printf("%" HIGHSINT_FORMAT " (nodeestim: %.1f)\n",
@@ -314,7 +316,7 @@ restart:
         mipdata_->lp.storeBasis();
 
       basis = mipdata_->lp.getStoredBasis();
-      if (!basis || !isBasisConsistent(mipdata_->lp.getModel(), *basis)) {
+      if (!basis || !isBasisConsistent(mipdata_->lp.getLp(), *basis)) {
         HighsBasis b = mipdata_->firstrootbasis;
         b.row_status.resize(mipdata_->lp.numRows(), HighsBasisStatus::kBasic);
         basis = std::make_shared<const HighsBasis>(std::move(b));

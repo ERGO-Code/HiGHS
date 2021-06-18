@@ -148,7 +148,7 @@ void testBasisSolve(Highs& highs) {
   vector<HighsInt> basic_variables, solution_row_indices, solution_col_indices;
   vector<double> rhs, known_solution, solution_row, solution_col;
 
-  HighsLp lp = highs.getModel();
+  HighsLp lp = highs.getLp();
   HighsInt numRow = lp.numRow_;
   HighsInt numCol = lp.numCol_;
   basic_variables.resize(numRow);
@@ -482,8 +482,8 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.writeModel("");
   REQUIRE(highs_status == HighsStatus::kOk);
 
-  HighsInt numRow = highs.getNumRows();
-  HighsInt numCol = highs.getNumCols();
+  HighsInt numRow = highs.getNumRow();
+  HighsInt numCol = highs.getNumCol();
   basic_variables.resize(numRow);
   rhs.resize(numRow);
   solution_row.resize(numCol);

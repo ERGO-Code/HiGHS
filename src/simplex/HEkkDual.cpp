@@ -293,16 +293,34 @@ HighsStatus HEkkDual::solve() {
   // Can't be solve_phase == kSolvePhase1 since this requires simplex
   // solver to have continued after identifying dual infeasiblility.
   if (solve_phase == kSolvePhaseCleanup) {
-    ekk_instance_.computePrimalObjectiveValue();
-    if (options.dual_simplex_cleanup) {
-      // Use primal to clean up. This almost always yields optimality,
-      // and shouldn't yield infeasiblilty - since the current point
-      // is primal feasible - but can yield
+    ekk_instance_.dual_simplex_cleanup_level_++;
+    if (ekk_instance_.dual_simplex_cleanup_level_ >
+        options.max_dual_simplex_cleanup_level) {
+      // No clean up. Dual simplex was optimal with unperturbed costs,
+      // so say that the scaled LP has been solved
+      // optimally. Optimality (unlikely) for the unscaled LP will
+      // still be assessed honestly, so leave it to the user to decide
+      // whether the solution can be accepted.
+      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+                   "HEkkDual:: Cannot use level %" HIGHSINT_FORMAT
+                   " primal simplex cleanup for %" HIGHSINT_FORMAT
+                   " dual infeasibilities\n",
+                   ekk_instance_.dual_simplex_cleanup_level_,
+                   info.num_dual_infeasibility);
+      ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
+    } else {
+      // Use primal simplex to clean up. This almost always yields
+      // optimality, and shouldn't yield infeasiblilty - since the
+      // current point is primal feasible - but can yield
       // unboundedness. Time/iteration limit return is, of course,
       // possible, as are solver error
+      highsLogUser(
+          ekk_instance_.options_.log_options, HighsLogType::kInfo,
+          "HEkkDual:: Using primal simplex to try to clean up %" HIGHSINT_FORMAT
+          " dual infeasibilities\n",
+          info.num_dual_infeasibility);
       HighsStatus return_status = HighsStatus::kOk;
       analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-      // Cleanup with primal code
       // Switch off any bound perturbation
       double save_primal_simplex_bound_perturbation_multiplier =
           info.primal_simplex_bound_perturbation_multiplier;
@@ -321,13 +339,16 @@ HighsStatus HEkkDual::solve() {
       ekk_instance_.called_return_from_solve_ = false;
       if (return_status != HighsStatus::kOk)
         return ekk_instance_.returnFromSolve(return_status);
-    } else {
-      // No clean up. Dual simplex was optimal with unperturbed costs,
-      // so say that the scaled LP has been solved
-      // optimally. Optimality (unlikely) for the unscaled LP will
-      // still be assessed honestly, so leave it to the user to decide
-      // whether the solution can be accepted.
-      model_status = HighsModelStatus::kOptimal;
+      if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
+          info.num_primal_infeasibility + info.num_dual_infeasibility)
+        highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+                     "HEkkDual:: Primal simplex clean up yields optimality, "
+                     "but with %" HIGHSINT_FORMAT
+                     " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                     " (max %g) dual infeasibilities\n",
+                     info.num_primal_infeasibility,
+                     info.max_primal_infeasibility, info.num_dual_infeasibility,
+                     info.max_dual_infeasibility);
     }
   }
   assert(model_status == HighsModelStatus::kOptimal ||
@@ -500,7 +521,7 @@ void HEkkDual::initialiseSolve() {
   ekk_instance_.model_status_ = HighsModelStatus::kNotset;
   ekk_instance_.solve_bailout_ = false;
   ekk_instance_.called_return_from_solve_ = false;
-  ekk_instance_.exit_algorithm = SimplexAlgorithm::kDual;
+  ekk_instance_.exit_algorithm_ = SimplexAlgorithm::kDual;
 
   rebuild_reason = kRebuildReasonNo;
 }

@@ -39,7 +39,7 @@ void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
 }
 
 void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
-  const HighsLp& lp = highs.getModel();
+  const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.numCol_;
   HighsInt numRow = lp.numRow_;
   double ray_error_norm = 0;
@@ -137,7 +137,7 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
 }
 
 void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
-  const HighsLp& lp = highs.getModel();
+  const HighsLp& lp = highs.getLp();
   HighsInt numCol = lp.numCol_;
   HighsInt numRow = lp.numRow_;
   double ray_error_norm = 0;
@@ -222,7 +222,7 @@ void testInfeasibleMps(const std::string model) {
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kInfeasible;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  lp = highs.getModel();
+  lp = highs.getLp();
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
@@ -258,8 +258,8 @@ void testUnboundedMps(const std::string model,
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   require_model_status = HighsModelStatus::kUnbounded;
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  REQUIRE(highs.changeObjectiveSense(sense));
-  lp = highs.getModel();
+  REQUIRE(highs.changeObjectiveSense(sense) == HighsStatus::kOk);
+  lp = highs.getLp();
   lp.model_name_ = model;
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);

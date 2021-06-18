@@ -62,6 +62,7 @@ HighsStatus HEkk::solve() {
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
   iteration_count_ = 0;
+  dual_simplex_cleanup_level_ = 0;
   if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
 
   assert(status_.has_basis);
@@ -369,8 +370,9 @@ HighsSolution HEkk::getSolution() {
   }
   for (HighsInt iRow = 0; iRow < lp_.numRow_; iRow++) {
     solution.row_value[iRow] = -info_.workValue_[lp_.numCol_ + iRow];
+    // @FlipRowDual negate RHS
     solution.row_dual[iRow] =
-        (HighsInt)lp_.sense_ * info_.workDual_[lp_.numCol_ + iRow];
+        -(HighsInt)lp_.sense_ * info_.workDual_[lp_.numCol_ + iRow];
   }
   solution.value_valid = true;
   solution.dual_valid = true;
@@ -2139,8 +2141,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   info_.valid_backtracking_basis_ = false;
 
   // Initialise the status of the primal and dual solutions
-  return_primal_solution_status = kSolutionStatusNone;
-  return_dual_solution_status = kSolutionStatusNone;
+  return_primal_solution_status_ = kSolutionStatusNone;
+  return_dual_solution_status_ = kSolutionStatusNone;
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -2157,10 +2159,18 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   }
   switch (model_status_) {
     case HighsModelStatus::kOptimal: {
-      assert(info_.num_primal_infeasibility == 0);
-      assert(info_.num_dual_infeasibility == 0);
-      return_primal_solution_status = kSolutionStatusFeasible;
-      return_dual_solution_status = kSolutionStatusFeasible;
+      if (info_.num_primal_infeasibility) {
+        // Optimal - but not to desired primal feasibilit tolerance
+        return_primal_solution_status_ = kSolutionStatusInfeasible;
+      } else {
+        return_primal_solution_status_ = kSolutionStatusFeasible;
+      }
+      if (info_.num_dual_infeasibility) {
+        // Optimal - but not to desired dual feasibilit tolerance
+        return_dual_solution_status_ = kSolutionStatusInfeasible;
+      } else {
+        return_dual_solution_status_ = kSolutionStatusFeasible;
+      }
       break;
     }
     case HighsModelStatus::kInfeasible: {
@@ -2168,7 +2178,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // dual simplex has identified dual unboundedness in phase 2. In
       // both cases there should be no primal or dual perturbations
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
-      if (exit_algorithm == SimplexAlgorithm::kPrimal) {
+      if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
         // phase 1
         initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -2182,7 +2192,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kUnboundedOrInfeasible: {
       // Dual simplex has identified dual infeasibility in phase
       // 1. There should be no dual perturbations
-      assert(exit_algorithm == SimplexAlgorithm::kDual);
+      assert(exit_algorithm_ == SimplexAlgorithm::kDual);
       assert(!info_.costs_perturbed);
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -2195,7 +2205,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kUnbounded: {
       // Primal simplex has identified unboundedness in phase 2. There
       // should be no primal or dual perturbations
-      assert(exit_algorithm == SimplexAlgorithm::kPrimal);
+      assert(exit_algorithm_ == SimplexAlgorithm::kPrimal);
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
       computeSimplexInfeasible();
       // Primal solution should be feasible
@@ -2222,7 +2232,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     }
     default: {
       std::string algorithm_name = "primal";
-      if (exit_algorithm == SimplexAlgorithm::kDual) algorithm_name = "dual";
+      if (exit_algorithm_ == SimplexAlgorithm::kDual) algorithm_name = "dual";
       highsLogDev(options_.log_options, HighsLogType::kError,
                   "EKK %s simplex solver returns status %s\n",
                   algorithm_name.c_str(),
@@ -2234,14 +2244,14 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   assert(info_.num_primal_infeasibility >= 0);
   assert(info_.num_dual_infeasibility >= 0);
   if (info_.num_primal_infeasibility == 0) {
-    return_primal_solution_status = kSolutionStatusFeasible;
+    return_primal_solution_status_ = kSolutionStatusFeasible;
   } else {
-    return_primal_solution_status = kSolutionStatusInfeasible;
+    return_primal_solution_status_ = kSolutionStatusInfeasible;
   }
   if (info_.num_dual_infeasibility == 0) {
-    return_dual_solution_status = kSolutionStatusFeasible;
+    return_dual_solution_status_ = kSolutionStatusFeasible;
   } else {
-    return_dual_solution_status = kSolutionStatusInfeasible;
+    return_dual_solution_status_ = kSolutionStatusInfeasible;
   }
   computePrimalObjectiveValue();
 
@@ -2345,5 +2355,5 @@ double HEkk::computeBasisCondition() {
 }
 
 void HEkk::initialiseAnalysis() {
-  analysis_.setup(lp_, options_, iteration_count_);
+  analysis_.setup(lp_name_, lp_, options_, iteration_count_);
 }
