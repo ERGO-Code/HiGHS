@@ -1649,8 +1649,7 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     info.workCost_[variable_in] = cost;
     info.workDual_[variable_in] += cost;
   } else if (primal_correction_strategy ==
-                 kSimplexPrimalCorrectionStrategyNone ||
-             info.primal_simplex_bound_perturbation_multiplier == 0.0) {
+             kSimplexPrimalCorrectionStrategyNone) {
     // @primal_infeasibility calculation
     double primal_infeasibility;
     if (bound_violated < 0) {
