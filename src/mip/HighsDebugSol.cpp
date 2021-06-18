@@ -68,11 +68,12 @@ void HighsDebugSol::activate() {
       highsLogUser(mipsolver->options_mip_->log_options, HighsLogType::kWarning,
                    "debug solution: could not open file '%s'\n",
                    mipsolver->options_mip_->mip_debug_solution_file.c_str());
-      HighsLp model = *mipsolver->model_;
-      model.col_names_.clear();
-      model.row_names_.clear();
-      model.colLower_ = mipsolver->mipdata_->domain.colLower_;
-      model.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
+      HighsModel model;
+      model.lp_ = *mipsolver->model_;
+      model.lp_.col_names_.clear();
+      model.lp_.row_names_.clear();
+      model.lp_.colLower_ = mipsolver->mipdata_->domain.colLower_;
+      model.lp_.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
                                        "debug_mip.mps", model);
     }
