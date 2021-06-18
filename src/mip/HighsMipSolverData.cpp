@@ -899,13 +899,17 @@ restart:
   HighsInt stall = 0;
   double smoothprogress = 0.0;
   HighsInt nseparounds = 0;
-
+  HighsInt lastprint = -1;
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
-    printDisplayLine();
+    if( lastprint < nseparounds - (1 + 0.2*nseparounds))
+    {
+      lastprint = nseparounds;
+      printDisplayLine();
+    }
     if (checkLimits()) return;
 
     if (nseparounds == maxSepaRounds) break;
@@ -1054,6 +1058,7 @@ restart:
 
         if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
+        lastprint = nseparounds;
         printDisplayLine();
       }
     }
@@ -1092,6 +1097,7 @@ restart:
 
     if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
+    lastprint = nseparounds;
     printDisplayLine();
   }
 
