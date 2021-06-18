@@ -58,6 +58,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       double solval = lpSolution.row_value[row];
       fractionality = std::abs(std::round(solval) - solval);
+      fractionality -= lpRelaxation.getRowLen(row) * mip.mipdata_->feastol;
     } else {
       HighsInt col = basisinds[i];
       if (mip.variableType(col) == HighsVarType::kContinuous) continue;
@@ -105,7 +106,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     std::frexp(maxAbsRowWeight, &expshift);
     expshift = -expshift;
 
-    HighsInt numNzs = 0;
+    HighsInt numRows = 0;
     for (int j = 0; j != numNonzeroWeights; ++j) {
       HighsInt row = nonzeroWeights[j];
       rowWeights[row] = std::ldexp(rowWeights[row], expshift);
@@ -114,13 +115,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
               mip.mipdata_->feastol) {
         rowWeights[row] = 0;
       } else
-        numNzs += lpRelaxation.getRowLen(row);
-    }
-
-    if (numNzs > 100 + 0.4 * lpRelaxation.numNonzeros()) {
-      // printf("%.2f%% nonzeros involved in tableau row\n",
-      //        100.0 * numNzs / (double)lpRelaxation.numNonzeros());
-      continue;
+        ++numRows;
     }
 
     for (int j = 0; j != numNonzeroWeights; ++j) {
@@ -130,6 +125,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
+
+    if (baseRowInds.size() - numRows > 300 + 0.15 * mip.numCol()) continue;
 
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
