@@ -912,7 +912,7 @@ restart:
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
-    if (lastprint < nseparounds - (1 + 0.2 * nseparounds)) {
+    if (lastprint < 0.8 * nseparounds) {
       lastprint = nseparounds;
       printDisplayLine();
     }
