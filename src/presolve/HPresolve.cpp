@@ -3027,8 +3027,15 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     bool trySparsify = mipsolver != nullptr;
 #endif
     bool tryProbing = mipsolver != nullptr;
+
+    HighsInt lastPrintSize = kHighsIInf;
     while (true) {
-      report();
+      HighsInt currSize =
+          model->numCol_ - numDeletedCols + model->numRow_ - numDeletedRows;
+      if (currSize < 0.85 * lastPrintSize) {
+        lastPrintSize = currSize;
+        report();
+      }
 
       HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
 
