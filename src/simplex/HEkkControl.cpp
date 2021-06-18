@@ -111,7 +111,7 @@ bool HEkk::switchToDevex() {
          kCostlyDseFractionNumTotalIterationBeforeSwitch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
+      highsLogDev(options_.log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex after %" HIGHSINT_FORMAT
                    " costly DSE iterations of %" HIGHSINT_FORMAT
                    " with "
@@ -131,7 +131,7 @@ bool HEkk::switchToDevex() {
     switch_to_devex = info_.allow_dual_steepest_edge_to_devex_switch &&
                       local_measure > local_threshold;
     if (switch_to_devex) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
+      highsLogDev(options_.log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex with log error measure of %g > "
                    "%g = threshold\n",
                    local_measure, local_threshold);

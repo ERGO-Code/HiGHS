@@ -47,6 +47,7 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   analyse_factor_time =
       kHighsAnalysisLevelNlaTime & options.highs_analysis_level;
+  last_user_log_time = -kHighsInf;
 
   // Set up the thread clocks
   HighsInt omp_max_threads = 1;
@@ -301,17 +302,25 @@ void HighsSimplexAnalysis::iterationReport() {
 }
 
 void HighsSimplexAnalysis::invertReport() {
-  const bool header = (num_invert_report_since_last_header < 0) ||
-                      (num_invert_report_since_last_header > 49) ||
-                      (num_iteration_report_since_last_header >= 0);
-  if (header) {
-    invertReport(header);
-    num_invert_report_since_last_header = 0;
-  }
-  invertReport(false);
-  // Force an iteration report header if this is an INVERT report without an
-  // rebuild_reason
-  if (!rebuild_reason) num_iteration_report_since_last_header = -1;
+  if (*log_options.log_dev_level) {
+    const bool header = (num_invert_report_since_last_header < 0) ||
+      (num_invert_report_since_last_header > 49) ||
+      (num_iteration_report_since_last_header >= 0);
+    if (header) {
+      invertReport(header);
+      num_invert_report_since_last_header = 0;
+    }
+    invertReport(false);
+    // Force an iteration report header if this is an INVERT report without an
+    // rebuild_reason
+    if (!rebuild_reason) num_iteration_report_since_last_header = -1;
+  } else {
+    if (last_user_log_time<0) {
+      const bool header = true;
+      userInvertReport(header);
+    }
+    userInvertReport();
+  }      
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
@@ -328,9 +337,21 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
     //  reportCondition(header);
   }
   reportInfeasibility(header);
-  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+  highsLogDev(log_options, HighsLogType::kInfo, "%s\n",
                analysis_log->str().c_str());
   if (!header) num_invert_report_since_last_header++;
+}
+
+void HighsSimplexAnalysis::userInvertReport(const bool header) {
+  const double highs_run_time = timer_->readRunHighsClock();
+  if (highs_run_time< last_user_log_time+5.0) return;
+  analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
+  reportAlgorithmPhaseIterationObjective(header);
+  reportInfeasibility(header);
+  reportRunTime(header, highs_run_time);
+  highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
+               analysis_log->str().c_str());
+  if (!header) last_user_log_time = highs_run_time;
 }
 
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
@@ -449,7 +470,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
         (AnIterNumCostlyDseIt > lcNumIter * kAnIterFracNumCostlyDseItbfSw) &&
         (lcNumIter > kAnIterFracNumTotItBfSw * numTot);
     if (switch_to_devex) {
-      highsLogUser(log_options, HighsLogType::kInfo,
+      highsLogDev(log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex after %" HIGHSINT_FORMAT
                    " costly DSE iterations of %" HIGHSINT_FORMAT
                    " with "
@@ -469,7 +490,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
     switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
                       dse_weight_error_measure > dse_weight_error_threshold;
     if (switch_to_devex) {
-      highsLogUser(log_options, HighsLogType::kInfo,
+      highsLogDev(log_options, HighsLogType::kInfo,
                    "Switch from DSE to Devex with log error measure of %g > "
                    "%g = threshold",
                    dse_weight_error_measure, dse_weight_error_threshold);
@@ -1372,6 +1393,11 @@ void HighsSimplexAnalysis::reportIterationData(const bool header) {
         entering_variable, leaving_variable, pivotal_row_index, dual_step,
         primal_step);
   }
+}
+
+void HighsSimplexAnalysis::reportRunTime(const bool header, const double run_time) {
+  if (header) return;
+  *analysis_log << highsFormatToString(" %ds", (int)run_time);
 }
 
 HighsInt HighsSimplexAnalysis::intLog10(const double v) {

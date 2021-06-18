@@ -280,7 +280,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
-    highsLogUser(log_options, HighsLogType::kWarning,
+    highsLogDev(log_options, HighsLogType::kWarning,
                  "Rank deficiency of %" HIGHSINT_FORMAT
                  " identified in basis matrix\n",
                  rank_deficiency);
@@ -381,7 +381,7 @@ void HFactor::buildSimple() {
       if (MRcountb4[lc_iRow] >= 0) {
         iRow = lc_iRow;
       } else {
-        highsLogUser(log_options, HighsLogType::kError,
+        highsLogDev(log_options, HighsLogType::kError,
                      "INVERT Error: Found a logical column with pivot "
                      "already in row %" HIGHSINT_FORMAT "\n",
                      lc_iRow);
@@ -401,7 +401,7 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         if (unit_col)
-          highsLogUser(log_options, HighsLogType::kError,
+          highsLogDev(log_options, HighsLogType::kError,
                        "INVERT Error: Found a second unit column with pivot in "
                        "row %" HIGHSINT_FORMAT "\n",
                        lc_iRow);
@@ -718,7 +718,7 @@ HighsInt HFactor::buildKernel() {
     double pivotX = colDelete(jColPivot, iRowPivot);
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
-      highsLogUser(log_options, HighsLogType::kWarning,
+      highsLogDev(log_options, HighsLogType::kWarning,
                    "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
                    fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;

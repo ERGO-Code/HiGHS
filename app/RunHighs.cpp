@@ -94,24 +94,44 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
     const HighsInt a_num_nz = lp.Astart_[lp.numCol_];
     HighsInt q_num_nz = 0;
     if (hessian.dim_) q_num_nz = hessian.q_start_[lp.numCol_];
-    highsLogUser(log_options, HighsLogType::kInfo, "%4s      : %s\n",
-                 problem_type.c_str(), lp.model_name_.c_str());
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Rows      : %" HIGHSINT_FORMAT "\n", lp.numRow_);
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Cols      : %" HIGHSINT_FORMAT "\n", lp.numCol_);
-    if (q_num_nz) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
+    if (*log_options.log_dev_level) {
+      highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
+		   problem_type.c_str(), lp.model_name_.c_str());
+      highsLogDev(log_options, HighsLogType::kInfo,
+		   "Rows      : %" HIGHSINT_FORMAT "\n", lp.numRow_);
+      highsLogDev(log_options, HighsLogType::kInfo,
+		   "Cols      : %" HIGHSINT_FORMAT "\n", lp.numCol_);
+      if (q_num_nz) {
+	highsLogDev(log_options, HighsLogType::kInfo,
+		     "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
+	highsLogDev(log_options, HighsLogType::kInfo,
+		     "Hessian Nz: %" HIGHSINT_FORMAT "\n", q_num_nz);
+      } else {
+	highsLogDev(log_options, HighsLogType::kInfo,
+		     "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+      }
+      if (num_int)
+	highsLogDev(log_options, HighsLogType::kInfo,
+		     "Integer  : %" HIGHSINT_FORMAT "\n", num_int);
     } else {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Nonzeros  : %" HIGHSINT_FORMAT "\n", a_num_nz);
+      highsLogUser(log_options, HighsLogType::kInfo, "%s", problem_type.c_str());
+      if (lp.model_name_.length())
+	highsLogUser(log_options, HighsLogType::kInfo, " %s", lp.model_name_.c_str());
+      highsLogUser(log_options, HighsLogType::kInfo, " has %" HIGHSINT_FORMAT " rows; %" HIGHSINT_FORMAT " cols", lp.numRow_, lp.numCol_);
+      if (q_num_nz) {
+	highsLogUser(log_options, HighsLogType::kInfo,
+		     "; %" HIGHSINT_FORMAT " matrix nonzeros", a_num_nz);
+	highsLogUser(log_options, HighsLogType::kInfo,
+		     "; %" HIGHSINT_FORMAT " Hessian nonzeros", q_num_nz);
+      } else {
+	highsLogUser(log_options, HighsLogType::kInfo,
+		     "; %" HIGHSINT_FORMAT " nonzeros", a_num_nz);
+      }
+      if (num_int)
+	highsLogUser(log_options, HighsLogType::kInfo,
+		     "; %" HIGHSINT_FORMAT " integer variables\n", num_int);
+      highsLogUser(log_options, HighsLogType::kInfo, "\n");
     }
-    if (num_int)
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Integer  : %" HIGHSINT_FORMAT "\n", num_int);
   }
 }
 

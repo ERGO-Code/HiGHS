@@ -49,7 +49,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (HighsInt)scale.col.size() == simplex_lp.numCol_ && right_size;
   right_size = (HighsInt)scale.row.size() == simplex_lp.numRow_ && right_size;
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "scale size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
@@ -58,13 +58,13 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   HighsLp check_lp = highs_lp;
   if (applyScalingToLp(options.log_options, check_lp, scale) !=
       HighsStatus::kOk) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::kLogicalError;
   }
   const bool lp_data_ok = check_lp == simplex_lp;
   if (!lp_data_ok) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(lp_data_ok);
     return_status = HighsDebugStatus::kLogicalError;
@@ -75,7 +75,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
         debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
         HighsStatus::kError;
     if (!basis_correct) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "Supposed to be a Simplex basis, but incorrect\n");
       assert(basis_correct);
       return_status = HighsDebugStatus::kLogicalError;
@@ -86,7 +86,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::kError;
     if (!invert_ok) {
-      highsLogUser(
+      highsLogDev(
           options.log_options, HighsLogType::kError,
           "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
@@ -107,14 +107,14 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // Check consistency of nonbasicFlag
   if (debugNonbasicFlagConsistent(options, lp, basis) ==
       HighsDebugStatus::kLogicalError) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicFlag inconsistent\n");
     return_status = HighsDebugStatus::kLogicalError;
   }
   const bool right_size = (HighsInt)basis.basicIndex_.size() == lp.numRow_;
   // Check consistency of basicIndex
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "basicIndex size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
@@ -131,13 +131,13 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
       // Nonzero value for localNonbasicFlag entry means that column is either
       if (flag == kNonbasicFlagTrue) {
         // Nonbasic...
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "Entry basicIndex_[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT " is not basic\n",
                      iRow, iCol);
       } else {
         // .. or is -1 since it has already been found in basicIndex
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "Entry basicIndex_[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT " is already basic\n",
                      iRow, iCol);
@@ -254,7 +254,7 @@ HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
   HighsInt numTot = lp.numCol_ + lp.numRow_;
   const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicFlag size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
@@ -269,7 +269,7 @@ HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
   }
   bool right_num_basic_variables = num_basic_variables == lp.numRow_;
   if (!right_num_basic_variables) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicFlag has %" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT
                  " basic variables\n",
                  num_basic_variables, lp.numRow_);

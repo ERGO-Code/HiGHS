@@ -74,7 +74,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     HighsInt flag = basis.nonbasicFlag_[iVar];
     bool flag_error = flag != kNonbasicFlagTrue && flag != kNonbasicFlagFalse;
     if (flag_error) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Variable %" HIGHSINT_FORMAT
                    " has "
@@ -128,7 +128,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       sum_dual_infeasibility += dual_infeasibility;
     }
     if (primal_error) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Nonbasic variable %" HIGHSINT_FORMAT
                    " "
@@ -141,7 +141,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
     bool move_error = move != basis.nonbasicMove_[iVar];
     if (move_error) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Nonbasic variable %" HIGHSINT_FORMAT
                    " "
@@ -166,7 +166,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     // correct. Determine primal infeasibilities
     bool nonbasicFlag_error = basis.nonbasicFlag_[iVar] == kNonbasicFlagTrue;
     if (nonbasicFlag_error) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Basic variable %" HIGHSINT_FORMAT
                    " "
@@ -178,7 +178,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
     bool nonbasicMove_error = basis.nonbasicMove_[iVar];
     if (nonbasicMove_error) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Basic variable %" HIGHSINT_FORMAT
                    " "
@@ -197,7 +197,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     double value = info.baseValue_[iRow];
     bool baseBound_error = workLower != lower || workUpper != upper;
     if (baseBound_error) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Basic variable %" HIGHSINT_FORMAT
                    " "
@@ -221,7 +221,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       if (base) primal_phase1_cost *= 1 + base * info.numTotRandomValue_[iRow];
       bool primal_phase1_cost_error = abs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                      " Basic variable %" HIGHSINT_FORMAT
                      " "
@@ -278,7 +278,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     const bool illegal_num_primal_infeasibility =
         num_primal_infeasibility != info_num_primal_infeasibility;
     if (illegal_num_primal_infeasibility) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Should have %" HIGHSINT_FORMAT
                    " not "
@@ -296,7 +296,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         abs(max_primal_infeasibility - info_max_primal_infeasibility) >
         ok_feasibility_difference;
     if (illegal_max_primal_infeasibility) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Should have %g not "
                    "%g max primal infeasibility\n",
@@ -313,7 +313,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         abs(sum_primal_infeasibility - info_sum_primal_infeasibility) >
         ok_feasibility_difference;
     if (illegal_sum_primal_infeasibility) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Should have %g not "
                    "%g sum primal infeasibilities\n",
@@ -329,7 +329,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     const bool illegal_num_dual_infeasibility =
         num_dual_infeasibility != info_num_dual_infeasibility;
     if (illegal_num_dual_infeasibility) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Should have %" HIGHSINT_FORMAT
                    " not "
@@ -347,7 +347,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         abs(max_dual_infeasibility - info_max_dual_infeasibility) >
         ok_feasibility_difference;
     if (illegal_max_dual_infeasibility) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Should have %g not "
                    "%g max dual infeasibility\n",
@@ -364,7 +364,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         abs(sum_dual_infeasibility - info_sum_dual_infeasibility) >
         ok_feasibility_difference;
     if (illegal_sum_dual_infeasibility) {
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                    " Should have %g not "
                    "%g sum dual infeasibilities\n",
@@ -385,7 +385,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       require_primal_feasible && num_primal_infeasibility > 0;
   if (illegal_primal_infeasibility) {
     // Should be primal feasible, but isn't
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                  " Should be primal "
                  "feasible, but num / max "
@@ -406,7 +406,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       num_dual_infeasibility > 0;
   if (illegal_dual_infeasibility) {
     // Dual simplex or optimal but has dual infeasibilities
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "ekkDebugSimplex - %s: Iteration %" HIGHSINT_FORMAT
                  " Should be dual "
                  "feasible, but num / max / "
@@ -519,7 +519,7 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   const bool consistent =
       ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::kLogicalError;
   if (!consistent) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "Supposed to be a Simplex basis, but not consistent\n");
     assert(consistent);
     return_status = HighsDebugStatus::kLogicalError;
@@ -528,7 +528,7 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   const bool correct_nonbasicMove =
       ekkDebugNonbasicMove(ekk_instance) != HighsDebugStatus::kLogicalError;
   if (!correct_nonbasicMove) {
-    highsLogUser(
+    highsLogDev(
         options.log_options, HighsLogType::kError,
         "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
     assert(correct_nonbasicMove);
@@ -554,7 +554,7 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
   bool right_size = (HighsInt)basis.nonbasicMove_.size() == numTot;
   // Check consistency of nonbasicMove
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicMove size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
@@ -614,7 +614,7 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
       num_fixed_variable_move_errors;
 
   if (num_errors) {
-    highsLogUser(
+    highsLogDev(
         options.log_options, HighsLogType::kError,
         "There are %" HIGHSINT_FORMAT " nonbasicMove errors: %" HIGHSINT_FORMAT
         " free; %" HIGHSINT_FORMAT " lower; %" HIGHSINT_FORMAT
@@ -643,14 +643,14 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
   // Check consistency of nonbasicFlag
   if (ekkDebugNonbasicFlagConsistent(ekk_instance) ==
       HighsDebugStatus::kLogicalError) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicFlag inconsistent\n");
     return_status = HighsDebugStatus::kLogicalError;
   }
   const bool right_size = (HighsInt)basis.basicIndex_.size() == lp.numRow_;
   // Check consistency of basicIndex
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "basicIndex size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
@@ -667,13 +667,13 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
       // Nonzero value for localNonbasicFlag entry means that column is either
       if (flag == kNonbasicFlagTrue) {
         // Nonbasic...
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "Entry basicIndex_[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT " is not basic\n",
                      iRow, iCol);
       } else {
         // .. or is -1 since it has already been found in basicIndex
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "Entry basicIndex_[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT " is already basic\n",
                      iRow, iCol);
@@ -696,7 +696,7 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
   HighsInt numTot = lp.numCol_ + lp.numRow_;
   const bool right_size = (HighsInt)basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicFlag size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::kLogicalError;
@@ -711,7 +711,7 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
   }
   bool right_num_basic_variables = num_basic_variables == lp.numRow_;
   if (!right_num_basic_variables) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "nonbasicFlag has %" HIGHSINT_FORMAT ", not %" HIGHSINT_FORMAT
                  " basic variables\n",
                  num_basic_variables, lp.numRow_);
@@ -739,28 +739,28 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
        status.has_invert;
   if (!ok) {
     if (!status.has_basis)
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "Not OK to solve since status.has_basis = "
                    "%" HIGHSINT_FORMAT "\n",
                    status.has_basis);
     if (!status.has_matrix)
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "Not OK to solve since status.has_matrix = "
                    "%" HIGHSINT_FORMAT "\n",
                    status.has_matrix);
     if (!status.has_factor_arrays)
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "Not OK to solve since status.has_factor_arrays "
                    "= %" HIGHSINT_FORMAT "\n",
                    status.has_factor_arrays);
     if (!status.has_dual_steepest_edge_weights)
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "Not OK to solve since "
                    "status.has_dual_steepest_edge_weights = %" HIGHSINT_FORMAT
                    "\n",
                    status.has_dual_steepest_edge_weights);
     if (!status.has_invert)
-      highsLogUser(options.log_options, HighsLogType::kError,
+      highsLogDev(options.log_options, HighsLogType::kError,
                    "Not OK to solve since status.has_invert = "
                    "%" HIGHSINT_FORMAT "\n",
                    status.has_invert);
@@ -806,7 +806,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
         double lp_lower = info.workLower_[var];
         ok = lp_lower == lp.colLower_[col];
         if (!ok) {
-          highsLogUser(options.log_options, HighsLogType::kError,
+          highsLogDev(options.log_options, HighsLogType::kError,
                        "For col %" HIGHSINT_FORMAT
                        ", info.workLower_ should be %g but is %g\n",
                        col, lp.colLower_[col], lp_lower);
@@ -817,7 +817,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
         double lp_upper = info.workUpper_[var];
         ok = lp_upper == lp.colUpper_[col];
         if (!ok) {
-          highsLogUser(options.log_options, HighsLogType::kError,
+          highsLogDev(options.log_options, HighsLogType::kError,
                        "For col %" HIGHSINT_FORMAT
                        ", info.workUpper_ should be %g but is %g\n",
                        col, lp.colUpper_[col], lp_upper);
@@ -831,7 +831,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
         double lp_lower = info.workLower_[var];
         ok = lp_lower == -lp.rowUpper_[row];
         if (!ok) {
-          highsLogUser(options.log_options, HighsLogType::kError,
+          highsLogDev(options.log_options, HighsLogType::kError,
                        "For row %" HIGHSINT_FORMAT
                        ", info.workLower_ should be %g but is %g\n",
                        row, -lp.rowUpper_[row], lp_lower);
@@ -842,7 +842,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
         double lp_upper = info.workUpper_[var];
         ok = lp_upper == -lp.rowLower_[row];
         if (!ok) {
-          highsLogUser(options.log_options, HighsLogType::kError,
+          highsLogDev(options.log_options, HighsLogType::kError,
                        "For row %" HIGHSINT_FORMAT
                        ", info.workUpper_ should be %g but is %g\n",
                        row, -lp.rowLower_[row], lp_upper);
@@ -855,7 +855,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
       ok =
           info.workRange_[var] == (info.workUpper_[var] - info.workLower_[var]);
       if (!ok) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "For variable %" HIGHSINT_FORMAT
                      ", info.workRange_ should be %g = %g - %g "
                      "but is %g\n",
@@ -877,7 +877,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
       double ok_cost = (HighsInt)lp.sense_ * lp.colCost_[col];
       ok = work_cost == ok_cost;
       if (!ok) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "For col %" HIGHSINT_FORMAT
                      ", info.workCost_ should be %g but is %g\n",
                      col, ok_cost, info.workCost_[var]);
@@ -888,7 +888,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
       HighsInt var = lp.numCol_ + row;
       ok = info.workCost_[var] == 0.;
       if (!ok) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "For row %" HIGHSINT_FORMAT
                      ", info.workCost_ should be zero but is %g\n",
                      row, info.workCost_[var]);
@@ -920,7 +920,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
         // Fixed variable
         ok = basis.nonbasicMove_[var] == kNonbasicMoveZe;
         if (!ok) {
-          highsLogUser(options.log_options, HighsLogType::kError,
+          highsLogDev(options.log_options, HighsLogType::kError,
                        "Fixed variable %" HIGHSINT_FORMAT
                        " (lp.numCol_ = %" HIGHSINT_FORMAT
                        ") [%11g, %11g, "
@@ -933,7 +933,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
         }
         ok = info.workValue_[var] == info.workLower_[var];
         if (!ok) {
-          highsLogUser(options.log_options, HighsLogType::kError,
+          highsLogDev(options.log_options, HighsLogType::kError,
                        "Fixed variable %" HIGHSINT_FORMAT
                        " (lp.numCol_ = %" HIGHSINT_FORMAT
                        ") so "
@@ -948,7 +948,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
         ok = (basis.nonbasicMove_[var] == kNonbasicMoveUp) ||
              (basis.nonbasicMove_[var] == kNonbasicMoveDn);
         if (!ok) {
-          highsLogUser(
+          highsLogDev(
               options.log_options, HighsLogType::kError,
               "Boxed variable %" HIGHSINT_FORMAT
               " (lp.numCol_ = %" HIGHSINT_FORMAT
@@ -963,7 +963,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
         if (basis.nonbasicMove_[var] == kNonbasicMoveUp) {
           ok = info.workValue_[var] == info.workLower_[var];
           if (!ok) {
-            highsLogUser(options.log_options, HighsLogType::kError,
+            highsLogDev(options.log_options, HighsLogType::kError,
                          "Boxed variable %" HIGHSINT_FORMAT
                          " (lp.numCol_ = %" HIGHSINT_FORMAT
                          ") with "
@@ -976,7 +976,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
         } else {
           ok = info.workValue_[var] == info.workUpper_[var];
           if (!ok) {
-            highsLogUser(options.log_options, HighsLogType::kError,
+            highsLogDev(options.log_options, HighsLogType::kError,
                          "Boxed variable %" HIGHSINT_FORMAT
                          " (lp.numCol_ = %" HIGHSINT_FORMAT
                          ") with "
@@ -992,7 +992,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
       // Infinite upper bound
       ok = basis.nonbasicMove_[var] == kNonbasicMoveUp;
       if (!ok) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "Finite lower bound and infinite upper bound variable "
                      "%" HIGHSINT_FORMAT
                      " "
@@ -1009,7 +1009,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
       }
       ok = info.workValue_[var] == info.workLower_[var];
       if (!ok) {
-        highsLogUser(
+        highsLogDev(
             options.log_options, HighsLogType::kError,
             "Finite lower bound and infinite upper bound variable "
             "%" HIGHSINT_FORMAT
@@ -1025,7 +1025,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
     if (!highs_isInfinity(info.workUpper_[var])) {
       ok = basis.nonbasicMove_[var] == kNonbasicMoveDn;
       if (!ok) {
-        highsLogUser(
+        highsLogDev(
             options.log_options, HighsLogType::kError,
             "Finite upper bound and infinite lower bound variable "
             "%" HIGHSINT_FORMAT
@@ -1040,7 +1040,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
       }
       ok = info.workValue_[var] == info.workUpper_[var];
       if (!ok) {
-        highsLogUser(
+        highsLogDev(
             options.log_options, HighsLogType::kError,
             "Finite upper bound and infinite lower bound variable "
             "%" HIGHSINT_FORMAT
@@ -1054,7 +1054,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
       // Infinite upper bound
       ok = basis.nonbasicMove_[var] == kNonbasicMoveZe;
       if (!ok) {
-        highsLogUser(
+        highsLogDev(
             options.log_options, HighsLogType::kError,
             "Free variable %" HIGHSINT_FORMAT " (lp.numCol_ = %" HIGHSINT_FORMAT
             ") [%11g, %11g, %11g] "
@@ -1066,7 +1066,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
       }
       ok = info.workValue_[var] == 0.0;
       if (!ok) {
-        highsLogUser(options.log_options, HighsLogType::kError,
+        highsLogDev(options.log_options, HighsLogType::kError,
                      "Free variable %" HIGHSINT_FORMAT
                      " (lp.numCol_ = %" HIGHSINT_FORMAT
                      ") so work value should "
@@ -1110,7 +1110,7 @@ void ekkDebugReportReinvertOnNumericalTrouble(
   } else {
     adjective = "clearly satisfies";
   }
-  highsLogUser(ekk_instance.options_.log_options, HighsLogType::kWarning,
+  highsLogDev(ekk_instance.options_.log_options, HighsLogType::kWarning,
                "%s (%s) [Iter %" HIGHSINT_FORMAT "; Update %" HIGHSINT_FORMAT
                "] Col: %11.4g; Row: %11.4g; Diff "
                "= %11.4g: Measure %11.4g %s %11.4g\n",
@@ -1119,12 +1119,12 @@ void ekkDebugReportReinvertOnNumericalTrouble(
                abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
                numerical_trouble_tolerance);
   if (wrong_sign) {
-    highsLogUser(ekk_instance.options_.log_options, HighsLogType::kWarning,
+    highsLogDev(ekk_instance.options_.log_options, HighsLogType::kWarning,
                  "   Incompatible signs for Col: %11.4g and Row: %11.4g\n",
                  alpha_from_col, alpha_from_row);
   }
   if ((numerical_trouble || wrong_sign) && !reinvert) {
-    highsLogUser(ekk_instance.options_.log_options, HighsLogType::kWarning,
+    highsLogDev(ekk_instance.options_.log_options, HighsLogType::kWarning,
                  "   Numerical trouble or wrong sign and not reinverting\n");
   }
 }

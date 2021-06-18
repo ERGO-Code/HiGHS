@@ -106,6 +106,7 @@ class HighsSimplexAnalysis {
   void iterationReport();
   void invertReport();
   void invertReport(const bool header);
+  void userInvertReport(const bool header = false);
   bool predictEndDensity(const HighsInt tran_stage_id,
                          const double start_density, double& end_density);
   void afterTranStage(const HighsInt tran_stage_id, const double start_density,
@@ -285,6 +286,7 @@ class HighsSimplexAnalysis {
   void reportInvert(const bool header);
   //  void reportCondition(const bool header);
   void reportIterationData(const bool header);
+  void reportRunTime(const bool header, const double run_time);
   void reportFreeListSize(const bool header);
   HighsInt intLog10(const double v);
   bool dualAlgorithm();
@@ -310,6 +312,7 @@ class HighsSimplexAnalysis {
 
   HighsInt num_invert_report_since_last_header = -1;
   HighsInt num_iteration_report_since_last_header = -1;
+  double last_user_log_time = -kHighsInf;
 
   double average_num_threads;
   double average_fraction_of_possible_minor_iterations_performed;

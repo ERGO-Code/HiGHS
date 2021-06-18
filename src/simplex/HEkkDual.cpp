@@ -62,7 +62,7 @@ HighsStatus HEkkDual::solve() {
 
   bool dual_info_ok = dualInfoOk(ekk_instance_.lp_);
   if (!dual_info_ok) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "HPrimalDual::solve has error in dual information\n");
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
@@ -104,7 +104,7 @@ HighsStatus HEkkDual::solve() {
                                perturb_costs);
   assert(status.has_invert);
   if (!status.has_invert) {
-    highsLogUser(options.log_options, HighsLogType::kError,
+    highsLogDev(options.log_options, HighsLogType::kError,
                  "HDual:: Should enter solve with INVERT\n");
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
@@ -301,7 +301,7 @@ HighsStatus HEkkDual::solve() {
       // optimally. Optimality (unlikely) for the unscaled LP will
       // still be assessed honestly, so leave it to the user to decide
       // whether the solution can be accepted.
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                    "HEkkDual:: Cannot use level %" HIGHSINT_FORMAT
                    " primal simplex cleanup for %" HIGHSINT_FORMAT
                    " dual infeasibilities\n",
@@ -314,7 +314,7 @@ HighsStatus HEkkDual::solve() {
       // current point is primal feasible - but can yield
       // unboundedness. Time/iteration limit return is, of course,
       // possible, as are solver error
-      highsLogUser(
+      highsLogDev(
           ekk_instance_.options_.log_options, HighsLogType::kInfo,
           "HEkkDual:: Using primal simplex to try to clean up %" HIGHSINT_FORMAT
           " dual infeasibilities\n",
@@ -341,7 +341,7 @@ HighsStatus HEkkDual::solve() {
         return ekk_instance_.returnFromSolve(return_status);
       if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
           info.num_primal_infeasibility + info.num_dual_infeasibility)
-        highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+        highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                      "HEkkDual:: Primal simplex clean up yields optimality, "
                      "but with %" HIGHSINT_FORMAT
                      " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
@@ -406,7 +406,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
     pass_num_slice = num_threads - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                    "SIP trying to use using %" HIGHSINT_FORMAT
                    " slices due to number of "
                    "threads (%" HIGHSINT_FORMAT
@@ -426,7 +426,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
     pass_num_slice = max(multi_num - 1, HighsInt{1});
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                    "PAMI trying to use using %" HIGHSINT_FORMAT
                    " slices due to number of "
                    "threads (%" HIGHSINT_FORMAT
@@ -449,7 +449,7 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   if (slice_num < 1) slice_num = 1;
   assert(slice_num <= kHighsSlicedLimit);
   if (slice_num > kHighsSlicedLimit) {
-    highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                  "WARNING: %" HIGHSINT_FORMAT
                  " = slice_num > kHighsSlicedLimit = %" HIGHSINT_FORMAT
                  " so truncating "
@@ -664,7 +664,7 @@ void HEkkDual::solvePhase1() {
     if (ekk_instance_.info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
-      highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                    "Cleaning up cost perturbation when unbounded in phase 1\n");
       if (dualInfeasCount == 0) {
         // No dual infeasibilities and (since unbounded) at least zero
@@ -2137,7 +2137,7 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   } else {
     lp_dual_status = "feasible";
   }
-  highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+  highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                "LP is dual %s with dual phase 1 objective %10.4g and num / "
                "max / sum dual infeasibilities = %" HIGHSINT_FORMAT
                " / %9.4g / %9.4g\n",
@@ -2226,7 +2226,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
     } else {
       action = "No   DualUB bailout";
     }
-    highsLogUser(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                  "%s on iteration %" HIGHSINT_FORMAT
                  ": Density %11.4g; Frequency %" HIGHSINT_FORMAT
                  ": "
@@ -2278,7 +2278,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      highsLogUser(
+      highsLogDev(
           ekk_instance_.options_.log_options, HighsLogType::kWarning,
           "Col %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
@@ -2293,7 +2293,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      highsLogUser(
+      highsLogDev(
           ekk_instance_.options_.log_options, HighsLogType::kWarning,
           "Row %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
@@ -2302,7 +2302,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
   if (relative_delta > 1e-3)
-    highsLogUser(
+    highsLogDev(
         ekk_instance_.options_.log_options, HighsLogType::kWarning,
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g\n",
         norm_dual, norm_delta_dual, relative_delta);
