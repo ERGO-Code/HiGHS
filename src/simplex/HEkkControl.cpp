@@ -112,14 +112,14 @@ bool HEkk::switchToDevex() {
 
     if (switch_to_devex) {
       highsLogDev(options_.log_options, HighsLogType::kInfo,
-                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
-                   " costly DSE iterations of %" HIGHSINT_FORMAT
-                   " with "
-                   "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
-                   "%11.4g; DSE = %11.4g\n",
-                   info_.num_costly_DSE_iteration, local_iteration_count,
-                   info_.col_aq_density, info_.row_ep_density,
-                   info_.row_ap_density, info_.row_DSE_density);
+                  "Switch from DSE to Devex after %" HIGHSINT_FORMAT
+                  " costly DSE iterations of %" HIGHSINT_FORMAT
+                  " with "
+                  "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
+                  "%11.4g; DSE = %11.4g\n",
+                  info_.num_costly_DSE_iteration, local_iteration_count,
+                  info_.col_aq_density, info_.row_ep_density,
+                  info_.row_ap_density, info_.row_DSE_density);
     }
   }
   if (!switch_to_devex) {
@@ -132,9 +132,9 @@ bool HEkk::switchToDevex() {
                       local_measure > local_threshold;
     if (switch_to_devex) {
       highsLogDev(options_.log_options, HighsLogType::kInfo,
-                   "Switch from DSE to Devex with log error measure of %g > "
-                   "%g = threshold\n",
-                   local_measure, local_threshold);
+                  "Switch from DSE to Devex with log error measure of %g > "
+                  "%g = threshold\n",
+                  local_measure, local_threshold);
     }
   }
   return switch_to_devex;

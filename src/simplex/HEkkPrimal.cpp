@@ -34,7 +34,7 @@ HighsStatus HEkkPrimal::solve() {
 
   if (!status.has_invert) {
     highsLogDev(options.log_options, HighsLogType::kError,
-                 "HEkkPrimal::solve called without INVERT\n");
+                "HEkkPrimal::solve called without INVERT\n");
     assert(status.has_fresh_invert);
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
   }
@@ -247,12 +247,12 @@ HighsStatus HEkkPrimal::solve() {
     if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
         info.num_primal_infeasibility + info.num_dual_infeasibility)
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
-                   "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
-                   "with %" HIGHSINT_FORMAT
-                   " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
-                   " (max %g) dual infeasibilities\n",
-                   info.num_primal_infeasibility, info.max_primal_infeasibility,
-                   info.num_dual_infeasibility, info.max_dual_infeasibility);
+                  "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
+                  "with %" HIGHSINT_FORMAT
+                  " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                  " (max %g) dual infeasibilities\n",
+                  info.num_primal_infeasibility, info.max_primal_infeasibility,
+                  info.num_dual_infeasibility, info.max_dual_infeasibility);
   }
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
                          ekk_instance_.model_status_) ==
@@ -292,8 +292,8 @@ void HEkkPrimal::initialiseInstance() {
       ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap;
   if (num_free_col) {
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
-                 "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
-                 num_free_col);
+                "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
+                num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot,
                                 ekk_instance_.options_.output_flag,
                                 ekk_instance_.options_.log_file_stream, debug);
@@ -703,7 +703,7 @@ void HEkkPrimal::iterate() {
     phase1ChooseRow();
     if (row_out < 0) {
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
-                   "Primal phase 1 choose row failed\n");
+                  "Primal phase 1 choose row failed\n");
       solve_phase = kSolvePhaseError;
       return;
     }
@@ -2284,9 +2284,9 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
-                   "HEkkPrimal::phase1update failed to remove nonbasic free "
-                   "column %" HIGHSINT_FORMAT "\n",
-                   variable_in);
+                  "HEkkPrimal::phase1update failed to remove nonbasic free "
+                  "column %" HIGHSINT_FORMAT "\n",
+                  variable_in);
       assert(removed_nonbasic_free_column);
     }
   }

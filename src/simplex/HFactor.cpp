@@ -281,9 +281,9 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
     highsLogDev(log_options, HighsLogType::kWarning,
-                 "Rank deficiency of %" HIGHSINT_FORMAT
-                 " identified in basis matrix\n",
-                 rank_deficiency);
+                "Rank deficiency of %" HIGHSINT_FORMAT
+                " identified in basis matrix\n",
+                rank_deficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
     // logical which replaces them
@@ -382,9 +382,9 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         highsLogDev(log_options, HighsLogType::kError,
-                     "INVERT Error: Found a logical column with pivot "
-                     "already in row %" HIGHSINT_FORMAT "\n",
-                     lc_iRow);
+                    "INVERT Error: Found a logical column with pivot "
+                    "already in row %" HIGHSINT_FORMAT "\n",
+                    lc_iRow);
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
         Bvalue[BcountX++] = 1.0;
@@ -402,9 +402,9 @@ void HFactor::buildSimple() {
       } else {
         if (unit_col)
           highsLogDev(log_options, HighsLogType::kError,
-                       "INVERT Error: Found a second unit column with pivot in "
-                       "row %" HIGHSINT_FORMAT "\n",
-                       lc_iRow);
+                      "INVERT Error: Found a second unit column with pivot in "
+                      "row %" HIGHSINT_FORMAT "\n",
+                      lc_iRow);
         for (HighsInt k = start; k < start + count; k++) {
           MRcountb4[Aindex[k]]++;
           Bindex[BcountX] = Aindex[k];
@@ -719,8 +719,8 @@ HighsInt HFactor::buildKernel() {
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
       highsLogDev(log_options, HighsLogType::kWarning,
-                   "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
-                   fabs(pivotX), nwork);
+                  "Small |pivot| = %g when nwork = %" HIGHSINT_FORMAT "\n",
+                  fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
     }

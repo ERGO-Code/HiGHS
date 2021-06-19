@@ -169,8 +169,7 @@ restart:
 
     if (mipdata_->dispfreq != 0) {
       if (mipdata_->num_leaves - mipdata_->last_displeave >=
-          std::min(mipdata_->dispfreq,
-                   3 + int64_t(0.1 * mipdata_->num_leaves)))
+          std::min(mipdata_->dispfreq, 3 + int64_t(0.1 * mipdata_->num_leaves)))
         mipdata_->printDisplayLine();
     }
 

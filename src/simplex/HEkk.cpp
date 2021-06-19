@@ -260,7 +260,7 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   if (debugBasisConsistent(options_, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
     highsLogDev(options_.log_options, HighsLogType::kError,
-                 "Supposed to be a Highs basis, but not valid\n");
+                "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
   HighsInt num_col = lp_.numCol_;
@@ -332,7 +332,7 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   if (debugBasisConsistent(options_, lp_, basis) ==
       HighsDebugStatus::kLogicalError) {
     highsLogDev(options_.log_options, HighsLogType::kError,
-                 "Supposed to be a Highs basis, but not valid\n");
+                "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
   basis_.nonbasicFlag_ = basis.nonbasicFlag_;
@@ -431,7 +431,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   if (!status_.has_basis) {
     if (only_from_known_basis) {
       highsLogDev(options_.log_options, HighsLogType::kError,
-                   "Simplex basis should be known but isn't\n");
+                  "Simplex basis should be known but isn't\n");
       return -(HighsInt)HighsStatus::kError;
     }
     setBasis();
@@ -442,7 +442,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     if (only_from_known_basis) {
       // If only this basis should be used, then return error
       highsLogDev(options_.log_options, HighsLogType::kError,
-                   "Supposed to be a full-rank basis, but incorrect\n");
+                  "Supposed to be a full-rank basis, but incorrect\n");
       return rank_deficiency;
     }
     // Account for rank deficiency by correcing nonbasicFlag
@@ -741,13 +741,13 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     HighsInt new_simplex_update_limit = simplex_update_count / 2;
     info_.update_limit = new_simplex_update_limit;
     highsLogDev(options_.log_options, HighsLogType::kWarning,
-                 "Rank deficiency of %" HIGHSINT_FORMAT
-                 " after %" HIGHSINT_FORMAT
-                 " simplex updates, so "
-                 "backtracking: max updates reduced from %" HIGHSINT_FORMAT
-                 " to %" HIGHSINT_FORMAT "\n",
-                 rank_deficiency, simplex_update_count,
-                 use_simplex_update_limit, new_simplex_update_limit);
+                "Rank deficiency of %" HIGHSINT_FORMAT
+                " after %" HIGHSINT_FORMAT
+                " simplex updates, so "
+                "backtracking: max updates reduced from %" HIGHSINT_FORMAT
+                " to %" HIGHSINT_FORMAT "\n",
+                rank_deficiency, simplex_update_count, use_simplex_update_limit,
+                new_simplex_update_limit);
   } else {
     // Current basis is full rank so save it
     putBacktrackingBasis(basicIndex_before_compute_factor, workEdWtFull_);
@@ -2224,7 +2224,10 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     return_dual_solution_status_ = kSolutionStatusInfeasible;
   }
   computePrimalObjectiveValue();
-
+  if (!options_.log_dev_level) {
+    const bool force = true;
+    analysis_.userInvertReport(force);
+  }
   return return_status;
 }
 
