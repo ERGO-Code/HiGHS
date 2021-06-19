@@ -23,12 +23,12 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   const auto& domchgstack = globaldomain.getDomainChangeStack();
   HighsInt changedend = globaldomain.getChangedCols().size();
 
-  HighsInt stackimplicstart = domchgstack.size() + 1;
-  HighsInt numImplications = -stackimplicstart;
+  HighsInt numImplications = -domchgstack.size()-1;
   if (val)
     globaldomain.changeBound(HighsBoundType::kLower, col, 1);
   else
     globaldomain.changeBound(HighsBoundType::kUpper, col, 0);
+  HighsInt stackimplicstart = domchgstack.size();
 
   if (globaldomain.infeasible()) {
     globaldomain.backtrack();

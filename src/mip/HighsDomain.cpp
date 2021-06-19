@@ -808,12 +808,12 @@ void HighsDomain::markPropagate(HighsInt row) {
   if (!propagateflags_[row]) {
     bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
                      (activitymaxinf_[row] == 1 ||
-                      (activitymax_[row] - mipsolver->rowLower(row)) /
+                      (double(activitymax_[row]) - mipsolver->rowLower(row)) /
                               mipsolver->mipdata_->maxAbsRowCoef[row] <
                           1.0 - mipsolver->mipdata_->feastol);
     bool propupper = mipsolver->rowUpper(row) != kHighsInf &&
                      (activitymininf_[row] == 1 ||
-                      (mipsolver->rowUpper(row) - activitymin_[row]) /
+                      (mipsolver->rowUpper(row) - double(activitymin_[row])) /
                               mipsolver->mipdata_->maxAbsRowCoef[row] <
                           1.0 - mipsolver->mipdata_->feastol);
 

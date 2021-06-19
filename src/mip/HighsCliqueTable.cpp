@@ -40,6 +40,7 @@ HighsInt HighsCliqueTable::splay(HighsInt cliqueid, HighsInt root) {
     return cliquesets[node].right;
   };
   auto get_key = [&](HighsInt node) { return cliquesets[node].cliqueid; };
+  ++numSplayCalls;
   return highs_splay(cliqueid, root, get_left, get_right, get_key);
 }
 
@@ -308,7 +309,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
 
   ++data.ncalls;
 
-  if (data.stop()) return;
+  if (data.stop(numSplayCalls)) return;
 
   double pivweight = -1.0;
   CliqueVar pivot;
@@ -364,7 +365,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
     double wv = v.weight(data.sol);
     data.wR += wv;
     bronKerboschRecurse(data, newPlen, localX.data(), newXlen);
-    if (data.stop()) return;
+    if (data.stop(numSplayCalls)) return;
 
     // remove v from R restore the weight and continue the loop in this call
     data.R.pop_back();
@@ -1471,6 +1472,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        HighsCutPool& cutpool, double feastol) {
   BronKerboschData data(sol);
   data.feastol = feastol;
+  data.maxSplayCalls = mipsolver.mipdata_->total_lp_iterations * 1000;
+  if (numSplayCalls > data.maxSplayCalls) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
   assert(numcliquesvar.size() == 2 * globaldom.colLower_.size());

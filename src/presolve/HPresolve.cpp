@@ -931,8 +931,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     HighsInt numDel = probingNumDelCol - numDelStart +
                       implications.substitutions.size() +
                       cliquetable.getSubstitutions().size();
+    int64_t splayContingent = cliquetable.numSplayCalls + 6 * numNonzeros();
 
-    // printf("start probing wit %" HIGHSINT_FORMAT " cliques\n");
     for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
          binaries) {
       HighsInt i = std::get<3>(binvar);
@@ -945,6 +945,13 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         if (cliquetable.numCliques() - numCliquesStart >
             std::max(HighsInt{1000000}, numNonzeros()))
           break;
+
+        // printf(
+        //    "numprobed=%d  numDel=%d  newcliques=%d numSplayCalls=%ld  "
+        //    "splayContingent=%ld\n",
+        //    numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
+        //    cliquetable.numSplayCalls, splayContingent);
+        if (cliquetable.numSplayCalls > splayContingent) break;
 
         // when a large percentage of columns have been deleted, stop this round
         // of probing
@@ -3059,7 +3066,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
 
         if (nzReduction > 0) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
-                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
+                      "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
 
           fastPresolveLoop(postSolveStack);
         }
