@@ -38,7 +38,9 @@ class HighsDomain {
     };
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
-    static Reason cliqueTable() { return Reason{kCliqueTable, 0}; }
+    static Reason cliqueTable(HighsInt col, HighsInt val) {
+      return Reason{kCliqueTable, 2 * col + val};
+    }
     static Reason modelRow(HighsInt row) { return Reason{kModelRow, row}; }
     static Reason cut(HighsInt cutpool, HighsInt cut) {
       return Reason{cutpool, cut};

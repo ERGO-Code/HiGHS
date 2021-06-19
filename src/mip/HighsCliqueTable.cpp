@@ -1472,7 +1472,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
                                        HighsCutPool& cutpool, double feastol) {
   BronKerboschData data(sol);
   data.feastol = feastol;
-  data.maxSplayCalls = mipsolver.mipdata_->total_lp_iterations * 1000;
+  data.maxSplayCalls = int64_t{100} * mipsolver.numNonzero() +
+                       mipsolver.mipdata_->total_lp_iterations * 1000;
   if (numSplayCalls > data.maxSplayCalls) return;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
@@ -1661,13 +1662,13 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
       if (domain.colLower_[v.col] == 1.0) continue;
 
       domain.changeBound(HighsBoundType::kLower, v.col, 1.0,
-                         HighsDomain::Reason::cliqueTable());
+                         HighsDomain::Reason::cliqueTable(col, val));
       if (domain.infeasible()) return;
     } else {
       if (domain.colUpper_[v.col] == 0.0) continue;
 
       domain.changeBound(HighsBoundType::kUpper, v.col, 0.0,
-                         HighsDomain::Reason::cliqueTable());
+                         HighsDomain::Reason::cliqueTable(col, val));
       if (domain.infeasible()) return;
     }
   }
@@ -1699,13 +1700,13 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
         if (domain.colUpper_[cliqueentries[i].col] == 0.0) continue;
 
         domain.changeBound(HighsBoundType::kUpper, cliqueentries[i].col, 0.0,
-                           HighsDomain::Reason::cliqueTable());
+                           HighsDomain::Reason::cliqueTable(col, val));
         if (domain.infeasible()) return;
       } else {
         if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
 
         domain.changeBound(HighsBoundType::kLower, cliqueentries[i].col, 1.0,
-                           HighsDomain::Reason::cliqueTable());
+                           HighsDomain::Reason::cliqueTable(col, val));
         if (domain.infeasible()) return;
       }
     }

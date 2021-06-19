@@ -21,6 +21,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   globaldomain.propagate();
   if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
+  const auto& domchgreason = globaldomain.getDomainChangeReason();
   HighsInt changedend = globaldomain.getChangedCols().size();
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
@@ -57,8 +58,15 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsInt loc = 2 * col + val;
   HighsInt implstart = implications.size();
 
-  implications.insert(implications.end(), domchgstack.data() + stackimplicstart,
-                      domchgstack.data() + stackimplicend);
+  implications.reserve(implications.size() + stackimplicend - stackimplicstart);
+
+  for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
+    if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
+        (domchgreason[i].index >> 1) == col)
+      continue;
+
+    implications.push_back(domchgstack[i]);
+  }
 
   globaldomain.backtrack();
   globaldomain.clearChangedCols(changedend);
