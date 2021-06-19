@@ -931,7 +931,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     HighsInt numDel = probingNumDelCol - numDelStart +
                       implications.substitutions.size() +
                       cliquetable.getSubstitutions().size();
-    int64_t splayContingent = cliquetable.numSplayCalls + 6 * numNonzeros();
+    int64_t splayContingent = cliquetable.numSplayCalls + 10 * numNonzeros();
 
     for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
          binaries) {
@@ -974,6 +974,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
 
         if (newNumDel > numDel) {
           probingContingent += numDel;
+          splayContingent += 1000 * numDel;
           numDel = newNumDel;
         }
 
