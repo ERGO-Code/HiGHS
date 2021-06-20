@@ -95,10 +95,12 @@ void HighsNodeQueue::link_domchgs(HighsInt node) {
     HighsInt col = nodes[node].domchgstack[i].column;
     switch (nodes[node].domchgstack[i].boundtype) {
       case HighsBoundType::kLower:
-        nodes[node].domchglinks[i] = colLowerNodes[col].emplace(val, node);
+        nodes[node].domchglinks[i] =
+            colLowerNodes[col].emplace(val, node).first;
         break;
       case HighsBoundType::kUpper:
-        nodes[node].domchglinks[i] = colUpperNodes[col].emplace(val, node);
+        nodes[node].domchglinks[i] =
+            colUpperNodes[col].emplace(val, node).first;
     }
   }
 }
@@ -143,11 +145,13 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
                                        double feastol,
                                        HighsCDouble& treeweight) {
   std::set<HighsInt> delnodes;
-  auto prunestart = colLowerNodes[col].lower_bound(ub + feastol);
+  auto prunestart =
+      colLowerNodes[col].lower_bound(std::make_pair(ub + feastol, -1));
   for (auto it = prunestart; it != colLowerNodes[col].end(); ++it)
     delnodes.insert(it->second);
 
-  auto pruneend = colUpperNodes[col].upper_bound(lb - feastol);
+  auto pruneend =
+      colUpperNodes[col].upper_bound(std::make_pair(lb - feastol, kHighsIInf));
   for (auto it = colUpperNodes[col].begin(); it != pruneend; ++it)
     delnodes.insert(it->second);
 
@@ -202,6 +206,12 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
   } while (numchgs != globaldomain.getDomainChangeStack().size());
 
   return double(treeweight);
+}
+
+double HighsNodeQueue::pruneNode(HighsInt nodeId) {
+  double treeweight = std::pow(0.5, nodes[nodeId].depth - 1);
+  unlink(nodeId);
+  return treeweight;
 }
 
 double HighsNodeQueue::performBounding(double upper_limit) {
@@ -344,13 +354,15 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
 
   if (bestCol == -1) return popBestNode();
 
-  std::multimap<double, int>::iterator start;
-  std::multimap<double, int>::iterator end;
+  std::set<std::pair<double, int>>::iterator start;
+  std::set<std::pair<double, int>>::iterator end;
   if (bestRedCost > 0) {
     start = colUpperNodes[bestCol].begin();
-    end = colUpperNodes[bestCol].lower_bound(sol.col_value[bestCol] - 0.5);
+    end = colUpperNodes[bestCol].lower_bound(
+        std::make_pair(sol.col_value[bestCol] - 0.5, -1));
   } else {
-    start = colLowerNodes[bestCol].upper_bound(sol.col_value[bestCol] + 0.5);
+    start = colLowerNodes[bestCol].upper_bound(
+        std::make_pair(sol.col_value[bestCol] + 0.5, kHighsIInf));
     end = colLowerNodes[bestCol].end();
   }
 

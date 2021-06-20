@@ -777,6 +777,46 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
         bool iscover = processNewEdge(globaldom, cliquevars[i], cliquevars[j]);
         if (globaldom.infeasible()) return;
 
+        if (false && !mipsolver.mipdata_->nodequeue.empty()) {
+          const auto& v1Nodes =
+              cliquevars[i].val == 1
+                  ? mipsolver.mipdata_->nodequeue.getUpNodes(cliquevars[i].col)
+                  : mipsolver.mipdata_->nodequeue.getDownNodes(
+                        cliquevars[i].col);
+          const auto& v2Nodes =
+              cliquevars[j].val == 1
+                  ? mipsolver.mipdata_->nodequeue.getUpNodes(cliquevars[j].col)
+                  : mipsolver.mipdata_->nodequeue.getDownNodes(
+                        cliquevars[j].col);
+
+          if (!v1Nodes.empty() && !v2Nodes.empty()) {
+            auto itV1 = v1Nodes.begin();
+            auto itV2 = v2Nodes.begin();
+
+            if (itV1->second <= v2Nodes.rbegin()->second ||
+                itV2->second <= v1Nodes.rbegin()->second) {
+              // node ranges overlap, check for nodes that can be pruned
+              while (itV1 != v1Nodes.end() && itV2 != v2Nodes.end()) {
+                if (itV1->second < itV2->second) {
+                  ++itV1;
+                } else if (itV2->second < itV1->second) {
+                  ++itV2;
+                } else {
+                  if (!mipsolver.submip)
+                    printf("node %d can be pruned\n", itV2->second);
+                  else
+                    printf("(subMIP) node %d can be pruned\n", itV2->second);
+                  HighsInt prunedNode = itV2->second;
+                  ++itV1;
+                  ++itV2;
+                  mipsolver.mipdata_->pruned_treeweight +=
+                      mipsolver.mipdata_->nodequeue.pruneNode(prunedNode);
+                }
+              }
+            }
+          }
+        }
+
         if (iscover) {
           for (HighsInt k = 0; k != numcliquevars; ++k) {
             if (k == i || k == j) continue;
