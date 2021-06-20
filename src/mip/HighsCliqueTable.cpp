@@ -777,7 +777,7 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
         bool iscover = processNewEdge(globaldom, cliquevars[i], cliquevars[j]);
         if (globaldom.infeasible()) return;
 
-        if (false && !mipsolver.mipdata_->nodequeue.empty()) {
+        if (!mipsolver.mipdata_->nodequeue.empty()) {
           const auto& v1Nodes =
               cliquevars[i].val == 1
                   ? mipsolver.mipdata_->nodequeue.getUpNodes(cliquevars[i].col)
@@ -802,10 +802,8 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
                 } else if (itV2->second < itV1->second) {
                   ++itV2;
                 } else {
-                  if (!mipsolver.submip)
-                    printf("node %d can be pruned\n", itV2->second);
-                  else
-                    printf("(subMIP) node %d can be pruned\n", itV2->second);
+                  // if (!mipsolver.submip)
+                  //   printf("node %d can be pruned\n", itV2->second);
                   HighsInt prunedNode = itV2->second;
                   ++itV1;
                   ++itV2;
@@ -1713,14 +1711,14 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
     }
   }
 
-  std::vector<HighsInt> stack;
-  stack.reserve(cliquesets.size());
+  HighsInt stackStart = stack.size();
+  // stack.reserve(cliquesets.size());
 
   if (cliquesetroot[v.index()] != -1) stack.push_back(cliquesetroot[v.index()]);
   if (sizeTwoCliquesetRoot[v.index()] != -1)
     stack.push_back(sizeTwoCliquesetRoot[v.index()]);
 
-  while (!stack.empty()) {
+  while (stack.size() != stackStart) {
     HighsInt node = stack.back();
     stack.pop_back();
 
@@ -1741,13 +1739,19 @@ void HighsCliqueTable::addImplications(HighsDomain& domain, HighsInt col,
 
         domain.changeBound(HighsBoundType::kUpper, cliqueentries[i].col, 0.0,
                            HighsDomain::Reason::cliqueTable(col, val));
-        if (domain.infeasible()) return;
+        if (domain.infeasible()) {
+          stack.clear();
+          return;
+        }
       } else {
         if (domain.colLower_[cliqueentries[i].col] == 1.0) continue;
 
         domain.changeBound(HighsBoundType::kLower, cliqueentries[i].col, 1.0,
                            HighsDomain::Reason::cliqueTable(col, val));
-        if (domain.infeasible()) return;
+        if (domain.infeasible()) {
+          stack.clear();
+          return;
+        }
       }
     }
   }
@@ -1773,8 +1777,8 @@ void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
   if (nfixings != oldnfixings) propagateAndCleanup(globaldom);
 }
 
-HighsInt HighsCliqueTable::getNumImplications(HighsInt col) const {
-  std::vector<HighsInt> stack;
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
+  assert(stack.empty());
   HighsInt numimplics = 0;
 
   if (cliquesetroot[CliqueVar(col, 1).index()] != -1)
@@ -1804,8 +1808,8 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) const {
   return numimplics;
 }
 
-HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
-  std::vector<HighsInt> stack;
+HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
+  assert(stack.empty());
   HighsInt numimplics = 0;
 
   if (cliquesetroot[CliqueVar(col, val).index()] != -1)
@@ -1833,7 +1837,6 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) const {
 
 void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   std::vector<CliqueVar> extensionvars;
-  std::vector<HighsInt> stack;
   std::vector<uint8_t> iscandidate(numcliquesvar.size());
   std::vector<uint16_t> cliquehits(cliques.size());
   std::vector<HighsInt> cliquehitinds;
