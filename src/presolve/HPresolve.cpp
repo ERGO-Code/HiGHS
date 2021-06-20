@@ -939,7 +939,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     HighsInt numDel = probingNumDelCol - numDelStart +
                       implications.substitutions.size() +
                       cliquetable.getSubstitutions().size();
-    int64_t splayContingent = cliquetable.numSplayCalls + 100 * numNonzeros();
+    int64_t splayContingent = cliquetable.numSplayCalls +
+                              std::max(HighsInt{1000000}, 100 * numNonzeros());
     HighsInt numFail = 0;
     for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
          binaries) {
@@ -948,13 +949,20 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
       if (cliquetable.getSubstitution(i) != nullptr) continue;
 
       if (domain.isBinary(i)) {
-        // break in case of too many new implications to not spent ages in
-        // probing
-        if (cliquetable.numCliques() - numCliquesStart >
-            std::max(HighsInt{1000000}, 2 * numNonzeros())) {
+        // when a large percentage of columns have been deleted, stop this round
+        // of probing
+        // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
+        if (numDel >
+            std::max(1000., (model->numRow_ + model->numCol_) * 0.05)) {
           probingEarlyAbort = true;
           break;
         }
+
+        // break in case of too many new implications to not spent ages in
+        // probing
+        if (cliquetable.numCliques() - numCliquesStart >
+            std::max(HighsInt{1000000}, 2 * numNonzeros()))
+          break;
 
         // if (numProbed % 10 == 0)
         //   printf(
@@ -962,17 +970,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         //       "splayContingent=%ld\n",
         //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
         //       cliquetable.numSplayCalls, splayContingent);
-        if (cliquetable.numSplayCalls > splayContingent) {
-          break;
-        }
+        if (cliquetable.numSplayCalls > splayContingent) break;
 
-        // when a large percentage of columns have been deleted, stop this round
-        // of probing
-        // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
-        if (numDel > (model->numRow_ + model->numCol_) * 0.05) {
-          probingEarlyAbort = true;
-          break;
-        }
         if (probingContingent - numProbed < 0) break;
 
         HighsInt numBoundChgs = 0;
