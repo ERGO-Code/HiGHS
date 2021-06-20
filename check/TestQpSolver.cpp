@@ -8,8 +8,16 @@ const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
+  double required_objective_function_value;
+  double required_x0;
+  double required_x1;
+  double required_x2;
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+
+  required_objective_function_value = -6.45;
+  required_x0 = 1.4;
+  required_x1 = 1.7;
 
   Highs highs;
 
@@ -20,13 +28,55 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   double objval = highs.getObjectiveValue();
-  REQUIRE(fabs(objval + 6.45) < double_equal_tolerance);
+  REQUIRE(fabs(objval - required_objective_function_value) <
+          double_equal_tolerance);
+
+  const HighsSolution& sol = highs.getSolution();
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+
+  // Check with qjh.mps
+  filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
+  required_objective_function_value = -4.91667;  // Should be -5.25
+  required_x0 = 5.0 / 6.0;                       // Should be 0.5
+  required_x1 = 5.0;                             // Should be 5.0
+  required_x2 = 7.0 / 6.0;                       // Should be 1.5
+
+  return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  HighsSolution sol = highs.getSolution();
-  REQUIRE(fabs(sol.col_value[0] - 1.4) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[1] - 1.7) < double_equal_tolerance);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  objval = highs.getObjectiveValue();
+  printf("Objective = %g\n", objval);
+  REQUIRE(fabs(objval - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  // Test writeModel by writing out qjh.mps...
+  filename = "qjh.mps";
+  highs.writeModel(filename);
+
+  // ... and reading it in again
+  return_status = highs.readModel(filename);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  objval = highs.getObjectiveValue();
+  printf("Objective = %g\n", objval);
+  REQUIRE(fabs(objval - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
 }
+
 TEST_CASE("test-qo1", "[qpsolver]") {
   // Test passing/reading and solving the problem qo1
   //
