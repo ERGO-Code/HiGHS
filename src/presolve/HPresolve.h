@@ -113,6 +113,8 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
+  std::vector<uint16_t> numProbes;
+
   int64_t probingContingent;
   HighsInt probingNumDelCol;
   HighsInt numProbed;
@@ -124,6 +126,7 @@ class HPresolve {
   // store old problem sizes to compute percentage redunctions in presolve loop
   HighsInt oldNumCol;
   HighsInt oldNumRow;
+  bool probingEarlyAbort;
 
   enum class Result {
     kOk,

@@ -120,6 +120,7 @@ void HPresolve::setInput(HighsMipSolver& mipsolver) {
   probingContingent = 1000;
   probingNumDelCol = 0;
   numProbed = 0;
+  numProbes.assign(mipsolver.numCol(), 0);
 
   if (mipsolver.model_ != &mipsolver.mipdata_->presolvedModel) {
     mipsolver.mipdata_->presolvedModel = *mipsolver.model_;
@@ -834,10 +835,15 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
     mipsolver->mipdata_->cutpool = HighsCutPool(
         mipsolver->model_->numCol_, mipsolver->options_mip_->mip_pool_age_limit,
         mipsolver->options_mip_->mip_pool_soft_limit);
+
+    for (HighsInt i = 0; i != oldNumCol; ++i)
+      if (newColIndex[i] != -1) numProbes[newColIndex[i]] = numProbes[i];
+    numProbes.resize(model->numCol_);
   }
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
+  probingEarlyAbort = false;
   if (numDeletedCols + numDeletedRows != 0) shrinkProblem(postSolveStack);
 
   toCSC(model->Avalue_, model->Aindex_, model->Astart_);
@@ -910,9 +916,11 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     if (domain.isBinary(i)) {
       HighsInt implicsUp = cliquetable.getNumImplications(i, 1);
       HighsInt implicsDown = cliquetable.getNumImplications(i, 0);
-      binaries.emplace_back(-int64_t(implicsUp) * implicsDown,
-                            -std::min(HighsInt{100}, implicsUp + implicsDown),
-                            random.integer(), i);
+      binaries.emplace_back(
+          -std::min(int64_t{5000}, int64_t(implicsUp) * implicsDown) /
+              (1.0 + numProbes[i]),
+          -std::min(HighsInt{100}, implicsUp + implicsDown), random.integer(),
+          i);
     }
   }
   if (!binaries.empty()) {
@@ -943,8 +951,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         // break in case of too many new implications to not spent ages in
         // probing
         if (cliquetable.numCliques() - numCliquesStart >
-            std::max(HighsInt{1000000}, numNonzeros()))
+            std::max(HighsInt{1000000}, 2 * numNonzeros())) {
+          probingEarlyAbort = true;
           break;
+        }
 
         // if (numProbed % 10 == 0)
         //   printf(
@@ -952,12 +962,17 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         //       "splayContingent=%ld\n",
         //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
         //       cliquetable.numSplayCalls, splayContingent);
-        if (cliquetable.numSplayCalls > splayContingent) break;
+        if (cliquetable.numSplayCalls > splayContingent) {
+          break;
+        }
 
         // when a large percentage of columns have been deleted, stop this round
         // of probing
         // if (numDel > std::max(model->numCol_ * 0.2, 1000.)) break;
-        if (numDel > (model->numRow_ + model->numCol_) * 0.05) break;
+        if (numDel > (model->numRow_ + model->numCol_) * 0.05) {
+          probingEarlyAbort = true;
+          break;
+        }
         if (probingContingent - numProbed < 0) break;
 
         HighsInt numBoundChgs = 0;
@@ -989,6 +1004,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         }
 
         ++numProbed;
+        numProbes[i] += 1;
 
         // printf("nprobed: %" HIGHSINT_FORMAT ", numCliques: %" HIGHSINT_FORMAT
         // "\n", nprobed,
@@ -3114,10 +3130,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
         detectImpliedIntegers();
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(runProbing(postSolveStack));
-        tryProbing =
-            probingContingent > numProbed && problemSizeReduction() > 1.0;
+        tryProbing = probingContingent > numProbed &&
+                     (problemSizeReduction() > 1.0 || probingEarlyAbort);
         trySparsify = true;
-        if (problemSizeReduction() > 0.05) continue;
+        if (problemSizeReduction() > 0.05 || tryProbing) continue;
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postSolveStack));
       }
 
