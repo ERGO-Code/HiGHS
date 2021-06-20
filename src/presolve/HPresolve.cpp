@@ -946,7 +946,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
             std::max(HighsInt{1000000}, numNonzeros()))
           break;
 
-        // if(numProbed % 100 == 0)
+        // if(numProbed % 10 == 0)
         // printf(
         //    "numprobed=%d  numDel=%d  newcliques=%d numSplayCalls=%ld  "
         //    "splayContingent=%ld\n",
@@ -982,6 +982,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
           splayContingent -= 1000 * numFail;
           ++numFail;
         } else {
+          splayContingent += 10000 * numNewCliques;
           numFail = 0;
         }
 
