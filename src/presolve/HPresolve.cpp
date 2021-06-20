@@ -946,12 +946,12 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
             std::max(HighsInt{1000000}, numNonzeros()))
           break;
 
-        // if(numProbed % 10 == 0)
-        // printf(
-        //    "numprobed=%d  numDel=%d  newcliques=%d numSplayCalls=%ld  "
-        //    "splayContingent=%ld\n",
-        //    numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
-        //    cliquetable.numSplayCalls, splayContingent);
+        // if (numProbed % 10 == 0)
+        //   printf(
+        //       "numprobed=%d  numDel=%d  newcliques=%d numSplayCalls=%ld  "
+        //       "splayContingent=%ld\n",
+        //       numProbed, numDel, cliquetable.numCliques() - numCliquesStart,
+        //       cliquetable.numSplayCalls, splayContingent);
         if (cliquetable.numSplayCalls > splayContingent) break;
 
         // when a large percentage of columns have been deleted, stop this round
@@ -965,6 +965,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         if (!implications.runProbing(i, numBoundChgs)) continue;
         probingContingent += numBoundChgs;
         numNewCliques += cliquetable.numCliques();
+        numNewCliques = std::max(numNewCliques, 0);
         while (domain.getChangedCols().size() != numChangedCols) {
           if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
             ++probingNumDelCol;
@@ -976,6 +977,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         if (newNumDel > numDel) {
           probingContingent += numDel;
           splayContingent += 1000 * (newNumDel + numDelStart);
+          splayContingent += 10000 * numNewCliques;
           numDel = newNumDel;
           numFail = 0;
         } else if (numNewCliques == 0) {
