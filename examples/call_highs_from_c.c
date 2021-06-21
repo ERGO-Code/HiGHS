@@ -286,6 +286,12 @@ void minimal_api_mps() {
   const char* filename = "../HiGHS/check/instances/avgas.mps";
   int num_row;
   int num_col;
+  int num_nz;
+
+  int run_status;
+  run_status = Highs_lpDimMpsRead(//				  filename,
+				  &num_col, &num_row, &num_nz);
+
   int sense;
   double offset;
   
@@ -298,10 +304,19 @@ void minimal_api_mps() {
   int* a_index;
   double* a_value;
 
-  int run_status;
-  run_status = Highs_lpMpsRead(filename, &num_col, &num_row, &sense, &offset,
-			       &col_cost, &col_lower, &col_upper, &row_lower, &row_upper,
-			       &a_start, &a_index, &a_value);
+  col_cost = (double*)malloc(sizeof(double) * (num_col));
+  col_lower = (double*)malloc(sizeof(double) * (num_col));
+  col_upper = (double*)malloc(sizeof(double) * (num_col));
+  row_lower = (double*)malloc(sizeof(double) * (num_row));
+  row_upper = (double*)malloc(sizeof(double) * (num_row));
+  a_start = (HighsInt*)malloc(sizeof(HighsInt) * (num_col + 1));
+  a_index = (HighsInt*)malloc(sizeof(HighsInt) * (num_nz));
+  a_value = (double*)malloc(sizeof(double) * (num_nz));
+  run_status = Highs_lpDataMpsRead(//				  filename,
+				  num_col, num_row,
+				   &sense, &offset,
+				   col_cost, col_lower, col_upper, row_lower, row_upper,
+				   a_start, a_index, a_value);
   /*
   printf("File %s: run status = %d\n", filename, run_status);
   printf("Columns: %d\n", num_col);
@@ -322,7 +337,6 @@ void minimal_api_mps() {
       printf("   %3d %3d %11.4g\n", el, a_index[el], a_value[el]);
   }
   */
-  int num_nz = a_start[num_col];
   int a_format = 1;
   double objective_value;
   double* col_value = (double*)malloc(sizeof(double) * num_col);
@@ -352,6 +366,22 @@ void minimal_api_mps() {
     objective_value += col_value[i]*col_cost[i];
   printf("Optimal objective value = %g\n", objective_value);
   assert(abs(objective_value+7.75)<1e-5);
+
+  free(col_cost);
+  free(col_lower);
+  free(col_upper);
+  free(row_lower);
+  free(row_upper);
+  free(a_start);
+  free(a_index);
+  free(a_value);
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+  free(col_basis_status);
+  free(row_basis_status);
+
 }
 
 void full_api() {

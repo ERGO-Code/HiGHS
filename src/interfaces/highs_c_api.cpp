@@ -59,6 +59,7 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
     }
   }
 
+  printf("Model status in C API is %" HIGHSINT_FORMAT "\n", *modelstatus);
   return (HighsInt)status;
 }
 
@@ -144,37 +145,44 @@ HighsInt Highs_qpCall(
   return (HighsInt)status;
 }
 
-HighsInt Highs_lpMpsRead(const char* filename, HighsInt* numcol,
-                         HighsInt* numrow, HighsInt* sense, double* offset,
-                         double** colcost, double** collower, double** colupper,
-                         double** rowlower, double** rowupper,
-                         HighsInt** astart, HighsInt** aindex,
-                         double** avalue) {
+HighsInt Highs_lpDimMpsRead(
+    //			    const char* filename,
+    HighsInt* numcol, HighsInt* numrow, HighsInt* numnz) {
   Highs highs;
   //  highs.setOptionValue("output_flag", false);
+  const char* filename = "ml.mps";
+  HighsStatus status = highs.readModel(filename);
+  const HighsLp& lp = highs.getLp();
+  *numcol = lp.numCol_;
+  *numrow = lp.numRow_;
+  *numnz = lp.Astart_[lp.numCol_];
+  return (HighsInt)status;
+}
+
+HighsInt Highs_lpDataMpsRead(
+    //			     const char* filename,
+    const HighsInt numcol, const HighsInt numrow, HighsInt* sense,
+    double* offset, double* colcost, double* collower, double* colupper,
+    double* rowlower, double* rowupper, HighsInt* astart, HighsInt* aindex,
+    double* avalue) {
+  Highs highs;
+  //  highs.setOptionValue("output_flag", false);
+  const char* filename = "ml.mps";
   HighsStatus status = highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
   const HighsInt num_nz = lp.Astart_[lp.numCol_];
-  *numcol = lp.numCol_;
-  *numrow = lp.numRow_;
+  assert(lp.numCol_ == numcol);
+  assert(lp.numRow_ == numrow);
   *sense = (HighsInt)lp.sense_;
   *offset = lp.offset_;
-  *colcost = (double*)malloc(sizeof(double) * (*numcol));
-  *collower = (double*)malloc(sizeof(double) * (*numcol));
-  *colupper = (double*)malloc(sizeof(double) * (*numcol));
-  *rowlower = (double*)malloc(sizeof(double) * (*numrow));
-  *rowupper = (double*)malloc(sizeof(double) * (*numrow));
-  *astart = (HighsInt*)malloc(sizeof(HighsInt) * (*numcol + 1));
-  *aindex = (HighsInt*)malloc(sizeof(HighsInt) * (num_nz));
-  *avalue = (double*)malloc(sizeof(double) * (num_nz));
-  memcpy(*colcost, &lp.colCost_[0], (*numcol) * sizeof(double));
-  memcpy(*collower, &lp.colLower_[0], (*numcol) * sizeof(double));
-  memcpy(*colupper, &lp.colUpper_[0], (*numcol) * sizeof(double));
-  memcpy(*rowlower, &lp.rowLower_[0], (*numrow) * sizeof(double));
-  memcpy(*rowupper, &lp.rowUpper_[0], (*numrow) * sizeof(double));
-  memcpy(*astart, &lp.Astart_[0], (*numcol + 1) * sizeof(HighsInt));
-  memcpy(*aindex, &lp.Aindex_[0], (num_nz) * sizeof(HighsInt));
-  memcpy(*avalue, &lp.Avalue_[0], (num_nz) * sizeof(double));
+  memcpy(colcost, &lp.colCost_[0], (numcol) * sizeof(double));
+  memcpy(collower, &lp.colLower_[0], (numcol) * sizeof(double));
+  memcpy(colupper, &lp.colUpper_[0], (numcol) * sizeof(double));
+  memcpy(rowlower, &lp.rowLower_[0], (numrow) * sizeof(double));
+  memcpy(rowupper, &lp.rowUpper_[0], (numrow) * sizeof(double));
+  memcpy(astart, &lp.Astart_[0], (numcol + 1) * sizeof(HighsInt));
+  memcpy(aindex, &lp.Aindex_[0], (num_nz) * sizeof(HighsInt));
+  memcpy(avalue, &lp.Avalue_[0], (num_nz) * sizeof(double));
 
   return (HighsInt)status;
 }
