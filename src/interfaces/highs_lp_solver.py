@@ -18,7 +18,7 @@ def Highs_lpCall(colcost, collower, colupper, rowlower, rowupper, astart, aindex
    n_col = len(colcost)
    n_row = len(rowlower)
    n_nz = len(aindex)
-   rowwise = 0
+   format = 1
    sense = 1
    offset = 0
    
@@ -50,7 +50,7 @@ def Highs_lpCall(colcost, collower, colupper, rowlower, rowupper, astart, aindex
    row_basis = int_array_type_row(*row_basis)
 
    retcode = highslib.Highs_lpCall(
-      ctypes.c_int(n_col), ctypes.c_int(n_row), ctypes.c_int(n_nz), ctypes.c_int(rowwise),
+      ctypes.c_int(n_col), ctypes.c_int(n_row), ctypes.c_int(n_nz), ctypes.c_int(format),
       ctypes.c_int(sense), ctypes.c_double(offset),
       dbl_array_type_col(*colcost), dbl_array_type_col(*collower), dbl_array_type_col(*colupper), 
       dbl_array_type_row(*rowlower), dbl_array_type_row(*rowupper), 

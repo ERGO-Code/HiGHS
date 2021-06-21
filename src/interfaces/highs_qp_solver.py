@@ -4,7 +4,7 @@ import os
 highslib = ctypes.cdll.LoadLibrary("libhighs.so") # highs lib folder must be in "LD_LIBRARY_PATH" environment variable
 
 highslib.Highs_qpCall.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                  ctypes.c_int, ctypes.c_int, ctypes.c_double, 
+                                  ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_double, 
 ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), 
 ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), 
 ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
@@ -20,8 +20,8 @@ def Highs_qpCall(colcost, collower, colupper, rowlower, rowupper, astart, aindex
    n_row = len(rowlower)
    n_nz = len(aindex)
    hessian_n_nz = len(qindex)
-   aformat = 0
-   qformat = 0
+   aformat = 1
+   qformat = 1
    sense = 1
    offset = 0
    

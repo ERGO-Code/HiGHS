@@ -130,6 +130,27 @@ HighsInt Highs_qpCall(
 );
 
 /*
+ * @brief reads an LP from an MPS file using HiGHS
+ */
+HighsInt Highs_lpMpsRead(
+    const char* filename,
+    HighsInt* numcol,   //!< number of columns
+    HighsInt* numrow,   //!< number of rows
+    HighsInt* sense,    //!< sense of the optimization
+    double* offset,     //!< objective constant
+    double** colcost,   //!< array of length [numcol] with column costs
+    double** collower,  //!< array of length [numcol] with lower column bounds
+    double** colupper,  //!< array of length [numcol] with upper column bounds
+    double** rowlower,  //!< array of length [numrow] with lower row bounds
+    double** rowupper,  //!< array of length [numrow] with upper row bounds
+    HighsInt**
+        astart,  //!< array of length [numcol+1] with column start indices
+    HighsInt**
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    double** avalue  //!< array of length [numnz] with value of matrix entries
+);
+
+/*
  * @brief creates a HiGHS object and returns the reference
  */
 void* Highs_create(void);
