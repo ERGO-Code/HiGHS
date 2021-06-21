@@ -191,17 +191,6 @@ highslib.Highs_lpDimMpsRead.argtypes = (ctypes.POINTER(ctypes.c_int),
                                         ctypes.POINTER(ctypes.c_int))
 highslib.Highs_lpDimMpsRead.restype = ctypes.c_int
 
-def Highs_lpDimMpsRead():
-   global highslib
-   n_col = 0
-   n_row = 0
-   n_nz = 0
-   return_status = highslib.Highs_lpDimMpsRead(ctypes.byref(ctypes.c_int(n_col)),
-                                               ctypes.byref(ctypes.c_int(n_row)),
-                                               ctypes.byref(ctypes.c_int(n_nz)));
-   print("n_col, n_row, n_nz = ", n_col, n_row, n_nz)
-   return return_status, n_col, n_row, n_nz
-
 highslib.Highs_lpDataMpsRead.argtypes = (ctypes.c_int, ctypes.c_int, 
                                          ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
                                          ctypes.POINTER(ctypes.c_double),
@@ -211,8 +200,16 @@ highslib.Highs_lpDataMpsRead.argtypes = (ctypes.c_int, ctypes.c_int,
                                          ctypes.POINTER(ctypes.c_double))
 highslib.Highs_lpDataMpsRead.restype = ctypes.c_int
 
-def Highs_lpDataMpsRead(n_col, n_row, n_nz):
+def Highs_lpMpsRead():
    global highslib
+   n_col = 0
+   n_row = 0
+   n_nz = 0
+   return_status = highslib.Highs_lpDimMpsRead(ctypes.byref(ctypes.c_int(n_col)),
+                                               ctypes.byref(ctypes.c_int(n_row)),
+                                               ctypes.byref(ctypes.c_int(n_nz)));
+   print("Python: n_col, n_row, n_nz = ", n_col, n_row, n_nz)
+
    sense = 1
    offset = 0
    dbl_array_type_col = ctypes.c_double * n_col
@@ -240,5 +237,5 @@ def Highs_lpDataMpsRead(n_col, n_row, n_nz):
    return_status = highslib.Highs_lpDataMpsRead(ctypes.c_int(n_col), ctypes.c_int(n_row),
                                           ctypes.byref(ctypes.c_int(sense)), ctypes.byref(ctypes.c_double(offset)),
                                           col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index, a_value);
-   return return_status, sense, offset, list(col_cost), list(col_lower), list(col_upper), list(row_lower), list(row_upper), list(a_start), list(a_index), list(a_value)
+   return return_status, n_col, n_row, sense, offset, list(col_cost), list(col_lower), list(col_upper), list(row_lower), list(row_upper), list(a_start), list(a_index), list(a_value)
 
