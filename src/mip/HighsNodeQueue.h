@@ -30,7 +30,7 @@ class HighsNodeQueue {
  public:
   struct OpenNode {
     std::vector<HighsDomainChange> domchgstack;
-    std::vector<std::set<std::pair<double, int>>::iterator> domchglinks;
+    std::vector<std::set<std::pair<double, HighsInt>>::iterator> domchglinks;
     double lower_bound;
     double estimate;
     HighsInt depth;
