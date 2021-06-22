@@ -354,8 +354,8 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
 
   if (bestCol == -1) return popBestNode();
 
-  std::set<std::pair<double, int>>::iterator start;
-  std::set<std::pair<double, int>>::iterator end;
+  std::set<std::pair<double, HighsInt>>::iterator start;
+  std::set<std::pair<double, HighsInt>>::iterator end;
   if (bestRedCost > 0) {
     start = colUpperNodes[bestCol].begin();
     end = colUpperNodes[bestCol].lower_bound(
