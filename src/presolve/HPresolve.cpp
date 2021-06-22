@@ -979,7 +979,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         if (!implications.runProbing(i, numBoundChgs)) continue;
         probingContingent += numBoundChgs;
         numNewCliques += cliquetable.numCliques();
-        numNewCliques = std::max(numNewCliques, 0);
+        numNewCliques = std::max(numNewCliques, HighsInt{0});
         while (domain.getChangedCols().size() != numChangedCols) {
           if (domain.isFixed(domain.getChangedCols()[numChangedCols++]))
             ++probingNumDelCol;
