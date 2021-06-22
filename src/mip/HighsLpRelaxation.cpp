@@ -607,6 +607,13 @@ void HighsLpRelaxation::recoverBasis() {
   }
 }
 
+void HighsLpRelaxation::setObjectiveLimit(double objlim) {
+  lpsolver.setOptionValue(
+      "objective_bound",
+      objlim + std::max(0.5, mipsolver.mipdata_->lower_bound *
+                                 mipsolver.mipdata_->feastol));
+}
+
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue(
       "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
