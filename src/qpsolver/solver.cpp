@@ -26,7 +26,10 @@
 
 void Solver::solve() {
 	CrashSolution* crash;
-	computestartingpoint(runtime, crash);   
+	computestartingpoint(runtime, crash);  
+	if (runtime.status == ProblemStatus::INFEASIBLE) {
+		return;
+	} 
    Basis basis(runtime, crash->active, crash->rowstatus, crash->inactive);
    solve(crash->primal, crash->rowact,  basis);
 }
