@@ -1004,7 +1004,8 @@ restart:
     }
 
     rootlpsolobj = lp.getObjective();
-    if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
+    if (lp.unscaledDualFeasible(status))
+      lower_bound = std::max(lp.getObjective(), lower_bound);
 
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
