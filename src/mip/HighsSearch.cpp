@@ -597,9 +597,13 @@ const HighsSearch::NodeData* HighsSearch::getParentNodeData() const {
 
 void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
   auto oldchangedcols = localdom.getChangedCols().size();
-  localdom.propagate();
-  localdom.clearChangedCols(oldchangedcols);
-  if (!localdom.infeasible()) {
+  bool prune = nodestack.back().lower_bound > getCutoffBound();
+  if (!prune) {
+    localdom.propagate();
+    localdom.clearChangedCols(oldchangedcols);
+    prune = localdom.infeasible();
+  }
+  if (!prune) {
     nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
                           nodestack.back().lower_bound,
                           nodestack.back().estimate, getCurrentDepth());
@@ -626,8 +630,14 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   }
 
   while (!nodestack.empty()) {
-    localdom.propagate();
-    if (!localdom.infeasible()) {
+    auto oldchangedcols = localdom.getChangedCols().size();
+    bool prune = nodestack.back().lower_bound > getCutoffBound();
+    if (!prune) {
+      localdom.propagate();
+      localdom.clearChangedCols(oldchangedcols);
+      prune = localdom.infeasible();
+    }
+    if (!prune) {
       nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
                             nodestack.back().lower_bound,
                             nodestack.back().estimate, getCurrentDepth());
