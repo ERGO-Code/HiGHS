@@ -38,7 +38,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // If the LP has no columns there is nothing left to test
   if (lp.numCol_ == 0) return HighsStatus::kOk;
-  assert(lp.orientation_ == MatrixOrientation::kColwise);
+  assert(lp.format_ == MatrixFormat::kColwise);
 
   // From here, any LP has lp.numCol_ > 0 and lp.Astart_[lp.numCol_] exists (as
   // the number of nonzeros)
@@ -830,13 +830,13 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const HighsInt num_new_col,
   // Check that nonzeros aren't being appended to a matrix with no rows
   if (num_new_nz > 0 && lp.numRow_ <= 0) return HighsStatus::kError;
   // Adding a positive number of columns to a matrix
-  if (lp.orientation_ == MatrixOrientation::kNone) {
+  if (lp.format_ == MatrixFormat::kNone) {
     // LP is currently empty, store the matrix column-wise
     assert(lp.numCol_ == 0 && lp.numRow_ == 0);
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
   } else {
     // Ensure that the matrix is stored column-wise
-    setOrientation(lp);
+    setFormat(lp);
   }
   // Determine the new number of columns in the matrix and resize the
   // starts accordingly.
@@ -890,11 +890,11 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::kError;
   // Adding a positive number of rows to a matrix
   HighsInt current_num_nz = 0;
-  if (lp.orientation_ == MatrixOrientation::kNone) {
+  if (lp.format_ == MatrixFormat::kNone) {
     // LP is currently empty, store the matrix row-wise
     assert(lp.numCol_ == 0 && lp.numRow_ == 0);
-    lp.orientation_ = MatrixOrientation::kRowwise;
-  } else if (lp.orientation_ == MatrixOrientation::kColwise) {
+    lp.format_ = MatrixFormat::kRowwise;
+  } else if (lp.format_ == MatrixFormat::kColwise) {
     assert(lp.numCol_ > 0);
     assert((HighsInt)lp.Astart_.size() >= lp.numCol_);
     current_num_nz = lp.Astart_[lp.numCol_];
@@ -910,16 +910,16 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
       // However, this allows efficient handling of the (common) case
       // where a modeller defines variables without constraints, and
       // then constraints one-by-one.
-      lp.orientation_ = MatrixOrientation::kRowwise;
+      lp.format_ = MatrixFormat::kRowwise;
       lp.Astart_.assign(lp.numRow_ + 1, 0);
     }
   }
-  if (lp.orientation_ == MatrixOrientation::kRowwise) {
+  if (lp.format_ == MatrixFormat::kRowwise) {
     appendToMatrix(lp, lp.numRow_, num_new_row, num_new_nz, XARstart, XARindex,
                    XARvalue);
   } else {
     // Storing the matrix column-wise, so have to insert the new rows
-    assert(lp.orientation_ == MatrixOrientation::kColwise);
+    assert(lp.format_ == MatrixFormat::kColwise);
     vector<HighsInt> Alength;
     Alength.assign(lp.numCol_, 0);
     for (HighsInt el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
@@ -2358,33 +2358,31 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-HighsStatus setOrientation(HighsLp& lp,
-                           const MatrixOrientation desired_orientation) {
-  if (desired_orientation == MatrixOrientation::kNone)
-    return HighsStatus::kError;
-  if (lp.orientation_ == desired_orientation) return HighsStatus::kOk;
+HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
+  if (desired_format == MatrixFormat::kNone) return HighsStatus::kError;
+  if (lp.format_ == desired_format) return HighsStatus::kOk;
   if (lp.numCol_ == 0 && lp.numRow_ == 0) {
     // No rows or columns, so either orientation is possible and has
     // identical data: just requires the start of the fictitious
     // row/column 0
     lp.Astart_.assign(1, 0);
-    lp.orientation_ = desired_orientation;
+    lp.format_ = desired_format;
   } else {
     // Any LP with positive numbers of rows or columns must have an orientation
-    assert(lp.orientation_ != MatrixOrientation::kNone);
-    if (desired_orientation == MatrixOrientation::kColwise) {
+    assert(lp.format_ != MatrixFormat::kNone);
+    if (desired_format == MatrixFormat::kColwise) {
       ensureColWise(lp);
     } else {
       ensureRowWise(lp);
     }
   }
-  assert(lp.orientation_ == desired_orientation);
+  assert(lp.format_ == desired_format);
   return HighsStatus::kOk;
 }
 
 void ensureColWise(HighsLp& lp) {
   // Should only call this is orientation is ROWWISE
-  assert(lp.orientation_ == MatrixOrientation::kRowwise);
+  assert(lp.format_ == MatrixFormat::kRowwise);
   HighsInt num_nz;
   bool empty_matrix = lp.numCol_ == 0 || lp.numRow_ == 0;
   if (!empty_matrix) {
@@ -2443,12 +2441,12 @@ void ensureColWise(HighsLp& lp) {
   assert(num_nz >= 0);
   assert((HighsInt)lp.Aindex_.size() >= num_nz);
   assert((HighsInt)lp.Avalue_.size() >= num_nz);
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
 }
 
 void ensureRowWise(HighsLp& lp) {
   // Should only call this is orientation is COLWISE
-  assert(lp.orientation_ == MatrixOrientation::kColwise);
+  assert(lp.format_ == MatrixFormat::kColwise);
   HighsInt num_nz;
   bool empty_matrix = lp.numCol_ == 0 || lp.numRow_ == 0;
   if (!empty_matrix) {
@@ -2507,5 +2505,5 @@ void ensureRowWise(HighsLp& lp) {
   assert(num_nz >= 0);
   assert((HighsInt)lp.Aindex_.size() >= num_nz);
   assert((HighsInt)lp.Avalue_.size() >= num_nz);
-  lp.orientation_ = MatrixOrientation::kRowwise;
+  lp.format_ = MatrixFormat::kRowwise;
 }

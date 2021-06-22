@@ -110,14 +110,13 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     lp.Astart_.push_back(nz);
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::kParserError;
   }
-  if (setOrientation(lp) != HighsStatus::kOk)
-    return FilereaderRetcode::kParserError;
+  if (setFormat(lp) != HighsStatus::kOk) return FilereaderRetcode::kParserError;
   return FilereaderRetcode::kOk;
 }
 
@@ -145,7 +144,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-  assert(lp.orientation_ != MatrixOrientation::kRowwise);
+  assert(lp.format_ != MatrixFormat::kRowwise);
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file

@@ -72,19 +72,17 @@ class Highs {
   HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
 
-  HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
-                        const HighsInt num_nz, const bool rowwise,
-                        const HighsInt hessian_num_nz, const HighsInt sense,
-                        const double offset, const double* costs,
-                        const double* col_lower, const double* col_upper,
-                        const double* row_lower, const double* row_upper,
-                        const HighsInt* astart, const HighsInt* aindex,
-                        const double* avalue, const HighsInt* q_start,
-                        const HighsInt* q_index, const double* q_value,
-                        const HighsInt* integrality = NULL);
+  HighsStatus passModel(
+      const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
+      const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
+      const HighsInt sense, const double offset, const double* costs,
+      const double* col_lower, const double* col_upper, const double* row_lower,
+      const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
+      const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
+      const double* q_value, const HighsInt* integrality = NULL);
 
   HighsStatus passModel(const HighsInt num_col, const HighsInt num_row,
-                        const HighsInt num_nz, const bool rowwise,
+                        const HighsInt num_nz, const HighsInt a_format,
                         const HighsInt sense, const double offset,
                         const double* costs, const double* col_lower,
                         const double* col_upper, const double* row_lower,
@@ -911,9 +909,9 @@ class Highs {
 
   std::string basisValidityToString(const HighsInt basis_validity) const;
 
-  HighsStatus setMatrixOrientation(const MatrixOrientation desired_orientation =
-                                       MatrixOrientation::kColwise) {
-    return setOrientation(model_.lp_, desired_orientation);
+  HighsStatus setMatrixFormat(
+      const MatrixFormat desired_format = MatrixFormat::kColwise) {
+    return setFormat(model_.lp_, desired_format);
   }
 
 #ifdef OSI_FOUND
@@ -1202,6 +1200,8 @@ class Highs {
 
   HighsStatus getPrimalRayInterface(bool& has_primal_ray,
                                     double* primal_ray_value);
+  bool aFormatOk(const HighsInt num_nz, const HighsInt format);
+  bool qFormatOk(const HighsInt num_nz, const HighsInt format);
 };
 
 #endif

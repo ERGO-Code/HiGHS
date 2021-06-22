@@ -85,7 +85,9 @@ enum OptionOffChooseOn {
 /** SCIP/HiGHS Objective sense */
 enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 
-enum class MatrixOrientation { kNone = 0, kColwise, kRowwise };
+enum class MatrixFormat { kNone = 0, kColwise, kRowwise };
+
+enum class HessianFormat { kNone = 0, kColwise };
 
 enum SolutionStatus {
   kSolutionStatusNone = 0,

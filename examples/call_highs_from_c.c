@@ -80,7 +80,7 @@ void minimal_api() {
   const double row_lower[3] = {-1.0e30, 5.0, 6.0};
   const double row_upper[3] = {7.0, 15.0, 1.0e30};
   // Define the constraint matrix column-wise
-  const int orientation = 0;
+  const int a_format = 1;
   const int a_start[2] = {0, 2};
   const int a_index[5] = {1, 2, 0, 1, 2};
   const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
@@ -97,7 +97,7 @@ void minimal_api() {
   int model_status;
   int run_status;
 
-  run_status = Highs_lpCall(num_col, num_row, num_nz, orientation,
+  run_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
 			   sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 			   a_start, a_index, a_value,
 			   col_value, col_dual, row_value, row_dual,
@@ -123,7 +123,7 @@ void minimal_api() {
 
   // Switch the sense to maximization and solve the LP again
   sense = sense_maximization;
-  run_status = Highs_lpCall(num_col, num_row, num_nz, orientation,
+  run_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
 			   sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 			   a_start, a_index, a_value,
 			   col_value, col_dual, row_value, row_dual,
@@ -151,7 +151,7 @@ void minimal_api() {
   // Indicate that the optimal solution for both columns must be
   // integer valued and solve the model as a MIP
   int integrality[2] = {1, 1};
-  run_status = Highs_mipCall(num_col, num_row, num_nz, orientation,
+  run_status = Highs_mipCall(num_col, num_row, num_nz, a_format,
 			     sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 			     a_start, a_index, a_value,
 			     integrality,
@@ -206,11 +206,12 @@ void minimal_api_qp() {
   const double row_lower[1] = {1};
   const double row_upper[1] = {1.0e30};
   // Define the constraint matrix row-wise
-  const int orientation = 1;
+  const int a_format = 2;
   const int a_start[2] = {0, 3};
   const int a_index[3] = {0, 1, 2};
   const double a_value[3] = {1.0, 1.0, 1.0};
 
+  const int q_format = 1;
   const int q_num_nz = 5;
   const int q_start[3] = {0, 2, 3};
   const int q_index[5] = {0, 2, 1, 0, 2};
@@ -228,7 +229,7 @@ void minimal_api_qp() {
   int model_status;
   int run_status;
 
-  run_status = Highs_qpCall(num_col, num_row, num_nz, orientation, q_num_nz,
+  run_status = Highs_qpCall(num_col, num_row, num_nz, q_num_nz, a_format, q_format, 
 			   sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
 			   a_start, a_index, a_value,
 			   q_start, q_index, q_value,
@@ -278,6 +279,111 @@ void minimal_api_qp() {
   free(row_basis_status);
 }
 
+void minimal_api_mps() {
+  // Illustrate the minimal interface for reading an mps file. Assumes
+  // that the model file is check/instances/avgas.mps
+  
+  const char* filename = "../HiGHS/check/instances/avgas.mps";
+  int num_row;
+  int num_col;
+  int num_nz;
+
+  int run_status;
+  run_status = Highs_lpDimMpsRead(//				  filename,
+				  &num_col, &num_row, &num_nz);
+
+  int sense;
+  double offset;
+  
+  double* col_cost;
+  double* col_lower;
+  double* col_upper;
+  double* row_lower;
+  double* row_upper;
+  int* a_start;
+  int* a_index;
+  double* a_value;
+
+  col_cost = (double*)malloc(sizeof(double) * (num_col));
+  col_lower = (double*)malloc(sizeof(double) * (num_col));
+  col_upper = (double*)malloc(sizeof(double) * (num_col));
+  row_lower = (double*)malloc(sizeof(double) * (num_row));
+  row_upper = (double*)malloc(sizeof(double) * (num_row));
+  a_start = (HighsInt*)malloc(sizeof(HighsInt) * (num_col + 1));
+  a_index = (HighsInt*)malloc(sizeof(HighsInt) * (num_nz));
+  a_value = (double*)malloc(sizeof(double) * (num_nz));
+  run_status = Highs_lpDataMpsRead(//				  filename,
+				  num_col, num_row,
+				   &sense, &offset,
+				   col_cost, col_lower, col_upper, row_lower, row_upper,
+				   a_start, a_index, a_value);
+  /*
+  printf("File %s: run status = %d\n", filename, run_status);
+  printf("Columns: %d\n", num_col);
+  printf("Rows: %d\n", num_row);
+  printf("Sense: %d\n", sense);
+  printf("Offset = %g\n", offset);
+  printf("Col        Cost       Lower       Upper\n");
+  for(int col = 0; col < num_col; col++)
+    printf("%3d %11.4g %11.4g %11.4g\n", col, col_cost[col], col_lower[col], col_upper[col]);
+  printf("Row       Lower       Upper\n");
+  for(int row = 0; row < num_row; row++)
+    printf("%3d %11.4g %11.4g\n", row, row_lower[row], row_upper[row]);
+  for(int col = 0; col < num_col; col++) {
+    printf("Col Start  End\n");
+    printf("%3d  %4d %4d\n", col, a_start[col], a_start[col+1]);
+    printf("    El Col       Value\n");
+    for(int el = a_start[col]; el < a_start[col+1]; el++)
+      printf("   %3d %3d %11.4g\n", el, a_index[el], a_value[el]);
+  }
+  */
+  int a_format = 1;
+  double objective_value;
+  double* col_value = (double*)malloc(sizeof(double) * num_col);
+  double* col_dual = (double*)malloc(sizeof(double) * num_col);
+  double* row_value = (double*)malloc(sizeof(double) * num_row);
+  double* row_dual = (double*)malloc(sizeof(double) * num_row);
+
+  int* col_basis_status = (int*)malloc(sizeof(int) * num_col);
+  int* row_basis_status = (int*)malloc(sizeof(int) * num_row);
+
+  int model_status;
+  run_status = Highs_lpCall(num_col, num_row, num_nz, a_format,
+			   sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper,
+			   a_start, a_index, a_value,
+			   col_value, col_dual, row_value, row_dual,
+			   col_basis_status, row_basis_status,
+			   &model_status);
+  // The run must be successful, and the model status optimal
+  assert(run_status == 0);
+  assert(model_status == 7);
+
+  printf("\nRun status = %d; Model status = %d\n", run_status, model_status);
+
+  objective_value = offset;
+  // Report the column primal and dual values, and basis status
+  for (int i = 0; i < num_col; i++)
+    objective_value += col_value[i]*col_cost[i];
+  printf("Optimal objective value = %g\n", objective_value);
+  assert(abs(objective_value+7.75)<1e-5);
+
+  free(col_cost);
+  free(col_lower);
+  free(col_upper);
+  free(row_lower);
+  free(row_upper);
+  free(a_start);
+  free(a_index);
+  free(a_value);
+  free(col_value);
+  free(col_dual);
+  free(row_value);
+  free(row_dual);
+  free(col_basis_status);
+  free(row_basis_status);
+
+}
+
 void full_api() {
   // This example does exactly the same as the minimal example above,
   // but illustrates the full C API.  It first forms and solves the LP
@@ -308,7 +414,7 @@ void full_api() {
   const double row_lower[3] = {-1.0e30, 5.0, 6.0};
   const double row_upper[3] = {7.0, 15.0, 1.0e30};
   // Define the constraint matrix column-wise
-  const int orientation = 0;
+  const int a_format = 1;
   const int a_start[2] = {0, 2};
   const int a_index[5] = {1, 2, 0, 1, 2};
   const double a_value[5] = {1.0, 3.0, 1.0, 2.0, 2.0};
@@ -326,7 +432,7 @@ void full_api() {
   void* highs = Highs_create();
 
   // Pass the LP to HiGHS
-  run_status = Highs_passLp(highs, num_col, num_row, num_nz, orientation, sense, offset,
+  run_status = Highs_passLp(highs, num_col, num_row, num_nz, a_format, sense, offset,
 			    col_cost, col_lower, col_upper,
 			    row_lower, row_upper,
 			    a_start, a_index, a_value);
@@ -579,8 +685,9 @@ void full_api() {
 }
 
 int main() {
-  minimal_api();
-  minimal_api_qp();
-  full_api();
+  //  minimal_api();
+  //  minimal_api_qp();
+  minimal_api_mps();
+  //  full_api();
   return 0;
 }

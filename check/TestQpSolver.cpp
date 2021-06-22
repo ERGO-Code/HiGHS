@@ -8,8 +8,16 @@ const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
+  double required_objective_function_value;
+  double required_x0;
+  double required_x1;
+  double required_x2;
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/qptestnw.lp";
+
+  required_objective_function_value = -6.45;
+  required_x0 = 1.4;
+  required_x1 = 1.7;
 
   Highs highs;
 
@@ -20,13 +28,55 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   double objval = highs.getObjectiveValue();
-  REQUIRE(fabs(objval + 6.45) < double_equal_tolerance);
+  REQUIRE(fabs(objval - required_objective_function_value) <
+          double_equal_tolerance);
+
+  const HighsSolution& sol = highs.getSolution();
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+
+  // Check with qjh.mps
+  filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
+  required_objective_function_value = -4.91667;  // Should be -5.25
+  required_x0 = 5.0 / 6.0;                       // Should be 0.5
+  required_x1 = 5.0;                             // Should be 5.0
+  required_x2 = 7.0 / 6.0;                       // Should be 1.5
+
+  return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
 
-  HighsSolution sol = highs.getSolution();
-  REQUIRE(fabs(sol.col_value[0] - 1.4) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[1] - 1.7) < double_equal_tolerance);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  objval = highs.getObjectiveValue();
+  printf("Objective = %g\n", objval);
+  REQUIRE(fabs(objval - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  // Test writeModel by writing out qjh.mps...
+  filename = "qjh.mps";
+  highs.writeModel(filename);
+
+  // ... and reading it in again
+  return_status = highs.readModel(filename);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  objval = highs.getObjectiveValue();
+  printf("Objective = %g\n", objval);
+  REQUIRE(fabs(objval - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
 }
+
 TEST_CASE("test-qo1", "[qpsolver]") {
   // Test passing/reading and solving the problem qo1
   //
@@ -34,6 +84,7 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   //
   // subject to x_1 + x_3 <= 2; x>=0
   HighsStatus return_status;
+  HighsModelStatus model_status;
   double objective_function_value;
   const double required_objective_function_value = -5.25;
 
@@ -57,12 +108,13 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   }
   lp.colUpper_ = {inf, inf, inf};
   if (!uncon) {
-    lp.rowLower_ = {1.0};  // Should be -inf, but 1.0 yields memory error
-    lp.rowUpper_ = {inf};  // Should be 2, but inf yields memory error
+    lp.rowLower_ = {
+        -inf};  //{1.0};  // Should be -inf, but 1.0 yields memory error
+    lp.rowUpper_ = {2};  //{inf};  // Should be 2, but inf yields memory error
     lp.Astart_ = {0, 1, 1, 2};
     lp.Aindex_ = {0, 0};
     lp.Avalue_ = {1.0, 1.0};
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
   }
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
@@ -83,6 +135,20 @@ TEST_CASE("test-qo1", "[qpsolver]") {
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   highs.writeSolution("", true);
+
+  // Make the problem infeasible
+  return_status = highs.changeColBounds(0, 3, inf);
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.changeColBounds(2, 3, inf);
+  REQUIRE(return_status == HighsStatus::kOk);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  highs.writeSolution("", true);
+  model_status = highs.getModelStatus();
+  printf("Infeasible QP status: %s\n",
+         highs.modelStatusToString(model_status).c_str());
+  REQUIRE(model_status == HighsModelStatus::kInfeasible);
 
   return_status = highs.clearModel();
 

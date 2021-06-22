@@ -233,18 +233,27 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
-  // A model with no rows might have no starts or orientation
-  // assigned, but HiGHS assumes that such a model will have null
-  // starts. Aribtrarily, make it column-wise
-  if (lp.numRow_ == 0) {
-    lp.orientation_ = MatrixOrientation::kColwise;
+  if (lp.numCol_ == 0 || lp.numRow_ == 0) {
+    // Model constraint matrix has either no columns or no
+    // rows. Clearly the matrix is empty, so may have no orientation
+    // or starts assigned. HiGHS assumes that such a model will have
+    // null starts, so make it column-wise
+    lp.format_ = MatrixFormat::kColwise;
     lp.Astart_.assign(lp.numCol_ + 1, 0);
     lp.Aindex_.clear();
     lp.Avalue_.clear();
+  } else {
+    // Matrix has rows and columns, so a_format must be valid, even if
+    // there are no nonzeros. However, the number of nonzeros can only
+    // be found from a valid setting of a_format! So, pass 1 as the
+    // number of nonzeros to force the check of a_format
+    if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
+  // Check that the value of q_format is valid
+  //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   return_status =
-      interpretCallStatus(setOrientation(lp), return_status, "setOrientation");
+      interpretCallStatus(setFormat(lp), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of the LP, normalising its values
   return_status =
@@ -281,14 +290,21 @@ HighsStatus Highs::passModel(HighsLp lp) {
 
 HighsStatus Highs::passModel(
     const HighsInt num_col, const HighsInt num_row, const HighsInt num_nz,
-    const bool rowwise, const HighsInt hessian_num_nz, const HighsInt sense,
-    const double offset, const double* costs, const double* col_lower,
-    const double* col_upper, const double* row_lower, const double* row_upper,
-    const HighsInt* astart, const HighsInt* aindex, const double* avalue,
-    const HighsInt* q_start, const HighsInt* q_index, const double* q_value,
-    const HighsInt* integrality) {
+    const HighsInt q_num_nz, const HighsInt a_format, const HighsInt q_format,
+    const HighsInt sense, const double offset, const double* costs,
+    const double* col_lower, const double* col_upper, const double* row_lower,
+    const double* row_upper, const HighsInt* astart, const HighsInt* aindex,
+    const double* avalue, const HighsInt* q_start, const HighsInt* q_index,
+    const double* q_value, const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
+  // Check that the values of a_format and q_format are valid
+  if (!aFormatOk(num_nz, a_format)) return HighsStatus::kError;
+  if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
+
+  bool a_rowwise = false;
+  if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
+
   lp.numCol_ = num_col;
   lp.numRow_ = num_row;
   if (num_col > 0) {
@@ -311,7 +327,7 @@ HighsStatus Highs::passModel(
     assert(astart != NULL);
     assert(aindex != NULL);
     assert(avalue != NULL);
-    if (rowwise) {
+    if (a_rowwise) {
       lp.Astart_.assign(astart, astart + num_row);
     } else {
       lp.Astart_.assign(astart, astart + num_col);
@@ -319,14 +335,14 @@ HighsStatus Highs::passModel(
     lp.Aindex_.assign(aindex, aindex + num_nz);
     lp.Avalue_.assign(avalue, avalue + num_nz);
   }
-  if (rowwise) {
+  if (a_rowwise) {
     lp.Astart_.resize(num_row + 1);
     lp.Astart_[num_row] = num_nz;
-    lp.orientation_ = MatrixOrientation::kRowwise;
+    lp.format_ = MatrixFormat::kRowwise;
   } else {
     lp.Astart_.resize(num_col + 1);
     lp.Astart_[num_col] = num_nz;
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
     lp.sense_ = ObjSense::kMaximize;
@@ -343,7 +359,7 @@ HighsStatus Highs::passModel(
       lp.integrality_[iCol] = (HighsVarType)integrality_status;
     }
   }
-  if (hessian_num_nz > 0) {
+  if (q_num_nz > 0) {
     assert(num_col > 0);
     assert(q_start != NULL);
     assert(q_index != NULL);
@@ -352,24 +368,24 @@ HighsStatus Highs::passModel(
     hessian.dim_ = num_col;
     hessian.q_start_.assign(q_start, q_start + num_col);
     hessian.q_start_.resize(num_col + 1);
-    hessian.q_start_[num_col] = hessian_num_nz;
-    hessian.q_index_.assign(q_index, q_index + hessian_num_nz);
-    hessian.q_value_.assign(q_value, q_value + hessian_num_nz);
+    hessian.q_start_[num_col] = q_num_nz;
+    hessian.q_index_.assign(q_index, q_index + q_num_nz);
+    hessian.q_value_.assign(q_value, q_value + q_num_nz);
   }
   return passModel(std::move(model));
 }
 
 HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
-                             const HighsInt num_nz, const bool rowwise,
+                             const HighsInt num_nz, const HighsInt a_format,
                              const HighsInt sense, const double offset,
                              const double* costs, const double* col_lower,
                              const double* col_upper, const double* row_lower,
                              const double* row_upper, const HighsInt* astart,
                              const HighsInt* aindex, const double* avalue,
                              const HighsInt* integrality) {
-  return passModel(num_col, num_row, num_nz, rowwise, 0, sense, offset, costs,
-                   col_lower, col_upper, row_lower, row_upper, astart, aindex,
-                   avalue, NULL, NULL, NULL, integrality);
+  return passModel(num_col, num_row, num_nz, 0, a_format, 0, sense, offset,
+                   costs, col_lower, col_upper, row_lower, row_upper, astart,
+                   aindex, avalue, NULL, NULL, NULL, integrality);
 }
 
 HighsStatus Highs::readModel(const std::string filename) {
@@ -426,8 +442,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (filename == "") {
     // Empty file name: report model on logging stream
@@ -530,13 +546,12 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (hmos_[0].ekk_instance_.status_.valid) {
-    return_status =
-        interpretCallStatus(setOrientation(hmos_[0].ekk_instance_.lp_),
-                            return_status, "setOrientation");
+    return_status = interpretCallStatus(setFormat(hmos_[0].ekk_instance_.lp_),
+                                        return_status, "setFormat");
     if (return_status == HighsStatus::kError) return return_status;
   }
 #ifdef HIGHSDEV
@@ -1163,8 +1178,8 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   if (!haveHmo("getReducedRow")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (row_vector == NULL) {
@@ -1224,8 +1239,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   if (!haveHmo("getReducedColumn")) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(setOrientation(model_.lp_), return_status,
-                                      "setOrientation");
+  return_status =
+      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (col_vector == NULL) {
@@ -2043,7 +2058,7 @@ HighsPresolveStatus Highs::runPresolve() {
   }
 
   // Ensure that the LP is column-wise
-  // setOrientation(model_.lp_);
+  // setFormat(model_.lp_);
 
   if (model_.lp_.numCol_ == 0 && model_.lp_.numRow_ == 0)
     return HighsPresolveStatus::kNullError;
@@ -2171,7 +2186,7 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
 
   HighsModelObject& model = hmos_[model_index];
   // Check that the model isn't row-wise
-  assert(model_.lp_.orientation_ != MatrixOrientation::kRowwise);
+  assert(model_.lp_.format_ != MatrixFormat::kRowwise);
 
   // Copy the LP solver iteration counts to this model so that they
   // are updated
@@ -2193,7 +2208,7 @@ HighsStatus Highs::callSolveQp() {
   // Check that the model isn't row-wise - not yet in master
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
-  assert(lp.orientation_ != MatrixOrientation::kRowwise);
+  assert(lp.format_ != MatrixFormat::kRowwise);
   assert(hessian.dim_ == lp.numCol_);
   //
   // Run the QP solver
@@ -2332,7 +2347,7 @@ HighsStatus Highs::callSolveMip() {
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
   // Check that the model isn't row-wise
-  assert(model_.lp_.orientation_ != MatrixOrientation::kRowwise);
+  assert(model_.lp_.format_ != MatrixFormat::kRowwise);
   HighsMipSolver solver(options_, model_.lp_, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;
