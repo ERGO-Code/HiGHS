@@ -90,7 +90,7 @@ class Nullspace {
 
 public:
    Nullspace(Runtime& rt, Basis& bas) : basis(bas), runtime(rt), bufferZ(Matrix(rt.instance.num_var,0)), temp_unit(rt.instance.num_var), buffer_d(rt.instance.num_var), buffer_col(rt.instance.num_var), buffer_aq(rt.instance.num_var), buffer_col_p(rt.instance.num_var), buffer_unit(rt.instance.num_var) {
-      if (bas.getnumactive() > 0) {
+      if (bas.getnuminactive() > 0) {
          recompute();
       }
       uptodateZ = true;
