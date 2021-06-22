@@ -17,7 +17,7 @@
 
 #include <cassert>
 
-bool HighsModel::isQp() {
+bool HighsModel::isQp() const {
   HighsInt dim = this->hessian_.dim_;
   HighsInt num_col = this->lp_.numCol_;
   if (dim) {

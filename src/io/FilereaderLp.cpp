@@ -160,6 +160,18 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
     this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.colCost_[i],
                       (i + 1));
   }
+  if (model.isQp()) {
+    this->writeToFile(file, "+ [ ");
+    for (HighsInt col=0; col<lp.numCol_; col++) {
+      for (HighsInt i=model.hessian_.q_start_[col]; i<model.hessian_.q_start_[col+1]; i++) {
+        if (col <= model.hessian_.q_index_[i]) {
+          this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ", 
+        model.hessian_.q_value_[i], col, model.hessian_.q_index_[i]);
+        }
+      }
+    }
+    this->writeToFile(file, " ]/2 ");
+  }
   this->writeToFileLineend(file);
 
   // write constraint section, lower & upper bounds are one constraint
