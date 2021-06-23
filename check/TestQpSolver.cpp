@@ -20,6 +20,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   required_x1 = 1.7;
 
   Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   HighsStatus return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
@@ -49,7 +50,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   objval = highs.getObjectiveValue();
-  printf("Objective = %g\n", objval);
+  if (dev_run) printf("Objective = %g\n", objval);
   REQUIRE(fabs(objval - required_objective_function_value) <
           double_equal_tolerance);
   REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
@@ -69,7 +70,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   objval = highs.getObjectiveValue();
-  printf("Objective = %g\n", objval);
+  if (dev_run) printf("Objective = %g\n", objval);
   REQUIRE(fabs(objval - required_objective_function_value) <
           double_equal_tolerance);
   REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
@@ -126,7 +127,7 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
-  highs.writeModel("");
+  if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
   objective_function_value = highs.getInfo().objective_function_value;
@@ -134,7 +135,7 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   //  < double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
-  highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", true);
 
   // Make the problem infeasible
   return_status = highs.changeColBounds(0, 3, inf);
@@ -144,10 +145,11 @@ TEST_CASE("test-qo1", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  highs.writeSolution("", true);
+  if (dev_run) highs.writeSolution("", true);
   model_status = highs.getModelStatus();
-  printf("Infeasible QP status: %s\n",
-         highs.modelStatusToString(model_status).c_str());
+  if (dev_run)
+    printf("Infeasible QP status: %s\n",
+           highs.modelStatusToString(model_status).c_str());
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
 
   return_status = highs.clearModel();

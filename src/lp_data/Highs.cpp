@@ -2251,14 +2251,15 @@ HighsStatus Highs::callSolveQp() {
   runtime.endofiterationevent.subscribe([this](Runtime& rt) {
     int rep = rt.statistics.iteration.size() - 1;
 
-    highsLogUser(options_.log_options, HighsLogType::kInfo, "%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT
-           ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n",
-           rt.statistics.iteration[rep], rt.statistics.objval[rep],
-           rt.statistics.nullspacedimension[rep], rt.statistics.time[rep],
-           rt.statistics.sum_primal_infeasibilities[rep],
-           rt.statistics.num_primal_infeasibilities[rep],
-           rt.statistics.density_nullspace[rep],
-           rt.statistics.density_factor[rep]);
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT
+                 ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n",
+                 rt.statistics.iteration[rep], rt.statistics.objval[rep],
+                 rt.statistics.nullspacedimension[rep], rt.statistics.time[rep],
+                 rt.statistics.sum_primal_infeasibilities[rep],
+                 rt.statistics.num_primal_infeasibilities[rep],
+                 rt.statistics.density_nullspace[rep],
+                 rt.statistics.density_factor[rep]);
   });
   runtime.settings.iterationlimit = std::numeric_limits<int>::max();
   runtime.settings.ratiotest =

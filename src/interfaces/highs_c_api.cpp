@@ -156,7 +156,9 @@ HighsInt Highs_lpDimMpsRead(
   *numcol = lp.numCol_;
   *numrow = lp.numRow_;
   *numnz = lp.Astart_[lp.numCol_];
-  printf("C: n_col, n_row, n_nz = %" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT "\n", *numcol, *numrow, *numnz);
+  printf("C: n_col, n_row, n_nz = %" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
+         " %" HIGHSINT_FORMAT "\n",
+         *numcol, *numrow, *numnz);
   return (HighsInt)status;
 }
 
