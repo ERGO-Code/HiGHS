@@ -685,9 +685,9 @@ void full_api() {
 }
 
 int main() {
-  //  minimal_api();
+    minimal_api();
   //  minimal_api_qp();
-  minimal_api_mps();
-  //  full_api();
+  //  minimal_api_mps();
+    full_api();
   return 0;
 }
