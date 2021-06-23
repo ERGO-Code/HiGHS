@@ -75,10 +75,6 @@ class NewCholeskyFactor {
   NewCholeskyFactor(Runtime& rt, Basis& basis, Nullspace& ns)
       : runtime(rt), nullspace(ns) {
     uptodate = false;
-    printf("computed size: %" HIGHSINT_FORMAT ", needed size: %" HIGHSINT_FORMAT
-           "\n",
-           min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
-           basis.getnuminactive());
     current_k_max =
         max(min((HighsInt)ceil(rt.instance.num_var / 16.0), (HighsInt)1000),
             basis.getnuminactive());

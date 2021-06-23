@@ -5,13 +5,13 @@
 
 template <typename T>  // T: void (*fncptr)(int, double)
 class Eventhandler {
-  std::vector<void (*)(T)> subscribers;
+  std::vector<std::function<void(T)>> subscribers;
 
  public:
-  void subscribe(void (*subscriber)(T)) { subscribers.push_back(subscriber); }
+  void subscribe(std::function<void(T)> subscriber) { subscribers.push_back(subscriber); }
 
   void fire(T args) {
-    for (void (*fun)(T) : subscribers) {
+    for (std::function<void(T)> fun : subscribers) {
       fun(args);
     }
   }

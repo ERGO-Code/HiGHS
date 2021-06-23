@@ -2248,12 +2248,10 @@ HighsStatus Highs::callSolveQp() {
   Runtime runtime(instance);
 
   runtime.settings.reportingfequency = 1000;
-  runtime.endofiterationevent.subscribe([](Runtime& rt) {
+  runtime.endofiterationevent.subscribe([this](Runtime& rt) {
     int rep = rt.statistics.iteration.size() - 1;
-    //  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-    //                 "Solving %s\n", lp_.model_name_.c_str());
 
-    printf("%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT
+    highsLogUser(options_.log_options, HighsLogType::kInfo, "%" HIGHSINT_FORMAT ", %lf, %" HIGHSINT_FORMAT
            ", %lf, %lf, %" HIGHSINT_FORMAT ", %lf, %lf\n",
            rt.statistics.iteration[rep], rt.statistics.objval[rep],
            rt.statistics.nullspacedimension[rep], rt.statistics.time[rep],
