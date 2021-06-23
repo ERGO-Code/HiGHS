@@ -345,7 +345,7 @@ if(FORTRAN_FOUND)
     install(TARGETS FortranHighs
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include
+        INCLUDES DESTINATION include/highs
         MODULES DESTINATION modules)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
@@ -385,7 +385,7 @@ if (OSI_FOUND)
     install(TARGETS OsiHighs
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
+        INCLUDES DESTINATION include/highs)
 
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
@@ -405,9 +405,9 @@ set_target_properties(highs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/${dir} )
+    install( FILES ${file} DESTINATION include/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include/highs)
 
 if (IPX_ON)
     if (UNIX)
@@ -432,7 +432,7 @@ if (IPX_ON)
     install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
+            INCLUDES DESTINATION include/highs)
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs libipx libbasiclu
@@ -441,7 +441,7 @@ else()
     install(TARGETS libhighs EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
+            INCLUDES DESTINATION include/highs)
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs 
@@ -654,6 +654,7 @@ set(headers_fast_build_
     mip/HighsTransformedLp.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
+    model/HighsModel.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -722,9 +723,9 @@ set_target_properties(libhighs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/${dir} )
+    install( FILES ${file} DESTINATION include/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include/highs)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")

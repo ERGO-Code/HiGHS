@@ -483,11 +483,11 @@ if (UNIX)
     install(TARGETS libhighs EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
-            PUBLIC_HEADER DESTINATION include)
+            PUBLIC_HEADER DESTINATION include/highs)
 elseif (WIN32)
     install(TARGETS libhighs EXPORT highs-targets
             LIBRARY DESTINATION bin
-            PUBLIC_HEADER DESTINATION include)
+            PUBLIC_HEADER DESTINATION include/highs)
 endif()
 
 
