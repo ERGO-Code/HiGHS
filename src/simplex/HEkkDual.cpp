@@ -2244,7 +2244,12 @@ double HEkkDual::computeExactDualObjectiveValue() {
   dual_row.clear();
   if (dual_col.count) {
     const double historical_density_for_non_hypersparse_operation = 1;
+    HVector nla_dual_col = dual_col;
     factor.btran(dual_col, historical_density_for_non_hypersparse_operation);
+    if (1==0) {
+      ekk_instance_.simplex_nla_.btran(nla_dual_col, historical_density_for_non_hypersparse_operation);
+      assert(nla_dual_col.isEqual(dual_col));
+    }
     matrix.priceByColumn(dual_row, dual_col);
   }
   double dual_objective = lp.offset_;

@@ -872,6 +872,11 @@ HighsInt HEkk::computeFactor() {
                   options_.highs_debug_level, options_.output_flag,
                   options_.log_file_stream, options_.log_to_console,
                   options_.log_dev_level);
+    nla_basis_ = basis_;
+    simplex_nla_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0], &lp_.Aindex_[0],
+		       &lp_.Avalue_[0], &nla_basis_.basicIndex_[0],
+		       info_.factor_pivot_threshold, 
+		       &options_, &timer_, &analysis_);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
@@ -885,10 +890,15 @@ HighsInt HEkk::computeFactor() {
         analysis_.getThreadFactorTimerClockPtr(thread_id);
   }
   const HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
+  if (1==0) {
+    const HighsInt rank_deficiency_nla = simplex_nla_.invert();
+    assert(rank_deficiency == rank_deficiency_nla);
+  }
   if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
   debugCheckInvert(options_, factor_, force);
+  analysis_.simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
     // Have an invertible representation, but of B with column(s)
@@ -906,7 +916,6 @@ HighsInt HEkk::computeFactor() {
   // number of updates shouldn't be positive
   info_.update_count = 0;
 
-  analysis_.simplexTimerStop(InvertClock);
   return rank_deficiency;
 }
 
@@ -1336,8 +1345,13 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis_.col_aq_density);
+  HVector nla_col_aq = col_aq;
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
+  if (1==0) {
+    simplex_nla_.ftran(nla_col_aq, analysis_.col_aq_density);
+    assert(nla_col_aq.isEqual(col_aq));
+  }
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
   HighsInt num_row = lp_.numRow_;
@@ -1358,8 +1372,13 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                     analysis_.row_ep_density);
+  HVector nla_row_ep = row_ep;
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
+  if (1==0) {
+    simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
+    assert(nla_row_ep.isEqual(row_ep));
+  }
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
   HighsInt num_row = lp_.numRow_;
@@ -1379,8 +1398,13 @@ void HEkk::fullBtran(HVector& buffer) {
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer,
                                     analysis_.dual_col_density);
+  HVector nla_buffer = buffer;
   factor_.btran(buffer, analysis_.dual_col_density,
                 analysis_.pointer_serial_factor_clocks);
+  if (1==0) {
+    simplex_nla_.btran(nla_buffer, analysis_.dual_col_density);
+    assert(nla_buffer.isEqual(buffer));
+  }
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
   const double local_dual_col_density = (double)buffer.count / lp_.numRow_;
@@ -1784,7 +1808,14 @@ bool HEkk::reinvertOnNumericalTrouble(
 void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
                         HighsInt* hint) {
   analysis_.simplexTimerStart(UpdateFactorClock);
+  HVector nla_column = *column;
+  HVector nla_row_ep = *row_ep;
   factor_.update(column, row_ep, iRow, hint);
+  if (1==0) {
+    assert(nla_column.isEqual(*column));
+    assert(nla_row_ep.isEqual(*row_ep));
+  }
+  
   // Now have a representation of B^{-1}, but it is not fresh
   status_.has_invert = true;
   if (info_.update_count >= info_.update_limit)

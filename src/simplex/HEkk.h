@@ -20,6 +20,7 @@
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/HSimplexNla.h"
 #include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
 
@@ -86,6 +87,7 @@ class HEkk {
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;
   SimplexBasis basis_;
+  SimplexBasis nla_basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
@@ -93,6 +95,7 @@ class HEkk {
 
   HMatrix matrix_;
   HFactor factor_;
+  HSimplexNla simplex_nla_;
 
   double build_synthetic_tick_;
   double total_synthetic_tick_;

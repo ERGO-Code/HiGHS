@@ -160,3 +160,14 @@ void HVector::saxpy(const double pivotX, const HVector* pivot) {
   }
   count = workCount;
 }
+bool HVector::isEqual(HVector& v0) {
+  if (this->size != v0.size) return false;
+  if (this->count != v0.count) return false;
+  if (this->index != v0.index) return false;
+  if (this->array != v0.array) return false;
+  //  if (this->index.size() != v0.index.size()) return false;
+  //  for (HighsInt el = 0; el < (HighsInt)this->index.size(); el++)
+  //    if (this->index[el] != v0.index[el]) return false;
+  if (this->synthetic_tick != v0.synthetic_tick) return false;
+  return true;
+}
