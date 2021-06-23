@@ -890,7 +890,7 @@ HighsInt HEkk::computeFactor() {
         analysis_.getThreadFactorTimerClockPtr(thread_id);
   }
   const HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
-  if (1==0) {
+  if (simplex_nla_.use_simplex_nla_invert) {
     const HighsInt rank_deficiency_nla = simplex_nla_.invert();
     assert(rank_deficiency == rank_deficiency_nla);
   }
@@ -1348,7 +1348,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   nla_col_aq = col_aq;
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (1==0) {
+  if (simplex_nla_.use_simplex_nla_trans) {
     simplex_nla_.ftran(nla_col_aq, analysis_.col_aq_density);
     assert(nla_col_aq.isEqual(col_aq));
   }
@@ -1375,7 +1375,7 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   HVector nla_row_ep = row_ep;
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (1==0) {
+  if (simplex_nla_.use_simplex_nla_trans) {
     simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
     assert(nla_row_ep.isEqual(row_ep));
   }
@@ -1811,9 +1811,12 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   *nla_column = *column;
   *nla_row_ep = *row_ep;
   factor_.update(column, row_ep, iRow, hint);
-  if (1==0) {
-    assert((*nla_column).isEqual(*column));
-    assert((*nla_row_ep).isEqual(*row_ep));
+  if (simplex_nla_.use_simplex_nla_update) {
+    HighsInt* nla_iRow;
+    HighsInt* nla_hint;
+    *nla_iRow = *iRow;
+    *nla_hint = *hint;
+    simplex_nla_.update(nla_column, nla_row_ep, nla_iRow, nla_hint);
   }
   
   // Now have a representation of B^{-1}, but it is not fresh
