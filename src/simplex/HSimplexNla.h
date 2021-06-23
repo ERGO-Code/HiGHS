@@ -48,6 +48,9 @@ class HSimplexNla {
   void btran(HVector& rhs, double nla_density);
   void ftran(HVector& rhs, double nla_density);
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
+
+  HighsInt build_synthetic_tick_;
+
 private:
   // References:
   //

@@ -367,6 +367,12 @@ void HEkkDual::initialiseInstance() {
   col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
+
+  nla_col_DSE.setup(solver_num_row);
+  nla_col_BFRT.setup(solver_num_row);
+  nla_col_aq.setup(solver_num_row);
+  nla_row_ep.setup(solver_num_row);
+  nla_row_ap.setup(solver_num_col);
   // Setup other buffers
   dualRow.setup();
   dualRHS.setup();
@@ -972,6 +978,8 @@ void HEkkDual::rebuild() {
   }
 
   ekk_instance_.build_synthetic_tick_ = factor->build_synthetic_tick;
+  if (1==0) 
+    assert(factor->build_synthetic_tick == ekk_instance_.simplex_nla_.build_synthetic_tick_);
   ekk_instance_.total_synthetic_tick_ = 0;
 
   // Dual simplex doesn't maintain the number of primal
@@ -1225,8 +1233,13 @@ void HEkkDual::chooseRow() {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                       analysis->row_ep_density);
     // Perform BTRAN
+    nla_row_ep = row_ep;
     factor->btran(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
+    if (1==0) {
+      ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density);
+      assert(nla_row_ep.isEqual(row_ep));
+    }
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
     analysis->simplexTimerStop(BtranClock);
@@ -1587,8 +1600,14 @@ void HEkkDual::updateFtran() {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis->col_aq_density);
   // Perform FTRAN
+  nla_col_aq = col_aq;
   factor->ftran(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
+  if (1==0) {
+    ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density);
+    assert(nla_col_aq.isEqual(col_aq));
+  }
+  
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
@@ -1839,7 +1858,7 @@ void HEkkDual::updatePivots() {
   ekk_instance_.iteration_count_++;
   //
   // Update the invertible representation of the basis matrix
-  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
+  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason, &nla_col_aq, &nla_row_ep);
   //
   // Update the row-wise representation of the nonbasic columns
   ekk_instance_.updateMatrix(variable_in, variable_out);

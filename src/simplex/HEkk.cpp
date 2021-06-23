@@ -1337,7 +1337,7 @@ void HEkk::initialiseNonbasicValueAndMove() {
   }
 }
 
-void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
+void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_col_aq) {
   analysis_.simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
@@ -1345,7 +1345,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis_.col_aq_density);
-  HVector nla_col_aq = col_aq;
+  nla_col_aq = col_aq;
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
   if (1==0) {
@@ -1806,14 +1806,14 @@ bool HEkk::reinvertOnNumericalTrouble(
 // calls matrix_.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
 void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
-                        HighsInt* hint) {
+                        HighsInt* hint, HVector* nla_column, HVector* nla_row_ep) {
   analysis_.simplexTimerStart(UpdateFactorClock);
-  HVector nla_column = *column;
-  HVector nla_row_ep = *row_ep;
+  *nla_column = *column;
+  *nla_row_ep = *row_ep;
   factor_.update(column, row_ep, iRow, hint);
   if (1==0) {
-    assert(nla_column.isEqual(*column));
-    assert(nla_row_ep.isEqual(*row_ep));
+    assert((*nla_column).isEqual(*column));
+    assert((*nla_row_ep).isEqual(*row_ep));
   }
   
   // Now have a representation of B^{-1}, but it is not fresh

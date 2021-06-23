@@ -164,6 +164,12 @@ class HEkkPrimal {
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
 
+  HVector nla_row_ep;
+  HVector nla_row_ap;
+  HVector nla_col_aq;
+  HVector nla_col_basic_feasibility_change;
+  HVector nla_row_basic_feasibility_change;
+
   const HighsInt primal_correction_strategy =
       kSimplexPrimalCorrectionStrategyAlways;
 

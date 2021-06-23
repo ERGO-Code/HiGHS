@@ -53,7 +53,9 @@ void HSimplexNla::setup(HighsInt num_col,
 
 HighsInt HSimplexNla::invert() {
   printf("In HSimplexNla::invert\n");
-  return factor_.build(NULL);
+  HighsInt rank_deficiency = factor_.build(NULL);
+  build_synthetic_tick_ = factor_.build_synthetic_tick;
+  return rank_deficiency;
 }
 
 void HSimplexNla::btran(HVector& rhs, double rhs_density) {

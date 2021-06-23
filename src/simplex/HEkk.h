@@ -128,7 +128,7 @@ class HEkk {
   void initialiseLpColBound();
   void initialiseLpRowBound();
   void initialiseNonbasicValueAndMove();
-  void pivotColumnFtran(const HighsInt iCol, HVector& col_aq);
+  void pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_col_aq);
   void unitBtran(const HighsInt iRow, HVector& row_ep);
   void fullBtran(HVector& buffer);
   void choosePriceTechnique(const HighsInt price_strategy,
@@ -150,7 +150,7 @@ class HEkk {
 
   void flipBound(const HighsInt iCol);
   void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
-                    HighsInt* hint);
+                    HighsInt* hint, HVector* nla_column=NULL, HVector* nla_row_ep=NULL);
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
