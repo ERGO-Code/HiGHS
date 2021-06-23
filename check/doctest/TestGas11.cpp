@@ -7,9 +7,9 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const double require_optimal_objective = 0) {
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("solver", solver) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("solver", solver) == HighsStatus::kOk);
 
-  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
 
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
 
@@ -24,7 +24,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     //     require_optimal_objective));
   }
 
-  REQUIRE(highs.resetHighsOptions() == HighsStatus::kOk);
+  REQUIRE(highs.resetOptions() == HighsStatus::kOk);
 }
 
 void mpsGas11(Highs& highs) {
