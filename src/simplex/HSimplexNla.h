@@ -51,7 +51,7 @@ class HSimplexNla {
 
   HighsInt build_synthetic_tick_;
   const bool use_simplex_nla_trans = false;
-  const bool use_simplex_nla_invert = false;
+  const bool use_simplex_nla_invert = true;
   const bool use_simplex_nla_update = false;
 
 private:

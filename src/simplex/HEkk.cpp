@@ -1348,7 +1348,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   nla_col_aq = col_aq;
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans) {
+  if (simplex_nla_.use_simplex_nla_trans && info_.update_count==0) {
     simplex_nla_.ftran(nla_col_aq, analysis_.col_aq_density);
     assert(nla_col_aq.isEqual(col_aq));
   }
@@ -1375,7 +1375,7 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   HVector nla_row_ep = row_ep;
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans) {
+  if (simplex_nla_.use_simplex_nla_trans && info_.update_count==0) {
     simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
     assert(nla_row_ep.isEqual(row_ep));
   }
@@ -1841,6 +1841,11 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 
   // Incoming variable
   basis_.basicIndex_[row_out] = variable_in;
+  if (simplex_nla_.use_simplex_nla_invert) {
+    HighsInt nla_variable_out = nla_basis_.basicIndex_[row_out];
+    assert(nla_variable_out == variable_out);
+    nla_basis_.basicIndex_[row_out] = variable_in;
+  }
   basis_.nonbasicFlag_[variable_in] = 0;
   basis_.nonbasicMove_[variable_in] = 0;
   info_.baseLower_[row_out] = info_.workLower_[variable_in];
