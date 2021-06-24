@@ -1119,7 +1119,8 @@ bool HighsDomain::propagate() {
             activitymax_[i].renormalize();
             propRowNumChangedBounds_[k].second = propagateRowLower(
                 Rindex, Rvalue, Rlen, mipsolver->rowLower(i), activitymax_[i],
-                activitymaxinf_[i], &changedbounds[2 * start + propRowNumChangedBounds_[k].first]);
+                activitymaxinf_[i],
+                &changedbounds[2 * start + propRowNumChangedBounds_[k].first]);
           }
         };
 
@@ -1753,7 +1754,8 @@ void HighsDomain::conflictAnalysis() {
   std::set<HighsInt> reasonSideFrontier;
   std::priority_queue<HighsInt> resolveQueue;
   std::vector<HighsInt> reasonDomChgs;
-
+  std::vector<HighsInt> inds;
+  std::vector<double> vals;
   if (!infeasible_ || branchPos_.empty() ||
       infeasible_reason.type == Reason::kBranching ||
       infeasible_reason.type == Reason::kUnknown)
@@ -1840,6 +1842,7 @@ void HighsDomain::conflictAnalysis() {
     }
 
     if (minQueueSize != 0 && reasonSideFrontier.size() < maxSize) {
+#if 0
       printf("UIP cut of depth %d:\n", currDepth);
       bool sep = false;
       for (HighsInt i : reasonSideFrontier) {
@@ -1855,6 +1858,25 @@ void HighsDomain::conflictAnalysis() {
         }
       }
       printf("\n");
+#endif
+      inds.clear();
+      vals.clear();
+      HighsInt rhs = reasonSideFrontier.size() - 1;
+      for (HighsInt i : reasonSideFrontier) {
+        HighsInt col = domchgstack_[i].column;
+        assert(globaldom.isBinary(col));
+        inds.push_back(col);
+        if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
+          assert(domchgstack_[i].boundval == 1.0);
+          vals.push_back(1.0);
+        } else {
+          vals.push_back(-1.0);
+          rhs -= 1;
+        }
+      }
+
+      mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
+                                          inds.size(), rhs, true);
     }
   }
 }
