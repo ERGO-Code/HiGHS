@@ -24,15 +24,14 @@
 
 static uint32_t support_hash(const HighsInt* Rindex, const double* Rvalue,
                              double maxabscoef, const HighsInt Rlen) {
-  std::vector<uint32_t> valueHashCodes(Rlen);
-
+  HighsHashHelpers::u64 hash = Rlen;
   double scale = 1.0 / maxabscoef;
-  for (HighsInt i = 0; i < Rlen; ++i)
-    valueHashCodes[i] = HighsHashHelpers::double_hash_code(scale * Rvalue[i]);
+  for (HighsInt i = 0; i < Rlen; ++i) {
+    HighsHashHelpers::sparse_combine(
+        hash, Rindex[i], HighsHashHelpers::double_hash_code(scale * Rvalue[i]));
+  }
 
-  return HighsHashHelpers::hash(std::make_pair(
-      HighsHashHelpers::vector_hash(Rindex, Rlen),
-      HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen)));
+  return hash;
 }
 
 #if 0
