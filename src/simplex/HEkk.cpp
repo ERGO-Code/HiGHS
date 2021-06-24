@@ -1365,7 +1365,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   analysis_.simplexTimerStop(FtranClock);
 }
 
-void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
+void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep) {
   analysis_.simplexTimerStart(BtranClock);
   row_ep.clear();
   row_ep.count = 1;
@@ -1375,7 +1375,7 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                     analysis_.row_ep_density);
-  HVector nla_row_ep = row_ep;
+  nla_row_ep = row_ep;
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
   if (simplex_nla_.use_simplex_nla_trans

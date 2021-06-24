@@ -1170,7 +1170,7 @@ void HEkkPrimal::assessPivot() {
   // BTRAN
   //
   // Compute unit BTran for tableau row and FT update
-  ekk_instance_.unitBtran(row_out, row_ep);
+  ekk_instance_.unitBtran(row_out, row_ep, nla_row_ep);
   //
   // PRICE
   //

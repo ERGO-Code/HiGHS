@@ -129,7 +129,7 @@ class HEkk {
   void initialiseLpRowBound();
   void initialiseNonbasicValueAndMove();
   void pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_col_aq);
-  void unitBtran(const HighsInt iRow, HVector& row_ep);
+  void unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep);
   void fullBtran(HVector& buffer);
   void choosePriceTechnique(const HighsInt price_strategy,
                             const double row_ep_density, bool& use_col_price,
