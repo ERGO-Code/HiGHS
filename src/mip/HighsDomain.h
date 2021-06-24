@@ -33,15 +33,21 @@ class HighsDomain {
     enum {
       kBranching = -1,
       kUnknown = -2,
-      kModelRow = -3,
-      kCliqueTable = -4,
+      kModelRowUpper = -3,
+      kModelRowLower = -4,
+      kCliqueTable = -5,
     };
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
     static Reason cliqueTable(HighsInt col, HighsInt val) {
       return Reason{kCliqueTable, 2 * col + val};
     }
-    static Reason modelRow(HighsInt row) { return Reason{kModelRow, row}; }
+    static Reason modelRowUpper(HighsInt row) {
+      return Reason{kModelRowUpper, row};
+    }
+    static Reason modelRowLower(HighsInt row) {
+      return Reason{kModelRowLower, row};
+    }
     static Reason cut(HighsInt cutpool, HighsInt cut) {
       return Reason{cutpool, cut};
     }
@@ -77,7 +83,7 @@ class HighsDomain {
   std::vector<uint8_t> changedcolsflags_;
   std::vector<HighsInt> changedcols_;
 
-  std::vector<HighsInt> propRowNumChangedBounds_;
+  std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;
 
   std::vector<HighsDomainChange> domchgstack_;
   std::vector<Reason> domchgreason_;
@@ -133,6 +139,7 @@ class HighsDomain {
         infeasible_reason(other.infeasible_reason),
         colLowerPos_(other.colLowerPos_),
         colUpperPos_(other.colUpperPos_),
+        branchPos_(other.branchPos_),
         colLower_(other.colLower_),
         colUpper_(other.colUpper_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
@@ -155,6 +162,9 @@ class HighsDomain {
     cutpoolpropagation = other.cutpoolpropagation;
     infeasible_ = other.infeasible_;
     infeasible_reason = other.infeasible_reason;
+    colLowerPos_ = other.colLowerPos_;
+    colUpperPos_ = other.colUpperPos_;
+    branchPos_ = other.branchPos_;
     colLower_ = other.colLower_;
     colUpper_ = other.colUpper_;
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)

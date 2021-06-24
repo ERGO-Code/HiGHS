@@ -338,6 +338,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
+        localdom.conflictAnalysis();
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         localdom.clearChangedCols();
@@ -424,6 +425,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
+            localdom.conflictAnalysis();
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kLower, col, upval,
@@ -465,6 +467,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
+        localdom.conflictAnalysis();
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         localdom.clearChangedCols();
@@ -551,6 +554,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
+            localdom.conflictAnalysis();
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kUpper, col, downval,
@@ -602,6 +606,7 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
     localdom.propagate();
     localdom.clearChangedCols(oldchangedcols);
     prune = localdom.infeasible();
+    if (prune) localdom.conflictAnalysis();
   }
   if (!prune) {
     nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
@@ -741,6 +746,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           parent->branchingdecision.boundtype == HighsBoundType::kLower;
       pseudocost.addCutoffObservation(col, upbranch);
     }
+
+    localdom.conflictAnalysis();
   } else {
     lp->flushDomain(localdom);
     lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -801,6 +808,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                 mipsolver, localdom, lp->getLpSolver().getSolution().col_dual,
                 lp->getObjective());
             if (localdom.infeasible()) {
+              localdom.conflictAnalysis();
               result = NodeResult::kBoundExceeding;
               addBoundExceedingConflict();
               localdom.clearChangedCols();
@@ -817,7 +825,10 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           // computing the proof conBoundExceedingstraint.
           addBoundExceedingConflict();
           localdom.propagate();
-          if (localdom.infeasible()) result = NodeResult::kBoundExceeding;
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis();
+            result = NodeResult::kBoundExceeding;
+          }
         }
       }
     } else if (status == HighsLpRelaxation::Status::kInfeasible) {
