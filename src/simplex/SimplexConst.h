@@ -117,6 +117,19 @@ enum RebuildReason {
   kRebuildReasonCount
 };
 
+enum SimplexNlaOperation {
+  kSimplexNlaBtranFull = 0,
+  kSimplexNlaPriceFull,
+  kSimplexNlaBtranBasicFeasibilityChange,
+  kSimplexNlaPriceBasicFeasibilityChange,
+  kSimplexNlaBtranEp,
+  kSimplexNlaPriceAp,
+  kSimplexNlaFtran,
+  kSimplexNlaFtranBfrt,
+  kSimplexNlaFtranDse,
+  kNumSimplexNlaOperation
+};
+
 enum class DualEdgeWeightMode { kDantzig = 0, kDevex, kSteepestEdge, kCount };
 
 const HighsInt kDualTasksMinThreads = 3;

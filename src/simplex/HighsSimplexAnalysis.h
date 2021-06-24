@@ -346,12 +346,12 @@ class HighsSimplexAnalysis {
     std::string AnIterOpName;
     HighsValueDistribution AnIterOp_density;
   };
-  AnIterOpRec AnIterOp[NUM_ANALYSIS_OPERATION_TYPE];
+  AnIterOpRec AnIterOp[kNumSimplexNlaOperation];
 
   struct AnIterTraceRec {
     double AnIterTraceTime;
     double AnIterTraceMulti;
-    double AnIterTraceDensity[NUM_ANALYSIS_OPERATION_TYPE];
+    double AnIterTraceDensity[kNumSimplexNlaOperation];
     double AnIterTraceCostlyDse;
     HighsInt AnIterTraceIter;
     HighsInt AnIterTrace_dual_edge_weight_mode;

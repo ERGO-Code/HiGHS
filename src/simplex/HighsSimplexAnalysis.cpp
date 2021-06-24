@@ -31,6 +31,17 @@
 void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
+  assert(ANALYSIS_OPERATION_TYPE_BTRAN_FULL == kSimplexNlaBtranFull);
+  assert(ANALYSIS_OPERATION_TYPE_PRICE_FULL == kSimplexNlaPriceFull);
+  assert(ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE == kSimplexNlaBtranBasicFeasibilityChange);
+  assert(ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE == kSimplexNlaPriceBasicFeasibilityChange);
+  assert(ANALYSIS_OPERATION_TYPE_BTRAN_EP == kSimplexNlaBtranEp);
+  assert(ANALYSIS_OPERATION_TYPE_PRICE_AP == kSimplexNlaPriceAp);
+  assert(ANALYSIS_OPERATION_TYPE_FTRAN == kSimplexNlaFtran);
+  assert(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT == kSimplexNlaFtranBfrt);
+  assert(ANALYSIS_OPERATION_TYPE_FTRAN_DSE == kSimplexNlaFtranDse);
+  assert(NUM_ANALYSIS_OPERATION_TYPE == kNumSimplexNlaOperation);
+  
   // Copy Problem size
   numRow = lp.numRow_;
   numCol = lp.numCol_;
