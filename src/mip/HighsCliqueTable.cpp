@@ -1554,11 +1554,14 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   bool runcliquesubsumption = false;
   std::vector<HighsInt> inds;
   std::vector<double> vals;
-  for (const std::vector<CliqueVar>& clique : data.cliques) {
+  for (std::vector<CliqueVar>& clique : data.cliques) {
     double rhs = 1;
     runcliquesubsumption = cliques.size() > 2;
     inds.clear();
     vals.clear();
+
+    std::sort(clique.begin(), clique.end(),
+              [](CliqueVar v1, CliqueVar v2) { return v1.col < v2.col; });
 
     for (CliqueVar v : clique) {
       inds.push_back(v.col);
