@@ -1926,7 +1926,7 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
   const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(
-        ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
+        kSimplexNlaBtranBasicFeasibilityChange,
         col_basic_feasibility_change,
         analysis->col_basic_feasibility_change_density);
   ekk_instance_.factor_.btran(col_basic_feasibility_change,
@@ -1934,7 +1934,7 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
                               analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(
-        ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
+        kSimplexNlaBtranBasicFeasibilityChange,
         col_basic_feasibility_change);
   const double local_col_basic_feasibility_change_density =
       (double)col_basic_feasibility_change.count / solver_num_row;
@@ -1961,19 +1961,19 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
       analysis->operationRecordBefore(
-          ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
+          kSimplexNlaPriceBasicFeasibilityChange,
           col_basic_feasibility_change,
           historical_density_for_non_hypersparse_operation);
       analysis->num_col_price++;
     } else if (use_row_price_w_switch) {
       analysis->operationRecordBefore(
-          ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
+          kSimplexNlaPriceBasicFeasibilityChange,
           col_basic_feasibility_change,
           analysis->col_basic_feasibility_change_density);
       analysis->num_row_price_with_switch++;
     } else {
       analysis->operationRecordBefore(
-          ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
+          kSimplexNlaPriceBasicFeasibilityChange,
           col_basic_feasibility_change,
           analysis->col_basic_feasibility_change_density);
       analysis->num_row_price++;
@@ -2016,7 +2016,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   assert(ekk_instance_.info_.row_basic_feasibility_change_density==analysis->row_basic_feasibility_change_density);
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(
-        ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
+        kSimplexNlaPriceBasicFeasibilityChange,
         row_basic_feasibility_change);
   analysis->simplexTimerStop(PriceBasicFeasibilityChangeClock);
 }

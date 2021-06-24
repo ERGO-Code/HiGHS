@@ -31,16 +31,16 @@
 void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
-  assert(ANALYSIS_OPERATION_TYPE_BTRAN_FULL == kSimplexNlaBtranFull);
-  assert(ANALYSIS_OPERATION_TYPE_PRICE_FULL == kSimplexNlaPriceFull);
-  assert(ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE == kSimplexNlaBtranBasicFeasibilityChange);
-  assert(ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE == kSimplexNlaPriceBasicFeasibilityChange);
-  assert(ANALYSIS_OPERATION_TYPE_BTRAN_EP == kSimplexNlaBtranEp);
-  assert(ANALYSIS_OPERATION_TYPE_PRICE_AP == kSimplexNlaPriceAp);
-  assert(ANALYSIS_OPERATION_TYPE_FTRAN == kSimplexNlaFtran);
-  assert(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT == kSimplexNlaFtranBfrt);
-  assert(ANALYSIS_OPERATION_TYPE_FTRAN_DSE == kSimplexNlaFtranDse);
-  assert(NUM_ANALYSIS_OPERATION_TYPE == kNumSimplexNlaOperation);
+  assert(kSimplexNlaBtranFull == kSimplexNlaBtranFull);
+  assert(kSimplexNlaPriceFull == kSimplexNlaPriceFull);
+  assert(kSimplexNlaBtranBasicFeasibilityChange == kSimplexNlaBtranBasicFeasibilityChange);
+  assert(kSimplexNlaPriceBasicFeasibilityChange == kSimplexNlaPriceBasicFeasibilityChange);
+  assert(kSimplexNlaBtranEp == kSimplexNlaBtranEp);
+  assert(kSimplexNlaPriceAp == kSimplexNlaPriceAp);
+  assert(kSimplexNlaFtran == kSimplexNlaFtran);
+  assert(kSimplexNlaFtranBfrt == kSimplexNlaFtranBfrt);
+  assert(kSimplexNlaFtranDse == kSimplexNlaFtranDse);
+  assert(kNumSimplexNlaOperation == kNumSimplexNlaOperation);
   
   // Copy Problem size
   numRow = lp.numRow_;
@@ -185,36 +185,36 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
     AnIterPrevIt = simplex_iteration_count_;
 
     AnIterOpRec* AnIter;
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_FULL];
+    AnIter = &AnIterOp[kSimplexNlaBtranFull];
     AnIter->AnIterOpName = "BTRAN Full";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_FULL];
+    AnIter = &AnIterOp[kSimplexNlaPriceFull];
     AnIter->AnIterOpName = "PRICE Full";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE];
+    AnIter = &AnIterOp[kSimplexNlaBtranBasicFeasibilityChange];
     AnIter->AnIterOpName = "BTRAN BcFsCg";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE];
+    AnIter = &AnIterOp[kSimplexNlaPriceBasicFeasibilityChange];
     AnIter->AnIterOpName = "PRICE BcFsCg";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
+    AnIter = &AnIterOp[kSimplexNlaBtranEp];
     AnIter->AnIterOpName = "BTRAN e_p";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_AP];
+    AnIter = &AnIterOp[kSimplexNlaPriceAp];
     AnIter->AnIterOpName = "PRICE a_p";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN];
+    AnIter = &AnIterOp[kSimplexNlaFtran];
     AnIter->AnIterOpName = "FTRAN";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT];
+    AnIter = &AnIterOp[kSimplexNlaFtranBfrt];
     AnIter->AnIterOpName = "FTRAN BFRT";
-    AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_DSE];
+    AnIter = &AnIterOp[kSimplexNlaFtranDse];
     AnIter->AnIterOpName = "FTRAN DSE";
-    for (HighsInt k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
+    for (HighsInt k = 0; k < kNumSimplexNlaOperation; k++) {
       AnIter = &AnIterOp[k];
-      if ((k == ANALYSIS_OPERATION_TYPE_PRICE_AP) ||
-          (k == ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE) ||
-          (k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
+      if ((k == kSimplexNlaPriceAp) ||
+          (k == kSimplexNlaPriceBasicFeasibilityChange) ||
+          (k == kSimplexNlaPriceFull)) {
         AnIter->AnIterOpHyperCANCEL = 1.0;
         AnIter->AnIterOpHyperTRAN = 1.0;
         AnIter->AnIterOpRsDim = numCol;
       } else {
-        if ((k == ANALYSIS_OPERATION_TYPE_BTRAN_EP) ||
-            (k == ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE) ||
-            (k == ANALYSIS_OPERATION_TYPE_BTRAN_FULL)) {
+        if ((k == kSimplexNlaBtranEp) ||
+            (k == kSimplexNlaBtranBasicFeasibilityChange) ||
+            (k == kSimplexNlaBtranFull)) {
           AnIter->AnIterOpHyperCANCEL = kHyperCancel;
           AnIter->AnIterOpHyperTRAN = kHyperBtranU;
         } else {
@@ -678,20 +678,20 @@ void HighsSimplexAnalysis::iterationRecord() {
       } else {
         lcAnIter.AnIterTraceMulti = 0;
       }
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaFtran] =
           col_aq_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp] =
           row_ep_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] =
           row_ap_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] =
           col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-        lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] =
+        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] =
             row_DSE_density;
         lcAnIter.AnIterTraceCostlyDse = AnIterCostlyDseMeasure;
       } else {
-        lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
+        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
         lcAnIter.AnIterTraceCostlyDse = 0;
       }
       lcAnIter.AnIterTrace_dual_edge_weight_mode = (HighsInt)edge_weight_mode;
@@ -809,7 +809,7 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("Dan for %12" HIGHSINT_FORMAT " (%3" HIGHSINT_FORMAT
            "%%) iterations\n",
            lc_EdWtNumIter, (100 * lc_EdWtNumIter) / AnIterNumIter);
-  for (HighsInt k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
+  for (HighsInt k = 0; k < kNumSimplexNlaOperation; k++) {
     AnIterOpRec& AnIter = AnIterOp[k];
     HighsInt lcNumCa = AnIter.AnIterOpNumCa;
     printf("\n%-10s performed %" HIGHSINT_FORMAT " times\n",
@@ -961,20 +961,20 @@ void HighsSimplexAnalysis::summaryReport() {
       } else {
         lcAnIter.AnIterTraceMulti = 0;
       }
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaFtran] =
           col_aq_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp] =
           row_ep_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] =
           row_ap_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] =
+      lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] =
           col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-        lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] =
+        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] =
             row_DSE_density;
         lcAnIter.AnIterTraceCostlyDse = AnIterCostlyDseMeasure;
       } else {
-        lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
+        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
         lcAnIter.AnIterTraceCostlyDse = 0;
       }
       lcAnIter.AnIterTrace_dual_edge_weight_mode = (HighsInt)edge_weight_mode;
@@ -986,7 +986,7 @@ void HighsSimplexAnalysis::summaryReport() {
       AnIterTraceRec& lcAnIter = AnIterTrace[rec];
       su_multi_values += fabs(lcAnIter.AnIterTraceMulti);
       su_dse_values +=
-          fabs(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE]);
+          fabs(lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse]);
     }
     const bool report_multi = su_multi_values > 0;
     const bool rp_dual_steepest_edge = su_dse_values > 0;
@@ -1039,17 +1039,17 @@ void HighsSimplexAnalysis::summaryReport() {
       }
       printf("|");
       printOneDensity(
-          lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN]);
+          lcAnIter.AnIterTraceDensity[kSimplexNlaFtran]);
       printOneDensity(
-          lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP]);
+          lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp]);
       printOneDensity(
-          lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP]);
+          lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp]);
       double use_row_DSE_density;
       if (rp_dual_steepest_edge) {
         if (lc_dual_edge_weight_mode ==
             (HighsInt)DualEdgeWeightMode::kSteepestEdge) {
           use_row_DSE_density =
-              lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE];
+              lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse];
         } else {
           use_row_DSE_density = 0;
         }
