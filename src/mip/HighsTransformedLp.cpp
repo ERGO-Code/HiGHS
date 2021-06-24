@@ -356,7 +356,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     vectorsum.cleanup(IsZero);
     if (maxError > mip.mipdata_->feastol) return false;
 
-    vectorsum.sort();
     inds = vectorsum.getNonzeros();
     numNz = inds.size();
 
@@ -564,7 +563,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     }
     rhs = double(tmpRhs);
   }
-  vectorsum.sort();
+
   inds = vectorsum.getNonzeros();
   numNz = inds.size();
   vals.resize(numNz);

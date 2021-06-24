@@ -369,6 +369,8 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               bool integral, bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
+  sortBuffer.resize(Rlen);
+
   // compute 1/||a|| for the cut
   // as it is only computed once
   double norm = 0.0;
@@ -376,6 +378,16 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   for (HighsInt i = 0; i != Rlen; ++i) {
     norm += Rvalue[i] * Rvalue[i];
     maxabscoef = std::max(maxabscoef, std::abs(Rvalue[i]));
+    sortBuffer[i].first = Rindex[i];
+    sortBuffer[i].second = Rvalue[i];
+  }
+  std::sort(
+      sortBuffer.begin(), sortBuffer.end(),
+      [](const std::pair<HighsInt, double>& a,
+         const std::pair<HighsInt, double>& b) { return a.first < b.first; });
+  for (HighsInt i = 0; i != Rlen; ++i) {
+    Rindex[i] = sortBuffer[i].first;
+    Rvalue[i] = sortBuffer[i].second;
   }
   uint32_t sh = support_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));

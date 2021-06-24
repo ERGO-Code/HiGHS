@@ -72,6 +72,7 @@ class HighsCutPool {
   HighsInt softlimit_;
   HighsInt numLpCuts;
   std::vector<HighsInt> ageDistribution;
+  std::vector<std::pair<HighsInt,double>> sortBuffer;
 
   bool isDuplicate(size_t hash, double norm, HighsInt* Rindex, double* Rvalue,
                    HighsInt Rlen, double rhs);

@@ -1560,9 +1560,6 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
     inds.clear();
     vals.clear();
 
-    std::sort(clique.begin(), clique.end(),
-              [](CliqueVar v1, CliqueVar v2) { return v1.col < v2.col; });
-
     for (CliqueVar v : clique) {
       inds.push_back(v.col);
       if (v.val == 0) {
