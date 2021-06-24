@@ -187,7 +187,7 @@ void HighsDebugSol::checkClique(const HighsCliqueTable::CliqueVar* clq,
 
 void HighsDebugSol::checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
                              double vubconstant) const {
-  if (!debugSolActive) return;
+  if (!debugSolActive || std::abs(vubcoef) == kHighsInf) return;
 
   assert(debugSolution[col] <= debugSolution[vubcol] * vubcoef + vubconstant +
                                    mipsolver->mipdata_->feastol);
@@ -195,7 +195,7 @@ void HighsDebugSol::checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsDebugSol::checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
                              double vlbconstant) const {
-  if (!debugSolActive) return;
+  if (!debugSolActive || std::abs(vlbcoef) == kHighsInf) return;
 
   assert(debugSolution[col] >= debugSolution[vlbcol] * vlbcoef + vlbconstant -
                                    mipsolver->mipdata_->feastol);
