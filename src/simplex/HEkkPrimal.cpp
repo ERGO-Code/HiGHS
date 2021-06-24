@@ -1941,6 +1941,10 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
   analysis->updateOperationResultDensity(
       local_col_basic_feasibility_change_density,
       analysis->col_basic_feasibility_change_density);
+  ekk_instance_.updateOperationResultDensity(
+      local_col_basic_feasibility_change_density,
+      ekk_instance_.info_.col_basic_feasibility_change_density);
+  assert(ekk_instance_.info_.col_basic_feasibility_change_density==analysis->col_basic_feasibility_change_density);
   analysis->simplexTimerStop(BtranBasicFeasibilityChangeClock);
 }
 
@@ -2006,6 +2010,10 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   analysis->updateOperationResultDensity(
       local_row_basic_feasibility_change_density,
       analysis->row_basic_feasibility_change_density);
+  ekk_instance_.updateOperationResultDensity(
+      local_row_basic_feasibility_change_density,
+      ekk_instance_.info_.row_basic_feasibility_change_density);
+  assert(ekk_instance_.info_.row_basic_feasibility_change_density==analysis->row_basic_feasibility_change_density);
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(
         ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,

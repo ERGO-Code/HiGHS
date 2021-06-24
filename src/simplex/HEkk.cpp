@@ -58,6 +58,11 @@ HighsStatus HEkk::passLp(const HighsLp& pass_lp) {
 
 HighsStatus HEkk::solve() {
   initialiseAnalysis();
+  // Set iteration_count_ = 0 and call initialiseControl(), just to
+  // check that info-based density methods are identical
+  iteration_count_ = 0;
+  initialiseControl();
+
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
   iteration_count_ = 0;
@@ -1362,6 +1367,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   analysis_.updateOperationResultDensity(local_col_aq_density,
                                          analysis_.col_aq_density);
   updateOperationResultDensity(local_col_aq_density, info_.col_aq_density);
+  assert(info_.col_aq_density==analysis_.col_aq_density);
   analysis_.simplexTimerStop(FtranClock);
 }
 
@@ -1392,6 +1398,7 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep) 
   analysis_.updateOperationResultDensity(local_row_ep_density,
                                          analysis_.row_ep_density);
   updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
+  assert(info_.row_ep_density==analysis_.row_ep_density);
   analysis_.simplexTimerStop(BtranClock);
 }
 
@@ -1420,6 +1427,7 @@ void HEkk::fullBtran(HVector& buffer) {
   analysis_.updateOperationResultDensity(local_dual_col_density,
                                          analysis_.dual_col_density);
   updateOperationResultDensity(local_dual_col_density, info_.dual_col_density);
+  assert(info_.dual_col_density==analysis_.dual_col_density);
   analysis_.simplexTimerStop(BtranFullClock);
 }
 
@@ -1491,6 +1499,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   analysis_.updateOperationResultDensity(local_row_ap_density,
                                          analysis_.row_ap_density);
   updateOperationResultDensity(local_row_ap_density, info_.row_ap_density);
+  assert(info_.row_ap_density==analysis_.row_ap_density);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
   analysis_.simplexTimerStop(PriceClock);
@@ -1536,6 +1545,10 @@ void HEkk::computePrimal() {
                                            analysis_.primal_col_density);
     updateOperationResultDensity(local_primal_col_density,
                                  info_.primal_col_density);
+    if (info_.primal_col_density!=analysis_.primal_col_density) {
+      printf("Primal col density: info(%g) != analysis(%g)\n", info_.primal_col_density, analysis_.primal_col_density);
+    }
+    assert(info_.primal_col_density==analysis_.primal_col_density);
   }
   for (HighsInt i = 0; i < num_row; i++) {
     HighsInt iCol = basis_.basicIndex_[i];
