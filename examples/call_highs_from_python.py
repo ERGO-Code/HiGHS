@@ -1,4 +1,4 @@
-file = "../HiGHS/src/interfaces/highs_python_api.py"
+file = "../src/interfaces/highs_python_api.py"
 exec(compile(open(file).read(), file, 'exec'))
 
 # Problem is
@@ -68,4 +68,6 @@ print (return_status, model_status, col_value, col_dual, row_value, row_dual, co
 return_status, n_col, n_row, n_nz = Highs_lpDimMpsRead()
 
 print("return_status, n_col, n_row, n_nz = ", return_status, n_col, n_row, n_nz)
+
+print(Highs_lpMpsRead())
 

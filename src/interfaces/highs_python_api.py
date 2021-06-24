@@ -200,15 +200,21 @@ highslib.Highs_lpDataMpsRead.argtypes = (ctypes.c_int, ctypes.c_int,
                                          ctypes.POINTER(ctypes.c_double))
 highslib.Highs_lpDataMpsRead.restype = ctypes.c_int
 
+def Highs_lpDimMpsRead():
+   global highslib
+   n_col = ctypes.c_int(0)
+   n_row = ctypes.c_int(0)
+   n_nz = ctypes.c_int(0)
+
+   return_status = highslib.Highs_lpDimMpsRead(ctypes.byref(n_col),
+                                               ctypes.byref(n_row),
+                                           
+                                               ctypes.byref(n_nz))
+   return return_status, n_col.value, n_row.value, n_nz.value
+
 def Highs_lpMpsRead():
    global highslib
-   n_col = 0
-   n_row = 0
-   n_nz = 0
-   return_status = highslib.Highs_lpDimMpsRead(ctypes.byref(ctypes.c_int(n_col)),
-                                               ctypes.byref(ctypes.c_int(n_row)),
-                                               ctypes.byref(ctypes.c_int(n_nz)));
-   print("Python: n_col, n_row, n_nz = ", n_col, n_row, n_nz)
+   status, n_col, n_row, n_nz = Highs_lpDimMpsRead() 
 
    sense = 1
    offset = 0
