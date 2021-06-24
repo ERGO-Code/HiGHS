@@ -171,10 +171,7 @@ HighsStatus HEkkDual::solve() {
               dualRHS.workEdWt[i] = row_ep.norm2();
               const double local_row_ep_density =
                   (double)row_ep.count / solver_num_row;
-              analysis->updateOperationResultDensity(local_row_ep_density,
-                                                     analysis->row_ep_density);
               ekk_instance_.updateOperationResultDensity(local_row_ep_density, ekk_instance_.info_.row_ep_density);
-	      assert(ekk_instance_.info_.row_ep_density==analysis->row_ep_density);
             }
             if (ekk_instance_.analysis_.analyse_simplex_time) {
               analysis->simplexTimerStop(SimplexIzDseWtClock);
@@ -1248,14 +1245,8 @@ void HEkkDual::chooseRow() {
     nla_row_ep = row_ep;
     factor->btran(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
-    if (ekk_instance_.simplex_nla_.use_simplex_nla_trans
-	//	&& ekk_instance_.info_.update_count==0
-	) {
-      printf("BTRAN0: Update count = %d\n", (int)ekk_instance_.info_.update_count);
-      ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density);
-      assert(nla_row_ep.isEqual(row_ep));
-      printf("BTRAN0: ticks(%g; %g)\n", nla_row_ep.synthetic_tick, row_ep.synthetic_tick);
-    }
+    ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density);
+    assert(nla_row_ep.isEqual(row_ep));
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(kSimplexNlaBtranEp, row_ep);
     analysis->simplexTimerStop(BtranClock);
@@ -1302,10 +1293,7 @@ void HEkkDual::chooseRow() {
   // Update the record of average row_ep (pi_p) density. This ignores
   // any BTRANs done for skipped candidates
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_row_ep_density,
-                                         analysis->row_ep_density);
   ekk_instance_.updateOperationResultDensity(local_row_ep_density, ekk_instance_.info_.row_ep_density);
-  assert(ekk_instance_.info_.row_ep_density==analysis->row_ep_density);
 }
 
 bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
@@ -1619,21 +1607,13 @@ void HEkkDual::updateFtran() {
   nla_col_aq = col_aq;
   factor->ftran(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
-  if (ekk_instance_.simplex_nla_.use_simplex_nla_trans
-	//	&& ekk_instance_.info_.update_count==0
-	) {
-      printf("FTRAN1: Update count = %d\n", (int)ekk_instance_.info_.update_count);
-    ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density);
-    assert(nla_col_aq.isEqual(col_aq));
-  }
+  ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density);
+  assert(nla_col_aq.isEqual(col_aq));
   
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(kSimplexNlaFtran, col_aq);
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_col_aq_density,
-                                         analysis->col_aq_density);
   ekk_instance_.updateOperationResultDensity(local_col_aq_density, ekk_instance_.info_.col_aq_density);
-  assert(ekk_instance_.info_.col_aq_density==analysis->col_aq_density);
   // Save the pivot value computed column-wise - used for numerical checking
   alpha_col = col_aq.array[row_out];
   analysis->simplexTimerStop(FtranClock);
@@ -1668,11 +1648,8 @@ void HEkkDual::updateFtranBFRT() {
     nla_col_BFRT = col_BFRT;
     factor->ftran(col_BFRT, analysis->col_BFRT_density,
                   analysis->pointer_serial_factor_clocks);
-    if (ekk_instance_.simplex_nla_.use_simplex_nla_trans) {
-      printf("FTRAN3: Update count = %d\n", (int)ekk_instance_.info_.update_count);
-      ekk_instance_.simplex_nla_.ftran(nla_col_BFRT, analysis->col_BFRT_density);
-      assert(nla_col_BFRT.isEqual(col_BFRT));
-    }
+    ekk_instance_.simplex_nla_.ftran(nla_col_BFRT, analysis->col_BFRT_density);
+    assert(nla_col_BFRT.isEqual(col_BFRT));
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(kSimplexNlaFtranBfrt,
                                      col_BFRT);
@@ -1681,10 +1658,7 @@ void HEkkDual::updateFtranBFRT() {
     analysis->simplexTimerStop(FtranBfrtClock);
   }
   const double local_col_BFRT_density = (double)col_BFRT.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_col_BFRT_density,
-                                         analysis->col_BFRT_density);
   ekk_instance_.updateOperationResultDensity(local_col_BFRT_density, ekk_instance_.info_.col_BFRT_density);
-  assert(ekk_instance_.info_.col_BFRT_density==analysis->col_BFRT_density);
 }
 
 void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
@@ -1701,11 +1675,8 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
   factor->ftran(*DSE_Vector, analysis->row_DSE_density,
                 analysis->pointer_serial_factor_clocks);
 
-    if (ekk_instance_.simplex_nla_.use_simplex_nla_trans) {
-      printf("FTRAN2: Update count = %d\n", (int)ekk_instance_.info_.update_count);
-      ekk_instance_.simplex_nla_.ftran(*nla_DSE_Vector, analysis->row_DSE_density);
-      assert((*nla_DSE_Vector).isEqual(*DSE_Vector));
-    }
+  ekk_instance_.simplex_nla_.ftran(*nla_DSE_Vector, analysis->row_DSE_density);
+  assert((*nla_DSE_Vector).isEqual(*DSE_Vector));
 
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(kSimplexNlaFtranDse,
@@ -1713,10 +1684,7 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
   analysis->simplexTimerStop(FtranDseClock);
   const double local_row_DSE_density =
       (double)DSE_Vector->count / solver_num_row;
-  analysis->updateOperationResultDensity(local_row_DSE_density,
-                                         analysis->row_DSE_density);
   ekk_instance_.updateOperationResultDensity(local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
-  assert(ekk_instance_.info_.row_DSE_density==analysis->row_DSE_density);
 }
 
 void HEkkDual::updateVerify() {

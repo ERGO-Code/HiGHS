@@ -50,9 +50,6 @@ class HSimplexNla {
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
   HighsInt build_synthetic_tick_;
-  const bool use_simplex_nla_trans = true;
-  const bool use_simplex_nla_invert = true;
-  const bool use_simplex_nla_update = true;
 
 private:
   // References:

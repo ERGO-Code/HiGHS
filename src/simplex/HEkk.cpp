@@ -895,10 +895,8 @@ HighsInt HEkk::computeFactor() {
         analysis_.getThreadFactorTimerClockPtr(thread_id);
   }
   const HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
-  if (simplex_nla_.use_simplex_nla_invert) {
-    const HighsInt rank_deficiency_nla = simplex_nla_.invert();
-    assert(rank_deficiency == rank_deficiency_nla);
-  }
+  const HighsInt rank_deficiency_nla = simplex_nla_.invert();
+  assert(rank_deficiency == rank_deficiency_nla);
   if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
@@ -1349,25 +1347,17 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   matrix_.collect_aj(col_aq, iCol, 1);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq,
-                                    analysis_.col_aq_density);
+                                    info_.col_aq_density);
   nla_col_aq = col_aq;
-  factor_.ftran(col_aq, analysis_.col_aq_density,
+  factor_.ftran(col_aq, info_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans
-	//	&& ekk_instance_.info_.update_count==0
-	) {
-      printf("FTRAN0: Update count = %d\n", (int)info_.update_count);
-    simplex_nla_.ftran(nla_col_aq, analysis_.col_aq_density);
-    assert(nla_col_aq.isEqual(col_aq));
-  }
+  simplex_nla_.ftran(nla_col_aq, info_.col_aq_density);
+  assert(nla_col_aq.isEqual(col_aq));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaFtran, col_aq);
   HighsInt num_row = lp_.numRow_;
   const double local_col_aq_density = (double)col_aq.count / num_row;
-  analysis_.updateOperationResultDensity(local_col_aq_density,
-                                         analysis_.col_aq_density);
   updateOperationResultDensity(local_col_aq_density, info_.col_aq_density);
-  assert(info_.col_aq_density==analysis_.col_aq_density);
   analysis_.simplexTimerStop(FtranClock);
 }
 
@@ -1384,21 +1374,13 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep) 
   nla_row_ep = row_ep;
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans
-	//	 && info_.update_count==0
-	) {
-      printf("BTRAN1: Update count = %d\n", (int)info_.update_count);
-    simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
-    assert(nla_row_ep.isEqual(row_ep));
-  }
+  simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
+  assert(nla_row_ep.isEqual(row_ep));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaBtranEp, row_ep);
   HighsInt num_row = lp_.numRow_;
   const double local_row_ep_density = (double)row_ep.count / num_row;
-  analysis_.updateOperationResultDensity(local_row_ep_density,
-                                         analysis_.row_ep_density);
   updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
-  assert(info_.row_ep_density==analysis_.row_ep_density);
   analysis_.simplexTimerStop(BtranClock);
 }
 
@@ -1414,20 +1396,12 @@ void HEkk::fullBtran(HVector& buffer) {
   HVector nla_buffer = buffer;
   factor_.btran(buffer, analysis_.dual_col_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans
-	//	 && info_.update_count==0
-	) {
-      printf("BTRAN2: Update count = %d\n", (int)info_.update_count);
-    simplex_nla_.btran(nla_buffer, analysis_.dual_col_density);
-    assert(nla_buffer.isEqual(buffer));
-  }
+  simplex_nla_.btran(nla_buffer, analysis_.dual_col_density);
+  assert(nla_buffer.isEqual(buffer));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaBtranFull, buffer);
   const double local_dual_col_density = (double)buffer.count / lp_.numRow_;
-  analysis_.updateOperationResultDensity(local_dual_col_density,
-                                         analysis_.dual_col_density);
   updateOperationResultDensity(local_dual_col_density, info_.dual_col_density);
-  assert(info_.dual_col_density==analysis_.dual_col_density);
   analysis_.simplexTimerStop(BtranFullClock);
 }
 
@@ -1496,10 +1470,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   }
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
-  analysis_.updateOperationResultDensity(local_row_ap_density,
-                                         analysis_.row_ap_density);
   updateOperationResultDensity(local_row_ap_density, info_.row_ap_density);
-  assert(info_.row_ap_density==analysis_.row_ap_density);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaPriceAp, row_ap);
   analysis_.simplexTimerStop(PriceClock);
@@ -1541,14 +1512,8 @@ void HEkk::computePrimal() {
     factor_.ftran(primal_col, analysis_.primal_col_density,
                   analysis_.pointer_serial_factor_clocks);
     const double local_primal_col_density = (double)primal_col.count / num_row;
-    analysis_.updateOperationResultDensity(local_primal_col_density,
-                                           analysis_.primal_col_density);
     updateOperationResultDensity(local_primal_col_density,
                                  info_.primal_col_density);
-    if (info_.primal_col_density!=analysis_.primal_col_density) {
-      printf("Primal col density: info(%g) != analysis(%g)\n", info_.primal_col_density, analysis_.primal_col_density);
-    }
-    assert(info_.primal_col_density==analysis_.primal_col_density);
   }
   for (HighsInt i = 0; i < num_row; i++) {
     HighsInt iCol = basis_.basicIndex_[i];
@@ -1837,11 +1802,8 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   assert((*nla_row_ep).isEqual(*row_ep));
   factor_.update(column, row_ep, iRow, hint);
   assert(nla_iRow == *iRow);
-  if (simplex_nla_.use_simplex_nla_update) {
-    simplex_nla_.update(nla_column, nla_row_ep, &nla_iRow, &nla_hint);
-    assert(nla_hint == *hint);
-  }
-  
+  simplex_nla_.update(nla_column, nla_row_ep, &nla_iRow, &nla_hint);
+  assert(nla_hint == *hint);
   // Now have a representation of B^{-1}, but it is not fresh
   status_.has_invert = true;
   if (info_.update_count >= info_.update_limit)
@@ -1864,11 +1826,9 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 
   // Incoming variable
   basis_.basicIndex_[row_out] = variable_in;
-  if (simplex_nla_.use_simplex_nla_invert) {
-    HighsInt nla_variable_out = nla_basis_.basicIndex_[row_out];
-    assert(nla_variable_out == variable_out);
-    nla_basis_.basicIndex_[row_out] = variable_in;
-  }
+  HighsInt nla_variable_out = nla_basis_.basicIndex_[row_out];
+  assert(nla_variable_out == variable_out);
+  nla_basis_.basicIndex_[row_out] = variable_in;
   basis_.nonbasicFlag_[variable_in] = 0;
   basis_.nonbasicMove_[variable_in] = 0;
   info_.baseLower_[row_out] = info_.workLower_[variable_in];
