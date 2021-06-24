@@ -178,17 +178,8 @@ class HighsSimplexAnalysis {
   bool analyse_factor_time;
 
   // Control parameters moving to info
-  double col_aq_density;
-  double row_ep_density;
-  double row_ap_density;
-  double row_DSE_density;
-  double col_basic_feasibility_change_density;
-  double row_basic_feasibility_change_density;
-  double col_BFRT_density;
-  double primal_col_density;
-  double dual_col_density;
-  bool allow_dual_steepest_edge_to_devex_switch;
-  double dual_steepest_edge_weight_log_error_threshold;
+  //  bool allow_dual_steepest_edge_to_devex_switch;
+  //  double dual_steepest_edge_weight_log_error_threshold;
 
   // Local copies of simplex data for reporting
   HighsInt simplex_strategy = 0;
@@ -221,6 +212,17 @@ class HighsSimplexAnalysis {
   double max_dual_phase_1_lp_dual_infeasibility = 0;
   double sum_dual_phase_1_lp_dual_infeasibility = 0;
   HighsInt num_devex_framework = 0;
+  double col_aq_density;
+  double row_ep_density;
+  double row_ap_density;
+  double row_DSE_density;
+  double col_basic_feasibility_change_density;
+  double row_basic_feasibility_change_density;
+  double col_BFRT_density;
+  double primal_col_density;
+  double dual_col_density;
+  HighsInt num_costly_DSE_iteration;
+  double costly_DSE_measure;
 
   // Local copies of parallel simplex data for reporting
   HighsInt multi_iteration_count = 0;
@@ -276,9 +278,8 @@ class HighsSimplexAnalysis {
   HighsInt intLog10(const double v);
   bool dualAlgorithm();
 
-  HighsInt AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
-  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
-  double AnIterCostlyDseMeasure;
+  //  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
+  //  double AnIterCostlyDseMeasure;
 
   HighsInt num_dual_steepest_edge_weight_check = 0;
   HighsInt num_dual_steepest_edge_weight_reject = 0;

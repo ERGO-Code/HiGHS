@@ -160,6 +160,8 @@ struct HighsSimplexInfo {
   double dual_steepest_edge_weight_log_error_threshold;
   double costly_DSE_frequency;
   HighsInt num_costly_DSE_iteration;
+  double costly_DSE_measure;
+
   double average_log_low_DSE_weight_error;
   double average_log_high_DSE_weight_error;
   // Needed globally??

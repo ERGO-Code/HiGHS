@@ -978,7 +978,8 @@ void HEkkDual::iterationAnalysisMajor() {
   // Possibly switch from DSE to Devex
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     bool switch_to_devex = false;
-    switch_to_devex = analysis->switchToDevex();
+    //    switch_to_devex = analysis->switchToDevex();
+    switch_to_devex = ekk_instance_.switchToDevex();
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::kDevex;
       // Set up the Devex framework
