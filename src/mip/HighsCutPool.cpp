@@ -49,11 +49,13 @@ static void printCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen
 }
 #endif
 
-bool HighsCutPool::isDuplicate(size_t hash, double norm, HighsInt* Rindex,
-                               double* Rvalue, HighsInt Rlen, double rhs) {
+bool HighsCutPool::isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
+                               const double* Rvalue, HighsInt Rlen,
+                               double rhs) {
   auto range = supportmap.equal_range(hash);
   const double* ARvalue = matrix_.getARvalue();
   const HighsInt* ARindex = matrix_.getARindex();
+
   for (auto it = range.first; it != range.second; ++it) {
     HighsInt rowindex = it->second;
     HighsInt start = matrix_.getRowStart(rowindex);
