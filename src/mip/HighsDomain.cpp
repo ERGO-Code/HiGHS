@@ -1268,15 +1268,20 @@ bool HighsDomain::explainBoundChange(HighsInt pos,
       HighsInt col = domchgreason_[pos].index >> 1;
       HighsInt val = domchgreason_[pos].index & 1;
       reasonDomChgs.clear();
+      HighsInt boundPos;
       if (val) {
         assert(colLowerPos_[col] >= 0);
         assert(colLowerPos_[col] < domchgstack_.size());
-        reasonDomChgs.push_back(colLowerPos_[col]);
+
+        getColLowerPos(col, pos, boundPos);
       } else {
         assert(colUpperPos_[col] >= 0);
         assert(colUpperPos_[col] < domchgstack_.size());
-        reasonDomChgs.push_back(colUpperPos_[col]);
+
+        getColUpperPos(col, pos, boundPos);
       }
+
+      reasonDomChgs.push_back(boundPos);
 
       break;
     }
@@ -1371,6 +1376,13 @@ bool HighsDomain::explainBoundChange(HighsInt pos,
         if (M < Mupper) break;
       }
 
+      if (M >= Mupper) {
+        // printf("local bounds reach only value of %.12g, need at most
+        // %.12g\n",
+        //        M, Mupper);
+        return false;
+      }
+
       break;
     }
     case Reason::kModelRowUpper: {
@@ -1462,6 +1474,13 @@ bool HighsDomain::explainBoundChange(HighsInt pos,
 
         reasonDomChgs.push_back(boundpos);
         if (M > Mlower) break;
+      }
+
+      if (M <= Mlower) {
+        // printf("local bounds reach only value of %.12g, need at least
+        // %.12g\n",
+        //        M, Mlower);
+        return false;
       }
 
       break;
@@ -1562,6 +1581,13 @@ bool HighsDomain::explainBoundChange(HighsInt pos,
         reasonDomChgs.push_back(boundpos);
         if (M > Mlower) break;
       }
+
+      if (M <= Mlower) {
+        // printf("local bounds reach only value of %.12g, need at least
+        // %.12g\n",
+        //        M, Mlower);
+        return false;
+      }
     }
   }
   return true;
@@ -1641,6 +1667,13 @@ bool HighsDomain::explainInfeasibility(std::vector<HighsInt>& reasonDomChgs) {
         if (M < Mupper) break;
       }
 
+      if (M >= Mupper) {
+        // printf("local bounds reach only value of %.12g, need at most
+        // %.12g\n",
+        //        M, Mupper);
+        return false;
+      }
+
       break;
     }
     case Reason::kModelRowUpper: {
@@ -1688,6 +1721,13 @@ bool HighsDomain::explainInfeasibility(std::vector<HighsInt>& reasonDomChgs) {
 
         reasonDomChgs.push_back(boundpos);
         if (M > Mlower) break;
+      }
+
+      if (M <= Mlower) {
+        // printf("local bounds reach only value of %.12g, need at least
+        // %.12g\n",
+        //        M, Mlower);
+        return false;
       }
 
       break;
@@ -1745,6 +1785,13 @@ bool HighsDomain::explainInfeasibility(std::vector<HighsInt>& reasonDomChgs) {
         reasonDomChgs.push_back(boundpos);
         if (M > Mlower) break;
       }
+
+      if (M <= Mlower) {
+        // printf("local bounds reach only value of %.12g, need at least
+        // %.12g\n",
+        //        M, Mlower);
+        return false;
+      }
     }
   }
   return true;
@@ -1765,7 +1812,8 @@ void HighsDomain::conflictAnalysis() {
   if (!explainInfeasibility(reasonDomChgs)) return;
 
   HighsDomain& globaldom = mipsolver->mipdata_->domain;
-
+  globaldom.propagate();
+  if (globaldom.infeasible()) return;
   for (HighsInt domChgPos : reasonDomChgs) {
     if (reasonSideFrontier.insert(domChgPos).second &&
         !globaldom.isBinary(domchgstack_[domChgPos].column)) {
@@ -1814,6 +1862,7 @@ void HighsDomain::conflictAnalysis() {
         minQueueSize = 1;
         reasonSideFrontier.erase(resolvePos);
         for (HighsInt domChgPos : reasonDomChgs) {
+          assert(domChgPos < resolvePos);
           if (reasonSideFrontier.insert(domChgPos).second) {
             if (!globaldom.isBinary(domchgstack_[domChgPos].column) ||
                 domChgPos > branchPos_[currDepth]) {
@@ -1834,6 +1883,7 @@ void HighsDomain::conflictAnalysis() {
 
       reasonSideFrontier.erase(resolvePos);
       for (HighsInt domChgPos : reasonDomChgs) {
+        assert(domChgPos < resolvePos);
         if (reasonSideFrontier.insert(domChgPos).second) {
           if (!globaldom.isBinary(domchgstack_[domChgPos].column))
             resolveQueue.push(domChgPos);
@@ -1843,38 +1893,42 @@ void HighsDomain::conflictAnalysis() {
 
     if (minQueueSize != 0 && reasonSideFrontier.size() < maxSize) {
 #if 0
-      printf("UIP cut of depth %d:\n", currDepth);
-      bool sep = false;
-      for (HighsInt i : reasonSideFrontier) {
-        char op =
-            domchgstack_[i].boundtype == HighsBoundType::kLower ? '<' : '>';
-        if (sep) {
-          printf(" V (x%d %c %g)", domchgstack_[i].column, op,
-                 domchgstack_[i].boundval);
-        } else {
-          printf("(x%d %c %g)", domchgstack_[i].column, op,
-                 domchgstack_[i].boundval);
-          sep = true;
+      if (!mipsolver->submip) {
+        printf("UIP cut of depth %d:\n", currDepth);
+        bool sep = false;
+        for (HighsInt i : reasonSideFrontier) {
+          char op =
+              domchgstack_[i].boundtype == HighsBoundType::kLower ? '<' : '>';
+          if (sep) {
+            printf(" V (x%d %c %g)", domchgstack_[i].column, op,
+                   domchgstack_[i].boundval);
+          } else {
+            printf("(x%d %c %g)", domchgstack_[i].column, op,
+                   domchgstack_[i].boundval);
+            sep = true;
+          }
         }
+        printf("\n");
       }
-      printf("\n");
 #endif
       inds.clear();
       vals.clear();
       HighsInt rhs = reasonSideFrontier.size() - 1;
       for (HighsInt i : reasonSideFrontier) {
         HighsInt col = domchgstack_[i].column;
-        assert(globaldom.isBinary(col));
+
         inds.push_back(col);
         if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
           assert(domchgstack_[i].boundval == 1.0);
           vals.push_back(1.0);
         } else {
+          assert(domchgstack_[i].boundval == 0.0);
           vals.push_back(-1.0);
           rhs -= 1;
         }
       }
 
+      maxSize = reasonSideFrontier.size() + 1;
       mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
                                           inds.size(), rhs, true);
     }
