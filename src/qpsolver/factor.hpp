@@ -5,9 +5,9 @@
 #include <cmath>
 #include <vector>
 
-#include "../matrix.hpp"
-#include "../nullspace.hpp"
-#include "../runtime.hpp"
+#include "matrix.hpp"
+#include "nullspace.hpp"
+#include "runtime.hpp"
 
 class NewCholeskyFactor {
  private:

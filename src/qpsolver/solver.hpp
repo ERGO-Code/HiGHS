@@ -5,7 +5,7 @@
 #include "eventhandler.hpp"
 #include "instance.hpp"
 #include "nullspace.hpp"
-#include "redhes/factor.hpp"
+#include "factor.hpp"
 #include "runtime.hpp"
 
 struct Solver {

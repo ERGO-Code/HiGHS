@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "instance.hpp"
-#include "pricing/pricing.hpp"
+#include "pricing.hpp"
 #include "runtime.hpp"
 #include "simplex/HFactor.h"
 #include "simplex/HVector.h"

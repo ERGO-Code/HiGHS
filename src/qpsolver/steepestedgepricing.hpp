@@ -1,13 +1,13 @@
-#ifndef __SRC_LIB_PRICING_DEVEXHARRISPRICING_HPP__
-#define __SRC_LIB_PRICING_DEVEXHARRISPRICING_HPP__
+#ifndef __SRC_LIB_PRICING_STEEPESTEDGEPRICING_HPP__
+#define __SRC_LIB_PRICING_STEEPESTEDGEPRICING_HPP__
 
-#include "../basis.hpp"
-#include "../runtime.hpp"
+#include "basis.hpp"
+#include "runtime.hpp"
 #include "pricing.hpp"
 
-// 44839, 78965849.088174, 559, 138.681866, 0.000671, 7998
+//
 
-class DevexHarrisPricing : public Pricing {
+class SteepestEdgePricing : public Pricing {
  private:
   Runtime& runtime;
   Basis& basis;
@@ -19,7 +19,7 @@ class DevexHarrisPricing : public Pricing {
     auto constraintindexinbasisfactor = basis.getindexinfactor();
 
     HighsInt minidx = -1;
-    double maxabslambda = 0.0;
+    double maxval = 0.0;
     for (HighsInt i = 0; i < activeconstraintidx.size(); i++) {
       HighsInt indexinbasis =
           constraintindexinbasisfactor[activeconstraintidx[i]];
@@ -30,18 +30,18 @@ class DevexHarrisPricing : public Pricing {
 
       double val = lambda.value[indexinbasis] * lambda.value[indexinbasis] /
                    weights[indexinbasis];
-      if (val > maxabslambda && fabs(lambda.value[indexinbasis]) >
-                                    runtime.settings.lambda_zero_threshold) {
+      if (val > maxval && fabs(lambda.value[indexinbasis]) >
+                              runtime.settings.lambda_zero_threshold) {
         if (basis.getstatus(activeconstraintidx[i]) ==
                 BasisStatus::ActiveAtLower &&
             -lambda.value[indexinbasis] > 0) {
           minidx = activeconstraintidx[i];
-          maxabslambda = val;
+          maxval = val;
         } else if (basis.getstatus(activeconstraintidx[i]) ==
                        BasisStatus::ActiveAtUpper &&
                    lambda.value[indexinbasis] > 0) {
           minidx = activeconstraintidx[i];
-          maxabslambda = val;
+          maxval = val;
         } else {
           // TODO
         }
@@ -52,7 +52,7 @@ class DevexHarrisPricing : public Pricing {
   }
 
  public:
-  DevexHarrisPricing(Runtime& rt, Basis& bas)
+  SteepestEdgePricing(Runtime& rt, Basis& bas)
       : runtime(rt),
         basis(bas),
         weights(std::vector<double>(rt.instance.num_var, 1.0)){};
@@ -66,19 +66,19 @@ class DevexHarrisPricing : public Pricing {
   void update_weights(const Vector& aq, const Vector& ep, HighsInt p,
                       HighsInt q) {
     HighsInt rowindex_p = basis.getindexinfactor()[p];
+
+    Vector v = basis.btran(aq);
+
     double weight_p = weights[rowindex_p];
     for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
       if (i == rowindex_p) {
-        weights[i] =
-            1 / (aq.value[rowindex_p] * aq.value[rowindex_p]) * weight_p;
+        weights[i] = weight_p / (aq.value[rowindex_p] * aq.value[rowindex_p]);
       } else {
-        weights[i] =
-            max(weights[i], (aq.value[i] * aq.value[i]) /
-                                (aq.value[rowindex_p] * aq.value[rowindex_p]) *
-                                weight_p * weight_p);
-      }
-      if (weights[i] > 10E6) {
-        weights[i] = 1.0;
+        weights[i] = weights[i] -
+                     2 * (aq.value[i] / aq.value[rowindex_p]) * (v.value[i]) +
+                     (aq.value[i] * aq.value[i]) /
+                         (aq.value[rowindex_p] * aq.value[rowindex_p]) *
+                         weight_p;
       }
     }
   }

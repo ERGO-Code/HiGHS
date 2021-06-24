@@ -3,8 +3,8 @@
 
 #include <limits>
 
-#include "../instance.hpp"
-#include "../vector.hpp"
+#include "instance.hpp"
+#include "vector.hpp"
 
 struct RatiotestResult {
   double alpha;

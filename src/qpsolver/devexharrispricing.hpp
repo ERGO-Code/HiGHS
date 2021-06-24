@@ -1,18 +1,16 @@
-#ifndef __SRC_LIB_PRICING_DEVEXPRICING_HPP__
-#define __SRC_LIB_PRICING_DEVEXPRICING_HPP__
+#ifndef __SRC_LIB_PRICING_DEVEXHARRISPRICING_HPP__
+#define __SRC_LIB_PRICING_DEVEXHARRISPRICING_HPP__
 
-#include "../basis.hpp"
-#include "../reducedcosts.hpp"
-#include "../runtime.hpp"
+#include "basis.hpp"
+#include "runtime.hpp"
 #include "pricing.hpp"
 
-// 42726, 78965776.391299, 559, 104.321553, 0.000669, 7937
+// 44839, 78965849.088174, 559, 138.681866, 0.000671, 7998
 
-class DevexPricing : public Pricing {
+class DevexHarrisPricing : public Pricing {
  private:
   Runtime& runtime;
   Basis& basis;
-  ReducedCosts& redcosts;
 
   std::vector<double> weights;
 
@@ -54,21 +52,13 @@ class DevexPricing : public Pricing {
   }
 
  public:
-  DevexPricing(Runtime& rt, Basis& bas, ReducedCosts& rc)
+  DevexHarrisPricing(Runtime& rt, Basis& bas)
       : runtime(rt),
         basis(bas),
-        redcosts(rc),
         weights(std::vector<double>(rt.instance.num_var, 1.0)){};
 
-  // B lambda = g
-  // lambda = inv(B)g
-  // lambda = Z'g == reduced gradient ??
-  // no: lambda = Y'g !!
-  // dual values updated as:
-  // c_N^T  += alpha_D * a_p^T (pivotal row)
-  // alpha_D = -c_q / a_pq
   HighsInt price(const Vector& x, const Vector& gradient) {
-    Vector& lambda = redcosts.getReducedCosts();
+    Vector lambda = basis.ftran(gradient);
     HighsInt minidx = chooseconstrainttodrop(lambda);
     return minidx;
   }
@@ -79,11 +69,13 @@ class DevexPricing : public Pricing {
     double weight_p = weights[rowindex_p];
     for (HighsInt i = 0; i < runtime.instance.num_var; i++) {
       if (i == rowindex_p) {
-        weights[i] = weight_p / (aq.value[rowindex_p] * aq.value[rowindex_p]);
+        weights[i] =
+            1 / (aq.value[rowindex_p] * aq.value[rowindex_p]) * weight_p;
       } else {
-        weights[i] += (aq.value[i] * aq.value[i]) /
-                      (aq.value[rowindex_p] * aq.value[rowindex_p]) * weight_p *
-                      weight_p;
+        weights[i] =
+            max(weights[i], (aq.value[i] * aq.value[i]) /
+                                (aq.value[rowindex_p] * aq.value[rowindex_p]) *
+                                weight_p * weight_p);
       }
       if (weights[i] > 10E6) {
         weights[i] = 1.0;

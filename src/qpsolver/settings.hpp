@@ -1,7 +1,7 @@
 #ifndef __SRC_LIB_SETTINGS_HPP__
 #define __SRC_LIB_SETTINGS_HPP__
 
-#include "ratiotest/ratiotest.hpp"
+#include "ratiotest.hpp"
 
 enum class OutputLevel { LIGHT, MEDIUM, HEAVY };
 
