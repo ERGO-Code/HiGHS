@@ -81,7 +81,7 @@ class HighsDomain {
 
   std::vector<HighsDomainChange> domchgstack_;
   std::vector<Reason> domchgreason_;
-  std::vector<double> prevboundval_;
+  std::vector<std::pair<double, HighsInt>> prevboundval_;
 
   std::vector<HighsCDouble> activitymin_;
   std::vector<HighsCDouble> activitymax_;
@@ -105,6 +105,10 @@ class HighsDomain {
 
   double doChangeBound(const HighsDomainChange& boundchg);
 
+  std::vector<HighsInt> colLowerPos_;
+  std::vector<HighsInt> colUpperPos_;
+  std::vector<HighsInt> branchPos_;
+
  public:
   std::vector<double> colLower_;
   std::vector<double> colUpper_;
@@ -127,6 +131,8 @@ class HighsDomain {
         cutpoolpropagation(other.cutpoolpropagation),
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
+        colLowerPos_(other.colLowerPos_),
+        colUpperPos_(other.colUpperPos_),
         colLower_(other.colLower_),
         colUpper_(other.colUpper_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
@@ -246,6 +252,16 @@ class HighsDomain {
   void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack);
 
   bool propagate();
+
+  double getColLowerPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
+
+  double getColUpperPos(HighsInt col, HighsInt stackpos, HighsInt& pos) const;
+
+  bool explainBoundChange(HighsInt pos, std::vector<HighsInt>& reasonDomChgs);
+
+  bool explainInfeasibility(std::vector<HighsInt>& reasonDomChgs);
+
+  void conflictAnalysis();
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;
