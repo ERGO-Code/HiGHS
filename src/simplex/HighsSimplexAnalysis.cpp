@@ -283,12 +283,6 @@ void HighsSimplexAnalysis::messaging(const HighsLogOptions& log_options_) {
   log_options = log_options_;
 }
 
-void HighsSimplexAnalysis::updateOperationResultDensity(
-    const double local_density, double& density) {
-  density = (1 - kRunningAverageMultiplier) * density +
-            kRunningAverageMultiplier * local_density;
-}
-
 void HighsSimplexAnalysis::iterationReport() {
   if ((HighsInt)kIterationReportLogType > *log_options.log_dev_level) return;
   const bool header = (num_iteration_report_since_last_header < 0) ||
