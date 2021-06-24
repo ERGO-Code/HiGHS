@@ -19,7 +19,7 @@ struct Runtime {
   Vector rowactivity;
   Vector dualvar;
   Vector dualcon;
-  ProblemStatus status;
+  ProblemStatus status = ProblemStatus::INDETERMINED;
 
   Runtime(Instance& inst)
       : instance(inst),

@@ -59,16 +59,16 @@ class NewCholeskyFactor {
     uptodate = true;
   }
 
-  void resize() {
+  void resize(HighsInt new_k_max) {
     std::vector<double> L_old = L;
     L.clear();
-    L.resize((current_k_max * 2) * (current_k_max * 2));
+    L.resize((new_k_max) * (new_k_max));
     for (HighsInt i = 0; i < current_k_max; i++) {
       for (HighsInt j = 0; j < current_k_max; j++) {
-        L[i * (current_k_max * 2) + j] = L_old[i * current_k_max + j];
+        L[i * (new_k_max) + j] = L_old[i * current_k_max + j];
       }
     }
-    current_k_max *= 2;
+    current_k_max = new_k_max;
   }
 
  public:
@@ -91,8 +91,8 @@ class NewCholeskyFactor {
 
     assert(lambda > 0);
 
-    if (current_k_max == current_k + 1) {
-      resize();
+    if (current_k_max <= current_k + 1) {
+      resize(current_k_max * 2);
     }
 
     for (HighsInt i = 0; i < current_k; i++) {
