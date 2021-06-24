@@ -117,14 +117,14 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
    // column.report("col_pre_ftran");
 
    HVector column_aq_hvec = vec2hvec(buffer_column_aq);
-   basisfactor.ftran(column_aq_hvec, 1.0);
+   basisfactor.ftranCall(column_aq_hvec, 1.0);
    // column.report("col_post_ftran");
 
    Vector::unit(rt.instance.A.mat.num_col, droppedcon_rowindex, buffer_row_ep);
    // row_ep.report("rowep_pre_btran");
 
    HVector row_ep_hvec = vec2hvec(buffer_row_ep);
-   basisfactor.btran(row_ep_hvec, 1.0);
+   basisfactor.btranCall(row_ep_hvec, 1.0);
    // row_ep.report("rowep_post_btran");
 
    pricing->update_weights(hvec2vec(column_aq_hvec), hvec2vec(row_ep_hvec), droppedcon, newactivecon);
@@ -143,27 +143,27 @@ void Basis::updatebasis(Runtime& rt, HighsInt newactivecon, HighsInt droppedcon,
 
 Vector& Basis::btran(const Vector& rhs, Vector& target) const {
    HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.btran(rhs_hvec, 1.0);
+   basisfactor.btranCall(rhs_hvec, 1.0);
    return hvec2vec(rhs_hvec, target);
 }
 
 Vector Basis::btran(const Vector& rhs) const {
    HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.btran(rhs_hvec, 1.0);
+   basisfactor.btranCall(rhs_hvec, 1.0);
 
    return hvec2vec(rhs_hvec);
 }
 
 Vector& Basis::ftran(const Vector& rhs, Vector& target) const {
    HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.ftran(rhs_hvec, 1.0);
+   basisfactor.ftranCall(rhs_hvec, 1.0);
 
    return hvec2vec(rhs_hvec, target);
 }
 
 Vector Basis::ftran(const Vector& rhs) const {
    HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.ftran(rhs_hvec, 1.0);
+   basisfactor.ftranCall(rhs_hvec, 1.0);
 
    return hvec2vec(rhs_hvec);
 }
@@ -197,7 +197,7 @@ Vector Basis::recomputex(const Instance& inst) {
       rhs.num_nz++;
    }
    HVector rhs_hvec = vec2hvec(rhs);
-   basisfactor.btran(rhs_hvec, 1.0);
+   basisfactor.btranCall(rhs_hvec, 1.0);
 
    return hvec2vec(rhs_hvec);
 }

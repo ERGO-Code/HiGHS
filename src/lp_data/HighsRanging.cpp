@@ -165,7 +165,11 @@ HighsStatus getRangingData(HighsRanging& ranging,
     // Form updated column
     column.clear();
     matrix.collect_aj(column, j, 1);
-    factor.ftran(column, 0);
+    HVector nla_column = column;
+    const double expected_density = 0;//ekk_instance.info_.col_aq_density;
+    factor.ftranCall(column, expected_density);
+    ekk_instance.simplex_nla_.ftran(nla_column, expected_density);
+    assert(nla_column.isEqual(column));
     HighsInt nWork = 0;
     for (HighsInt k = 0; k < column.count; k++) {
       HighsInt iRow = column.index[k];

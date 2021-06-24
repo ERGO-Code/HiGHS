@@ -53,7 +53,7 @@ const double kMinPivotTolerance = 0;
 const double kDefaultPivotTolerance = 1e-10;
 const double kMaxPivotTolerance = 1.0;
 /**
- * Necessary thresholds for historical density to trigger
+ * Necessary thresholds for expected density to trigger
  * hyper-sparse TRANs,
  */
 const double kHyperFtranL = 0.15;
@@ -155,15 +155,15 @@ class HFactor {
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
-  void ftran(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
-             double historical_density,  //!< Historical density of the result
+  void ftranCall(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
+             const double expected_density,  //!< Expected density of the result
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
-  void btran(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
-             double historical_density,  //!< Historical density of the result
+  void btranCall(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
+             const double expected_density,  //!< Expected density of the result
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
@@ -356,13 +356,13 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double historical_density,
+  void ftranL(HVector& vector, const double expected_density,
               HighsTimerClock* factor_timer_clock_pointer = NULL) const;
-  void btranL(HVector& vector, double historical_density,
+  void btranL(HVector& vector, const double expected_density,
               HighsTimerClock* factor_timer_clock_pointer = NULL) const;
-  void ftranU(HVector& vector, double historical_density,
+  void ftranU(HVector& vector, const double expected_density,
               HighsTimerClock* factor_timer_clock_pointer = NULL) const;
-  void btranU(HVector& vector, double historical_density,
+  void btranU(HVector& vector, const double expected_density,
               HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   void ftranFT(HVector& vector) const;

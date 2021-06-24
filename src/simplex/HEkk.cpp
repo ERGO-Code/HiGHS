@@ -1346,12 +1346,10 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   col_aq.packFlag = true;
   matrix_.collect_aj(col_aq, iCol, 1);
   if (analysis_.analyse_simplex_data)
-    analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq,
-                                    info_.col_aq_density);
+    analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq, info_.col_aq_density);
   nla_col_aq = col_aq;
-  factor_.ftran(col_aq, info_.col_aq_density,
-                analysis_.pointer_serial_factor_clocks);
-  simplex_nla_.ftran(nla_col_aq, info_.col_aq_density);
+  factor_.ftranCall(col_aq, info_.col_aq_density, analysis_.pointer_serial_factor_clocks);
+  simplex_nla_.ftran(nla_col_aq, info_.col_aq_density, analysis_.pointer_serial_factor_clocks);
   assert(nla_col_aq.isEqual(col_aq));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaFtran, col_aq);
@@ -1369,12 +1367,11 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep) 
   row_ep.array[iRow] = 1;
   row_ep.packFlag = true;
   if (analysis_.analyse_simplex_data)
-    analysis_.operationRecordBefore(kSimplexNlaBtranEp, row_ep,
-                                    analysis_.row_ep_density);
+    analysis_.operationRecordBefore(kSimplexNlaBtranEp, row_ep, analysis_.row_ep_density);
   nla_row_ep = row_ep;
-  factor_.btran(row_ep, analysis_.row_ep_density,
+  factor_.btranCall(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
-  simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
+  simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density, analysis_.pointer_serial_factor_clocks);
   assert(nla_row_ep.isEqual(row_ep));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaBtranEp, row_ep);
@@ -1391,12 +1388,11 @@ void HEkk::fullBtran(HVector& buffer) {
   // isn't known.
   analysis_.simplexTimerStart(BtranFullClock);
   if (analysis_.analyse_simplex_data)
-    analysis_.operationRecordBefore(kSimplexNlaBtranFull, buffer,
-                                    analysis_.dual_col_density);
+    analysis_.operationRecordBefore(kSimplexNlaBtranFull, buffer, analysis_.dual_col_density);
   HVector nla_buffer = buffer;
-  factor_.btran(buffer, analysis_.dual_col_density,
+  factor_.btranCall(buffer, analysis_.dual_col_density,
                 analysis_.pointer_serial_factor_clocks);
-  simplex_nla_.btran(nla_buffer, analysis_.dual_col_density);
+  simplex_nla_.btran(nla_buffer, analysis_.dual_col_density, analysis_.pointer_serial_factor_clocks);
   assert(nla_buffer.isEqual(buffer));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaBtranFull, buffer);
@@ -1431,18 +1427,14 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
                        use_row_price_w_switch);
   if (analysis_.analyse_simplex_data) {
     if (use_col_price) {
-      const double historical_density_for_non_hypersparse_operation = 1;
-      analysis_.operationRecordBefore(
-          kSimplexNlaPriceAp, row_ep,
-          historical_density_for_non_hypersparse_operation);
+      const double expected_density = 1;
+      analysis_.operationRecordBefore(kSimplexNlaPriceAp, row_ep, expected_density);
       analysis_.num_col_price++;
     } else if (use_row_price_w_switch) {
-      analysis_.operationRecordBefore(kSimplexNlaPriceAp, row_ep,
-                                      analysis_.row_ep_density);
+      analysis_.operationRecordBefore(kSimplexNlaPriceAp, row_ep, analysis_.row_ep_density);
       analysis_.num_row_price_with_switch++;
     } else {
-      analysis_.operationRecordBefore(kSimplexNlaPriceAp, row_ep,
-                                      analysis_.row_ep_density);
+      analysis_.operationRecordBefore(kSimplexNlaPriceAp, row_ep, analysis_.row_ep_density);
       analysis_.num_row_price++;
     }
   }
@@ -1480,15 +1472,12 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStart(PriceFullClock);
   full_row.clear();
   if (analysis_.analyse_simplex_data) {
-    const double historical_density_for_non_hypersparse_operation = 1;
-    analysis_.operationRecordBefore(
-        kSimplexNlaPriceFull, full_col,
-        historical_density_for_non_hypersparse_operation);
+    const double expected_density = 1;
+    analysis_.operationRecordBefore(kSimplexNlaPriceFull, full_col, expected_density);
   }
   matrix_.priceByColumn(full_row, full_col);
   if (analysis_.analyse_simplex_data)
-    analysis_.operationRecordAfter(kSimplexNlaPriceFull,
-                                   full_row);
+    analysis_.operationRecordAfter(kSimplexNlaPriceFull, full_row);
   analysis_.simplexTimerStop(PriceFullClock);
 }
 
@@ -1509,7 +1498,7 @@ void HEkk::computePrimal() {
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
   if (primal_col.count) {
-    factor_.ftran(primal_col, analysis_.primal_col_density,
+    factor_.ftranCall(primal_col, analysis_.primal_col_density,
                   analysis_.pointer_serial_factor_clocks);
     const double local_primal_col_density = (double)primal_col.count / num_row;
     updateOperationResultDensity(local_primal_col_density,
@@ -2275,7 +2264,7 @@ double HEkk::computeBasisCondition() {
   }
   for (HighsInt ps_n = 1; ps_n <= 5; ps_n++) {
     row_ep.packFlag = false;
-    factor_.ftran(row_ep, NoDensity);
+    factor_.ftranCall(row_ep, NoDensity);
     // zeta = sign(y);
     for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
       bs_cond_y[r_n] = row_ep.array[r_n];
@@ -2297,7 +2286,7 @@ double HEkk::computeBasisCondition() {
       }
     }
     row_ep.packFlag = false;
-    factor_.btran(row_ep, NoDensity);
+    factor_.btranCall(row_ep, NoDensity);
     double norm_z = 0.0;
     double ztx = 0.0;
     norm_Binv = 0.0;

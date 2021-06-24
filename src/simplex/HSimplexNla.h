@@ -45,8 +45,10 @@ class HSimplexNla {
 	     HighsTimer* timer,
 	     HighsSimplexAnalysis* analysis);
   HighsInt invert();
-  void btran(HVector& rhs, double nla_density);
-  void ftran(HVector& rhs, double nla_density);
+  void btran(HVector& rhs, const double expected_density,
+	     HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void ftran(HVector& rhs, const double expected_density,
+	     HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
   HighsInt build_synthetic_tick_;

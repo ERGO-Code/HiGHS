@@ -68,7 +68,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       rhs.array[index] += value;
     }
   }
-  factor.ftran(rhs, rhsDensity);
+  factor.ftranCall(rhs, rhsDensity);
   double solve_error_norm = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     double solve_error = fabs(rhs.array[iRow] - column.array[iRow]);
@@ -120,7 +120,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       column.array[index] = 1.0;
       column.index[column.count++] = index;
     }
-    factor.ftran(column, columnDensity);
+    factor.ftranCall(column, columnDensity);
     double inverse_column_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < numRow; lc_iRow++) {
       double value = column.array[lc_iRow];

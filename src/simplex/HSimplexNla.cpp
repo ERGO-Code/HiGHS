@@ -58,14 +58,16 @@ HighsInt HSimplexNla::invert() {
   return rank_deficiency;
 }
 
-void HSimplexNla::btran(HVector& rhs, double rhs_density) {
+void HSimplexNla::btran(HVector& rhs, const double expected_density,
+			HighsTimerClock* factor_timer_clock_pointer) const {
   printf("In HSimplexNla::btran\n");
-  factor_.btran(rhs, rhs_density, NULL);
+  factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
-void HSimplexNla::ftran(HVector& rhs, double rhs_density) {
+void HSimplexNla::ftran(HVector& rhs, const double expected_density,
+			HighsTimerClock* factor_timer_clock_pointer) const {
   printf("In HSimplexNla::ftran\n");
-  factor_.ftran(rhs, rhs_density, NULL);
+  factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
 void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {

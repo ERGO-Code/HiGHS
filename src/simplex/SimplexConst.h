@@ -118,6 +118,7 @@ enum RebuildReason {
 };
 
 enum SimplexNlaOperation {
+  kSimplexNlaNull = -1,
   kSimplexNlaBtranFull = 0,
   kSimplexNlaPriceFull,
   kSimplexNlaBtranBasicFeasibilityChange,

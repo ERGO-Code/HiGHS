@@ -306,21 +306,21 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   return rank_deficiency;
 }
 
-void HFactor::ftran(HVector& vector, double historical_density,
+void HFactor::ftranCall(HVector& vector, const double expected_density,
                     HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
-  ftranL(vector, historical_density, factor_timer_clock_pointer);
-  ftranU(vector, historical_density, factor_timer_clock_pointer);
+  ftranL(vector, expected_density, factor_timer_clock_pointer);
+  ftranU(vector, expected_density, factor_timer_clock_pointer);
   factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
-void HFactor::btran(HVector& vector, double historical_density,
+void HFactor::btranCall(HVector& vector, const double expected_density,
                     HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtran, factor_timer_clock_pointer);
-  btranU(vector, historical_density, factor_timer_clock_pointer);
-  btranL(vector, historical_density, factor_timer_clock_pointer);
+  btranU(vector, expected_density, factor_timer_clock_pointer);
+  btranL(vector, expected_density, factor_timer_clock_pointer);
   factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
@@ -1043,7 +1043,7 @@ void HFactor::buildFinish() {
   build_synthetic_tick += numRow * 80 + (LcountX + UcountX) * 60;
 }
 
-void HFactor::ftranL(HVector& rhs, double historical_density,
+void HFactor::ftranL(HVector& rhs, const double expected_density,
                      HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranLower, factor_timer_clock_pointer);
@@ -1057,7 +1057,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
   }
 
   double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > kHyperCancel || historical_density > kHyperFtranL) {
+  if (current_density > kHyperCancel || expected_density > kHyperFtranL) {
     factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
     // Alias to RHS
     HighsInt RHScount = 0;
@@ -1097,12 +1097,12 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
   factor_timer.stop(FactorFtranLower, factor_timer_clock_pointer);
 }
 
-void HFactor::btranL(HVector& rhs, double historical_density,
+void HFactor::btranL(HVector& rhs, const double expected_density,
                      HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtranLower, factor_timer_clock_pointer);
   double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > kHyperCancel || historical_density > kHyperBtranL) {
+  if (current_density > kHyperCancel || expected_density > kHyperBtranL) {
     // Alias to RHS
     factor_timer.start(FactorBtranLowerSps, factor_timer_clock_pointer);
     HighsInt RHScount = 0;
@@ -1153,7 +1153,7 @@ void HFactor::btranL(HVector& rhs, double historical_density,
   factor_timer.stop(FactorBtranLower, factor_timer_clock_pointer);
 }
 
-void HFactor::ftranU(HVector& rhs, double historical_density,
+void HFactor::ftranU(HVector& rhs, const double expected_density,
                      HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranUpper, factor_timer_clock_pointer);
@@ -1176,7 +1176,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
 
   // The regular part
   const double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > kHyperCancel || historical_density > kHyperFtranU) {
+  if (current_density > kHyperCancel || expected_density > kHyperFtranU) {
     const bool report_ftran_upper_sparse =
         false;  // current_density < kHyperCancel;
     HighsInt use_clock;
@@ -1230,9 +1230,9 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
     if (report_ftran_upper_sparse) {
       const double final_density = 1.0 * rhs.count / numRow;
       printf(
-          "FactorFtranUpperSps: historical_density = %10.4g; current_density = "
+          "FactorFtranUpperSps: expected_density = %10.4g; current_density = "
           "%10.4g; final_density = %10.4g\n",
-          historical_density, current_density, final_density);
+          expected_density, current_density, final_density);
     }
   } else {
     HighsInt use_clock = -1;
@@ -1265,7 +1265,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
   factor_timer.stop(FactorFtranUpper, factor_timer_clock_pointer);
 }
 
-void HFactor::btranU(HVector& rhs, double historical_density,
+void HFactor::btranU(HVector& rhs, const double expected_density,
                      HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtranUpper, factor_timer_clock_pointer);
@@ -1277,7 +1277,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
 
   // The regular part
   double current_density = 1.0 * rhs.count / numRow;
-  if (current_density > kHyperCancel || historical_density > kHyperBtranU) {
+  if (current_density > kHyperCancel || expected_density > kHyperBtranU) {
     factor_timer.start(FactorBtranUpperSps, factor_timer_clock_pointer);
     // Alias to non constant
     double RHS_synthetic_tick = 0;

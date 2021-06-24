@@ -1457,13 +1457,17 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // in the solution are always accumulated. There's no switch (such
   // as setting solve_vector.count = numRow+1) to not do this.
   //
-  // Get hist_dsty from analysis during simplex solve.
-  double hist_dsty = 1;
+  // Get expected_density from analysis during simplex solve.
+  const double expected_density = 1;
+  HVector nla_solve_vector = solve_vector;
   if (transpose) {
-    ekk_instance.factor_.btran(solve_vector, hist_dsty);
+    ekk_instance.factor_.btranCall(solve_vector, expected_density);
+    ekk_instance.simplex_nla_.btran(nla_solve_vector, expected_density);
   } else {
-    ekk_instance.factor_.ftran(solve_vector, hist_dsty);
+    ekk_instance.factor_.ftranCall(solve_vector, expected_density);
+    ekk_instance.simplex_nla_.ftran(nla_solve_vector, expected_density);
   }
+  assert(nla_solve_vector.isEqual(solve_vector));
   // Extract the solution
   if (solution_indices == NULL) {
     // Nonzeros in the solution not required

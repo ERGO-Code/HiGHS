@@ -166,7 +166,7 @@ HighsStatus HEkkDual::solve() {
               row_ep.index[0] = i;
               row_ep.array[i] = 1;
               row_ep.packFlag = false;
-              factor->btran(row_ep, analysis->row_ep_density,
+              factor->btranCall(row_ep, analysis->row_ep_density,
                             analysis->pointer_serial_factor_clocks);
               dualRHS.workEdWt[i] = row_ep.norm2();
               const double local_row_ep_density =
@@ -1239,13 +1239,13 @@ void HEkkDual::chooseRow() {
     row_ep.array[row_out] = 1;
     row_ep.packFlag = true;
     if (analysis->analyse_simplex_data)
-      analysis->operationRecordBefore(kSimplexNlaBtranEp, row_ep,
-                                      analysis->row_ep_density);
+      analysis->operationRecordBefore(kSimplexNlaBtranEp, row_ep, analysis->row_ep_density);
     // Perform BTRAN
     nla_row_ep = row_ep;
-    factor->btran(row_ep, analysis->row_ep_density,
+    factor->btranCall(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
-    ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density);
+    ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density,
+                  analysis->pointer_serial_factor_clocks);
     assert(nla_row_ep.isEqual(row_ep));
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(kSimplexNlaBtranEp, row_ep);
@@ -1450,16 +1450,13 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   if (analysis->analyse_simplex_data) {
     const HighsInt row_ep_count = row_ep->count;
     if (use_col_price) {
-      analysis->operationRecordBefore(kSimplexNlaPriceAp,
-                                      row_ep_count, 0.0);
+      analysis->operationRecordBefore(kSimplexNlaPriceAp, row_ep_count, 0.0);
       analysis->num_col_price++;
     } else if (use_row_price_w_switch) {
-      analysis->operationRecordBefore(kSimplexNlaPriceAp,
-                                      row_ep_count, analysis->row_ep_density);
+      analysis->operationRecordBefore(kSimplexNlaPriceAp, row_ep_count, analysis->row_ep_density);
       analysis->num_row_price_with_switch++;
     } else {
-      analysis->operationRecordBefore(kSimplexNlaPriceAp,
-                                      row_ep_count, analysis->row_ep_density);
+      analysis->operationRecordBefore(kSimplexNlaPriceAp, row_ep_count, analysis->row_ep_density);
       analysis->num_row_price++;
     }
   }
@@ -1524,8 +1521,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
     HighsInt row_ap_count = 0;
     for (HighsInt i = 0; i < slice_num; i++)
       row_ap_count += slice_row_ap[i].count;
-    analysis->operationRecordAfter(kSimplexNlaPriceAp,
-                                   row_ap_count);
+    analysis->operationRecordAfter(kSimplexNlaPriceAp, row_ap_count);
   }
 
   // Join CC1 results here
@@ -1601,13 +1597,13 @@ void HEkkDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(col_aq, variable_in, 1);
   if (analysis->analyse_simplex_data)
-    analysis->operationRecordBefore(kSimplexNlaFtran, col_aq,
-                                    analysis->col_aq_density);
+    analysis->operationRecordBefore(kSimplexNlaFtran, col_aq, analysis->col_aq_density);
   // Perform FTRAN
   nla_col_aq = col_aq;
-  factor->ftran(col_aq, analysis->col_aq_density,
+  factor->ftranCall(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
-  ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density);
+  ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density,
+                analysis->pointer_serial_factor_clocks);
   assert(nla_col_aq.isEqual(col_aq));
   
   if (analysis->analyse_simplex_data)
@@ -1642,17 +1638,16 @@ void HEkkDual::updateFtranBFRT() {
 
   if (col_BFRT.count) {
     if (analysis->analyse_simplex_data)
-      analysis->operationRecordBefore(kSimplexNlaFtranBfrt,
-                                      col_BFRT, analysis->col_BFRT_density);
+      analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT, analysis->col_BFRT_density);
     // Perform FTRAN BFRT
     nla_col_BFRT = col_BFRT;
-    factor->ftran(col_BFRT, analysis->col_BFRT_density,
+    factor->ftranCall(col_BFRT, analysis->col_BFRT_density,
                   analysis->pointer_serial_factor_clocks);
-    ekk_instance_.simplex_nla_.ftran(nla_col_BFRT, analysis->col_BFRT_density);
+    ekk_instance_.simplex_nla_.ftran(nla_col_BFRT, analysis->col_BFRT_density,
+                  analysis->pointer_serial_factor_clocks);
     assert(nla_col_BFRT.isEqual(col_BFRT));
     if (analysis->analyse_simplex_data)
-      analysis->operationRecordAfter(kSimplexNlaFtranBfrt,
-                                     col_BFRT);
+      analysis->operationRecordAfter(kSimplexNlaFtranBfrt, col_BFRT);
   }
   if (time_updateFtranBFRT) {
     analysis->simplexTimerStop(FtranBfrtClock);
@@ -1669,18 +1664,17 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
   if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranDseClock);
   if (analysis->analyse_simplex_data)
-    analysis->operationRecordBefore(kSimplexNlaFtranDse,
-                                    *DSE_Vector, analysis->row_DSE_density);
+    analysis->operationRecordBefore(kSimplexNlaFtranDse, *DSE_Vector, analysis->row_DSE_density);
   // Perform FTRAN DSE
-  factor->ftran(*DSE_Vector, analysis->row_DSE_density,
+  factor->ftranCall(*DSE_Vector, analysis->row_DSE_density,
                 analysis->pointer_serial_factor_clocks);
 
-  ekk_instance_.simplex_nla_.ftran(*nla_DSE_Vector, analysis->row_DSE_density);
+  ekk_instance_.simplex_nla_.ftran(*nla_DSE_Vector, analysis->row_DSE_density,
+                  analysis->pointer_serial_factor_clocks);
   assert((*nla_DSE_Vector).isEqual(*DSE_Vector));
 
   if (analysis->analyse_simplex_data)
-    analysis->operationRecordAfter(kSimplexNlaFtranDse,
-                                   *DSE_Vector);
+    analysis->operationRecordAfter(kSimplexNlaFtranDse, *DSE_Vector);
   analysis->simplexTimerStop(FtranDseClock);
   const double local_row_DSE_density =
       (double)DSE_Vector->count / solver_num_row;
@@ -2262,11 +2256,11 @@ double HEkkDual::computeExactDualObjectiveValue() {
   dual_row.setup(lp.numCol_);
   dual_row.clear();
   if (dual_col.count) {
-    const double historical_density_for_non_hypersparse_operation = 1;
+    const double expected_density = 1;
     HVector nla_dual_col = dual_col;
-    factor.btran(dual_col, historical_density_for_non_hypersparse_operation);
+    factor.btranCall(dual_col, expected_density);
     if (1==0) {
-      ekk_instance_.simplex_nla_.btran(nla_dual_col, historical_density_for_non_hypersparse_operation);
+      ekk_instance_.simplex_nla_.btran(nla_dual_col, expected_density);
       assert(nla_dual_col.isEqual(dual_col));
     }
     matrix.priceByColumn(dual_row, dual_col);
