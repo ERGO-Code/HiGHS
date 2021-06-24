@@ -1348,7 +1348,10 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   nla_col_aq = col_aq;
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans && info_.update_count==0) {
+  if (simplex_nla_.use_simplex_nla_trans
+	//	&& ekk_instance_.info_.update_count==0
+	) {
+      printf("FTRAN0: Update count = %d\n", (int)info_.update_count);
     simplex_nla_.ftran(nla_col_aq, analysis_.col_aq_density);
     assert(nla_col_aq.isEqual(col_aq));
   }
@@ -1375,7 +1378,10 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   HVector nla_row_ep = row_ep;
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (simplex_nla_.use_simplex_nla_trans && info_.update_count==0) {
+  if (simplex_nla_.use_simplex_nla_trans
+	//	 && info_.update_count==0
+	) {
+      printf("BTRAN1: Update count = %d\n", (int)info_.update_count);
     simplex_nla_.btran(nla_row_ep, analysis_.row_ep_density);
     assert(nla_row_ep.isEqual(row_ep));
   }
@@ -1401,7 +1407,10 @@ void HEkk::fullBtran(HVector& buffer) {
   HVector nla_buffer = buffer;
   factor_.btran(buffer, analysis_.dual_col_density,
                 analysis_.pointer_serial_factor_clocks);
-  if (1==0) {
+  if (simplex_nla_.use_simplex_nla_trans
+	//	 && info_.update_count==0
+	) {
+      printf("BTRAN2: Update count = %d\n", (int)info_.update_count);
     simplex_nla_.btran(nla_buffer, analysis_.dual_col_density);
     assert(nla_buffer.isEqual(buffer));
   }
@@ -1808,15 +1817,16 @@ bool HEkk::reinvertOnNumericalTrouble(
 void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
                         HighsInt* hint, HVector* nla_column, HVector* nla_row_ep) {
   analysis_.simplexTimerStart(UpdateFactorClock);
-  *nla_column = *column;
-  *nla_row_ep = *row_ep;
+  HighsInt nla_iRow = *iRow;
+  HighsInt nla_hint = *hint;
+  printf("updateFactor: ticks(%g; %g)\n", (*nla_row_ep).synthetic_tick, (*row_ep).synthetic_tick);
+  assert((*nla_column).isEqual(*column));
+  assert((*nla_row_ep).isEqual(*row_ep));
   factor_.update(column, row_ep, iRow, hint);
+  assert(nla_iRow == *iRow);
   if (simplex_nla_.use_simplex_nla_update) {
-    HighsInt* nla_iRow;
-    HighsInt* nla_hint;
-    *nla_iRow = *iRow;
-    *nla_hint = *hint;
-    simplex_nla_.update(nla_column, nla_row_ep, nla_iRow, nla_hint);
+    simplex_nla_.update(nla_column, nla_row_ep, &nla_iRow, &nla_hint);
+    assert(nla_hint == *hint);
   }
   
   // Now have a representation of B^{-1}, but it is not fresh

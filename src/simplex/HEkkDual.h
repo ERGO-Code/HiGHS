@@ -220,6 +220,7 @@ class HEkkDual {
    * FTRAN applied to the pivotal column (FTRAN-DSE)
    */
   void updateFtranDSE(HVector* DSE_Vector  //!< Pivotal column as RHS for FTRAN
+		      , HVector* nla_DSE_Vector
   );
   /**
    * @brief Compare the pivot value computed row-wise and column-wise

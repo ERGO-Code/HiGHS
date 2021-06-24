@@ -1057,7 +1057,7 @@ void HEkkDual::iterate() {
 
   // updateFtranDSE performs the DSE FTRAN on pi_p
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge)
-    updateFtranDSE(&row_ep);
+    updateFtranDSE(&row_ep, &nla_row_ep);
   analysis->simplexTimerStop(IterateFtranClock);
 
   // updateVerify() Checks row-wise pivot against column-wise pivot for
@@ -1114,7 +1114,7 @@ void HEkkDual::iterateTasks() {
 #pragma omp task
     {
       col_DSE.copy(&row_ep);
-      updateFtranDSE(&col_DSE);
+      updateFtranDSE(&col_DSE, NULL);
     }
 #pragma omp task
     {
@@ -1236,9 +1236,13 @@ void HEkkDual::chooseRow() {
     nla_row_ep = row_ep;
     factor->btran(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
-    if (1==0) {
+    if (ekk_instance_.simplex_nla_.use_simplex_nla_trans
+	//	&& ekk_instance_.info_.update_count==0
+	) {
+      printf("BTRAN0: Update count = %d\n", (int)ekk_instance_.info_.update_count);
       ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density);
       assert(nla_row_ep.isEqual(row_ep));
+      printf("BTRAN0: ticks(%g; %g)\n", nla_row_ep.synthetic_tick, row_ep.synthetic_tick);
     }
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
@@ -1603,7 +1607,10 @@ void HEkkDual::updateFtran() {
   nla_col_aq = col_aq;
   factor->ftran(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
-  if (1==0) {
+  if (ekk_instance_.simplex_nla_.use_simplex_nla_trans
+	//	&& ekk_instance_.info_.update_count==0
+	) {
+      printf("FTRAN1: Update count = %d\n", (int)ekk_instance_.info_.update_count);
     ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density);
     assert(nla_col_aq.isEqual(col_aq));
   }
@@ -1646,8 +1653,14 @@ void HEkkDual::updateFtranBFRT() {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
                                       col_BFRT, analysis->col_BFRT_density);
     // Perform FTRAN BFRT
+    nla_col_BFRT = col_BFRT;
     factor->ftran(col_BFRT, analysis->col_BFRT_density,
                   analysis->pointer_serial_factor_clocks);
+    if (ekk_instance_.simplex_nla_.use_simplex_nla_trans) {
+      printf("FTRAN3: Update count = %d\n", (int)ekk_instance_.info_.update_count);
+      ekk_instance_.simplex_nla_.ftran(nla_col_BFRT, analysis->col_BFRT_density);
+      assert(nla_col_BFRT.isEqual(col_BFRT));
+    }
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
                                      col_BFRT);
@@ -1662,7 +1675,7 @@ void HEkkDual::updateFtranBFRT() {
       local_col_BFRT_density, ekk_instance_.info_.col_BFRT_density);
 }
 
-void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
+void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
   // Compute the vector required to update DSE weights - being FTRAN
   // applied to the pivotal column (FTRAN-DSE)
   //
@@ -1675,6 +1688,13 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   // Perform FTRAN DSE
   factor->ftran(*DSE_Vector, analysis->row_DSE_density,
                 analysis->pointer_serial_factor_clocks);
+
+    if (ekk_instance_.simplex_nla_.use_simplex_nla_trans) {
+      printf("FTRAN2: Update count = %d\n", (int)ekk_instance_.info_.update_count);
+      ekk_instance_.simplex_nla_.ftran(*nla_DSE_Vector, analysis->row_DSE_density);
+      assert((*nla_DSE_Vector).isEqual(*DSE_Vector));
+    }
+
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                    *DSE_Vector);
