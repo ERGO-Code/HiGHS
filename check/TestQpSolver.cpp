@@ -38,10 +38,10 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 
   // Check with qjh.mps
   filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
-  required_objective_function_value = -4.91667;  // Should be -5.25
-  required_x0 = 5.0 / 6.0;                       // Should be 0.5
-  required_x1 = 5.0;                             // Should be 5.0
-  required_x2 = 7.0 / 6.0;                       // Should be 1.5
+  required_objective_function_value = -5.25;
+  required_x0 = 0.5;
+  required_x1 = 5.0;                        
+  required_x2 = 1.5;
 
   return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::kOk);
