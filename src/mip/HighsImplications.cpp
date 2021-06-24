@@ -398,12 +398,11 @@ void HighsImplications::separateImpliedBounds(
             globaldomain.colUpper_[implics[i].column])
           continue;
 
-        HighsInt implicColPos = col < implics[i].column;
-        vals[implicColPos] = 1.0;
-        inds[implicColPos] = implics[i].column;
-        vals[1 - implicColPos] =
+        vals[0] = 1.0;
+        inds[0] = implics[i].column;
+        vals[1] =
             globaldomain.colUpper_[implics[i].column] - implics[i].boundval;
-        inds[1 - implicColPos] = col;
+        inds[1] = col;
         rhs = globaldomain.colUpper_[implics[i].column];
 
       } else {
@@ -411,12 +410,11 @@ void HighsImplications::separateImpliedBounds(
             globaldomain.colLower_[implics[i].column])
           continue;
 
-        HighsInt implicColPos = col < implics[i].column;
-        vals[implicColPos] = -1.0;
-        inds[implicColPos] = implics[i].column;
-        vals[1 - implicColPos] =
+        vals[0] = -1.0;
+        inds[0] = implics[i].column;
+        vals[1] =
             globaldomain.colLower_[implics[i].column] - implics[i].boundval;
-        inds[1 - implicColPos] = col;
+        inds[1] = col;
         rhs = -globaldomain.colLower_[implics[i].column];
       }
 
@@ -447,24 +445,22 @@ void HighsImplications::separateImpliedBounds(
             globaldomain.colUpper_[implics[i].column])
           continue;
 
-        HighsInt implicColPos = col < implics[i].column;
-        vals[implicColPos] = 1.0;
-        inds[implicColPos] = implics[i].column;
-        vals[1 - implicColPos] =
+        vals[0] = 1.0;
+        inds[0] = implics[i].column;
+        vals[1] =
             implics[i].boundval - globaldomain.colUpper_[implics[i].column];
-        inds[1 - implicColPos] = col;
+        inds[1] = col;
         rhs = implics[i].boundval;
       } else {
         if (implics[i].boundval - feastol <=
             globaldomain.colLower_[implics[i].column])
           continue;
 
-        HighsInt implicColPos = col < implics[i].column;
-        vals[implicColPos] = -1.0;
-        inds[implicColPos] = implics[i].column;
-        vals[1 - implicColPos] =
+        vals[0] = -1.0;
+        inds[0] = implics[i].column;
+        vals[1] =
             globaldomain.colLower_[implics[i].column] - implics[i].boundval;
-        inds[1 - implicColPos] = col;
+        inds[1] = col;
         rhs = -implics[i].boundval;
       }
 
