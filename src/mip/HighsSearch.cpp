@@ -641,6 +641,7 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       localdom.propagate();
       localdom.clearChangedCols(oldchangedcols);
       prune = localdom.infeasible();
+      if (prune) localdom.conflictAnalysis();
     }
     if (!prune) {
       nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),

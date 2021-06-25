@@ -1916,6 +1916,7 @@ void HighsDomain::conflictAnalysis() {
   }
 
   HighsInt currDepthEnd = kHighsIInf;
+  HighsInt fUIP = -1;
 
   for (HighsInt currDepth = branchPos_.size() - 1; currDepth >= 0;
        --currDepth) {
@@ -1976,6 +1977,11 @@ void HighsDomain::conflictAnalysis() {
           reasonSideFrontier, domchgstack_);
     }
 
+    if (thisDepthSize == 1 && currDepth == branchPos_.size() - 1) {
+      auto it = reasonSideFrontier.lower_bound(branchPos_[currDepth] + 1);
+      if (it != reasonSideFrontier.end()) fUIP = *it;
+    }
+
     if (minQueueSize != 0) {
 #if 0
       if (!mipsolver->submip) {
@@ -2017,6 +2023,85 @@ void HighsDomain::conflictAnalysis() {
       mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
                                           inds.size(), rhs, true);
     }
+  }
+
+  if (fUIP != -1) {
+    HighsInt col = domchgstack_[fUIP].column;
+    if (!globaldom.isBinary(col)) return;
+    reasonSideFrontier.clear();
+    reasonSideFrontier.insert(fUIP);
+    resolveQueue.push(fUIP);
+    HighsInt currDepth = branchPos_.size() - 1;
+
+    if (!explainBoundChange(fUIP, reasonDomChgs)) return;
+
+    while (!resolveQueue.empty()) {
+      HighsInt resolvePos = resolveQueue.top();
+      resolveQueue.pop();
+
+      if (explainBoundChange(resolvePos, reasonDomChgs)) {
+        reasonSideFrontier.erase(resolvePos);
+        for (HighsInt domChgPos : reasonDomChgs) {
+          assert(domChgPos < resolvePos);
+          if (reasonSideFrontier.insert(domChgPos).second) {
+            if (domChgPos > branchPos_[currDepth]) resolveQueue.push(domChgPos);
+          }
+        }
+      } else if (!globaldom.isBinary(domchgstack_[resolvePos].column))
+        return;
+    }
+
+    if (reasonSideFrontier.count(fUIP) != 0) return;
+
+    for (HighsInt pos : reasonSideFrontier) {
+      if (!globaldom.isBinary(domchgstack_[pos].column)) resolveQueue.push(pos);
+    }
+
+    while (!resolveQueue.empty()) {
+      HighsInt resolvePos = resolveQueue.top();
+      resolveQueue.pop();
+      if (!explainBoundChange(resolvePos, reasonDomChgs)) return;
+
+      reasonSideFrontier.erase(resolvePos);
+      for (HighsInt domChgPos : reasonDomChgs) {
+        assert(domChgPos < resolvePos);
+        if (reasonSideFrontier.insert(domChgPos).second) {
+          if (!globaldom.isBinary(domchgstack_[domChgPos].column))
+            resolveQueue.push(domChgPos);
+        }
+      }
+    }
+
+    inds.clear();
+    vals.clear();
+    HighsInt rhs = reasonSideFrontier.size();
+
+    inds.push_back(col);
+    if (domchgstack_[fUIP].boundtype == HighsBoundType::kLower) {
+      assert(domchgstack_[fUIP].boundval == 1.0);
+      vals.push_back(-1.0);
+      rhs -= 1;
+    } else {
+      assert(domchgstack_[fUIP].boundval == 0.0);
+      vals.push_back(1.0);
+    }
+    for (HighsInt i : reasonSideFrontier) {
+      col = domchgstack_[i].column;
+
+      inds.push_back(col);
+      if (!globaldom.isBinary(col)) return;
+      if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
+        assert(domchgstack_[i].boundval == 1.0);
+        vals.push_back(1.0);
+      } else {
+        assert(domchgstack_[i].boundval == 0.0);
+        vals.push_back(-1.0);
+        rhs -= 1;
+      }
+    }
+
+    mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
+                                        inds.size(), rhs, true);
   }
 }
 
