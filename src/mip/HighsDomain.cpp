@@ -1915,7 +1915,6 @@ void HighsDomain::conflictAnalysis() {
         reasonSideFrontier, domchgstack_);
   }
 
-  size_t maxSize = kHighsIInf;  // reasonSideFrontier.size();
   HighsInt currDepthEnd = kHighsIInf;
 
   for (HighsInt currDepth = branchPos_.size() - 1; currDepth >= 0;
@@ -1977,7 +1976,7 @@ void HighsDomain::conflictAnalysis() {
           reasonSideFrontier, domchgstack_);
     }
 
-    if (minQueueSize != 0 && reasonSideFrontier.size() < maxSize) {
+    if (minQueueSize != 0) {
 #if 0
       if (!mipsolver->submip) {
         printf("UIP cut of depth %d:\n", currDepth);
@@ -2004,6 +2003,7 @@ void HighsDomain::conflictAnalysis() {
         HighsInt col = domchgstack_[i].column;
 
         inds.push_back(col);
+        if (!globaldom.isBinary(col)) return;
         if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
           assert(domchgstack_[i].boundval == 1.0);
           vals.push_back(1.0);
@@ -2014,7 +2014,6 @@ void HighsDomain::conflictAnalysis() {
         }
       }
 
-      // maxSize = reasonSideFrontier.size() + 1;
       mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
                                           inds.size(), rhs, true);
     }
