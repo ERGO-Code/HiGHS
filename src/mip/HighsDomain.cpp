@@ -1873,6 +1873,7 @@ bool HighsDomain::explainInfeasibility(std::vector<HighsInt>& reasonDomChgs) {
 
 void HighsDomain::conflictAnalysis() {
   std::set<HighsInt> reasonSideFrontier;
+  std::set<HighsInt> reconvergenceFrontier;
   std::priority_queue<HighsInt> resolveQueue;
   std::vector<HighsInt> reasonDomChgs;
   std::vector<HighsInt> inds;
@@ -1884,6 +1885,9 @@ void HighsDomain::conflictAnalysis() {
 
   reasonDomChgs.reserve(domchgstack_.size());
   if (!explainInfeasibility(reasonDomChgs)) return;
+
+  if (reasonDomChgs.size() > 0.15 * mipsolver->mipdata_->integral_cols.size())
+    return;
 
   HighsDomain& globaldom = mipsolver->mipdata_->domain;
   globaldom.propagate();
@@ -1898,6 +1902,7 @@ void HighsDomain::conflictAnalysis() {
   mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, domchgstack_);
 
+  // resolve non-binary domain changes first
   while (!resolveQueue.empty()) {
     HighsInt resolvePos = resolveQueue.top();
     resolveQueue.pop();
@@ -1916,7 +1921,6 @@ void HighsDomain::conflictAnalysis() {
   }
 
   HighsInt currDepthEnd = kHighsIInf;
-  HighsInt fUIP = -1;
 
   for (HighsInt currDepth = branchPos_.size() - 1; currDepth >= 0;
        --currDepth) {
@@ -1977,31 +1981,7 @@ void HighsDomain::conflictAnalysis() {
           reasonSideFrontier, domchgstack_);
     }
 
-    if (thisDepthSize == 1 && currDepth == branchPos_.size() - 1) {
-      auto it = reasonSideFrontier.lower_bound(branchPos_[currDepth] + 1);
-      if (it != reasonSideFrontier.end()) fUIP = *it;
-    }
-
     if (minQueueSize != 0) {
-#if 0
-      if (!mipsolver->submip) {
-        printf("UIP cut of depth %d:\n", currDepth);
-        bool sep = false;
-        for (HighsInt i : reasonSideFrontier) {
-          char op =
-              domchgstack_[i].boundtype == HighsBoundType::kLower ? '<' : '>';
-          if (sep) {
-            printf(" V (x%d %c %g)", domchgstack_[i].column, op,
-                   domchgstack_[i].boundval);
-          } else {
-            printf("(x%d %c %g)", domchgstack_[i].column, op,
-                   domchgstack_[i].boundval);
-            sep = true;
-          }
-        }
-        printf("\n");
-      }
-#endif
       inds.clear();
       vals.clear();
       HighsInt rhs = reasonSideFrontier.size() - 1;
@@ -2009,7 +1989,7 @@ void HighsDomain::conflictAnalysis() {
         HighsInt col = domchgstack_[i].column;
 
         inds.push_back(col);
-        if (!globaldom.isBinary(col)) return;
+        assert(globaldom.isBinary(col));
         if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
           assert(domchgstack_[i].boundval == 1.0);
           vals.push_back(1.0);
@@ -2020,88 +2000,170 @@ void HighsDomain::conflictAnalysis() {
         }
       }
 
+      auto oldSize = globaldom.getDomainChangeStack().size();
       mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
                                           inds.size(), rhs, true);
-    }
-  }
+      globaldom.propagate();
+      if (globaldom.infeasible()) return;
+      if (globaldom.getDomainChangeStack().size() != oldSize) {
+        reasonDomChgs.clear();
+        for (auto it = reasonSideFrontier.begin();
+             it != reasonSideFrontier.end();) {
+          HighsInt pos = *it;
+          HighsInt col = domchgstack_[pos].column;
+          if (!globaldom.isFixed(domchgstack_[pos].column)) {
+            ++it;
+            continue;
+          }
 
-  if (fUIP != -1) {
-    HighsInt col = domchgstack_[fUIP].column;
-    if (!globaldom.isBinary(col)) return;
-    reasonSideFrontier.clear();
-    reasonSideFrontier.insert(fUIP);
-    resolveQueue.push(fUIP);
-    HighsInt currDepth = branchPos_.size() - 1;
-
-    if (!explainBoundChange(fUIP, reasonDomChgs)) return;
-
-    while (!resolveQueue.empty()) {
-      HighsInt resolvePos = resolveQueue.top();
-      resolveQueue.pop();
-
-      if (explainBoundChange(resolvePos, reasonDomChgs)) {
-        reasonSideFrontier.erase(resolvePos);
-        for (HighsInt domChgPos : reasonDomChgs) {
-          assert(domChgPos < resolvePos);
-          if (reasonSideFrontier.insert(domChgPos).second) {
-            if (domChgPos > branchPos_[currDepth]) resolveQueue.push(domChgPos);
+          double fixVal = globaldom.colLower_[col];
+          if (domchgstack_[pos].boundtype == HighsBoundType::kLower) {
+            // if the bound was fixed to the opposite value then the conflict is
+            // globally redundant
+            if (fixVal < domchgstack_[pos].boundval - 0.5) return;
+            // otherwise, one of the other bound changes must be still be
+            // non-active and the bound change of the fixed column can be
+            // dropped
+            it = reasonSideFrontier.erase(it);
+          } else {
+            if (fixVal > domchgstack_[pos].boundval + 0.5) return;
+            it = reasonSideFrontier.erase(it);
           }
         }
-      } else if (!globaldom.isBinary(domchgstack_[resolvePos].column))
-        return;
+      }
     }
 
-    if (reasonSideFrontier.count(fUIP) != 0) return;
+    if (thisDepthSize == 1) {
+      // there should be a UIP that is not the branching vertex, so try to
+      // generate a reconvergence cut
+      do {
+        auto it = reasonSideFrontier.lower_bound(branchPos_[currDepth] + 1);
+        if (it == reasonSideFrontier.end()) break;
+        HighsInt UIP = *it;
+        reconvergenceFrontier.clear();
+        reconvergenceFrontier.insert(UIP);
+        resolveQueue.push(UIP);
 
-    for (HighsInt pos : reasonSideFrontier) {
-      if (!globaldom.isBinary(domchgstack_[pos].column)) resolveQueue.push(pos);
-    }
-
-    while (!resolveQueue.empty()) {
-      HighsInt resolvePos = resolveQueue.top();
-      resolveQueue.pop();
-      if (!explainBoundChange(resolvePos, reasonDomChgs)) return;
-
-      reasonSideFrontier.erase(resolvePos);
-      for (HighsInt domChgPos : reasonDomChgs) {
-        assert(domChgPos < resolvePos);
-        if (reasonSideFrontier.insert(domChgPos).second) {
-          if (!globaldom.isBinary(domchgstack_[domChgPos].column))
-            resolveQueue.push(domChgPos);
+        bool abort = false;
+        if (!explainBoundChange(UIP, reasonDomChgs)) {
+          abort = true;
+          break;
         }
-      }
+
+        // resolve all bound changes in the current depth level
+        while (!resolveQueue.empty()) {
+          HighsInt resolvePos = resolveQueue.top();
+          resolveQueue.pop();
+
+          if (explainBoundChange(resolvePos, reasonDomChgs)) {
+            reconvergenceFrontier.erase(resolvePos);
+            for (HighsInt domChgPos : reasonDomChgs) {
+              assert(domChgPos < resolvePos);
+              if (reconvergenceFrontier.insert(domChgPos).second) {
+                if (domChgPos > branchPos_[currDepth])
+                  resolveQueue.push(domChgPos);
+              }
+            }
+          } else {
+            abort = true;
+            break;
+          }
+        }
+
+        // if the UIP or another bound change of this depth could not be
+        // resolved abort
+        if (abort || reconvergenceFrontier.count(UIP) != 0) break;
+
+        // check that all entries in the reconvergence frontier are binary
+        for (HighsInt pos : reconvergenceFrontier) {
+          if (!globaldom.isBinary(domchgstack_[pos].column))
+            resolveQueue.push(pos);
+        }
+
+        while (!resolveQueue.empty()) {
+          HighsInt resolvePos = resolveQueue.top();
+          resolveQueue.pop();
+          if (!explainBoundChange(resolvePos, reasonDomChgs)) {
+            abort = true;
+            break;
+          }
+
+          reconvergenceFrontier.erase(resolvePos);
+          for (HighsInt domChgPos : reasonDomChgs) {
+            assert(domChgPos < resolvePos);
+            if (reconvergenceFrontier.insert(domChgPos).second) {
+              if (!globaldom.isBinary(domchgstack_[domChgPos].column))
+                resolveQueue.push(domChgPos);
+            }
+          }
+        }
+
+        if (abort) break;
+
+        inds.clear();
+        vals.clear();
+        HighsInt rhs = reconvergenceFrontier.size();
+
+        HighsInt UIPcol = domchgstack_[UIP].column;
+
+        inds.push_back(UIPcol);
+        if (domchgstack_[UIP].boundtype == HighsBoundType::kLower) {
+          assert(domchgstack_[UIP].boundval == 1.0);
+          vals.push_back(-1.0);
+          rhs -= 1;
+        } else {
+          assert(domchgstack_[UIP].boundval == 0.0);
+          vals.push_back(1.0);
+        }
+        for (HighsInt i : reconvergenceFrontier) {
+          HighsInt col = domchgstack_[i].column;
+
+          inds.push_back(col);
+          if (!globaldom.isBinary(col)) return;
+          if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
+            assert(domchgstack_[i].boundval == 1.0);
+            vals.push_back(1.0);
+          } else {
+            assert(domchgstack_[i].boundval == 0.0);
+            vals.push_back(-1.0);
+            rhs -= 1;
+          }
+        }
+
+        // add the reconvergence cut of this depth level
+        auto oldSize = globaldom.getDomainChangeStack().size();
+        mipsolver->mipdata_->cutpool.addCut(
+            *mipsolver, inds.data(), vals.data(), inds.size(), rhs, true);
+        globaldom.propagate();
+        if (globaldom.infeasible()) return;
+        if (globaldom.getDomainChangeStack().size() != oldSize) {
+          reasonDomChgs.clear();
+          for (auto it = reasonSideFrontier.begin();
+               it != reasonSideFrontier.end();) {
+            HighsInt pos = *it;
+            HighsInt col = domchgstack_[pos].column;
+            if (!globaldom.isFixed(domchgstack_[pos].column)) {
+              ++it;
+              continue;
+            }
+
+            double fixVal = globaldom.colLower_[col];
+            if (domchgstack_[pos].boundtype == HighsBoundType::kLower) {
+              // if the bound was fixed to the opposite value then the conflict
+              // is globally redundant
+              if (fixVal < domchgstack_[pos].boundval - 0.5) return;
+              // otherwise, one of the other bound changes must be still be
+              // non-active and the bound change of the fixed column can be
+              // dropped
+              it = reasonSideFrontier.erase(it);
+            } else {
+              if (fixVal > domchgstack_[pos].boundval + 0.5) return;
+              it = reasonSideFrontier.erase(it);
+            }
+          }
+        }
+      } while (false);
     }
-
-    inds.clear();
-    vals.clear();
-    HighsInt rhs = reasonSideFrontier.size();
-
-    inds.push_back(col);
-    if (domchgstack_[fUIP].boundtype == HighsBoundType::kLower) {
-      assert(domchgstack_[fUIP].boundval == 1.0);
-      vals.push_back(-1.0);
-      rhs -= 1;
-    } else {
-      assert(domchgstack_[fUIP].boundval == 0.0);
-      vals.push_back(1.0);
-    }
-    for (HighsInt i : reasonSideFrontier) {
-      col = domchgstack_[i].column;
-
-      inds.push_back(col);
-      if (!globaldom.isBinary(col)) return;
-      if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
-        assert(domchgstack_[i].boundval == 1.0);
-        vals.push_back(1.0);
-      } else {
-        assert(domchgstack_[i].boundval == 0.0);
-        vals.push_back(-1.0);
-        rhs -= 1;
-      }
-    }
-
-    mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
-                                        inds.size(), rhs, true);
   }
 }
 
