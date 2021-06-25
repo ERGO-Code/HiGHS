@@ -1886,8 +1886,8 @@ void HighsDomain::conflictAnalysis() {
   reasonDomChgs.reserve(domchgstack_.size());
   if (!explainInfeasibility(reasonDomChgs)) return;
 
-  if (reasonDomChgs.size() > 0.15 * mipsolver->mipdata_->integral_cols.size())
-    return;
+  HighsInt maxSize = 0.15 * mipsolver->mipdata_->integral_cols.size();
+  if (reasonDomChgs.size() > 2 * maxSize) return;
 
   HighsDomain& globaldom = mipsolver->mipdata_->domain;
   globaldom.propagate();
@@ -1981,7 +1981,7 @@ void HighsDomain::conflictAnalysis() {
           reasonSideFrontier, domchgstack_);
     }
 
-    if (minQueueSize != 0) {
+    if (minQueueSize != 0 && reasonSideFrontier.size() <= maxSize) {
       inds.clear();
       vals.clear();
       HighsInt rhs = reasonSideFrontier.size() - 1;
@@ -2098,7 +2098,7 @@ void HighsDomain::conflictAnalysis() {
           }
         }
 
-        if (abort) break;
+        if (abort || reconvergenceFrontier.size() >= maxSize) break;
 
         inds.clear();
         vals.clear();
