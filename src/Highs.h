@@ -282,7 +282,7 @@ class Highs {
   /**
    * @brief Gets the current model objective value
    */
-  double getObjectiveValue() { return info_.objective_function_value; }
+  double getObjectiveValue() const { return info_.objective_function_value; }
 
   /**
    * Methods for operations with the invertible representation of the
