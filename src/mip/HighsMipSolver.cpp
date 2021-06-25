@@ -66,6 +66,12 @@ void HighsMipSolver::run() {
 restart:
   if (modelstatus_ == HighsModelStatus::kNotset) {
     mipdata_->evaluateRootNode();
+    // age 5 times to remove stored but never violated cuts after root separation
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
+    mipdata_->cutpool.performAging();
   }
   if (mipdata_->nodequeue.empty()) {
     cleanupSolve();
@@ -103,6 +109,7 @@ restart:
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
     bool heuristicsCalled = false;
+    HighsInt cutpoolStartSize = mipdata_->cutpool.getNumCuts();
     while (true) {
       if (!heuristicsCalled && mipdata_->moreHeuristicsAllowed()) {
         search.evaluateNode();
@@ -143,7 +150,8 @@ restart:
 
       if (!search.backtrack()) break;
 
-      if (mipdata_->num_nodes - plungestart >= 100) break;
+      HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
+      if (numPlungeNodes >= 100) break;
 
       while (search.hasNode() &&
              search.getCurrentEstimate() > mipdata_->upper_limit) {
@@ -151,6 +159,12 @@ restart:
       }
 
       if (!search.hasNode()) break;
+
+      // if conflicts where found perform early aging
+      if (mipdata_->cutpool.getNumCuts() - cutpoolStartSize > 50) {
+        mipdata_->cutpool.performAging();
+        cutpoolStartSize = mipdata_->cutpool.getNumCuts();
+      }
 
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=

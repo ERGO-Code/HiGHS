@@ -412,8 +412,8 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
-  ages_[rowindex] = 0;
-  ++ageDistribution[0];
+  ages_[rowindex] = std::max(0, agelim_ - 5);
+  ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
   ++modification_[rowindex];
 
