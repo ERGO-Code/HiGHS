@@ -900,7 +900,7 @@ HighsInt HEkk::computeFactor() {
   if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
-  debugCheckInvert(options_, factor_, force);
+  debugCheckInvert(options_, factor_, simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
@@ -1498,11 +1498,21 @@ void HEkk::computePrimal() {
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
   if (primal_col.count) {
-    factor_.ftranCall(primal_col, analysis_.primal_col_density,
-                  analysis_.pointer_serial_factor_clocks);
+    HVector nla_primal_col = primal_col;
+    if (analysis_.primal_col_density != info_.primal_col_density) {
+      printf("HEkk::computePrimal primal_col_density analysis(%g); info(%g)\n", analysis_.primal_col_density,
+	     info_.primal_col_density);
+    }
+    assert(analysis_.primal_col_density == info_.primal_col_density);
+    factor_.ftranCall(primal_col, analysis_.primal_col_density,  analysis_.pointer_serial_factor_clocks);
+    simplex_nla_.ftran(nla_primal_col, analysis_.primal_col_density, analysis_.pointer_serial_factor_clocks);
+    assert(nla_primal_col.isEqual(primal_col));
+    
     const double local_primal_col_density = (double)primal_col.count / num_row;
     updateOperationResultDensity(local_primal_col_density,
                                  info_.primal_col_density);
+    updateOperationResultDensity(local_primal_col_density,
+                                 analysis_.primal_col_density);
   }
   for (HighsInt i = 0; i < num_row; i++) {
     HighsInt iCol = basis_.basicIndex_[i];
@@ -2243,7 +2253,7 @@ double HEkk::computeBasisCondition() {
   const HighsInt* Astart = &lp_.Astart_[0];
   const double* Avalue = &lp_.Avalue_[0];
   // Compute the Hager condition number estimate for the basis matrix
-  const double NoDensity = 1;
+  const double expected_density = 1;
   bs_cond_x.resize(solver_num_row);
   bs_cond_y.resize(solver_num_row);
   bs_cond_z.resize(solver_num_row);
@@ -2264,7 +2274,11 @@ double HEkk::computeBasisCondition() {
   }
   for (HighsInt ps_n = 1; ps_n <= 5; ps_n++) {
     row_ep.packFlag = false;
-    factor_.ftranCall(row_ep, NoDensity);
+    HVector nla_row_ep = row_ep;
+    factor_.ftranCall(row_ep, expected_density);
+    simplex_nla_.ftran(nla_row_ep, expected_density);
+    assert(nla_row_ep.isEqual(row_ep));
+    
     // zeta = sign(y);
     for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
       bs_cond_y[r_n] = row_ep.array[r_n];
@@ -2286,7 +2300,10 @@ double HEkk::computeBasisCondition() {
       }
     }
     row_ep.packFlag = false;
-    factor_.btranCall(row_ep, NoDensity);
+    nla_row_ep = row_ep;
+    factor_.btranCall(row_ep, expected_density);
+    simplex_nla_.btran(nla_row_ep, expected_density);
+    assert(nla_row_ep.isEqual(row_ep));
     double norm_z = 0.0;
     double ztx = 0.0;
     norm_Binv = 0.0;

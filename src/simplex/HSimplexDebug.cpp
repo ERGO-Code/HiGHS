@@ -44,6 +44,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = ekk_instance.lp_;
   const HighsScale& scale = highs_model_object.scale_;
   const HFactor& factor = ekk_instance.factor_;
+  const HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
   bool right_size = true;
   right_size = (HighsInt)scale.col.size() == simplex_lp.numCol_ && right_size;
@@ -83,8 +84,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (status.has_invert) {
-    const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
-                               options, factor)) != HighsStatus::kError;
+    const bool invert_ok =
+      debugDebugToHighsStatus(debugCheckInvert(options, factor, simplex_nla)) != HighsStatus::kError;
     if (!invert_ok) {
       highsLogUser(
           options.log_options, HighsLogType::kError,

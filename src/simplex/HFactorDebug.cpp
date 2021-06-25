@@ -26,7 +26,9 @@ const double inverse_large_error = 1e-12;
 const double inverse_excessive_error = sqrt(inverse_large_error);
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
-                                  const HFactor& factor, const bool force) {
+                                  const HFactor& factor,
+				  const HSimplexNla& simplex_nla,
+				  const bool force) {
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::kNotChecked;
   if (force)
@@ -46,7 +48,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   HVector rhs;
   column.setup(numRow);
   rhs.setup(numRow);
-  double rhsDensity = 1;
+  double expected_density = 1;
 
   // Solve for a random solution
   HighsRandom random;
@@ -68,7 +70,11 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       rhs.array[index] += value;
     }
   }
-  factor.ftranCall(rhs, rhsDensity);
+  HVector nla_rhs = rhs;
+  factor.ftranCall(rhs, expected_density);
+  simplex_nla.ftran(nla_rhs, expected_density);
+  assert(nla_rhs.isEqual(rhs));
+
   double solve_error_norm = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     double solve_error = fabs(rhs.array[iRow] - column.array[iRow]);
@@ -103,7 +109,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (options.highs_debug_level < kHighsDebugLevelExpensive)
     return return_status;
 
-  double columnDensity = 0;
+  expected_density = 0;
   double inverse_error_norm = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
     HighsInt iCol = baseIndex[iRow];
@@ -120,7 +126,13 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       column.array[index] = 1.0;
       column.index[column.count++] = index;
     }
-    factor.ftranCall(column, columnDensity);
+
+    HVector nla_column = column;
+    factor.ftranCall(column, expected_density);
+    simplex_nla.ftran(nla_column, expected_density);
+    assert(nla_column.isEqual(column));
+
+
     double inverse_column_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < numRow; lc_iRow++) {
       double value = column.array[lc_iRow];

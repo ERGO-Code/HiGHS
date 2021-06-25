@@ -207,8 +207,9 @@ void HEkkDual::majorChooseRowBtran() {
     work_ep->packFlag = true;
     HighsTimerClock* factor_timer_clock_pointer =
         analysis->getThreadFactorTimerClockPointer();
+    assert(analysis->row_ep_density == ekk_instance_.info_.row_ep_density);
     factor->btranCall(*work_ep, analysis->row_ep_density,
-                  factor_timer_clock_pointer);
+		      factor_timer_clock_pointer);
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // For Dual steepest edge we know the exact weight as the 2-norm of
       // work_ep
@@ -620,6 +621,8 @@ void HEkkDual::majorUpdateFtranParallel() {
   for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     if (analysis->analyse_simplex_data)
       analysis->operationRecordBefore(kSimplexNlaFtran, multi_finish[iFn].col_aq->count, analysis->col_aq_density);
+
+    assert(analysis->col_aq_density == ekk_instance_.info_.col_aq_density);
     multi_density[multi_ntasks] = analysis->col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;

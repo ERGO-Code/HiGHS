@@ -156,7 +156,7 @@ HighsStatus HEkkDual::solve() {
             // Basis is not logical and DSE weights are to be initialised
             highsLogDev(options.log_options, HighsLogType::kDetailed,
                         "Basis is not logical, so compute exact DSE weights\n");
-            if (ekk_instance_.analysis_.analyse_simplex_time) {
+            if (analysis->analyse_simplex_time) {
               analysis->simplexTimerStart(SimplexIzDseWtClock);
               analysis->simplexTimerStart(DseIzClock);
             }
@@ -166,14 +166,27 @@ HighsStatus HEkkDual::solve() {
               row_ep.index[0] = i;
               row_ep.array[i] = 1;
               row_ep.packFlag = false;
+	      
+	      nla_row_ep = row_ep;
+	      if (analysis->row_ep_density != info.row_ep_density) {
+		printf("HEkkDual::solve() row_ep_density analysis(%g); info(%g)\n", analysis->row_ep_density,
+		       info.row_ep_density);
+	      }
+	      assert(analysis->row_ep_density == info.row_ep_density);
               factor->btranCall(row_ep, analysis->row_ep_density,
                             analysis->pointer_serial_factor_clocks);
+
+	      ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density,
+				 analysis->pointer_serial_factor_clocks);
+	      assert(nla_row_ep.isEqual(row_ep));
+
               dualRHS.workEdWt[i] = row_ep.norm2();
               const double local_row_ep_density =
                   (double)row_ep.count / solver_num_row;
-              ekk_instance_.updateOperationResultDensity(local_row_ep_density, ekk_instance_.info_.row_ep_density);
+              ekk_instance_.updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
+              ekk_instance_.updateOperationResultDensity(local_row_ep_density, info.row_ep_density);
             }
-            if (ekk_instance_.analysis_.analyse_simplex_time) {
+            if (analysis->analyse_simplex_time) {
               analysis->simplexTimerStop(SimplexIzDseWtClock);
               analysis->simplexTimerStop(DseIzClock);
               double IzDseWtTT =
@@ -1242,6 +1255,7 @@ void HEkkDual::chooseRow() {
       analysis->operationRecordBefore(kSimplexNlaBtranEp, row_ep, analysis->row_ep_density);
     // Perform BTRAN
     nla_row_ep = row_ep;
+    assert(analysis->row_ep_density == ekk_instance_.info_.row_ep_density);
     factor->btranCall(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
     ekk_instance_.simplex_nla_.btran(nla_row_ep, analysis->row_ep_density,
@@ -1600,6 +1614,7 @@ void HEkkDual::updateFtran() {
     analysis->operationRecordBefore(kSimplexNlaFtran, col_aq, analysis->col_aq_density);
   // Perform FTRAN
   nla_col_aq = col_aq;
+  assert(analysis->col_aq_density == ekk_instance_.info_.col_aq_density);
   factor->ftranCall(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
   ekk_instance_.simplex_nla_.ftran(nla_col_aq, analysis->col_aq_density,
@@ -1641,6 +1656,7 @@ void HEkkDual::updateFtranBFRT() {
       analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT, analysis->col_BFRT_density);
     // Perform FTRAN BFRT
     nla_col_BFRT = col_BFRT;
+    assert(analysis->col_BFRT_density == ekk_instance_.info_.col_BFRT_density);
     factor->ftranCall(col_BFRT, analysis->col_BFRT_density,
                   analysis->pointer_serial_factor_clocks);
     ekk_instance_.simplex_nla_.ftran(nla_col_BFRT, analysis->col_BFRT_density,
@@ -1666,6 +1682,7 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(kSimplexNlaFtranDse, *DSE_Vector, analysis->row_DSE_density);
   // Perform FTRAN DSE
+  assert(analysis->row_DSE_density == ekk_instance_.info_.row_DSE_density);
   factor->ftranCall(*DSE_Vector, analysis->row_DSE_density,
                 analysis->pointer_serial_factor_clocks);
 
@@ -2259,10 +2276,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
     const double expected_density = 1;
     HVector nla_dual_col = dual_col;
     factor.btranCall(dual_col, expected_density);
-    if (1==0) {
-      ekk_instance_.simplex_nla_.btran(nla_dual_col, expected_density);
-      assert(nla_dual_col.isEqual(dual_col));
-    }
+    ekk_instance_.simplex_nla_.btran(nla_dual_col, expected_density);
+    assert(nla_dual_col.isEqual(dual_col));
     matrix.priceByColumn(dual_row, dual_col);
   }
   double dual_objective = lp.offset_;
