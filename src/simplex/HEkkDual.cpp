@@ -168,10 +168,6 @@ HighsStatus HEkkDual::solve() {
               row_ep.packFlag = false;
 	      
 	      nla_row_ep = row_ep;
-	      if (analysis->row_ep_density != info.row_ep_density) {
-		printf("HEkkDual::solve() row_ep_density analysis(%g); info(%g)\n", analysis->row_ep_density,
-		       info.row_ep_density);
-	      }
 	      assert(analysis->row_ep_density == info.row_ep_density);
               factor->btranCall(row_ep, analysis->row_ep_density,
                             analysis->pointer_serial_factor_clocks);

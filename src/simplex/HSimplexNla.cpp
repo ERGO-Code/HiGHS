@@ -34,7 +34,7 @@ void HSimplexNla::setup(HighsInt num_col,
 			HighsOptions* options,
 			HighsTimer* timer,
 			HighsSimplexAnalysis* analysis) {
-  printf("In HSimplexNla::setup\n");
+  //  printf("In HSimplexNla::setup\n");
   num_col_ = num_col;
   num_row_ = num_row;
   a_start_ = a_start;
@@ -52,7 +52,7 @@ void HSimplexNla::setup(HighsInt num_col,
 }
 
 HighsInt HSimplexNla::invert() {
-  printf("In HSimplexNla::invert\n");
+  //  printf("In HSimplexNla::invert\n");
   HighsInt rank_deficiency = factor_.build(NULL);
   build_synthetic_tick_ = factor_.build_synthetic_tick;
   return rank_deficiency;
@@ -60,17 +60,17 @@ HighsInt HSimplexNla::invert() {
 
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
 			HighsTimerClock* factor_timer_clock_pointer) const {
-  printf("In HSimplexNla::btran\n");
+  //  printf("In HSimplexNla::btran\n");
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
 			HighsTimerClock* factor_timer_clock_pointer) const {
-  printf("In HSimplexNla::ftran\n");
+  //  printf("In HSimplexNla::ftran\n");
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
 void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
-  printf("In HSimplexNla::update\n");
+  //  printf("In HSimplexNla::update\n");
   factor_.update(aq, ep, iRow, hint);
 }

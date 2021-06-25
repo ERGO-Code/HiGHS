@@ -208,6 +208,7 @@ void HEkkDual::majorChooseRowBtran() {
     HighsTimerClock* factor_timer_clock_pointer =
         analysis->getThreadFactorTimerClockPointer();
     assert(analysis->row_ep_density == ekk_instance_.info_.row_ep_density);
+    assert(1==0);
     factor->btranCall(*work_ep, analysis->row_ep_density,
 		      factor_timer_clock_pointer);
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
@@ -635,6 +636,7 @@ void HEkkDual::majorUpdateFtranParallel() {
     double density = multi_density[i];
     HighsTimerClock* factor_timer_clock_pointer =
         analysis->getThreadFactorTimerClockPointer();
+    assert(1==0);
     factor->ftranCall(*rhs, density, factor_timer_clock_pointer);
   }
 

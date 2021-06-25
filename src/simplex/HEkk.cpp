@@ -1499,10 +1499,6 @@ void HEkk::computePrimal() {
   // looks odd in the analysis!
   if (primal_col.count) {
     HVector nla_primal_col = primal_col;
-    if (analysis_.primal_col_density != info_.primal_col_density) {
-      printf("HEkk::computePrimal primal_col_density analysis(%g); info(%g)\n", analysis_.primal_col_density,
-	     info_.primal_col_density);
-    }
     assert(analysis_.primal_col_density == info_.primal_col_density);
     factor_.ftranCall(primal_col, analysis_.primal_col_density,  analysis_.pointer_serial_factor_clocks);
     simplex_nla_.ftran(nla_primal_col, analysis_.primal_col_density, analysis_.pointer_serial_factor_clocks);
@@ -1796,7 +1792,7 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
   analysis_.simplexTimerStart(UpdateFactorClock);
   HighsInt nla_iRow = *iRow;
   HighsInt nla_hint = *hint;
-  printf("updateFactor: ticks(%g; %g)\n", (*nla_row_ep).synthetic_tick, (*row_ep).synthetic_tick);
+  //  printf("updateFactor: ticks(%g; %g)\n", (*nla_row_ep).synthetic_tick, (*row_ep).synthetic_tick);
   assert((*nla_column).isEqual(*column));
   assert((*nla_row_ep).isEqual(*row_ep));
   factor_.update(column, row_ep, iRow, hint);
@@ -2261,7 +2257,7 @@ double HEkk::computeBasisCondition() {
   // x = ones(n,1)/n;
   // y = A\x;
   double mu = 1.0 / solver_num_row;
-  double norm_Binv;
+  double norm_Binv = 0;
   for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
   row_ep.clear();
   for (HighsInt r_n = 0; r_n < solver_num_row; r_n++) {
@@ -2275,6 +2271,7 @@ double HEkk::computeBasisCondition() {
   for (HighsInt ps_n = 1; ps_n <= 5; ps_n++) {
     row_ep.packFlag = false;
     HVector nla_row_ep = row_ep;
+    assert(1==0);
     factor_.ftranCall(row_ep, expected_density);
     simplex_nla_.ftran(nla_row_ep, expected_density);
     assert(nla_row_ep.isEqual(row_ep));
@@ -2301,6 +2298,7 @@ double HEkk::computeBasisCondition() {
     }
     row_ep.packFlag = false;
     nla_row_ep = row_ep;
+    assert(1==0);
     factor_.btranCall(row_ep, expected_density);
     simplex_nla_.btran(nla_row_ep, expected_density);
     assert(nla_row_ep.isEqual(row_ep));

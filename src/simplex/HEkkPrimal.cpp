@@ -1926,8 +1926,8 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
   const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(kSimplexNlaBtranBasicFeasibilityChange, col_basic_feasibility_change, analysis->col_basic_feasibility_change_density);
-    assert(analysis->col_basic_feasibility_change_density == ekk_instance_.info_.col_basic_feasibility_change_density);
-    nla_col_basic_feasibility_change = col_basic_feasibility_change;
+  assert(analysis->col_basic_feasibility_change_density == ekk_instance_.info_.col_basic_feasibility_change_density);
+  nla_col_basic_feasibility_change = col_basic_feasibility_change;
   ekk_instance_.factor_.btranCall(col_basic_feasibility_change,
                               analysis->col_basic_feasibility_change_density,
                               analysis->pointer_serial_factor_clocks);
