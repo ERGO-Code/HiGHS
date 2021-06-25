@@ -80,6 +80,14 @@ void HighsDebugSol::activate() {
   }
 }
 
+void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
+  HighsInt oldNumCol = debugSolution.size();
+  for (HighsInt i = 0; i != oldNumCol; ++i)
+    if (newColIndex[i] != -1) debugSolution[newColIndex[i]] = debugSolution[i];
+
+  debugSolution.resize(mipsolver->model_->numCol_);
+}
+
 void HighsDebugSol::registerDomain(const HighsDomain& domain) {
   conflictingBounds.emplace(&domain, std::set<HighsDomainChange>());
 
@@ -199,6 +207,29 @@ void HighsDebugSol::checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
 
   assert(debugSolution[col] >= debugSolution[vlbcol] * vlbcoef + vlbconstant -
                                    mipsolver->mipdata_->feastol);
+}
+
+void HighsDebugSol::checkConflictReasonFrontier(
+    const std::set<HighsInt>& reasonSideFrontier,
+    const std::vector<HighsDomainChange>& domchgstack) const {
+  if (!debugSolActive) return;
+
+  HighsInt numActiveBoundChgs = 0;
+  for (HighsInt i : reasonSideFrontier) {
+    HighsInt col = domchgstack[i].column;
+
+    if (domchgstack[i].boundtype == HighsBoundType::kLower) {
+      if (debugSolution[col] >=
+          domchgstack[i].boundval - mipsolver->mipdata_->feastol)
+        ++numActiveBoundChgs;
+    } else {
+      if (debugSolution[col] <=
+          domchgstack[i].boundval + mipsolver->mipdata_->feastol)
+        ++numActiveBoundChgs;
+    }
+  }
+
+  assert(numActiveBoundChgs < (HighsInt)reasonSideFrontier.size());
 }
 
 #endif

@@ -162,16 +162,31 @@ void HighsMipSolverData::init() {
     dispfreq = 2000;
   else
     dispfreq = 100;
+
+  debugSolution.activate();
 }
 
 void HighsMipSolverData::runPresolve() {
+#ifdef HIGHS_DEBUGSOL
+  bool debugSolActive = false;
+  std::swap(debugSolution.debugSolActive, debugSolActive);
+#endif
+
   mipsolver.timer_.start(mipsolver.timer_.presolve_clock);
   presolve::HPresolve presolve;
-
   presolve.setInput(mipsolver);
-
   mipsolver.modelstatus_ = presolve.run(postSolveStack);
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
+
+#ifdef HIGHS_DEBUGSOL
+  std::swap(debugSolution.debugSolActive, debugSolActive);
+  if (debugSolution.debugSolActive) {
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
+      assert(domain.colLower_[i] <= debugSolution.debugSolution[i] + feastol);
+      assert(domain.colUpper_[i] >= debugSolution.debugSolution[i] - feastol);
+    }
+  }
+#endif
 }
 
 void HighsMipSolverData::runSetup() {
@@ -307,7 +322,6 @@ void HighsMipSolverData::runSetup() {
   numintegercols = integer_cols.size();
 
   heuristics.setupIntCols();
-  debugSolution.activate();
 }
 
 double HighsMipSolverData::transformNewIncumbent(

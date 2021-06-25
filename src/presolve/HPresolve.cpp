@@ -838,6 +838,8 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
 
     for (HighsInt i = 0; i != oldNumCol; ++i)
       if (newColIndex[i] != -1) numProbes[newColIndex[i]] = numProbes[i];
+
+    mipsolver->mipdata_->debugSolution.shrink(newColIndex);
     numProbes.resize(model->numCol_);
   }
 }

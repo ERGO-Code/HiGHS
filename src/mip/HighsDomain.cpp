@@ -297,48 +297,94 @@ void HighsDomain::computeMinActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmin,
                                      HighsCDouble& activitymin) {
-  activitymin = 0.0;
-  ninfmin = 0;
-  for (HighsInt j = start; j != end; ++j) {
-    HighsInt col = ARindex[j];
-    double val = ARvalue[j];
+  if (infeasible_) {
+    activitymin = 0.0;
+    ninfmin = 0;
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex[j];
+      double val = ARvalue[j];
 
-    assert(col < int(colLower_.size()));
+      assert(col < int(colLower_.size()));
 
-    double contributionmin =
-        activityContributionMin(val, colLower_[col], colUpper_[col]);
+      HighsInt tmp;
+      double lb = getColLowerPos(col, infeasible_pos - 1, tmp);
+      double ub = getColUpperPos(col, infeasible_pos - 1, tmp);
+      double contributionmin = activityContributionMin(val, lb, ub);
 
-    if (contributionmin == -kHighsInf)
-      ++ninfmin;
-    else
-      activitymin += contributionmin;
+      if (contributionmin == -kHighsInf)
+        ++ninfmin;
+      else
+        activitymin += contributionmin;
+    }
+
+    activitymin.renormalize();
+  } else {
+    activitymin = 0.0;
+    ninfmin = 0;
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex[j];
+      double val = ARvalue[j];
+
+      assert(col < int(colLower_.size()));
+
+      double contributionmin =
+          activityContributionMin(val, colLower_[col], colUpper_[col]);
+
+      if (contributionmin == -kHighsInf)
+        ++ninfmin;
+      else
+        activitymin += contributionmin;
+    }
+
+    activitymin.renormalize();
   }
-
-  activitymin.renormalize();
 }
 
 void HighsDomain::computeMaxActivity(HighsInt start, HighsInt end,
                                      const HighsInt* ARindex,
                                      const double* ARvalue, HighsInt& ninfmax,
                                      HighsCDouble& activitymax) {
-  activitymax = 0.0;
-  ninfmax = 0;
-  for (HighsInt j = start; j != end; ++j) {
-    HighsInt col = ARindex[j];
-    double val = ARvalue[j];
+  if (infeasible_) {
+    activitymax = 0.0;
+    ninfmax = 0;
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex[j];
+      double val = ARvalue[j];
 
-    assert(col < int(colLower_.size()));
+      assert(col < int(colLower_.size()));
 
-    double contributionmin =
-        activityContributionMax(val, colLower_[col], colUpper_[col]);
+      HighsInt tmp;
+      double lb = getColLowerPos(col, infeasible_pos - 1, tmp);
+      double ub = getColUpperPos(col, infeasible_pos - 1, tmp);
+      double contributionmin = activityContributionMax(val, lb, ub);
 
-    if (contributionmin == kHighsInf)
-      ++ninfmax;
-    else
-      activitymax += contributionmin;
+      if (contributionmin == kHighsInf)
+        ++ninfmax;
+      else
+        activitymax += contributionmin;
+    }
+
+    activitymax.renormalize();
+  } else {
+    activitymax = 0.0;
+    ninfmax = 0;
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt col = ARindex[j];
+      double val = ARvalue[j];
+
+      assert(col < int(colLower_.size()));
+
+      double contributionmin =
+          activityContributionMax(val, colLower_[col], colUpper_[col]);
+
+      if (contributionmin == kHighsInf)
+        ++ninfmax;
+      else
+        activitymax += contributionmin;
+    }
+
+    activitymax.renormalize();
   }
-
-  activitymax.renormalize();
 }
 
 HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
@@ -799,6 +845,7 @@ void HighsDomain::markPropagateCut(Reason reason) {
     case Reason::kBranching:
     case Reason::kModelRowLower:
     case Reason::kModelRowUpper:
+    case Reason::kConflictingBounds:
       break;
     default:
       assert(reason.type >= 0 && reason.type < int(cutpoolpropagation.size()));
@@ -898,9 +945,11 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
       if (boundchg.boundval - colUpper_[boundchg.column] >
           mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
-        if (!infeasible_) infeasible_pos = domchgstack_.size();
-        infeasible_ = true;
-        infeasible_reason = reason;
+        if (!infeasible_) {
+          infeasible_pos = domchgstack_.size();
+          infeasible_ = true;
+          infeasible_reason = Reason::conflictingBounds(domchgstack_.size());
+        }
       } else {
         boundchg.boundval = colUpper_[boundchg.column];
         if (boundchg.boundval == colLower_[boundchg.column]) return;
@@ -915,9 +964,11 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
       if (colLower_[boundchg.column] - boundchg.boundval >
           mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
-        if (!infeasible_) infeasible_pos = domchgstack_.size();
-        infeasible_ = true;
-        infeasible_reason = reason;
+        if (!infeasible_) {
+          infeasible_pos = domchgstack_.size();
+          infeasible_ = true;
+          infeasible_reason = Reason::conflictingBounds(domchgstack_.size());
+        }
       } else {
         boundchg.boundval = colLower_[boundchg.column];
         if (boundchg.boundval == colUpper_[boundchg.column]) return;
@@ -1263,6 +1314,7 @@ bool HighsDomain::explainBoundChange(HighsInt pos,
   switch (domchgreason_[pos].type) {
     case Reason::kUnknown:
     case Reason::kBranching:
+    case Reason::kConflictingBounds:
       return false;
     case Reason::kCliqueTable: {
       HighsInt col = domchgreason_[pos].index >> 1;
@@ -1599,7 +1651,29 @@ bool HighsDomain::explainInfeasibility(std::vector<HighsInt>& reasonDomChgs) {
     case Reason::kUnknown:
     case Reason::kBranching:
       return false;
+    case Reason::kConflictingBounds: {
+      reasonDomChgs.clear();
+      HighsInt conflictingBoundPos = infeasible_reason.index;
+      HighsInt col = domchgstack_[conflictingBoundPos].column;
+
+      reasonDomChgs.push_back(conflictingBoundPos);
+
+      HighsInt otherBoundPos;
+      if (domchgstack_[conflictingBoundPos].boundtype ==
+          HighsBoundType::kLower) {
+        double ub = getColUpperPos(col, conflictingBoundPos, otherBoundPos);
+        assert(domchgstack_[conflictingBoundPos].boundval >
+               ub + mipsolver->mipdata_->feastol);
+      } else {
+        double lb = getColLowerPos(col, conflictingBoundPos, otherBoundPos);
+        assert(domchgstack_[conflictingBoundPos].boundval <
+               lb - mipsolver->mipdata_->feastol);
+      }
+      if (otherBoundPos != -1) reasonDomChgs.push_back(otherBoundPos);
+      break;
+    }
     case Reason::kCliqueTable: {
+      assert(false);
       HighsInt col = infeasible_reason.index >> 1;
       HighsInt val = infeasible_reason.index & 1;
       reasonDomChgs.clear();
@@ -1821,6 +1895,9 @@ void HighsDomain::conflictAnalysis() {
     }
   }
 
+  mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+      reasonSideFrontier, domchgstack_);
+
   while (!resolveQueue.empty()) {
     HighsInt resolvePos = resolveQueue.top();
     resolveQueue.pop();
@@ -1833,9 +1910,12 @@ void HighsDomain::conflictAnalysis() {
           resolveQueue.push(domChgPos);
       }
     }
+
+    mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+        reasonSideFrontier, domchgstack_);
   }
 
-  size_t maxSize = reasonSideFrontier.size();
+  size_t maxSize = kHighsIInf;  // reasonSideFrontier.size();
   HighsInt currDepthEnd = kHighsIInf;
 
   for (HighsInt currDepth = branchPos_.size() - 1; currDepth >= 0;
@@ -1871,6 +1951,9 @@ void HighsDomain::conflictAnalysis() {
             }
           }
         }
+
+        mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+            reasonSideFrontier, domchgstack_);
       } else if (!globaldom.isBinary(domchgstack_[resolvePos].column))
         return;
     }
@@ -1889,6 +1972,9 @@ void HighsDomain::conflictAnalysis() {
             resolveQueue.push(domChgPos);
         }
       }
+
+      mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+          reasonSideFrontier, domchgstack_);
     }
 
     if (minQueueSize != 0 && reasonSideFrontier.size() < maxSize) {
@@ -1928,7 +2014,7 @@ void HighsDomain::conflictAnalysis() {
         }
       }
 
-      maxSize = reasonSideFrontier.size() + 1;
+      // maxSize = reasonSideFrontier.size() + 1;
       mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
                                           inds.size(), rhs, true);
     }

@@ -36,6 +36,7 @@ class HighsDomain {
       kModelRowUpper = -3,
       kModelRowLower = -4,
       kCliqueTable = -5,
+      kConflictingBounds = -6,
     };
     static Reason branching() { return Reason{kBranching, 0}; }
     static Reason unspecified() { return Reason{kUnknown, 0}; }
@@ -50,6 +51,9 @@ class HighsDomain {
     }
     static Reason cut(HighsInt cutpool, HighsInt cut) {
       return Reason{cutpool, cut};
+    }
+    static Reason conflictingBounds(HighsInt pos) {
+      return Reason{kConflictingBounds, pos};
     }
   };
 
