@@ -162,8 +162,6 @@ void HighsMipSolverData::init() {
     dispfreq = 2000;
   else
     dispfreq = 100;
-
-  debugSolution.activate();
 }
 
 void HighsMipSolverData::runPresolve() {
@@ -322,6 +320,8 @@ void HighsMipSolverData::runSetup() {
   numintegercols = integer_cols.size();
 
   heuristics.setupIntCols();
+
+  if( numRestarts == 0 ) debugSolution.activate();
 }
 
 double HighsMipSolverData::transformNewIncumbent(
@@ -696,7 +696,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
         "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
-        "primal bound", "cutpool", "lpcuts", "gap", "explored");
+        "primal bound", "cutpool", "confl.", "gap", "explored");
   }
 
   ++num_disp_lines;
@@ -706,7 +706,6 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (std::abs(lb) <= epsilon) lb = 0;
   double ub = kHighsInf;
   double gap = kHighsInf;
-  HighsInt lpcuts = lp.numRows() - mipsolver.model_->numRow_;
 
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
@@ -720,7 +719,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %7.2f%% | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
         nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
-        ub, cutpool.getNumCuts(), lpcuts, gap, 100 * double(pruned_treeweight));
+        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap, 100 * double(pruned_treeweight));
   } else {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -728,7 +727,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %8.2f | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
         nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
-        ub, cutpool.getNumCuts(), lpcuts, gap, 100 * double(pruned_treeweight));
+        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap, 100 * double(pruned_treeweight));
   }
 }
 

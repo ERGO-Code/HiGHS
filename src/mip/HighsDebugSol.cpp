@@ -232,4 +232,34 @@ void HighsDebugSol::checkConflictReasonFrontier(
   assert(numActiveBoundChgs < (HighsInt)reasonSideFrontier.size());
 }
 
+void HighsDebugSol::checkConflictReconvergenceFrontier(
+    const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+    const std::vector<HighsDomainChange>& domchgstack) const {
+  if (!debugSolActive) return;
+
+  HighsInt numActiveBoundChgs = 0;
+  for (HighsInt i : reconvergenceFrontier) {
+    HighsInt col = domchgstack[i].column;
+
+    if (domchgstack[i].boundtype == HighsBoundType::kLower) {
+      if (debugSolution[col] >= domchgstack[i].boundval) ++numActiveBoundChgs;
+    } else {
+      if (debugSolution[col] <= domchgstack[i].boundval) ++numActiveBoundChgs;
+    }
+  }
+
+  auto reconvChg =
+      mipsolver->mipdata_->domain.flip(domchgstack[reconvDomchgPos]);
+
+  if (reconvChg.boundtype == HighsBoundType::kLower) {
+    if (debugSolution[reconvChg.column] >= reconvChg.boundval)
+      ++numActiveBoundChgs;
+  } else {
+    if (debugSolution[reconvChg.column] <= reconvChg.boundval)
+      ++numActiveBoundChgs;
+  }
+
+  assert(numActiveBoundChgs <= (HighsInt)reconvergenceFrontier.size());
+}
+
 #endif

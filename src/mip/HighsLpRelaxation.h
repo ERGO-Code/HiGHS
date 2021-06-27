@@ -20,7 +20,7 @@
 #include "mip/HighsMipSolver.h"
 
 class HighsDomain;
-class HighsCutSet;
+struct HighsCutSet;
 class HighsPseudocost;
 
 class HighsLpRelaxation {

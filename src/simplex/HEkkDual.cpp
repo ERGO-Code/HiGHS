@@ -657,6 +657,7 @@ void HEkkDual::solvePhase1() {
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
+    return;
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
@@ -677,6 +678,7 @@ void HEkkDual::solvePhase1() {
       highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       model_status = HighsModelStatus::kSolveError;
+      return;
     }
   }
 
@@ -936,6 +938,18 @@ void HEkkDual::rebuild() {
     // Reset the knowledge of previous objective values
     //    debugUpdatedObjectiveValue(ekk_instance_, algorithm, -1, "");
   }
+#if 0
+  // todo: this needs to be more clever maybe and not add a new perturbation
+  // after every time backtracking occurs maybe a flag that is set to true and
+  // allows reperturbation when a new non-singular back tracking basis has been
+  // stored would work.
+  if (simplex_info.backtracking_ && solvePhase == SOLVE_PHASE_2) {
+    // printf("new cost perturbation after backtracking\n");
+    // if we are backtracking initialise the cost with a new perturbation
+    // so that it is more unlikely to run into the singularity again
+    ekk_instance_.initialiseCost(SimplexAlgorithm::DUAL, solvePhase, true);
+  }
+#endif
   // Recompute dual solution
   ekk_instance_.computeDual();
 
@@ -1061,6 +1075,71 @@ void HEkkDual::iterate() {
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
+
+  if (rebuild_reason == kRebuildReasonNo &&
+      // ekk_instance_.info_
+      //      .allow_cost_perturbation &&  // todo, if cost perturbation is not
+      // allowed then maybe increase a cycling
+      // counter, clear the visited basis set
+      // and return an error if the counter
+      // reaches N. N should probably be above
+      // one so that a single occurence of a
+      // cycle or a false positive does not
+      // lead to an immediate error
+      // solve_phase == kSolvePhase2 &&
+      ekk_instance_.visited_basis_.size() > 1 &&
+      ekk_instance_.checkForCycling(variable_in, row_out)) {
+    // printf("cycling detected\n");
+
+    // todo@ Julian: there is bad cycling from which highs does not break out by
+    // itself, e.g. due to numerical differences, in the second LP on
+    // satellites2-40 when setting highs_random_seed=1261. With the code below
+    // it only prints "cycling detected" once and solves the
+    // LP even though it needs quite some iterations. I don't know whether I
+    // reset set all data correctly but I think because I return rebuild reason
+    // and set has_fresh_rebuild=false it will set everything up correctly
+    // in iteration loop during the rebuild. This could probably be done in a
+    // better way but this was the least invasive for me to add to the solver
+    // code. Also I am unsure about what to do in phase1 which is why I added
+    // the solvePhase check to the if condition. I am sure you can add some
+    // better way to resolve the cycling than going to rebuild. Maybe you can
+    // incorporate the hash information into the choose* functions so that no
+    // row/column that closes a cycle is chosen in the first place.
+
+    // Apart from the cycling: Since the random initialisation is only reset for
+    // a new LP it could be good to also change the randomization and
+    // perturbation after backtracking so that HiGHS is less likely to choose
+    // the same pivots that yielded a singular basis
+#if 1
+    // in case cycling is detected: draw new random
+    // numbers, reperturb costs, and rebuild
+    if (solve_phase == kSolvePhase2) {
+      ekk_instance_.initialiseSimplexLpRandomVectors();
+      ekk_instance_.info_.dual_simplex_cost_perturbation_multiplier = std::min(
+          128.0,
+          std::max(
+              2 * ekk_instance_.info_.dual_simplex_cost_perturbation_multiplier,
+              1.0));
+      double oldCost = ekk_instance_.info_.workCost_[variable_in];
+      ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, solve_phase, true);
+      // perturb the chosen column to have zero dual in the current solution
+      // this seems to considerably improve cycling behavior even though more
+      // primal simplex iterations may be required in the cleanup phase
+      ekk_instance_.info_.workCost_[variable_in] =
+          oldCost - workDual[variable_in];
+      workDual[variable_in] = 0;
+      // ekk_instance_.status_.has_fresh_rebuild = false;
+    }
+
+    // clear the set of visited basis as it can happen due to the new
+    // perturbation that a previous basis is visited again and we do not want to
+    // add new perturbations if no new cycles occur. Only store the current
+    // basis hash.
+    ekk_instance_.visited_basis_.clear();
+    ekk_instance_.visited_basis_.insert(ekk_instance_.basis_.hash);
+    rebuild_reason = RebuildReason::kRebuildReasonChooseColumnFail;
+#endif
+  }
 
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
@@ -1833,8 +1912,8 @@ void HEkkDual::shiftCost(const HighsInt iCol, const double amount) {
     printf("Column %" HIGHSINT_FORMAT " already has nonzero shift of %g\n",
            iCol, info.workShift_[iCol]);
   }
-  assert(info.workShift_[iCol] == 0);
-  info.workShift_[iCol] = amount;
+  // assert(simplex_info.workShift_[iCol] == 0);
+  info.workShift_[iCol] += amount;
 }
 
 // Undo the shift in the cost of a particular column

@@ -835,6 +835,9 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
     mipsolver->mipdata_->cutpool = HighsCutPool(
         mipsolver->model_->numCol_, mipsolver->options_mip_->mip_pool_age_limit,
         mipsolver->options_mip_->mip_pool_soft_limit);
+    mipsolver->mipdata_->conflictPool =
+        HighsConflictPool(5 * mipsolver->options_mip_->mip_pool_age_limit,
+                          mipsolver->options_mip_->mip_pool_soft_limit);
 
     for (HighsInt i = 0; i != oldNumCol; ++i)
       if (newColIndex[i] != -1) numProbes[newColIndex[i]] = numProbes[i];
@@ -1070,13 +1073,13 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     // finally apply substitutions
     HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(postSolveStack));
 
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
-                " deleted rows, %" HIGHSINT_FORMAT
-                " deleted "
-                "columns, %" HIGHSINT_FORMAT " lifted nonzeros\n",
-                numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
-                addednnz);
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "%" HIGHSINT_FORMAT " probing evaluations: %" HIGHSINT_FORMAT
+                 " deleted rows, %" HIGHSINT_FORMAT
+                 " deleted "
+                 "columns, %" HIGHSINT_FORMAT " lifted nonzeros\n",
+                 numProbed - oldNumProbed, numDeletedRows, numDeletedCols,
+                 addednnz);
   }
 
   return checkLimits(postSolveStack);
@@ -3192,6 +3195,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
 
   if (mipsolver != nullptr) {
     mipsolver->mipdata_->domain.addCutpool(mipsolver->mipdata_->cutpool);
+    mipsolver->mipdata_->domain.addConflictPool(
+        mipsolver->mipdata_->conflictPool);
 
     if (mipsolver->mipdata_->numRestarts != 0) {
       std::vector<HighsInt> cutinds;

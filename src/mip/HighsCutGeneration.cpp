@@ -1299,11 +1299,6 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
       cutpool.addCut(lpRelaxation.getMipSolver(), proofinds.data(),
                      proofvals.data(), rowlen, proofrhs, cutintegral);
 
-  if (cutindex != -1 && !localdomain.infeasible()) {
-    localdomain.propagate();
-    if (localdomain.infeasible()) localdomain.conflictAnalysis();
-  }
-
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
   return cutindex != -1;

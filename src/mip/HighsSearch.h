@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "mip/HighsDomain.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsNodeQueue.h"

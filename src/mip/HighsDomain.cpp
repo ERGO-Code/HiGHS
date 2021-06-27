@@ -17,6 +17,7 @@
 #include <numeric>
 #include <queue>
 
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsMipSolverData.h"
 
@@ -62,11 +63,303 @@ void HighsDomain::addCutpool(HighsCutPool& cutpool) {
   cutpoolpropagation.emplace_back(cutpoolindex, this, cutpool);
 }
 
+void HighsDomain::addConflictPool(HighsConflictPool& conflictPool) {
+  HighsInt conflictPoolIndex = conflictPoolPropagation.size();
+  conflictPoolPropagation.emplace_back(conflictPoolIndex, this, conflictPool);
+}
+
+void HighsDomain::ConflictPoolPropagation::linkWatchedLiteral(
+    HighsInt linkPos) {
+  assert(watchedLiterals_[linkPos].domchg.column != -1);
+  HighsInt& head =
+      watchedLiterals_[linkPos].domchg.boundtype == HighsBoundType::kLower
+          ? colLowerWatched_[watchedLiterals_[linkPos].domchg.column]
+          : colUpperWatched_[watchedLiterals_[linkPos].domchg.column];
+
+  watchedLiterals_[linkPos].prev = -1;
+  watchedLiterals_[linkPos].next = head;
+  if (head != -1) {
+    watchedLiterals_[head].prev = linkPos;
+    head = linkPos;
+  }
+}
+
+void HighsDomain::ConflictPoolPropagation::unlinkWatchedLiteral(
+    HighsInt linkPos) {
+  if (watchedLiterals_[linkPos].domchg.column == -1) return;
+
+  HighsInt& head =
+      watchedLiterals_[linkPos].domchg.boundtype == HighsBoundType::kLower
+          ? colLowerWatched_[watchedLiterals_[linkPos].domchg.column]
+          : colUpperWatched_[watchedLiterals_[linkPos].domchg.column];
+  watchedLiterals_[linkPos].domchg.column = -1;
+  HighsInt prev = watchedLiterals_[linkPos].prev;
+  HighsInt next = watchedLiterals_[linkPos].next;
+  if (prev != -1)
+    watchedLiterals_[prev].next = next;
+  else
+    head = next;
+
+  if (next != -1) watchedLiterals_[next].prev = prev;
+}
+
+HighsDomain::ConflictPoolPropagation::ConflictPoolPropagation(
+    HighsInt conflictpoolindex, HighsDomain* domain,
+    HighsConflictPool& conflictpool_)
+    : conflictpoolindex(conflictpoolindex),
+      domain(domain),
+      conflictpool_(&conflictpool_) {
+  colLowerWatched_.resize(domain->mipsolver->numCol(), -1);
+  colUpperWatched_.resize(domain->mipsolver->numCol(), -1);
+  conflictpool_.addPropagationDomain(this);
+}
+
+HighsDomain::ConflictPoolPropagation::ConflictPoolPropagation(
+    const ConflictPoolPropagation& other)
+    : conflictpoolindex(other.conflictpoolindex),
+      domain(other.domain),
+      conflictpool_(other.conflictpool_),
+      colLowerWatched_(other.colLowerWatched_),
+      colUpperWatched_(other.colUpperWatched_),
+      conflictFlag_(other.conflictFlag_),
+      propagateConflictInds_(other.propagateConflictInds_),
+      conflictWatchedVersion_(other.conflictWatchedVersion_),
+      watchedLiterals_(other.watchedLiterals_) {
+  conflictpool_->addPropagationDomain(this);
+}
+
+HighsDomain::ConflictPoolPropagation::~ConflictPoolPropagation() {
+  conflictpool_->removePropagationDomain(this);
+}
+
+void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
+  HighsInt start = conflictpool_->getConflictRanges()[conflict].first;
+  HighsInt end = conflictpool_->getConflictRanges()[conflict].second;
+  const std::vector<HighsDomainChange>& conflictEntries =
+      conflictpool_->getConflictEntryVector();
+
+  if (HighsInt(conflictWatchedVersion_.size()) <= conflict) {
+    watchedLiterals_.resize(2 * conflict + 2);
+    conflictFlag_.resize(conflict + 1);
+    conflictWatchedVersion_.resize(conflict + 1);
+  }
+
+  conflictWatchedVersion_[conflict] =
+      conflictpool_->getModificationCount(conflict);
+
+  HighsInt numWatched = 0;
+  for (HighsInt i = start; i != end; ++i) {
+    if (domain->isActive(conflictEntries[i])) continue;
+    HighsInt col = conflictEntries[i].column;
+    HighsInt watchPos = 2 * conflict + numWatched;
+    watchedLiterals_[watchPos].domchg = conflictEntries[i];
+    linkWatchedLiteral(watchPos);
+    if (++numWatched == 2) break;
+  }
+  switch (numWatched) {
+    case 0: {
+      std::pair<HighsInt, HighsInt> latestActive[2];
+      HighsInt numActive = 0;
+      for (HighsInt i = start; i != end; ++i) {
+        HighsInt pos = conflictEntries[i].boundtype == HighsBoundType::kLower
+                           ? domain->colLowerPos_[conflictEntries[i].column]
+                           : domain->colUpperPos_[conflictEntries[i].column];
+        switch (numActive) {
+          case 0:
+            latestActive[0] = std::make_pair(pos, i);
+            numActive = 1;
+            break;
+          case 1:
+            latestActive[1] = std::make_pair(pos, i);
+            numActive = 2;
+            if (latestActive[0].first < latestActive[1].first)
+              std::swap(latestActive[0], latestActive[1]);
+            break;
+          case 2:
+            if (pos > latestActive[1].first) {
+              latestActive[1] = std::make_pair(pos, i);
+              if (latestActive[0].first < latestActive[1].first)
+                std::swap(latestActive[0], latestActive[1]);
+            }
+        }
+      }
+      for (HighsInt i = 0; i < numActive; ++i) {
+        HighsInt watchPos = 2 * conflict + i;
+        watchedLiterals_[watchPos].domchg =
+            conflictEntries[latestActive[i].second];
+        linkWatchedLiteral(watchPos);
+      }
+      break;
+    }
+    case 1: {
+      HighsInt latestActive = -1;
+      HighsInt latestPos = -1;
+
+      for (HighsInt i = start; i != end; ++i) {
+        HighsInt pos = conflictEntries[i].boundtype == HighsBoundType::kLower
+                           ? domain->colLowerPos_[conflictEntries[i].column]
+                           : domain->colUpperPos_[conflictEntries[i].column];
+        if (pos > latestPos) {
+          latestActive = i;
+          latestPos = pos;
+        }
+      }
+      if (latestActive != -1) {
+        HighsInt watchPos = 2 * conflict + 1;
+        watchedLiterals_[watchPos].domchg = conflictEntries[latestActive];
+        linkWatchedLiteral(watchPos);
+      }
+      break;
+    }
+    case 2:
+      break;
+  }
+
+  conflictFlag_[conflict] = numWatched;
+  markPropagateConflict(conflict);
+}
+
+void HighsDomain::ConflictPoolPropagation::markPropagateConflict(
+    HighsInt conflict) {
+  if (conflictFlag_[conflict] < 2) {
+    propagateConflictInds_.push_back(conflict);
+    conflictFlag_[conflict] |= 4;
+  }
+}
+
+void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
+    HighsInt col, double oldbound, double newbound) {
+  assert(!domain->infeasible_);
+
+  const std::vector<HighsDomainChange>& conflictEntries =
+      conflictpool_->getConflictEntryVector();
+
+  for (HighsInt i = colLowerWatched_[col]; i != -1;) {
+    HighsInt conflict = i >> 1;
+    if (conflictWatchedVersion_[conflict] !=
+        conflictpool_->getModificationCount(conflict)) {
+      i = watchedLiterals_[i].next;
+      unlinkWatchedLiteral(2 * conflict);
+      unlinkWatchedLiteral(2 * conflict + 1);
+      continue;
+    }
+
+    const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
+    HighsInt numInactiveDelta =
+        (domchg.boundval > newbound) - (domchg.boundval > oldbound);
+    if (numInactiveDelta != 0) {
+      conflictFlag_[conflict] += numInactiveDelta;
+      markPropagateConflict(conflict);
+    }
+
+    i = watchedLiterals_[i].next;
+  }
+}
+
+void HighsDomain::ConflictPoolPropagation::updateActivityUbChange(
+    HighsInt col, double oldbound, double newbound) {
+  assert(!domain->infeasible_);
+
+  const std::vector<HighsDomainChange>& conflictEntries =
+      conflictpool_->getConflictEntryVector();
+
+  for (HighsInt i = colUpperWatched_[col]; i != -1;) {
+    HighsInt conflict = i >> 1;
+    if (conflictWatchedVersion_[conflict] !=
+        conflictpool_->getModificationCount(conflict)) {
+      i = watchedLiterals_[i].next;
+      unlinkWatchedLiteral(2 * conflict);
+      unlinkWatchedLiteral(2 * conflict + 1);
+      continue;
+    }
+
+    const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
+    HighsInt numInactiveDelta =
+        (domchg.boundval < newbound) - (domchg.boundval < oldbound);
+    if (numInactiveDelta != 0) {
+      conflictFlag_[conflict] += numInactiveDelta;
+      markPropagateConflict(conflict);
+    }
+
+    i = watchedLiterals_[i].next;
+  }
+}
+
+void HighsDomain::ConflictPoolPropagation::propagateConflict(
+    HighsInt conflict) {
+  conflictFlag_[conflict] &= 3;
+  if (conflictFlag_[conflict] == 2) return;
+
+  if (domain->infeasible_) return;
+
+  const std::vector<HighsDomainChange>& entries =
+      conflictpool_->getConflictEntryVector();
+  HighsInt start = conflictpool_->getConflictRanges()[conflict].first;
+  if (start == -1) {
+    unlinkWatchedLiteral(2 * conflict);
+    unlinkWatchedLiteral(2 * conflict + 1);
+    return;
+  }
+  HighsInt end = conflictpool_->getConflictRanges()[conflict].second;
+
+  WatchedLiteral* watched = watchedLiterals_.data() + 2 * conflict;
+
+  HighsInt inactive[2];
+  HighsInt latestactive[2];
+  HighsInt numInactive = 0;
+  for (HighsInt i = start; i != end; ++i) {
+    if (domain->isActive(entries[i])) continue;
+
+    inactive[numInactive++] = i;
+    if (numInactive == 2) break;
+  }
+
+  conflictFlag_[conflict] = numInactive;
+  conflictWatchedVersion_[conflict] =
+      conflictpool_->getModificationCount(conflict);
+
+  switch (numInactive) {
+    case 0:
+      if (!domain->infeasible_) {
+        domain->infeasible_ = true;
+        domain->infeasible_reason = Reason::cut(
+            domain->cutpoolpropagation.size() + conflictpoolindex, conflict);
+        domain->infeasible_pos = domain->domchgstack_.size();
+      }
+      conflictpool_->resetAge(conflict);
+      // printf("conflict propagation found infeasibility\n");
+      break;
+    case 1:
+      domain->changeBound(
+          domain->flip(entries[inactive[0]]),
+          Reason::cut(domain->cutpoolpropagation.size() + conflictpoolindex,
+                      conflict));
+      conflictpool_->resetAge(conflict);
+      // printf("conflict propagation found bound change\n");
+      break;
+    case 2: {
+      if (watched[0].domchg != entries[inactive[0]]) {
+        unlinkWatchedLiteral(2 * conflict);
+        watched[0].domchg = entries[inactive[0]];
+        linkWatchedLiteral(2 * conflict);
+      }
+
+      if (watched[1].domchg != entries[inactive[1]]) {
+        unlinkWatchedLiteral(2 * conflict + 1);
+        watched[1].domchg = entries[inactive[1]];
+        linkWatchedLiteral(2 * conflict + 1);
+      }
+
+      return;
+    }
+  }
+}
+
 HighsDomain::CutpoolPropagation::CutpoolPropagation(HighsInt cutpoolindex,
                                                     HighsDomain* domain,
-                                                    HighsCutPool& cutpool)
-    : cutpoolindex(cutpoolindex), domain(domain), cutpool(&cutpool) {
-  cutpool.addPropagationDomain(this);
+                                                    HighsCutPool& cutpool_)
+    : cutpoolindex(cutpoolindex), domain(domain), cutpool(&cutpool_) {
+  cutpool->addPropagationDomain(this);
 }
 
 HighsDomain::CutpoolPropagation::CutpoolPropagation(
@@ -446,7 +739,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kUpper};
 
     } else {
       bool accept;
@@ -482,7 +775,7 @@ HighsInt HighsDomain::propagateRowUpper(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kLower};
     }
   }
 
@@ -548,7 +841,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kUpper, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kUpper};
     } else {
       bool accept;
 
@@ -583,7 +876,7 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
       }
 
       if (accept)
-        boundchgs[numchgs++] = {HighsBoundType::kLower, Rindex[i], bound};
+        boundchgs[numchgs++] = {bound, Rindex[i], HighsBoundType::kLower};
     }
   }
 
@@ -611,6 +904,21 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         deltamin = (newbound - oldbound) * mip->Avalue_[i];
       }
       activitymin_[mip->Aindex_[i]] += deltamin;
+
+#ifndef NDEBUG
+      {
+        HighsInt tmpinf;
+        HighsCDouble tmpminact;
+        computeMinActivity(mipsolver->mipdata_->ARstart_[mip->Aindex_[i]],
+                           mipsolver->mipdata_->ARstart_[mip->Aindex_[i] + 1],
+                           mipsolver->mipdata_->ARindex_.data(),
+                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
+                           tmpminact);
+        assert(std::abs(double(activitymin_[mip->Aindex_[i]] - tmpminact)) <=
+               mipsolver->mipdata_->epsilon);
+        assert(tmpinf == activitymininf_[mip->Aindex_[i]]);
+      }
+#endif
 
       if (deltamin <= 0) continue;
 
@@ -645,6 +953,21 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         deltamax = (newbound - oldbound) * mip->Avalue_[i];
       }
       activitymax_[mip->Aindex_[i]] += deltamax;
+
+#ifndef NDEBUG
+      {
+        HighsInt tmpinf;
+        HighsCDouble tmpmaxact;
+        computeMaxActivity(mipsolver->mipdata_->ARstart_[mip->Aindex_[i]],
+                           mipsolver->mipdata_->ARstart_[mip->Aindex_[i] + 1],
+                           mipsolver->mipdata_->ARindex_.data(),
+                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
+                           tmpmaxact);
+        assert(std::abs(double(activitymax_[mip->Aindex_[i]] - tmpmaxact)) <=
+               mipsolver->mipdata_->epsilon);
+        assert(tmpinf == activitymaxinf_[mip->Aindex_[i]]);
+      }
+#endif
 
       if (deltamax >= 0) continue;
 
@@ -710,6 +1033,9 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
     }
 
     return;
+  } else {
+    for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
+      conflictprop.updateActivityLbChange(col, oldbound, newbound);
   }
 }
 
@@ -734,6 +1060,21 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         deltamax = (newbound - oldbound) * mip->Avalue_[i];
       }
       activitymax_[mip->Aindex_[i]] += deltamax;
+
+#ifndef NDEBUG
+      {
+        HighsInt tmpinf;
+        HighsCDouble tmpmaxact;
+        computeMaxActivity(mipsolver->mipdata_->ARstart_[mip->Aindex_[i]],
+                           mipsolver->mipdata_->ARstart_[mip->Aindex_[i] + 1],
+                           mipsolver->mipdata_->ARindex_.data(),
+                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
+                           tmpmaxact);
+        assert(std::abs(double(activitymax_[mip->Aindex_[i]] - tmpmaxact)) <=
+               mipsolver->mipdata_->epsilon);
+        assert(tmpinf == activitymaxinf_[mip->Aindex_[i]]);
+      }
+#endif
 
       if (deltamax >= 0) continue;
 
@@ -769,6 +1110,21 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 
       activitymin_[mip->Aindex_[i]] += deltamin;
+
+#ifndef NDEBUG
+      {
+        HighsInt tmpinf;
+        HighsCDouble tmpminact;
+        computeMinActivity(mipsolver->mipdata_->ARstart_[mip->Aindex_[i]],
+                           mipsolver->mipdata_->ARstart_[mip->Aindex_[i] + 1],
+                           mipsolver->mipdata_->ARindex_.data(),
+                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
+                           tmpminact);
+        assert(std::abs(double(activitymin_[mip->Aindex_[i]] - tmpminact)) <=
+               mipsolver->mipdata_->epsilon);
+        assert(tmpinf == activitymininf_[mip->Aindex_[i]]);
+      }
+#endif
 
       if (deltamin <= 0) continue;
 
@@ -835,6 +1191,9 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
     }
 
     return;
+  } else {
+    for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
+      conflictprop.updateActivityUbChange(col, oldbound, newbound);
   }
 }
 
@@ -848,15 +1207,18 @@ void HighsDomain::markPropagateCut(Reason reason) {
     case Reason::kConflictingBounds:
       break;
     default:
-      assert(reason.type >= 0 && reason.type < int(cutpoolpropagation.size()));
-      cutpoolpropagation[reason.type].markPropagateCut(reason.index);
+      assert(reason.type >= 0 &&
+             reason.type < HighsInt(cutpoolpropagation.size() +
+                                    conflictPoolPropagation.size()));
+      if (reason.type < (HighsInt)cutpoolpropagation.size())
+        cutpoolpropagation[reason.type].markPropagateCut(reason.index);
+      else
+        conflictPoolPropagation[reason.type - cutpoolpropagation.size()]
+            .markPropagateConflict(reason.index);
   }
 }
 
 void HighsDomain::markPropagate(HighsInt row) {
-  // todo, check if std::min(maxactivity - lhs, rhs - minactivity) <  amax -
-  // feastol and only mark in that case
-
   if (!propagateflags_[row]) {
     bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
                      (activitymaxinf_[row] == 1 ||
@@ -935,7 +1297,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
 
 void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   assert(boundchg.column >= 0);
-  assert(infeasible_ == 0);
+  // assert(infeasible_ == 0);
   mipsolver->mipdata_->debugSolution.boundChangeAdded(
       *this, boundchg, reason.type == Reason::kBranching);
   HighsInt prevPos;
@@ -1038,6 +1400,12 @@ HighsDomainChange HighsDomain::backtrack() {
   bool old_infeasible = infeasible_;
   Reason old_reason = infeasible_reason;
 
+  if (infeasible_ && infeasible_pos == HighsInt(domchgstack_.size())) {
+    assert(old_infeasible);
+    assert(k == HighsInt(domchgstack_.size()) - 1);
+    infeasible_ = false;
+    infeasible_reason = Reason::unspecified();
+  }
   while (k >= 0) {
     double prevbound = prevboundval_[k].first;
     HighsInt prevpos = prevboundval_[k].second;
@@ -1056,7 +1424,7 @@ HighsDomainChange HighsDomain::backtrack() {
 
     // change back to global bound
     doChangeBound(
-        {domchgstack_[k].boundtype, domchgstack_[k].column, prevbound});
+        {prevbound, domchgstack_[k].column, domchgstack_[k].boundtype});
 
     if (infeasible_ && infeasible_pos == k) {
       assert(old_infeasible);
@@ -1088,7 +1456,7 @@ HighsDomainChange HighsDomain::backtrack() {
     prevboundval_.clear();
     domchgreason_.clear();
     branchPos_.clear();
-    return HighsDomainChange({HighsBoundType::kLower, -1, 0.0});
+    return HighsDomainChange({0.0, -1, HighsBoundType::kLower});
   }
 
   HighsDomainChange backtrackboundchg = domchgstack_[k];
@@ -1112,6 +1480,13 @@ bool HighsDomain::propagate() {
           break;
         }
       }
+
+      for (const auto& conflictprop : conflictPoolPropagation) {
+        if (!conflictprop.propagateConflictInds_.empty()) {
+          haverows = true;
+          break;
+        }
+      }
     }
     return haverows;
   };
@@ -1128,6 +1503,19 @@ bool HighsDomain::propagate() {
       new HighsDomainChange[changedboundsize]);
 
   while (havePropagationRows()) {
+    const HighsInt numConflictPools = conflictPoolPropagation.size();
+    for (HighsInt conflictPool = 0; conflictPool < numConflictPools;
+         ++conflictPool) {
+      auto& conflictprop = conflictPoolPropagation[conflictPool];
+      while (!conflictprop.propagateConflictInds_.empty()) {
+        propagateinds.swap(conflictprop.propagateConflictInds_);
+
+        for (HighsInt conflict : propagateinds)
+          conflictprop.propagateConflict(conflict);
+
+        propagateinds.clear();
+      }
+    }
     if (!propagateinds_.empty()) {
       propagateinds.swap(propagateinds_);
 
@@ -1308,863 +1696,26 @@ double HighsDomain::getColUpperPos(HighsInt col, HighsInt stackpos,
   return ub;
 }
 
-bool HighsDomain::explainBoundChange(HighsInt pos,
-                                     std::vector<HighsInt>& reasonDomChgs) {
-  HighsDomain& globaldom = mipsolver->mipdata_->domain;
-  switch (domchgreason_[pos].type) {
-    case Reason::kUnknown:
-    case Reason::kBranching:
-    case Reason::kConflictingBounds:
-      return false;
-    case Reason::kCliqueTable: {
-      HighsInt col = domchgreason_[pos].index >> 1;
-      HighsInt val = domchgreason_[pos].index & 1;
-      reasonDomChgs.clear();
-      HighsInt boundPos;
-      if (val) {
-        assert(colLowerPos_[col] >= 0);
-        assert(colLowerPos_[col] < domchgstack_.size());
+void HighsDomain::conflictAnalysis(HighsConflictPool& conflictPool) {
+  if (&mipsolver->mipdata_->domain == this) return;
+  if (mipsolver->mipdata_->domain.infeasible() || !infeasible_) return;
 
-        getColLowerPos(col, pos, boundPos);
-      } else {
-        assert(colUpperPos_[col] >= 0);
-        assert(colUpperPos_[col] < domchgstack_.size());
+  ConflictSet conflictSet(*this);
+  // if (!conflictSet.resolvable(infeasible_pos)) return;
 
-        getColUpperPos(col, pos, boundPos);
-      }
-
-      reasonDomChgs.push_back(boundPos);
-
-      break;
-    }
-    case Reason::kModelRowLower: {
-      HighsInt rowIndex = domchgreason_[pos].index;
-
-      // retrieve the matrix values of the cut
-      HighsInt len;
-      const HighsInt* inds;
-      const double* vals;
-      mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
-
-      // get the coefficient value of the column for which we want to explain
-      // the bound change
-      double domchgVal = 0;
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-        if (col == domchgstack_[pos].column) {
-          domchgVal = vals[i];
-          break;
-        }
-      }
-
-      assert(domchgVal != 0);
-
-      double maxAct = globaldom.getMaxActivity(rowIndex);
-      // if the global min activity is infinite we do not filter the bounds
-      // and just take all as it is rare and we would need to use the local
-      // activity as base which is not available as easily as not all bound
-      // changes on the stack are used. Using all local bounds of columns that
-      // are present in the cut is however guaranteed to be sufficient even
-      // though it might not be as strong.
-      if (maxAct == kHighsInf) return false;
-
-      // to explain the bound change we start from the bound constraint,
-      // multiply it by the columns coefficient in the constraint. Then the
-      // bound constraint is a0 * x0 >= b0 and the constraint
-      // a0 * x0 + \sum ai * xi >= b. Let the max activity of \sum ai xi be M,
-      // then the constraint yields the bound a0 * x0 >= b - M. If M is
-      // sufficiently small the bound constraint is implied. Therefore we
-      // decrease M by updating it with the stronger local bounds until
-      // M <= b - b0 holds.
-      double b0 = domchgstack_[pos].boundval;
-      if (mipsolver->variableType(domchgstack_[pos].column) !=
-          HighsVarType::kContinuous) {
-        // in case of an integral variable the bound was rounded and can be
-        // relaxed by 1-feastol
-        if (domchgstack_[pos].boundtype == HighsBoundType::kLower)
-          b0 -= (1.0 - mipsolver->mipdata_->feastol);
-        else
-          b0 += (1.0 - mipsolver->mipdata_->feastol);
-      } else {
-        // for a continuous variable we relax the bound by epsilon to
-        // accomodate for tiny rounding errors
-        if (domchgstack_[pos].boundtype == HighsBoundType::kLower)
-          b0 -= mipsolver->mipdata_->epsilon;
-        else
-          b0 += mipsolver->mipdata_->epsilon;
-      }
-
-      // now multiply the bound constraint with the coefficient value in the
-      // constraint to obtain b0
-      b0 *= domchgVal;
-
-      // compute the lower bound of M that is necessary
-      double Mupper = mipsolver->rowLower(rowIndex) - b0;
-
-      // M is the global residual activity initially
-      double M = maxAct;
-      if (domchgVal < 0)
-        M -= domchgVal * globaldom.colLower_[domchgstack_[pos].column];
-      else
-        M -= domchgVal * globaldom.colUpper_[domchgstack_[pos].column];
-
-      reasonDomChgs.clear();
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-        if (col == domchgstack_[pos].column) continue;
-
-        HighsInt boundpos;
-        if (vals[i] > 0) {
-          double ub = getColUpperPos(col, pos, boundpos);
-          if (globaldom.colUpper_[col] <= ub) continue;
-          M += vals[i] * (ub - globaldom.colUpper_[col]);
-        } else {
-          double lb = getColLowerPos(col, pos, boundpos);
-          if (globaldom.colLower_[col] >= lb) continue;
-          M += vals[i] * (lb - globaldom.colLower_[col]);
-        }
-
-        reasonDomChgs.push_back(boundpos);
-        if (M < Mupper) break;
-      }
-
-      if (M >= Mupper) {
-        // printf("local bounds reach only value of %.12g, need at most
-        // %.12g\n",
-        //        M, Mupper);
-        return false;
-      }
-
-      break;
-    }
-    case Reason::kModelRowUpper: {
-      HighsInt rowIndex = domchgreason_[pos].index;
-
-      // retrieve the matrix values of the cut
-      HighsInt len;
-      const HighsInt* inds;
-      const double* vals;
-      mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
-
-      // get the coefficient value of the column for which we want to explain
-      // the bound change
-      double domchgVal = 0;
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-        if (col == domchgstack_[pos].column) {
-          domchgVal = vals[i];
-          break;
-        }
-      }
-
-      assert(domchgVal != 0);
-
-      double minAct = globaldom.getMinActivity(rowIndex);
-      // if the global min activity is infinite we do not filter the bounds
-      // and just take all as it is rare and we would need to use the local
-      // activity as base which is not available as easily as not all bound
-      // changes on the stack are used. Using all local bounds of columns that
-      // are present in the cut is however guaranteed to be sufficient even
-      // though it might not be as strong.
-      if (minAct == -kHighsInf) return false;
-
-      // to explain the bound change we start from the bound constraint,
-      // multiply it by the columns coefficient in the constraint. Then the
-      // bound constraint is a0 * x0 <= b0 and the constraint
-      // a0 * x0 + \sum ai * xi <= b. Let the min activity of \sum ai xi be M,
-      // then the constraint yields the bound a0 * x0 <= b - M. If M is
-      // sufficiently large the bound constraint is implied. Therefore we
-      // increase M by updating it with the stronger local bounds until
-      // M >= b - b0 holds.
-      double b0 = domchgstack_[pos].boundval;
-      if (mipsolver->variableType(domchgstack_[pos].column) !=
-          HighsVarType::kContinuous) {
-        // in case of an integral variable the bound was rounded and can be
-        // relaxed by 1-feastol
-        if (domchgstack_[pos].boundtype == HighsBoundType::kLower)
-          b0 -= (1.0 - mipsolver->mipdata_->feastol);
-        else
-          b0 += (1.0 - mipsolver->mipdata_->feastol);
-      } else {
-        // for a continuous variable we relax the bound by epsilon to
-        // accomodate for tiny rounding errors
-        if (domchgstack_[pos].boundtype == HighsBoundType::kLower)
-          b0 -= mipsolver->mipdata_->epsilon;
-        else
-          b0 += mipsolver->mipdata_->epsilon;
-      }
-
-      // now multiply the bound constraint with the coefficient value in the
-      // constraint to obtain b0
-      b0 *= domchgVal;
-
-      // compute the lower bound of M that is necessary
-      double Mlower = mipsolver->rowUpper(rowIndex) - b0;
-
-      // M is the global residual activity initially
-      double M = minAct;
-      if (domchgVal < 0)
-        M -= domchgVal * globaldom.colUpper_[domchgstack_[pos].column];
-      else
-        M -= domchgVal * globaldom.colLower_[domchgstack_[pos].column];
-
-      reasonDomChgs.clear();
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-        if (col == domchgstack_[pos].column) continue;
-
-        HighsInt boundpos;
-        if (vals[i] > 0) {
-          double lb = getColLowerPos(col, pos, boundpos);
-          if (globaldom.colLower_[col] >= lb) continue;
-          M += vals[i] * (lb - globaldom.colLower_[col]);
-        } else {
-          double ub = getColUpperPos(col, pos, boundpos);
-          if (globaldom.colUpper_[col] <= ub) continue;
-          M += vals[i] * (ub - globaldom.colUpper_[col]);
-        }
-
-        reasonDomChgs.push_back(boundpos);
-        if (M > Mlower) break;
-      }
-
-      if (M <= Mlower) {
-        // printf("local bounds reach only value of %.12g, need at least
-        // %.12g\n",
-        //        M, Mlower);
-        return false;
-      }
-
-      break;
-    }
-    default: {
-      assert(domchgreason_[pos].type >= 0);
-      assert(domchgreason_[pos].type < cutpoolpropagation.size());
-      HighsInt cutpoolIndex = domchgreason_[pos].type;
-      HighsInt cutIndex = domchgreason_[pos].index;
-
-      // retrieve the matrix values of the cut
-      HighsInt len;
-      const HighsInt* inds;
-      const double* vals;
-      cutpoolpropagation[cutpoolIndex].cutpool->getCut(cutIndex, len, inds,
-                                                       vals);
-
-      // get the coefficient value of the column for which we want to explain
-      // the bound change
-      double domchgVal = 0;
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-        if (col == domchgstack_[pos].column) {
-          domchgVal = vals[i];
-          break;
-        }
-      }
-
-      assert(domchgVal != 0);
-
-      double minAct = globaldom.getMinCutActivity(
-          *cutpoolpropagation[cutpoolIndex].cutpool, cutIndex);
-      // if the global min activity is infinite we do not filter the bounds
-      // and just take all as it is rare and we would need to use the local
-      // activity as base which is not available as easily as not all bound
-      // changes on the stack are used. Using all local bounds of columns that
-      // are present in the cut is however guaranteed to be sufficient even
-      // though it might not be as strong.
-      if (minAct == -kHighsInf) return false;
-
-      // to explain the bound change we start from the bound constraint,
-      // multiply it by the columns coefficient in the constraint. Then the
-      // bound constraint is a0 * x0 <= b0 and the constraint
-      // a0 * x0 + \sum ai * xi <= b. Let the min activity of \sum ai xi be M,
-      // then the constraint yields the bound a0 * x0 <= b - M. If M is
-      // sufficiently large the bound constraint is implied. Therefore we
-      // increase M by updating it with the stronger local bounds until
-      // M >= b - b0 holds.
-      double b0 = domchgstack_[pos].boundval;
-      if (mipsolver->variableType(domchgstack_[pos].column) !=
-          HighsVarType::kContinuous) {
-        // in case of an integral variable the bound was rounded and can be
-        // relaxed by 1-feastol
-        if (domchgstack_[pos].boundtype == HighsBoundType::kLower)
-          b0 -= (1.0 - mipsolver->mipdata_->feastol);
-        else
-          b0 += (1.0 - mipsolver->mipdata_->feastol);
-      } else {
-        // for a continuous variable we relax the bound by epsilon to
-        // accomodate for tiny rounding errors
-        if (domchgstack_[pos].boundtype == HighsBoundType::kLower)
-          b0 -= mipsolver->mipdata_->epsilon;
-        else
-          b0 += mipsolver->mipdata_->epsilon;
-      }
-
-      // now multiply the bound constraint with the coefficient value in the
-      // constraint to obtain b0
-      b0 *= domchgVal;
-
-      // compute the lower bound of M that is necessary
-      double Mlower =
-          cutpoolpropagation[cutpoolIndex].cutpool->getRhs()[cutIndex] - b0;
-
-      // M is the global residual activity initially
-      double M = minAct;
-      if (domchgVal < 0)
-        M -= domchgVal * globaldom.colUpper_[domchgstack_[pos].column];
-      else
-        M -= domchgVal * globaldom.colLower_[domchgstack_[pos].column];
-
-      reasonDomChgs.clear();
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-        if (col == domchgstack_[pos].column) continue;
-
-        HighsInt boundpos;
-        if (vals[i] > 0) {
-          double lb = getColLowerPos(col, pos, boundpos);
-          if (globaldom.colLower_[col] >= lb) continue;
-          M += vals[i] * (lb - globaldom.colLower_[col]);
-        } else {
-          double ub = getColUpperPos(col, pos, boundpos);
-          if (globaldom.colUpper_[col] <= ub) continue;
-          M += vals[i] * (ub - globaldom.colUpper_[col]);
-        }
-
-        reasonDomChgs.push_back(boundpos);
-        if (M > Mlower) break;
-      }
-
-      if (M <= Mlower) {
-        // printf("local bounds reach only value of %.12g, need at least
-        // %.12g\n",
-        //        M, Mlower);
-        return false;
-      }
-    }
-  }
-  return true;
+  conflictSet.conflictAnalysis(conflictPool);
 }
 
-bool HighsDomain::explainInfeasibility(std::vector<HighsInt>& reasonDomChgs) {
-  HighsDomain& globaldom = mipsolver->mipdata_->domain;
-  switch (infeasible_reason.type) {
-    case Reason::kUnknown:
-    case Reason::kBranching:
-      return false;
-    case Reason::kConflictingBounds: {
-      reasonDomChgs.clear();
-      HighsInt conflictingBoundPos = infeasible_reason.index;
-      HighsInt col = domchgstack_[conflictingBoundPos].column;
-
-      reasonDomChgs.push_back(conflictingBoundPos);
-
-      HighsInt otherBoundPos;
-      if (domchgstack_[conflictingBoundPos].boundtype ==
-          HighsBoundType::kLower) {
-        double ub = getColUpperPos(col, conflictingBoundPos, otherBoundPos);
-        assert(domchgstack_[conflictingBoundPos].boundval >
-               ub + mipsolver->mipdata_->feastol);
-      } else {
-        double lb = getColLowerPos(col, conflictingBoundPos, otherBoundPos);
-        assert(domchgstack_[conflictingBoundPos].boundval <
-               lb - mipsolver->mipdata_->feastol);
-      }
-      if (otherBoundPos != -1) reasonDomChgs.push_back(otherBoundPos);
-      break;
-    }
-    case Reason::kCliqueTable: {
-      assert(false);
-      HighsInt col = infeasible_reason.index >> 1;
-      HighsInt val = infeasible_reason.index & 1;
-      reasonDomChgs.clear();
-
-      reasonDomChgs.push_back(infeasible_pos);
-      if (val) {
-        assert(colLowerPos_[col] >= 0);
-        assert(colLowerPos_[col] < domchgstack_.size());
-        assert(reasonDomChgs.back() != colLowerPos_[col]);
-        reasonDomChgs.push_back(colLowerPos_[col]);
-      } else {
-        assert(colUpperPos_[col] >= 0);
-        assert(colUpperPos_[col] < domchgstack_.size());
-        assert(reasonDomChgs.back() != colUpperPos_[col]);
-        reasonDomChgs.push_back(colUpperPos_[col]);
-      }
-
-      break;
-    }
-    case Reason::kModelRowLower: {
-      HighsInt rowIndex = infeasible_reason.index;
-
-      // retrieve the matrix values of the cut
-      HighsInt len;
-      const HighsInt* inds;
-      const double* vals;
-      mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
-
-      double maxAct = globaldom.getMaxActivity(rowIndex);
-      // if the global min activity is infinite we do not filter the bounds
-      // and just take all as it is rare and we would need to use the local
-      // activity as base which is not available as easily as not all bound
-      // changes on the stack are used. Using all local bounds of columns that
-      // are present in the cut is however guaranteed to be sufficient even
-      // though it might not be as strong.
-      if (maxAct == kHighsInf) return false;
-
-      // compute the lower bound of M that is necessary
-      double Mupper = mipsolver->rowLower(rowIndex) -
-                      std::max(1.0, std::abs(mipsolver->rowLower(rowIndex))) *
-                          mipsolver->mipdata_->feastol;
-
-      // M is the global residual activity initially
-      double M = maxAct;
-
-      reasonDomChgs.clear();
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-
-        HighsInt boundpos;
-        if (vals[i] > 0) {
-          double ub = getColUpperPos(col, infeasible_pos, boundpos);
-          if (globaldom.colUpper_[col] <= ub) continue;
-          M += vals[i] * (ub - globaldom.colUpper_[col]);
-        } else {
-          double lb = getColLowerPos(col, infeasible_pos, boundpos);
-          if (globaldom.colLower_[col] >= lb) continue;
-          M += vals[i] * (lb - globaldom.colLower_[col]);
-        }
-
-        assert(boundpos >= 0);
-        assert(boundpos < domchgstack_.size());
-
-        reasonDomChgs.push_back(boundpos);
-        if (M < Mupper) break;
-      }
-
-      if (M >= Mupper) {
-        // printf("local bounds reach only value of %.12g, need at most
-        // %.12g\n",
-        //        M, Mupper);
-        return false;
-      }
-
-      break;
-    }
-    case Reason::kModelRowUpper: {
-      HighsInt rowIndex = infeasible_reason.index;
-
-      // retrieve the matrix values of the cut
-      HighsInt len;
-      const HighsInt* inds;
-      const double* vals;
-      mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
-
-      double minAct = globaldom.getMinActivity(rowIndex);
-      // if the global min activity is infinite we do not filter the bounds
-      // and just take all as it is rare and we would need to use the local
-      // activity as base which is not available as easily as not all bound
-      // changes on the stack are used. Using all local bounds of columns that
-      // are present in the cut is however guaranteed to be sufficient even
-      // though it might not be as strong.
-      if (minAct == -kHighsInf) return false;
-
-      // compute the lower bound of M that is necessary
-      double Mlower = mipsolver->rowUpper(rowIndex) +
-                      std::max(1.0, std::abs(mipsolver->rowUpper(rowIndex))) *
-                          mipsolver->mipdata_->feastol;
-
-      // M is the global residual activity initially
-      double M = minAct;
-      reasonDomChgs.clear();
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-
-        HighsInt boundpos;
-        if (vals[i] > 0) {
-          double lb = getColLowerPos(col, infeasible_pos, boundpos);
-          if (globaldom.colLower_[col] >= lb) continue;
-          M += vals[i] * (lb - globaldom.colLower_[col]);
-        } else {
-          double ub = getColUpperPos(col, infeasible_pos, boundpos);
-          if (globaldom.colUpper_[col] <= ub) continue;
-          M += vals[i] * (ub - globaldom.colUpper_[col]);
-        }
-
-        assert(boundpos >= 0);
-        assert(boundpos < domchgstack_.size());
-
-        reasonDomChgs.push_back(boundpos);
-        if (M > Mlower) break;
-      }
-
-      if (M <= Mlower) {
-        // printf("local bounds reach only value of %.12g, need at least
-        // %.12g\n",
-        //        M, Mlower);
-        return false;
-      }
-
-      break;
-    }
-    default: {
-      assert(infeasible_reason.type >= 0);
-      assert(infeasible_reason.type < cutpoolpropagation.size());
-      HighsInt cutpoolIndex = infeasible_reason.type;
-      HighsInt cutIndex = infeasible_reason.index;
-
-      // retrieve the matrix values of the cut
-      HighsInt len;
-      const HighsInt* inds;
-      const double* vals;
-      cutpoolpropagation[cutpoolIndex].cutpool->getCut(cutIndex, len, inds,
-                                                       vals);
-
-      double minAct = globaldom.getMinCutActivity(
-          *cutpoolpropagation[cutpoolIndex].cutpool, cutIndex);
-      // if the global min activity is infinite we do not filter the bounds
-      // and just take all as it is rare and we would need to use the local
-      // activity as base which is not available as easily as not all bound
-      // changes on the stack are used. Using all local bounds of columns that
-      // are present in the cut is however guaranteed to be sufficient even
-      // though it might not be as strong.
-      if (minAct == -kHighsInf) return false;
-
-      // compute the lower bound of M that is necessary
-      double Mlower =
-          cutpoolpropagation[cutpoolIndex].cutpool->getRhs()[cutIndex] +
-          std::max(1.0, std::abs(cutpoolpropagation[cutpoolIndex]
-                                     .cutpool->getRhs()[cutIndex])) *
-              mipsolver->mipdata_->feastol;
-
-      // M is the global residual activity initially
-      double M = minAct;
-      reasonDomChgs.clear();
-      for (HighsInt i = 0; i < len; ++i) {
-        HighsInt col = inds[i];
-
-        HighsInt boundpos;
-        if (vals[i] > 0) {
-          double lb = getColLowerPos(col, infeasible_pos, boundpos);
-          if (globaldom.colLower_[col] >= lb) continue;
-          M += vals[i] * (lb - globaldom.colLower_[col]);
-        } else {
-          double ub = getColUpperPos(col, infeasible_pos, boundpos);
-          if (globaldom.colUpper_[col] <= ub) continue;
-          M += vals[i] * (ub - globaldom.colUpper_[col]);
-        }
-
-        assert(boundpos >= 0);
-        assert(boundpos < domchgstack_.size());
-
-        reasonDomChgs.push_back(boundpos);
-        if (M > Mlower) break;
-      }
-
-      if (M <= Mlower) {
-        // printf("local bounds reach only value of %.12g, need at least
-        // %.12g\n",
-        //        M, Mlower);
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-void HighsDomain::conflictAnalysis() {
-  std::set<HighsInt> reasonSideFrontier;
-  std::set<HighsInt> reconvergenceFrontier;
-  std::priority_queue<HighsInt> resolveQueue;
-  std::vector<HighsInt> reasonDomChgs;
-  std::vector<HighsInt> inds;
-  std::vector<double> vals;
-  if (!infeasible_ || branchPos_.empty() ||
-      infeasible_reason.type == Reason::kBranching ||
-      infeasible_reason.type == Reason::kUnknown)
-    return;
-
-  reasonDomChgs.reserve(domchgstack_.size());
-  if (!explainInfeasibility(reasonDomChgs)) return;
-
-  HighsInt maxSize = 0.15 * mipsolver->mipdata_->integral_cols.size();
-  if (reasonDomChgs.size() > 2 * maxSize) return;
-
-  HighsDomain& globaldom = mipsolver->mipdata_->domain;
-  globaldom.propagate();
-  if (globaldom.infeasible()) return;
-  for (HighsInt domChgPos : reasonDomChgs) {
-    if (reasonSideFrontier.insert(domChgPos).second &&
-        !globaldom.isBinary(domchgstack_[domChgPos].column)) {
-      resolveQueue.push(domChgPos);
-    }
-  }
-
-  mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
-      reasonSideFrontier, domchgstack_);
-
-  // resolve non-binary domain changes first
-  while (!resolveQueue.empty()) {
-    HighsInt resolvePos = resolveQueue.top();
-    resolveQueue.pop();
-    if (!explainBoundChange(resolvePos, reasonDomChgs)) return;
-
-    reasonSideFrontier.erase(resolvePos);
-    for (HighsInt domChgPos : reasonDomChgs) {
-      if (reasonSideFrontier.insert(domChgPos).second) {
-        if (!globaldom.isBinary(domchgstack_[domChgPos].column))
-          resolveQueue.push(domChgPos);
-      }
-    }
-
-    mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
-        reasonSideFrontier, domchgstack_);
-  }
-
-  HighsInt currDepthEnd = kHighsIInf;
-
-  for (HighsInt currDepth = branchPos_.size() - 1; currDepth >= 0;
-       --currDepth) {
-    for (auto it = reasonSideFrontier.lower_bound(branchPos_[currDepth] + 1);
-         it != reasonSideFrontier.upper_bound(currDepthEnd); ++it)
-      resolveQueue.push(*it);
-
-    currDepthEnd = branchPos_[currDepth];
-
-    if (resolveQueue.empty()) continue;
-
-    size_t thisDepthSize = resolveQueue.size();
-
-    size_t minQueueSize = 0;
-
-    while (thisDepthSize > minQueueSize) {
-      HighsInt resolvePos = resolveQueue.top();
-      resolveQueue.pop();
-
-      if (resolvePos > branchPos_[currDepth]) --thisDepthSize;
-
-      if (explainBoundChange(resolvePos, reasonDomChgs)) {
-        minQueueSize = 1;
-        reasonSideFrontier.erase(resolvePos);
-        for (HighsInt domChgPos : reasonDomChgs) {
-          assert(domChgPos < resolvePos);
-          if (reasonSideFrontier.insert(domChgPos).second) {
-            if (!globaldom.isBinary(domchgstack_[domChgPos].column) ||
-                domChgPos > branchPos_[currDepth]) {
-              if (domChgPos > branchPos_[currDepth]) ++thisDepthSize;
-              resolveQueue.push(domChgPos);
-            }
-          }
-        }
-
-        mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
-            reasonSideFrontier, domchgstack_);
-      } else if (!globaldom.isBinary(domchgstack_[resolvePos].column))
-        return;
-    }
-
-    while (!resolveQueue.empty()) {
-      HighsInt resolvePos = resolveQueue.top();
-      resolveQueue.pop();
-      if (globaldom.isBinary(domchgstack_[resolvePos].column)) continue;
-      if (!explainBoundChange(resolvePos, reasonDomChgs)) return;
-
-      reasonSideFrontier.erase(resolvePos);
-      for (HighsInt domChgPos : reasonDomChgs) {
-        assert(domChgPos < resolvePos);
-        if (reasonSideFrontier.insert(domChgPos).second) {
-          if (!globaldom.isBinary(domchgstack_[domChgPos].column))
-            resolveQueue.push(domChgPos);
-        }
-      }
-
-      mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
-          reasonSideFrontier, domchgstack_);
-    }
-
-    if (minQueueSize != 0 && reasonSideFrontier.size() <= maxSize) {
-      inds.clear();
-      vals.clear();
-      HighsInt rhs = reasonSideFrontier.size() - 1;
-      for (HighsInt i : reasonSideFrontier) {
-        HighsInt col = domchgstack_[i].column;
-
-        inds.push_back(col);
-        assert(globaldom.isBinary(col));
-        if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
-          assert(domchgstack_[i].boundval == 1.0);
-          vals.push_back(1.0);
-        } else {
-          assert(domchgstack_[i].boundval == 0.0);
-          vals.push_back(-1.0);
-          rhs -= 1;
-        }
-      }
-
-      auto oldSize = globaldom.getDomainChangeStack().size();
-      mipsolver->mipdata_->cutpool.addCut(*mipsolver, inds.data(), vals.data(),
-                                          inds.size(), rhs, true);
-      globaldom.propagate();
-      if (globaldom.infeasible()) return;
-      if (globaldom.getDomainChangeStack().size() != oldSize) {
-        reasonDomChgs.clear();
-        for (auto it = reasonSideFrontier.begin();
-             it != reasonSideFrontier.end();) {
-          HighsInt pos = *it;
-          HighsInt col = domchgstack_[pos].column;
-          if (!globaldom.isFixed(domchgstack_[pos].column)) {
-            ++it;
-            continue;
-          }
-
-          double fixVal = globaldom.colLower_[col];
-          if (domchgstack_[pos].boundtype == HighsBoundType::kLower) {
-            // if the bound was fixed to the opposite value then the conflict is
-            // globally redundant
-            if (fixVal < domchgstack_[pos].boundval - 0.5) return;
-            // otherwise, one of the other bound changes must be still be
-            // non-active and the bound change of the fixed column can be
-            // dropped
-            it = reasonSideFrontier.erase(it);
-          } else {
-            if (fixVal > domchgstack_[pos].boundval + 0.5) return;
-            it = reasonSideFrontier.erase(it);
-          }
-        }
-      }
-    }
-
-    if (thisDepthSize == 1) {
-      // there should be a UIP that is not the branching vertex, so try to
-      // generate a reconvergence cut
-      do {
-        auto it = reasonSideFrontier.lower_bound(branchPos_[currDepth] + 1);
-        if (it == reasonSideFrontier.end()) break;
-        HighsInt UIP = *it;
-        reconvergenceFrontier.clear();
-        reconvergenceFrontier.insert(UIP);
-        resolveQueue.push(UIP);
-
-        bool abort = false;
-        if (!explainBoundChange(UIP, reasonDomChgs)) {
-          abort = true;
-          break;
-        }
-
-        // resolve all bound changes in the current depth level
-        while (!resolveQueue.empty()) {
-          HighsInt resolvePos = resolveQueue.top();
-          resolveQueue.pop();
-
-          if (explainBoundChange(resolvePos, reasonDomChgs)) {
-            reconvergenceFrontier.erase(resolvePos);
-            for (HighsInt domChgPos : reasonDomChgs) {
-              assert(domChgPos < resolvePos);
-              if (reconvergenceFrontier.insert(domChgPos).second) {
-                if (domChgPos > branchPos_[currDepth])
-                  resolveQueue.push(domChgPos);
-              }
-            }
-          } else {
-            abort = true;
-            break;
-          }
-        }
-
-        // if the UIP or another bound change of this depth could not be
-        // resolved abort
-        if (abort || reconvergenceFrontier.count(UIP) != 0) break;
-
-        // check that all entries in the reconvergence frontier are binary
-        for (HighsInt pos : reconvergenceFrontier) {
-          if (!globaldom.isBinary(domchgstack_[pos].column))
-            resolveQueue.push(pos);
-        }
-
-        while (!resolveQueue.empty()) {
-          HighsInt resolvePos = resolveQueue.top();
-          resolveQueue.pop();
-          if (!explainBoundChange(resolvePos, reasonDomChgs)) {
-            abort = true;
-            break;
-          }
-
-          reconvergenceFrontier.erase(resolvePos);
-          for (HighsInt domChgPos : reasonDomChgs) {
-            assert(domChgPos < resolvePos);
-            if (reconvergenceFrontier.insert(domChgPos).second) {
-              if (!globaldom.isBinary(domchgstack_[domChgPos].column))
-                resolveQueue.push(domChgPos);
-            }
-          }
-        }
-
-        if (abort || reconvergenceFrontier.size() >= maxSize) break;
-
-        inds.clear();
-        vals.clear();
-        HighsInt rhs = reconvergenceFrontier.size();
-
-        HighsInt UIPcol = domchgstack_[UIP].column;
-
-        inds.push_back(UIPcol);
-        if (domchgstack_[UIP].boundtype == HighsBoundType::kLower) {
-          assert(domchgstack_[UIP].boundval == 1.0);
-          vals.push_back(-1.0);
-          rhs -= 1;
-        } else {
-          assert(domchgstack_[UIP].boundval == 0.0);
-          vals.push_back(1.0);
-        }
-        for (HighsInt i : reconvergenceFrontier) {
-          HighsInt col = domchgstack_[i].column;
-
-          inds.push_back(col);
-          if (!globaldom.isBinary(col)) return;
-          if (domchgstack_[i].boundtype == HighsBoundType::kLower) {
-            assert(domchgstack_[i].boundval == 1.0);
-            vals.push_back(1.0);
-          } else {
-            assert(domchgstack_[i].boundval == 0.0);
-            vals.push_back(-1.0);
-            rhs -= 1;
-          }
-        }
-
-        // add the reconvergence cut of this depth level
-        auto oldSize = globaldom.getDomainChangeStack().size();
-        mipsolver->mipdata_->cutpool.addCut(
-            *mipsolver, inds.data(), vals.data(), inds.size(), rhs, true);
-        globaldom.propagate();
-        if (globaldom.infeasible()) return;
-        if (globaldom.getDomainChangeStack().size() != oldSize) {
-          reasonDomChgs.clear();
-          for (auto it = reasonSideFrontier.begin();
-               it != reasonSideFrontier.end();) {
-            HighsInt pos = *it;
-            HighsInt col = domchgstack_[pos].column;
-            if (!globaldom.isFixed(domchgstack_[pos].column)) {
-              ++it;
-              continue;
-            }
-
-            double fixVal = globaldom.colLower_[col];
-            if (domchgstack_[pos].boundtype == HighsBoundType::kLower) {
-              // if the bound was fixed to the opposite value then the conflict
-              // is globally redundant
-              if (fixVal < domchgstack_[pos].boundval - 0.5) return;
-              // otherwise, one of the other bound changes must be still be
-              // non-active and the bound change of the fixed column can be
-              // dropped
-              it = reasonSideFrontier.erase(it);
-            } else {
-              if (fixVal > domchgstack_[pos].boundval + 0.5) return;
-              it = reasonSideFrontier.erase(it);
-            }
-          }
-        }
-      } while (false);
-    }
-  }
+void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
+                                   const double* proofvals, HighsInt prooflen,
+                                   double proofrhs,
+                                   HighsConflictPool& conflictPool) {
+  if (&mipsolver->mipdata_->domain == this) return;
+  if (mipsolver->mipdata_->domain.infeasible()) return;
+
+  ConflictSet conflictSet(*this);
+  conflictSet.conflictAnalysis(proofinds, proofvals, prooflen, proofrhs,
+                               conflictPool);
 }
 
 void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
@@ -2246,4 +1797,715 @@ bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {
                           ? colLower_[domchg.column]
                           : colUpper_[domchg.column];
   return std::abs(domchg.boundval - otherbound) <= mipsolver->mipdata_->epsilon;
+}
+
+HighsDomainChange HighsDomain::flip(const HighsDomainChange& domchg) const {
+  if (domchg.boundtype == HighsBoundType::kLower) {
+    HighsDomainChange flipped{domchg.boundval - mipsolver->mipdata_->feastol,
+                              domchg.column, HighsBoundType::kUpper};
+    if (mipsolver->variableType(domchg.column) != HighsVarType::kContinuous)
+      flipped.boundval = std::floor(flipped.boundval);
+    return flipped;
+  } else {
+    HighsDomainChange flipped{domchg.boundval + mipsolver->mipdata_->feastol,
+                              domchg.column, HighsBoundType::kLower};
+    if (mipsolver->variableType(domchg.column) != HighsVarType::kContinuous)
+      flipped.boundval = std::ceil(flipped.boundval);
+    return flipped;
+  }
+}
+
+double HighsDomain::feastol() const { return mipsolver->mipdata_->feastol; }
+
+HighsDomain::ConflictSet::ConflictSet(HighsDomain& localdom_)
+    : localdom(localdom_),
+      globaldom(localdom.mipsolver->mipdata_->domain),
+      reasonSideFrontier(),
+      reconvergenceFrontier(),
+      resolveQueue(),
+      resolvedDomainChanges() {}
+
+bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
+                                                     const HighsInt* inds,
+                                                     const double* vals,
+                                                     HighsInt len, double rhs,
+                                                     double maxAct) {
+  if (maxAct == kHighsInf) return false;
+
+  // get the coefficient value of the column for which we want to explain
+  // the bound change
+  double domchgVal = 0;
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+    if (col == localdom.domchgstack_[pos].column) {
+      domchgVal = vals[i];
+      break;
+    }
+  }
+
+  // to explain the bound change we start from the bound constraint,
+  // multiply it by the columns coefficient in the constraint. Then the
+  // bound constraint is a0 * x0 >= b0 and the constraint
+  // a0 * x0 + \sum ai * xi >= b. Let the max activity of \sum ai xi be M,
+  // then the constraint yields the bound a0 * x0 >= b - M. If M is
+  // sufficiently small the bound constraint is implied. Therefore we
+  // decrease M by updating it with the stronger local bounds until
+  // M <= b - b0 holds.
+  double b0 = localdom.domchgstack_[pos].boundval;
+  if (localdom.mipsolver->variableType(localdom.domchgstack_[pos].column) !=
+      HighsVarType::kContinuous) {
+    // in case of an integral variable the bound was rounded and can be
+    // relaxed by 1-feastol
+    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+      b0 -= (1.0 - localdom.mipsolver->mipdata_->feastol);
+    else
+      b0 += (1.0 - localdom.mipsolver->mipdata_->feastol);
+  } else {
+    // for a continuous variable we relax the bound by epsilon to
+    // accomodate for tiny rounding errors
+    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+      b0 -= localdom.mipsolver->mipdata_->epsilon;
+    else
+      b0 += localdom.mipsolver->mipdata_->epsilon;
+  }
+
+  // now multiply the bound constraint with the coefficient value in the
+  // constraint to obtain b0
+  b0 *= domchgVal;
+
+  // compute the lower bound of M that is necessary
+  double Mupper = rhs - b0;
+
+  // M is the global residual activity initially
+  double M = maxAct;
+  if (domchgVal < 0)
+    M -= domchgVal * globaldom.colLower_[localdom.domchgstack_[pos].column];
+  else
+    M -= domchgVal * globaldom.colUpper_[localdom.domchgstack_[pos].column];
+
+  resolvedDomainChanges.clear();
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+    if (col == localdom.domchgstack_[pos].column) continue;
+
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double ub = localdom.getColUpperPos(col, pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      M += vals[i] * (ub - globaldom.colUpper_[col]);
+    } else {
+      double lb = localdom.getColLowerPos(col, pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      M += vals[i] * (lb - globaldom.colLower_[col]);
+    }
+
+    resolvedDomainChanges.push_back(boundpos);
+    if (M < Mupper) return true;
+  }
+
+  if (M >= Mupper) {
+    // printf("local bounds reach only value of %.12g, need at most
+    // %.12g\n",
+    //        M, Mupper);
+    return false;
+  }
+
+  return true;
+}
+
+bool HighsDomain::ConflictSet::explainInfeasibility() {
+  switch (localdom.infeasible_reason.type) {
+    case Reason::kUnknown:
+    case Reason::kBranching:
+      return false;
+    case Reason::kConflictingBounds: {
+      resolvedDomainChanges.clear();
+      HighsInt conflictingBoundPos = localdom.infeasible_reason.index;
+      HighsInt col = localdom.domchgstack_[conflictingBoundPos].column;
+
+      resolvedDomainChanges.push_back(conflictingBoundPos);
+
+      HighsInt otherBoundPos;
+      if (localdom.domchgstack_[conflictingBoundPos].boundtype ==
+          HighsBoundType::kLower) {
+        double ub =
+            localdom.getColUpperPos(col, conflictingBoundPos, otherBoundPos);
+        assert(localdom.domchgstack_[conflictingBoundPos].boundval >
+               ub + localdom.mipsolver->mipdata_->feastol);
+      } else {
+        double lb =
+            localdom.getColLowerPos(col, conflictingBoundPos, otherBoundPos);
+        assert(localdom.domchgstack_[conflictingBoundPos].boundval <
+               lb - localdom.mipsolver->mipdata_->feastol);
+      }
+      if (otherBoundPos != -1) resolvedDomainChanges.push_back(otherBoundPos);
+      return true;
+    }
+    case Reason::kCliqueTable:
+      assert(false);
+      return false;
+    case Reason::kModelRowLower: {
+      HighsInt rowIndex = localdom.infeasible_reason.index;
+
+      // retrieve the matrix values of the cut
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      localdom.mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
+
+      double maxAct = globaldom.getMaxActivity(rowIndex);
+
+      return explainInfeasibilityGeq(
+          inds, vals, len, localdom.mipsolver->rowLower(rowIndex), maxAct);
+    }
+    case Reason::kModelRowUpper: {
+      HighsInt rowIndex = localdom.infeasible_reason.index;
+
+      // retrieve the matrix values of the cut
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      localdom.mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
+
+      double minAct = globaldom.getMinActivity(rowIndex);
+
+      return explainInfeasibilityLeq(
+          inds, vals, len, localdom.mipsolver->rowUpper(rowIndex), minAct);
+    }
+    default:
+      assert(localdom.infeasible_reason.type >= 0);
+      assert(localdom.infeasible_reason.type <
+             HighsInt(localdom.cutpoolpropagation.size() +
+                      localdom.conflictPoolPropagation.size()));
+
+      if (localdom.infeasible_reason.type <
+          (HighsInt)localdom.cutpoolpropagation.size()) {
+        HighsInt cutpoolIndex = localdom.infeasible_reason.type;
+        HighsInt cutIndex = localdom.infeasible_reason.index;
+
+        // retrieve the matrix values of the cut
+        HighsInt len;
+        const HighsInt* inds;
+        const double* vals;
+        localdom.cutpoolpropagation[cutpoolIndex].cutpool->getCut(cutIndex, len,
+                                                                  inds, vals);
+
+        double minAct = globaldom.getMinCutActivity(
+            *localdom.cutpoolpropagation[cutpoolIndex].cutpool, cutIndex);
+
+        return explainInfeasibilityLeq(inds, vals, len,
+                                       localdom.cutpoolpropagation[cutpoolIndex]
+                                           .cutpool->getRhs()[cutIndex],
+                                       minAct);
+      } else {
+        HighsInt conflictPoolIndex = localdom.infeasible_reason.type -
+                                     localdom.cutpoolpropagation.size();
+        HighsInt conflictIndex = localdom.infeasible_reason.index;
+
+        // retrieve the conflict entries
+        auto conflictRange =
+            localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictpool_->getConflictRanges()[conflictIndex];
+        const HighsDomainChange* conflict =
+            localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictpool_->getConflictEntryVector()
+                .data() +
+            conflictRange.first;
+        HighsInt len = conflictRange.second - conflictRange.first;
+
+        return explainInfeasibilityConflict(conflict, len);
+      }
+  }
+
+  return false;
+}
+
+bool HighsDomain::ConflictSet::explainInfeasibilityConflict(
+    const HighsDomainChange* conflict, HighsInt len) {
+  resolvedDomainChanges.clear();
+  for (HighsInt i = 0; i < len; ++i) {
+    if (globaldom.isActive(conflict[i])) continue;
+
+    HighsInt pos;
+    if (conflict[i].boundtype == HighsBoundType::kLower)
+      localdom.getColLowerPos(conflict[i].column, localdom.infeasible_pos, pos);
+    else
+      localdom.getColUpperPos(conflict[i].column, localdom.infeasible_pos, pos);
+
+    if (pos == -1) {
+      assert(false);
+      return false;
+    }
+    resolvedDomainChanges.push_back(pos);
+  }
+
+  return true;
+}
+
+bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
+                                                       const double* vals,
+                                                       HighsInt len, double rhs,
+                                                       double minAct) {
+  if (minAct == -kHighsInf) return false;
+
+  HighsInt infeasible_pos = kHighsIInf;
+  if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
+
+  // compute the lower bound of M that is necessary
+  double Mlower = rhs + std::max(1.0, std::abs(rhs)) *
+                            localdom.mipsolver->mipdata_->feastol;
+
+  // M is the global residual activity initially
+  double M = minAct;
+  resolvedDomainChanges.clear();
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double lb = localdom.getColLowerPos(col, infeasible_pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      M += vals[i] * (lb - globaldom.colLower_[col]);
+    } else {
+      double ub = localdom.getColUpperPos(col, infeasible_pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      M += vals[i] * (ub - globaldom.colUpper_[col]);
+    }
+
+    assert(boundpos >= 0);
+    assert(boundpos < localdom.domchgstack_.size());
+
+    resolvedDomainChanges.push_back(boundpos);
+    if (M > Mlower) break;
+  }
+
+  if (M <= Mlower) {
+    // printf("local bounds reach only value of %.12g, need at least
+    // %.12g\n",
+    //        M, Mlower);
+    return false;
+  }
+
+  return true;
+}
+
+bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
+                                                       const double* vals,
+                                                       HighsInt len, double rhs,
+                                                       double maxAct) {
+  if (maxAct == kHighsInf) return false;
+
+  HighsInt infeasible_pos = kHighsIInf;
+  if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
+
+  // compute the lower bound of M that is necessary
+  double Mupper = rhs - std::max(1.0, std::abs(rhs)) *
+                            localdom.mipsolver->mipdata_->feastol;
+
+  // M is the global residual activity initially
+  double M = maxAct;
+
+  resolvedDomainChanges.clear();
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double ub = localdom.getColUpperPos(col, infeasible_pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      M += vals[i] * (ub - globaldom.colUpper_[col]);
+    } else {
+      double lb = localdom.getColLowerPos(col, infeasible_pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      M += vals[i] * (lb - globaldom.colLower_[col]);
+    }
+
+    assert(boundpos >= 0);
+    assert(boundpos < localdom.domchgstack_.size());
+
+    resolvedDomainChanges.push_back(boundpos);
+    if (M < Mupper) break;
+  }
+
+  if (M >= Mupper) {
+    // printf("local bounds reach only value of %.12g, need at most
+    // %.12g\n",
+    //        M, Mupper);
+    return false;
+  }
+
+  return true;
+}
+
+bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
+  switch (localdom.domchgreason_[pos].type) {
+    case Reason::kUnknown:
+    case Reason::kBranching:
+    case Reason::kConflictingBounds:
+      return false;
+    case Reason::kCliqueTable: {
+      HighsInt col = localdom.domchgreason_[pos].index >> 1;
+      HighsInt val = localdom.domchgreason_[pos].index & 1;
+      resolvedDomainChanges.clear();
+      HighsInt boundPos;
+      if (val) {
+        assert(localdom.colLowerPos_[col] >= 0);
+        assert(localdom.colLowerPos_[col] < localdom.domchgstack_.size());
+
+        localdom.getColLowerPos(col, pos, boundPos);
+      } else {
+        assert(localdom.colUpperPos_[col] >= 0);
+        assert(localdom.colUpperPos_[col] < localdom.domchgstack_.size());
+
+        localdom.getColUpperPos(col, pos, boundPos);
+      }
+
+      resolvedDomainChanges.push_back(boundPos);
+
+      return true;
+    }
+    case Reason::kModelRowLower: {
+      HighsInt rowIndex = localdom.domchgreason_[pos].index;
+
+      // retrieve the matrix values of the cut
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      localdom.mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
+
+      double maxAct = globaldom.getMaxActivity(rowIndex);
+
+      return explainBoundChangeGeq(
+          pos, inds, vals, len, localdom.mipsolver->rowLower(rowIndex), maxAct);
+    }
+    case Reason::kModelRowUpper: {
+      HighsInt rowIndex = localdom.domchgreason_[pos].index;
+
+      // retrieve the matrix values of the cut
+      HighsInt len;
+      const HighsInt* inds;
+      const double* vals;
+      localdom.mipsolver->mipdata_->getRow(rowIndex, len, inds, vals);
+
+      double minAct = globaldom.getMinActivity(rowIndex);
+
+      return explainBoundChangeLeq(
+          pos, inds, vals, len, localdom.mipsolver->rowUpper(rowIndex), minAct);
+    }
+    default:
+      assert(localdom.domchgreason_[pos].type >= 0);
+      assert(localdom.domchgreason_[pos].type <
+             (HighsInt)(localdom.cutpoolpropagation.size() +
+                        localdom.conflictPoolPropagation.size()));
+      if (localdom.domchgreason_[pos].type <
+          (HighsInt)localdom.cutpoolpropagation.size()) {
+        HighsInt cutpoolIndex = localdom.domchgreason_[pos].type;
+        HighsInt cutIndex = localdom.domchgreason_[pos].index;
+
+        // retrieve the matrix values of the cut
+        HighsInt len;
+        const HighsInt* inds;
+        const double* vals;
+        localdom.cutpoolpropagation[cutpoolIndex].cutpool->getCut(cutIndex, len,
+                                                                  inds, vals);
+        double minAct = globaldom.getMinCutActivity(
+            *localdom.cutpoolpropagation[cutpoolIndex].cutpool, cutIndex);
+
+        return explainBoundChangeLeq(pos, inds, vals, len,
+                                     localdom.cutpoolpropagation[cutpoolIndex]
+                                         .cutpool->getRhs()[cutIndex],
+                                     minAct);
+      } else {
+        HighsInt conflictPoolIndex = localdom.domchgreason_[pos].type -
+                                     localdom.cutpoolpropagation.size();
+        HighsInt conflictIndex = localdom.domchgreason_[pos].index;
+
+        // retrieve the conflict entries
+        auto conflictRange =
+            localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictpool_->getConflictRanges()[conflictIndex];
+        const HighsDomainChange* conflict =
+            localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictpool_->getConflictEntryVector()
+                .data() +
+            conflictRange.first;
+        HighsInt len = conflictRange.second - conflictRange.first;
+
+        return explainBoundChangeConflict(pos, conflict, len);
+      }
+  }
+
+  return false;
+}
+
+bool HighsDomain::ConflictSet::explainBoundChangeConflict(
+    HighsInt domchgPos, const HighsDomainChange* conflict, HighsInt len) {
+  resolvedDomainChanges.clear();
+  auto domchg = localdom.flip(localdom.domchgstack_[domchgPos]);
+  for (HighsInt i = 0; i < len; ++i) {
+    if (conflict[i] == domchg || globaldom.isActive(conflict[i])) continue;
+
+    HighsInt pos;
+    if (conflict[i].boundtype == HighsBoundType::kLower)
+      localdom.getColLowerPos(conflict[i].column, domchgPos - 1, pos);
+    else
+      localdom.getColUpperPos(conflict[i].column, domchgPos - 1, pos);
+
+    if (pos == -1) continue;
+    resolvedDomainChanges.push_back(pos);
+  }
+
+  return true;
+}
+
+bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
+                                                     const HighsInt* inds,
+                                                     const double* vals,
+                                                     HighsInt len, double rhs,
+                                                     double minAct) {
+  if (minAct == -kHighsInf) return false;
+  // get the coefficient value of the column for which we want to explain
+  // the bound change
+  double domchgVal = 0;
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+    if (col == localdom.domchgstack_[pos].column) {
+      domchgVal = vals[i];
+      break;
+    }
+  }
+
+  assert(domchgVal != 0);
+
+  // to explain the bound change we start from the bound constraint,
+  // multiply it by the columns coefficient in the constraint. Then the
+  // bound constraint is a0 * x0 <= b0 and the constraint
+  // a0 * x0 + \sum ai * xi <= b. Let the min activity of \sum ai xi be M,
+  // then the constraint yields the bound a0 * x0 <= b - M. If M is
+  // sufficiently large the bound constraint is implied. Therefore we
+  // increase M by updating it with the stronger local bounds until
+  // M >= b - b0 holds.
+  double b0 = localdom.domchgstack_[pos].boundval;
+  if (localdom.mipsolver->variableType(localdom.domchgstack_[pos].column) !=
+      HighsVarType::kContinuous) {
+    // in case of an integral variable the bound was rounded and can be
+    // relaxed by 1-feastol
+    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+      b0 -= (1.0 - localdom.mipsolver->mipdata_->feastol);
+    else
+      b0 += (1.0 - localdom.mipsolver->mipdata_->feastol);
+  } else {
+    // for a continuous variable we relax the bound by epsilon to
+    // accomodate for tiny rounding errors
+    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+      b0 -= localdom.mipsolver->mipdata_->epsilon;
+    else
+      b0 += localdom.mipsolver->mipdata_->epsilon;
+  }
+
+  // now multiply the bound constraint with the coefficient value in the
+  // constraint to obtain b0
+  b0 *= domchgVal;
+
+  // compute the lower bound of M that is necessary
+  double Mlower = rhs - b0;
+
+  // M is the global residual activity initially
+  double M = minAct;
+  if (domchgVal < 0)
+    M -= domchgVal * globaldom.colUpper_[localdom.domchgstack_[pos].column];
+  else
+    M -= domchgVal * globaldom.colLower_[localdom.domchgstack_[pos].column];
+
+  resolvedDomainChanges.clear();
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+    if (col == localdom.domchgstack_[pos].column) continue;
+
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double lb = localdom.getColLowerPos(col, pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      M += vals[i] * (lb - globaldom.colLower_[col]);
+    } else {
+      double ub = localdom.getColUpperPos(col, pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      M += vals[i] * (ub - globaldom.colUpper_[col]);
+    }
+
+    resolvedDomainChanges.push_back(boundpos);
+    if (M > Mlower) return true;
+  }
+
+  if (M <= Mlower) {
+    // printf("local bounds reach only value of %.12g, need at least
+    // %.12g\n",
+    //        M, Mlower);
+    return false;
+  }
+
+  return true;
+}
+
+void HighsDomain::ConflictSet::pushQueue(HighsInt domchgPos) {
+  resolveQueue.push_back(domchgPos);
+  std::push_heap(resolveQueue.begin(), resolveQueue.end());
+}
+
+HighsInt HighsDomain::ConflictSet::popQueue() {
+  assert(!resolveQueue.empty());
+  std::pop_heap(resolveQueue.begin(), resolveQueue.end());
+  HighsInt elem = resolveQueue.back();
+  resolveQueue.pop_back();
+  return elem;
+}
+
+void HighsDomain::ConflictSet::clearQueue() { resolveQueue.clear(); }
+
+HighsInt HighsDomain::ConflictSet::queueSize() { return resolveQueue.size(); }
+
+bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) {
+  assert(domChgPos >= 0);
+  assert(domChgPos < (HighsInt)localdom.domchgreason_.size());
+  // printf("domchgPos: %d\n", domChgPos);
+  // printf("stacksize: %ld\n", localdom.domchgreason_.size());
+  switch (localdom.domchgreason_[domChgPos].type) {
+    case Reason::kBranching:
+    case Reason::kUnknown:
+      return false;
+    default:
+      return true;
+  }
+}
+
+HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<HighsInt>& frontier,
+                                                HighsInt depthLevel,
+                                                HighsInt stopSize,
+                                                HighsInt minResolve) {
+  clearQueue();
+  HighsInt startPos =
+      depthLevel == 0 ? 0 : localdom.branchPos_[depthLevel - 1] + 1;
+  auto iterEnd = depthLevel == localdom.branchPos_.size()
+                     ? frontier.end()
+                     : frontier.upper_bound(localdom.branchPos_[depthLevel]);
+  for (auto it = frontier.lower_bound(startPos); it != iterEnd; ++it) {
+    assert(it != frontier.end());
+    HighsInt domChgPos = *it;
+    if (resolvable(domChgPos)) pushQueue(domChgPos);
+  }
+
+  HighsInt numResolved = 0;
+
+  while (queueSize() > stopSize ||
+         (queueSize() > 0 && numResolved < minResolve)) {
+    HighsInt pos = popQueue();
+    if (!explainBoundChange(pos)) continue;
+
+    ++numResolved;
+    frontier.erase(pos);
+    for (HighsInt i : resolvedDomainChanges) {
+      if (frontier.insert(i).second && i >= startPos && resolvable(i))
+        pushQueue(i);
+    }
+  }
+
+  return numResolved;
+}
+
+HighsInt HighsDomain::ConflictSet::computeCuts(
+    HighsInt depthLevel, HighsConflictPool& conflictPool) {
+  HighsInt numResolved =
+      resolveDepth(reasonSideFrontier, depthLevel, 1,
+                   depthLevel == localdom.branchPos_.size() ? 1 : 0);
+
+  HighsInt numConflicts = 0;
+  if (numResolved != 0) {
+    // add conflict cut
+    localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+        reasonSideFrontier, localdom.domchgstack_);
+
+    conflictPool.addConflictCut(localdom, reasonSideFrontier);
+    ++numConflicts;
+  }
+
+  // if the queue size is 1 then we have a resolvable UIP that is not the branch
+  // vertex
+  if (queueSize() == 1) {
+    HighsInt uipPos = popQueue();
+    clearQueue();
+
+    // compute the UIP reconvergence cut
+    reconvergenceFrontier.clear();
+    reconvergenceFrontier.insert(uipPos);
+    HighsInt numResolved = resolveDepth(reconvergenceFrontier, depthLevel, 0);
+
+    if (numResolved != 0 && reconvergenceFrontier.count(uipPos) == 0) {
+      localdom.mipsolver->mipdata_->debugSolution
+          .checkConflictReconvergenceFrontier(reconvergenceFrontier, uipPos,
+                                              localdom.domchgstack_);
+      conflictPool.addReconvergenceCut(localdom, reconvergenceFrontier, uipPos);
+      ++numConflicts;
+    }
+  }
+
+  return numConflicts;
+}
+
+void HighsDomain::ConflictSet::conflictAnalysis(
+    HighsConflictPool& conflictPool) {
+  resolvedDomainChanges.reserve(localdom.domchgstack_.size());
+
+  if (!explainInfeasibility()) return;
+
+  HighsInt maxSize = 0.15 * localdom.mipsolver->mipdata_->integral_cols.size();
+  if (resolvedDomainChanges.size() > 2 * maxSize) return;
+
+  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
+                            resolvedDomainChanges.end());
+
+  localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+      reasonSideFrontier, localdom.domchgstack_);
+
+  HighsInt numConflicts = 0;
+  for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
+       --currDepth) {
+    numConflicts += computeCuts(currDepth, conflictPool);
+
+    if (numConflicts == 0) break;
+  }
+}
+
+void HighsDomain::ConflictSet::conflictAnalysis(
+    const HighsInt* proofinds, const double* proofvals, HighsInt prooflen,
+    double proofrhs, HighsConflictPool& conflictPool) {
+  resolvedDomainChanges.reserve(localdom.domchgstack_.size());
+
+  HighsInt ninfmin;
+  HighsCDouble activitymin;
+  globaldom.computeMinActivity(0, prooflen, proofinds, proofvals, ninfmin,
+                               activitymin);
+  if (ninfmin != 0) return;
+
+  if (!explainInfeasibilityLeq(proofinds, proofvals, prooflen, proofrhs,
+                               double(activitymin)))
+    return;
+
+  HighsInt maxSize = 0.15 * localdom.mipsolver->mipdata_->integral_cols.size();
+  if (resolvedDomainChanges.size() > 2 * maxSize) return;
+
+  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
+                            resolvedDomainChanges.end());
+
+  localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
+      reasonSideFrontier, localdom.domchgstack_);
+
+  HighsInt numConflicts = 0;
+  for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
+       --currDepth) {
+    numConflicts += computeCuts(currDepth, conflictPool);
+
+    // at least in the highest depth level conflicts must be found, otherwise we
+    // can immediately stop
+    if (numConflicts == 0) break;
+  }
 }

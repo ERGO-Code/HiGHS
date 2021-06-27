@@ -161,6 +161,9 @@ void HighsSearch::addBoundExceedingConflict() {
     if (lp->computeDualProof(mipsolver.mipdata_->domain,
                              mipsolver.mipdata_->upper_limit, inds, vals,
                              rhs)) {
+      localdom.conflictAnalysis(inds.data(), vals.data(), inds.size(), rhs,
+                                mipsolver.mipdata_->conflictPool);
+
       HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
       mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                                  inds.size(), rhs);
@@ -184,6 +187,9 @@ void HighsSearch::addInfeasibleConflict() {
     //  }
     //}
     // HighsInt oldnumcuts = cutpool.getNumCuts();
+    localdom.conflictAnalysis(inds.data(), vals.data(), inds.size(), rhs,
+                              mipsolver.mipdata_->conflictPool);
+
     HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
     mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                                inds.size(), rhs);
@@ -338,7 +344,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
-        localdom.conflictAnalysis();
+        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         localdom.clearChangedCols();
@@ -425,7 +431,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
-            localdom.conflictAnalysis();
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kLower, col, upval,
@@ -467,7 +472,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       localdom.propagate();
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
-        localdom.conflictAnalysis();
+        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         localdom.clearChangedCols();
@@ -554,7 +559,6 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           localdom.propagate();
           bool infeas = localdom.infeasible();
           if (infeas) {
-            localdom.conflictAnalysis();
             localdom.backtrack();
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::kUpper, col, downval,
@@ -606,7 +610,7 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
     localdom.propagate();
     localdom.clearChangedCols(oldchangedcols);
     prune = localdom.infeasible();
-    if (prune) localdom.conflictAnalysis();
+    if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
   }
   if (!prune) {
     nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
@@ -641,7 +645,7 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       localdom.propagate();
       localdom.clearChangedCols(oldchangedcols);
       prune = localdom.infeasible();
-      if (prune) localdom.conflictAnalysis();
+      if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
     }
     if (!prune) {
       nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
@@ -748,7 +752,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
       pseudocost.addCutoffObservation(col, upbranch);
     }
 
-    localdom.conflictAnalysis();
+    localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
   } else {
     lp->flushDomain(localdom);
     lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -809,7 +813,6 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                 mipsolver, localdom, lp->getLpSolver().getSolution().col_dual,
                 lp->getObjective());
             if (localdom.infeasible()) {
-              localdom.conflictAnalysis();
               result = NodeResult::kBoundExceeding;
               addBoundExceedingConflict();
               localdom.clearChangedCols();
@@ -827,7 +830,6 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
           addBoundExceedingConflict();
           localdom.propagate();
           if (localdom.infeasible()) {
-            localdom.conflictAnalysis();
             result = NodeResult::kBoundExceeding;
           }
         }

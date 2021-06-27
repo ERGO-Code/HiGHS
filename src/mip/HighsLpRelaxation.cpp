@@ -618,7 +618,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue(
       "time_limit", lpsolver.getRunTime() + mipsolver.options_mip_->time_limit -
                         mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-
+  // lpsolver.setOptionValue("output_flag", true);
   HighsStatus callstatus = lpsolver.run();
 
   const HighsInfo& info = lpsolver.getInfo();

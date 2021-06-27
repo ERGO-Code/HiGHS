@@ -76,6 +76,10 @@ struct HighsDebugSol {
   void checkConflictReasonFrontier(
       const std::set<HighsInt>& reasonSideFrontier,
       const std::vector<HighsDomainChange>& domchgstack) const;
+
+  void checkConflictReconvergenceFrontier(
+      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::vector<HighsDomainChange>& domchgstack) const;
 };
 
 #else
@@ -118,6 +122,10 @@ struct HighsDebugSol {
 
   void checkConflictReasonFrontier(
       const std::set<HighsInt>& reasonSideFrontier,
+      const std::vector<HighsDomainChange>& domchgstack) const {}
+
+  void checkConflictReconvergenceFrontier(
+      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
       const std::vector<HighsDomainChange>& domchgstack) const {}
 };
 #endif

@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
@@ -34,6 +35,7 @@
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
   HighsCutPool cutpool;
+  HighsConflictPool conflictPool;
   HighsDomain domain;
   HighsLpRelaxation lp;
   HighsPseudocost pseudocost;
@@ -102,6 +104,8 @@ struct HighsMipSolverData {
       : mipsolver(mipsolver),
         cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
                 mipsolver.options_mip_->mip_pool_soft_limit),
+        conflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                     mipsolver.options_mip_->mip_pool_soft_limit),
         domain(mipsolver),
         lp(mipsolver),
         pseudocost(),
@@ -110,6 +114,7 @@ struct HighsMipSolverData {
         heuristics(mipsolver),
         debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
+    domain.addConflictPool(conflictPool);
   }
 
   bool moreHeuristicsAllowed();

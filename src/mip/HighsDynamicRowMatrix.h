@@ -22,7 +22,7 @@
 class HighsDynamicRowMatrix {
  private:
   /// vector of index ranges in the index and value arrays of AR for each row
-  std::vector<std::pair<HighsInt, int>> ARrange_;
+  std::vector<std::pair<HighsInt, HighsInt>> ARrange_;
 
   /// column indices for each nonzero in AR
   std::vector<HighsInt> ARindex_;
@@ -42,7 +42,7 @@ class HighsDynamicRowMatrix {
 
   /// keep an ordered set ofof free spaces in the row arrays so that they can be
   /// reused efficiently
-  std::set<std::pair<HighsInt, int>> freespaces_;
+  std::set<std::pair<HighsInt, HighsInt>> freespaces_;
 
   /// vector of deleted rows so that their indices can be reused
   std::vector<HighsInt> deletedrows_;

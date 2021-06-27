@@ -113,6 +113,7 @@ set(sources
     mip/HighsPathSeparator.cpp
     mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
+    mip/HighsConflictPool.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsGFkSolve.cpp
@@ -202,6 +203,7 @@ set(headers
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
+    mip/HighsConflictPool.h
     mip/HighsCutPool.h
     mip/HighsDebugSol.h
     mip/HighsDomainChange.h
@@ -527,6 +529,7 @@ target_sources(libhighs PRIVATE
     mip/HighsPathSeparator.cpp
     mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
+    mip/HighsConflictPool.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsGFkSolve.cpp
@@ -629,6 +632,7 @@ set(headers_fast_build_
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
+    mip/HighsConflictPool.h
     mip/HighsCutPool.h
     mip/HighsDebugSol.h
     mip/HighsDomainChange.h
