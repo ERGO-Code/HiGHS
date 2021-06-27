@@ -286,7 +286,10 @@ retry:
       }
 
       localdom.propagate();
-      if (localdom.infeasible()) break;
+      if (localdom.infeasible()) {
+        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+        break;
+      }
 
       if (getFixingRate() >= stopFixingRate) break;
     }
@@ -342,17 +345,26 @@ retry:
         if (localdom.colLower_[fracint.first] < fixval) {
           heur.branchUpwards(fracint.first, fixval, fracint.second);
           ++numBranched;
-          if (localdom.infeasible()) break;
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            break;
+          }
         }
 
         if (localdom.colUpper_[fracint.first] > fixval) {
           heur.branchDownwards(fracint.first, fixval, fracint.second);
           ++numBranched;
-          if (localdom.infeasible()) break;
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            break;
+          }
         }
 
         localdom.propagate();
-        if (localdom.infeasible()) break;
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
 
         fixingrate = getFixingRate();
         if (fixingrate >= maxfixingrate) break;
@@ -580,7 +592,10 @@ retry:
           }
 
           localdom.propagate();
-          if (localdom.infeasible()) break;
+          if (localdom.infeasible()) {
+            localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+            break;
+          }
           if (getFixingRate() >= stopFixingRate) break;
         }
       }
@@ -628,17 +643,26 @@ retry:
       if (localdom.colLower_[fracint.first] < fixval) {
         heur.branchUpwards(fracint.first, fixval, fracint.second);
         ++numBranched;
-        if (localdom.infeasible()) break;
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
       }
 
       if (localdom.colUpper_[fracint.first] > fixval) {
         heur.branchDownwards(fracint.first, fixval, fracint.second);
         ++numBranched;
-        if (localdom.infeasible()) break;
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          break;
+        }
       }
 
       localdom.propagate();
-      if (localdom.infeasible()) break;
+      if (localdom.infeasible()) {
+        localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+        break;
+      }
 
       fixingrate = getFixingRate();
       if (fixingrate >= maxfixingrate) break;
@@ -702,9 +726,15 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     intval = std::max(localdom.colLower_[col], intval);
 
     localdom.fixCol(col, intval);
-    if (localdom.infeasible()) return false;
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      return false;
+    }
     localdom.propagate();
-    if (localdom.infeasible()) return false;
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      return false;
+    }
   }
 
   if (numintcols != mipsolver.numCol()) {
@@ -817,9 +847,15 @@ void HighsPrimalHeuristics::randomizedRounding(
     intval = std::max(localdom.colLower_[i], intval);
 
     localdom.fixCol(i, intval, HighsDomain::Reason::branching());
-    if (localdom.infeasible()) return;
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      return;
+    }
     localdom.propagate();
-    if (localdom.infeasible()) return;
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+      return;
+    }
   }
 
   if (int(mipsolver.mipdata_->integer_cols.size()) != mipsolver.numCol()) {
@@ -903,9 +939,15 @@ void HighsPrimalHeuristics::feasibilityPump() {
       referencepoint.push_back((HighsInt)intval);
       if (!localdom.infeasible()) {
         localdom.fixCol(i, intval);
-        if (localdom.infeasible()) continue;
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          continue;
+        }
         localdom.propagate();
-        if (localdom.infeasible()) continue;
+        if (localdom.infeasible()) {
+          localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+          continue;
+        }
       }
     }
 
