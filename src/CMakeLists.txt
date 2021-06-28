@@ -583,8 +583,12 @@ target_sources(libhighs PRIVATE
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
-target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ model/ simplex/
-                           presolve/ util/ test/ interfaces/ ../extern/)
+target_include_directories(libhighs PUBLIC . lp_data/ model/
+                           interfaces/ ../extern/)
+
+target_include_directories(libhighs PRIVATE ipm/ io/ mip/
+                           presolve/ util/ test/)
+
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
 # on UNIX system the 'lib' prefix is automatically added
@@ -655,6 +659,8 @@ set(headers_fast_build_
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
