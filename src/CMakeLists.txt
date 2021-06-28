@@ -483,8 +483,6 @@ else()
 # install / export.
 # Define library in modern CMake using target_*()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
-cmake_policy(SET CMP0110 NEW)
-
 add_library(libhighs)
 
 target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")

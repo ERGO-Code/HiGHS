@@ -315,9 +315,9 @@ else()
 message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
-       
-       if(CMAKE_VERSION VERSION_GREATER "3.19.0")
-         cmake_policy(SET CMP0110 NEW)
+
+       if(POLICY 0110)
+           cmake_policy(SET CMP0110 NEW)
        endif()
 # todo: remove patch once release is official. 
 # add here to avoid compile errors.
