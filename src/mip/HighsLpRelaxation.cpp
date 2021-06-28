@@ -385,6 +385,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   inds.clear();
   vals.clear();
+  inds.reserve(lp.numCol_);
+  vals.reserve(lp.numCol_);
   for (HighsInt i = 0; i != lp.numCol_; ++i) {
     HighsInt start = lp.Astart_[i];
     HighsInt end = lp.Astart_[i + 1];

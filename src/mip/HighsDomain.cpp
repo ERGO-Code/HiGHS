@@ -1835,13 +1835,43 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
   // get the coefficient value of the column for which we want to explain
   // the bound change
   double domchgVal = 0;
+
+  resolveBuffer.reserve(len);
+  resolveBuffer.clear();
+  const auto& nodequeue = localdom.mipsolver->mipdata_->nodequeue;
   for (HighsInt i = 0; i < len; ++i) {
     HighsInt col = inds[i];
+
     if (col == localdom.domchgstack_[pos].column) {
       domchgVal = vals[i];
-      break;
+      continue;
     }
+
+    double delta;
+    HighsInt numNodes;
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double ub = localdom.getColUpperPos(col, pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      delta = vals[i] * (ub - globaldom.colUpper_[col]);
+      numNodes = nodequeue.numNodesDown(col);
+    } else {
+      double lb = localdom.getColLowerPos(col, pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      delta = vals[i] * (lb - globaldom.colLower_[col]);
+      numNodes = nodequeue.numNodesUp(col);
+    }
+
+    resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
+
+  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
+            [&](const std::tuple<double, HighsInt, HighsInt>& a,
+                const std::tuple<double, HighsInt, HighsInt>& b) {
+              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+              return prioA > prioB;
+            });
 
   // to explain the bound change we start from the bound constraint,
   // multiply it by the columns coefficient in the constraint. Then the
@@ -1884,23 +1914,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
     M -= domchgVal * globaldom.colUpper_[localdom.domchgstack_[pos].column];
 
   resolvedDomainChanges.clear();
-  for (HighsInt i = 0; i < len; ++i) {
-    HighsInt col = inds[i];
-    if (col == localdom.domchgstack_[pos].column) continue;
-
-    HighsInt boundpos;
-    if (vals[i] > 0) {
-      double ub = localdom.getColUpperPos(col, pos, boundpos);
-      if (globaldom.colUpper_[col] <= ub) continue;
-      M += vals[i] * (ub - globaldom.colUpper_[col]);
-    } else {
-      double lb = localdom.getColLowerPos(col, pos, boundpos);
-      if (globaldom.colLower_[col] >= lb) continue;
-      M += vals[i] * (lb - globaldom.colLower_[col]);
-    }
-
-    resolvedDomainChanges.push_back(boundpos);
-    if (M < Mupper) return true;
+  for (const std::tuple<double, HighsInt, HighsInt>& reasonDomchg :
+       resolveBuffer) {
+    M += std::get<0>(reasonDomchg);
+    resolvedDomainChanges.push_back(std::get<2>(reasonDomchg));
+    assert(resolvedDomainChanges.back() >= 0);
+    assert(resolvedDomainChanges.back() < localdom.domchgstack_.size());
+    if (M < Mupper) break;
   }
 
   if (M >= Mupper) {
@@ -2051,31 +2071,50 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
   HighsInt infeasible_pos = kHighsIInf;
   if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
 
-  // compute the lower bound of M that is necessary
-  double Mlower = rhs + std::max(1.0, std::abs(rhs)) *
-                            localdom.mipsolver->mipdata_->feastol;
-
-  // M is the global residual activity initially
-  double M = minAct;
-  resolvedDomainChanges.clear();
+  resolveBuffer.reserve(len);
+  resolveBuffer.clear();
+  const auto& nodequeue = localdom.mipsolver->mipdata_->nodequeue;
   for (HighsInt i = 0; i < len; ++i) {
     HighsInt col = inds[i];
 
+    double delta;
+    HighsInt numNodes;
     HighsInt boundpos;
     if (vals[i] > 0) {
       double lb = localdom.getColLowerPos(col, infeasible_pos, boundpos);
       if (globaldom.colLower_[col] >= lb) continue;
-      M += vals[i] * (lb - globaldom.colLower_[col]);
+      delta = vals[i] * (lb - globaldom.colLower_[col]);
+      numNodes = nodequeue.numNodesUp(col);
     } else {
       double ub = localdom.getColUpperPos(col, infeasible_pos, boundpos);
       if (globaldom.colUpper_[col] <= ub) continue;
-      M += vals[i] * (ub - globaldom.colUpper_[col]);
+      delta = vals[i] * (ub - globaldom.colUpper_[col]);
+      numNodes = nodequeue.numNodesDown(col);
     }
 
-    assert(boundpos >= 0);
-    assert(boundpos < localdom.domchgstack_.size());
+    resolveBuffer.emplace_back(delta, numNodes, boundpos);
+  }
 
-    resolvedDomainChanges.push_back(boundpos);
+  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
+            [&](const std::tuple<double, HighsInt, HighsInt>& a,
+                const std::tuple<double, HighsInt, HighsInt>& b) {
+              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+              return prioA > prioB;
+            });
+
+  // compute the lower bound of M that is necessary
+  double Mlower = rhs + std::max(1.0, std::abs(rhs)) *
+                            localdom.mipsolver->mipdata_->feastol;
+  // M is the global residual activity initially
+  double M = minAct;
+  resolvedDomainChanges.clear();
+  for (const std::tuple<double, HighsInt, HighsInt>& reasonDomchg :
+       resolveBuffer) {
+    M += std::get<0>(reasonDomchg);
+    resolvedDomainChanges.push_back(std::get<2>(reasonDomchg));
+    assert(resolvedDomainChanges.back() >= 0);
+    assert(resolvedDomainChanges.back() < localdom.domchgstack_.size());
     if (M > Mlower) break;
   }
 
@@ -2098,6 +2137,38 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
   HighsInt infeasible_pos = kHighsIInf;
   if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
 
+  resolveBuffer.reserve(len);
+  resolveBuffer.clear();
+  const auto& nodequeue = localdom.mipsolver->mipdata_->nodequeue;
+  for (HighsInt i = 0; i < len; ++i) {
+    HighsInt col = inds[i];
+
+    double delta;
+    HighsInt numNodes;
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double ub = localdom.getColUpperPos(col, infeasible_pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      delta = vals[i] * (ub - globaldom.colUpper_[col]);
+      numNodes = nodequeue.numNodesDown(col);
+    } else {
+      double lb = localdom.getColLowerPos(col, infeasible_pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      delta = vals[i] * (lb - globaldom.colLower_[col]);
+      numNodes = nodequeue.numNodesUp(col);
+    }
+
+    resolveBuffer.emplace_back(delta, numNodes, boundpos);
+  }
+
+  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
+            [&](const std::tuple<double, HighsInt, HighsInt>& a,
+                const std::tuple<double, HighsInt, HighsInt>& b) {
+              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+              return prioA > prioB;
+            });
+
   // compute the lower bound of M that is necessary
   double Mupper = rhs - std::max(1.0, std::abs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
@@ -2106,24 +2177,12 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
   double M = maxAct;
 
   resolvedDomainChanges.clear();
-  for (HighsInt i = 0; i < len; ++i) {
-    HighsInt col = inds[i];
-
-    HighsInt boundpos;
-    if (vals[i] > 0) {
-      double ub = localdom.getColUpperPos(col, infeasible_pos, boundpos);
-      if (globaldom.colUpper_[col] <= ub) continue;
-      M += vals[i] * (ub - globaldom.colUpper_[col]);
-    } else {
-      double lb = localdom.getColLowerPos(col, infeasible_pos, boundpos);
-      if (globaldom.colLower_[col] >= lb) continue;
-      M += vals[i] * (lb - globaldom.colLower_[col]);
-    }
-
-    assert(boundpos >= 0);
-    assert(boundpos < localdom.domchgstack_.size());
-
-    resolvedDomainChanges.push_back(boundpos);
+  for (const std::tuple<double, HighsInt, HighsInt>& reasonDomchg :
+       resolveBuffer) {
+    M += std::get<0>(reasonDomchg);
+    resolvedDomainChanges.push_back(std::get<2>(reasonDomchg));
+    assert(resolvedDomainChanges.back() >= 0);
+    assert(resolvedDomainChanges.back() < localdom.domchgstack_.size());
     if (M < Mupper) break;
   }
 
@@ -2267,13 +2326,43 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
   // get the coefficient value of the column for which we want to explain
   // the bound change
   double domchgVal = 0;
+
+  resolveBuffer.reserve(len);
+  resolveBuffer.clear();
+  const auto& nodequeue = localdom.mipsolver->mipdata_->nodequeue;
   for (HighsInt i = 0; i < len; ++i) {
     HighsInt col = inds[i];
+
     if (col == localdom.domchgstack_[pos].column) {
       domchgVal = vals[i];
-      break;
+      continue;
     }
+
+    double delta;
+    HighsInt numNodes;
+    HighsInt boundpos;
+    if (vals[i] > 0) {
+      double lb = localdom.getColLowerPos(col, pos, boundpos);
+      if (globaldom.colLower_[col] >= lb) continue;
+      delta = vals[i] * (lb - globaldom.colLower_[col]);
+      numNodes = nodequeue.numNodesUp(col);
+    } else {
+      double ub = localdom.getColUpperPos(col, pos, boundpos);
+      if (globaldom.colUpper_[col] <= ub) continue;
+      delta = vals[i] * (ub - globaldom.colUpper_[col]);
+      numNodes = nodequeue.numNodesDown(col);
+    }
+
+    resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
+
+  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
+            [&](const std::tuple<double, HighsInt, HighsInt>& a,
+                const std::tuple<double, HighsInt, HighsInt>& b) {
+              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+              return prioA > prioB;
+            });
 
   assert(domchgVal != 0);
 
@@ -2318,23 +2407,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
     M -= domchgVal * globaldom.colLower_[localdom.domchgstack_[pos].column];
 
   resolvedDomainChanges.clear();
-  for (HighsInt i = 0; i < len; ++i) {
-    HighsInt col = inds[i];
-    if (col == localdom.domchgstack_[pos].column) continue;
-
-    HighsInt boundpos;
-    if (vals[i] > 0) {
-      double lb = localdom.getColLowerPos(col, pos, boundpos);
-      if (globaldom.colLower_[col] >= lb) continue;
-      M += vals[i] * (lb - globaldom.colLower_[col]);
-    } else {
-      double ub = localdom.getColUpperPos(col, pos, boundpos);
-      if (globaldom.colUpper_[col] <= ub) continue;
-      M += vals[i] * (ub - globaldom.colUpper_[col]);
-    }
-
-    resolvedDomainChanges.push_back(boundpos);
-    if (M > Mlower) return true;
+  for (const std::tuple<double, HighsInt, HighsInt>& reasonDomchg :
+       resolveBuffer) {
+    M += std::get<0>(reasonDomchg);
+    resolvedDomainChanges.push_back(std::get<2>(reasonDomchg));
+    assert(resolvedDomainChanges.back() >= 0);
+    assert(resolvedDomainChanges.back() < localdom.domchgstack_.size());
+    if (M > Mlower) break;
   }
 
   if (M <= Mlower) {

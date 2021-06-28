@@ -725,7 +725,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     intval = std::min(localdom.colUpper_[col], intval);
     intval = std::max(localdom.colLower_[col], intval);
 
-    localdom.fixCol(col, intval);
+    localdom.fixCol(col, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) {
       localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
       return false;
@@ -938,7 +938,7 @@ void HighsPrimalHeuristics::feasibilityPump() {
       roundedsol[i] = intval;
       referencepoint.push_back((HighsInt)intval);
       if (!localdom.infeasible()) {
-        localdom.fixCol(i, intval);
+        localdom.fixCol(i, intval, HighsDomain::Reason::branching());
         if (localdom.infeasible()) {
           localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
           continue;

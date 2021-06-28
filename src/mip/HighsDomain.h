@@ -66,6 +66,7 @@ class HighsDomain {
     std::set<HighsInt> reconvergenceFrontier;
     std::vector<HighsInt> resolveQueue;
     std::vector<HighsInt> resolvedDomainChanges;
+    std::vector<std::tuple<double, HighsInt, HighsInt>> resolveBuffer;
 
    public:
     ConflictSet(HighsDomain& localdom);
@@ -343,7 +344,10 @@ class HighsDomain {
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
     if (colLower_[col] < val)
+    {
       changeBound({val, col, HighsBoundType::kLower}, reason);
+      if( infeasible_ == 0 ) propagate();
+    }
 
     if (infeasible_ == 0 && colUpper_[col] > val)
       changeBound({val, col, HighsBoundType::kUpper}, reason);
