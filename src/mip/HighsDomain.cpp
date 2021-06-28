@@ -2536,9 +2536,6 @@ void HighsDomain::ConflictSet::conflictAnalysis(
 
   if (!explainInfeasibility()) return;
 
-  HighsInt maxSize = 0.15 * localdom.mipsolver->mipdata_->integral_cols.size();
-  if (resolvedDomainChanges.size() > 2 * maxSize) return;
-
   reasonSideFrontier.insert(resolvedDomainChanges.begin(),
                             resolvedDomainChanges.end());
 
@@ -2568,9 +2565,6 @@ void HighsDomain::ConflictSet::conflictAnalysis(
   if (!explainInfeasibilityLeq(proofinds, proofvals, prooflen, proofrhs,
                                double(activitymin)))
     return;
-
-  HighsInt maxSize = 0.15 * localdom.mipsolver->mipdata_->integral_cols.size();
-  if (resolvedDomainChanges.size() > 2 * maxSize) return;
 
   reasonSideFrontier.insert(resolvedDomainChanges.begin(),
                             resolvedDomainChanges.end());
