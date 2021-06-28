@@ -1885,11 +1885,11 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
   if (localdom.mipsolver->variableType(localdom.domchgstack_[pos].column) !=
       HighsVarType::kContinuous) {
     // in case of an integral variable the bound was rounded and can be
-    // relaxed by 1-feastol
+    // relaxed by 1-feastol. We use 1 - 10 * feastol for numerical safety.
     if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
-      b0 -= (1.0 - localdom.mipsolver->mipdata_->feastol);
+      b0 -= (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
     else
-      b0 += (1.0 - localdom.mipsolver->mipdata_->feastol);
+      b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
     // accomodate for tiny rounding errors
@@ -2104,7 +2104,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
             });
 
   // compute the lower bound of M that is necessary
-  double Mlower = rhs + std::max(1.0, std::abs(rhs)) *
+  double Mlower = rhs + std::max(10.0, std::abs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
   // M is the global residual activity initially
   double M = minAct;
@@ -2170,7 +2170,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
             });
 
   // compute the lower bound of M that is necessary
-  double Mupper = rhs - std::max(1.0, std::abs(rhs)) *
+  double Mupper = rhs - std::max(10.0, std::abs(rhs)) *
                             localdom.mipsolver->mipdata_->feastol;
 
   // M is the global residual activity initially
@@ -2378,11 +2378,11 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
   if (localdom.mipsolver->variableType(localdom.domchgstack_[pos].column) !=
       HighsVarType::kContinuous) {
     // in case of an integral variable the bound was rounded and can be
-    // relaxed by 1-feastol
+    // relaxed by 1-feastol. We use 1 - 10 * feastol for numerical safety
     if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
-      b0 -= (1.0 - localdom.mipsolver->mipdata_->feastol);
+      b0 -= (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
     else
-      b0 += (1.0 - localdom.mipsolver->mipdata_->feastol);
+      b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
     // accomodate for tiny rounding errors
