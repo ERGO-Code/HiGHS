@@ -911,27 +911,38 @@ HighsSearch::NodeResult HighsSearch::branch() {
                             mipsolver.mipdata_->epsilon;
           double upPrio =
               pseudocost.getAvgInferencesUp(col) + mipsolver.mipdata_->epsilon;
+          double downVal = std::floor(currnode.branching_point);
+          double upVal = std::ceil(currnode.branching_point);
           if (!subrootsol.empty()) {
-            upPrio *= (1.0 + (currnode.branching_point - subrootsol[col]));
-            downPrio *= (1.0 + (subrootsol[col] - currnode.branching_point));
+            double rootsol = subrootsol[col];
+            if (rootsol < downVal)
+              rootsol = downVal;
+            else if (rootsol > upVal)
+              rootsol = upVal;
+
+            upPrio *= (1.0 + (currnode.branching_point - rootsol));
+            downPrio *= (1.0 + (rootsol - currnode.branching_point));
+
           } else {
             if (currnode.lp_objective != -kHighsInf)
               subrootsol = lp->getSolution().col_value;
             if (!mipsolver.mipdata_->rootlpsol.empty()) {
-              upPrio *= (1.0 + (currnode.branching_point -
-                                mipsolver.mipdata_->rootlpsol[col]));
-              downPrio *= (1.0 + (mipsolver.mipdata_->rootlpsol[col] -
-                                  currnode.branching_point));
+              double rootsol = mipsolver.mipdata_->rootlpsol[col];
+              if (rootsol < downVal)
+                rootsol = downVal;
+              else if (rootsol > upVal)
+                rootsol = upVal;
+
+              upPrio *= (1.0 + (currnode.branching_point - rootsol));
+              downPrio *= (1.0 + (rootsol - currnode.branching_point));
             }
           }
           if (upPrio + mipsolver.mipdata_->epsilon >= downPrio) {
             currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-            currnode.branchingdecision.boundval =
-                std::ceil(currnode.branching_point);
+            currnode.branchingdecision.boundval = upVal;
           } else {
             currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
-            currnode.branchingdecision.boundval =
-                std::floor(currnode.branching_point);
+            currnode.branchingdecision.boundval = downVal;
           }
           break;
         }
