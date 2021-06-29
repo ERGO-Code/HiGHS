@@ -854,6 +854,14 @@ restart:
     assert(numRestarts != 0);
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);
+#ifdef HIGHS_DEBUGSOL
+    for (HighsInt i = 0; i < cutset.numCuts(); ++i) {
+      debugSolution.checkCut(cutset.ARindex_.data() + cutset.ARstart_[i],
+                             cutset.ARvalue_.data() + cutset.ARstart_[i],
+                             cutset.ARstart_[i + 1] - cutset.ARstart_[i],
+                             cutset.upper_[i]);
+    }
+#endif
     lp.addCuts(cutset);
     // solve the first root lp
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,

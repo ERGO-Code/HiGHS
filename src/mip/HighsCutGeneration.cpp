@@ -721,6 +721,10 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
 }
 
 bool HighsCutGeneration::postprocessCut() {
+  // right hand sides slightly below zero are likely due to numerical errors and
+  // can cause numerical troubles with scaling, so set them to zero
+  if (rhs < 0 && rhs > -epsilon) rhs = 0;
+
   if (integralSupport && integralCoefficients) {
     // if the cut is known to be integral no postprocessing is needed and we
     // simply remove zero coefficients
@@ -824,7 +828,7 @@ bool HighsCutGeneration::postprocessCut() {
       // finally we can round down the right hand side. Therefore in most cases
       // small errors for which the upper bound constraints where used and the
       // right hand side was weakened, do not weaken the final cut.
-      rhs = floor(rhs + epsilon);
+      rhs = floor(rhs + feastol);
 
       if (intscale * maxAbsValue * feastol < 0.5) {
         // integral scale leads to small enough values, accept scale
