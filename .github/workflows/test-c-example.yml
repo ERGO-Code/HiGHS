@@ -30,6 +30,6 @@ jobs:
       run: |
         g++ $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
           -o c_example \
-          -I install/include \
+          -I install/include/highs \
           -L install/lib -lhighs
         LD_LIBRARY_PATH=install/lib ./c_example
