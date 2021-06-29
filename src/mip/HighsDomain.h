@@ -84,7 +84,7 @@ class HighsDomain {
     bool resolvable(HighsInt domChgPos);
 
     HighsInt resolveDepth(std::set<HighsInt>& frontier, HighsInt depthLevel,
-                          HighsInt stopSize, HighsInt minResolve = 0);
+                          HighsInt stopSize, HighsInt minResolve = 0, bool increaseConflictScore = false);
 
     HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool);
 

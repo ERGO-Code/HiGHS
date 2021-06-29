@@ -38,8 +38,11 @@ struct HighsPseudocostInitialization {
   std::vector<double> inferencesdown;
   std::vector<HighsInt> ninferencesup;
   std::vector<HighsInt> ninferencesdown;
+  std::vector<double> conflictscoreup;
+  std::vector<double> conflictscoredown;
   double cost_total;
   double inferences_total;
+  double conflict_avg_score;
   int64_t nsamplestotal;
   int64_t ninferencestotal;
 
@@ -61,7 +64,11 @@ class HighsPseudocost {
   std::vector<HighsInt> ninferencesdown;
   std::vector<HighsInt> ncutoffsup;
   std::vector<HighsInt> ncutoffsdown;
+  std::vector<double> conflictscoreup;
+  std::vector<double> conflictscoredown;
 
+  double conflict_weight;
+  double conflict_avg_score;
   double cost_total;
   double inferences_total;
   int64_t nsamplestotal;
@@ -82,6 +89,32 @@ class HighsPseudocost {
       nsamplesup[i] -= base.nsamplesup[i];
       nsamplesdown[i] -= base.nsamplesdown[i];
     }
+  }
+
+  void increaseConflictWeight() {
+    conflict_weight *= 1.02;
+
+    if (conflict_weight > 1000.0) {
+      double scale = 1.0 / conflict_weight;
+      conflict_weight = 1.0;
+      conflict_avg_score *= scale;
+
+      HighsInt numCol = conflictscoreup.size();
+      for (HighsInt i = 0; i < numCol; ++i) {
+        conflictscoreup[i] *= scale;
+        conflictscoredown[i] *= scale;
+      }
+    }
+  }
+
+  void increaseConflictScoreUp(HighsInt col) {
+    conflictscoreup[col] += conflict_weight;
+    conflict_avg_score += conflict_weight;
+  }
+
+  void increaseConflictScoreDown(HighsInt col) {
+    conflictscoredown[col] += conflict_weight;
+    conflict_avg_score += conflict_weight;
   }
 
   void setMinReliable(HighsInt minreliable) { this->minreliable = minreliable; }
@@ -205,27 +238,28 @@ class HighsPseudocost {
   }
 
   double getScore(HighsInt col, double upcost, double downcost) const {
-    double costScore =
-        std::sqrt(upcost * downcost) / std::max(1e-6, cost_total);
-    double inferenceScore = std::sqrt(inferencesup[col] * inferencesdown[col]) /
-                            (std::max(1e-6, inferences_total));
+    double costScore = std::max(upcost, 1e-6) * std::max(downcost, 1e-6) /
+                       std::max(1e-6, cost_total * cost_total);
+    double inferenceScore = std::max(inferencesup[col], 1e-6) *
+                            std::max(inferencesdown[col], 1e-6) /
+                            std::max(1e-6, inferences_total * inferences_total);
 
-    double cutoffRateUp =
-        ncutoffsup[col] /
-        double(std::max(HighsInt{1}, ncutoffsup[col] + nsamplesup[col]));
-    double cutoffRateDown =
-        ncutoffsdown[col] /
-        double(std::max(HighsInt{1}, ncutoffsdown[col] + nsamplesdown[col]));
-    double avgCutoffRate =
-        ncutoffstotal /
-        double(std::max(int64_t{1}, nsamplestotal + ncutoffstotal));
+    double avgCutoffs = ncutoffstotal / (double)ncutoffsdown.size();
+    double cutoffScore = std::max((double)ncutoffsup[col], 1e-6) *
+                         std::max((double)ncutoffsdown[col], 1e-6) /
+                         std::max(1e-6, avgCutoffs * avgCutoffs);
 
-    double cutoffScore = std::sqrt(cutoffRateUp * cutoffRateDown) /
-                         std::max(1e-6, avgCutoffRate);
+    double conflictScoreUp = conflictscoreup[col] / conflict_weight;
+    double conflictScoreDown = conflictscoredown[col] / conflict_weight;
+    double conflictScoreAvg =
+        conflict_avg_score / (conflict_weight * conflictscoreup.size());
+    double conflictScore = std::max(conflictScoreUp, 1e-6) *
+                           std::max(conflictScoreDown, 1e-6) /
+                           std::max(1e-6, conflictScoreAvg * conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
 
-    return mapScore(costScore) +
+    return mapScore(costScore) + 1e-2 * mapScore(conflictScore) +
            1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore));
   }
 

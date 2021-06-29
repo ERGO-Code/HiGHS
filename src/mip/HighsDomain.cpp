@@ -2460,7 +2460,8 @@ bool HighsDomain::ConflictSet::resolvable(HighsInt domChgPos) {
 HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<HighsInt>& frontier,
                                                 HighsInt depthLevel,
                                                 HighsInt stopSize,
-                                                HighsInt minResolve) {
+                                                HighsInt minResolve,
+                                                bool increaseConflictScore) {
   clearQueue();
   HighsInt startPos =
       depthLevel == 0 ? 0 : localdom.branchPos_[depthLevel - 1] + 1;
@@ -2483,8 +2484,17 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<HighsInt>& frontier,
     ++numResolved;
     frontier.erase(pos);
     for (HighsInt i : resolvedDomainChanges) {
-      if (frontier.insert(i).second && i >= startPos && resolvable(i))
-        pushQueue(i);
+      if (frontier.insert(i).second) {
+        if (increaseConflictScore) {
+          if (localdom.domchgstack_[i].boundtype == HighsBoundType::kLower)
+            localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
+                localdom.domchgstack_[i].column);
+          else
+            localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
+                localdom.domchgstack_[i].column);
+        }
+        if (i >= startPos && resolvable(i)) pushQueue(i);
+      }
     }
   }
 
@@ -2495,7 +2505,7 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
     HighsInt depthLevel, HighsConflictPool& conflictPool) {
   HighsInt numResolved =
       resolveDepth(reasonSideFrontier, depthLevel, 1,
-                   depthLevel == localdom.branchPos_.size() ? 1 : 0);
+                   depthLevel == localdom.branchPos_.size() ? 1 : 0, true);
 
   HighsInt numConflicts = 0;
   if (numResolved != 0) {
@@ -2536,8 +2546,16 @@ void HighsDomain::ConflictSet::conflictAnalysis(
 
   if (!explainInfeasibility()) return;
 
-  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
-                            resolvedDomainChanges.end());
+  localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();
+  for (HighsInt pos : resolvedDomainChanges) {
+    reasonSideFrontier.insert(pos);
+    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+      localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
+          localdom.domchgstack_[pos].column);
+    else
+      localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
+          localdom.domchgstack_[pos].column);
+  }
 
   localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, localdom.domchgstack_);
@@ -2566,8 +2584,18 @@ void HighsDomain::ConflictSet::conflictAnalysis(
                                double(activitymin)))
     return;
 
-  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
-                            resolvedDomainChanges.end());
+  localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();
+  for (HighsInt pos : resolvedDomainChanges) {
+    reasonSideFrontier.insert(pos);
+    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+      localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
+          localdom.domchgstack_[pos].column);
+    else
+      localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
+          localdom.domchgstack_[pos].column);
+  }
+
+  assert(resolvedDomainChanges.size() == reasonSideFrontier.size());
 
   localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, localdom.domchgstack_);
