@@ -729,9 +729,9 @@ set_target_properties(libhighs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/highs/${dir} )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include/highs)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/highs)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
