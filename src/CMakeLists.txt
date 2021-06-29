@@ -405,9 +405,9 @@ set_target_properties(highs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION ${HIGHS_BINARY_DIR}/include/highs/${dir} )
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/highs/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${HIGHS_BINARY_DIR}/include/highs)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/highs)
 
 if (IPX_ON)
     if (UNIX)
