@@ -122,7 +122,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       if (mipsolver.mipdata_->domain.colUpper_[col] == kHighsInf)
         maxub = lb + 10;
       else
-        maxub = (HighsInt)(mipsolver.mipdata_->domain.colUpper_[col] - 0.5);
+        maxub = (HighsInt)std::floor(mipsolver.mipdata_->domain.colUpper_[col] -
+                                     0.5);
 
       HighsInt step = 1;
       if (maxub - lb > 1000) step = (maxub - lb + 999) / 1000;

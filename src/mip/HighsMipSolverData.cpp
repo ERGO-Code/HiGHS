@@ -202,7 +202,8 @@ void HighsMipSolverData::runPresolve() {
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
 #ifdef HIGHS_DEBUGSOL
-  std::swap(debugSolution.debugSolActive, debugSolActive);
+  debugSolution.debugSolActive = debugSolActive;
+  if (debugSolution.debugSolActive) debugSolution.registerDomain(domain);
   assert(!debugSolution.debugSolActive ||
          checkSolution(debugSolution.debugSolution));
 #endif
@@ -346,7 +347,7 @@ void HighsMipSolverData::runSetup() {
   if (numRestarts == 0) {
     debugSolution.activate();
     assert(!debugSolution.debugSolActive ||
-         checkSolution(debugSolution.debugSolution));
+           checkSolution(debugSolution.debugSolution));
   }
 #endif
 }
@@ -800,7 +801,7 @@ bool HighsMipSolverData::rootSeparationRound(
   if (lp.unscaledDualFeasible(status)) {
     lower_bound = std::max(lp.getObjective(), lower_bound);
     redcostfixing.addRootRedcost(
-        mipsolver, lp.getLpSolver().getSolution().col_dual, lower_bound);
+        mipsolver, lp.getLpSolver().getSolution().col_dual, lp.getObjective());
     if (upper_limit != kHighsInf) {
       redcostfixing.propagateRootRedcost(mipsolver);
 
@@ -910,7 +911,7 @@ restart:
   if (lp.unscaledDualFeasible(lp.getStatus())) {
     lower_bound = std::max(lp.getObjective(), lower_bound);
     redcostfixing.addRootRedcost(
-        mipsolver, lp.getLpSolver().getSolution().col_dual, lower_bound);
+        mipsolver, lp.getLpSolver().getSolution().col_dual, lp.getObjective());
     if (upper_limit != kHighsInf) redcostfixing.propagateRootRedcost(mipsolver);
   }
 
