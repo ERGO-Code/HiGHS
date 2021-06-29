@@ -244,9 +244,17 @@ class HighsPseudocost {
                             std::max(inferencesdown[col], 1e-6) /
                             std::max(1e-6, inferences_total * inferences_total);
 
-    double avgCutoffs = ncutoffstotal / (double)ncutoffsdown.size();
-    double cutoffScore = std::max((double)ncutoffsup[col], 1e-6) *
-                         std::max((double)ncutoffsdown[col], 1e-6) /
+    double cutOffScoreUp =
+        ncutoffsup[col] /
+        std::max(1.0, double(ncutoffsup[col] + nsamplesup[col]));
+    double cutOffScoreDown =
+        ncutoffsdown[col] /
+        std::max(1.0, double(ncutoffsdown[col] + nsamplesdown[col]));
+    double avgCutoffs =
+        ncutoffstotal / std::max(1.0, double(ncutoffstotal + nsamplestotal));
+
+    double cutoffScore = std::max(cutOffScoreUp, 1e-6) *
+                         std::max(cutOffScoreDown, 1e-6) /
                          std::max(1e-6, avgCutoffs * avgCutoffs);
 
     double conflictScoreUp = conflictscoreup[col] / conflict_weight;
