@@ -3861,7 +3861,7 @@ HighsInt HPresolve::strengthenInequalities() {
 
       HighsInt alpos = *std::min_element(
           cover.begin(), cover.end(), [&](HighsInt i1, HighsInt i2) {
-            if (reducedcost[i1] <= 1e-3 || reducedcost[i2] <= 1e-3) return false;
+            if (reducedcost[i1] <= 1e-3 && reducedcost[i2] > 1e-3) return false;
             if (reducedcost[i1] > 1e-3 && reducedcost[i2] <= 1e-3) return true;
             return reducedcost[i1] < reducedcost[i2];
           });
