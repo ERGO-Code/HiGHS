@@ -128,6 +128,7 @@ struct HighsMipSolverData {
   double transformNewIncumbent(const std::vector<double>& sol);
   double percentageInactiveIntegers() const;
   void performRestart();
+  bool checkSolution(const std::vector<double>& solution);
   bool trySolution(const std::vector<double>& solution, char source = ' ');
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);

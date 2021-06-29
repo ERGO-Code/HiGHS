@@ -86,6 +86,13 @@ void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
     if (newColIndex[i] != -1) debugSolution[newColIndex[i]] = debugSolution[i];
 
   debugSolution.resize(mipsolver->model_->numCol_);
+  HighsCDouble debugsolobj = 0.0;
+  for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
+    debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
+
+  debugSolObjective = double(debugsolobj);
+
+  conflictingBounds.clear();
 }
 
 void HighsDebugSol::registerDomain(const HighsDomain& domain) {

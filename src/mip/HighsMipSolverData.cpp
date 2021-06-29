@@ -21,6 +21,31 @@
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
 
+bool HighsMipSolverData::checkSolution(const std::vector<double>& solution) {
+  for (HighsInt i = 0; i != mipsolver.model_->numCol_; ++i) {
+    if (solution[i] < mipsolver.model_->colLower_[i] - feastol) return false;
+    if (solution[i] > mipsolver.model_->colUpper_[i] + feastol) return false;
+    if (mipsolver.variableType(i) == HighsVarType::kInteger &&
+        std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
+      return false;
+  }
+
+  for (HighsInt i = 0; i != mipsolver.model_->numRow_; ++i) {
+    double rowactivity = 0.0;
+
+    HighsInt start = ARstart_[i];
+    HighsInt end = ARstart_[i + 1];
+
+    for (HighsInt j = start; j != end; ++j)
+      rowactivity += solution[ARindex_[j]] * ARvalue_[j];
+
+    if (rowactivity > mipsolver.rowUpper(i) + feastol) return false;
+    if (rowactivity < mipsolver.rowLower(i) - feastol) return false;
+  }
+
+  return true;
+}
+
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
                                      char source) {
   if (int(solution.size()) != mipsolver.model_->numCol_) return false;
@@ -178,12 +203,8 @@ void HighsMipSolverData::runPresolve() {
 
 #ifdef HIGHS_DEBUGSOL
   std::swap(debugSolution.debugSolActive, debugSolActive);
-  if (debugSolution.debugSolActive) {
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      assert(domain.colLower_[i] <= debugSolution.debugSolution[i] + feastol);
-      assert(domain.colUpper_[i] >= debugSolution.debugSolution[i] - feastol);
-    }
-  }
+  assert(!debugSolution.debugSolActive ||
+         checkSolution(debugSolution.debugSolution));
 #endif
 }
 
@@ -321,7 +342,13 @@ void HighsMipSolverData::runSetup() {
 
   heuristics.setupIntCols();
 
-  if( numRestarts == 0 ) debugSolution.activate();
+#ifdef HIGHS_DEBUGSOL
+  if (numRestarts == 0) {
+    debugSolution.activate();
+    assert(!debugSolution.debugSolActive ||
+         checkSolution(debugSolution.debugSolution));
+  }
+#endif
 }
 
 double HighsMipSolverData::transformNewIncumbent(
@@ -514,6 +541,10 @@ void HighsMipSolverData::performRestart() {
     if (mipsolver.solution_objective_ != kHighsInf &&
         mipsolver.modelstatus_ == HighsModelStatus::kInfeasible)
       mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+    // transform the objective limit to the current model
+    upper_limit -= mipsolver.model_->offset_;
+    upper_bound -= mipsolver.model_->offset_;
+    lower_bound = upper_bound;
     return;
   }
   runSetup();
@@ -719,7 +750,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
         "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %7.2f%% | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
         nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
-        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap, 100 * double(pruned_treeweight));
+        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap,
+        100 * double(pruned_treeweight));
   } else {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -727,7 +759,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
         "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %8.2f | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
         nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
-        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap, 100 * double(pruned_treeweight));
+        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap,
+        100 * double(pruned_treeweight));
   }
 }
 
