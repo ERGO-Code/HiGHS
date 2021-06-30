@@ -151,7 +151,7 @@ class Nullspace {
 
     if (fabs(buffer_d.value[maxabs]) < rt.settings.d_zero_threshold) {
       printf(
-          "degeneracy? not possible to find non-active constraHighsInt to "
+          "degeneracy? not possible to find non-active constraint to "
           "leave basis. max: log(d[%" HIGHSINT_FORMAT "]) = %lf\n",
           maxabs, log10(fabs(buffer_d.value[maxabs])));
       exit(1);
