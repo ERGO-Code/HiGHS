@@ -1076,13 +1076,6 @@ restart:
       lp.getFractionalIntegers().empty()) {
     addIncumbent(lp.getLpSolver().getSolution().col_value, lp.getObjective(),
                  'T');
-    if (lower_bound > upper_limit) {
-      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
-      pruned_treeweight = 1.0;
-      num_nodes += 1;
-      num_leaves += 1;
-      return;
-    }
   } else {
     rootlpsol = lp.getLpSolver().getSolution().col_value;
     rootlpsolobj = lp.getObjective();
@@ -1092,6 +1085,14 @@ restart:
       analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
+
+      if (lower_bound > upper_limit) {
+        mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+        pruned_treeweight = 1.0;
+        num_nodes += 1;
+        num_leaves += 1;
+        return;
+      }
 
       // if there are new global bound changes we reevaluate the LP and do one
       // more separation round
@@ -1131,6 +1132,14 @@ restart:
         heuristics.flushStatistics();
       }
     }
+  }
+
+  if (lower_bound > upper_limit) {
+    mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+    pruned_treeweight = 1.0;
+    num_nodes += 1;
+    num_leaves += 1;
+    return;
   }
 
   // if there are new global bound changes we reevaluate the LP and do one more
