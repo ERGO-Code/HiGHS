@@ -527,7 +527,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
 
       if (solval[i] > feastol) {
         double delta = abs(vals[i]);
-        if (delta <= 1e-4 || delta >= 1e4) continue;
+        if (delta <= 1e-4) continue;
         maxabsdelta = max(maxabsdelta, delta);
         deltas.push_back(delta);
       }
@@ -537,8 +537,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     }
   }
 
-  if (maxabsdelta + 1.0 > 1e-4 && maxabsdelta + 1.0 < 1e4)
-    deltas.push_back(maxabsdelta + 1.0);
+  deltas.push_back(initialScale);
+  deltas.push_back(maxabsdelta + initialScale);
   deltas.push_back(1.0);
 
   if (deltas.empty()) return false;
@@ -902,7 +902,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   int expshift = 0;
   std::frexp(maxAbsVal, &expshift);
   expshift = -expshift;
-  rhs *= std::ldexp(1.0, expshift);
+  initialScale = std::ldexp(1.0, expshift);
+  rhs *= initialScale;
   for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
 
   isintegral.resize(rowlen);

@@ -54,6 +54,7 @@ class HighsCutGeneration {
   bool integralSupport;
   bool integralCoefficients;
   HighsInt rowlen;
+  double initialScale;
 
   bool determineCover(bool lpSol = true);
 
