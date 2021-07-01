@@ -68,7 +68,7 @@ class HighsCutGeneration {
   bool postprocessCut();
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
-                                bool& hasContinuous, bool scale = true);
+                                bool& hasContinuous);
 
  public:
   HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
@@ -76,7 +76,7 @@ class HighsCutGeneration {
 
   /// separates the LP solution for the given single row relaxation
   bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
-                   std::vector<double>& vals, double& rhs, bool scaleInputRow = true);
+                   std::vector<double>& vals, double& rhs);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain

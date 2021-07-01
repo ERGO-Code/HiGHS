@@ -509,7 +509,6 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
   double continuoussqrnorm = 0.0;
   std::vector<HighsInt> integerinds;
   integerinds.reserve(rowlen);
-  deltas.reserve(rowlen);
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
 
@@ -880,8 +879,7 @@ bool HighsCutGeneration::postprocessCut() {
 
 bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
                                                   bool& hasGeneralInts,
-                                                  bool& hasContinuous,
-                                                  bool scale) {
+                                                  bool& hasContinuous) {
   // preprocess the inequality before cut generation
   // 1. Determine the maximal activity to check for trivial redundancy and
   // tighten coefficients
@@ -904,14 +902,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   int expshift = 0;
   std::frexp(maxAbsVal, &expshift);
   expshift = -expshift;
-  double smallVal = 10 * feastol * maxAbsVal;
-
-  if (scale) {
-    rhs *= std::ldexp(1.0, expshift);
-    smallVal = std::ldexp(smallVal, expshift);
-    for (HighsInt i = 0; i < rowlen; ++i)
-      vals[i] = std::ldexp(vals[i], expshift);
-  }
+  rhs *= std::ldexp(1.0, expshift);
+  for (HighsInt i = 0; i < rowlen; ++i) vals[i] = std::ldexp(vals[i], expshift);
 
   isintegral.resize(rowlen);
   for (HighsInt i = 0; i != rowlen; ++i) {
@@ -1057,8 +1049,7 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
 
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<HighsInt>& inds_,
-                                     std::vector<double>& vals_, double& rhs_,
-                                     bool scaleInputRow) {
+                                     std::vector<double>& vals_, double& rhs_) {
 #if 0
   if (vals_.size() > 1) {
     std::vector<HighsInt> indsCheck_ = inds_;
@@ -1080,7 +1071,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     // printf("before preprocessing of base inequality:\n");
     checkNumerics(vals, rowlen, double(rhs));
     if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
-                                  hasContinuous, scaleInputRow))
+                                  hasContinuous))
       return false;
     // printf("after preprocessing of base inequality:\n");
     checkNumerics(vals, rowlen, double(rhs));
@@ -1114,8 +1105,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
   bool hasContinuous = false;
-  if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts, hasContinuous,
-                                scaleInputRow))
+  if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
+                                hasContinuous))
     return false;
 
   // it can happen that there is an unbounded integer variable during the
