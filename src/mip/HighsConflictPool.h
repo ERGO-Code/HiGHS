@@ -59,7 +59,7 @@ class HighsConflictPool {
 
   void addReconvergenceCut(const HighsDomain& domain,
                            const std::set<HighsInt>& reconvergenceFrontier,
-                           HighsInt reconvergenceDomchgPos);
+                           const HighsDomainChange& reconvergenceDomchg);
 
   void removeConflict(HighsInt conflict);
 

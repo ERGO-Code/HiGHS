@@ -84,7 +84,8 @@ class HighsDomain {
     bool resolvable(HighsInt domChgPos);
 
     HighsInt resolveDepth(std::set<HighsInt>& frontier, HighsInt depthLevel,
-                          HighsInt stopSize, HighsInt minResolve = 0, bool increaseConflictScore = false);
+                          HighsInt stopSize, HighsInt minResolve = 0,
+                          bool increaseConflictScore = false);
 
     HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool);
 
@@ -107,11 +108,13 @@ class HighsDomain {
                                     const HighsDomainChange* conflict,
                                     HighsInt len);
 
-    bool explainBoundChangeLeq(HighsInt domchgPos, const HighsInt* inds,
+    bool explainBoundChangeLeq(const HighsDomainChange& domchg,
+                               HighsInt domchgPos, const HighsInt* inds,
                                const double* vals, HighsInt len, double rhs,
                                double minActivity);
 
-    bool explainBoundChangeGeq(HighsInt domchgPos, const HighsInt* inds,
+    bool explainBoundChangeGeq(const HighsDomainChange& domchg,
+                               HighsInt domchgPos, const HighsInt* inds,
                                const double* vals, HighsInt len, double rhs,
                                double maxActivity);
   };
@@ -343,10 +346,9 @@ class HighsDomain {
 
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
-    if (colLower_[col] < val)
-    {
+    if (colLower_[col] < val) {
       changeBound({val, col, HighsBoundType::kLower}, reason);
-      if( infeasible_ == 0 ) propagate();
+      if (infeasible_ == 0) propagate();
     }
 
     if (infeasible_ == 0 && colUpper_[col] > val)
@@ -393,6 +395,12 @@ class HighsDomain {
   void conflictAnalysis(const HighsInt* proofinds, const double* proofvals,
                         HighsInt prooflen, double proofrhs,
                         HighsConflictPool& conflictPool);
+
+  void conflictAnalyzeReconvergence(const HighsDomainChange& domchg,
+                                    const HighsInt* proofinds,
+                                    const double* proofvals, HighsInt prooflen,
+                                    double proofrhs,
+                                    HighsConflictPool& conflictPool);
 
   void tightenCoefficients(HighsInt* inds, double* vals, HighsInt len,
                            double& rhs) const;

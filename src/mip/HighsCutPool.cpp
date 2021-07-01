@@ -131,7 +131,7 @@ void HighsCutPool::performAging() {
 
   HighsInt agelim = agelim_;
   HighsInt numActiveCuts = getNumCuts() - numLpCuts;
-  while (agelim > 1 && numActiveCuts > softlimit_) {
+  while (agelim > 5 && numActiveCuts > softlimit_) {
     numActiveCuts -= ageDistribution[agelim];
     --agelim;
   }

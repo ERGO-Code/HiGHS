@@ -809,9 +809,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
             result = NodeResult::kBoundExceeding;
             addBoundExceedingConflict();
           } else if (mipsolver.mipdata_->upper_limit != kHighsInf) {
-            HighsRedcostFixing::propagateRedCost(
-                mipsolver, localdom, lp->getLpSolver().getSolution().col_dual,
-                lp->getObjective());
+            HighsRedcostFixing::propagateRedCost(mipsolver, localdom, *lp);
             if (localdom.infeasible()) {
               result = NodeResult::kBoundExceeding;
               addBoundExceedingConflict();

@@ -242,6 +242,7 @@ HighsInt HighsCliqueTable::runCliqueSubsumption(
           firstremovable = cliqueid;
         } else {
           ++nremoved;
+          cliques[cliqueid].origin = kHighsIInf;
           removeClique(cliqueid);
         }
       } else if (hits == (HighsInt)clique.size())

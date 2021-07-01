@@ -24,6 +24,7 @@
 
 class HighsDomain;
 class HighsMipSolver;
+class HighsLpRelaxation;
 
 class HighsRedcostFixing {
   std::vector<std::multimap<double, int>> lurkingColUpper;
@@ -34,8 +35,7 @@ class HighsRedcostFixing {
 
   static void propagateRedCost(const HighsMipSolver& mipsolver,
                                HighsDomain& localdomain,
-                               const std::vector<double>& lpredcost,
-                               double lpobjective);
+                               const HighsLpRelaxation& lp);
 
   void addRootRedcost(const HighsMipSolver& mipsolver,
                       const std::vector<double>& lpredcost, double lpobjective);

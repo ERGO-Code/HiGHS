@@ -356,8 +356,8 @@ void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
 bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
                                          double upperbound,
                                          std::vector<HighsInt>& inds,
-                                         std::vector<double>& vals,
-                                         double& rhs) const {
+                                         std::vector<double>& vals, double& rhs,
+                                         bool extractCliques) const {
   std::vector<double> row_dual = lpsolver.getSolution().row_dual;
 
   const HighsLp& lp = lpsolver.getLp();
@@ -441,9 +441,9 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                              inds.size(), rhs);
-
-  mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
-      mipsolver, inds.data(), vals.data(), inds.size(), rhs);
+  if (extractCliques)
+    mipsolver.mipdata_->cliquetable.extractCliquesFromCut(
+        mipsolver, inds.data(), vals.data(), inds.size(), rhs);
 
   return true;
 }
@@ -557,9 +557,9 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
 
-  hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
-                                  mipsolver.mipdata_->upper_limit,
-                                  dualproofinds, dualproofvals, dualproofrhs);
+  hasdualproof = computeDualProof(
+      mipsolver.mipdata_->domain, mipsolver.mipdata_->upper_limit,
+      dualproofinds, dualproofvals, dualproofrhs);
   if (!hasdualproof) dualproofrhs = kHighsInf;
 }
 

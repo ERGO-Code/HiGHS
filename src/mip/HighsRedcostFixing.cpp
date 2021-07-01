@@ -46,12 +46,16 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
 
 void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                           HighsDomain& localdomain,
-                                          const std::vector<double>& lpredcost,
-                                          double lpobjective) {
+                                          const HighsLpRelaxation& lp) {
+  const std::vector<double>& lpredcost = lp.getSolution().col_dual;
+  double lpobjective = lp.getObjective();
   HighsCDouble gap =
       HighsCDouble(mipsolver.mipdata_->upper_limit) - lpobjective;
+
   double tolerance = 10 * mipsolver.mipdata_->feastol;
   assert(!localdomain.infeasible());
+  std::vector<HighsDomainChange> boundChanges;
+  boundChanges.reserve(mipsolver.mipdata_->integral_cols.size());
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     // lpobj + (col - bnd) * redcost <= cutoffbound
     // (col - bnd) * redcost <= gap
@@ -80,9 +84,14 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       if (newub >= localdomain.colUpper_[col]) continue;
       assert(newub < localdomain.colUpper_[col]);
 
-      localdomain.changeBound(HighsBoundType::kUpper, col, newub,
-                              HighsDomain::Reason::unspecified());
-      if (localdomain.infeasible()) return;
+      if (mipsolver.mipdata_->domain.isBinary(col)) {
+        boundChanges.emplace_back(
+            HighsDomainChange{newub, col, HighsBoundType::kUpper});
+      } else {
+        localdomain.changeBound(HighsBoundType::kUpper, col, newub,
+                                HighsDomain::Reason::unspecified());
+        if (localdomain.infeasible()) return;
+      }
     } else if ((localdomain.colLower_[col] == -kHighsInf &&
                 lpredcost[col] < -tolerance) ||
                lpredcost[col] < -threshold) {
@@ -95,13 +104,69 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       if (newlb <= localdomain.colLower_[col]) continue;
       assert(newlb > localdomain.colLower_[col]);
 
-      localdomain.changeBound(HighsBoundType::kLower, col, newlb,
-                              HighsDomain::Reason::unspecified());
-      if (localdomain.infeasible()) return;
+      if (mipsolver.mipdata_->domain.isBinary(col)) {
+        boundChanges.emplace_back(
+            HighsDomainChange{newlb, col, HighsBoundType::kLower});
+      } else {
+        localdomain.changeBound(HighsBoundType::kLower, col, newlb,
+                                HighsDomain::Reason::unspecified());
+        if (localdomain.infeasible()) return;
+      }
     }
   }
 
-  localdomain.propagate();
+  if (!boundChanges.empty()) {
+    std::vector<HighsInt> inds;
+    std::vector<double> vals;
+    double rhs;
+
+    if (boundChanges.size() <= 100 &&
+        lp.computeDualProof(mipsolver.mipdata_->domain,
+                            mipsolver.mipdata_->upper_limit, inds, vals, rhs,
+                            false)) {
+      bool addedConstraints = false;
+
+      HighsInt oldNumConflicts =
+          mipsolver.mipdata_->conflictPool.getNumConflicts();
+      for (const HighsDomainChange& domchg : boundChanges) {
+        if (localdomain.isActive(domchg)) continue;
+        localdomain.conflictAnalyzeReconvergence(
+            domchg, inds.data(), vals.data(), inds.size(), rhs,
+            mipsolver.mipdata_->conflictPool);
+      }
+      addedConstraints =
+          mipsolver.mipdata_->conflictPool.getNumConflicts() != oldNumConflicts;
+
+      if (addedConstraints) {
+        localdomain.propagate();
+        if (localdomain.infeasible()) return;
+
+        boundChanges.erase(
+            std::remove_if(boundChanges.begin(), boundChanges.end(),
+                           [&](const HighsDomainChange& domchg) {
+                             return localdomain.isActive(domchg);
+                           }),
+            boundChanges.end());
+      }
+
+      if (!boundChanges.empty()) {
+        for (const HighsDomainChange& domchg : boundChanges) {
+          localdomain.changeBound(domchg, HighsDomain::Reason::unspecified());
+          if (localdomain.infeasible()) break;
+        }
+
+        if (!localdomain.infeasible()) localdomain.propagate();
+      }
+      // /printf("numConflicts: %d\n", numConflicts);
+    } else {
+      for (const HighsDomainChange& domchg : boundChanges) {
+        localdomain.changeBound(domchg, HighsDomain::Reason::unspecified());
+        if (localdomain.infeasible()) break;
+      }
+
+      if (!localdomain.infeasible()) localdomain.propagate();
+    }
+  }
 }
 
 void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
@@ -113,8 +178,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
-      // so for lurkub = lb to ub - 1 we can compute the necessary cutoff bound
-      // to reach this bound which is:
+      // so for lurkub = lb to ub - 1 we can compute the necessary cutoff
+      // bound to reach this bound which is:
       //  lurkub = (cutoffbound - lpobj)/redcost + lb
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
       HighsInt lb = (HighsInt)mipsolver.mipdata_->domain.colLower_[col];
@@ -161,8 +226,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       }
     } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
       // col >= (cutoffbound - lpobj)/redcost + ub
-      // so for lurklb = lb + 1 to ub we can compute the necessary cutoff bound
-      // to reach this bound which is:
+      // so for lurklb = lb + 1 to ub we can compute the necessary cutoff
+      // bound to reach this bound which is:
       //  lurklb = (cutoffbound - lpobj)/redcost + ub
       //  cutoffbound = (lurklb - ub) * redcost + lpobj
 

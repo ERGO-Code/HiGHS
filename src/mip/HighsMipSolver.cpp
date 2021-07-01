@@ -161,6 +161,10 @@ restart:
 
       if (!search.hasNode()) break;
 
+      if (mipdata_->conflictPool.getNumConflicts() >
+          options_mip_->mip_pool_soft_limit)
+        mipdata_->conflictPool.performAging();
+
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=
             std::min(mipdata_->dispfreq,

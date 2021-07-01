@@ -320,23 +320,26 @@ void HighsDomain::ConflictPoolPropagation::propagateConflict(
 
   switch (numInactive) {
     case 0:
-      if (!domain->infeasible_) {
-        domain->infeasible_ = true;
-        domain->infeasible_reason = Reason::cut(
-            domain->cutpoolpropagation.size() + conflictpoolindex, conflict);
-        domain->infeasible_pos = domain->domchgstack_.size();
-      }
+      assert(!domain->infeasible_);
+      domain->infeasible_ = true;
+      domain->infeasible_reason = Reason::cut(
+          domain->cutpoolpropagation.size() + conflictpoolindex, conflict);
+      domain->infeasible_pos = domain->domchgstack_.size();
       conflictpool_->resetAge(conflict);
       // printf("conflict propagation found infeasibility\n");
       break;
-    case 1:
-      domain->changeBound(
-          domain->flip(entries[inactive[0]]),
-          Reason::cut(domain->cutpoolpropagation.size() + conflictpoolindex,
-                      conflict));
-      conflictpool_->resetAge(conflict);
+    case 1: {
+      HighsDomainChange domchg = domain->flip(entries[inactive[0]]);
+      if (!domain->isActive(domchg)) {
+        domain->changeBound(
+            domain->flip(entries[inactive[0]]),
+            Reason::cut(domain->cutpoolpropagation.size() + conflictpoolindex,
+                        conflict));
+        conflictpool_->resetAge(conflict);
+      }
       // printf("conflict propagation found bound change\n");
       break;
+    }
     case 2: {
       if (watched[0].domchg != entries[inactive[0]]) {
         unlinkWatchedLiteral(2 * conflict);
@@ -1718,6 +1721,37 @@ void HighsDomain::conflictAnalysis(const HighsInt* proofinds,
                                conflictPool);
 }
 
+void HighsDomain::conflictAnalyzeReconvergence(
+    const HighsDomainChange& domchg, const HighsInt* proofinds,
+    const double* proofvals, HighsInt prooflen, double proofrhs,
+    HighsConflictPool& conflictPool) {
+  if (&mipsolver->mipdata_->domain == this) return;
+  ConflictSet conflictSet(*this);
+
+  HighsInt ninfmin;
+  HighsCDouble activitymin;
+  mipsolver->mipdata_->domain.computeMinActivity(
+      0, prooflen, proofinds, proofvals, ninfmin, activitymin);
+  if (ninfmin != 0) return;
+
+  if (!conflictSet.explainBoundChangeLeq(domchg, domchgstack_.size(), proofinds,
+                                         proofvals, prooflen, proofrhs,
+                                         double(activitymin)))
+    return;
+
+  if (conflictSet.resolvedDomainChanges.size() >
+      0.3 * mipsolver->mipdata_->integral_cols.size())
+    return;
+
+  conflictSet.reconvergenceFrontier.insert(
+      conflictSet.resolvedDomainChanges.begin(),
+      conflictSet.resolvedDomainChanges.end());
+  conflictSet.resolveDepth(conflictSet.reconvergenceFrontier, branchPos_.size(),
+                           0);
+  conflictPool.addReconvergenceCut(*this, conflictSet.reconvergenceFrontier,
+                                   domchg);
+}
+
 void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
                                       HighsInt len, double& rhs) const {
   HighsCDouble maxactivity = 0;
@@ -1825,11 +1859,9 @@ HighsDomain::ConflictSet::ConflictSet(HighsDomain& localdom_)
       resolveQueue(),
       resolvedDomainChanges() {}
 
-bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
-                                                     const HighsInt* inds,
-                                                     const double* vals,
-                                                     HighsInt len, double rhs,
-                                                     double maxAct) {
+bool HighsDomain::ConflictSet::explainBoundChangeGeq(
+    const HighsDomainChange& domchg, HighsInt pos, const HighsInt* inds,
+    const double* vals, HighsInt len, double rhs, double maxAct) {
   if (maxAct == kHighsInf) return false;
 
   // get the coefficient value of the column for which we want to explain
@@ -1842,7 +1874,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
   for (HighsInt i = 0; i < len; ++i) {
     HighsInt col = inds[i];
 
-    if (col == localdom.domchgstack_[pos].column) {
+    if (col == domchg.column) {
       domchgVal = vals[i];
       continue;
     }
@@ -1881,19 +1913,19 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
   // sufficiently small the bound constraint is implied. Therefore we
   // decrease M by updating it with the stronger local bounds until
   // M <= b - b0 holds.
-  double b0 = localdom.domchgstack_[pos].boundval;
-  if (localdom.mipsolver->variableType(localdom.domchgstack_[pos].column) !=
+  double b0 = domchg.boundval;
+  if (localdom.mipsolver->variableType(domchg.column) !=
       HighsVarType::kContinuous) {
     // in case of an integral variable the bound was rounded and can be
     // relaxed by 1-feastol. We use 1 - 10 * feastol for numerical safety.
-    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+    if (domchg.boundtype == HighsBoundType::kLower)
       b0 -= (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
     else
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
     // accomodate for tiny rounding errors
-    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+    if (domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
       b0 += localdom.mipsolver->mipdata_->epsilon;
@@ -1909,9 +1941,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(HighsInt pos,
   // M is the global residual activity initially
   double M = maxAct;
   if (domchgVal < 0)
-    M -= domchgVal * globaldom.colLower_[localdom.domchgstack_[pos].column];
+    M -= domchgVal * globaldom.colLower_[domchg.column];
   else
-    M -= domchgVal * globaldom.colUpper_[localdom.domchgstack_[pos].column];
+    M -= domchgVal * globaldom.colUpper_[domchg.column];
 
   resolvedDomainChanges.clear();
   for (const std::tuple<double, HighsInt, HighsInt>& reasonDomchg :
@@ -2052,10 +2084,9 @@ bool HighsDomain::ConflictSet::explainInfeasibilityConflict(
     else
       localdom.getColUpperPos(conflict[i].column, localdom.infeasible_pos, pos);
 
-    if (pos == -1) {
-      assert(false);
+    if (pos == -1)
       return false;
-    }
+
     resolvedDomainChanges.push_back(pos);
   }
 
@@ -2234,8 +2265,9 @@ bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
 
       double maxAct = globaldom.getMaxActivity(rowIndex);
 
-      return explainBoundChangeGeq(
-          pos, inds, vals, len, localdom.mipsolver->rowLower(rowIndex), maxAct);
+      return explainBoundChangeGeq(localdom.domchgstack_[pos], pos, inds, vals,
+                                   len, localdom.mipsolver->rowLower(rowIndex),
+                                   maxAct);
     }
     case Reason::kModelRowUpper: {
       HighsInt rowIndex = localdom.domchgreason_[pos].index;
@@ -2248,8 +2280,9 @@ bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
 
       double minAct = globaldom.getMinActivity(rowIndex);
 
-      return explainBoundChangeLeq(
-          pos, inds, vals, len, localdom.mipsolver->rowUpper(rowIndex), minAct);
+      return explainBoundChangeLeq(localdom.domchgstack_[pos], pos, inds, vals,
+                                   len, localdom.mipsolver->rowUpper(rowIndex),
+                                   minAct);
     }
     default:
       assert(localdom.domchgreason_[pos].type >= 0);
@@ -2270,7 +2303,8 @@ bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
         double minAct = globaldom.getMinCutActivity(
             *localdom.cutpoolpropagation[cutpoolIndex].cutpool, cutIndex);
 
-        return explainBoundChangeLeq(pos, inds, vals, len,
+        return explainBoundChangeLeq(localdom.domchgstack_[pos], pos, inds,
+                                     vals, len,
                                      localdom.cutpoolpropagation[cutpoolIndex]
                                          .cutpool->getRhs()[cutIndex],
                                      minAct);
@@ -2278,6 +2312,12 @@ bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
         HighsInt conflictPoolIndex = localdom.domchgreason_[pos].type -
                                      localdom.cutpoolpropagation.size();
         HighsInt conflictIndex = localdom.domchgreason_[pos].index;
+
+        if (localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictWatchedVersion_[conflictIndex] !=
+            localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictpool_->getModificationCount(conflictIndex))
+          break;
 
         // retrieve the conflict entries
         auto conflictRange =
@@ -2317,11 +2357,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeConflict(
   return true;
 }
 
-bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
-                                                     const HighsInt* inds,
-                                                     const double* vals,
-                                                     HighsInt len, double rhs,
-                                                     double minAct) {
+bool HighsDomain::ConflictSet::explainBoundChangeLeq(
+    const HighsDomainChange& domchg, HighsInt pos, const HighsInt* inds,
+    const double* vals, HighsInt len, double rhs, double minAct) {
   if (minAct == -kHighsInf) return false;
   // get the coefficient value of the column for which we want to explain
   // the bound change
@@ -2333,7 +2371,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
   for (HighsInt i = 0; i < len; ++i) {
     HighsInt col = inds[i];
 
-    if (col == localdom.domchgstack_[pos].column) {
+    if (col == domchg.column) {
       domchgVal = vals[i];
       continue;
     }
@@ -2374,19 +2412,19 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
   // sufficiently large the bound constraint is implied. Therefore we
   // increase M by updating it with the stronger local bounds until
   // M >= b - b0 holds.
-  double b0 = localdom.domchgstack_[pos].boundval;
-  if (localdom.mipsolver->variableType(localdom.domchgstack_[pos].column) !=
+  double b0 = domchg.boundval;
+  if (localdom.mipsolver->variableType(domchg.column) !=
       HighsVarType::kContinuous) {
     // in case of an integral variable the bound was rounded and can be
     // relaxed by 1-feastol. We use 1 - 10 * feastol for numerical safety
-    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+    if (domchg.boundtype == HighsBoundType::kLower)
       b0 -= (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
     else
       b0 += (1.0 - 10 * localdom.mipsolver->mipdata_->feastol);
   } else {
     // for a continuous variable we relax the bound by epsilon to
     // accomodate for tiny rounding errors
-    if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
+    if (domchg.boundtype == HighsBoundType::kLower)
       b0 -= localdom.mipsolver->mipdata_->epsilon;
     else
       b0 += localdom.mipsolver->mipdata_->epsilon;
@@ -2402,9 +2440,9 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(HighsInt pos,
   // M is the global residual activity initially
   double M = minAct;
   if (domchgVal < 0)
-    M -= domchgVal * globaldom.colUpper_[localdom.domchgstack_[pos].column];
+    M -= domchgVal * globaldom.colUpper_[domchg.column];
   else
-    M -= domchgVal * globaldom.colLower_[localdom.domchgstack_[pos].column];
+    M -= domchgVal * globaldom.colLower_[domchg.column];
 
   resolvedDomainChanges.clear();
   for (const std::tuple<double, HighsInt, HighsInt>& reasonDomchg :
@@ -2532,7 +2570,8 @@ HighsInt HighsDomain::ConflictSet::computeCuts(
       localdom.mipsolver->mipdata_->debugSolution
           .checkConflictReconvergenceFrontier(reconvergenceFrontier, uipPos,
                                               localdom.domchgstack_);
-      conflictPool.addReconvergenceCut(localdom, reconvergenceFrontier, uipPos);
+      conflictPool.addReconvergenceCut(localdom, reconvergenceFrontier,
+                                       localdom.domchgstack_[uipPos]);
       ++numConflicts;
     }
   }
@@ -2545,6 +2584,10 @@ void HighsDomain::ConflictSet::conflictAnalysis(
   resolvedDomainChanges.reserve(localdom.domchgstack_.size());
 
   if (!explainInfeasibility()) return;
+
+  if (resolvedDomainChanges.size() >
+      0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+    return;
 
   localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();
   for (HighsInt pos : resolvedDomainChanges) {
@@ -2582,6 +2625,10 @@ void HighsDomain::ConflictSet::conflictAnalysis(
 
   if (!explainInfeasibilityLeq(proofinds, proofvals, prooflen, proofrhs,
                                double(activitymin)))
+    return;
+
+  if (resolvedDomainChanges.size() >
+      0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
   localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();

@@ -83,7 +83,7 @@ void HighsConflictPool::addConflictCut(
 
 void HighsConflictPool::addReconvergenceCut(
     const HighsDomain& domain, const std::set<HighsInt>& reconvergenceFrontier,
-    HighsInt reconvergenceDomchgPos) {
+    const HighsDomainChange& reconvergenceDomchg) {
   HighsInt conflictIndex;
   HighsInt start;
   HighsInt end;
@@ -131,7 +131,7 @@ void HighsConflictPool::addReconvergenceCut(
   const std::vector<HighsDomainChange>& domchgStack_ =
       domain.getDomainChangeStack();
   assert(i < end);
-  conflictEntries_[i++] = domain.flip(domchgStack_[reconvergenceDomchgPos]);
+  conflictEntries_[i++] = domain.flip(reconvergenceDomchg);
   double feastol = domain.feastol();
   for (HighsInt pos : reconvergenceFrontier) {
     assert(i < end);
@@ -174,7 +174,7 @@ void HighsConflictPool::performAging() {
   HighsInt conflictMaxIndex = conflictRanges_.size();
   HighsInt agelim = agelim_;
   HighsInt numActiveConflicts = getNumConflicts();
-  while (agelim > 10 && numActiveConflicts > softlimit_) {
+  while (agelim > 5 && numActiveConflicts > softlimit_) {
     numActiveConflicts -= ageDistribution_[agelim];
     --agelim;
   }
