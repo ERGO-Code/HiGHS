@@ -34,7 +34,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   for (HighsInt j = 0; j != rowlen; ++j) {
     if (!isintegral[j]) continue;
 
-    if (solval[j] <= feastol) continue;
+    if (lpSol && solval[j] <= feastol) continue;
 
     cover.push_back(j);
   }
@@ -89,6 +89,9 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 
     std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
               [&](HighsInt i, HighsInt j) {
+                if (solval[i] > feastol && solval[j] <= feastol) return true;
+                if (solval[i] <= feastol && solval[j] > feastol) return false;
+
                 int64_t numNodesA;
                 int64_t numNodesB;
 
@@ -558,7 +561,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
     if (double(oneoveroneminusf0) * double(scale) > 1e4) continue;
 
     HighsCDouble sqrnorm = scale * scale * continuoussqrnorm;
-    HighsCDouble viol = continuouscontribution * oneoveroneminusf0 - scalrhs;
+    HighsCDouble viol =
+        scale * continuouscontribution * oneoveroneminusf0 - downrhs;
 
     for (HighsInt j : integerinds) {
       HighsCDouble scalaj = vals[j] * scale;
@@ -597,7 +601,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
     if (double(oneoveroneminusf0) * double(scale) > 1e4) continue;
 
     HighsCDouble sqrnorm = scale * scale * continuoussqrnorm;
-    HighsCDouble viol = continuouscontribution * oneoveroneminusf0 - scalrhs;
+    HighsCDouble viol =
+        scale * continuouscontribution * oneoveroneminusf0 - downrhs;
 
     for (HighsInt j : integerinds) {
       HighsCDouble scalaj = vals[j] * scale;
@@ -658,7 +663,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
     }
 
     HighsCDouble sqrnorm = scale * scale * continuoussqrnorm;
-    HighsCDouble viol = continuouscontribution * oneoveroneminusf0 - scalrhs;
+    HighsCDouble viol =
+        scale * continuouscontribution * oneoveroneminusf0 - downrhs;
 
     for (HighsInt j : integerinds) {
       HighsCDouble scalaj = vals[j] * scale;
@@ -947,8 +953,6 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       if (upper[i] == kHighsInf) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
-        if (vals[i] > 0.0) maxact = kHighsInf;
-        if (maxact == kHighsInf) break;
       } else if (upper[i] != 1.0) {
         hasGeneralInts = true;
       }
