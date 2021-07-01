@@ -227,7 +227,18 @@ restart:
               std::max(
                   double(mipdata_->pruned_treeweight - treeweightLastCheck),
                   mipdata_->epsilon);
-
+      // printf(
+      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld, "
+      //     "currNodeEstim: %g, "
+      //     "prunedTreeWeightDelta: %g, numHugeTreeEstim: %d, numLeavesThisRun:
+      //     "
+      //     "%ld\n",
+      //     nTreeRestarts, mipdata_->num_nodes -
+      //     mipdata_->num_nodes_before_run, numNodesLastCheck -
+      //     mipdata_->num_nodes_before_run, currNodeEstim, 100.0 *
+      //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
+      //     numHugeTreeEstim,
+      //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
       if (currNodeEstim >=
           1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
         ++numHugeTreeEstim;
@@ -240,7 +251,14 @@ restart:
         numNodesLastCheck = mipdata_->num_nodes;
       }
 
-      if (numHugeTreeEstim >= (10 << nTreeRestarts)) {
+      double minHugeTreeOffset =
+          (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
+      int64_t minHugeTreeEstim =
+          (10 + minHugeTreeOffset) * (1 << nTreeRestarts);
+      if (numHugeTreeEstim >= ((10 + int64_t((mipdata_->num_leaves -
+                                              mipdata_->num_leaves_before_run) *
+                                             1e-3))
+                               << nTreeRestarts)) {
         mipdata_->performRestart();
         goto restart;
       }

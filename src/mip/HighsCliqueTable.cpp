@@ -1065,8 +1065,9 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
 
   // if not all variables are binary, we extract variable upper and lower bounds
   // constraints on the non-binary variable for each binary variable in the
-  // constraint
-  if (nbin < len) {
+  // constraint:
+  // todo@ evaluate performance impact, seems to cause slowdown on some instances
+  if (false && nbin < len) {
     for (HighsInt i = 0; i != nbin; ++i) {
       HighsInt bincol = inds[perm[i]];
       HighsCDouble impliedActivity = rhs - minact - std::abs(vals[perm[i]]);

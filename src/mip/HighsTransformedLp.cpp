@@ -117,7 +117,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     double bestub = mipsolver.mipdata_->domain.colUpper_[col];
     double bestlb = mipsolver.mipdata_->domain.colLower_[col];
-    if (bestub - bestlb < 100.5) {
+    // todo: use binary variable bounds on integers?
+    if (true || bestub - bestlb < 100.5) {
       if (bestlb == bestub) continue;
       lbDist[col] = lpSolution.col_value[col] - bestlb;
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
