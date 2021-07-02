@@ -17,8 +17,8 @@
 #include <queue>
 #include <vector>
 
-#include "mip/HighsDomain.h"
 #include "mip/HighsConflictPool.h"
+#include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsNodeQueue.h"
@@ -188,7 +188,13 @@ class HighsSearch {
 
   NodeResult branch();
 
+  /// backtrack one level in DFS manner
   bool backtrack(bool recoverBasis = true);
+
+  /// backtrack an unspecified amount of depth level until the next
+  /// node that seems worthwhile to continue the plunge. Put unpromising nodes
+  /// to the node queue
+  bool backtrackPlunge(HighsNodeQueue& nodequeue);
 
   /// for heuristics. Will discard nodes above targetDepth regardless of their
   /// status

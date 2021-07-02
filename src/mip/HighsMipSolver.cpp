@@ -149,17 +149,12 @@ restart:
         break;
       }
 
-      if (!search.backtrack()) break;
-
       HighsInt numPlungeNodes = mipdata_->num_nodes - plungestart;
       if (numPlungeNodes >= 100) break;
 
-      while (search.hasNode() &&
-             search.getCurrentEstimate() > mipdata_->upper_limit) {
-        search.currentNodeToQueue(mipdata_->nodequeue);
-      }
+      if (!search.backtrackPlunge(mipdata_->nodequeue)) break;
 
-      if (!search.hasNode()) break;
+      assert(search.hasNode());
 
       if (mipdata_->conflictPool.getNumConflicts() >
           options_mip_->mip_pool_soft_limit)

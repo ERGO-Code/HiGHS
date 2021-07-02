@@ -2084,8 +2084,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityConflict(
     else
       localdom.getColUpperPos(conflict[i].column, localdom.infeasible_pos, pos);
 
-    if (pos == -1)
-      return false;
+    if (pos == -1) return false;
 
     resolvedDomainChanges.push_back(pos);
   }
@@ -2585,13 +2584,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(
 
   if (!explainInfeasibility()) return;
 
-  if (resolvedDomainChanges.size() >
-      0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
-    return;
-
   localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();
   for (HighsInt pos : resolvedDomainChanges) {
-    reasonSideFrontier.insert(pos);
     if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
       localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
           localdom.domchgstack_[pos].column);
@@ -2599,6 +2593,13 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
           localdom.domchgstack_[pos].column);
   }
+
+  if (resolvedDomainChanges.size() >
+      0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+    return;
+
+  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
+                            resolvedDomainChanges.end());
 
   localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, localdom.domchgstack_);
@@ -2627,13 +2628,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(
                                double(activitymin)))
     return;
 
-  if (resolvedDomainChanges.size() >
-      0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
-    return;
-
   localdom.mipsolver->mipdata_->pseudocost.increaseConflictWeight();
   for (HighsInt pos : resolvedDomainChanges) {
-    reasonSideFrontier.insert(pos);
     if (localdom.domchgstack_[pos].boundtype == HighsBoundType::kLower)
       localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreUp(
           localdom.domchgstack_[pos].column);
@@ -2641,6 +2637,13 @@ void HighsDomain::ConflictSet::conflictAnalysis(
       localdom.mipsolver->mipdata_->pseudocost.increaseConflictScoreDown(
           localdom.domchgstack_[pos].column);
   }
+
+  if (resolvedDomainChanges.size() >
+      0.3 * localdom.mipsolver->mipdata_->integral_cols.size())
+    return;
+
+  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
+                            resolvedDomainChanges.end());
 
   assert(resolvedDomainChanges.size() == reasonSideFrontier.size());
 

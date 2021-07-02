@@ -1165,49 +1165,200 @@ bool HighsSearch::backtrack(bool recoverBasis) {
   assert(!nodestack.empty());
   assert(nodestack.back().opensubtrees == 0);
 
-  while (nodestack.back().opensubtrees == 0) {
-    nodestack.pop_back();
+  while (true) {
+    while (nodestack.back().opensubtrees == 0) {
+      nodestack.pop_back();
 
 #ifndef NDEBUG
-    HighsDomainChange branchchg =
+      HighsDomainChange branchchg =
 #endif
-        localdom.backtrack();
-    if (nodestack.empty()) {
-      lp->flushDomain(localdom);
-      return false;
+          localdom.backtrack();
+      if (nodestack.empty()) {
+        lp->flushDomain(localdom);
+        return false;
+      }
+      assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+      assert(branchchg.boundtype ==
+             nodestack.back().branchingdecision.boundtype);
+      assert(branchchg.column == nodestack.back().branchingdecision.column);
     }
-    assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
-    assert(branchchg.boundtype == nodestack.back().branchingdecision.boundtype);
-    assert(branchchg.column == nodestack.back().branchingdecision.column);
+
+    NodeData& currnode = nodestack.back();
+
+    assert(currnode.opensubtrees == 1);
+    currnode.opensubtrees = 0;
+    bool fallbackbranch =
+        currnode.branchingdecision.boundval == currnode.branching_point;
+
+    if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
+      currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+      currnode.branchingdecision.boundval =
+          std::floor(currnode.branchingdecision.boundval - 0.5);
+    } else {
+      currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+      currnode.branchingdecision.boundval =
+          std::ceil(currnode.branchingdecision.boundval + 0.5);
+    }
+
+    if (fallbackbranch)
+      currnode.branching_point = currnode.branchingdecision.boundval;
+
+    HighsInt domchgPos = localdom.getDomainChangeStack().size();
+    HighsInt numChangedCols = localdom.getChangedCols().size();
+    localdom.changeBound(currnode.branchingdecision);
+    bool prune = nodestack.back().lower_bound > getCutoffBound() ||
+                 localdom.infeasible();
+    if (!prune) {
+      localdom.propagate();
+      prune = localdom.infeasible();
+    }
+    if (prune) {
+      localdom.backtrack();
+      localdom.clearChangedCols(numChangedCols);
+      treeweight += std::pow(0.5, getCurrentDepth());
+      continue;
+    }
+    nodestack.emplace_back(currnode.lower_bound, currnode.estimate,
+                           currnode.nodeBasis);
+    lp->flushDomain(localdom);
+    nodestack.back().domgchgStackPos = domchgPos;
+    break;
   }
 
-  NodeData& currnode = nodestack.back();
-
-  assert(currnode.opensubtrees == 1);
-  currnode.opensubtrees = 0;
-  bool fallbackbranch =
-      currnode.branchingdecision.boundval == currnode.branching_point;
-
-  if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
-    currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
-    currnode.branchingdecision.boundval =
-        std::floor(currnode.branchingdecision.boundval - 0.5);
-  } else {
-    currnode.branchingdecision.boundtype = HighsBoundType::kLower;
-    currnode.branchingdecision.boundval =
-        std::ceil(currnode.branchingdecision.boundval + 0.5);
-  }
-
-  if (fallbackbranch)
-    currnode.branching_point = currnode.branchingdecision.boundval;
-
-  HighsInt domchgPos = localdom.getDomainChangeStack().size();
-  localdom.changeBound(currnode.branchingdecision);
-  nodestack.emplace_back(currnode.lower_bound, currnode.estimate,
-                         currnode.nodeBasis);
-  lp->flushDomain(localdom);
-  nodestack.back().domgchgStackPos = domchgPos;
   if (recoverBasis && nodestack.back().nodeBasis) {
+    lp->setStoredBasis(nodestack.back().nodeBasis);
+    lp->recoverBasis();
+  }
+
+  return true;
+}
+
+bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
+  if (!lp->getSolution().dual_valid) return backtrack();
+
+  const std::vector<double>& col_dual = lp->getSolution().col_dual;
+  const std::vector<HighsDomainChange>& domchgstack =
+      localdom.getDomainChangeStack();
+
+  if (nodestack.empty()) return false;
+  assert(!nodestack.empty());
+  assert(nodestack.back().opensubtrees == 0);
+
+  while (true) {
+    while (nodestack.back().opensubtrees == 0) {
+      nodestack.pop_back();
+
+#ifndef NDEBUG
+      HighsDomainChange branchchg =
+#endif
+          localdom.backtrack();
+      if (nodestack.empty()) {
+        lp->flushDomain(localdom);
+        return false;
+      }
+      assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+      assert(branchchg.boundtype ==
+             nodestack.back().branchingdecision.boundtype);
+      assert(branchchg.column == nodestack.back().branchingdecision.column);
+    }
+
+    NodeData& currnode = nodestack.back();
+
+    assert(currnode.opensubtrees == 1);
+    currnode.opensubtrees = 0;
+    bool fallbackbranch =
+        currnode.branchingdecision.boundval == currnode.branching_point;
+    double nodeScore;
+    if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
+      currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
+      currnode.branchingdecision.boundval =
+          std::floor(currnode.branchingdecision.boundval - 0.5);
+      nodeScore = pseudocost.getScoreDown(
+          currnode.branchingdecision.column,
+          fallbackbranch ? 0.5 : currnode.branching_point);
+    } else {
+      currnode.branchingdecision.boundtype = HighsBoundType::kLower;
+      currnode.branchingdecision.boundval =
+          std::ceil(currnode.branchingdecision.boundval + 0.5);
+      nodeScore = pseudocost.getScoreUp(
+          currnode.branchingdecision.column,
+          fallbackbranch ? 0.5 : currnode.branching_point);
+    }
+
+    if (fallbackbranch)
+      currnode.branching_point = currnode.branchingdecision.boundval;
+
+    HighsInt domchgPos = domchgstack.size();
+    HighsInt numChangedCols = localdom.getChangedCols().size();
+    localdom.changeBound(currnode.branchingdecision);
+    bool prune = nodestack.back().lower_bound > getCutoffBound() ||
+                 localdom.infeasible();
+    if (!prune) {
+      localdom.propagate();
+      prune = localdom.infeasible();
+    }
+    if (prune) {
+      localdom.backtrack();
+      localdom.clearChangedCols(numChangedCols);
+      treeweight += std::pow(0.5, getCurrentDepth());
+      continue;
+    }
+    bool nodeToQueue = false;
+    // we check if switching to the other branch of an anchestor yields a higher
+    // additive score than staying in this node and if so we postpone the node
+    // and put it to the queue to backtrack further.
+    // The additive score assumes that we lose the branch score of the active
+    // path and gain the branching score of the inactive path. If there is an
+    // ancestor that has a higher score gain the proceeding with the current
+    // node we backtrack.
+    double ancestorLoss = 0.0;
+    for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
+      if (nodestack[i].opensubtrees == 0) continue;
+
+      bool fallbackbranch = nodestack[i].branchingdecision.boundval ==
+                            nodestack[i].branching_point;
+      double branchpoint = fallbackbranch ? 0.5 : nodestack[i].branching_point;
+      double ancestorScoreActive;
+      double ancestorScoreInactive;
+      if (nodestack[i].branchingdecision.boundtype == HighsBoundType::kLower) {
+        ancestorScoreInactive = pseudocost.getScoreDown(
+            nodestack[i].branchingdecision.column, branchpoint);
+        ancestorScoreActive = pseudocost.getScoreUp(
+            nodestack[i].branchingdecision.column, branchpoint);
+      } else {
+        ancestorScoreActive = pseudocost.getScoreDown(
+            nodestack[i].branchingdecision.column, branchpoint);
+        ancestorScoreInactive = pseudocost.getScoreUp(
+            nodestack[i].branchingdecision.column, branchpoint);
+      }
+
+      // if (!mipsolver.submip)
+      //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
+      //   ancestorScore);
+      ancestorLoss -= ancestorScoreActive;
+      if (ancestorLoss + ancestorScoreInactive >
+          nodeScore + mipsolver.mipdata_->feastol) {
+        nodeToQueue = true;
+        break;
+      }
+    }
+    if (nodeToQueue) {
+      //if (!mipsolver.submip) printf("node goes to queue\n");
+      localdom.backtrack();
+      localdom.clearChangedCols(numChangedCols);
+      nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
+                            nodestack.back().lower_bound,
+                            nodestack.back().estimate, getCurrentDepth() + 1);
+      continue;
+    }
+    nodestack.emplace_back(currnode.lower_bound, currnode.estimate,
+                           currnode.nodeBasis);
+    lp->flushDomain(localdom);
+    nodestack.back().domgchgStackPos = domchgPos;
+    break;
+  }
+
+  if (nodestack.back().nodeBasis) {
     lp->setStoredBasis(nodestack.back().nodeBasis);
     lp->recoverBasis();
   }
