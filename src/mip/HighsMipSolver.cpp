@@ -138,8 +138,20 @@ restart:
       if (mipdata_->domain.infeasible()) break;
 
       if (!search.currentNodePruned()) {
-        search.dive();
+        HighsSearch::NodeResult nodeResult = search.dive();
         ++mipdata_->num_leaves;
+
+        switch (nodeResult) {
+          default:
+            assert(false);
+            break;
+          case HighsSearch::NodeResult::kBoundExceeding:
+            mipdata_->pseudocost.increaseBoundExceedingLeaveCounter();
+            break;
+          case HighsSearch::NodeResult::kDomainInfeasible:
+          case HighsSearch::NodeResult::kLpInfeasible:
+            mipdata_->pseudocost.increaseInfeasibleLeaveCounter();
+        }
 
         search.flushStatistics();
       }

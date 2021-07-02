@@ -34,12 +34,16 @@ HighsPseudocost::HighsPseudocost(const HighsMipSolver& mipsolver)
       nsamplestotal(0),
       ninferencestotal(0),
       ncutoffstotal(0),
-      minreliable(mipsolver.options_mip_->mip_pscost_minreliable) {
+      minreliable(mipsolver.options_mip_->mip_pscost_minreliable),
+      numInfeasLeaves(0),
+      numBoundExceedingLeaves(0) {
   if (mipsolver.pscostinit != nullptr) {
     cost_total = mipsolver.pscostinit->cost_total;
     inferences_total = mipsolver.pscostinit->inferences_total;
     nsamplestotal = mipsolver.pscostinit->nsamplestotal;
     ninferencestotal = mipsolver.pscostinit->ninferencestotal;
+    numInfeasLeaves = mipsolver.pscostinit->numInfeasLeaves;
+    numBoundExceedingLeaves = mipsolver.pscostinit->numBoundExceedingLeaves;
 
     conflict_avg_score =
         mipsolver.pscostinit->conflict_avg_score * mipsolver.numCol();
@@ -77,7 +81,9 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
       inferences_total(pscost.inferences_total),
       conflict_avg_score(pscost.conflict_avg_score),
       nsamplestotal(std::min(int64_t{1}, pscost.nsamplestotal)),
-      ninferencestotal(std::min(int64_t{1}, pscost.ninferencestotal)) {
+      ninferencestotal(std::min(int64_t{1}, pscost.ninferencestotal)),
+      numInfeasLeaves(pscost.numInfeasLeaves),
+      numBoundExceedingLeaves(pscost.numBoundExceedingLeaves) {
   HighsInt ncol = pseudocostup.size();
   conflict_avg_score /= ncol * pscost.conflict_weight;
   for (HighsInt i = 0; i != ncol; ++i) {
@@ -97,7 +103,9 @@ HighsPseudocostInitialization::HighsPseudocostInitialization(
       inferences_total(pscost.inferences_total),
       conflict_avg_score(pscost.conflict_avg_score),
       nsamplestotal(std::min(int64_t{1}, pscost.nsamplestotal)),
-      ninferencestotal(std::min(int64_t{1}, pscost.ninferencestotal)) {
+      ninferencestotal(std::min(int64_t{1}, pscost.ninferencestotal)),
+      numInfeasLeaves(pscost.numInfeasLeaves),
+      numBoundExceedingLeaves(pscost.numBoundExceedingLeaves) {
   pseudocostup.resize(postsolveStack.getOrigNumCol());
   pseudocostdown.resize(postsolveStack.getOrigNumCol());
   nsamplesup.resize(postsolveStack.getOrigNumCol());

@@ -107,8 +107,6 @@ class HighsNodeQueue {
 
   OpenNode popBestBoundNode();
 
-  OpenNode popRelatedNode(const HighsLpRelaxation& lprelax);
-
   int64_t numNodesUp(HighsInt col) const { return colLowerNodes[col].size(); }
 
   int64_t numNodesDown(HighsInt col) const { return colUpperNodes[col].size(); }

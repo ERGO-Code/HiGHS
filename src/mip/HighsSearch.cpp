@@ -833,7 +833,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
         }
       }
     } else if (status == HighsLpRelaxation::Status::kInfeasible) {
-      result = NodeResult::kLpInfeasible;
+      if (lp->getLpSolver().getModelStatus(true) ==
+          HighsModelStatus::kObjectiveBound)
+        result = NodeResult::kBoundExceeding;
+      else
+        result = NodeResult::kLpInfeasible;
       addInfeasibleConflict();
       if (parent != nullptr && parent->lp_objective != -kHighsInf &&
           parent->branching_point != parent->branchingdecision.boundval) {

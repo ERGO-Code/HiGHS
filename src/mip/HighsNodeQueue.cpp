@@ -332,64 +332,6 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
   return std::move(nodes[bestboundnode]);
 }
 
-HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
-    const HighsLpRelaxation& lprelax) {
-  const HighsSolution& sol = lprelax.getSolution();
-  if ((HighsInt)sol.col_dual.size() != lprelax.numCols()) return popBestNode();
-  double bestRedCost = 0.0;
-  HighsInt bestCol = -1;
-  for (HighsInt i : lprelax.getMipSolver().mipdata_->integral_cols) {
-    if (sol.col_dual[i] > std::abs(bestRedCost)) {
-      if (numNodesDown(i, sol.col_value[i] - 0.5) > 0) {
-        bestCol = i;
-        bestRedCost = sol.col_dual[i];
-      }
-    } else if (sol.col_dual[i] < -std::abs(bestRedCost)) {
-      if (numNodesUp(i, sol.col_value[i] + 0.5) > 0) {
-        bestCol = i;
-        bestRedCost = sol.col_dual[i];
-      }
-    }
-  }
-
-  if (bestCol == -1) return popBestNode();
-
-  std::set<std::pair<double, HighsInt>>::iterator start;
-  std::set<std::pair<double, HighsInt>>::iterator end;
-  if (bestRedCost > 0) {
-    start = colUpperNodes[bestCol].begin();
-    end = colUpperNodes[bestCol].lower_bound(
-        std::make_pair(sol.col_value[bestCol] - 0.5, -1));
-  } else {
-    start = colLowerNodes[bestCol].upper_bound(
-        std::make_pair(sol.col_value[bestCol] + 0.5, kHighsIInf));
-    end = colLowerNodes[bestCol].end();
-  }
-
-  HighsInt bestNode = -1;
-  double bestNodeCriterion = kHighsInf;
-  for (auto i = start; i != end; ++i) {
-    double nodeCriterion = ESTIMATE_WEIGHT * nodes[i->second].estimate +
-                           LOWERBOUND_WEIGHT * nodes[i->second].lower_bound;
-    if (nodeCriterion < bestNodeCriterion) {
-      bestNode = i->second;
-      bestNodeCriterion = nodeCriterion;
-    }
-  }
-
-  assert(bestNode != -1);
-
-  // printf(
-  //     "popping related node %" HIGHSINT_FORMAT " with lower bound %g and
-  //     estimate %g which has " "col %" HIGHSINT_FORMAT " with reduced cost %g
-  //     flipped\n", bestNode, nodes[bestNode].lower_bound,
-  //     nodes[bestNode].estimate, bestCol, bestRedCost);
-
-  unlink(bestNode);
-
-  return std::move(nodes[bestNode]);
-}
-
 double HighsNodeQueue::getBestLowerBound() {
   if (lowerroot == -1) return kHighsInf;
 
