@@ -1234,9 +1234,6 @@ bool HighsSearch::backtrack(bool recoverBasis) {
 }
 
 bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
-  if (!lp->getSolution().dual_valid) return backtrack();
-
-  const std::vector<double>& col_dual = lp->getSolution().col_dual;
   const std::vector<HighsDomainChange>& domchgstack =
       localdom.getDomainChangeStack();
 
@@ -1307,7 +1304,6 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     // we check if switching to the other branch of an anchestor yields a higher
     // additive branch score than staying in this node and if so we postpone the
     // node and put it to the queue to backtrack further.
-    double ancestorLoss = 0.0;
     for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
       if (nodestack[i].opensubtrees == 0) continue;
 
@@ -1332,7 +1328,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
       //   ancestorScore);
       nodeToQueue = ancestorScoreInactive - ancestorScoreActive >
-          nodeScore + mipsolver.mipdata_->feastol;
+                    nodeScore + mipsolver.mipdata_->feastol;
       break;
     }
     if (nodeToQueue) {
