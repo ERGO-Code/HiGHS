@@ -1305,12 +1305,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     }
     bool nodeToQueue = false;
     // we check if switching to the other branch of an anchestor yields a higher
-    // additive score than staying in this node and if so we postpone the node
-    // and put it to the queue to backtrack further.
-    // The additive score assumes that we lose the branch score of the active
-    // path and gain the branching score of the inactive path. If there is an
-    // ancestor that has a higher score gain the proceeding with the current
-    // node we backtrack.
+    // additive branch score than staying in this node and if so we postpone the
+    // node and put it to the queue to backtrack further.
     double ancestorLoss = 0.0;
     for (HighsInt i = nodestack.size() - 2; i >= 0; --i) {
       if (nodestack[i].opensubtrees == 0) continue;
@@ -1335,15 +1331,12 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       // if (!mipsolver.submip)
       //   printf("nodeScore: %g, ancestorScore: %g\n", nodeScore,
       //   ancestorScore);
-      ancestorLoss -= ancestorScoreActive;
-      if (ancestorLoss + ancestorScoreInactive >
-          nodeScore + mipsolver.mipdata_->feastol) {
-        nodeToQueue = true;
-        break;
-      }
+      nodeToQueue = ancestorScoreInactive - ancestorScoreActive >
+          nodeScore + mipsolver.mipdata_->feastol;
+      break;
     }
     if (nodeToQueue) {
-      //if (!mipsolver.submip) printf("node goes to queue\n");
+      // if (!mipsolver.submip) printf("node goes to queue\n");
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
       nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
