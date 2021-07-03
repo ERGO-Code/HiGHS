@@ -31,6 +31,9 @@ class HighsRedcostFixing {
   std::vector<std::multimap<double, int>> lurkingColLower;
 
  public:
+  std::vector<std::pair<double, HighsDomainChange>> getLurkingBounds(
+      const HighsMipSolver& mipsolver) const;
+
   void propagateRootRedcost(const HighsMipSolver& mipsolver);
 
   static void propagateRedCost(const HighsMipSolver& mipsolver,

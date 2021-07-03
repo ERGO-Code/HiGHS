@@ -14,6 +14,32 @@
 
 #include "mip/HighsMipSolverData.h"
 
+std::vector<std::pair<double, HighsDomainChange>>
+HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
+  std::vector<std::pair<double, HighsDomainChange>> domchgs;
+  if (lurkingColLower.empty()) return domchgs;
+
+  for (HighsInt col : mipsolver.mipdata_->integral_cols) {
+    for (auto it = lurkingColLower[col].begin();
+         it != lurkingColLower[col].end(); ++it) {
+      if (it->second > mipsolver.mipdata_->domain.colLower_[col])
+        domchgs.emplace_back(
+            it->first,
+            HighsDomainChange{(double)it->second, col, HighsBoundType::kLower});
+    }
+
+    for (auto it = lurkingColUpper[col].begin();
+         it != lurkingColUpper[col].end(); ++it) {
+      if (it->second < mipsolver.mipdata_->domain.colUpper_[col])
+        domchgs.emplace_back(
+            it->first,
+            HighsDomainChange{(double)it->second, col, HighsBoundType::kUpper});
+    }
+  }
+
+  return domchgs;
+}
+
 void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
   if (lurkingColLower.empty()) return;
 

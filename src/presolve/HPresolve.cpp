@@ -3832,7 +3832,7 @@ HighsInt HPresolve::strengthenInequalities() {
     }
 
     const double smallVal =
-        std::max(10 * options->mip_feasibility_tolerance,
+        std::max(100 * options->mip_feasibility_tolerance,
                  options->mip_feasibility_tolerance * double(maxviolation));
     while (true) {
       if (maxviolation - continuouscontribution <= smallVal || indices.empty())

@@ -974,16 +974,7 @@ restart:
 
     if (mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
-      if (fixingRate >= 10.0) {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "%.1f%% inactive integer columns, restarting\n",
-                     fixingRate);
-        performRestart();
-        ++numRestartsRoot;
-        if (mipsolver.modelstatus_ == HighsModelStatus::kNotset) goto restart;
-
-        return;
-      }
+      if (fixingRate >= 10.0) break;
     }
 
     ++nseparounds;
@@ -1124,6 +1115,32 @@ restart:
 
     if (!rootlpsol.empty() &&
         (moreHeuristicsAllowed() || upper_limit == kHighsInf)) {
+      double oldLimit = upper_limit;
+      heuristics.rootReducedCost();
+      heuristics.flushStatistics();
+
+      if (upper_limit != oldLimit) {
+        domain.propagate();
+        if (domain.infeasible())
+          status = HighsLpRelaxation::Status::kInfeasible;
+        else {
+          removeFixedIndices();
+          status = lp.resolveLp(&domain);
+        }
+        if (status == HighsLpRelaxation::Status::kInfeasible) {
+          lower_bound = std::min(kHighsInf, upper_bound);
+          pruned_treeweight = 1.0;
+          num_nodes += 1;
+          num_leaves += 1;
+          return;
+        }
+        HighsInt ncuts;
+        if (rootSeparationRound(sepa, ncuts, status)) return;
+
+        if (lp.unscaledDualFeasible(status))
+          lower_bound = std::max(lp.getObjective(), lower_bound);
+      }
+
       heuristics.RENS(rootlpsol);
       heuristics.flushStatistics();
 

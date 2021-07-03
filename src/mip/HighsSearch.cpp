@@ -1437,7 +1437,9 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
   do {
     if (maxbacktracks == 0) break;
 
-    dive();
+    NodeResult result = dive();
+    // if a limit was reached the result might be open
+    if (result == NodeResult::kOpen) break;
 
     --maxbacktracks;
 
