@@ -243,20 +243,6 @@ retry:
       continue;
     }
 
-    // printf("num backtracks: %" HIGHSINT_FORMAT "\n", nbacktracks);
-    // if we estimate that there is no improving solution in this subtree, we
-    // stop fixing variables but still backtrack to a node that has a good
-    // estimate and is not pruned as the stop flag is checked after the
-    // acktracking
-    if (heur.getCurrentEstimate() > mipsolver.mipdata_->upper_limit) {
-      heur.cutoffNode();
-      ++nbacktracks;
-      // printf("node cutoff due to bad estimate\n");
-      if (!heur.backtrack()) break;
-      stop = true;
-      continue;
-    }
-
     fixingrate = getFixingRate();
     // printf("after evaluating node current fixingrate is %g\n", fixingrate);
     if (fixingrate >= maxfixingrate) break;
@@ -501,19 +487,6 @@ retry:
       }
 
       if (!heur.backtrack()) break;
-      continue;
-    }
-
-    // if we estimate that there is no improving solution in this subtree, we
-    // stop fixing variables but still backtrack to a node that has a good
-    // estimate and is not pruned as the stop flag is checked after the
-    // acktracking
-    if (heur.getCurrentEstimate() > mipsolver.mipdata_->upper_limit) {
-      heur.cutoffNode();
-      ++nbacktracks;
-      // printf("backtrack2\n");
-      if (!heur.backtrack()) break;
-      stop = true;
       continue;
     }
 
