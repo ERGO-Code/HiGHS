@@ -173,6 +173,8 @@ class HighsLpRelaxation {
 
   double computeBestEstimate(const HighsPseudocost& ps) const;
 
+  double computeLPDegneracy() const;
+
   static bool scaledOptimal(Status status) {
     switch (status) {
       case Status::kOptimal:

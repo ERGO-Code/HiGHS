@@ -184,6 +184,36 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   return double(estimate);
 }
 
+double HighsLpRelaxation::computeLPDegneracy() const {
+  if (!lpsolver.getSolution().dual_valid || !lpsolver.getBasis().valid) {
+    return 0.0;
+  }
+
+  const HighsBasis& basis = lpsolver.getBasis();
+  const HighsSolution& sol = lpsolver.getSolution();
+  HighsInt numNonbasicCols = 0;
+  HighsInt numZeroNonbasicCols = 0;
+  for (HighsInt i = 0; i < numCols(); ++i) {
+    if (basis.col_status[i] != HighsBasisStatus::kBasic) {
+      ++numNonbasicCols;
+      numZeroNonbasicCols +=
+          std::abs(sol.col_dual[i]) <= mipsolver.mipdata_->feastol;
+    }
+  }
+
+  double degenerateColumnShare =
+      numZeroNonbasicCols / (double)std::max(HighsInt{1}, numNonbasicCols);
+  double varConsRatio =
+      (numCols() + numZeroNonbasicCols - numNonbasicCols) / (double)numRows();
+
+  double fac1 = degenerateColumnShare < 0.8
+                    ? 1.0
+                    : std::pow(10.0, 10 * (degenerateColumnShare - 0.7));
+  double fac2 = varConsRatio < 2.0 ? 1.0 : 10.0 * varConsRatio;
+
+  return fac1 * fac2;
+}
+
 void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   HighsInt numcuts = cutset.numCuts();
   assert(lpsolver.getLp().numRow_ ==
@@ -557,9 +587,9 @@ void HighsLpRelaxation::storeDualUBProof() {
   dualproofinds.clear();
   dualproofvals.clear();
 
-  hasdualproof = computeDualProof(
-      mipsolver.mipdata_->domain, mipsolver.mipdata_->upper_limit,
-      dualproofinds, dualproofvals, dualproofrhs);
+  hasdualproof = computeDualProof(mipsolver.mipdata_->domain,
+                                  mipsolver.mipdata_->upper_limit,
+                                  dualproofinds, dualproofvals, dualproofrhs);
   if (!hasdualproof) dualproofrhs = kHighsInf;
 }
 

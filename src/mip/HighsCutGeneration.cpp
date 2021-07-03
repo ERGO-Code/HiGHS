@@ -537,9 +537,11 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     }
   }
 
-  deltas.push_back(initialScale);
-  deltas.push_back(maxabsdelta + initialScale);
-  deltas.push_back(1.0);
+  deltas.push_back(std::min(initialScale, 1.0));
+  // deltas.push_back(1.0);
+  // printf("initialScale: %g\n", initialScale);
+  // deltas.push_back(maxabsdelta + initialScale);
+  deltas.push_back(maxabsdelta + std::min(1.0, initialScale));
 
   if (deltas.empty()) return false;
 
@@ -595,7 +597,6 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
   /* try if multiplying best delta by 2 4 or 8 gives a better efficacy */
   for (HighsInt k = 1; k <= 3; ++k) {
     double delta = bestdelta * (1 << k);
-    if (delta <= 1e-4 || delta >= 1e4) continue;
     double scale = 1.0 / delta;
     double scalrhs = double(rhs) * scale;
     double downrhs = floor(scalrhs);
@@ -1172,11 +1173,11 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       }
 
       double efficacy = violation / std::sqrt(sqrnorm);
-      if (efficacy <= 100 * feastol) {
+      if (efficacy <= minEfficacy) {
         success = false;
         rhs = tmpRhs;
       } else {
-        minMirEfficacy = efficacy + feastol;
+        minMirEfficacy += efficacy;
         if (!complementation.empty()) {
           // remove the complementation if it exists, so that the values stored
           // values are uncomplemented

@@ -889,6 +889,9 @@ HighsSearch::NodeResult HighsSearch::branch() {
       }
     }
 
+    double degeneracyFac = lp->computeLPDegneracy();
+    pseudocost.setDegeneracyFactor(degeneracyFac);
+    if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     HighsInt branchcand = selectBranchingCandidate(sbmaxiters);
 
     if (branchcand != -1) {
@@ -1053,6 +1056,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
   }
   inbranching = false;
   pseudocost.setMinReliable(minrel);
+  pseudocost.setDegeneracyFactor(1.0);
 
   assert(currnode.opensubtrees == 2 || currnode.opensubtrees == 0);
 

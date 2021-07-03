@@ -45,8 +45,6 @@ struct HighsPseudocostInitialization {
   double conflict_avg_score;
   int64_t nsamplestotal;
   int64_t ninferencestotal;
-  int64_t numInfeasLeaves;
-  int64_t numBoundExceedingLeaves;
 
   HighsPseudocostInitialization(const HighsPseudocost& pscost,
                                 HighsInt maxCount);
@@ -77,8 +75,7 @@ class HighsPseudocost {
   int64_t ninferencestotal;
   int64_t ncutoffstotal;
   HighsInt minreliable;
-  int64_t numInfeasLeaves;
-  int64_t numBoundExceedingLeaves;
+  double degeneracyFactor;
 
  public:
   HighsPseudocost() = default;
@@ -95,9 +92,6 @@ class HighsPseudocost {
     }
   }
 
-  void increaseInfeasibleLeaveCounter() { ++numInfeasLeaves; }
-  void increaseBoundExceedingLeaveCounter() { ++numBoundExceedingLeaves; }
-
   void increaseConflictWeight() {
     conflict_weight *= 1.02;
 
@@ -112,6 +106,10 @@ class HighsPseudocost {
         conflictscoredown[i] *= scale;
       }
     }
+  }
+
+  void setDegeneracyFactor(double degeneracyFactor) {
+    this->degeneracyFactor = degeneracyFactor;
   }
 
   void increaseConflictScoreUp(HighsInt col) {
@@ -280,11 +278,8 @@ class HighsPseudocost {
                            std::max(1e-6, conflictScoreAvg * conflictScoreAvg);
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
-
-    double dynamicFactor =
-        (1.0 + numInfeasLeaves) / (1.0 + numBoundExceedingLeaves);
-    return mapScore(costScore) / dynamicFactor +
-           dynamicFactor *
+    return mapScore(costScore) / degeneracyFactor +
+           degeneracyFactor *
                (1e-2 * mapScore(conflictScore) +
                 1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore)));
   }
@@ -316,12 +311,9 @@ class HighsPseudocost {
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
 
-    double dynamicFactor =
-        (1.0 + numInfeasLeaves) / (1.0 + numBoundExceedingLeaves);
-    return mapScore(costScore) / dynamicFactor +
-           dynamicFactor *
-               (1e-2 * mapScore(conflictScore) +
-                1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore)));
+    return mapScore(costScore) +
+           (1e-2 * mapScore(conflictScore) +
+            1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore)));
   }
 
   double getScoreDown(HighsInt col, double frac) const {
@@ -345,12 +337,9 @@ class HighsPseudocost {
 
     auto mapScore = [](double score) { return 1.0 - 1.0 / (1.0 + score); };
 
-    double dynamicFactor =
-        (1.0 + numInfeasLeaves) / (1.0 + numBoundExceedingLeaves);
-    return mapScore(costScore) / dynamicFactor +
-           dynamicFactor *
-               (1e-2 * mapScore(conflictScore) +
-                1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore)));
+    return mapScore(costScore) +
+           (1e-2 * mapScore(conflictScore) +
+            1e-4 * (mapScore(cutoffScore) + mapScore(inferenceScore)));
   }
 
   double getAvgInferencesUp(HighsInt col) const { return inferencesup[col]; }
