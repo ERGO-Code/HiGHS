@@ -189,7 +189,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
     ageDistribution[ages_[i]] -= 1;
-    if (double(viol) <= feastol) {
+    if (double(viol) <= 10 * feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
         uint32_t sh = support_hash(&ARindex[start], &ARvalue[start],

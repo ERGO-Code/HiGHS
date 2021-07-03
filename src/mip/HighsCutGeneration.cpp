@@ -537,8 +537,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     }
   }
 
-  deltas.push_back(std::min(initialScale, 1.0));
-  // deltas.push_back(1.0);
+  deltas.push_back(initialScale);
+  deltas.push_back(1.0);
   // printf("initialScale: %g\n", initialScale);
   // deltas.push_back(maxabsdelta + initialScale);
   deltas.push_back(maxabsdelta + std::min(1.0, initialScale));
@@ -1130,7 +1130,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     }
   }
 
-  const double minEfficacy = 10 * feastol;
+  const double minEfficacy = 100 * feastol;
 
   if (hasUnboundedInts) {
     if (!cmirCutGenerationHeuristic(minEfficacy)) return false;
