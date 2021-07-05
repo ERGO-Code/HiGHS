@@ -40,7 +40,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
   required_objective_function_value = -5.25;
   required_x0 = 0.5;
-  required_x1 = 5.0;                        
+  required_x1 = 5.0;
   required_x2 = 1.5;
 
   return_status = highs.readModel(filename);
@@ -116,7 +116,8 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
   objective_function_value = highs.getInfo().objective_function_value;
   required_objective_function_value = -5.50;
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) < double_equal_tolerance);
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", true);
@@ -137,7 +138,8 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   REQUIRE(return_status == HighsStatus::kOk);
   objective_function_value = highs.getInfo().objective_function_value;
   required_objective_function_value = -5.25;
-  REQUIRE(fabs(objective_function_value - required_objective_function_value) < double_equal_tolerance);
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", true);
