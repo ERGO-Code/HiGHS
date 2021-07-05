@@ -99,15 +99,17 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
   submipsolver.run();
   if (submipsolver.mipdata_) {
-    double adjustmentfactor = submipsolver.numNonzero() /
-                              (double)mipsolver.orig_model_->Avalue_.size();
-    size_t adjusted_lp_iterations =
+    double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
+                        mipsolver.mipdata_->continuous_cols.size();
+    double adjustmentfactor = submipsolver.numCol() / numUnfixed;
+    // (double)mipsolver.orig_model_->Avalue_.size();
+    int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
 
     if (mipsolver.submip)
       mipsolver.mipdata_->num_nodes += std::max(
-          size_t{1}, size_t(adjustmentfactor * submipsolver.node_count_));
+          int64_t{1}, int64_t(adjustmentfactor * submipsolver.node_count_));
   }
 
   if (submipsolver.modelstatus_ == HighsModelStatus::kInfeasible) {
@@ -206,8 +208,6 @@ void HighsPrimalHeuristics::rootReducedCost() {
 
   double currCutoff = kHighsInf;
   for (const std::pair<double, HighsDomainChange>& domchg : lurkingBounds) {
-    currCutoff = domchg.first;
-    if (currCutoff < mipsolver.mipdata_->lower_bound) break;
     if (localdom.isActive(domchg.second)) continue;
     localdom.changeBound(domchg.second);
 
