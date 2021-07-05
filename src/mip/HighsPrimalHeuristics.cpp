@@ -208,6 +208,12 @@ void HighsPrimalHeuristics::rootReducedCost() {
 
   double currCutoff = kHighsInf;
   for (const std::pair<double, HighsDomainChange>& domchg : lurkingBounds) {
+    currCutoff = domchg.first;
+
+    if (currCutoff <=
+        mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol)
+      break;
+
     if (localdom.isActive(domchg.second)) continue;
     localdom.changeBound(domchg.second);
 
