@@ -22,21 +22,27 @@ a_index = (0, 1, 2, 0, 1, 2)
 a_value = (2.0, 3.0, 2.0, 2.0, 4.0, 1.0)
 
 # Find the continuous solution of the LP
-return_status, model_status, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_lpCall(col_cost, col_lower, col_upper,
-                                                                                            row_lower, row_upper,
-                                                                                            a_start, a_index, a_value)
+return_status, model_status, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_lpCall(
+    col_cost, col_lower, col_upper,
+    row_lower, row_upper,
+    a_start, a_index, a_value)
 
-print (return_status, model_status, col_value, col_dual, row_value, row_dual, col_basis, row_basis)
+print ("return_status = ", return_status)
+print ("model_status = ", model_status)
+print (col_value, col_dual, row_value, row_dual, col_basis, row_basis)
 
 # Now find the integer solution of the LP
 # Add integrality for the two variables and call the MIP solver
 integrality = (1, 1)
-return_status, model_status, col_value, row_value = Highs_mipCall(col_cost, col_lower, col_upper,
-                                                  row_lower, row_upper,
-                                                  a_start, a_index, a_value,
-                                                  integrality)
+return_status, model_status, col_value, row_value = Highs_mipCall(
+    col_cost, col_lower, col_upper,
+    row_lower, row_upper,
+    a_start, a_index, a_value,
+    integrality)
 
-print (return_status, model_status, col_value, row_value)
+print ("return_status = ", return_status)
+print ("model_status = ", model_status)
+print (col_value, row_value)
 
 # Illustrate the solution of a QP
 #
@@ -56,18 +62,29 @@ a_value = (1.0, 1.0, 1.0)
 q_start = (0, 2, 3)
 q_index = (0, 2, 1, 0, 2)
 q_value = (2.0, -1.0, 0.2, -1.0, 2.0)
-return_status, model_status, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_qpCall(col_cost, col_lower, col_upper,
-                                                 row_lower, row_upper,
-                                                 a_start, a_index, a_value,
-                                                 q_start, q_index, q_value)
+return_status, model_status, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_qpCall(
+    col_cost, col_lower, col_upper,
+    row_lower, row_upper,
+    a_start, a_index, a_value,
+    q_start, q_index, q_value)
 
-print (return_status, model_status, col_value, col_dual, row_value, row_dual, col_basis, row_basis)
+print ("return_status = ", return_status)
+print ("model_status = ", model_status)
+print (col_value, col_dual, row_value, row_dual, col_basis, row_basis)
 
 # Illustrate the reading of an MPS file
 #
 return_status, n_col, n_row, n_nz = Highs_lpDimMpsRead()
 
-print("return_status, n_col, n_row, n_nz = ", return_status, n_col, n_row, n_nz)
+return_status, n_col, n_row, sense, offset, col_cost, col_lower, col_upper, row_lower, row_upper, a_start, a_index, a_value = Highs_lpMpsRead()
 
-print(Highs_lpMpsRead())
+# Find the continuous solution of the LP
+return_status, model_status, col_value, col_dual, row_value, row_dual , col_basis, row_basis = Highs_lpCall(
+    col_cost, col_lower, col_upper,
+    row_lower, row_upper,
+    a_start, a_index, a_value)
+
+print ("return_status = ", return_status)
+print ("model_status = ", model_status)
+print (col_value)
 
