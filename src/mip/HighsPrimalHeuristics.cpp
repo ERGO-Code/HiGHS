@@ -99,11 +99,11 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
   submipsolver.run();
   if (submipsolver.mipdata_) {
-    double adjustmentfactor =
-        submipsolver.numRow() / (double)mipsolver.mipdata_->lp.numRows();
+    double numUnfixedCols = mipsolver.mipdata_->integral_cols.size() +
+                            mipsolver.mipdata_->continuous_cols.size();
+    double adjustmentfactor = submipsolver.numCol() / (double)numUnfixedCols;
     size_t adjusted_lp_iterations =
-        (size_t)(adjustmentfactor *
-                 submipsolver.mipdata_->total_lp_iterations);
+        (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
 
     if (mipsolver.submip)
@@ -226,8 +226,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
       break;
     }
     double fixingRate = neighborhood.getFixingRate();
-    if (fixingRate >= 0.8) break;
-    if (fixingRate < 0.5) continue;
+    if (fixingRate >= 0.5) break;
     // double gap = (currCutoff - mipsolver.mipdata_->lower_bound) /
     //             std::max(std::abs(mipsolver.mipdata_->lower_bound), 1.0);
     // if (gap < 0.001) break;
