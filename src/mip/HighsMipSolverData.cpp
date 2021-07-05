@@ -480,7 +480,7 @@ try_again:
 }
 
 double HighsMipSolverData::percentageInactiveIntegers() const {
-  return 100.0 * (1.0 - double(integer_cols.size() +
+  return 100.0 * (1.0 - double(integer_cols.size() -
                                cliquetable.getSubstitutions().size()) /
                             numintegercols);
 }
@@ -774,67 +774,89 @@ bool HighsMipSolverData::rootSeparationRound(
   total_lp_iterations += tmpLpIters;
   sepa_lp_iterations += tmpLpIters;
 
-  if (status == HighsLpRelaxation::Status::kInfeasible) {
-    lower_bound = std::min(kHighsInf, upper_bound);
-    pruned_treeweight = 1.0;
-    num_nodes += 1;
-    num_leaves += 1;
-    return true;
-  }
+  status = evaluateRootLp();
+  if (status == HighsLpRelaxation::Status::kInfeasible) return true;
 
   const std::vector<double>& solvals = lp.getLpSolver().getSolution().col_value;
 
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
     heuristics.flushStatistics();
-
-    domain.propagate();
-    if (domain.infeasible()) {
-      pruned_treeweight = 1.0;
-      lower_bound = std::min(kHighsInf, upper_bound);
-      num_nodes = 1;
-      num_leaves = 1;
-      return true;
-    }
-  }
-
-  if (lp.unscaledDualFeasible(status)) {
-    lower_bound = std::max(lp.getObjective(), lower_bound);
-    redcostfixing.addRootRedcost(
-        mipsolver, lp.getLpSolver().getSolution().col_dual, lp.getObjective());
-    if (upper_limit != kHighsInf) {
-      redcostfixing.propagateRootRedcost(mipsolver);
-
-      if (domain.infeasible())
-        status = HighsLpRelaxation::Status::kInfeasible;
-      else if (!domain.getChangedCols().empty()) {
-        tmpLpIters = -lp.getNumLpIterations();
-        status = lp.resolveLp(&domain);
-        tmpLpIters += lp.getNumLpIterations();
-        avgrootlpiters = lp.getAvgSolveIters();
-        total_lp_iterations += tmpLpIters;
-        sepa_lp_iterations += tmpLpIters;
-      }
-
-      if (status == HighsLpRelaxation::Status::kInfeasible) {
-        pruned_treeweight = 1.0;
-        lower_bound = std::min(kHighsInf, upper_bound);
-        num_nodes = 1;
-        num_leaves = 1;
-        return true;
-      }
-    }
-  }
-
-  if (lower_bound > upper_limit) {
-    lower_bound = std::min(kHighsInf, upper_bound);
-    pruned_treeweight = 1.0;
-    num_nodes = 1;
-    num_leaves = 1;
-    return true;
+    status = evaluateRootLp();
+    if (status == HighsLpRelaxation::Status::kInfeasible) return true;
   }
 
   return false;
+}
+
+HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
+  do {
+    domain.propagate();
+    if (domain.infeasible()) {
+      lower_bound = std::min(kHighsInf, upper_bound);
+      pruned_treeweight = 1.0;
+      num_nodes += 1;
+      num_leaves += 1;
+      return HighsLpRelaxation::Status::kInfeasible;
+    }
+
+    if (!domain.getChangedCols().empty()) {
+      removeFixedIndices();
+      lp.flushDomain(domain);
+    }
+
+    bool lpWasSolved = false;
+    HighsLpRelaxation::Status status;
+    if (lp.getLpSolver().getModelStatus(true) == HighsModelStatus::kNotset) {
+      int64_t lpIters = -lp.getNumLpIterations();
+      status = lp.resolveLp(&domain);
+      lpIters += lp.getNumLpIterations();
+      total_lp_iterations += lpIters;
+      avgrootlpiters = lp.getAvgSolveIters();
+      lpWasSolved = true;
+      if (status == HighsLpRelaxation::Status::kOptimal &&
+          lp.getFractionalIntegers().empty() &&
+          addIncumbent(lp.getLpSolver().getSolution().col_value,
+                       lp.getObjective(), 'T')) {
+        mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+        lower_bound = upper_bound;
+        pruned_treeweight = 1.0;
+        num_nodes += 1;
+        num_leaves += 1;
+        return HighsLpRelaxation::Status::kInfeasible;
+      }
+    } else
+      status = lp.getStatus();
+
+    if (status == HighsLpRelaxation::Status::kInfeasible) {
+      lower_bound = std::min(kHighsInf, upper_bound);
+      pruned_treeweight = 1.0;
+      num_nodes += 1;
+      num_leaves += 1;
+      return status;
+    }
+
+    if (lp.unscaledDualFeasible(lp.getStatus())) {
+      lower_bound = std::max(lp.getObjective(), lower_bound);
+      if (lpWasSolved) {
+        redcostfixing.addRootRedcost(mipsolver,
+                                     lp.getLpSolver().getSolution().col_dual,
+                                     lp.getObjective());
+        if (upper_limit != kHighsInf)
+          redcostfixing.propagateRootRedcost(mipsolver);
+      }
+    }
+
+    if (lower_bound > upper_limit) {
+      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+      pruned_treeweight = 1.0;
+      num_nodes += 1;
+      num_leaves += 1;
+      return HighsLpRelaxation::Status::kInfeasible;
+    }
+
+    if (domain.getChangedCols().empty()) return status;
+  } while (true);
 }
 
 void HighsMipSolverData::evaluateRootNode() {
@@ -883,25 +905,25 @@ restart:
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
-  int64_t lpIters = -lp.getNumLpIterations();
-  HighsLpRelaxation::Status status = lp.resolveLp();
-  lpIters += lp.getNumLpIterations();
+  HighsLpRelaxation::Status status = evaluateRootLp();
+  if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
-
   lp.getLpSolver().setOptionValue("presolve", "off");
-  avgrootlpiters = lp.getAvgSolveIters();
-  if (numRestarts == 0) firstrootlpiters = lpIters;
-
-  total_lp_iterations += lpIters;
-
   lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
-  //  lp.getLpSolver().setOptionValue("output_flag", false);
-  //  lp.getLpSolver().setOptionValue("log_dev_level", 0);
   lp.getLpSolver().setOptionValue("parallel", "off");
 
-  firstlpsol = lp.getLpSolver().getSolution().col_value;
+  if (status == HighsLpRelaxation::Status::kInfeasible) return;
+
+  heuristics.randomizedRounding(firstlpsol);
+  heuristics.flushStatistics();
+
+  status = evaluateRootLp();
+  if (status == HighsLpRelaxation::Status::kInfeasible) return;
+
+  firstlpsol = lp.getSolution().col_value;
   firstlpsolobj = lp.getObjective();
+
   if (lp.getLpSolver().getBasis().valid && lp.numRows() == mipsolver.numRow())
     firstrootbasis = lp.getLpSolver().getBasis();
   else {
@@ -915,37 +937,6 @@ restart:
     firstrootbasis.valid = true;
   }
   rootlpsolobj = firstlpsolobj;
-
-  if (lp.unscaledDualFeasible(lp.getStatus())) {
-    lower_bound = std::max(lp.getObjective(), lower_bound);
-    redcostfixing.addRootRedcost(
-        mipsolver, lp.getLpSolver().getSolution().col_dual, lp.getObjective());
-    if (upper_limit != kHighsInf) redcostfixing.propagateRootRedcost(mipsolver);
-  }
-
-  if (!domain.infeasible()) {
-    if (!domain.getChangedCols().empty()) {
-      auto tmpLpIters = -lp.getNumLpIterations();
-      status = lp.resolveLp(&domain);
-      tmpLpIters += lp.getNumLpIterations();
-      avgrootlpiters = lp.getAvgSolveIters();
-      total_lp_iterations += tmpLpIters;
-    }
-
-    heuristics.randomizedRounding(firstlpsol);
-    heuristics.flushStatistics();
-  }
-
-  domain.propagate();
-
-  if (status == HighsLpRelaxation::Status::kInfeasible || domain.infeasible() ||
-      lower_bound > upper_limit) {
-    lower_bound = std::min(kHighsInf, upper_bound);
-    pruned_treeweight = 1.0;
-    num_nodes += 1;
-    num_leaves += 1;
-    return;
-  }
 
   // begin separation
   std::vector<double> avgdirection;
@@ -986,24 +977,8 @@ restart:
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
-      // if there are new global bound changes we reevaluate the LP and do one
-      // more separation round
-      if (!domain.getChangedCols().empty()) {
-        domain.propagate();
-        if (domain.infeasible())
-          status = HighsLpRelaxation::Status::kInfeasible;
-        else {
-          removeFixedIndices();
-          status = lp.resolveLp(&domain);
-        }
-        if (status == HighsLpRelaxation::Status::kInfeasible) {
-          lower_bound = std::min(kHighsInf, upper_bound);
-          pruned_treeweight = 1.0;
-          num_nodes += 1;
-          num_leaves += 1;
-          return;
-        }
-      }
+      status = evaluateRootLp();
+      if (status == HighsLpRelaxation::Status::kInfeasible) return;
     }
 
     HighsCDouble sqrnorm = 0.0;
@@ -1050,106 +1025,91 @@ restart:
     }
 
     rootlpsolobj = lp.getObjective();
-    if (lp.unscaledDualFeasible(status))
-      lower_bound = std::max(lp.getObjective(), lower_bound);
-
     lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
     if (ncuts == 0) break;
   }
 
   lp.setIterationLimit();
-  lpIters = -lp.getNumLpIterations();
-  status = lp.resolveLp(&domain);
-  lpIters += lp.getNumLpIterations();
-  total_lp_iterations += lpIters;
+  status = evaluateRootLp();
+  if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
-  if (status == HighsLpRelaxation::Status::kOptimal &&
-      lp.getFractionalIntegers().empty()) {
-    addIncumbent(lp.getLpSolver().getSolution().col_value, lp.getObjective(),
-                 'T');
-  } else {
-    rootlpsol = lp.getLpSolver().getSolution().col_value;
-    rootlpsolobj = lp.getObjective();
-    lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
+  rootlpsol = lp.getLpSolver().getSolution().col_value;
+  rootlpsolobj = lp.getObjective();
+  lp.setIterationLimit(std::max(10000, int(10 * avgrootlpiters)));
 
-    if (!analyticCenterComputed || upper_limit == kHighsInf) {
-      analyticCenterComputed = true;
-      heuristics.centralRounding();
-      heuristics.flushStatistics();
+  if (!analyticCenterComputed || upper_limit == kHighsInf) {
+    analyticCenterComputed = true;
+    heuristics.centralRounding();
+    heuristics.flushStatistics();
 
-      if (lower_bound > upper_limit) {
-        mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
-        pruned_treeweight = 1.0;
-        num_nodes += 1;
-        num_leaves += 1;
-        return;
-      }
+    // if there are new global bound changes we reevaluate the LP and do one
+    // more separation round
+    bool separate = !domain.getChangedCols().empty();
+    status = evaluateRootLp();
+    if (status == HighsLpRelaxation::Status::kInfeasible) return;
+    if (separate) {
+      HighsInt ncuts;
+      if (rootSeparationRound(sepa, ncuts, status)) return;
+    }
+  }
 
-      // if there are new global bound changes we reevaluate the LP and do one
-      // more separation round
-      if (!domain.getChangedCols().empty()) {
-        domain.propagate();
-        if (domain.infeasible())
-          status = HighsLpRelaxation::Status::kInfeasible;
-        else {
-          removeFixedIndices();
-          status = lp.resolveLp(&domain);
-        }
-        if (status == HighsLpRelaxation::Status::kInfeasible) {
-          lower_bound = std::min(kHighsInf, upper_bound);
-          pruned_treeweight = 1.0;
-          num_nodes += 1;
-          num_leaves += 1;
-          return;
-        }
-        HighsInt ncuts;
-        if (rootSeparationRound(sepa, ncuts, status)) return;
+  if (lastprint != nseparounds) {
+    lastprint = nseparounds;
+    printDisplayLine();
+  }
 
-        if (lp.unscaledDualFeasible(status))
-          lower_bound = std::max(lp.getObjective(), lower_bound);
+  do {
+    if (rootlpsol.empty()) break;
+    if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
+    double oldLimit = upper_limit;
+    heuristics.rootReducedCost();
+    heuristics.flushStatistics();
+
+    // if there are new global bound changes we reevaluate the LP and do one
+    // more separation round
+    bool separate = !domain.getChangedCols().empty();
+    status = evaluateRootLp();
+    if (status == HighsLpRelaxation::Status::kInfeasible) return;
+    if (separate) {
+      HighsInt ncuts;
+      if (rootSeparationRound(sepa, ncuts, status)) return;
+
+      ++nseparounds;
+      if (lastprint < 0.8 * nseparounds) {
         lastprint = nseparounds;
         printDisplayLine();
       }
     }
 
-    if (!rootlpsol.empty() &&
-        (moreHeuristicsAllowed() || upper_limit == kHighsInf)) {
-      double oldLimit = upper_limit;
-      heuristics.rootReducedCost();
-      heuristics.flushStatistics();
+    if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
 
-      if (upper_limit != oldLimit) {
-        domain.propagate();
-        if (domain.infeasible())
-          status = HighsLpRelaxation::Status::kInfeasible;
-        else {
-          removeFixedIndices();
-          status = lp.resolveLp(&domain);
-        }
-        if (status == HighsLpRelaxation::Status::kInfeasible) {
-          lower_bound = std::min(kHighsInf, upper_bound);
-          pruned_treeweight = 1.0;
-          num_nodes += 1;
-          num_leaves += 1;
-          return;
-        }
-        HighsInt ncuts;
-        if (rootSeparationRound(sepa, ncuts, status)) return;
+    heuristics.RENS(rootlpsol);
+    heuristics.flushStatistics();
 
-        if (lp.unscaledDualFeasible(status))
-          lower_bound = std::max(lp.getObjective(), lower_bound);
-      }
+    // if there are new global bound changes we reevaluate the LP and do one
+    // more separation round
+    separate = !domain.getChangedCols().empty();
+    status = evaluateRootLp();
+    if (status == HighsLpRelaxation::Status::kInfeasible) return;
+    if (separate) {
+      HighsInt ncuts;
+      if (rootSeparationRound(sepa, ncuts, status)) return;
 
-      heuristics.RENS(rootlpsol);
-      heuristics.flushStatistics();
-
-      if (upper_limit == kHighsInf && !mipsolver.submip) {
-        heuristics.feasibilityPump();
-        heuristics.flushStatistics();
+      ++nseparounds;
+      if (lastprint < 0.8 * nseparounds) {
+        lastprint = nseparounds;
+        printDisplayLine();
       }
     }
-  }
+
+    if (upper_limit != kHighsInf || mipsolver.submip) break;
+    heuristics.feasibilityPump();
+    heuristics.flushStatistics();
+
+    status = evaluateRootLp();
+    if (status == HighsLpRelaxation::Status::kInfeasible) return;
+  } while (false);
 
   if (lower_bound > upper_limit) {
     mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
@@ -1159,36 +1119,30 @@ restart:
     return;
   }
 
-  // if there are new global bound changes we reevaluate the LP and do one more
-  // separation round
-  if (!domain.getChangedCols().empty()) {
-    domain.propagate();
-    if (domain.infeasible())
-      status = HighsLpRelaxation::Status::kInfeasible;
-    else {
-      removeFixedIndices();
-      status = lp.resolveLp(&domain);
-    }
-    if (status == HighsLpRelaxation::Status::kInfeasible) {
-      lower_bound = std::min(kHighsInf, upper_bound);
-      pruned_treeweight = 1.0;
-      num_nodes += 1;
-      num_leaves += 1;
-      return;
-    }
+  // if there are new global bound changes we reevaluate the LP and do one
+  // more separation round
+  bool separate = !domain.getChangedCols().empty();
+  status = evaluateRootLp();
+  if (status == HighsLpRelaxation::Status::kInfeasible) return;
+  if (separate) {
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
-    if (lp.unscaledDualFeasible(status))
-      lower_bound = std::max(lp.getObjective(), lower_bound);
-
-    lastprint = nseparounds;
-    printDisplayLine();
+    ++nseparounds;
+    if (lastprint < 0.8 * nseparounds) {
+      lastprint = nseparounds;
+      printDisplayLine();
+    }
   }
 
   removeFixedIndices();
   if (lp.getLpSolver().getBasis().valid) lp.removeObsoleteRows();
   rootlpsolobj = lp.getObjective();
+
+  if (lastprint != nseparounds) {
+    lastprint = nseparounds;
+    printDisplayLine();
+  }
 
   if (lower_bound <= upper_limit) {
     if (mipsolver.options_mip_->presolve != kHighsOffString) {

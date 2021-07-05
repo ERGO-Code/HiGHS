@@ -132,6 +132,7 @@ struct HighsMipSolverData {
   bool trySolution(const std::vector<double>& solution, char source = ' ');
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
+  HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
   bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
 

@@ -498,8 +498,6 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 }
 
 bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
-  std::vector<double> deltas;
-
   using std::abs;
   using std::floor;
   using std::max;
@@ -507,10 +505,16 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
 
   double continuouscontribution = 0.0;
   double continuoussqrnorm = 0.0;
-  std::vector<HighsInt> integerinds;
+
+  deltas.clear();
+  deltas.reserve(rowlen + 3);
+  integerinds.clear();
   integerinds.reserve(rowlen);
+
   double maxabsdelta = 0.0;
   constexpr double maxCMirScale = 1e6;
+  constexpr double f0min = 0.005;
+  constexpr double f0max = 0.995;
 
   complementation.resize(rowlen);
 
@@ -537,7 +541,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     }
   }
 
-  deltas.push_back(std::min(initialScale, 1.0));
+  deltas.push_back(1.0);
+  deltas.push_back(initialScale);
   deltas.push_back(maxabsdelta + std::min(1.0, initialScale));
 
   if (deltas.empty()) return false;
@@ -545,7 +550,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
   std::sort(deltas.begin(), deltas.end());
   double curdelta = deltas[0];
   for (size_t i = 1; i < deltas.size(); ++i) {
-    if (deltas[i] - curdelta <= feastol)
+    if (deltas[i] - curdelta <= 10 * feastol)
       deltas[i] = 0.0;
     else
       curdelta = deltas[i];
@@ -561,7 +566,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     double downrhs = floor(scalrhs);
 
     double f0 = scalrhs - downrhs;
-    if (f0 < 0.01 || f0 > 0.99) continue;
+    if (f0 < f0min || f0 > f0max) continue;
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     if (oneoveroneminusf0 > maxCMirScale) continue;
 
@@ -598,7 +603,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     double scalrhs = double(rhs) * scale;
     double downrhs = floor(scalrhs);
     double f0 = scalrhs - downrhs;
-    if (f0 < 0.01 || f0 > 0.99) continue;
+    if (f0 < f0min || f0 > f0max) continue;
 
     double oneoveroneminusf0 = 1.0 / (1.0 - f0);
     if (oneoveroneminusf0 > maxCMirScale) continue;
@@ -645,7 +650,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     double downrhs = floor(scalrhs);
 
     double f0 = scalrhs - downrhs;
-    if (f0 < 0.01 || f0 > 0.99) {
+    if (f0 < f0min || f0 > f0max) {
       complementation[k] = 1 - complementation[k];
       solval[k] = upper[k] - solval[k];
       rhs -= upper[k] * vals[k];

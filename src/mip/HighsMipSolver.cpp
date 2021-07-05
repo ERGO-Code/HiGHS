@@ -369,7 +369,6 @@ void HighsMipSolver::cleanupSolve() {
       modelstatus_ = HighsModelStatus::kInfeasible;
   }
 
-  model_ = orig_model_;
   timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
   std::string solutionstatus = "-";

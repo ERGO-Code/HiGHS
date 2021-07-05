@@ -56,6 +56,9 @@ class HighsCutGeneration {
   HighsInt rowlen;
   double initialScale;
 
+  std::vector<HighsInt> integerinds;
+  std::vector<double> deltas;
+
   bool determineCover(bool lpSol = true);
 
   void separateLiftedKnapsackCover();

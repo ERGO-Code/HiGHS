@@ -64,11 +64,17 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
 
     int numBoundChgs = (int)propdomain.getChangedCols().size();
 
-    if (!propdomain.getChangedCols().empty()) {
+    while (!propdomain.getChangedCols().empty()) {
       lp->setObjectiveLimit(mipdata.upper_limit);
       status = lp->resolveLp(&propdomain);
-
       if (!lp->scaledOptimal(status)) return -1;
+
+      if (&propdomain == &mipdata.domain && lp->unscaledDualFeasible(status)) {
+        mipdata.redcostfixing.addRootRedcost(
+            mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
+        if (mipdata.upper_limit != kHighsInf)
+          mipdata.redcostfixing.propagateRootRedcost(mipdata.mipsolver);
+      }
     }
 
     return numBoundChgs;
@@ -119,6 +125,12 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
     ncuts += cutset.numCuts();
     lp->addCuts(cutset);
     status = lp->resolveLp(&propdomain);
+    if (&propdomain == &mipdata.domain && lp->unscaledDualFeasible(status)) {
+      mipdata.redcostfixing.addRootRedcost(
+          mipdata.mipsolver, lp->getSolution().col_dual, lp->getObjective());
+      if (mipdata.upper_limit != kHighsInf)
+        mipdata.redcostfixing.propagateRootRedcost(mipdata.mipsolver);
+    }
     lp->performAging();
   }
 
