@@ -99,9 +99,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   submipsolver.implicinit = &mipsolver.mipdata_->implications;
   submipsolver.run();
   if (submipsolver.mipdata_) {
-    double numUnfixedCols = mipsolver.mipdata_->integral_cols.size() +
-                            mipsolver.mipdata_->continuous_cols.size();
-    double adjustmentfactor = submipsolver.numCol() / (double)numUnfixedCols;
+    double adjustmentfactor = submipsolver.numNonzero() /
+                              (double)mipsolver.orig_model_->Avalue_.size();
     size_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
