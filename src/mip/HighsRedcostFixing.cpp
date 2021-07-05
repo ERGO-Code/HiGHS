@@ -15,39 +15,25 @@
 #include "mip/HighsMipSolverData.h"
 
 std::vector<std::pair<double, HighsDomainChange>>
-HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) {
+HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
   std::vector<std::pair<double, HighsDomainChange>> domchgs;
   if (lurkingColLower.empty()) return domchgs;
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     for (auto it = lurkingColLower[col].begin();
-         it != lurkingColLower[col].end();) {
-      if (it->first < mipsolver.mipdata_->lower_bound) {
-        it = lurkingColLower[col].erase(it);
-        continue;
-      }
-
+         it != lurkingColLower[col].end(); ++it) {
       if (it->second > mipsolver.mipdata_->domain.colLower_[col])
         domchgs.emplace_back(
             it->first,
             HighsDomainChange{(double)it->second, col, HighsBoundType::kLower});
-
-      ++it;
     }
 
     for (auto it = lurkingColUpper[col].begin();
-         it != lurkingColUpper[col].end();) {
-      if (it->first < mipsolver.mipdata_->lower_bound) {
-        it = lurkingColUpper[col].erase(it);
-        continue;
-      }
-
+         it != lurkingColUpper[col].end(); ++it) {
       if (it->second < mipsolver.mipdata_->domain.colUpper_[col])
         domchgs.emplace_back(
             it->first,
             HighsDomainChange{(double)it->second, col, HighsBoundType::kUpper});
-
-      ++it;
     }
   }
 
@@ -60,38 +46,24 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     for (auto it =
              lurkingColLower[col].lower_bound(mipsolver.mipdata_->upper_limit);
-         it != lurkingColLower[col].end();) {
-      if (it->first < mipsolver.mipdata_->lower_bound) {
-        it = lurkingColLower[col].erase(it);
-        continue;
-      }
-
+         it != lurkingColLower[col].end(); ++it) {
       if (it->second > mipsolver.mipdata_->domain.colLower_[col]) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kLower, col, (double)it->second,
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
       }
-
-      ++it;
     }
 
     for (auto it =
              lurkingColUpper[col].lower_bound(mipsolver.mipdata_->upper_limit);
-         it != lurkingColUpper[col].end();) {
-      if (it->first < mipsolver.mipdata_->lower_bound) {
-        it = lurkingColUpper[col].erase(it);
-        continue;
-      }
-
+         it != lurkingColUpper[col].end(); ++it) {
       if (it->second < mipsolver.mipdata_->domain.colUpper_[col]) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kUpper, col, (double)it->second,
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
       }
-
-      ++it;
     }
   }
 
