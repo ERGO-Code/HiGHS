@@ -963,7 +963,8 @@ restart:
 
     removeFixedIndices();
 
-    if (mipsolver.options_mip_->presolve != kHighsOffString) {
+    if (!mipsolver.submip &&
+        mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
       if (fixingRate >= 10.0) break;
     }
@@ -1145,9 +1146,10 @@ restart:
   }
 
   if (lower_bound <= upper_limit) {
-    if (mipsolver.options_mip_->presolve != kHighsOffString) {
+    if (!mipsolver.submip &&
+        mipsolver.options_mip_->presolve != kHighsOffString) {
       double fixingRate = percentageInactiveIntegers();
-      if (fixingRate >= 2.5 ||
+      if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                      "%.1f%% inactive integer columns, restarting\n",

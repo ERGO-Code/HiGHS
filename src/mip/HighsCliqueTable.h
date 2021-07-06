@@ -93,6 +93,7 @@ class HighsCliqueTable {
   std::vector<Substitution> substitutions;
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
+  std::vector<uint8_t> iscandidate;
   std::vector<uint16_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
   std::vector<HighsInt> stack;
@@ -111,7 +112,7 @@ class HighsCliqueTable {
 
   HighsInt findCommonCliqueId(CliqueVar v1, CliqueVar v2);
 
-  HighsInt runCliqueSubsumption(HighsDomain& globaldom,
+  HighsInt runCliqueSubsumption(const HighsDomain& globaldom,
                                 std::vector<CliqueVar>& clique);
   struct BronKerboschData {
     const std::vector<double>& sol;
@@ -246,6 +247,9 @@ class HighsCliqueTable {
   HighsInt getNumImplications(HighsInt col, bool val);
 
   void runCliqueMerging(HighsDomain& globaldomain);
+
+  void runCliqueMerging(HighsDomain& globaldomain,
+                        std::vector<CliqueVar>& clique, bool equation = false);
 
   void rebuild(HighsInt ncols, const HighsDomain& globaldomain,
                const std::vector<HighsInt>& cIndex,

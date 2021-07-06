@@ -101,7 +101,7 @@ bool HighsPrimalHeuristics::solveSubMip(
   if (submipsolver.mipdata_) {
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
-    double adjustmentfactor = submipsolver.numCol() / numUnfixed;
+    double adjustmentfactor = submipsolver.numCol() / std::max(1.0, numUnfixed);
     // (double)mipsolver.orig_model_->Avalue_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
@@ -240,8 +240,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
   double fixingRate = neighborhood.getFixingRate();
   if (fixingRate < 0.3) return;
 
-  solveSubMip(mipsolver.mipdata_->lp.getLp(),
-              mipsolver.mipdata_->lp.getLpSolver().getBasis(), fixingRate,
+  solveSubMip(*mipsolver.model_, mipsolver.mipdata_->firstrootbasis, fixingRate,
               localdom.colLower_, localdom.colUpper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
@@ -1047,6 +1046,7 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setOptionValue("run_crossover", false);
   ipm.setOptionValue("presolve", "off");
   ipm.setOptionValue("output_flag", false);
+  ipm.setOptionValue("ipm_iteration_limit", 200);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   // lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;

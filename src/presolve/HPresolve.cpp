@@ -944,8 +944,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
     HighsInt numDel = probingNumDelCol - numDelStart +
                       implications.substitutions.size() +
                       cliquetable.getSubstitutions().size();
-    int64_t splayContingent = cliquetable.numSplayCalls +
-                              std::max(HighsInt{1000000}, 100 * numNonzeros());
+    int64_t splayContingent =
+        cliquetable.numSplayCalls +
+        std::max(mipsolver->submip ? HighsInt{0} : HighsInt{1000000},
+                 100 * numNonzeros());
     HighsInt numFail = 0;
     for (const std::tuple<int64_t, HighsInt, HighsInt, HighsInt>& binvar :
          binaries) {
@@ -995,11 +997,13 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
 
         if (newNumDel > numDel) {
           probingContingent += numDel;
-          splayContingent += 1000 * (newNumDel + numDelStart);
-          splayContingent += 10000 * numNewCliques;
+          if (!mipsolver->submip) {
+            splayContingent += 1000 * (newNumDel + numDelStart);
+            splayContingent += 10000 * numNewCliques;
+          }
           numDel = newNumDel;
           numFail = 0;
-        } else if (numNewCliques == 0) {
+        } else if (mipsolver->submip || numNewCliques == 0) {
           splayContingent -= 1000 * numFail;
           ++numFail;
         } else {

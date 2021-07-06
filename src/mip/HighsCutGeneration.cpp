@@ -497,7 +497,10 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   return true;
 }
 
-bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
+static double fast_floor(double x) { return (int64_t)x - (x < (int64_t)x); }
+
+bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
+                                                    bool onlyInitialCMIRScale) {
   using std::abs;
   using std::floor;
   using std::max;
@@ -529,6 +532,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
         solval[i] = upper[i] - solval[i];
       }
 
+      if (onlyInitialCMIRScale) continue;
+
       if (solval[i] > feastol) {
         double delta = abs(vals[i]);
         if (delta <= 1e-4) continue;
@@ -541,9 +546,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     }
   }
 
-  deltas.push_back(1.0);
-  deltas.push_back(initialScale);
-  deltas.push_back(maxabsdelta + std::min(1.0, initialScale));
+  deltas.push_back(std::min(1.0, initialScale));
+  if (!onlyInitialCMIRScale)
+    deltas.push_back(maxabsdelta + std::min(1.0, initialScale));
 
   if (deltas.empty()) return false;
 
@@ -563,7 +568,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
   for (double delta : deltas) {
     double scale = 1.0 / delta;
     double scalrhs = double(rhs) * scale;
-    double downrhs = floor(scalrhs);
+    double downrhs = fast_floor(scalrhs);
 
     double f0 = scalrhs - downrhs;
     if (f0 < f0min || f0 > f0max) continue;
@@ -575,13 +580,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
-      double downaj = floor(scalaj + kHighsTiny);
+      double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj;
-      if (fj > f0)
-        aj = double(downaj + fj - f0);
-      else
-        aj = downaj;
+      double aj = downaj + std::max(0.0, fj - f0);
 
       viol += aj * solval[j];
       sqrnorm += aj * aj;
@@ -597,11 +598,11 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
   if (bestdelta == -1) return false;
 
   /* try if multiplying best delta by 2 4 or 8 gives a better efficacy */
-  for (HighsInt k = 1; k <= 3; ++k) {
+  for (HighsInt k = 1; !onlyInitialCMIRScale && k <= 3; ++k) {
     double delta = bestdelta * (1 << k);
     double scale = 1.0 / delta;
     double scalrhs = double(rhs) * scale;
-    double downrhs = floor(scalrhs);
+    double downrhs = fast_floor(scalrhs);
     double f0 = scalrhs - downrhs;
     if (f0 < f0min || f0 > f0max) continue;
 
@@ -613,13 +614,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
-      double downaj = floor(scalaj + kHighsTiny);
+      double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj;
-      if (fj > f0)
-        aj = double(downaj + fj - f0);
-      else
-        aj = downaj;
+      double aj = downaj + std::max(0.0, fj - f0);
 
       viol += aj * solval[j];
       sqrnorm += aj * aj;
@@ -635,9 +632,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
   if (bestdelta == -1) return false;
 
   // try to flip complementation of integers to increase efficacy
-
   for (HighsInt k : integerinds) {
     if (upper[k] == kHighsInf) continue;
+    if (solval[k] <= feastol) continue;
 
     complementation[k] = 1 - complementation[k];
     solval[k] = upper[k] - solval[k];
@@ -647,7 +644,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
     double delta = bestdelta;
     double scale = 1.0 / delta;
     double scalrhs = double(rhs) * scale;
-    double downrhs = floor(scalrhs);
+    double downrhs = fast_floor(scalrhs);
 
     double f0 = scalrhs - downrhs;
     if (f0 < f0min || f0 > f0max) {
@@ -673,13 +670,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
 
     for (HighsInt j : integerinds) {
       double scalaj = vals[j] * scale;
-      double downaj = floor(scalaj + kHighsTiny);
+      double downaj = fast_floor(scalaj + kHighsTiny);
       double fj = scalaj - downaj;
-      double aj;
-      if (fj > f0)
-        aj = downaj + fj - f0;
-      else
-        aj = downaj;
+      double aj = downaj + std::max(0.0, fj - f0);
 
       viol += aj * solval[j];
       sqrnorm += aj * aj;
@@ -719,11 +712,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy) {
       HighsCDouble scalaj = scale * vals[j];
       double downaj = floor(double(scalaj + kHighsTiny));
       HighsCDouble fj = scalaj - downaj;
-      HighsCDouble aj;
-      if (fj > f0)
-        aj = downaj + fj - f0;
-      else
-        aj = downaj;
+      HighsCDouble aj = downaj;
+      if (fj > f0) aj += fj - f0;
+
       vals[j] = double(aj * bestdelta);
     }
   }
@@ -1053,7 +1044,8 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
 
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      std::vector<HighsInt>& inds_,
-                                     std::vector<double>& vals_, double& rhs_) {
+                                     std::vector<double>& vals_, double& rhs_,
+                                     bool onlyInitialCMIRScale) {
 #if 0
   if (vals_.size() > 1) {
     std::vector<HighsInt> indsCheck_ = inds_;
@@ -1135,7 +1127,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   const double minEfficacy = 10 * feastol;
 
   if (hasUnboundedInts) {
-    if (!cmirCutGenerationHeuristic(minEfficacy)) return false;
+    if (!cmirCutGenerationHeuristic(minEfficacy, onlyInitialCMIRScale))
+      return false;
   } else {
     // 1. Determine a cover, cover does not need to be minimal as neither of
     // the
@@ -1197,7 +1190,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     inds = tmpInds.data();
     vals = tmpVals.data();
 
-    bool cmirSuccess = cmirCutGenerationHeuristic(minMirEfficacy);
+    bool cmirSuccess =
+        cmirCutGenerationHeuristic(minMirEfficacy, onlyInitialCMIRScale);
 
     if (cmirSuccess) {
       // take the cmir cut as it is better

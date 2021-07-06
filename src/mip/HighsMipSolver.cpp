@@ -223,9 +223,9 @@ restart:
                   double(mipdata_->pruned_treeweight - treeweightLastCheck),
                   mipdata_->epsilon);
       // printf(
-      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld, "
-      //     "currNodeEstim: %g, "
-      //     "prunedTreeWeightDelta: %g, numHugeTreeEstim: %d, numLeavesThisRun:
+      //     "nTreeRestarts: %d, numNodesThisRun: %ld, numNodesLastCheck: %ld,
+      //     " "currNodeEstim: %g, " "prunedTreeWeightDelta: %g,
+      //     numHugeTreeEstim: %d, numLeavesThisRun:
       //     "
       //     "%ld\n",
       //     nTreeRestarts, mipdata_->num_nodes -
@@ -234,6 +234,16 @@ restart:
       //     double(mipdata_->pruned_treeweight - treeweightLastCheck),
       //     numHugeTreeEstim,
       //     mipdata_->num_leaves - mipdata_->num_leaves_before_run);
+
+      bool doRestart = false;
+
+      if (mipdata_->percentageInactiveIntegers() >= 10.0 &&
+          mipdata_->num_nodes - mipdata_->num_nodes_before_run <= 1000) {
+        doRestart = currNodeEstim >=
+                    (100.0 / mipdata_->percentageInactiveIntegers()) *
+                        (mipdata_->num_nodes - mipdata_->num_nodes_before_run);
+      }
+
       if (currNodeEstim >=
           1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
         ++numHugeTreeEstim;
@@ -250,10 +260,15 @@ restart:
           (mipdata_->num_leaves - mipdata_->num_leaves_before_run) * 1e-3;
       int64_t minHugeTreeEstim =
           (10 + minHugeTreeOffset) * (1 << nTreeRestarts);
-      if (numHugeTreeEstim >= ((10 + int64_t((mipdata_->num_leaves -
+
+      doRestart =
+          doRestart ||
+          numHugeTreeEstim >= ((10 + int64_t((mipdata_->num_leaves -
                                               mipdata_->num_leaves_before_run) *
                                              1e-3))
-                               << nTreeRestarts)) {
+                               << nTreeRestarts);
+
+      if (doRestart) {
         mipdata_->performRestart();
         goto restart;
       }

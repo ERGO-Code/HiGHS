@@ -425,8 +425,9 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   if (extractCliques && this == &mipsolver.mipdata_->cutpool) {
     // if this is the global cutpool extract cliques from the cut
-    mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,
-                                                          Rvalue, Rlen, rhs);
+    if (Rlen <= 100)
+      mipsolver.mipdata_->cliquetable.extractCliquesFromCut(mipsolver, Rindex,
+                                                            Rvalue, Rlen, rhs);
   }
 
   return rowindex;
