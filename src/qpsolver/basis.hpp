@@ -68,8 +68,8 @@ class Basis {
 
   std::map<int, BasisStatus> basisstatus;
 
-  // index i: -1 if constraHighsInt not in basis, [0, num_var] if
-  // constraHighsInt in basis (active or not)
+  // index i: -1 if constraint not in basis, [0, num_var] if
+  // constraint in basis (active or not)
   std::vector<HighsInt> constraintindexinbasisfactor;
 
   void build();
@@ -105,7 +105,7 @@ class Basis {
 
   void report();
 
-  // move that constraHighsInt into V section basis (will correspond to
+  // move that constraint into V section basis (will correspond to
   // Nullspace from now on)
   void deactivate(HighsInt conid);
 

@@ -58,8 +58,6 @@ HighsInt Highs_lpCall(const HighsInt numcol, const HighsInt numrow,
       if (has_basis) rowbasisstatus[i] = (HighsInt)basis.row_status[i];
     }
   }
-
-  printf("Model status in C API is %" HIGHSINT_FORMAT "\n", *modelstatus);
   return (HighsInt)status;
 }
 
@@ -156,9 +154,6 @@ HighsInt Highs_lpDimMpsRead(
   *numcol = lp.numCol_;
   *numrow = lp.numRow_;
   *numnz = lp.Astart_[lp.numCol_];
-  printf("C: n_col, n_row, n_nz = %" HIGHSINT_FORMAT " %" HIGHSINT_FORMAT
-         " %" HIGHSINT_FORMAT "\n",
-         *numcol, *numrow, *numnz);
   return (HighsInt)status;
 }
 

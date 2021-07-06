@@ -91,7 +91,7 @@ void Basis::report() {
   printf("\n");
 }
 
-// move that constraHighsInt into V section basis (will correspond to Nullspace
+// move that constraint into V section basis (will correspond to Nullspace
 // from now on)
 void Basis::deactivate(HighsInt conid) {
   // printf("deact %" HIGHSINT_FORMAT "\n", conid);
@@ -108,7 +108,7 @@ void Basis::activate(Runtime& rt, HighsInt conid, BasisStatus atlower,
     basisstatus[conid] = atlower;
     activeconstraintidx.push_back(conid);
   } else {
-    printf("Degeneracy? constraHighsInt %" HIGHSINT_FORMAT
+    printf("Degeneracy? constraint %" HIGHSINT_FORMAT
            " already in basis\n",
            conid);
     exit(1);

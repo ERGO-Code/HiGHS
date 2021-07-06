@@ -24,9 +24,12 @@ def Highs_lpCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start, 
    sense = 1
    offset = 0
    
+   # In case a_start has the fictitious start of column n_col
+   a_start_length = len(a_start)
+
    dbl_array_type_col = ctypes.c_double * n_col
    dbl_array_type_row = ctypes.c_double * n_row
-   int_array_type_a_start = ctypes.c_int * n_col
+   int_array_type_a_start = ctypes.c_int * a_start_length
    int_array_type_a_index = ctypes.c_int * n_nz
    dbl_array_type_a_value = ctypes.c_double * n_nz
 
@@ -42,7 +45,7 @@ def Highs_lpCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start, 
    col_basis = [0] * n_col
    row_basis = [0] * n_row
 
-   model_status = 0
+   model_status = ctypes.c_int(0)
 
    col_value = dbl_array_type_col(*col_value)
    col_dual = dbl_array_type_col(*col_dual)
@@ -59,9 +62,8 @@ def Highs_lpCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start, 
       int_array_type_a_start(*a_start), int_array_type_a_index(*a_index), dbl_array_type_a_value(*a_value),
       col_value, col_dual, 
       row_value, row_dual, 
-      col_basis, row_basis, ctypes.byref(ctypes.c_int(model_status)))
-   print("model_status = ", model_status)
-   return return_status, model_status, list(col_value), list(col_dual), list(row_value), list(row_dual), list(col_basis), list(row_basis)
+      col_basis, row_basis, ctypes.byref(model_status))
+   return return_status, model_status.value, list(col_value), list(col_dual), list(row_value), list(row_dual), list(col_basis), list(row_basis)
 
 # =============
 # Highs_mipCall
@@ -82,10 +84,13 @@ def Highs_mipCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start,
    a_format = 1
    sense = 1
    offset = 0
-   
+
+   # In case a_start has the fictitious start of column n_col
+   a_start_length = len(a_start)
+
    dbl_array_type_col = ctypes.c_double * n_col
    dbl_array_type_row = ctypes.c_double * n_row
-   int_array_type_a_start = ctypes.c_int * n_col
+   int_array_type_a_start = ctypes.c_int * a_start_length
    int_array_type_a_index = ctypes.c_int * n_nz
    dbl_array_type_a_value = ctypes.c_double * n_nz
 
@@ -101,7 +106,7 @@ def Highs_mipCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start,
    col_basis = [0] * n_col
    row_basis = [0] * n_row
 
-   model_status = 0
+   model_status = ctypes.c_int(0)
 
    col_value = dbl_array_type_col(*col_value)
    row_value = dbl_array_type_row(*row_value)
@@ -113,8 +118,8 @@ def Highs_mipCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start,
       dbl_array_type_row(*row_lower), dbl_array_type_row(*row_upper), 
       int_array_type_a_start(*a_start), int_array_type_a_index(*a_index), dbl_array_type_a_value(*a_value),
       int_array_type_col(*integrality), 
-      col_value, row_value, ctypes.byref(ctypes.c_int(model_status)))
-   return return_status, model_status, list(col_value), list(row_value)
+      col_value, row_value, ctypes.byref(model_status))
+   return return_status, model_status.value, list(col_value), list(row_value)
 
 # ============
 # Highs_qpCall
@@ -140,13 +145,17 @@ def Highs_qpCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start, 
    sense = 1
    offset = 0
    
+   # In case a_start or q_start has the fictitious start of column n_col
+   a_start_length = len(a_start)
+   q_start_length = len(q_start)
+
    dbl_array_type_col = ctypes.c_double * n_col
    dbl_array_type_row = ctypes.c_double * n_row
-   int_array_type_a_start = ctypes.c_int * n_col
+   int_array_type_a_start = ctypes.c_int * a_start_length
    int_array_type_a_index = ctypes.c_int * n_nz
    dbl_array_type_a_value = ctypes.c_double * n_nz
 
-   int_array_type_q_start = ctypes.c_int * n_col
+   int_array_type_q_start = ctypes.c_int * q_start_length
    int_array_type_q_index = ctypes.c_int * q_n_nz
    dbl_array_type_q_value = ctypes.c_double * q_n_nz
 
@@ -162,7 +171,7 @@ def Highs_qpCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start, 
    col_basis = [0] * n_col
    row_basis = [0] * n_row
 
-   model_status = 0
+   model_status = ctypes.c_int(0)
 
    col_value = dbl_array_type_col(*col_value)
    col_dual = dbl_array_type_col(*col_dual)
@@ -181,8 +190,8 @@ def Highs_qpCall(col_cost, col_lower, col_upper, row_lower, row_upper, a_start, 
       int_array_type_q_start(*q_start), int_array_type_q_index(*q_index), dbl_array_type_q_value(*q_value),
       col_value, col_dual, 
       row_value, row_dual, 
-      col_basis, row_basis, ctypes.byref(ctypes.c_int(model_status)))
-   return return_status, model_status, list(col_value), list(col_dual), list(row_value), list(row_dual), list(col_basis), list(row_basis)
+      col_basis, row_basis, ctypes.byref(model_status))
+   return return_status, model_status.value, list(col_value), list(col_dual), list(row_value), list(row_dual), list(col_basis), list(row_basis)
 
 # ==========================================
 # Highs_lpDimMpsRead and Highs_lpDataMpsRead
@@ -208,7 +217,6 @@ def Highs_lpDimMpsRead():
 
    return_status = highslib.Highs_lpDimMpsRead(ctypes.byref(n_col),
                                                ctypes.byref(n_row),
-                                           
                                                ctypes.byref(n_nz))
    return return_status, n_col.value, n_row.value, n_nz.value
 

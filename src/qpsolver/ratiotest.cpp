@@ -30,7 +30,7 @@ RatiotestResult ratiotest_textbook(const Vector& x, const Vector& p,
     }
   }
 
-  // check ratio towards constraHighsInt bounds
+  // check ratio towards constraint bounds
   for (HighsInt j = 0; j < rowmove.num_nz; j++) {
     HighsInt i = rowmove.index[j];
     double alpha_i = step(rowact.value[i], rowmove.value[i], instance.con_lo[i],
