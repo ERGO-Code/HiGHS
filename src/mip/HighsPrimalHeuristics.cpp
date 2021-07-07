@@ -208,13 +208,8 @@ void HighsPrimalHeuristics::rootReducedCost() {
 
   double currCutoff = kHighsInf;
   double lower_bound;
-  if (mipsolver.mipdata_->objintscale == 0)
-    lower_bound = mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
-  else
-    lower_bound = std::ceil((mipsolver.mipdata_->objintscale *
-                             mipsolver.mipdata_->lower_bound) +
-                            mipsolver.mipdata_->feastol) /
-                  mipsolver.mipdata_->objintscale;
+
+  lower_bound = mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
 
   for (const std::pair<double, HighsDomainChange>& domchg : lurkingBounds) {
     currCutoff = domchg.first;
