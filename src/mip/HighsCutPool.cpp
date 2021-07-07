@@ -384,7 +384,7 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
                               bool integral, bool propagate,
-                              bool extractCliques) {
+                              bool extractCliques, bool isConflict) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   sortBuffer.resize(Rlen);
@@ -422,14 +422,27 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
     double newAvgPropNzs = newPropNzs / (double)(numPropRows + 1);
 
-    constexpr double alpha = 1.5;
-
-    if (newAvgPropNzs >
-        std::max(std::min(alpha * avgModelNzs, maxDensityLim), minDensityLim)) {
-      propagate = false;
+    constexpr double alpha = 2.0;
+    if (isConflict) {
+      // for conflicts we allow an increased average propagation density
+      if (newAvgPropNzs >
+          std::min(std::max(alpha * avgModelNzs, minDensityLimConflict),
+                   maxDensityLim)) {
+        propagate = false;
+      } else {
+        ++numPropRows;
+        numPropNzs = newPropNzs;
+      }
     } else {
-      ++numPropRows;
-      numPropNzs = newPropNzs;
+      // for cuts we do not want to accept any dense cuts and don't use the
+      // average but its actual length
+      if (Rlen >= std::min(std::max(alpha * avgModelNzs, minDensityLim),
+                           maxDensityLim)) {
+        propagate = false;
+      } else {
+        ++numPropRows;
+        numPropNzs = newPropNzs;
+      }
     }
   }
 

@@ -1416,9 +1416,9 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
       proofinds.data(), proofvals.data(), rowlen, proofrhs);
 
-  HighsInt cutindex =
-      cutpool.addCut(lpRelaxation.getMipSolver(), proofinds.data(),
-                     proofvals.data(), rowlen, proofrhs, cutintegral);
+  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(),
+                                     proofinds.data(), proofvals.data(), rowlen,
+                                     proofrhs, cutintegral, true, true, true);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool

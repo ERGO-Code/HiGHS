@@ -388,7 +388,7 @@ void HighsImplications::separateImpliedBounds(
     if (infeas) {
       vals[0] = 1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, false);
+      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, true, false);
       continue;
     }
 
@@ -425,7 +425,7 @@ void HighsImplications::separateImpliedBounds(
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
                            HighsVarType::kContinuous,
-                       false);
+                       false, false);
       }
     }
 
@@ -435,7 +435,7 @@ void HighsImplications::separateImpliedBounds(
     if (infeas) {
       vals[0] = -1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, false);
+      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, true, false);
       continue;
     }
 
@@ -471,7 +471,7 @@ void HighsImplications::separateImpliedBounds(
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
                            HighsVarType::kContinuous,
-                       false);
+                       false, false);
       }
     }
   }

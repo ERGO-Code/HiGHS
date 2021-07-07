@@ -66,6 +66,7 @@ class HighsCutPool {
 
   double bestObservedScore;
   double minScoreFactor;
+  double minDensityLimConflict;
   double minDensityLim;
   double maxDensityLim;
 
@@ -91,6 +92,7 @@ class HighsCutPool {
     ageDistribution.resize(agelim_ + 1);
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
+    minDensityLimConflict = 0.3 * ncols;
     minDensityLim = 0.1 * ncols;
     maxDensityLim = 0.8 * ncols;
   }
@@ -146,7 +148,7 @@ class HighsCutPool {
   HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                   double* Rvalue, HighsInt Rlen, double rhs,
                   bool integral = false, bool propagate = true,
-                  bool extractCliques = true);
+                  bool extractCliques = true, bool isConflict = false);
 
   HighsInt getRowLength(HighsInt row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);
