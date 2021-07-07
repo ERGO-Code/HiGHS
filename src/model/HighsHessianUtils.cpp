@@ -22,7 +22,7 @@
 
 #include "lp_data/HighsModelUtils.h"
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options, const ObjSense sense) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Assess the Hessian dimensions and vector sizes, returning on error
@@ -55,11 +55,21 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
       interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
 
-  // Form Q = (G+G^T)/2
-  call_status = normaliseHessian(options, hessian);
-  return_status =
+  if (hessian.format_ == HessianFormat::kSquare) {
+    // Form Q = (G+G^T)/2
+    call_status = normaliseHessian(options, hessian);
+    return_status =
       interpretCallStatus(call_status, return_status, "normaliseHessian");
-  if (return_status == HighsStatus::kError) return return_status;
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  if (kHessianFormatInternal == HessianFormat::kTriangular) {
+    // Extract the triangular part of Q: lower triangle column-wise
+    // or, equivalently, upper triangle row-wise
+    call_status = extractTriangularHessian(options, hessian);
+    return_status =
+      interpretCallStatus(call_status, return_status, "extractTriangularHessian");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
 
   // Assess Q
   call_status =
@@ -71,10 +81,11 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
 
   HighsInt hessian_num_nz = hessian.q_start_[hessian.dim_];
-  // If the Hessian has nonzeros, check its diagonal. It's OK to be
-  // identically zero, since it will be ignored.
+  // If the Hessian has nonzeros, check its diagonal entries in the
+  // context of the objective sense. It's OK to be identically zero,
+  // since it will be ignored.
   if (hessian_num_nz)
-    if (!positiveHessianDiagonal(options, hessian))
+    if (!okHessianDiagonal(options, hessian, sense))
       return_status = HighsStatus::kError;
 
   // If entries have been removed from the matrix, resize the index
@@ -92,19 +103,21 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   return return_status;
 }
 
-bool positiveHessianDiagonal(const HighsOptions& options,
-                             HighsHessian& hessian) {
+bool okHessianDiagonal(const HighsOptions& options,
+		       HighsHessian& hessian,
+		       const ObjSense sense) {
   const double kSmallHessianDiagonalValue = options.small_matrix_value;
   double min_illegal_diagonal_value = kHighsInf;
   double max_illegal_diagonal_value = -kHighsInf;
   const HighsInt dim = hessian.dim_;
+  const HighsInt sense_sign = (HighsInt)sense;
   HighsInt num_small_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     double diagonal_value = 0;
     for (HighsInt iEl = hessian.q_start_[iCol];
          iEl < hessian.q_start_[iCol + 1]; iEl++) {
       if (hessian.q_index_[iEl] == iCol) {
-        diagonal_value = hessian.q_value_[iEl];
+        diagonal_value = sense_sign * hessian.q_value_[iEl];
         continue;
       }
     }
@@ -117,13 +130,54 @@ bool positiveHessianDiagonal(const HighsOptions& options,
     }
   }
 
-  if (num_small_diagonal_value)
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Hessian has %" HIGHSINT_FORMAT
-                 " diagonal entries in [%g, %g] less than %g\n",
-                 num_small_diagonal_value, min_illegal_diagonal_value,
-                 max_illegal_diagonal_value, kSmallHessianDiagonalValue);
+  if (num_small_diagonal_value) {
+    if (sense == ObjSense::kMinimize) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Hessian has %" HIGHSINT_FORMAT
+		   " diagonal entries in [%g, %g] less than %g\n",
+		   num_small_diagonal_value, min_illegal_diagonal_value,
+		   max_illegal_diagonal_value, kSmallHessianDiagonalValue);
+    } else {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Hessian has %" HIGHSINT_FORMAT
+		   " diagonal entries in [%g, %g] greater than %g\n",
+		   num_small_diagonal_value, -max_illegal_diagonal_value,
+		   -min_illegal_diagonal_value, -kSmallHessianDiagonalValue);
+    }
+  }
   return num_small_diagonal_value == 0;
+}
+
+HighsStatus extractTriangularHessian(const HighsOptions& options,
+                             HighsHessian& hessian) {
+  // Viewing the Hessian column-wise, remove any entries in the strict
+  // upper triangle
+  HighsStatus return_status = HighsStatus::kOk;
+  const HighsInt dim = hessian.dim_;
+  HighsInt nnz = 0;
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    double diagonal_value = 0;
+    const HighsInt nnz0 = nnz;
+    for (HighsInt iEl = hessian.q_start_[iCol];
+         iEl < hessian.q_start_[iCol + 1]; iEl++) {
+      HighsInt iRow = hessian.q_index_[iEl];
+      if (iRow < iCol) continue;
+      hessian.q_index_[nnz] = iRow;
+      hessian.q_value_[nnz] = hessian.q_value_[iEl];
+      nnz++;
+    }
+    hessian.q_start_[iCol] = nnz0;
+  }
+  const HighsInt num_ignored_nz = hessian.q_start_[dim] - nnz;
+  assert(num_ignored_nz >= 0);
+  if (num_ignored_nz) {
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+		   "Ignored %" HIGHSINT_FORMAT
+		   " entries of Hessian in opposite triangle\n", num_ignored_nz);
+    hessian.q_start_[dim] = nnz;
+    return_status = HighsStatus::kWarning;
+  }
+  return return_status;
 }
 
 HighsStatus normaliseHessian(const HighsOptions& options,

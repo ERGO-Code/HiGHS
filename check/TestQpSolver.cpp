@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -76,6 +76,55 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
   REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
   REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
+}
+
+TEST_CASE("test-qod", "[qpsolver]") {
+  // Oscar's edge case
+  //
+  // min x^2 + x = x(x + 1)
+  
+  HighsStatus return_status;
+  //  HighsModelStatus model_status;
+  double objective_function_value;
+  double required_objective_function_value;
+  double required_x0;
+
+  HighsModel model;
+  HighsLp& lp = model.lp_;
+  HighsHessian& hessian = model.hessian_;
+  const double inf = kHighsInf;
+
+  lp.model_name_ = "qod";
+  lp.numCol_ = 1;
+  lp.numRow_ = 0;
+  lp.colCost_ = {1.0};
+  lp.colLower_ = {-inf};
+  lp.colUpper_ = {inf};
+  lp.sense_ = ObjSense::kMinimize;
+  lp.offset_ = 0;
+  hessian.dim_ = lp.numCol_;
+  hessian.q_start_ = {0, 1};
+  hessian.q_index_ = {0};
+  hessian.q_value_ = {2.0};
+
+  Highs highs;
+  if (!dev_run) highs.setOptionValue("output_flag", false);
+  return_status = highs.passModel(model);
+  REQUIRE(return_status == HighsStatus::kOk);
+  if (dev_run) highs.writeModel("");
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::kOk);
+  objective_function_value = highs.getInfo().objective_function_value;
+  required_objective_function_value = -0.25;
+  required_x0 = -0.5;
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
+  const HighsSolution& sol = highs.getSolution();
+  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+
+  if (dev_run) printf("Objective = %g\n", objective_function_value);
+  if (dev_run) highs.writeSolution("", true);
+
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {

@@ -87,7 +87,9 @@ enum class ObjSense { kMinimize = 1, kMaximize = -1 };
 
 enum class MatrixFormat { kNone = 0, kColwise, kRowwise };
 
-enum class HessianFormat { kNone = 0, kColwise };
+enum class HessianFormat { kNone = 0, kTriangular, kSquare };
+
+const HessianFormat kHessianFormatInternal = HessianFormat::kSquare;
 
 enum SolutionStatus {
   kSolutionStatusNone = 0,
