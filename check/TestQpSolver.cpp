@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -82,7 +82,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   // Oscar's edge case
   //
   // min x^2 + x = x(x + 1)
-  
+
   HighsStatus return_status;
   //  HighsModelStatus model_status;
   double objective_function_value;
@@ -124,7 +124,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", true);
-
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -152,9 +151,16 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   hessian.dim_ = lp.numCol_;
-  hessian.q_start_ = {0, 2, 3, 5};
-  hessian.q_index_ = {0, 2, 1, 0, 2};
-  hessian.q_value_ = {2.0, -1.0, 0.2, -1.0, 2.0};
+
+  //  hessian.format_ = HessianFormat::kSquare;
+  //  hessian.q_start_ = {0, 2, 3, 5};
+  //  hessian.q_index_ = {0, 2, 1, 0, 2};
+  //  hessian.q_value_ = {2.0, -1.0, 0.2, -1.0, 2.0};
+
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.q_start_ = {0, 2, 3, 4};
+  hessian.q_index_ = {0, 2, 1, 2};
+  hessian.q_value_ = {2.0, -1.0, 0.2, 2.0};
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);

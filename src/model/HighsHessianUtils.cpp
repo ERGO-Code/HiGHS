@@ -22,7 +22,8 @@
 
 #include "lp_data/HighsModelUtils.h"
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options, const ObjSense sense) {
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
+                          const ObjSense sense) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Assess the Hessian dimensions and vector sizes, returning on error
@@ -59,15 +60,15 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options, co
     // Form Q = (G+G^T)/2
     call_status = normaliseHessian(options, hessian);
     return_status =
-      interpretCallStatus(call_status, return_status, "normaliseHessian");
+        interpretCallStatus(call_status, return_status, "normaliseHessian");
     if (return_status == HighsStatus::kError) return return_status;
   }
   if (kHessianFormatInternal == HessianFormat::kTriangular) {
     // Extract the triangular part of Q: lower triangle column-wise
     // or, equivalently, upper triangle row-wise
     call_status = extractTriangularHessian(options, hessian);
-    return_status =
-      interpretCallStatus(call_status, return_status, "extractTriangularHessian");
+    return_status = interpretCallStatus(call_status, return_status,
+                                        "extractTriangularHessian");
     if (return_status == HighsStatus::kError) return return_status;
   }
 
@@ -103,9 +104,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options, co
   return return_status;
 }
 
-bool okHessianDiagonal(const HighsOptions& options,
-		       HighsHessian& hessian,
-		       const ObjSense sense) {
+bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
+                       const ObjSense sense) {
   const double kSmallHessianDiagonalValue = options.small_matrix_value;
   double min_illegal_diagonal_value = kHighsInf;
   double max_illegal_diagonal_value = -kHighsInf;
@@ -133,23 +133,23 @@ bool okHessianDiagonal(const HighsOptions& options,
   if (num_small_diagonal_value) {
     if (sense == ObjSense::kMinimize) {
       highsLogUser(options.log_options, HighsLogType::kError,
-		   "Hessian has %" HIGHSINT_FORMAT
-		   " diagonal entries in [%g, %g] less than %g\n",
-		   num_small_diagonal_value, min_illegal_diagonal_value,
-		   max_illegal_diagonal_value, kSmallHessianDiagonalValue);
+                   "Hessian has %" HIGHSINT_FORMAT
+                   " diagonal entries in [%g, %g] less than %g\n",
+                   num_small_diagonal_value, min_illegal_diagonal_value,
+                   max_illegal_diagonal_value, kSmallHessianDiagonalValue);
     } else {
       highsLogUser(options.log_options, HighsLogType::kError,
-		   "Hessian has %" HIGHSINT_FORMAT
-		   " diagonal entries in [%g, %g] greater than %g\n",
-		   num_small_diagonal_value, -max_illegal_diagonal_value,
-		   -min_illegal_diagonal_value, -kSmallHessianDiagonalValue);
+                   "Hessian has %" HIGHSINT_FORMAT
+                   " diagonal entries in [%g, %g] greater than %g\n",
+                   num_small_diagonal_value, -max_illegal_diagonal_value,
+                   -min_illegal_diagonal_value, -kSmallHessianDiagonalValue);
     }
   }
   return num_small_diagonal_value == 0;
 }
 
 HighsStatus extractTriangularHessian(const HighsOptions& options,
-                             HighsHessian& hessian) {
+                                     HighsHessian& hessian) {
   // Viewing the Hessian column-wise, remove any entries in the strict
   // upper triangle
   HighsStatus return_status = HighsStatus::kOk;
@@ -170,14 +170,73 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
   }
   const HighsInt num_ignored_nz = hessian.q_start_[dim] - nnz;
   assert(num_ignored_nz >= 0);
-  if (num_ignored_nz) {
-      highsLogUser(options.log_options, HighsLogType::kWarning,
-		   "Ignored %" HIGHSINT_FORMAT
-		   " entries of Hessian in opposite triangle\n", num_ignored_nz);
+  if (hessian.format_ == HessianFormat::kTriangular && num_ignored_nz) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Ignored %" HIGHSINT_FORMAT
+                 " entries of Hessian in opposite triangle\n",
+                 num_ignored_nz);
     hessian.q_start_[dim] = nnz;
     return_status = HighsStatus::kWarning;
   }
+  hessian.format_ = HessianFormat::kTriangular;
   return return_status;
+}
+
+void triangularToSquareHessian(const HighsHessian& hessian,
+                               vector<HighsInt>& start, vector<HighsInt>& index,
+                               vector<double>& value) {
+  const HighsInt dim = hessian.dim_;
+  if (dim <= 0) {
+    start.assign(1, 0);
+    return;
+  }
+  assert(hessian.format_ == HessianFormat::kTriangular);
+  const HighsInt nnz = hessian.q_start_[dim];
+  const HighsInt square_nnz = nnz + (nnz - dim);
+  start.resize(dim + 1);
+  index.resize(square_nnz);
+  value.resize(square_nnz);
+  vector<HighsInt> length;
+  length.assign(dim, 0);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt iRow = hessian.q_index_[hessian.q_start_[iCol]];
+    assert(iRow == iCol);
+    length[iCol]++;
+    for (HighsInt iEl = hessian.q_start_[iCol] + 1;
+         iEl < hessian.q_start_[iCol + 1]; iEl++) {
+      HighsInt iRow = hessian.q_index_[iEl];
+      assert(iRow > iCol);
+      length[iRow]++;
+      length[iCol]++;
+    }
+  }
+  start[0] = 0;
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    start[iCol + 1] = start[iCol] + length[iCol];
+  assert(square_nnz == start[dim]);
+  for (HighsInt iCol = 0; iCol < dim; iCol++) {
+    HighsInt iEl = hessian.q_start_[iCol];
+    HighsInt iRow = hessian.q_index_[iEl];
+    HighsInt toEl = start[iCol];
+    index[toEl] = iRow;
+    value[toEl] = hessian.q_value_[iEl];
+    start[iCol]++;
+    for (HighsInt iEl = hessian.q_start_[iCol] + 1;
+         iEl < hessian.q_start_[iCol + 1]; iEl++) {
+      HighsInt iRow = hessian.q_index_[iEl];
+      HighsInt toEl = start[iRow];
+      index[toEl] = iCol;
+      value[toEl] = hessian.q_value_[iEl];
+      start[iRow]++;
+      toEl = start[iCol];
+      index[toEl] = iRow;
+      value[toEl] = hessian.q_value_[iEl];
+      start[iCol]++;
+    }
+  }
+  start[0] = 0;
+  for (HighsInt iCol = 0; iCol < dim; iCol++)
+    start[iCol + 1] = start[iCol] + length[iCol];
 }
 
 HighsStatus normaliseHessian(const HighsOptions& options,

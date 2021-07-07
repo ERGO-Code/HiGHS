@@ -27,16 +27,19 @@
 
 using std::vector;
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options, const ObjSense sense = ObjSense::kMinimize);
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
+                          const ObjSense sense = ObjSense::kMinimize);
 HighsStatus assessHessianDimensions(const HighsOptions& options,
                                     HighsHessian& hessian);
-bool okHessianDiagonal(const HighsOptions& options,
-		       HighsHessian& hessian,
-		       const ObjSense sense = ObjSense::kMinimize);
+bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
+                       const ObjSense sense = ObjSense::kMinimize);
 HighsStatus normaliseHessian(const HighsOptions& options,
                              HighsHessian& hessian);
 HighsStatus extractTriangularHessian(const HighsOptions& options,
-                             HighsHessian& hessian);
+                                     HighsHessian& hessian);
+void triangularToSquareHessian(const HighsHessian& hessian,
+                               vector<HighsInt>& start, vector<HighsInt>& index,
+                               vector<double>& value);
 void reportHessian(const HighsLogOptions& log_options, const HighsInt dim,
                    const HighsInt num_nz, const HighsInt* start,
                    const HighsInt* index, const double* value);

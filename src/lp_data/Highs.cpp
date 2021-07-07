@@ -249,7 +249,7 @@ HighsStatus Highs::passModel(HighsModel model) {
     // number of nonzeros to force the check of a_format
     if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
-  // Check that the value of q_format is valid
+  // Check that the value of q_format is valid - once we have multiple formats
   //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   return_status =
@@ -366,6 +366,7 @@ HighsStatus Highs::passModel(
     assert(q_value != NULL);
     HighsHessian& hessian = model.hessian_;
     hessian.dim_ = num_col;
+    hessian.format_ = HessianFormat::kTriangular;
     hessian.q_start_.assign(q_start, q_start + num_col);
     hessian.q_start_.resize(num_col + 1);
     hessian.q_start_[num_col] = q_num_nz;
@@ -2229,9 +2230,14 @@ HighsStatus Highs::callSolveQp() {
   instance.var_up = lp.colUpper_;
   instance.Q.mat.num_col = lp.numCol_;
   instance.Q.mat.num_row = lp.numCol_;
-  instance.Q.mat.start = hessian.q_start_;
-  instance.Q.mat.index = hessian.q_index_;
-  instance.Q.mat.value = hessian.q_value_;
+  if (kHessianFormatInternal == HessianFormat::kSquare) {
+    instance.Q.mat.start = hessian.q_start_;
+    instance.Q.mat.index = hessian.q_index_;
+    instance.Q.mat.value = hessian.q_value_;
+  } else {
+    triangularToSquareHessian(hessian, instance.Q.mat.start,
+                              instance.Q.mat.index, instance.Q.mat.value);
+  }
 
   for (HighsInt i = 0; i < instance.c.value.size(); i++) {
     if (instance.c.value[i] != 0.0) {

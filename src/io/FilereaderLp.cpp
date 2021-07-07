@@ -78,6 +78,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     hessian.q_start_.push_back(qnnz);
+    hessian.format_ = HessianFormat::kSquare;
 
     // handle constraints
     std::map<std::shared_ptr<Variable>, std::vector<unsigned int>>

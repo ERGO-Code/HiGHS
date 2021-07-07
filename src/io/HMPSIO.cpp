@@ -519,6 +519,10 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       warning_found = true;
     }
   }
+  // If there is Hessian data to write out, writeMps assumes that hessian is
+  // triangular
+  if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);
+
   HighsStatus write_status = writeMps(
       options.log_options, filename, lp.model_name_, lp.numRow_, lp.numCol_,
       hessian.dim_, lp.sense_, lp.offset_, lp.colCost_, lp.colLower_,
@@ -816,14 +820,14 @@ HighsStatus writeMps(
     assert((HighsInt)q_index.size() >= hessian_num_nz);
     assert((HighsInt)q_value.size() >= hessian_num_nz);
 
+    // Assumes that Hessian entries are the lower triangle column-wise
     fprintf(file, "QUADOBJ\n");
     for (HighsInt col = 0; col < q_dim; col++) {
       for (HighsInt el = q_start[col]; el < q_start[col + 1]; el++) {
         HighsInt row = q_index[el];
-        //	assert(row < col);
-        if (row <= col)
-          fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
-                  col_names[row].c_str(), q_value[el]);
+        assert(row >= col);
+        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
+                col_names[row].c_str(), q_value[el]);
       }
     }
   }

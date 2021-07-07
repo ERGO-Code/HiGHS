@@ -25,7 +25,7 @@ class HighsHessian;
 class HighsHessian {
  public:
   HighsInt dim_ = 0;
-  HessianFormat format_ = HessianFormat::kSquare;
+  HessianFormat format_ = HessianFormat::kTriangular;
   std::vector<HighsInt> q_start_;
   std::vector<HighsInt> q_index_;
   std::vector<double> q_value_;

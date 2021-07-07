@@ -89,7 +89,7 @@ enum class MatrixFormat { kNone = 0, kColwise, kRowwise };
 
 enum class HessianFormat { kNone = 0, kTriangular, kSquare };
 
-const HessianFormat kHessianFormatInternal = HessianFormat::kSquare;
+const HessianFormat kHessianFormatInternal = HessianFormat::kTriangular;
 
 enum SolutionStatus {
   kSolutionStatusNone = 0,
