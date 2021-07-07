@@ -123,7 +123,6 @@ HighsDomain::ConflictPoolPropagation::ConflictPoolPropagation(
       colUpperWatched_(other.colUpperWatched_),
       conflictFlag_(other.conflictFlag_),
       propagateConflictInds_(other.propagateConflictInds_),
-      conflictWatchedVersion_(other.conflictWatchedVersion_),
       watchedLiterals_(other.watchedLiterals_) {
   conflictpool_->addPropagationDomain(this);
 }
@@ -132,20 +131,22 @@ HighsDomain::ConflictPoolPropagation::~ConflictPoolPropagation() {
   conflictpool_->removePropagationDomain(this);
 }
 
+void HighsDomain::ConflictPoolPropagation::conflictDeleted(HighsInt conflict) {
+  conflictFlag_[conflict] |= 8;
+  unlinkWatchedLiteral(2 * conflict);
+  unlinkWatchedLiteral(2 * conflict + 1);
+}
+
 void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
   HighsInt start = conflictpool_->getConflictRanges()[conflict].first;
   HighsInt end = conflictpool_->getConflictRanges()[conflict].second;
   const std::vector<HighsDomainChange>& conflictEntries =
       conflictpool_->getConflictEntryVector();
 
-  if (HighsInt(conflictWatchedVersion_.size()) <= conflict) {
+  if (HighsInt(conflictFlag_.size()) <= conflict) {
     watchedLiterals_.resize(2 * conflict + 2);
     conflictFlag_.resize(conflict + 1);
-    conflictWatchedVersion_.resize(conflict + 1);
   }
-
-  conflictWatchedVersion_[conflict] =
-      conflictpool_->getModificationCount(conflict);
 
   HighsInt numWatched = 0;
   for (HighsInt i = start; i != end; ++i) {
@@ -215,7 +216,7 @@ void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
       break;
   }
 
-  conflictFlag_[conflict] = numWatched;
+  conflictFlag_[conflict] = numWatched | (conflictFlag_[conflict] & 4);
   markPropagateConflict(conflict);
 }
 
@@ -234,15 +235,9 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
   const std::vector<HighsDomainChange>& conflictEntries =
       conflictpool_->getConflictEntryVector();
 
-  for (HighsInt i = colLowerWatched_[col]; i != -1;) {
+  for (HighsInt i = colLowerWatched_[col]; i != -1;
+       i = watchedLiterals_[i].next) {
     HighsInt conflict = i >> 1;
-    if (conflictWatchedVersion_[conflict] !=
-        conflictpool_->getModificationCount(conflict)) {
-      i = watchedLiterals_[i].next;
-      unlinkWatchedLiteral(2 * conflict);
-      unlinkWatchedLiteral(2 * conflict + 1);
-      continue;
-    }
 
     const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
     HighsInt numInactiveDelta =
@@ -251,8 +246,6 @@ void HighsDomain::ConflictPoolPropagation::updateActivityLbChange(
       conflictFlag_[conflict] += numInactiveDelta;
       markPropagateConflict(conflict);
     }
-
-    i = watchedLiterals_[i].next;
   }
 }
 
@@ -263,15 +256,9 @@ void HighsDomain::ConflictPoolPropagation::updateActivityUbChange(
   const std::vector<HighsDomainChange>& conflictEntries =
       conflictpool_->getConflictEntryVector();
 
-  for (HighsInt i = colUpperWatched_[col]; i != -1;) {
+  for (HighsInt i = colUpperWatched_[col]; i != -1;
+       i = watchedLiterals_[i].next) {
     HighsInt conflict = i >> 1;
-    if (conflictWatchedVersion_[conflict] !=
-        conflictpool_->getModificationCount(conflict)) {
-      i = watchedLiterals_[i].next;
-      unlinkWatchedLiteral(2 * conflict);
-      unlinkWatchedLiteral(2 * conflict + 1);
-      continue;
-    }
 
     const HighsDomainChange& domchg = watchedLiterals_[i].domchg;
     HighsInt numInactiveDelta =
@@ -280,15 +267,15 @@ void HighsDomain::ConflictPoolPropagation::updateActivityUbChange(
       conflictFlag_[conflict] += numInactiveDelta;
       markPropagateConflict(conflict);
     }
-
-    i = watchedLiterals_[i].next;
   }
 }
 
 void HighsDomain::ConflictPoolPropagation::propagateConflict(
     HighsInt conflict) {
-  conflictFlag_[conflict] &= 3;
-  if (conflictFlag_[conflict] == 2) return;
+  // remove propagate flag, but keep watched and deleted information
+  conflictFlag_[conflict] &= (3 | 8);
+  // if two inactive literals are watched or conflict has been deleted skip
+  if (conflictFlag_[conflict] >= 2) return;
 
   if (domain->infeasible_) return;
 
@@ -315,8 +302,6 @@ void HighsDomain::ConflictPoolPropagation::propagateConflict(
   }
 
   conflictFlag_[conflict] = numInactive;
-  conflictWatchedVersion_[conflict] =
-      conflictpool_->getModificationCount(conflict);
 
   switch (numInactive) {
     case 0:
@@ -372,7 +357,6 @@ HighsDomain::CutpoolPropagation::CutpoolPropagation(
       cutpool(other.cutpool),
       activitycuts_(other.activitycuts_),
       activitycutsinf_(other.activitycutsinf_),
-      activitycutversion_(other.activitycutversion_),
       propagatecutflags_(other.propagatecutflags_),
       propagatecutinds_(other.propagatecutinds_) {
   cutpool->addPropagationDomain(this);
@@ -382,28 +366,49 @@ HighsDomain::CutpoolPropagation::~CutpoolPropagation() {
   cutpool->removePropagationDomain(this);
 }
 
-void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut) {
-  HighsInt start = cutpool->getMatrix().getRowStart(cut);
-  HighsInt end = cutpool->getMatrix().getRowEnd(cut);
-  const HighsInt* arindex = cutpool->getMatrix().getARindex();
-  const double* arvalue = cutpool->getMatrix().getARvalue();
+void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
+  if (!propagate) {
+    if (domain != &domain->mipsolver->mipdata_->domain) return;
+    HighsInt start = cutpool->getMatrix().getRowStart(cut);
+    HighsInt end = cutpool->getMatrix().getRowEnd(cut);
+    const HighsInt* arindex = cutpool->getMatrix().getARindex();
+    const double* arvalue = cutpool->getMatrix().getARvalue();
 
-  if (int(activitycuts_.size()) <= cut) {
-    activitycuts_.resize(cut + 1);
-    activitycutsinf_.resize(cut + 1);
-    propagatecutflags_.resize(cut + 1);
-    activitycutversion_.resize(cut + 1);
+    if (HighsInt(activitycuts_.size()) <= cut) {
+      activitycuts_.resize(cut + 1);
+      activitycutsinf_.resize(cut + 1);
+      propagatecutflags_.resize(cut + 1, 2);
+    }
+
+    propagatecutflags_[cut] &= ~uint8_t{2};
+    domain->computeMinActivity(start, end, arindex, arvalue,
+                               activitycutsinf_[cut], activitycuts_[cut]);
+  } else {
+    HighsInt start = cutpool->getMatrix().getRowStart(cut);
+    HighsInt end = cutpool->getMatrix().getRowEnd(cut);
+    const HighsInt* arindex = cutpool->getMatrix().getARindex();
+    const double* arvalue = cutpool->getMatrix().getARvalue();
+
+    if (HighsInt(activitycuts_.size()) <= cut) {
+      activitycuts_.resize(cut + 1);
+      activitycutsinf_.resize(cut + 1);
+      propagatecutflags_.resize(cut + 1, 2);
+    }
+
+    propagatecutflags_[cut] &= ~uint8_t{2};
+    domain->computeMinActivity(start, end, arindex, arvalue,
+                               activitycutsinf_[cut], activitycuts_[cut]);
+
+    if (activitycutsinf_[cut] <= 1 && !propagatecutflags_[cut]) {
+      markPropagateCut(cut);
+      // propagatecutflags_[cut] = 1;
+      // propagatecutinds_.push_back(cut);
+    }
   }
+}
 
-  activitycutversion_[cut] = cutpool->getModificationCount(cut);
-  domain->computeMinActivity(start, end, arindex, arvalue,
-                             activitycutsinf_[cut], activitycuts_[cut]);
-
-  if (activitycutsinf_[cut] <= 1 && !propagatecutflags_[cut]) {
-    markPropagateCut(cut);
-    // propagatecutflags_[cut] = 1;
-    // propagatecutinds_.push_back(cut);
-  }
+void HighsDomain::CutpoolPropagation::cutDeleted(HighsInt cut) {
+  if (cut < (HighsInt)propagatecutflags_.size()) propagatecutflags_[cut] |= 2;
 }
 
 void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
@@ -413,7 +418,7 @@ void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
         (1.0 - domain->mipsolver->mipdata_->feastol) *
             cutpool->getMaxAbsCutCoef(cut)))) {
     propagatecutinds_.push_back(cut);
-    propagatecutflags_[cut] = 1;
+    propagatecutflags_[cut] |= 1;
   }
 }
 
@@ -421,25 +426,11 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
                                                              double oldbound,
                                                              double newbound) {
   assert(!domain->infeasible_);
-  cutpool->getMatrix().forEachColumnEntry(col, [&](HighsInt row, double val) {
-    if (val > 0) {
-      double deltamin;
+  cutpool->getMatrix().forEachPositiveColumnEntry(
+      col, [&](HighsInt row, double val) {
+        assert(val > 0);
+        double deltamin;
 
-      assert(row < int(activitycutversion_.size()));
-
-      if (activitycutversion_[row] != cutpool->getModificationCount(row)) {
-        HighsInt start = cutpool->getMatrix().getRowStart(row);
-        HighsInt end = cutpool->getMatrix().getRowEnd(row);
-        const HighsInt* arindex = cutpool->getMatrix().getARindex();
-        const double* arvalue = cutpool->getMatrix().getARvalue();
-
-        domain->computeMinActivity(start, end, arindex, arvalue,
-                                   activitycutsinf_[row], activitycuts_[row]);
-
-        activitycutversion_[row] = cutpool->getModificationCount(row);
-
-        deltamin = kHighsInf;
-      } else {
         if (oldbound == -kHighsInf) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
@@ -450,57 +441,54 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
           deltamin = (newbound - oldbound) * val;
         }
         activitycuts_[row] += deltamin;
-      }
 
-      if (deltamin <= 0) return true;
+        if (deltamin <= 0) return true;
 
-      if (activitycutsinf_[row] == 0 &&
-          activitycuts_[row] - cutpool->getRhs()[row] >
-              domain->mipsolver->mipdata_->feastol) {
-        // todo, now that multiple cutpools are possible the index needs to be
-        // encoded differently
-        domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
-        domain->infeasible_ = true;
-        domain->infeasible_pos = domain->domchgstack_.size();
-        domain->infeasible_reason = Reason::cut(cutpoolindex, row);
-        return false;
-      }
+        if (activitycutsinf_[row] == 0 &&
+            activitycuts_[row] - cutpool->getRhs()[row] >
+                domain->mipsolver->mipdata_->feastol) {
+          // todo, now that multiple cutpools are possible the index needs to be
+          // encoded differently
+          domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
+          domain->infeasible_ = true;
+          domain->infeasible_pos = domain->domchgstack_.size();
+          domain->infeasible_reason = Reason::cut(cutpoolindex, row);
+          return false;
+        }
 
-      if (activitycutsinf_[row] <= 1 && !propagatecutflags_[row]) {
-        markPropagateCut(row);
-        // propagatecutflags_[row] = 1;
-        // propagatecutinds_.push_back(row);
-      }
-    }
+        if (activitycutsinf_[row] <= 1 && !propagatecutflags_[row]) {
+          markPropagateCut(row);
+          // propagatecutflags_[row] = 1;
+          // propagatecutinds_.push_back(row);
+        }
 
-    return true;
-  });
+        return true;
+      });
 
   if (domain->infeasible_) {
     assert(domain->infeasible_reason.type == cutpoolindex);
     assert(domain->infeasible_reason.index >= 0);
     std::swap(oldbound, newbound);
-    cutpool->getMatrix().forEachColumnEntry(col, [&](HighsInt row, double val) {
-      if (val > 0) {
-        double deltamin;
+    cutpool->getMatrix().forEachPositiveColumnEntry(
+        col, [&](HighsInt row, double val) {
+          assert(val > 0);
+          double deltamin;
 
-        assert(row < int(activitycutversion_.size()));
+          if (oldbound == -kHighsInf) {
+            --activitycutsinf_[row];
+            deltamin = newbound * val;
+          } else if (newbound == -kHighsInf) {
+            ++activitycutsinf_[row];
+            deltamin = -oldbound * val;
+          } else {
+            deltamin = (newbound - oldbound) * val;
+          }
+          activitycuts_[row] += deltamin;
 
-        if (oldbound == -kHighsInf) {
-          --activitycutsinf_[row];
-          deltamin = newbound * val;
-        } else if (newbound == -kHighsInf) {
-          ++activitycutsinf_[row];
-          deltamin = -oldbound * val;
-        } else {
-          deltamin = (newbound - oldbound) * val;
-        }
-        activitycuts_[row] += deltamin;
+          if (domain->infeasible_reason.index == row) return false;
 
-        if (domain->infeasible_reason.index == row) return false;
-      }
-      return true;
-    });
+          return true;
+        });
   }
 }
 
@@ -508,25 +496,11 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
                                                              double oldbound,
                                                              double newbound) {
   assert(!domain->infeasible_);
-  cutpool->getMatrix().forEachColumnEntry(col, [&](HighsInt row, double val) {
-    if (val < 0) {
-      double deltamin;
+  cutpool->getMatrix().forEachNegativeColumnEntry(
+      col, [&](HighsInt row, double val) {
+        assert(val < 0);
+        double deltamin;
 
-      assert(row < int(activitycutversion_.size()));
-
-      if (activitycutversion_[row] != cutpool->getModificationCount(row)) {
-        HighsInt start = cutpool->getMatrix().getRowStart(row);
-        HighsInt end = cutpool->getMatrix().getRowEnd(row);
-        const HighsInt* arindex = cutpool->getMatrix().getARindex();
-        const double* arvalue = cutpool->getMatrix().getARvalue();
-
-        domain->computeMinActivity(start, end, arindex, arvalue,
-                                   activitycutsinf_[row], activitycuts_[row]);
-
-        activitycutversion_[row] = cutpool->getModificationCount(row);
-
-        deltamin = kHighsInf;
-      } else {
         if (oldbound == kHighsInf) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
@@ -537,55 +511,52 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
           deltamin = (newbound - oldbound) * val;
         }
         activitycuts_[row] += deltamin;
-      }
 
-      if (deltamin <= 0) return true;
+        if (deltamin <= 0) return true;
 
-      if (activitycutsinf_[row] == 0 &&
-          activitycuts_[row] - cutpool->getRhs()[row] >
-              domain->mipsolver->mipdata_->feastol) {
-        domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
-        domain->infeasible_ = true;
-        domain->infeasible_pos = domain->domchgstack_.size();
-        domain->infeasible_reason = Reason::cut(cutpoolindex, row);
-        return false;
-      }
+        if (activitycutsinf_[row] == 0 &&
+            activitycuts_[row] - cutpool->getRhs()[row] >
+                domain->mipsolver->mipdata_->feastol) {
+          domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
+          domain->infeasible_ = true;
+          domain->infeasible_pos = domain->domchgstack_.size();
+          domain->infeasible_reason = Reason::cut(cutpoolindex, row);
+          return false;
+        }
 
-      if (activitycutsinf_[row] <= 1 && !propagatecutflags_[row]) {
-        markPropagateCut(row);
-        // propagatecutflags_[row] = 1;
-        // propagatecutinds_.push_back(row);
-      }
-    }
+        if (activitycutsinf_[row] <= 1 && !propagatecutflags_[row]) {
+          markPropagateCut(row);
+          // propagatecutflags_[row] = 1;
+          // propagatecutinds_.push_back(row);
+        }
 
-    return true;
-  });
+        return true;
+      });
 
   if (domain->infeasible_) {
     assert(domain->infeasible_reason.type == cutpoolindex);
     assert(domain->infeasible_reason.index >= 0);
     std::swap(oldbound, newbound);
-    cutpool->getMatrix().forEachColumnEntry(col, [&](HighsInt row, double val) {
-      if (val < 0) {
-        double deltamin;
+    cutpool->getMatrix().forEachNegativeColumnEntry(
+        col, [&](HighsInt row, double val) {
+          assert(val < 0);
+          double deltamin;
 
-        assert(row < int(activitycutversion_.size()));
+          if (oldbound == kHighsInf) {
+            --activitycutsinf_[row];
+            deltamin = newbound * val;
+          } else if (newbound == kHighsInf) {
+            ++activitycutsinf_[row];
+            deltamin = -oldbound * val;
+          } else {
+            deltamin = (newbound - oldbound) * val;
+          }
+          activitycuts_[row] += deltamin;
 
-        if (oldbound == kHighsInf) {
-          --activitycutsinf_[row];
-          deltamin = newbound * val;
-        } else if (newbound == kHighsInf) {
-          ++activitycutsinf_[row];
-          deltamin = -oldbound * val;
-        } else {
-          deltamin = (newbound - oldbound) * val;
-        }
-        activitycuts_[row] += deltamin;
+          if (domain->infeasible_reason.index == row) return false;
 
-        if (domain->infeasible_reason.index == row) return false;
-      }
-      return true;
-    });
+          return true;
+        });
   }
 }
 
@@ -1607,7 +1578,7 @@ bool HighsDomain::propagate() {
 
         for (HighsInt i = 0; i != numproprows; ++i) {
           HighsInt cut = propagateinds[i];
-          cutpoolprop.propagatecutflags_[cut] = 0;
+          cutpoolprop.propagatecutflags_[cut] &= 2;
           propnnz += cutpoolprop.cutpool->getMatrix().getRowEnd(cut) -
                      cutpoolprop.cutpool->getMatrix().getRowStart(cut);
         }
@@ -1617,33 +1588,15 @@ bool HighsDomain::propagate() {
               numproprows, std::make_pair(HighsInt{0}, HighsInt{0}));
 
           auto propagateIndex = [&](HighsInt k) {
+            // first check if cut is marked as deleted
+            if (cutpoolprop.propagatecutflags_[k] & 2) return;
             HighsInt i = propagateinds[k];
 
             HighsInt Rlen;
             const HighsInt* Rindex;
             const double* Rvalue;
             cutpoolprop.cutpool->getCut(i, Rlen, Rindex, Rvalue);
-
-            if (cutpoolprop.activitycutversion_[i] !=
-                cutpoolprop.cutpool->getModificationCount(i)) {
-              cutpoolprop.activitycutversion_[i] =
-                  cutpoolprop.cutpool->getModificationCount(i);
-              HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
-              if (start == -1) {
-                cutpoolprop.activitycuts_[i] = 0;
-                return;
-              }
-              HighsInt end = cutpoolprop.cutpool->getMatrix().getRowEnd(i);
-              const HighsInt* arindex =
-                  cutpoolprop.cutpool->getMatrix().getARindex();
-              const double* arvalue =
-                  cutpoolprop.cutpool->getMatrix().getARvalue();
-
-              computeMinActivity(start, end, arindex, arvalue,
-                                 cutpoolprop.activitycutsinf_[i],
-                                 cutpoolprop.activitycuts_[i]);
-            } else
-              cutpoolprop.activitycuts_[i].renormalize();
+            cutpoolprop.activitycuts_[i].renormalize();
 
             propRowNumChangedBounds_[k].first = propagateRowUpper(
                 Rindex, Rvalue, Rlen, cutpoolprop.cutpool->getRhs()[i],
@@ -1801,23 +1754,11 @@ double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
                                       HighsInt cut) {
   for (auto& cutpoolprop : cutpoolpropagation) {
     if (cutpoolprop.cutpool == &cutpool) {
-      if (cutpool.getModificationCount(cut) !=
-          cutpoolprop.activitycutversion_[cut]) {
-        cutpoolprop.activitycutversion_[cut] =
-            cutpoolprop.cutpool->getModificationCount(cut);
-        HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(cut);
-        if (start == -1) {
-          cutpoolprop.activitycuts_[cut] = 0;
-          return -kHighsInf;
-        }
-        HighsInt end = cutpoolprop.cutpool->getMatrix().getRowEnd(cut);
-        const HighsInt* arindex = cutpoolprop.cutpool->getMatrix().getARindex();
-        const double* arvalue = cutpoolprop.cutpool->getMatrix().getARvalue();
-        computeMinActivity(start, end, arindex, arvalue,
-                           cutpoolprop.activitycutsinf_[cut],
-                           cutpoolprop.activitycuts_[cut]);
-      }
-      return cutpoolprop.activitycutsinf_[cut] == 0
+      // assert((cutpoolprop.propagatecutflags_[cut] & 2) == 0);
+
+      return cut < (HighsInt)cutpoolprop.propagatecutflags_.size() &&
+                     (cutpoolprop.propagatecutflags_[cut] & 2) == 0 &&
+                     cutpoolprop.activitycutsinf_[cut] == 0
                  ? double(cutpoolprop.activitycuts_[cut])
                  : -kHighsInf;
     }
@@ -2054,6 +1995,11 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
                                      localdom.cutpoolpropagation.size();
         HighsInt conflictIndex = localdom.infeasible_reason.index;
 
+        if (localdom.conflictPoolPropagation[conflictPoolIndex]
+                .conflictFlag_[conflictIndex] &
+            8)
+          return false;
+
         // retrieve the conflict entries
         auto conflictRange =
             localdom.conflictPoolPropagation[conflictPoolIndex]
@@ -2079,12 +2025,15 @@ bool HighsDomain::ConflictSet::explainInfeasibilityConflict(
     if (globaldom.isActive(conflict[i])) continue;
 
     HighsInt pos;
-    if (conflict[i].boundtype == HighsBoundType::kLower)
-      localdom.getColLowerPos(conflict[i].column, localdom.infeasible_pos, pos);
-    else
-      localdom.getColUpperPos(conflict[i].column, localdom.infeasible_pos, pos);
-
-    if (pos == -1) return false;
+    if (conflict[i].boundtype == HighsBoundType::kLower) {
+      double lb = localdom.getColLowerPos(conflict[i].column,
+                                          localdom.infeasible_pos, pos);
+      if (pos == -1 || lb < conflict[i].boundval) return false;
+    } else {
+      double ub = localdom.getColUpperPos(conflict[i].column,
+                                          localdom.infeasible_pos, pos);
+      if (pos == -1 || ub > conflict[i].boundval) return false;
+    }
 
     resolvedDomainChanges.push_back(pos);
   }
@@ -2313,9 +2262,8 @@ bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
         HighsInt conflictIndex = localdom.domchgreason_[pos].index;
 
         if (localdom.conflictPoolPropagation[conflictPoolIndex]
-                .conflictWatchedVersion_[conflictIndex] !=
-            localdom.conflictPoolPropagation[conflictPoolIndex]
-                .conflictpool_->getModificationCount(conflictIndex))
+                .conflictFlag_[conflictIndex] &
+            8)
           break;
 
         // retrieve the conflict entries
@@ -2340,8 +2288,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeConflict(
     HighsInt domchgPos, const HighsDomainChange* conflict, HighsInt len) {
   resolvedDomainChanges.clear();
   auto domchg = localdom.flip(localdom.domchgstack_[domchgPos]);
+  bool foundDomchg = false;
   for (HighsInt i = 0; i < len; ++i) {
-    if (conflict[i] == domchg || globaldom.isActive(conflict[i])) continue;
+    if (!foundDomchg && conflict[i] == domchg) {
+      foundDomchg = true;
+      continue;
+    }
+    if (globaldom.isActive(conflict[i])) continue;
 
     HighsInt pos;
     if (conflict[i].boundtype == HighsBoundType::kLower)
@@ -2353,7 +2306,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeConflict(
     resolvedDomainChanges.push_back(pos);
   }
 
-  return true;
+  return foundDomchg;
 }
 
 bool HighsDomain::ConflictSet::explainBoundChangeLeq(

@@ -157,7 +157,6 @@ void HighsLpRelaxation::loadModel() {
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
   mask.resize(lpmodel.numCol_);
-  mipsolver.mipdata_->domain.clearChangedCols();
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {

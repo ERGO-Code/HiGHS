@@ -57,7 +57,6 @@ class HighsCutPool {
  private:
   HighsDynamicRowMatrix matrix_;
   std::vector<double> rhs_;
-  std::vector<unsigned> modification_;
   std::vector<int16_t> ages_;
   std::vector<double> rownormalization_;
   std::vector<double> maxabscoef_;
@@ -67,10 +66,14 @@ class HighsCutPool {
 
   double bestObservedScore;
   double minScoreFactor;
+  double minDensityLim;
+  double maxDensityLim;
 
   HighsInt agelim_;
   HighsInt softlimit_;
   HighsInt numLpCuts;
+  HighsInt numPropNzs;
+  HighsInt numPropRows;
   std::vector<HighsInt> ageDistribution;
   std::vector<std::pair<HighsInt, double>> sortBuffer;
 
@@ -79,10 +82,17 @@ class HighsCutPool {
 
  public:
   HighsCutPool(HighsInt ncols, HighsInt agelim, HighsInt softlimit)
-      : matrix_(ncols), agelim_(agelim), softlimit_(softlimit), numLpCuts(0) {
+      : matrix_(ncols),
+        agelim_(agelim),
+        softlimit_(softlimit),
+        numLpCuts(0),
+        numPropNzs(0),
+        numPropRows(0) {
     ageDistribution.resize(agelim_ + 1);
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
+    minDensityLim = 0.1 * ncols;
+    maxDensityLim = 0.8 * ncols;
   }
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 
@@ -135,14 +145,11 @@ class HighsCutPool {
 
   HighsInt addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                   double* Rvalue, HighsInt Rlen, double rhs,
-                  bool integral = false, bool extractCliques = true);
+                  bool integral = false, bool propagate = true,
+                  bool extractCliques = true);
 
   HighsInt getRowLength(HighsInt row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);
-  }
-
-  unsigned getModificationCount(HighsInt cut) const {
-    return modification_[cut];
   }
 
   void getCut(HighsInt cut, HighsInt& cutlen, const HighsInt*& cutinds,

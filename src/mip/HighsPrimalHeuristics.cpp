@@ -207,12 +207,19 @@ void HighsPrimalHeuristics::rootReducedCost() {
   HeuristicNeighborhood neighborhood(mipsolver, localdom);
 
   double currCutoff = kHighsInf;
+  double lower_bound;
+  if (mipsolver.mipdata_->objintscale == 0)
+    lower_bound = mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol;
+  else
+    lower_bound = std::ceil((mipsolver.mipdata_->objintscale *
+                             mipsolver.mipdata_->lower_bound) +
+                            mipsolver.mipdata_->feastol) /
+                  mipsolver.mipdata_->objintscale;
+
   for (const std::pair<double, HighsDomainChange>& domchg : lurkingBounds) {
     currCutoff = domchg.first;
 
-    if (currCutoff <=
-        mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol)
-      break;
+    if (currCutoff <= lower_bound) break;
 
     if (localdom.isActive(domchg.second)) continue;
     localdom.changeBound(domchg.second);

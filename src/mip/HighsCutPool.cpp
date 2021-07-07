@@ -143,7 +143,15 @@ void HighsCutPool::performAging() {
     ages_[i] += 1;
 
     if (ages_[i] > agelim) {
-      ++modification_[i];
+      for (HighsDomain::CutpoolPropagation* propagationdomain :
+           propagationDomains)
+        propagationdomain->cutDeleted(i);
+
+      if (matrix_.columnsLinked(i)) {
+        --numPropRows;
+        numPropNzs -= getRowLength(i);
+      }
+
       matrix_.removeRow(i);
       ages_[i] = -1;
       rhs_[i] = kHighsInf;
@@ -195,7 +203,14 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
         uint32_t sh = support_hash(&ARindex[start], &ARvalue[start],
                                    maxabscoef_[i], end - start);
 
-        ++modification_[i];
+        for (HighsDomain::CutpoolPropagation* propagationdomain :
+             propagationDomains)
+          propagationdomain->cutDeleted(i);
+
+        if (matrix_.columnsLinked(i)) {
+          --numPropRows;
+          numPropNzs -= getRowLength(i);
+        }
 
         matrix_.removeRow(i);
         ages_[i] = -1;
@@ -368,7 +383,8 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
 
 HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
                               double* Rvalue, HighsInt Rlen, double rhs,
-                              bool integral, bool extractCliques) {
+                              bool integral, bool propagate,
+                              bool extractCliques) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
   sortBuffer.resize(Rlen);
@@ -397,14 +413,33 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   if (isDuplicate(sh, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
 
+  // if (Rlen > 0.15 * matrix_.numCols())
+  //   printf("cut with len %d not propagated\n", Rlen);
+  if (propagate) {
+    HighsInt newPropNzs = numPropNzs + Rlen;
+
+    double avgModelNzs = mipsolver.numNonzero() / (double)mipsolver.numRow();
+
+    double newAvgPropNzs = newPropNzs / (double)(numPropRows + 1);
+
+    constexpr double alpha = 1.5;
+
+    if (newAvgPropNzs >
+        std::max(std::min(alpha * avgModelNzs, maxDensityLim), minDensityLim)) {
+      propagate = false;
+    } else {
+      ++numPropRows;
+      numPropNzs = newPropNzs;
+    }
+  }
+
   // if no such cut exists we append the new cut
-  HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
+  HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen, propagate);
   supportmap.emplace(sh, rowindex);
 
   if (rowindex == int(rhs_.size())) {
     rhs_.resize(rowindex + 1);
     ages_.resize(rowindex + 1);
-    modification_.resize(rowindex + 1);
     rownormalization_.resize(rowindex + 1);
     maxabscoef_.resize(rowindex + 1);
     rowintegral.resize(rowindex + 1);
@@ -415,13 +450,13 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ages_[rowindex] = std::max(0, agelim_ - 5);
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
-  ++modification_[rowindex];
 
   rownormalization_[rowindex] = normalization;
   maxabscoef_[rowindex] = maxabscoef;
 
+  // printf("density: %.2f%%\n", 100.0 * Rlen / (double)matrix_.numCols());
   for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)
-    propagationdomain->cutAdded(rowindex);
+    propagationdomain->cutAdded(rowindex, propagate);
 
   if (extractCliques && this == &mipsolver.mipdata_->cutpool) {
     // if this is the global cutpool extract cliques from the cut

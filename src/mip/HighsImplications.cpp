@@ -50,15 +50,15 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     return true;
   }
 
-  numImplications += domchgstack.size();
+  HighsInt stackimplicend = domchgstack.size();
+  numImplications += stackimplicend;
   mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,
                                                          val);
-  HighsInt stackimplicend = domchgstack.size();
 
   HighsInt loc = 2 * col + val;
   HighsInt implstart = implications.size();
 
-  implications.reserve(implications.size() + stackimplicend - stackimplicstart);
+  implications.reserve(implstart + numImplications);
 
   for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
     if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&

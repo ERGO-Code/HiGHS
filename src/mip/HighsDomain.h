@@ -125,7 +125,6 @@ class HighsDomain {
     HighsCutPool* cutpool;
     std::vector<HighsCDouble> activitycuts_;
     std::vector<HighsInt> activitycutsinf_;
-    std::vector<unsigned> activitycutversion_;
     std::vector<uint8_t> propagatecutflags_;
     std::vector<HighsInt> propagatecutinds_;
 
@@ -136,7 +135,9 @@ class HighsDomain {
 
     ~CutpoolPropagation();
 
-    void cutAdded(HighsInt cut);
+    void cutAdded(HighsInt cut, bool propagate);
+
+    void cutDeleted(HighsInt cut);
 
     void markPropagateCut(HighsInt cut);
 
@@ -153,7 +154,6 @@ class HighsDomain {
     std::vector<HighsInt> colUpperWatched_;
     std::vector<uint8_t> conflictFlag_;
     std::vector<HighsInt> propagateConflictInds_;
-    std::vector<unsigned> conflictWatchedVersion_;
 
     struct WatchedLiteral {
       HighsDomainChange domchg = {0.0, -1, HighsBoundType::kLower};
@@ -175,6 +175,8 @@ class HighsDomain {
     void unlinkWatchedLiteral(HighsInt linkPos);
 
     void conflictAdded(HighsInt conflict);
+
+    void conflictDeleted(HighsInt conflict);
 
     void markPropagateConflict(HighsInt conflict);
 

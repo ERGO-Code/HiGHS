@@ -151,6 +151,9 @@ void HighsConflictPool::addReconvergenceCut(
 }
 
 void HighsConflictPool::removeConflict(HighsInt conflict) {
+  for (HighsDomain::ConflictPoolPropagation* conflictProp : propagationDomains)
+    conflictProp->conflictDeleted(conflict);
+
   if (ages_[conflict] >= 0) {
     ageDistribution_[ages_[conflict]] -= 1;
     ages_[conflict] = -1;

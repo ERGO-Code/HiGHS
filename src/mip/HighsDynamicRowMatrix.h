@@ -30,13 +30,17 @@ class HighsDynamicRowMatrix {
   std::vector<double> ARvalue_;
 
   std::vector<HighsInt> ARrowindex_;
-  std::vector<HighsInt> Anext_;
-  std::vector<HighsInt> Aprev_;
+  std::vector<HighsInt> AnextPos_;
+  std::vector<HighsInt> AprevPos_;
+  std::vector<HighsInt> AnextNeg_;
+  std::vector<HighsInt> AprevNeg_;
 
   /// vector of pointers to the head/tail of the nonzero block list for each
   /// column
-  std::vector<HighsInt> Ahead_;
-  std::vector<HighsInt> Atail_;
+  std::vector<HighsInt> AheadPos_;
+  std::vector<HighsInt> AheadNeg_;
+
+  std::vector<uint8_t> colsLinked;
 
   /// vector of column sizes
 
@@ -51,28 +55,40 @@ class HighsDynamicRowMatrix {
   std::vector<HighsInt> Asize_;
   HighsDynamicRowMatrix(HighsInt ncols);
 
+  bool columnsLinked(HighsInt rowindex) const { return colsLinked[rowindex]; }
+
   /// adds a row to the matrix with the given values and returns its index
-  HighsInt addRow(HighsInt* Rindex, double* Rvalue, HighsInt Rlen);
+  HighsInt addRow(HighsInt* Rindex, double* Rvalue, HighsInt Rlen,
+                  bool linkCols = true);
 
   /// removes the row with the given index from the matrix, afterwards the index
   /// can be reused for new rows
   void removeRow(HighsInt rowindex);
 
-  std::size_t nonzeroCapacity() const { return ARvalue_.size(); }
+  HighsInt numCols() const { return Asize_.size(); }
 
-  /// replaces a rows values but does not change the support
-  void replaceRowValues(HighsInt rowindex, double* Rvalue);
+  std::size_t nonzeroCapacity() const { return ARvalue_.size(); }
 
   /// calls the given function object for each entry in the given column.
   /// The function object should accept the row index as first argument and
   /// the nonzero value of the column in that row as the second argument.
   template <typename Func>
-  void forEachColumnEntry(HighsInt col, Func&& f) const {
-    HighsInt iter = Ahead_[col];
+  void forEachPositiveColumnEntry(HighsInt col, Func&& f) const {
+    HighsInt iter = AheadPos_[col];
 
     while (iter != -1) {
       if (!f(ARrowindex_[iter], ARvalue_[iter])) break;
-      iter = Anext_[iter];
+      iter = AnextPos_[iter];
+    }
+  }
+
+  template <typename Func>
+  void forEachNegativeColumnEntry(HighsInt col, Func&& f) const {
+    HighsInt iter = AheadNeg_[col];
+
+    while (iter != -1) {
+      if (!f(ARrowindex_[iter], ARvalue_[iter])) break;
+      iter = AnextNeg_[iter];
     }
   }
 

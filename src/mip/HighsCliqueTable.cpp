@@ -1570,7 +1570,7 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
     rhs = std::floor(rhs + 0.5);
 
     cutpool.addCut(mipsolver, inds.data(), vals.data(), inds.size(), rhs, true,
-                   false);
+                   false, false);
   }
 
   if (runcliquesubsumption) {

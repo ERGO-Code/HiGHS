@@ -18,13 +18,13 @@
 #include <numeric>
 
 HighsDynamicRowMatrix::HighsDynamicRowMatrix(HighsInt ncols) {
-  Ahead_.resize(ncols, -1);
-  Atail_.resize(ncols, -1);
+  AheadPos_.resize(ncols, -1);
+  AheadNeg_.resize(ncols, -1);
   Asize_.resize(ncols);
 }
 /// adds a row to the matrix with the given values and returns its index
 HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
-                                       HighsInt Rlen) {
+                                       HighsInt Rlen, bool linkCols) {
   HighsInt rowindex;
   HighsInt start;
   HighsInt end;
@@ -40,8 +40,10 @@ HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
     ARindex_.resize(end);
     ARvalue_.resize(end);
     ARrowindex_.resize(end);
-    Aprev_.resize(end);
-    Anext_.resize(end);
+    AprevPos_.resize(end, -1);
+    AnextPos_.resize(end, -1);
+    AprevNeg_.resize(end, -1);
+    AnextNeg_.resize(end, -1);
   } else {
     std::pair<HighsInt, HighsInt> freeslot = *it;
     freespaces_.erase(it);
@@ -59,11 +61,13 @@ HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
   if (deletedrows_.empty()) {
     rowindex = ARrange_.size();
     ARrange_.emplace_back(start, end);
+    colsLinked.push_back(linkCols);
   } else {
     rowindex = deletedrows_.back();
     deletedrows_.pop_back();
     ARrange_[rowindex].first = start;
     ARrange_[rowindex].second = end;
+    colsLinked[rowindex] = linkCols;
   }
 
   // now add the nonzeros in the order sorted by the index value
@@ -72,27 +76,29 @@ HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
     ARvalue_[i] = Rvalue[i - start];
     ARrowindex_[i] = rowindex;
   }
+
   // link the row values to the columns
+  if (!linkCols) return rowindex;
+
   for (HighsInt i = start; i != end; ++i) {
     HighsInt col = ARindex_[i];
-
     ++Asize_[col];
-    Anext_[i] = -1;
-    HighsInt tail = Atail_[col];
-    Aprev_[i] = tail;
 
-    if (tail == -1) {
-      // no nonzero has been linked to this column yet
-      assert(Ahead_[col] == -1);
-      Ahead_[col] = Atail_[col] = i;
-      continue;
+    if (ARvalue_[i] > 0) {
+      AprevPos_[i] = -1;
+      HighsInt head = AheadPos_[col];
+      AheadPos_[col] = i;
+      AnextPos_[i] = head;
+
+      if (head != -1) AprevPos_[head] = i;
+    } else {
+      AprevNeg_[i] = -1;
+      HighsInt head = AheadNeg_[col];
+      AheadNeg_[col] = i;
+      AnextNeg_[i] = head;
+
+      if (head != -1) AprevNeg_[head] = i;
     }
-
-    assert(Anext_[tail] == -1);
-
-    Anext_[tail] = i;
-    Aprev_[i] = tail;
-    Atail_[col] = i;
   }
 
   return rowindex;
@@ -104,28 +110,44 @@ void HighsDynamicRowMatrix::removeRow(HighsInt rowindex) {
   HighsInt start = ARrange_[rowindex].first;
   HighsInt end = ARrange_[rowindex].second;
 
-  for (HighsInt i = start; i != end; ++i) {
-    HighsInt col = ARindex_[i];
+  if (colsLinked[rowindex]) {
+    for (HighsInt i = start; i != end; ++i) {
+      HighsInt col = ARindex_[i];
+      --Asize_[col];
 
-    --Asize_[col];
+      if (ARvalue_[i] > 0) {
+        HighsInt prev = AprevPos_[i];
+        HighsInt next = AnextPos_[i];
 
-    HighsInt prev = Aprev_[i];
-    HighsInt next = Anext_[i];
+        if (next != -1) {
+          assert(AprevPos_[next] == i);
+          AprevPos_[next] = prev;
+        }
 
-    if (next != -1) {
-      assert(Aprev_[next] == i);
-      Aprev_[next] = prev;
-    } else {
-      assert(Atail_[col] == i);
-      Atail_[col] = prev;
-    }
+        if (prev != -1) {
+          assert(AnextPos_[prev] == i);
+          AnextPos_[prev] = next;
+        } else {
+          assert(AheadPos_[col] == i);
+          AheadPos_[col] = next;
+        }
+      } else {
+        HighsInt prev = AprevNeg_[i];
+        HighsInt next = AnextNeg_[i];
 
-    if (prev != -1) {
-      assert(Anext_[prev] == i);
-      Anext_[prev] = next;
-    } else {
-      assert(Ahead_[col] == i);
-      Ahead_[col] = next;
+        if (next != -1) {
+          assert(AprevNeg_[next] == i);
+          AprevNeg_[next] = prev;
+        }
+
+        if (prev != -1) {
+          assert(AnextNeg_[prev] == i);
+          AnextNeg_[prev] = next;
+        } else {
+          assert(AheadNeg_[col] == i);
+          AheadNeg_[col] = next;
+        }
+      }
     }
   }
 
@@ -137,13 +159,4 @@ void HighsDynamicRowMatrix::removeRow(HighsInt rowindex) {
   // set the range to -1,-1 to indicate a deleted row
   ARrange_[rowindex].first = -1;
   ARrange_[rowindex].second = -1;
-}
-
-/// replaces a rows values but does not change the support
-void HighsDynamicRowMatrix::replaceRowValues(HighsInt rowindex,
-                                             double* Rvalue) {
-  HighsInt start = ARrange_[rowindex].first;
-  HighsInt end = ARrange_[rowindex].second;
-
-  std::copy(Rvalue, Rvalue + (end - start), ARvalue_.data() + start);
 }
