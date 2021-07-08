@@ -65,7 +65,8 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
   }
   if (kHessianFormatInternal == HessianFormat::kTriangular) {
     // Extract the triangular part of Q: lower triangle column-wise
-    // or, equivalently, upper triangle row-wise
+    // or, equivalently, upper triangle row-wise, ensuring that the
+    // diagonal entry comes first, unless it's zero
     call_status = extractTriangularHessian(options, hessian);
     return_status = interpretCallStatus(call_status, return_status,
                                         "extractTriangularHessian");
@@ -114,13 +115,11 @@ bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,
   HighsInt num_small_diagonal_value = 0;
   for (HighsInt iCol = 0; iCol < dim; iCol++) {
     double diagonal_value = 0;
-    for (HighsInt iEl = hessian.q_start_[iCol];
-         iEl < hessian.q_start_[iCol + 1]; iEl++) {
-      if (hessian.q_index_[iEl] == iCol) {
-        diagonal_value = sense_sign * hessian.q_value_[iEl];
-        continue;
-      }
-    }
+    // Assumes that the diagonal entry is always first, unless it's
+    // zero so doesn't appear
+    HighsInt iEl = hessian.q_start_[iCol];
+    if (hessian.q_index_[iEl] == iCol)
+      diagonal_value = sense_sign * hessian.q_value_[iEl];
     if (diagonal_value <= kSmallHessianDiagonalValue) {
       min_illegal_diagonal_value =
           std::min(diagonal_value, min_illegal_diagonal_value);
@@ -164,6 +163,13 @@ HighsStatus extractTriangularHessian(const HighsOptions& options,
       if (iRow < iCol) continue;
       hessian.q_index_[nnz] = iRow;
       hessian.q_value_[nnz] = hessian.q_value_[iEl];
+      if (iRow == iCol && nnz > nnz0) {
+        // Diagonal entry is not first in column so swap it in
+        hessian.q_index_[nnz] = hessian.q_index_[nnz0];
+        hessian.q_value_[nnz] = hessian.q_value_[nnz0];
+        hessian.q_index_[nnz0] = iRow;
+        hessian.q_value_[nnz0] = hessian.q_value_[iEl];
+      }
       nnz++;
     }
     hessian.q_start_[iCol] = nnz0;

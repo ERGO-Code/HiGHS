@@ -32,8 +32,12 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
+  double objval = highs.getObjectiveValue();
+  printf("objval = %g; objective_function_value = %g\n", objval,
+         objective_function_value);
 
-  double alt_objective_function_value = model.objectiveValue(solution.col_value);
+  double alt_objective_function_value =
+      model.objectiveValue(solution.col_value);
   REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
 
@@ -127,9 +131,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
   const HighsInfo& info = highs.getInfo();
   const HighsSolution& solution = highs.getSolution();
   const double& objective_function_value = info.objective_function_value;
-  
+
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  return_status = highs.passModel(model);
+  return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
@@ -138,11 +142,11 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   const bool pretty = true;
   if (dev_run) {
-    printf("One variable unconstrained QP: objective = %g; solution:\n", objective_function_value);
+    printf("One variable unconstrained QP: objective = %g; solution:\n",
+           objective_function_value);
     highs.writeSolution("", pretty);
   }
 
-  
   required_objective_function_value = 0;
   required_x0 = -0.5;
   REQUIRE(fabs(objective_function_value - required_objective_function_value) <
@@ -151,8 +155,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", true);
-
-  
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -166,9 +168,9 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   double objective_function_value;
   double required_objective_function_value;
 
-  HighsModel model;
-  HighsLp& lp = model.lp_;
-  HighsHessian& hessian = model.hessian_;
+  HighsModel local_model;
+  HighsLp& lp = local_model.lp_;
+  HighsHessian& hessian = local_model.hessian_;
   const double inf = kHighsInf;
   // Start with an unconstrained QP
   lp.model_name_ = "qjh";
@@ -193,7 +195,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
 
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
-  return_status = highs.passModel(model);
+  return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
@@ -215,7 +217,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   lp.Aindex_ = {0, 0};
   lp.Avalue_ = {1.0, 1.0};
   lp.format_ = MatrixFormat::kColwise;
-  return_status = highs.passModel(model);
+  return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();

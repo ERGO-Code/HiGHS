@@ -212,7 +212,7 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
 
   HighsModelStatus model_status = highs.getModelStatus();
 
-  const bool issue0 = true;
+  const bool issue0 = false;
   if (issue0) {
     REQUIRE(model_status == HighsModelStatus::kOptimal);
     REQUIRE(fabs(info.objective_function_value - required_objective_value) <

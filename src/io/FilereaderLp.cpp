@@ -44,7 +44,11 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     // get objective
-    lp.offset_ = m.objective->offset;
+    if (m.objective->offset) {
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Ignoring m.objective->offset = %g\n", m.objective->offset);
+      lp.offset_ = 0;  // m.objective->offset;
+    }
     lp.colCost_.resize(lp.numCol_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
