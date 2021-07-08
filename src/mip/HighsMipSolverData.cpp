@@ -848,7 +848,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
     }
 
     if (lower_bound > upper_limit) {
-      mipsolver.modelstatus_ = HighsModelStatus::kOptimal;
+      lower_bound = std::min(kHighsInf, upper_bound);
       pruned_treeweight = 1.0;
       num_nodes += 1;
       num_leaves += 1;
