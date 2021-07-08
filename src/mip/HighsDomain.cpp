@@ -889,7 +889,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                            mipsolver->mipdata_->ARvalue_.data(), tmpinf,
                            tmpminact);
         assert(std::abs(double(activitymin_[mip->Aindex_[i]] - tmpminact)) <=
-               mipsolver->mipdata_->epsilon);
+               mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->Aindex_[i]]);
       }
 #endif
@@ -938,7 +938,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                            mipsolver->mipdata_->ARvalue_.data(), tmpinf,
                            tmpmaxact);
         assert(std::abs(double(activitymax_[mip->Aindex_[i]] - tmpmaxact)) <=
-               mipsolver->mipdata_->epsilon);
+               mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->Aindex_[i]]);
       }
 #endif
@@ -1045,7 +1045,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
                            mipsolver->mipdata_->ARvalue_.data(), tmpinf,
                            tmpmaxact);
         assert(std::abs(double(activitymax_[mip->Aindex_[i]] - tmpmaxact)) <=
-               mipsolver->mipdata_->epsilon);
+               mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->Aindex_[i]]);
       }
 #endif
@@ -1095,7 +1095,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
                            mipsolver->mipdata_->ARvalue_.data(), tmpinf,
                            tmpminact);
         assert(std::abs(double(activitymin_[mip->Aindex_[i]] - tmpminact)) <=
-               mipsolver->mipdata_->epsilon);
+               mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->Aindex_[i]]);
       }
 #endif

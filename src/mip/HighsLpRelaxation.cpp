@@ -692,7 +692,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       avgSolveIters += (itercount - avgSolveIters) / numSolved;
 
       storeDualUBProof();
-      if (checkDualProof()) {
+      if (hasdualproof && checkDualProof()) {
         // printf("proof constraint for obj limit %g valid\n",
         //        lpsolver.getOptions().objective_bound);
         return Status::kInfeasible;
@@ -703,8 +703,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "objlim\n",
         //     objbound);
         lpsolver.setOptionValue("objective_bound", kHighsInf);
-        run(resolve_on_error);
+        Status result = run(resolve_on_error);
         lpsolver.setOptionValue("objective_bound", objbound);
+        return result;
       }
 
       return Status::kError;

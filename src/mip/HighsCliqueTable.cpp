@@ -2088,6 +2088,5 @@ void HighsCliqueTable::buildFrom(const HighsCliqueTable& init) {
 
   newCliqueTable.colsubstituted = init.colsubstituted;
   newCliqueTable.substitutions = init.substitutions;
-  newCliqueTable.numSplayCalls = init.numSplayCalls;
   *this = std::move(newCliqueTable);
 }
