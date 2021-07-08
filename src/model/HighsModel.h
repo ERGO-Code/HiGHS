@@ -27,8 +27,8 @@ class HighsModel {
  public:
   HighsLp lp_;
   HighsHessian hessian_;
-  bool isQp() const;
-  bool isMip() { return this->lp_.isMip(); }
+  bool isQp() const { return this->hessian_.dim_; }
+  bool isMip() const { return this->lp_.isMip(); }
   void clear();
   double objectiveValue(const std::vector<double>& solution) const;
 };

@@ -389,6 +389,46 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                    aindex, avalue, NULL, NULL, NULL, integrality);
 }
 
+HighsStatus Highs::passHessian(HighsHessian hessian_) {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsHessian& hessian = model_.hessian_;
+  hessian = std::move(hessian_);
+  // Check validity of any Hessian, normalising its entries
+  return_status = interpretCallStatus(assessHessian(hessian, options_),
+                                      return_status, "assessHessian");
+  if (return_status == HighsStatus::kError) return return_status;
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.q_start_[hessian.dim_] == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
+  return_status =
+      interpretCallStatus(clearSolver(), return_status, "clearSolver");
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
+                               const HighsInt format, const HighsInt* start,
+                               const HighsInt* index, const double* value) {
+  HighsHessian hessian;
+  if (!qFormatOk(num_nz, format)) return HighsStatus::kError;
+  HighsInt num_col = model_.lp_.numCol_;
+  if (dim != num_col) return HighsStatus::kError;
+  hessian.dim_ = num_col;
+  hessian.format_ = HessianFormat::kTriangular;
+  hessian.q_start_.assign(start, start + num_col);
+  hessian.q_start_.resize(num_col + 1);
+  hessian.q_start_[num_col] = num_nz;
+  hessian.q_index_.assign(index, index + num_nz);
+  hessian.q_value_.assign(value, value + num_nz);
+  return passHessian(hessian);
+}
+
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
   Filereader* reader = Filereader::getFilereader(filename);
@@ -2210,7 +2250,17 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   assert(lp.format_ != MatrixFormat::kRowwise);
-  assert(hessian.dim_ == lp.numCol_);
+  if (hessian.dim_ != lp.numCol_) {
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Hessian dimension = %" HIGHSINT_FORMAT
+                " incompatible with matrix dimension = %" HIGHSINT_FORMAT "\n",
+                hessian.dim_, lp.numCol_);
+    scaled_model_status_ = HighsModelStatus::kModelError;
+    model_status_ = scaled_model_status_;
+    solution_.value_valid = false;
+    solution_.dual_valid = false;
+    return HighsStatus::kError;
+  }
   //
   // Run the QP solver
   Instance instance(lp.numCol_, lp.numRow_);

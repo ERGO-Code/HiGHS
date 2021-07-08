@@ -91,6 +91,15 @@ class Highs {
                         const HighsInt* integrality = NULL);
 
   /**
+   * @brief Pass the Hessian of the model
+   */
+  HighsStatus passHessian(HighsHessian hessian_);
+
+  HighsStatus passHessian(const HighsInt dim, const HighsInt num_nz,
+                          const HighsInt format, const HighsInt* start,
+                          const HighsInt* index, const double* value);
+
+  /**
    * @brief reads in a model and initializes the HighsModelObject
    */
   HighsStatus readModel(const std::string filename  //!< the filename

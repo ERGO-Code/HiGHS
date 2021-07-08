@@ -50,8 +50,8 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   bool operator==(const HighsLp& lp);
-  bool equalButForNames(const HighsLp& lp);
-  bool isMip();
+  bool equalButForNames(const HighsLp& lp) const;
+  bool isMip() const;
   void clear();
 };
 

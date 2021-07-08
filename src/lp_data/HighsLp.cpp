@@ -17,7 +17,7 @@
 
 #include <cassert>
 
-bool HighsLp::isMip() {
+bool HighsLp::isMip() const {
   HighsInt integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(integrality_size == this->numCol_);
@@ -34,7 +34,7 @@ bool HighsLp::operator==(const HighsLp& lp) {
   return equal;
 }
 
-bool HighsLp::equalButForNames(const HighsLp& lp) {
+bool HighsLp::equalButForNames(const HighsLp& lp) const {
   bool equal = true;
   equal = this->numCol_ == lp.numCol_ && equal;
   equal = this->numRow_ == lp.numRow_ && equal;
