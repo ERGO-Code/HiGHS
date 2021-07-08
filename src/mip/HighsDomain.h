@@ -367,9 +367,7 @@ class HighsDomain {
     return domchgreason_;
   }
 
-  HighsInt getBranchDepth() const {
-    return branchPos_.size();
-  }
+  HighsInt getBranchDepth() const { return branchPos_.size(); }
 
   std::vector<HighsDomainChange> getReducedDomainChangeStack() const {
     std::vector<HighsDomainChange> reducedstack;

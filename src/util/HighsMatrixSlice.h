@@ -53,7 +53,7 @@ class HighsSliceNonzero {
 
 template <>
 class HighsMatrixSlice<HighsEmptySlice> {
-public:
+ public:
   using iterator = const HighsSliceNonzero*;
   static constexpr const HighsSliceNonzero* begin() { return nullptr; }
   static constexpr const HighsSliceNonzero* end() { return nullptr; }
