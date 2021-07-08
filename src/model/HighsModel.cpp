@@ -33,3 +33,20 @@ void HighsModel::clear() {
   this->lp_.clear();
   this->hessian_.clear();
 }
+
+double HighsModel::objectiveValue(const std::vector<double>& solution) const {
+  assert((int)solution.size() >= this->lp_.numCol_);
+  double objective_function_value = this->lp_.offset_;
+  for (HighsInt iCol=0; iCol<this->lp_.numCol_; iCol++)
+    objective_function_value += this->lp_.colCost_[iCol] * solution[iCol];
+  if (this->hessian_.dim_ == 0) return objective_function_value;
+  double quadratic_term = 0;
+  for (HighsInt iCol=0; iCol < this->hessian_.dim_; iCol++) {
+    for (HighsInt iEl = this->hessian_.q_start_[iCol];  iEl < this->hessian_.q_start_[iCol+1]; iEl++) {
+      quadratic_term += solution[iCol] * this->hessian_.q_value_[iEl] * solution[this->hessian_.q_index_[iEl]];
+    }
+  }
+  quadratic_term *= 0.5;
+  objective_function_value += quadratic_term;
+  return objective_function_value;  
+}

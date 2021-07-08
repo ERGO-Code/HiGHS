@@ -30,6 +30,7 @@ class HighsModel {
   bool isQp() const;
   bool isMip() { return this->lp_.isMip(); }
   void clear();
+  double objectiveValue(const std::vector<double>& solution) const;
 };
 
 #endif

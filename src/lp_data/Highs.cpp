@@ -2332,6 +2332,7 @@ HighsStatus Highs::callSolveQp() {
     }
     info_.basis_validity = BasisValidity::kBasisValidityInvalid;
   }
+  info_.objective_function_value = model_.objectiveValue(solution_.col_value);
   // ... and iteration counts...
   info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
   info_.ipm_iteration_count = iteration_counts_.ipm;

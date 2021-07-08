@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -20,6 +20,11 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   required_x1 = 1.7;
 
   Highs highs;
+  const HighsModel& model = highs.getModel();
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  const double& objective_function_value = info.objective_function_value;
+
   if (!dev_run) highs.setOptionValue("output_flag", false);
 
   HighsStatus return_status = highs.readModel(filename);
@@ -28,13 +33,14 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  double objval = highs.getObjectiveValue();
-  REQUIRE(fabs(objval - required_objective_function_value) <
+  double alt_objective_function_value = model.objectiveValue(solution.col_value);
+  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
 
-  const HighsSolution& sol = highs.getSolution();
-  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
 
   // Check with qjh.mps
   filename = std::string(HIGHS_DIR) + "/check/instances/qjh.mps";
@@ -49,13 +55,18 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  objval = highs.getObjectiveValue();
-  if (dev_run) printf("Objective = %g\n", objval);
-  REQUIRE(fabs(objval - required_objective_function_value) <
+  //  objective_function_value = highs.getObjectiveValue();
+  if (dev_run) printf("Objective = %g\n", objective_function_value);
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
           double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
+
+  alt_objective_function_value = model.objectiveValue(solution.col_value);
+  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
+          double_equal_tolerance);
+
+  REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[2] - required_x2) < double_equal_tolerance);
   REQUIRE(return_status == HighsStatus::kOk);
 
   // Test writeModel by writing out qjh.mps...
@@ -69,13 +80,18 @@ TEST_CASE("qpsolver", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
 
-  objval = highs.getObjectiveValue();
-  if (dev_run) printf("Objective = %g\n", objval);
-  REQUIRE(fabs(objval - required_objective_function_value) <
+  //  objective_function_value = highs.getObjectiveValue();
+  if (dev_run) printf("Objective = %g\n", objective_function_value);
+
+  alt_objective_function_value = model.objectiveValue(solution.col_value);
+  REQUIRE(fabs(objective_function_value - alt_objective_function_value) <
           double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[1] - required_x1) < double_equal_tolerance);
-  REQUIRE(fabs(sol.col_value[2] - required_x2) < double_equal_tolerance);
+
+  REQUIRE(fabs(objective_function_value - required_objective_function_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[2] - required_x2) < double_equal_tolerance);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -85,13 +101,12 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   HighsStatus return_status;
   //  HighsModelStatus model_status;
-  double objective_function_value;
   double required_objective_function_value;
   double required_x0;
 
-  HighsModel model;
-  HighsLp& lp = model.lp_;
-  HighsHessian& hessian = model.hessian_;
+  HighsModel local_model;
+  HighsLp& lp = local_model.lp_;
+  HighsHessian& hessian = local_model.hessian_;
   const double inf = kHighsInf;
 
   lp.model_name_ = "qod";
@@ -101,29 +116,43 @@ TEST_CASE("test-qod", "[qpsolver]") {
   lp.colLower_ = {-inf};
   lp.colUpper_ = {inf};
   lp.sense_ = ObjSense::kMinimize;
-  lp.offset_ = 0;
+  lp.offset_ = 0.25;
   hessian.dim_ = lp.numCol_;
   hessian.q_start_ = {0, 1};
   hessian.q_index_ = {0};
   hessian.q_value_ = {2.0};
 
   Highs highs;
+  const HighsModel& model = highs.getModel();
+  const HighsInfo& info = highs.getInfo();
+  const HighsSolution& solution = highs.getSolution();
+  const double& objective_function_value = info.objective_function_value;
+  
   if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.passModel(model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
-  objective_function_value = highs.getInfo().objective_function_value;
-  required_objective_function_value = -0.25;
+  //  objective_function_value = info.objective_function_value;
+
+  const bool pretty = true;
+  if (dev_run) {
+    printf("One variable unconstrained QP: objective = %g; solution:\n", objective_function_value);
+    highs.writeSolution("", pretty);
+  }
+
+  
+  required_objective_function_value = 0;
   required_x0 = -0.5;
   REQUIRE(fabs(objective_function_value - required_objective_function_value) <
           double_equal_tolerance);
-  const HighsSolution& sol = highs.getSolution();
-  REQUIRE(fabs(sol.col_value[0] - required_x0) < double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - required_x0) < double_equal_tolerance);
 
   if (dev_run) printf("Objective = %g\n", objective_function_value);
   if (dev_run) highs.writeSolution("", true);
+
+  
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
