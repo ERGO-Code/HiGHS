@@ -84,7 +84,7 @@ HighsInt Highs_mipCall(
                        //!< variables are continuous (0) or integer (1)
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* rowvalue,  //!< array of length [numrow], filled with row values
-    int* modelstatus   //!< status of the model will be saved here
+    HighsInt* modelstatus  //!< status of the model will be saved here
 );
 
 /*
@@ -126,7 +126,7 @@ HighsInt Highs_qpCall(
                                //!< basis status
     HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
                                //!< basis status
-    int* modelstatus           //!< status of the model will be saved here
+    HighsInt* modelstatus      //!< status of the model will be saved here
 );
 
 /*
@@ -300,6 +300,14 @@ HighsInt Highs_passModel(
                      //!< variables are continuous (0) or integer (1) - or NULL
                      //!< if model is continuous
 );
+
+/*
+ * @brief pass a hessian to HiGHS
+ */
+HighsInt Highs_passHessian(void* highs, const HighsInt dim,
+                           const HighsInt num_nz, const HighsInt format,
+                           const HighsInt* start, const HighsInt* index,
+                           const double* value);
 
 HighsInt Highs_setBoolOptionValue(void* highs,
                                   const char* option,   //!< name of the option
@@ -788,6 +796,12 @@ HighsInt Highs_changeCoeff(
  * @brief Get the objective sense
  */
 HighsInt Highs_getObjectiveSense(void* highs, HighsInt* sense);
+
+/**
+ * @brief Get the objective offset
+ */
+HighsInt Highs_getObjectiveOffset(void* highs, double* offset);
+
 /**
  * @brief Get multiple columns from the model given by an interval
  */

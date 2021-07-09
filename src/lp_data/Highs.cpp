@@ -421,11 +421,18 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   if (dim != num_col) return HighsStatus::kError;
   hessian.dim_ = num_col;
   hessian.format_ = HessianFormat::kTriangular;
-  hessian.q_start_.assign(start, start + num_col);
-  hessian.q_start_.resize(num_col + 1);
-  hessian.q_start_[num_col] = num_nz;
-  hessian.q_index_.assign(index, index + num_nz);
-  hessian.q_value_.assign(value, value + num_nz);
+  if (dim > 0) {
+    assert(start != NULL);
+    hessian.q_start_.assign(start, start + num_col);
+    hessian.q_start_.resize(num_col + 1);
+    hessian.q_start_[num_col] = num_nz;
+  }
+  if (num_nz > 0) {
+    assert(index != NULL);
+    assert(value != NULL);
+    hessian.q_index_.assign(index, index + num_nz);
+    hessian.q_value_.assign(value, value + num_nz);
+  }
   return passHessian(hessian);
 }
 
@@ -2706,7 +2713,12 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
     case HighsModelStatus::kPresolveError:
     case HighsModelStatus::kSolveError:
     case HighsModelStatus::kPostsolveError:
-      clearUserSolverData();
+      // Don't clear the model status!
+      //      clearUserSolverData();
+      clearInfo();
+      clearSolution();
+      clearBasis();
+      assert(model_status_ == scaled_model_status_);
       assert(return_status == HighsStatus::kError);
       break;
 

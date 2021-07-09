@@ -95,12 +95,8 @@ TEST_CASE("qpsolver", "[qpsolver]") {
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
-  // Oscar's edge case
-  //
-  // min x^2 + x = x(x + 1)
-
   HighsStatus return_status;
-  //  HighsModelStatus model_status;
+  HighsModelStatus model_status;
   double required_objective_function_value;
   double required_x0;
   double required_x1;
@@ -109,6 +105,10 @@ TEST_CASE("test-qod", "[qpsolver]") {
   HighsLp& lp = local_model.lp_;
   HighsHessian& hessian = local_model.hessian_;
   const double inf = kHighsInf;
+
+  // Oscar's edge case
+  //
+  // min x^2 + x = x(x + 1)
 
   lp.model_name_ = "qod";
   lp.numCol_ = 1;
@@ -165,6 +165,10 @@ TEST_CASE("test-qod", "[qpsolver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kError);
 
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::kModelError);
+
+  // Pass the new Hessian
   hessian.dim_ = 2;
   hessian.q_start_ = {0, 1, 2};
   hessian.q_index_ = {0, 1};
@@ -182,7 +186,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
   }
 
   required_objective_function_value = -0.25;
-  required_x0 = -0.5;
   required_x1 = 0.5;
 
   alt_objective_function_value = model.objectiveValue(solution.col_value);
