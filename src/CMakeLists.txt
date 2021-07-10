@@ -133,6 +133,7 @@ set(sources
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
+    presolve/HighsSymmetry.cpp
     presolve/HPreData.cpp
     presolve/HPresolve.cpp
     presolve/PresolveAnalysis.cpp
@@ -548,6 +549,7 @@ target_sources(libhighs PRIVATE
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
+    presolve/HighsSymmetry.cpp
     presolve/HPreData.cpp
     presolve/HPresolve.cpp
     presolve/PresolveAnalysis.cpp
@@ -682,6 +684,7 @@ set(headers_fast_build_
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
+    presolve/HighsSymmetry.h
     presolve/HPreData.h
     presolve/HPresolve.h
     presolve/PresolveAnalysis.h
