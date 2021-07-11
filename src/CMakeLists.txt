@@ -345,7 +345,7 @@ if(FORTRAN_FOUND)
     install(TARGETS FortranHighs
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include/highs
+        INCLUDES DESTINATION include
         MODULES DESTINATION modules)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
@@ -385,7 +385,7 @@ if (OSI_FOUND)
     install(TARGETS OsiHighs
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include/highs)
+        INCLUDES DESTINATION include)
 
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
@@ -405,9 +405,9 @@ set_target_properties(highs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/highs/${dir} )
+    install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include/highs)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
 if (IPX_ON)
     if (UNIX)
@@ -441,7 +441,7 @@ else()
     install(TARGETS libhighs EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include/highs)
+            INCLUDES DESTINATION include)
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs 
@@ -725,9 +725,9 @@ set_target_properties(libhighs PROPERTIES INSTALL_RPATH
 # install the header files of highs
 foreach ( file ${headers_fast_build_} )
     get_filename_component( dir ${file} DIRECTORY )
-    install( FILES ${file} DESTINATION include/highs/${dir} )
+    install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
-install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include/highs)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
 
 # target_compile_options(libhighs PRIVATE "-Wall")
