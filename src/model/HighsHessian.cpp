@@ -62,3 +62,8 @@ bool HighsHessian::operator==(const HighsHessian& hessian) {
   equal = this->q_value_ == hessian.q_value_ && equal;
   return equal;
 }
+
+std::vector<double> HighsHessian::product(const std::vector<double>& solution) const {
+  std::vector<double> product;
+  return product;
+}

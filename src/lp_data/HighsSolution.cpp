@@ -31,18 +31,47 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsModel& model,
+		    const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsSolutionParams& solution_params) {
   HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+  getKktFailures(model, solution, basis, solution_params, primal_dual_errors);
 }
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsSolutionParams& solution_params,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
+  vector<double> gradient = model.objectiveGradient(solution.col_value);
+  getKktFailures(model.lp_, gradient, solution, basis, solution_params, primal_dual_errors, get_residuals);
+}
+
+void getLpKktFailures(const HighsLp& lp,
+		    const HighsSolution& solution,
+                    const HighsBasis& basis,
+                    HighsSolutionParams& solution_params) {
+  HighsPrimalDualErrors primal_dual_errors;
+  getLpKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+}
+
+void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                    const HighsBasis& basis,
+                    HighsSolutionParams& solution_params,
+                    HighsPrimalDualErrors& primal_dual_errors,
+                    const bool get_residuals) {
+  getKktFailures(lp, lp.colCost_, solution, basis, solution_params, primal_dual_errors, get_residuals);
+}
+
+void getKktFailures(const HighsLp& lp,
+		    const std::vector<double>& gradient,
+		    const HighsSolution& solution,
+                    const HighsBasis& basis,
+                    HighsSolutionParams& solution_params,
+                    HighsPrimalDualErrors& primal_dual_errors,
+                    const bool get_residuals) {
+  printf("Calling getKktFailures\n");
   double primal_feasibility_tolerance =
       solution_params.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
@@ -237,7 +266,7 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
     }
     if (iVar < lp.numCol_ && get_residuals) {
       HighsInt iCol = iVar;
-      if (have_dual_solution) dual_activities[iCol] = lp.colCost_[iCol];
+      if (have_dual_solution) dual_activities[iCol] = gradient[iCol];//lp.colCost_[iCol];
       for (HighsInt el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
         HighsInt iRow = lp.Aindex_[el];
         double Avalue = lp.Avalue_[el];

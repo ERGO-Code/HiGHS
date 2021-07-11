@@ -526,8 +526,8 @@ HighsStatus Highs::run() {
   if (!haveHmo("run")) return HighsStatus::kError;
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
-  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
-  //    kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level = //kHighsDebugLevelMin;
+      kHighsDebugLevelCostly;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
                            //  kHighsDebugLevelCheap;
@@ -914,8 +914,8 @@ HighsStatus Highs::run() {
           HighsInt save_highs_debug_level = options_.highs_debug_level;
           if (force_debug) options_.highs_debug_level = kHighsDebugLevelCostly;
           if (debugHighsSolution("After returning from postsolve", options_,
-                                 model_.lp_, hmos_[original_hmo].solution_,
-                                 hmos_[original_hmo].basis_) ==
+				 model_, hmos_[original_hmo].solution_,
+				 hmos_[original_hmo].basis_) ==
               HighsDebugStatus::kLogicalError)
             return returnFromRun(HighsStatus::kError);
           options_.highs_debug_level = save_highs_debug_level;
@@ -2367,7 +2367,7 @@ HighsStatus Highs::callSolveQp() {
     solution_params.dual_feasibility_tolerance =
         options_.dual_feasibility_tolerance;
     // NB getKktFailures sets the primal and dual solution status
-    getKktFailures(model_.lp_, solution_, basis_, solution_params);
+    getKktFailures(model_, solution_, basis_, solution_params);
     // Set the values in HighsInfo instance info_.
     solution_params.objective_function_value = objective_function_value;
     //  Most come from solution_params...
@@ -2451,7 +2451,7 @@ HighsStatus Highs::callSolveMip() {
   solution_params.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(model_.lp_, solution_, basis_, solution_params);
+  getKktFailures(model_, solution_, basis_, solution_params);
   // Set the values in HighsInfo instance info_.
   solution_params.objective_function_value = solver.solution_objective_;
   //  Most come from solution_params...
@@ -2836,7 +2836,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }
-  if (debugHighsSolution("Return from run()", options_, model_.lp_, solution_,
+  if (debugHighsSolution("Return from run()", options_, model_, solution_,
                          basis_, model_status_,
                          info_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;

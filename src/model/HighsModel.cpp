@@ -41,3 +41,16 @@ double HighsModel::objectiveValue(const std::vector<double>& solution) const {
   }
   return objective_function_value;
 }
+
+std::vector<double> HighsModel::objectiveGradient(const std::vector<double>& solution) const {
+  std::vector<double> gradient;
+  if (this->hessian_.dim_ > 0) {
+    gradient = this->hessian_.product(solution);
+  } else {
+    gradient.assign(this->lp_.numCol_, 0);
+  }
+  for (HighsInt iCol = 0; iCol < this->hessian_.dim_; iCol++) 
+    gradient[iCol] += this->lp_.colCost_[iCol];
+  return gradient;
+}
+
