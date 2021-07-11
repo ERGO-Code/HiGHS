@@ -432,7 +432,7 @@ if (IPX_ON)
     install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include/highs)
+            INCLUDES DESTINATION include)
 
     # Add library targets to the build-tree export set
     export(TARGETS libhighs libipx libbasiclu
