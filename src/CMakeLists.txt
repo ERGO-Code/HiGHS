@@ -655,6 +655,8 @@ set(headers_fast_build_
     model/HighsHessian.h
     model/HighsHessianUtils.h
     model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
