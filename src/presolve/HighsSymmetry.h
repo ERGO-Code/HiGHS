@@ -64,23 +64,24 @@ class HighsSymmetryDetection {
   // compressed graph storage
   std::vector<HighsInt> Gstart;
   std::vector<HighsInt> Gend;
-  std::vector<HighsInt> Gindex;
-  std::vector<u32> Gcolor;
+  std::vector<std::pair<HighsInt,HighsUInt>> Gedge;
+
+  std::vector<std::pair<HighsInt,HighsUInt>> edgeBuffer;
 
   std::vector<HighsInt> currentPartition;
   std::vector<HighsInt> currentPartitionLinks;
   std::vector<HighsInt> vertexToCell;
   std::vector<HighsInt> vertexPosition;
   std::vector<HighsInt> vertexGroundSet;
-  std::vector<u32> vertexHashes;
+  std::vector<u64> vertexHashes;
+  std::vector<bool> hashValid;
   std::vector<HighsInt> orbitPartition;
-  std::vector<HighsInt> orbitSize;
 
   std::vector<HighsInt> cellCreationStack;
   std::vector<std::uint8_t> cellInRefinementQueue;
   std::vector<HighsInt> refinementQueue;
-  std::vector<HighsInt> permutation;
   std::vector<HighsInt*> distinguishCands;
+  std::vector<HighsInt> automorphisms;
 
   std::vector<HighsInt> linkCompressionStack;
 
@@ -98,6 +99,7 @@ class HighsSymmetryDetection {
   HighsInt firstPathDepth;
   HighsInt bestPathDepth;
 
+  HighsInt numAutomorphisms;
   HighsInt numCol;
   HighsInt numRow;
   HighsInt numVertices;
@@ -133,6 +135,8 @@ class HighsSymmetryDetection {
   void initializeHashValues();
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
+  bool checkStoredAutomorphism(HighsInt vertex);
+  u64 getVertexHash(HighsInt vertex);
   HighsInt selectTargetCell();
 
   bool updateCellMembership(HighsInt vertex, HighsInt cell,
