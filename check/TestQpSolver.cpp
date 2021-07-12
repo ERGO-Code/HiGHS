@@ -4,7 +4,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -274,9 +274,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   hessian.q_value_ = {2.0, -1.0, 0.2, 2.0};
 
   Highs highs;
-  const HighsModel& model = highs.getModel();
   const HighsInfo& info = highs.getInfo();
-  const HighsSolution& solution = highs.getSolution();
   const double& objective_function_value = info.objective_function_value;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.passModel(local_model);

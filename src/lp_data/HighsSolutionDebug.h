@@ -22,31 +22,25 @@
 #include "lp_data/HighsSolution.h"
 
 HighsDebugStatus debugHighsLpSolution(const std::string message,
-				      const HighsModelObject& model);
+                                      const HighsModelObject& model);
 
 HighsDebugStatus debugHighsSolution(const string message,
-				    const HighsOptions& options,
-				    const HighsModel& model,
-				    const HighsSolution& solution,
-				    const HighsBasis& basis);
+                                    const HighsOptions& options,
+                                    const HighsModel& model,
+                                    const HighsSolution& solution,
+                                    const HighsBasis& basis);
 
-HighsDebugStatus debugHighsSolution(const string message,
-				    const HighsOptions& options,
-				    const HighsModel& model,
-				    const HighsSolution& solution,
-				    const HighsBasis& basis,
-				    const HighsModelStatus model_status,
-				    const HighsInfo& info);
+HighsDebugStatus debugHighsSolution(
+    const string message, const HighsOptions& options, const HighsModel& model,
+    const HighsSolution& solution, const HighsBasis& basis,
+    const HighsModelStatus model_status, const HighsInfo& info);
 
-HighsDebugStatus debugHighsSolution(const std::string message,
-				    const HighsOptions& options,
-				    const HighsLp& lp,
-				    const std::vector<double>& gradient,
-				    const HighsSolution& solution,
-				    const HighsBasis& basis,
-				    const HighsModelStatus model_status,
-				    const HighsSolutionParams& solution_params,
-				    const bool check_model_status_and_solution_params);
+HighsDebugStatus debugHighsSolution(
+    const std::string message, const HighsOptions& options, const HighsLp& lp,
+    const HighsHessian& hessian, const HighsSolution& solution,
+    const HighsBasis& basis, const HighsModelStatus model_status,
+    const HighsSolutionParams& solution_params,
+    const bool check_model_status_and_solution_params);
 
 void debugReportHighsSolution(const string message,
                               const HighsLogOptions& log_options,

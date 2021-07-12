@@ -52,6 +52,7 @@ class HighsLp {
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
+  double objectiveValue(const std::vector<double>& solution) const;
   void clear();
 };
 

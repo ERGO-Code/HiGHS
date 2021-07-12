@@ -526,8 +526,8 @@ HighsStatus Highs::run() {
   if (!haveHmo("run")) return HighsStatus::kError;
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
-  HighsInt min_highs_debug_level = //kHighsDebugLevelMin;
-      kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level =  kHighsDebugLevelMin;
+  //      kHighsDebugLevelCostly;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
                            //  kHighsDebugLevelCheap;
@@ -914,8 +914,8 @@ HighsStatus Highs::run() {
           HighsInt save_highs_debug_level = options_.highs_debug_level;
           if (force_debug) options_.highs_debug_level = kHighsDebugLevelCostly;
           if (debugHighsSolution("After returning from postsolve", options_,
-				 model_, hmos_[original_hmo].solution_,
-				 hmos_[original_hmo].basis_) ==
+                                 model_, hmos_[original_hmo].solution_,
+                                 hmos_[original_hmo].basis_) ==
               HighsDebugStatus::kLogicalError)
             return returnFromRun(HighsStatus::kError);
           options_.highs_debug_level = save_highs_debug_level;
@@ -2356,40 +2356,25 @@ HighsStatus Highs::callSolveQp() {
   }
   solution_.value_valid = true;
   solution_.dual_valid = true;
-  const double objective_function_value =
-      runtime.instance.objval(runtime.primal);
-  const bool can_get_qp_kkt_failures = false;
-  if (can_get_qp_kkt_failures) {
-    // Use generic method to set data required for info
-    HighsSolutionParams solution_params;
-    solution_params.primal_feasibility_tolerance =
-        options_.primal_feasibility_tolerance;
-    solution_params.dual_feasibility_tolerance =
-        options_.dual_feasibility_tolerance;
-    // NB getKktFailures sets the primal and dual solution status
-    getKktFailures(model_, solution_, basis_, solution_params);
-    // Set the values in HighsInfo instance info_.
-    solution_params.objective_function_value = objective_function_value;
-    //  Most come from solution_params...
-    copyFromSolutionParams(info_, solution_params);
-  } else {
-    info_.num_primal_infeasibilities = -1;  // Not known
-    info_.max_primal_infeasibility = 0.0;   //
-    info_.sum_primal_infeasibilities = -1;  // Not known
-    info_.num_dual_infeasibilities = -1;    // Not known
-    info_.max_dual_infeasibility = -1;      // Not known
-    info_.sum_dual_infeasibilities = -1;    // Not known
-    info_.objective_function_value = objective_function_value;
-    if (model_status_ == HighsModelStatus::kOptimal) {
-      info_.primal_solution_status = SolutionStatus::kSolutionStatusFeasible;
-      info_.dual_solution_status = SolutionStatus::kSolutionStatusFeasible;
-    } else {
-      info_.primal_solution_status = SolutionStatus::kSolutionStatusInfeasible;
-      info_.dual_solution_status = SolutionStatus::kSolutionStatusInfeasible;
-    }
-    info_.basis_validity = BasisValidity::kBasisValidityInvalid;
-  }
-  info_.objective_function_value = model_.objectiveValue(solution_.col_value);
+  const double model_objective_function_value =
+      model_.objectiveValue(solution_.col_value);
+  //  const double runtime_objective_function_value =
+  //    runtime.instance.objval(runtime.primal);
+  //  printf("objective_function_value: runtime = %g; model = %g\n",
+  //	 runtime_objective_function_value,
+  //	 model_objective_function_value);
+  // Use generic method to set data required for info
+  HighsSolutionParams solution_params;
+  solution_params.primal_feasibility_tolerance =
+      options_.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
+  // NB getKktFailures sets the primal and dual solution status
+  getKktFailures(model_, solution_, basis_, solution_params);
+  // Set the values in HighsInfo instance info_.
+  solution_params.objective_function_value = model_objective_function_value;
+  //  Most come from solution_params...
+  copyFromSolutionParams(info_, solution_params);
   // ... and iteration counts...
   info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
   info_.ipm_iteration_count = iteration_counts_.ipm;

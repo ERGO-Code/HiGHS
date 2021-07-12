@@ -53,6 +53,14 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   return equal;
 }
 
+double HighsLp::objectiveValue(const std::vector<double>& solution) const {
+  assert((int)solution.size() >= this->numCol_);
+  double objective_function_value = this->offset_;
+  for (HighsInt iCol = 0; iCol < this->numCol_; iCol++)
+    objective_function_value += this->colCost_[iCol] * solution[iCol];
+  return objective_function_value;
+}
+
 void HighsLp::clear() {
   this->numCol_ = 0;
   this->numRow_ = 0;

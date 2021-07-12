@@ -31,7 +31,8 @@ class HighsModel {
   bool isMip() const { return this->lp_.isMip(); }
   void clear();
   double objectiveValue(const std::vector<double>& solution) const;
-  std::vector<double> objectiveGradient(const std::vector<double>& solution) const;
+  void objectiveGradient(const std::vector<double>& solution,
+                         std::vector<double>& gradient) const;
 };
 
 #endif

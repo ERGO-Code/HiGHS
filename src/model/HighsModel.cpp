@@ -23,34 +23,17 @@ void HighsModel::clear() {
 }
 
 double HighsModel::objectiveValue(const std::vector<double>& solution) const {
-  assert((int)solution.size() >= this->lp_.numCol_);
-  double objective_function_value = this->lp_.offset_;
-  for (HighsInt iCol = 0; iCol < this->lp_.numCol_; iCol++)
-    objective_function_value += this->lp_.colCost_[iCol] * solution[iCol];
-  if (this->hessian_.dim_ == 0) return objective_function_value;
-  for (HighsInt iCol = 0; iCol < this->hessian_.dim_; iCol++) {
-    HighsInt iEl = this->hessian_.q_start_[iCol];
-    assert(this->hessian_.q_index_[iEl] == iCol);
-    objective_function_value +=
-        0.5 * solution[iCol] * this->hessian_.q_value_[iEl] * solution[iCol];
-    for (HighsInt iEl = this->hessian_.q_start_[iCol] + 1;
-         iEl < this->hessian_.q_start_[iCol + 1]; iEl++)
-      objective_function_value += solution[iCol] *
-                                  this->hessian_.q_value_[iEl] *
-                                  solution[this->hessian_.q_index_[iEl]];
-  }
-  return objective_function_value;
+  return this->hessian_.objectiveValue(solution) +
+         this->lp_.objectiveValue(solution);
 }
 
-std::vector<double> HighsModel::objectiveGradient(const std::vector<double>& solution) const {
-  std::vector<double> gradient;
+void HighsModel::objectiveGradient(const std::vector<double>& solution,
+                                   std::vector<double>& gradient) const {
   if (this->hessian_.dim_ > 0) {
-    gradient = this->hessian_.product(solution);
+    this->hessian_.product(solution, gradient);
   } else {
     gradient.assign(this->lp_.numCol_, 0);
   }
-  for (HighsInt iCol = 0; iCol < this->hessian_.dim_; iCol++) 
+  for (HighsInt iCol = 0; iCol < this->hessian_.dim_; iCol++)
     gradient[iCol] += this->lp_.colCost_[iCol];
-  return gradient;
 }
-

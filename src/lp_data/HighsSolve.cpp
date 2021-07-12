@@ -77,9 +77,9 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
     //    model.solution_params_);
     getLpKktFailures(model.lp_, model.solution_, model.basis_,
-		     model.solution_params_);
+                     model.solution_params_);
     const double objective_function_value =
-        computeObjectiveValue(model.lp_, model.solution_);
+        model.lp_.objectiveValue(model.solution_.col_value);
     model.solution_params_.objective_function_value = objective_function_value;
 
     HighsSolutionParams check_solution_params;
@@ -89,7 +89,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     check_solution_params.dual_feasibility_tolerance =
         options.dual_feasibility_tolerance;
     getLpKktFailures(model.lp_, model.solution_, model.basis_,
-		     check_solution_params);
+                     check_solution_params);
 
     if (debugCompareSolutionParams(options, model.solution_params_,
                                    check_solution_params) !=
