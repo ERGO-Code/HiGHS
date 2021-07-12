@@ -68,7 +68,8 @@ struct HighsSymmetries {
                                std::vector<HighsInt>& orbitStarts);
 
   HighsInt orbitalFixing(const std::vector<HighsInt>& orbitCols,
-                         const std::vector<HighsInt>& orbitStarts, HighsDomain& domain);
+                         const std::vector<HighsInt>& orbitStarts,
+                         HighsDomain& domain);
 };
 
 class HighsSymmetryDetection {
