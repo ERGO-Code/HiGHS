@@ -62,7 +62,9 @@ void HighsSymmetryDetection::removeFixPoints() {
   if ((HighsInt)currentPartition.size() < numVertices) {
     numVertices = currentPartition.size();
     currentPartitionLinks.resize(numVertices);
-    cellInRefinementQueue.resize(numVertices);
+    cellInRefinementQueue.assign(numVertices, false);
+    assert(refinementQueue.empty());
+    refinementQueue.clear();
     HighsInt cellStart = 0;
     HighsInt cellNumber = 0;
     for (HighsInt i = 0; i < numVertices; ++i) {
@@ -78,7 +80,13 @@ void HighsSymmetryDetection::removeFixPoints() {
         cellStart = i;
       }
 
-      markCellForRefinement(cellStart);
+      if (!cellInRefinementQueue[cellStart]) {
+        cellInRefinementQueue[cellStart] = true;
+        refinementQueue.push_back(cellStart);
+        std::push_heap(refinementQueue.begin(), refinementQueue.end(),
+                       std::greater<HighsInt>());
+      }
+
       // correct the vertexToCell array to not store the start index of the
       // cell, not its number
       updateCellMembership(i, cellStart, false);
@@ -223,7 +231,9 @@ HighsInt HighsSymmetries::orbitalFixing(
     }
 
     if (fixcol != -1) {
+      HighsInt oldNumFixed = numFixed;
       double fixVal = domain.colLower_[fixcol];
+      auto oldSize = domain.getDomainChangeStack().size();
       if (domain.colLower_[fixcol] == 1.0) {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
           if (domain.colLower_[orbitCols[j]] == 1.0) continue;
@@ -242,8 +252,12 @@ HighsInt HighsSymmetries::orbitalFixing(
         }
       }
 
-      if (numFixed != 0)
+      HighsInt newFixed = numFixed - oldNumFixed;
+
+      if (newFixed != 0) {
         domain.propagate();
+        if (domain.getDomainChangeStack().size() - oldSize > newFixed) i = -1;
+      }
     }
   }
 
