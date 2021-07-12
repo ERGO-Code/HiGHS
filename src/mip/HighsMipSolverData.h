@@ -30,6 +30,7 @@
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "presolve/HighsPostsolveStack.h"
+#include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
 struct HighsMipSolverData {
@@ -48,6 +49,7 @@ struct HighsMipSolverData {
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
+  bool detectSymmetries;
   HighsInt numRestarts;
   HighsInt numRestartsRoot;
 
@@ -62,6 +64,8 @@ struct HighsMipSolverData {
   std::vector<HighsInt> implint_cols;
   std::vector<HighsInt> integral_cols;
   std::vector<HighsInt> continuous_cols;
+
+  HighsSymmetries symmetries;
 
   double objintscale;
 
@@ -130,9 +134,13 @@ struct HighsMipSolverData {
   void performRestart();
   bool checkSolution(const std::vector<double>& solution);
   bool trySolution(const std::vector<double>& solution, char source = ' ');
-  bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
+  bool rootSeparationRound(const std::vector<HighsInt>& orbitCols,
+                           const std::vector<HighsInt>& orbitStarts,
+                           HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
-  HighsLpRelaxation::Status evaluateRootLp();
+  HighsLpRelaxation::Status evaluateRootLp(
+      const std::vector<HighsInt>& orbitCols,
+      const std::vector<HighsInt>& orbitStarts);
   void evaluateRootNode();
   bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
 

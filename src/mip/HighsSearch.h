@@ -46,6 +46,8 @@ class HighsSearch {
   HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
+  std::vector<HighsInt> orbitCols;
+  std::vector<HighsInt> orbitStarts;
 
  public:
   enum class ChildSelectionRule {

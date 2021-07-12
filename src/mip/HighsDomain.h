@@ -361,6 +361,10 @@ class HighsDomain {
 
   HighsDomainChange backtrack();
 
+  const std::vector<HighsInt>& getBranchingPositions() const {
+    return branchPos_;
+  }
+
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {
     return domchgstack_;
   }

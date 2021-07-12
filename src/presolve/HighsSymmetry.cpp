@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include "mip/HighsDomain.h"
+
 void HighsSymmetryDetection::removeFixPoints() {
   Gend.resize(numVertices);
   for (HighsInt i = 0; i < numVertices; ++i) {
@@ -93,6 +95,159 @@ void HighsSymmetryDetection::removeFixPoints() {
 
     partitionRefinement();
   }
+}
+
+void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2) {
+  if (v1 == v2) return;
+
+  HighsInt orbit1 = getOrbit(v1);
+  HighsInt orbit2 = getOrbit(v2);
+
+  if (orbit1 == orbit2) return;
+
+  if (orbitSize[orbit2] < orbitSize[orbit1]) {
+    orbitPartition[orbit2] = orbit1;
+    orbitSize[orbit1] += orbitSize[orbit2];
+  } else {
+    orbitPartition[orbit1] = orbit2;
+    orbitSize[orbit2] += orbitSize[orbit1];
+  }
+
+  return;
+}
+
+HighsInt HighsSymmetries::getOrbit(HighsInt col) {
+  HighsInt i = columnPosition[col];
+  if (i == -1) return -1;
+  HighsInt orbit = orbitPartition[i];
+  if (orbit != orbitPartition[orbit]) {
+    do {
+      linkCompressionStack.push_back(i);
+      i = orbit;
+      orbit = orbitPartition[orbit];
+    } while (orbit != orbitPartition[orbit]);
+
+    do {
+      i = linkCompressionStack.back();
+      linkCompressionStack.pop_back();
+      orbitPartition[i] = orbit;
+    } while (!linkCompressionStack.empty());
+  }
+
+  return orbit;
+}
+
+void HighsSymmetries::computeStabilizedOrbits(
+    const HighsDomain& localdom, std::vector<HighsInt>& orbitCols,
+    std::vector<HighsInt>& orbitStarts) {
+  const auto& domchgStack = localdom.getDomainChangeStack();
+  const auto& branchingPos = localdom.getBranchingPositions();
+
+  std::vector<HighsInt> binariesBranchedToOne;
+  binariesBranchedToOne.reserve(permutationColumns.size());
+
+  HighsInt permLength = permutationColumns.size();
+  for (HighsInt i : branchingPos) {
+    HighsInt col = domchgStack[i].column;
+    if (columnPosition[col] == -1) continue;
+
+    if (localdom.variableType(col) == HighsVarType::kContinuous ||
+        localdom.colLower_[col] != 1.0 || localdom.colUpper_[col] != 1.0)
+      continue;
+
+    binariesBranchedToOne.push_back(columnPosition[col]);
+  }
+
+  orbitPartition.resize(permLength);
+  std::iota(orbitPartition.begin(), orbitPartition.end(), 0);
+  orbitSize.assign(permLength, 1);
+
+  for (HighsInt i = 0; i < numPerms; ++i) {
+    const HighsInt* perm = permutations.data() + i * permutationColumns.size();
+
+    bool permRespectsBranchings = true;
+    for (HighsInt i : binariesBranchedToOne) {
+      if (permutationColumns[i] != perm[i]) {
+        permRespectsBranchings = false;
+        break;
+      }
+    }
+
+    if (!permRespectsBranchings) continue;
+
+    for (HighsInt j = 0; j < permLength; ++j) {
+      mergeOrbits(permutationColumns[j], perm[j]);
+    }
+  }
+
+  orbitCols.clear();
+  orbitStarts.clear();
+  orbitCols.reserve(permLength);
+  for (HighsInt i = 0; i < permLength; ++i) {
+    if (orbitSize[i] > 1 && localdom.variableType(permutationColumns[i]) !=
+                                HighsVarType::kContinuous)
+      orbitCols.push_back(permutationColumns[i]);
+  }
+  if (orbitCols.empty()) return;
+  std::sort(orbitCols.begin(), orbitCols.end(),
+            [&](HighsInt col1, HighsInt col2) {
+              return getOrbit(col1) < getOrbit(col2);
+            });
+  HighsInt numOrbitCols = orbitCols.size();
+  orbitStarts.reserve(numOrbitCols + 1);
+  orbitStarts.push_back(0);
+  if (numOrbitCols != 0) {
+    for (HighsInt i = 1; i < numOrbitCols; ++i) {
+      if (getOrbit(orbitCols[i]) != getOrbit(orbitCols[i - 1]))
+        orbitStarts.push_back(i);
+    }
+    orbitStarts.push_back(numOrbitCols);
+  }
+}
+
+HighsInt HighsSymmetries::orbitalFixing(
+    const std::vector<HighsInt>& orbitCols,
+    const std::vector<HighsInt>& orbitStarts, HighsDomain& domain) {
+  if (orbitCols.empty()) return 0;
+
+  HighsInt numFixed = 0;
+  HighsInt numOrbits = orbitStarts.size() - 1;
+  for (HighsInt i = 0; i < numOrbits; ++i) {
+    bool containsNonBin = false;
+    HighsInt fixcol = -1;
+    for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
+      if (domain.isFixed(orbitCols[j])) {
+        fixcol = orbitCols[j];
+        break;
+      }
+    }
+
+    if (fixcol != -1) {
+      double fixVal = domain.colLower_[fixcol];
+      if (domain.colLower_[fixcol] == 1.0) {
+        for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
+          if (domain.colLower_[orbitCols[j]] == 1.0) continue;
+          ++numFixed;
+          domain.changeBound(HighsBoundType::kLower, orbitCols[j], 1.0,
+                             HighsDomain::Reason::unspecified());
+          if (domain.infeasible()) break;
+        }
+      } else {
+        for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
+          if (domain.colUpper_[orbitCols[j]] == 0.0) continue;
+          ++numFixed;
+          domain.changeBound(HighsBoundType::kUpper, orbitCols[j], 0.0,
+                             HighsDomain::Reason::unspecified());
+          if (domain.infeasible()) break;
+        }
+      }
+
+      if (numFixed != 0)
+        domain.propagate();
+    }
+  }
+
+  return numFixed;
 }
 
 void HighsSymmetryDetection::initializeGroundSet() {
@@ -764,7 +919,6 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
           } else if (!bestLeavePartition.empty() &&
                      bestLeavePrefixLen == currNodeCertificate.size() &&
                      compareCurrentGraph(bestLeaveGraph)) {
-            printf("discovered symmetry with best leave\n");
             HighsInt k = (numAutomorphisms++) & 63;
             HighsInt* permutation = automorphisms.data() + k * numVertices;
             for (HighsInt i = 0; i < numVertices; ++i) {
@@ -842,6 +996,11 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
     }
   }
 
-  vertexGroundSet.resize(numActiveCols);
-  symmetries.permutationColumns = std::move(vertexGroundSet);
+  if (symmetries.numPerms > 0) {
+    vertexGroundSet.resize(numActiveCols);
+    symmetries.permutationColumns = std::move(vertexGroundSet);
+    symmetries.columnPosition.resize(numCol, -1);
+    for (HighsInt i = 0; i < numActiveCols; ++i)
+      symmetries.columnPosition[symmetries.permutationColumns[i]] = i;
+  }
 }

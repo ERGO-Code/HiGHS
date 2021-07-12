@@ -320,6 +320,7 @@ struct HighsOptionsStruct {
   bool use_original_HFactor_logic;
 
   // Options for MIP solver
+  bool mip_detect_symmetry;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
@@ -582,6 +583,12 @@ class HighsOptions : public HighsOptionsStruct {
                                        "Write the primal and dual solution in "
                                        "a pretty (human-readable) format",
                                        advanced, &write_solution_pretty, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("mip_detect_symmetry",
+                             "Whether symmetry should be detected",
+                             advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",

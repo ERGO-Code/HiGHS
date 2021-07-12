@@ -86,6 +86,7 @@ bool HighsPrimalHeuristics::solveSubMip(
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
   submipoptions.presolve = "on";
+  submipoptions.mip_detect_symmetry = mipsolver.mipdata_->detectSymmetries;
   // setup solver and run it
 
   HighsSolution solution;

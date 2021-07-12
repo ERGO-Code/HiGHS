@@ -51,10 +51,24 @@ class HighsMatrixColoring {
   }
 };
 
+class HighsDomain;
 struct HighsSymmetries {
   std::vector<HighsInt> permutationColumns;
   std::vector<HighsInt> permutations;
+  std::vector<HighsInt> orbitPartition;
+  std::vector<HighsInt> orbitSize;
+  std::vector<HighsInt> columnPosition;
+  std::vector<HighsInt> linkCompressionStack;
   HighsInt numPerms = 0;
+
+  void mergeOrbits(HighsInt col1, HighsInt col2);
+  HighsInt getOrbit(HighsInt col);
+  void computeStabilizedOrbits(const HighsDomain& localdom,
+                               std::vector<HighsInt>& orbitCols,
+                               std::vector<HighsInt>& orbitStarts);
+
+  HighsInt orbitalFixing(const std::vector<HighsInt>& orbitCols,
+                         const std::vector<HighsInt>& orbitStarts, HighsDomain& domain);
 };
 
 class HighsSymmetryDetection {
@@ -64,9 +78,9 @@ class HighsSymmetryDetection {
   // compressed graph storage
   std::vector<HighsInt> Gstart;
   std::vector<HighsInt> Gend;
-  std::vector<std::pair<HighsInt,HighsUInt>> Gedge;
+  std::vector<std::pair<HighsInt, HighsUInt>> Gedge;
 
-  std::vector<std::pair<HighsInt,HighsUInt>> edgeBuffer;
+  std::vector<std::pair<HighsInt, HighsUInt>> edgeBuffer;
 
   std::vector<HighsInt> currentPartition;
   std::vector<HighsInt> currentPartitionLinks;
