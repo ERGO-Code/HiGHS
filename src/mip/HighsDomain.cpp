@@ -1369,6 +1369,137 @@ void HighsDomain::setDomainChangeStack(
   }
 }
 
+void HighsDomain::setDomainChangeStack(
+    const std::vector<HighsDomainChange>& domchgstack,
+    const std::vector<HighsInt>& branchingPositions) {
+  infeasible_ = false;
+  mipsolver->mipdata_->debugSolution.resetDomain(*this);
+
+  if (!domchgstack_.empty()) {
+    for (const HighsDomainChange& domchg : domchgstack_) {
+      if (domchg.boundtype == HighsBoundType::kLower)
+        colLowerPos_[domchg.column] = -1;
+      else
+        colUpperPos_[domchg.column] = -1;
+    }
+  }
+
+  prevboundval_.clear();
+  domchgstack_.clear();
+  domchgreason_.clear();
+  branchPos_.clear();
+  HighsInt stacksize = domchgstack.size();
+  HighsInt nextBranchPos = -1;
+  HighsInt k = 0;
+  for (HighsInt branchPos : branchingPositions) {
+    for (; k < branchPos; ++k) {
+      if (domchgstack[k].boundtype == HighsBoundType::kLower &&
+          domchgstack[k].boundval <= colLower_[domchgstack[k].column])
+        continue;
+      if (domchgstack[k].boundtype == HighsBoundType::kUpper &&
+          domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
+        continue;
+
+      mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
+                                                          true);
+
+      changeBound(domchgstack[k], Reason::unspecified());
+
+      if (infeasible_) return;
+    }
+
+    if (k == stacksize) return;
+
+    if (domchgstack[k].boundtype == HighsBoundType::kLower &&
+        domchgstack[k].boundval <= colLower_[domchgstack[k].column])
+      continue;
+    if (domchgstack[k].boundtype == HighsBoundType::kUpper &&
+        domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
+      continue;
+
+    mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
+                                                        true);
+
+    changeBound(domchgstack[k], Reason::branching());
+
+    if (infeasible_) return;
+  }
+
+  for (; k < stacksize; ++k) {
+    if (domchgstack[k].boundtype == HighsBoundType::kLower &&
+        domchgstack[k].boundval <= colLower_[domchgstack[k].column])
+      continue;
+    if (domchgstack[k].boundtype == HighsBoundType::kUpper &&
+        domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
+      continue;
+
+    mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
+                                                        true);
+
+    changeBound(domchgstack[k], Reason::unspecified());
+
+    if (infeasible_) break;
+  }
+}
+
+void HighsDomain::backtrackToGlobal() {
+  HighsInt k = HighsInt(domchgstack_.size()) - 1;
+  bool old_infeasible = infeasible_;
+  Reason old_reason = infeasible_reason;
+
+  if (infeasible_ && infeasible_pos == HighsInt(domchgstack_.size())) {
+    assert(old_infeasible);
+    assert(k == HighsInt(domchgstack_.size()) - 1);
+    infeasible_ = false;
+    infeasible_reason = Reason::unspecified();
+  }
+
+  while (k >= 0) {
+    double prevbound = prevboundval_[k].first;
+    HighsInt prevpos = prevboundval_[k].second;
+    assert(prevpos < k);
+
+    mipsolver->mipdata_->debugSolution.boundChangeRemoved(*this,
+                                                          domchgstack_[k]);
+
+    if (domchgstack_[k].boundtype == HighsBoundType::kLower) {
+      assert(colLowerPos_[domchgstack_[k].column] == k);
+      colLowerPos_[domchgstack_[k].column] = prevpos;
+    } else {
+      assert(colUpperPos_[domchgstack_[k].column] == k);
+      colUpperPos_[domchgstack_[k].column] = prevpos;
+    }
+
+    // change back to global bound
+    doChangeBound(
+        {prevbound, domchgstack_[k].column, domchgstack_[k].boundtype});
+
+    if (infeasible_ && infeasible_pos == k) {
+      assert(old_infeasible);
+      assert(k == HighsInt(domchgstack_.size()) - 1);
+      infeasible_ = false;
+      infeasible_reason = Reason::unspecified();
+    }
+
+    --k;
+  }
+
+  if (old_infeasible) {
+    markPropagateCut(old_reason);
+    infeasible_reason = Reason::unspecified();
+    infeasible_ = false;
+  }
+
+  HighsInt numreason = domchgreason_.size();
+  for (HighsInt i = k + 1; i < numreason; ++i)
+    markPropagateCut(domchgreason_[i]);
+
+  domchgstack_.clear();
+  prevboundval_.clear();
+  domchgreason_.clear();
+  branchPos_.clear();
+}
+
 HighsDomainChange HighsDomain::backtrack() {
   HighsInt k = HighsInt(domchgstack_.size()) - 1;
   bool old_infeasible = infeasible_;

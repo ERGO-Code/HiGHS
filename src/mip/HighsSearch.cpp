@@ -613,7 +613,9 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
     if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
   }
   if (!prune) {
-    nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
+    std::vector<HighsInt> branchPositions;
+    auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
+    nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
                           nodestack.back().lower_bound,
                           nodestack.back().estimate, getCurrentDepth());
   } else
@@ -648,7 +650,9 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
     }
     if (!prune) {
-      nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
+      std::vector<HighsInt> branchPositions;
+      auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
+      nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
                             nodestack.back().lower_bound,
                             nodestack.back().estimate, getCurrentDepth());
     } else {
@@ -717,7 +721,7 @@ void HighsSearch::resetLocalDomain() {
 }
 
 void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
-  localdom.setDomainChangeStack(std::move(node.domchgstack));
+  localdom.setDomainChangeStack(node.domchgstack, node.branchings);
   nodestack.emplace_back(node.lower_bound, node.estimate);
   depthoffset = node.depth - 1;
   subrootsol.clear();
@@ -1177,14 +1181,16 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     while (nodestack.back().opensubtrees == 0) {
       nodestack.pop_back();
 
+      if (nodestack.empty()) {
+        localdom.backtrackToGlobal();
+        lp->flushDomain(localdom);
+        return false;
+      }
+
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif
           localdom.backtrack();
-      if (nodestack.empty()) {
-        lp->flushDomain(localdom);
-        return false;
-      }
       assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
       assert(branchchg.boundtype ==
              nodestack.back().branchingdecision.boundtype);
@@ -1253,14 +1259,15 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     while (nodestack.back().opensubtrees == 0) {
       nodestack.pop_back();
 
+      if (nodestack.empty()) {
+        localdom.backtrackToGlobal();
+        lp->flushDomain(localdom);
+        return false;
+      }
 #ifndef NDEBUG
       HighsDomainChange branchchg =
 #endif
           localdom.backtrack();
-      if (nodestack.empty()) {
-        lp->flushDomain(localdom);
-        return false;
-      }
       assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
       assert(branchchg.boundtype ==
              nodestack.back().branchingdecision.boundtype);
@@ -1343,7 +1350,9 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       // if (!mipsolver.submip) printf("node goes to queue\n");
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
+      std::vector<HighsInt> branchPositions;
+      auto domchgStack = localdom.getReducedDomainChangeStack(branchPositions);
+      nodequeue.emplaceNode(std::move(domchgStack), std::move(branchPositions),
                             nodestack.back().lower_bound,
                             nodestack.back().estimate, getCurrentDepth() + 1);
       continue;

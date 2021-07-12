@@ -263,7 +263,9 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 
       // release the memory for domain changes
       nodes[delroot].domchgstack.clear();
+      nodes[delroot].branchings.clear();
       nodes[delroot].domchgstack.shrink_to_fit();
+      nodes[delroot].branchings.shrink_to_fit();
 
       // remember the free position for reuse
       freeslots.push(delroot);
@@ -274,17 +276,20 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 }
 
 void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                                 std::vector<HighsInt>&& branchPositions,
                                  double lower_bound, double estimate,
                                  HighsInt depth) {
   HighsInt pos;
 
   if (freeslots.empty()) {
     pos = nodes.size();
-    nodes.emplace_back(std::move(domchgs), lower_bound, estimate, depth);
+    nodes.emplace_back(std::move(domchgs), std::move(branchPositions),
+                       lower_bound, estimate, depth);
   } else {
     pos = freeslots.top();
     freeslots.pop();
-    nodes[pos] = OpenNode(std::move(domchgs), lower_bound, estimate, depth);
+    nodes[pos] = OpenNode(std::move(domchgs), std::move(branchPositions),
+                          lower_bound, estimate, depth);
   }
 
   assert(nodes[pos].lower_bound == lower_bound);

@@ -551,8 +551,16 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
   // use the previous number in that case. The number is stored in the
   // colToCell array which is subsequently used to sort an initial column
   // permutation.
+  HighsInt indexOffset = numCol + 1;
   for (HighsInt i = 0; i < numCol; ++i) {
     MatrixColumn matrixCol;
+
+    if (lp.integrality_[i] != HighsVarType::kContinuous &&
+        (lp.colLower_[i] != 0.0 || lp.colUpper_[i] != 1.0)) {
+      vertexToCell[i] = indexOffset;
+      indexOffset += 1;
+      continue;
+    }
 
     matrixCol.cost = coloring.color(lp.colCost_[i]);
     matrixCol.lb = coloring.color(lp.colLower_[i]);
@@ -578,7 +586,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
 
     if (*rowCell == 0) *rowCell = rowSet.size();
 
-    vertexToCell[numCol + i] = columnSet.size() + 1 + *rowCell;
+    vertexToCell[numCol + i] = indexOffset + *rowCell;
   }
 
   // set up the initial partition array, sort by the colToCell value

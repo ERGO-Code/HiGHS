@@ -357,6 +357,8 @@ class HighsDomain {
       changeBound({val, col, HighsBoundType::kUpper}, reason);
   }
 
+  void backtrackToGlobal();
+
   HighsDomainChange backtrack();
 
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {
@@ -369,24 +371,32 @@ class HighsDomain {
 
   HighsInt getBranchDepth() const { return branchPos_.size(); }
 
-  std::vector<HighsDomainChange> getReducedDomainChangeStack() const {
+  std::vector<HighsDomainChange> getReducedDomainChangeStack(
+      std::vector<HighsInt>& branchingPositions) const {
     std::vector<HighsDomainChange> reducedstack;
     reducedstack.reserve(domchgstack_.size());
-    for (const HighsDomainChange& domchg : domchgstack_) {
+    branchingPositions.reserve(branchPos_.size());
+    for (HighsInt i = 0; i < (HighsInt)domchgstack_.size(); ++i) {
       // keep only the tightest bound change for each variable
-      if ((domchg.boundtype == HighsBoundType::kLower &&
-           colLower_[domchg.column] != domchg.boundval) ||
-          (domchg.boundtype == HighsBoundType::kUpper &&
-           colUpper_[domchg.column] != domchg.boundval))
+      if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
+           colLower_[domchgstack_[i].column] != domchgstack_[i].boundval) ||
+          (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
+           colUpper_[domchgstack_[i].column] != domchgstack_[i].boundval))
         continue;
 
-      reducedstack.push_back(domchg);
+      if (domchgreason_[i].type == Reason::kBranching)
+        branchingPositions.push_back(reducedstack.size());
+      reducedstack.push_back(domchgstack_[i]);
     }
+
     reducedstack.shrink_to_fit();
     return reducedstack;
   }
 
   void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack);
+
+  void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack,
+                            const std::vector<HighsInt>& branchingPositions);
 
   bool propagate();
 

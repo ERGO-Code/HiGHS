@@ -1164,7 +1164,8 @@ restart:
       }
     }
     // add the root node to the nodequeue to initialize the search
-    nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lower_bound,
+    nodequeue.emplaceNode(std::vector<HighsDomainChange>(),
+                          std::vector<HighsInt>(), lower_bound,
                           lp.computeBestEstimate(pseudocost), 1);
   }
 }

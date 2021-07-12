@@ -30,6 +30,7 @@ class HighsNodeQueue {
  public:
   struct OpenNode {
     std::vector<HighsDomainChange> domchgstack;
+    std::vector<HighsInt> branchings;
     std::vector<std::set<std::pair<double, HighsInt>>::iterator> domchglinks;
     double lower_bound;
     double estimate;
@@ -41,6 +42,8 @@ class HighsNodeQueue {
 
     OpenNode()
         : domchgstack(),
+          branchings(),
+          domchglinks(),
           lower_bound(-kHighsInf),
           estimate(-kHighsInf),
           depth(0),
@@ -49,9 +52,11 @@ class HighsNodeQueue {
           leftestimate(-1),
           rightestimate(-1) {}
 
-    OpenNode(std::vector<HighsDomainChange>&& domchgstack, double lower_bound,
+    OpenNode(std::vector<HighsDomainChange>&& domchgstack,
+             std::vector<HighsInt>&& branchings, double lower_bound,
              double estimate, HighsInt depth)
         : domchgstack(domchgstack),
+          branchings(branchings),
           lower_bound(lower_bound),
           estimate(estimate),
           depth(depth),
@@ -100,7 +105,8 @@ class HighsNodeQueue {
 
   void setNumCol(HighsInt numcol);
 
-  void emplaceNode(std::vector<HighsDomainChange>&& domchgs, double lower_bound,
+  void emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                   std::vector<HighsInt>&& branchings, double lower_bound,
                    double estimate, HighsInt depth);
 
   OpenNode popBestNode();
