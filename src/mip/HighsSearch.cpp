@@ -393,6 +393,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchUpwards(col, upval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
+        treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
@@ -467,6 +468,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchUpwards(col, upval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
+            treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -482,6 +484,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchUpwards(col, upval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
+            treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -538,6 +541,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchDownwards(col, downval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
+        treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
@@ -612,6 +616,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
+            treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -627,6 +632,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
+            treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -641,6 +647,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchDownwards(col, downval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
+        treeweight += std::pow(0.5, getCurrentDepth() - 1);
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();

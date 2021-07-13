@@ -88,6 +88,7 @@ class HighsSymmetryDetection {
   using u64 = std::uint64_t;
   using u32 = std::uint32_t;
 
+  const HighsLp* model;
   // compressed graph storage
   std::vector<HighsInt> Gstart;
   std::vector<HighsInt> Gend;
@@ -180,8 +181,10 @@ class HighsSymmetryDetection {
     return currentPartitionLinks[cell] - cell;
   }
 
+  bool isFromBinaryColumn(HighsInt vertex) const;
+
  public:
-  void loadModelAsGraph(const HighsLp& lp, double epsilon);
+  void loadModelAsGraph(const HighsLp& model, double epsilon);
 
   void run(HighsSymmetries& symmetries);
 };

@@ -678,10 +678,11 @@ struct MatrixRow {
   }
 };
 
-void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
+void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
                                               double epsilon) {
-  numCol = lp.numCol_;
-  numRow = lp.numRow_;
+  this->model = &model;
+  numCol = model.numCol_;
+  numRow = model.numRow_;
   numVertices = numRow + numCol;
 
   cellInRefinementQueue.resize(numVertices);
@@ -694,22 +695,22 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
   HighsMatrixColoring coloring(epsilon);
   edgeBuffer.resize(numVertices);
   // set up row and column based incidence matrix
-  HighsInt numNz = lp.Aindex_.size();
+  HighsInt numNz = model.Aindex_.size();
   Gedge.resize(2 * numNz);
-  std::transform(lp.Aindex_.begin(), lp.Aindex_.end(), Gedge.begin(),
+  std::transform(model.Aindex_.begin(), model.Aindex_.end(), Gedge.begin(),
                  [&](HighsInt rowIndex) {
                    return std::make_pair(rowIndex + numCol, HighsUInt{0});
                  });
 
   Gstart.resize(numVertices + 1);
-  std::copy(lp.Astart_.begin(), lp.Astart_.end(), Gstart.begin());
+  std::copy(model.Astart_.begin(), model.Astart_.end(), Gstart.begin());
 
   // set up the column colors and count row sizes
   std::vector<HighsInt> rowSizes(numRow);
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      Gedge[j].second = coloring.color(lp.Avalue_[j]);
-      rowSizes[lp.Aindex_[j]] += 1;
+      Gedge[j].second = coloring.color(model.Avalue_[j]);
+      rowSizes[model.Aindex_[j]] += 1;
     }
   }
 
@@ -726,7 +727,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
   // finally add the nonzeros to the row major matrix
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      HighsInt row = lp.Aindex_[j];
+      HighsInt row = model.Aindex_[j];
       HighsInt ARpos = Gstart[numCol + row + 1] - rowSizes[row];
       rowSizes[row] -= 1;
       Gedge[ARpos].first = i;
@@ -740,28 +741,34 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
   // use the previous number in that case. The number is stored in the
   // colToCell array which is subsequently used to sort an initial column
   // permutation.
+  HighsInt indexOffset = numCol + 1;
   for (HighsInt i = 0; i < numCol; ++i) {
     MatrixColumn matrixCol;
 
-    matrixCol.cost = coloring.color(lp.colCost_[i]);
-    matrixCol.lb = coloring.color(lp.colLower_[i]);
-    matrixCol.ub = coloring.color(lp.colUpper_[i]);
-    matrixCol.integral = (u32)lp.integrality_[i];
+    matrixCol.cost = coloring.color(model.colCost_[i]);
+    matrixCol.lb = coloring.color(model.colLower_[i]);
+    matrixCol.ub = coloring.color(model.colUpper_[i]);
+    matrixCol.integral = (u32)model.integrality_[i];
     matrixCol.len = Gstart[i + 1] - Gstart[i];
 
     HighsInt* columnCell = &columnSet[matrixCol];
 
-    if (*columnCell == 0) *columnCell = columnSet.size();
+    if (*columnCell == 0) {
+      *columnCell = columnSet.size();
+      if (model.colLower_[i] != 0.0 || model.colUpper_[i] != 1.0 ||
+          model.integrality_[i] == HighsVarType::kContinuous)
+        *columnCell += indexOffset;
+    }
 
     vertexToCell[i] = *columnCell;
   }
 
-  HighsInt indexOffset = columnSet.size() + 1;
+  indexOffset = 2 * numCol + 1;
   for (HighsInt i = 0; i < numRow; ++i) {
     MatrixRow matrixRow;
 
-    matrixRow.lb = coloring.color(lp.rowLower_[i]);
-    matrixRow.ub = coloring.color(lp.rowUpper_[i]);
+    matrixRow.lb = coloring.color(model.rowLower_[i]);
+    matrixRow.ub = coloring.color(model.rowUpper_[i]);
     matrixRow.len = Gstart[numCol + i + 1] - Gstart[numCol + i];
 
     HighsInt* rowCell = &rowSet[matrixRow];
@@ -886,6 +893,18 @@ bool HighsSymmetryDetection::compareCurrentGraph(
   return true;
 }
 
+bool HighsSymmetryDetection::isFromBinaryColumn(HighsInt pos) const {
+  if (pos >= numActiveCols) return false;
+
+  HighsInt col = currentPartition[pos];
+
+  if (model->colLower_[col] != 0.0 || model->colUpper_[col] != 1.0 ||
+      model->integrality_[col] == HighsVarType::kContinuous)
+    return false;
+
+  return true;
+}
+
 void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   initializeHashValues();
   partitionRefinement();
@@ -910,7 +929,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
 
         HighsInt backtrackDepth = firstPathDepth - 1;
         while (backtrackDepth > 0 &&
-               nodeStack[backtrackDepth - 1].targetCell >= numActiveCols)
+               !isFromBinaryColumn(nodeStack[backtrackDepth - 1].targetCell))
           --backtrackDepth;
         switchToNextNode(backtrackDepth);
       } else {
