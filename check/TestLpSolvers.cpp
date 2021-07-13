@@ -18,7 +18,11 @@ void testSolver(Highs& highs, const std::string solver,
   HighsModelStatus model_status;
   HighsStatus return_status;
   const bool perform_timeout_test = false;  // true;  //
-  const bool use_simplex = solver == "simplex";
+  bool use_simplex = solver == "simplex";
+  // Only use IPX if IPX_ON and using 32-bit arithmetic
+  //#ifdef HIGHSINT64
+  //  use_simplex = true;
+  //#endif
 
   const HighsInfo& info = highs.getInfo();
 
