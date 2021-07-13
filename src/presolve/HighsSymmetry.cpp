@@ -149,22 +149,28 @@ std::shared_ptr<const StabilizerOrbits>
 HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
   const auto& domchgStack = localdom.getDomainChangeStack();
   const auto& branchingPos = localdom.getBranchingPositions();
+  const auto& prevBounds = localdom.getPreviousBounds();
 
-  std::vector<HighsInt> binariesBranchedToOne;
-  binariesBranchedToOne.reserve(permutationColumns.size());
-
-  HighsInt permLength = permutationColumns.size();
+  StabilizerOrbits stabilizerOrbits;
+  stabilizerOrbits.stabilizedCols.reserve(permutationColumns.size());
   for (HighsInt i : branchingPos) {
     HighsInt col = domchgStack[i].column;
     if (columnPosition[col] == -1) continue;
 
-    if (localdom.variableType(col) == HighsVarType::kContinuous ||
-        localdom.colLower_[col] != 1.0 || localdom.colUpper_[col] != 1.0)
-      continue;
+    assert(localdom.variableType(col) != HighsVarType::kContinuous);
 
-    binariesBranchedToOne.push_back(columnPosition[col]);
+    // if we branch a variable upwards it is either binary and branch to one and
+    // needs to be stabilized or it is a general integer and needs to be
+    // stabilized regardless of branching direction.
+    // if we branch downwards we only need to stabilize on this
+    // branching column if it is a general integer
+    if (domchgStack[i].boundtype == HighsBoundType::kLower)
+      stabilizerOrbits.stabilizedCols.push_back(columnPosition[col]);
+    else if (prevBounds[i].first != 1.0)
+      stabilizerOrbits.stabilizedCols.push_back(columnPosition[col]);
   }
 
+  HighsInt permLength = permutationColumns.size();
   orbitPartition.resize(permLength);
   std::iota(orbitPartition.begin(), orbitPartition.end(), 0);
   orbitSize.assign(permLength, 1);
@@ -173,7 +179,7 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     const HighsInt* perm = permutations.data() + i * permutationColumns.size();
 
     bool permRespectsBranchings = true;
-    for (HighsInt i : binariesBranchedToOne) {
+    for (HighsInt i : stabilizerOrbits.stabilizedCols) {
       if (permutationColumns[i] != perm[i]) {
         permRespectsBranchings = false;
         break;
@@ -187,8 +193,6 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     }
   }
 
-  StabilizerOrbits stabilizerOrbits;
-
   stabilizerOrbits.orbitCols.reserve(permLength);
   for (HighsInt i = 0; i < permLength; ++i) {
     if (orbitSize[i] > 1 && localdom.variableType(permutationColumns[i]) !=
@@ -196,6 +200,9 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
   if (stabilizerOrbits.orbitCols.empty()) return nullptr;
+  stabilizerOrbits.columnPosition = columnPosition.data();
+  std::sort(stabilizerOrbits.stabilizedCols.begin(),
+            stabilizerOrbits.stabilizedCols.end());
   std::sort(stabilizerOrbits.orbitCols.begin(),
             stabilizerOrbits.orbitCols.end(),
             [&](HighsInt col1, HighsInt col2) {
@@ -273,6 +280,7 @@ void HighsSymmetryDetection::initializeGroundSet() {
 
   orbitPartition.resize(numVertices);
   std::iota(orbitPartition.begin(), orbitPartition.end(), 0);
+  orbitSize.assign(numVertices, 1);
 
   automorphisms.resize(numVertices * 64);
   numAutomorphisms = 0;
@@ -287,10 +295,13 @@ bool HighsSymmetryDetection::mergeOrbits(HighsInt v1, HighsInt v2) {
 
   if (orbit1 == orbit2) return false;
 
-  if (orbit1 < orbit2)
+  if (orbit1 < orbit2) {
     orbitPartition[orbit2] = orbit1;
-  else
+    orbitSize[orbit1] += orbitSize[orbit2];
+  } else {
     orbitPartition[orbit1] = orbit2;
+    orbitSize[orbit2] += orbitSize[orbit1];
+  }
 
   return true;
 }
@@ -720,16 +731,8 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
   // use the previous number in that case. The number is stored in the
   // colToCell array which is subsequently used to sort an initial column
   // permutation.
-  HighsInt indexOffset = numCol + 1;
   for (HighsInt i = 0; i < numCol; ++i) {
     MatrixColumn matrixCol;
-
-    if (lp.integrality_[i] != HighsVarType::kContinuous &&
-        (lp.colLower_[i] != 0.0 || lp.colUpper_[i] != 1.0)) {
-      vertexToCell[i] = indexOffset;
-      indexOffset += 1;
-      continue;
-    }
 
     matrixCol.cost = coloring.color(lp.colCost_[i]);
     matrixCol.lb = coloring.color(lp.colLower_[i]);
@@ -744,6 +747,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& lp,
     vertexToCell[i] = *columnCell;
   }
 
+  HighsInt indexOffset = columnSet.size() + 1;
   for (HighsInt i = 0; i < numRow; ++i) {
     MatrixRow matrixRow;
 
@@ -1011,10 +1015,51 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   }
 
   if (symmetries.numPerms > 0) {
+    // check which columns have non-trivial orbits
+    HighsInt numFixed = 0;
+    for (HighsInt i = 0; i < numActiveCols; ++i) {
+      if (orbitSize[getOrbit(vertexGroundSet[i])] == 1) {
+        vertexPosition[vertexGroundSet[i]] = -1;
+        vertexGroundSet[i] = -1;
+        numFixed += 1;
+      }
+    }
+
+    vertexPosition.resize(numCol);
+
+    if (numFixed != 0) {
+      // now compress symmetries and the groundset to only contain the unfixed
+      // columns
+      HighsInt* perms = symmetries.permutations.data();
+      HighsInt* permEnd =
+          symmetries.permutations.data() + symmetries.numPerms * numActiveCols;
+      HighsInt* permOutput = symmetries.permutations.data();
+      while (perms != permEnd) {
+        for (HighsInt i = 0; i < numActiveCols; ++i) {
+          if (vertexGroundSet[i] == -1) continue;
+
+          *permOutput = perms[i];
+          ++permOutput;
+        }
+
+        perms += numActiveCols;
+      }
+
+      HighsInt outPos = 0;
+      for (HighsInt i = 0; i < numActiveCols; ++i) {
+        if (vertexGroundSet[i] == -1) continue;
+
+        vertexGroundSet[outPos] = vertexGroundSet[i];
+        vertexPosition[vertexGroundSet[outPos]] = outPos;
+        outPos += 1;
+      }
+
+      numActiveCols -= numFixed;
+    }
+
     vertexGroundSet.resize(numActiveCols);
     symmetries.permutationColumns = std::move(vertexGroundSet);
-    symmetries.columnPosition.resize(numCol, -1);
-    for (HighsInt i = 0; i < numActiveCols; ++i)
-      symmetries.columnPosition[symmetries.permutationColumns[i]] = i;
+    symmetries.columnPosition = std::move(vertexPosition);
+    symmetries.permutations.resize(symmetries.numPerms * numActiveCols);
   }
 }

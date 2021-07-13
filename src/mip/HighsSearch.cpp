@@ -59,6 +59,27 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
   return double(objval);
 }
 
+bool HighsSearch::orbitsValidInChildNode(
+    const HighsDomainChange& branchChg) const {
+  HighsInt branchCol = branchChg.column;
+  if (branchChg.boundtype == HighsBoundType::kUpper) {
+    // a down branch stays valid if the variable is binary
+    if (branchChg.boundval == 0.0 && localdom.colLower_[branchCol] == 0.0 &&
+        localdom.colUpper_[branchCol] == 1.0 &&
+        localdom.colBoundsAreGlobal(branchCol))
+      return true;
+  }
+
+  // if the variable is integral or we are in an up branch the stabilizer only
+  // stays valid if the column has been stabilized
+  const NodeData& currNode = nodestack.back();
+  if (currNode.stabilizerOrbits &&
+      currNode.stabilizerOrbits->isStabilized(branchCol))
+    return true;
+
+  return false;
+}
+
 double HighsSearch::getCutoffBound() const {
   return std::min(mipsolver.mipdata_->upper_limit, upper_limit);
 }
@@ -131,9 +152,12 @@ void HighsSearch::branchDownwards(HighsInt col, double newub,
   currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
+  bool passStabilizerToChildNode =
+      orbitsValidInChildNode(currnode.branchingdecision);
   localdom.changeBound(currnode.branchingdecision);
-  nodestack.emplace_back(currnode.lower_bound, currnode.estimate,
-                         currnode.nodeBasis, currnode.stabilizerOrbits);
+  nodestack.emplace_back(
+      currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
+      passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
   nodestack.back().domgchgStackPos = domchgPos;
 }
 
@@ -151,12 +175,12 @@ void HighsSearch::branchUpwards(HighsInt col, double newlb,
   currnode.branchingdecision.boundtype = HighsBoundType::kLower;
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
+  bool passStabilizerToChildNode =
+      orbitsValidInChildNode(currnode.branchingdecision);
   localdom.changeBound(currnode.branchingdecision);
-  bool orbitsValidInChildNode =
-      newlb != 1.0 || mipsolver.mipdata_->domain.colUpper_[col] != 1.0;
   nodestack.emplace_back(
       currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
-      orbitsValidInChildNode ? currnode.stabilizerOrbits : nullptr);
+      passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
   nodestack.back().domgchgStackPos = domchgPos;
 }
 
@@ -347,11 +371,20 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     if (!downscorereliable[candidate]) {
       // evaluate down branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
-      localdom.changeBound(HighsBoundType::kUpper, col, downval);
+
+      HighsDomainChange domchg{downval, col, HighsBoundType::kUpper};
+      bool orbitalFixing =
+          nodestack.back().stabilizerOrbits && orbitsValidInChildNode(domchg);
+      localdom.changeBound(domchg);
       localdom.propagate();
-      // the down branch always has the stabilized symmetries still valid
-      if (nodestack.back().stabilizerOrbits)
-        nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+
+      if (localdom.infeasible()) orbitalFixing = false;
+
+      if (orbitalFixing) {
+        HighsInt numFix =
+            nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+        if (numFix == 0) orbitalFixing = false;
+      }
 
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
@@ -359,8 +392,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         localdom.clearChangedCols();
-        localdom.changeBound(HighsBoundType::kLower, col, upval,
-                             HighsDomain::Reason::unspecified());
+
+        branchUpwards(col, upval, fracval);
+        nodestack[nodestack.size() - 2].opensubtrees = 0;
+
         lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
       }
@@ -431,8 +466,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::kLower, col, upval,
-                                 HighsDomain::Reason::unspecified());
+
+            branchUpwards(col, upval, fracval);
+            nodestack[nodestack.size() - 2].opensubtrees = 0;
+
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -444,8 +481,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::kLower, col, upval,
-                                 HighsDomain::Reason::unspecified());
+
+            branchUpwards(col, upval, fracval);
+            nodestack[nodestack.size() - 2].opensubtrees = 0;
+
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -456,8 +495,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
         lp->flushDomain(localdom);
-        localdom.changeBound(HighsBoundType::kLower, col, upval,
-                             HighsDomain::Reason::unspecified());
+
+        branchUpwards(col, upval, fracval);
+        nodestack[nodestack.size() - 2].opensubtrees = 0;
+
         lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
@@ -479,11 +520,15 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     } else {
       // evaluate up branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
-      localdom.changeBound(HighsBoundType::kLower, col, upval);
+      HighsDomainChange domchg{upval, col, HighsBoundType::kLower};
+      bool orbitalFixing =
+          nodestack.back().stabilizerOrbits && orbitsValidInChildNode(domchg);
+      localdom.changeBound(domchg);
       localdom.propagate();
-      // if we did not branch on a binary variable symmetries are still valid
-      if (nodestack.back().stabilizerOrbits &&
-          (upval != 1.0 || localdom.colUpper_[col] != 1.0))
+
+      if (localdom.infeasible()) orbitalFixing = false;
+
+      if (orbitalFixing)
         nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
 
       inferences += localdom.getDomainChangeStack().size();
@@ -492,8 +537,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         localdom.clearChangedCols();
-        localdom.changeBound(HighsBoundType::kUpper, col, downval,
-                             HighsDomain::Reason::unspecified());
+
+        branchDownwards(col, downval, fracval);
+        nodestack[nodestack.size() - 2].opensubtrees = 0;
+
         lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
       }
@@ -564,8 +611,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::kUpper, col, downval,
-                                 HighsDomain::Reason::unspecified());
+
+            branchDownwards(col, downval, fracval);
+            nodestack[nodestack.size() - 2].opensubtrees = 0;
+
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -577,8 +626,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::kUpper, col, downval,
-                                 HighsDomain::Reason::unspecified());
+
+            branchDownwards(col, downval, fracval);
+            nodestack[nodestack.size() - 2].opensubtrees = 0;
+
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -589,8 +640,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
         lp->flushDomain(localdom);
-        localdom.changeBound(HighsBoundType::kUpper, col, downval,
-                             HighsDomain::Reason::unspecified());
+
+        branchDownwards(col, downval, fracval);
+        nodestack[nodestack.size() - 2].opensubtrees = 0;
+
         lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
@@ -745,9 +798,12 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
     const auto& domchgstack = localdom.getDomainChangeStack();
     const auto& branchpos = localdom.getBranchingPositions();
     for (HighsInt i : localdom.getBranchingPositions()) {
-      if (domchgstack[i].boundtype == HighsBoundType::kLower &&
-          domchgstack[i].boundval == 1.0 &&
-          mipsolver.mipdata_->domain.colUpper_[domchgstack[i].column] == 1.0) {
+      HighsInt col = domchgstack[i].column;
+      if (mipsolver.mipdata_->symmetries.columnPosition[col] == -1) continue;
+
+      if (!mipsolver.mipdata_->domain.isBinary(col) ||
+          (domchgstack[i].boundtype == HighsBoundType::kLower &&
+           domchgstack[i].boundval == 1.0)) {
         globalSymmetriesValid = false;
         break;
       }
@@ -909,15 +965,15 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 HighsSearch::NodeResult HighsSearch::branch() {
   assert(localdom.getChangedCols().empty());
 
-  NodeData& currnode = nodestack.back();
-  assert(currnode.opensubtrees == 2);
-  currnode.branchingdecision.column = -1;
+  assert(nodestack.back().opensubtrees == 2);
+  nodestack.back().branchingdecision.column = -1;
   inbranching = true;
 
   HighsInt minrel = pseudocost.getMinReliable();
 
   NodeResult result = NodeResult::kOpen;
-  while (currnode.opensubtrees == 2 && lp->scaledOptimal(lp->getStatus()) &&
+  while (nodestack.back().opensubtrees == 2 &&
+         lp->scaledOptimal(lp->getStatus()) &&
          !lp->getFractionalIntegers().empty()) {
     int64_t sbmaxiters = 0;
     if (minrel > 0) {
@@ -941,7 +997,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     HighsInt branchcand = selectBranchingCandidate(sbmaxiters);
-
+    NodeData& currnode = nodestack.back();
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];
       currnode.branchingdecision.column = branching.first;
@@ -1103,6 +1159,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     result = evaluateNode();
   }
   inbranching = false;
+  NodeData& currnode = nodestack.back();
   pseudocost.setMinReliable(minrel);
   pseudocost.setDegeneracyFactor(1.0);
 
@@ -1208,17 +1265,15 @@ HighsSearch::NodeResult HighsSearch::branch() {
   // finally open a new node with the branching decision added
   // and remember that we have one open subtree left
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
+
+  bool passStabilizerToChildNode =
+      orbitsValidInChildNode(currnode.branchingdecision);
   localdom.changeBound(currnode.branchingdecision);
   currnode.opensubtrees = 1;
 
-  bool orbitsValidInChildNode =
-      currnode.branchingdecision.boundtype == HighsBoundType::kUpper ||
-      currnode.branchingdecision.boundval != 1.0 ||
-      mipsolver.mipdata_->domain.colUpper_[currnode.branchingdecision.column] !=
-          1.0;
   nodestack.emplace_back(
       currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
-      orbitsValidInChildNode ? currnode.stabilizerOrbits : nullptr);
+      passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
   nodestack.back().domgchgStackPos = domchgPos;
 
   return NodeResult::kBranched;
@@ -1255,27 +1310,23 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     currnode.opensubtrees = 0;
     bool fallbackbranch =
         currnode.branchingdecision.boundval == currnode.branching_point;
-    bool orbitsValidInChildNode;
+    HighsInt domchgPos = localdom.getDomainChangeStack().size();
     if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
       currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
       currnode.branchingdecision.boundval =
           std::floor(currnode.branchingdecision.boundval - 0.5);
-      orbitsValidInChildNode = true;
     } else {
       currnode.branchingdecision.boundtype = HighsBoundType::kLower;
       currnode.branchingdecision.boundval =
           std::ceil(currnode.branchingdecision.boundval + 0.5);
-      orbitsValidInChildNode =
-          currnode.branchingdecision.boundval != 1.0 ||
-          mipsolver.mipdata_->domain
-                  .colUpper_[currnode.branchingdecision.column] != 1.0;
     }
 
     if (fallbackbranch)
       currnode.branching_point = currnode.branchingdecision.boundval;
 
-    HighsInt domchgPos = localdom.getDomainChangeStack().size();
     HighsInt numChangedCols = localdom.getChangedCols().size();
+    bool passStabilizerToChildNode =
+        orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
     bool prune = nodestack.back().lower_bound > getCutoffBound() ||
                  localdom.infeasible();
@@ -1291,7 +1342,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     }
     nodestack.emplace_back(
         currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
-        orbitsValidInChildNode ? currnode.stabilizerOrbits : nullptr);
+        passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
     lp->flushDomain(localdom);
     nodestack.back().domgchgStackPos = domchgPos;
@@ -1340,7 +1391,6 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     bool fallbackbranch =
         currnode.branchingdecision.boundval == currnode.branching_point;
     double nodeScore;
-    bool orbitsValidInChildNode;
     if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
       currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
       currnode.branchingdecision.boundval =
@@ -1348,7 +1398,6 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       nodeScore = pseudocost.getScoreDown(
           currnode.branchingdecision.column,
           fallbackbranch ? 0.5 : currnode.branching_point);
-      orbitsValidInChildNode = true;
     } else {
       currnode.branchingdecision.boundtype = HighsBoundType::kLower;
       currnode.branchingdecision.boundval =
@@ -1356,10 +1405,6 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       nodeScore = pseudocost.getScoreUp(
           currnode.branchingdecision.column,
           fallbackbranch ? 0.5 : currnode.branching_point);
-      orbitsValidInChildNode =
-          currnode.branchingdecision.boundval != 1.0 ||
-          mipsolver.mipdata_->domain
-                  .colUpper_[currnode.branchingdecision.column] != 1.0;
     }
 
     if (fallbackbranch)
@@ -1367,6 +1412,8 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
     HighsInt domchgPos = domchgstack.size();
     HighsInt numChangedCols = localdom.getChangedCols().size();
+    bool passStabilizerToChildNode =
+        orbitsValidInChildNode(currnode.branchingdecision);
     localdom.changeBound(currnode.branchingdecision);
     bool prune = nodestack.back().lower_bound > getCutoffBound() ||
                  localdom.infeasible();
@@ -1424,7 +1471,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     }
     nodestack.emplace_back(
         currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
-        orbitsValidInChildNode ? currnode.stabilizerOrbits : nullptr);
+        passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
     lp->flushDomain(localdom);
     nodestack.back().domgchgStackPos = domchgPos;
@@ -1467,30 +1514,26 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   currnode.opensubtrees = 0;
   bool fallbackbranch =
       currnode.branchingdecision.boundval == currnode.branching_point;
-  bool orbitsValidInChildNode;
   if (currnode.branchingdecision.boundtype == HighsBoundType::kLower) {
     currnode.branchingdecision.boundtype = HighsBoundType::kUpper;
     currnode.branchingdecision.boundval =
         std::floor(currnode.branchingdecision.boundval - 0.5);
-    orbitsValidInChildNode = true;
   } else {
     currnode.branchingdecision.boundtype = HighsBoundType::kLower;
     currnode.branchingdecision.boundval =
         std::ceil(currnode.branchingdecision.boundval + 0.5);
-    orbitsValidInChildNode =
-        currnode.branchingdecision.boundval != 1.0 ||
-        mipsolver.mipdata_->domain
-                .colUpper_[currnode.branchingdecision.column] != 1.0;
   }
 
   if (fallbackbranch)
     currnode.branching_point = currnode.branchingdecision.boundval;
 
   HighsInt domchgPos = localdom.getDomainChangeStack().size();
+  bool passStabilizerToChildNode =
+      orbitsValidInChildNode(currnode.branchingdecision);
   localdom.changeBound(currnode.branchingdecision);
   nodestack.emplace_back(
       currnode.lower_bound, currnode.estimate, currnode.nodeBasis,
-      orbitsValidInChildNode ? currnode.stabilizerOrbits : nullptr);
+      passStabilizerToChildNode ? currnode.stabilizerOrbits : nullptr);
 
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;

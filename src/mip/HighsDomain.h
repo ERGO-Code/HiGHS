@@ -365,12 +365,20 @@ class HighsDomain {
     return branchPos_;
   }
 
+  const std::vector<std::pair<double, HighsInt>>& getPreviousBounds() const {
+    return prevboundval_;
+  }
+
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {
     return domchgstack_;
   }
 
   const std::vector<Reason>& getDomainChangeReason() const {
     return domchgreason_;
+  }
+
+  bool colBoundsAreGlobal(HighsInt col) const {
+    return colLowerPos_[col] == -1 && colUpperPos_[col] == -1;
   }
 
   HighsInt getBranchDepth() const { return branchPos_.size(); }

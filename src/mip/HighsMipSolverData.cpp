@@ -357,23 +357,33 @@ void HighsMipSolverData::runSetup() {
   symmetries.numPerms = 0;
 
   if (detectSymmetries) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "(%4.1fs) Starting symmetry computation\n",
-                 mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-    HighsSymmetryDetection symDetection;
-    symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
-                                  mipsolver.options_mip_->small_matrix_value);
-    symDetection.run(symmetries);
-    if (symmetries.numPerms == 0) {
-      detectSymmetries = false;
+    bool haveBin = false;
+    for (HighsInt i : integral_cols) {
+      if (mipsolver.model_->colLower_[i] == 0.0 &&
+          mipsolver.model_->colUpper_[i] == 1.0) {
+        haveBin = true;
+        break;
+      }
+    }
+    if (haveBin) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "(%4.1fs) No symmetry present\n",
+                   "(%4.1fs) Starting symmetry computation\n",
                    mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-    } else {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
-                   mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                   symmetries.numPerms);
+      HighsSymmetryDetection symDetection;
+      symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
+                                    mipsolver.options_mip_->small_matrix_value);
+      symDetection.run(symmetries);
+      if (symmetries.numPerms == 0) {
+        detectSymmetries = false;
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "(%4.1fs) No symmetry present\n",
+                     mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+      } else {
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
+                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                     symmetries.numPerms);
+      }
     }
   }
 }
@@ -561,6 +571,7 @@ void HighsMipSolverData::performRestart() {
   incumbent.clear();
   pruned_treeweight = 0;
   nodequeue.clear();
+  globalOrbits.reset();
 
   runPresolve();
 
@@ -791,8 +802,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
   }
 }
 
-bool HighsMipSolverData::rootSeparationRound(HighsSeparation& sepa,
-    HighsInt& ncuts, HighsLpRelaxation::Status& status) {
+bool HighsMipSolverData::rootSeparationRound(
+    HighsSeparation& sepa, HighsInt& ncuts, HighsLpRelaxation::Status& status) {
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
   tmpLpIters += lp.getNumLpIterations();
@@ -819,7 +830,7 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   do {
     domain.propagate();
 
-    if ( globalOrbits && !domain.infeasible()) {
+    if (globalOrbits && !domain.infeasible()) {
       HighsInt numFixed = globalOrbits->orbitalFixing(domain);
       if (numFixed != 0) printf("root orbital fixing: %d fixed\n", numFixed);
     }

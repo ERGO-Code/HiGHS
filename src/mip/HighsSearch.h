@@ -121,6 +121,9 @@ class HighsSearch {
     reliableatnode[col] |= 2;
   }
 
+
+  bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
+
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
 

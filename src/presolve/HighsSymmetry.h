@@ -15,6 +15,7 @@
 #ifndef PRESOLVE_HIGHS_SYMMETRY_H_
 #define PRESOLVE_HIGHS_SYMMETRY_H_
 
+#include <algorithm>
 #include <map>
 #include <vector>
 
@@ -56,8 +57,16 @@ class HighsDomain;
 struct StabilizerOrbits {
   std::vector<HighsInt> orbitCols;
   std::vector<HighsInt> orbitStarts;
+  std::vector<HighsInt> stabilizedCols;
+  const HighsInt* columnPosition;
 
   HighsInt orbitalFixing(HighsDomain& domain) const;
+
+  bool isStabilized(HighsInt col) const {
+    return columnPosition[col] == -1 ||
+           std::binary_search(stabilizedCols.begin(), stabilizedCols.end(),
+                              col);
+  }
 };
 
 struct HighsSymmetries {
@@ -71,7 +80,8 @@ struct HighsSymmetries {
 
   void mergeOrbits(HighsInt col1, HighsInt col2);
   HighsInt getOrbit(HighsInt col);
-  std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(const HighsDomain& localdom);
+  std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
+      const HighsDomain& localdom);
 };
 
 class HighsSymmetryDetection {
@@ -93,6 +103,7 @@ class HighsSymmetryDetection {
   std::vector<u64> vertexHashes;
   std::vector<bool> hashValid;
   std::vector<HighsInt> orbitPartition;
+  std::vector<HighsInt> orbitSize;
 
   std::vector<HighsInt> cellCreationStack;
   std::vector<std::uint8_t> cellInRefinementQueue;
