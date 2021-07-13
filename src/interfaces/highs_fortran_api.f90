@@ -1,6 +1,6 @@
-module highs_lp_solver
+module highs_fortran_api
   interface
-     function Highs_lpCall (numcol, numrow, numnz,  &
+     function Highs_lpCall (numcol, numrow, numnz, aformat,  &
           sense, offset, colcost, collower, colupper, rowlower, rowupper, &
           astart, aindex, avalue, &
           colvalue, coldual, rowvalue, rowdual, &
@@ -10,8 +10,9 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numcol
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: aformat
       integer ( c_int ), VALUE :: sense
-      real ( c_double ) :: offset
+      real ( c_double ), VALUE :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -30,7 +31,7 @@ module highs_lp_solver
       integer ( c_int ) :: modelstatus
     end function Highs_lpCall
 
-     function Highs_mipCall (numcol, numrow, numnz, &
+     function Highs_mipCall (numcol, numrow, numnz, aformat, &
           sense, offset, colcost, collower, colupper, rowlower, rowupper, &
           astart, aindex, avalue, integrality, &
           colvalue, rowvalue, modelstatus) &
@@ -39,8 +40,9 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numcol
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: aformat
       integer ( c_int ), VALUE :: sense
-      real ( c_double ) :: offset
+      real ( c_double ), VALUE :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -56,7 +58,7 @@ module highs_lp_solver
       integer ( c_int ) :: modelstatus
     end function Highs_mipCall
 
-     function Highs_qpCall (numcol, numrow, numnz, qnumnz, &
+     function Highs_qpCall (numcol, numrow, numnz, qnumnz, aformat, qformat, &
           sense, offset, colcost, collower, colupper, rowlower, rowupper, &
           astart, aindex, avalue, &
           qstart, qindex, qvalue, &
@@ -68,8 +70,10 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numrow
       integer ( c_int ), VALUE :: numnz
       integer ( c_int ), VALUE :: qnumnz
+      integer ( c_int ), VALUE :: aformat
+      integer ( c_int ), VALUE :: qformat
       integer ( c_int ), VALUE :: sense
-      real ( c_double ) :: offset
+      real ( c_double ), VALUE :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -145,7 +149,7 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numnz
       integer ( c_int ), VALUE :: aformat
       integer ( c_int ), VALUE :: sense
-      real ( c_double ) :: offset
+      real ( c_double ), VALUE :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -167,7 +171,7 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: numnz
       integer ( c_int ), VALUE :: aformat
       integer ( c_int ), VALUE :: sense
-      real ( c_double ) :: offset
+      real ( c_double ), VALUE :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -192,7 +196,7 @@ module highs_lp_solver
       integer ( c_int ), VALUE :: aformat
       integer ( c_int ), VALUE :: qformat
       integer ( c_int ), VALUE :: sense
-      real ( c_double ) :: offset
+      real ( c_double ), VALUE :: offset
       real ( c_double ) :: colcost(*)
       real ( c_double ) :: collower(*)
       real ( c_double ) :: colupper(*)
@@ -207,6 +211,18 @@ module highs_lp_solver
       real ( c_double ) :: qvalue(*)
       integer ( c_int ) :: s
     end function Highs_passModel
+
+    function Highs_passHessian ( h, dim, numnz, qformat, qstart, qindex, qvalue) result ( s ) bind ( c, name='Highs_passHessian' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: dim
+      integer ( c_int ), VALUE :: numnz
+      integer ( c_int ), VALUE :: qformat
+      integer ( c_int ) :: qstart(*)
+      integer ( c_int ) :: qindex(*)
+      real ( c_double ) :: qvalue(*)
+      integer ( c_int ) :: s
+    end function Highs_passHessian
 
     function Highs_setBoolOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setBoolOptionValue' )
       use iso_c_binding
@@ -809,4 +825,4 @@ module highs_lp_solver
   
     end interface
 
-end module highs_lp_solver
+end module highs_fortran_api

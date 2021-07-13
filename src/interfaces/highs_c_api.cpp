@@ -172,7 +172,7 @@ HighsInt Highs_lpDimMpsRead(
     //			    const char* filename,
     HighsInt* numcol, HighsInt* numrow, HighsInt* numnz) {
   Highs highs;
-  //  highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", false);
   const char* filename = "ml.mps";
   HighsStatus status = highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
@@ -189,7 +189,7 @@ HighsInt Highs_lpDataMpsRead(
     double* rowlower, double* rowupper, HighsInt* astart, HighsInt* aindex,
     double* avalue) {
   Highs highs;
-  //  highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", false);
   const char* filename = "ml.mps";
   HighsStatus status = highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
