@@ -102,7 +102,8 @@ void HighsSymmetryDetection::removeFixPoints() {
         currentPartition.begin();
 
     partitionRefinement();
-  }
+  } else
+    numActiveCols = numCol;
 }
 
 void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2) {
