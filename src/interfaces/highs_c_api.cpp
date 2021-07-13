@@ -980,12 +980,12 @@ HighsInt Highs_call(const HighsInt numcol, const HighsInt numrow,
                     HighsInt* rowbasisstatus, HighsInt* modelstatus) {
   printf(
       "Method Highs_call is deprecated: alternative method is Highs_lpCall\n");
-  const HighsInt rowwise = 0;
+  const HighsInt aformat_columnwise = 1;
   const HighsInt sense = 1;
   const double offset = 0;
-  return Highs_lpCall(numcol, numrow, numnz, rowwise, sense, offset, colcost,
-                      collower, colupper, rowlower, rowupper, astart, aindex,
-                      avalue, colvalue, coldual, rowvalue, rowdual,
+  return Highs_lpCall(numcol, numrow, numnz, aformat_columnwise, sense, offset,
+                      colcost, collower, colupper, rowlower, rowupper, astart,
+                      aindex, avalue, colvalue, coldual, rowvalue, rowdual,
                       colbasisstatus, rowbasisstatus, modelstatus);
 }
 
