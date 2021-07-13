@@ -145,9 +145,8 @@ HighsInt HighsSymmetries::getOrbit(HighsInt col) {
   return orbit;
 }
 
-void HighsSymmetries::computeStabilizedOrbits(
-    const HighsDomain& localdom, std::vector<HighsInt>& orbitCols,
-    std::vector<HighsInt>& orbitStarts) {
+std::shared_ptr<const StabilizerOrbits>
+HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
   const auto& domchgStack = localdom.getDomainChangeStack();
   const auto& branchingPos = localdom.getBranchingPositions();
 
@@ -188,34 +187,35 @@ void HighsSymmetries::computeStabilizedOrbits(
     }
   }
 
-  orbitCols.clear();
-  orbitStarts.clear();
-  orbitCols.reserve(permLength);
+  StabilizerOrbits stabilizerOrbits;
+
+  stabilizerOrbits.orbitCols.reserve(permLength);
   for (HighsInt i = 0; i < permLength; ++i) {
     if (orbitSize[i] > 1 && localdom.variableType(permutationColumns[i]) !=
                                 HighsVarType::kContinuous)
-      orbitCols.push_back(permutationColumns[i]);
+      stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
-  if (orbitCols.empty()) return;
-  std::sort(orbitCols.begin(), orbitCols.end(),
+  if (stabilizerOrbits.orbitCols.empty()) return nullptr;
+  std::sort(stabilizerOrbits.orbitCols.begin(),
+            stabilizerOrbits.orbitCols.end(),
             [&](HighsInt col1, HighsInt col2) {
               return getOrbit(col1) < getOrbit(col2);
             });
-  HighsInt numOrbitCols = orbitCols.size();
-  orbitStarts.reserve(numOrbitCols + 1);
-  orbitStarts.push_back(0);
-  if (numOrbitCols != 0) {
-    for (HighsInt i = 1; i < numOrbitCols; ++i) {
-      if (getOrbit(orbitCols[i]) != getOrbit(orbitCols[i - 1]))
-        orbitStarts.push_back(i);
-    }
-    orbitStarts.push_back(numOrbitCols);
+  HighsInt numOrbitCols = stabilizerOrbits.orbitCols.size();
+  stabilizerOrbits.orbitStarts.reserve(numOrbitCols + 1);
+  stabilizerOrbits.orbitStarts.push_back(0);
+
+  for (HighsInt i = 1; i < numOrbitCols; ++i) {
+    if (getOrbit(stabilizerOrbits.orbitCols[i]) !=
+        getOrbit(stabilizerOrbits.orbitCols[i - 1]))
+      stabilizerOrbits.orbitStarts.push_back(i);
   }
+  stabilizerOrbits.orbitStarts.push_back(numOrbitCols);
+
+  return std::make_shared<const StabilizerOrbits>(std::move(stabilizerOrbits));
 }
 
-HighsInt HighsSymmetries::orbitalFixing(
-    const std::vector<HighsInt>& orbitCols,
-    const std::vector<HighsInt>& orbitStarts, HighsDomain& domain) {
+HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
   if (orbitCols.empty()) return 0;
 
   HighsInt numFixed = 0;

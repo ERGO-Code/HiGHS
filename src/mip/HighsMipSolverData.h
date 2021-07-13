@@ -66,6 +66,7 @@ struct HighsMipSolverData {
   std::vector<HighsInt> continuous_cols;
 
   HighsSymmetries symmetries;
+  std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
   double objintscale;
 
@@ -134,13 +135,9 @@ struct HighsMipSolverData {
   void performRestart();
   bool checkSolution(const std::vector<double>& solution);
   bool trySolution(const std::vector<double>& solution, char source = ' ');
-  bool rootSeparationRound(const std::vector<HighsInt>& orbitCols,
-                           const std::vector<HighsInt>& orbitStarts,
-                           HighsSeparation& sepa, HighsInt& ncuts,
+  bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
-  HighsLpRelaxation::Status evaluateRootLp(
-      const std::vector<HighsInt>& orbitCols,
-      const std::vector<HighsInt>& orbitStarts);
+  HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
   bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
 

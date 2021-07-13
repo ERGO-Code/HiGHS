@@ -24,6 +24,7 @@
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HighsSymmetry.h"
 #include "util/HighsHash.h"
 
 class HighsMipSolver;
@@ -46,8 +47,6 @@ class HighsSearch {
   HighsInt depthoffset;
   bool inbranching;
   bool inheuristic;
-  std::vector<HighsInt> orbitCols;
-  std::vector<HighsInt> orbitStarts;
 
  public:
   enum class ChildSelectionRule {
@@ -86,16 +85,19 @@ class HighsSearch {
     // selection
     double lp_objective;
     std::shared_ptr<const HighsBasis> nodeBasis;
+    std::shared_ptr<const StabilizerOrbits> stabilizerOrbits;
     HighsDomainChange branchingdecision;
     HighsInt domgchgStackPos;
     uint8_t opensubtrees;
 
     NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf,
-             std::shared_ptr<const HighsBasis> parentBasis = nullptr)
+             std::shared_ptr<const HighsBasis> parentBasis = nullptr,
+             std::shared_ptr<const StabilizerOrbits> stabilizerOrbits = nullptr)
         : lower_bound(parentlb),
           estimate(parentestimate),
           lp_objective(-kHighsInf),
-          nodeBasis(parentBasis),
+          nodeBasis(std::move(parentBasis)),
+          stabilizerOrbits(std::move(stabilizerOrbits)),
           domgchgStackPos(-1),
           opensubtrees(2) {}
   };

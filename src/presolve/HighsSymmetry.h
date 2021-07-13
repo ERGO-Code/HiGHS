@@ -52,6 +52,14 @@ class HighsMatrixColoring {
 };
 
 class HighsDomain;
+
+struct StabilizerOrbits {
+  std::vector<HighsInt> orbitCols;
+  std::vector<HighsInt> orbitStarts;
+
+  HighsInt orbitalFixing(HighsDomain& domain) const;
+};
+
 struct HighsSymmetries {
   std::vector<HighsInt> permutationColumns;
   std::vector<HighsInt> permutations;
@@ -63,13 +71,7 @@ struct HighsSymmetries {
 
   void mergeOrbits(HighsInt col1, HighsInt col2);
   HighsInt getOrbit(HighsInt col);
-  void computeStabilizedOrbits(const HighsDomain& localdom,
-                               std::vector<HighsInt>& orbitCols,
-                               std::vector<HighsInt>& orbitStarts);
-
-  HighsInt orbitalFixing(const std::vector<HighsInt>& orbitCols,
-                         const std::vector<HighsInt>& orbitStarts,
-                         HighsDomain& domain);
+  std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(const HighsDomain& localdom);
 };
 
 class HighsSymmetryDetection {

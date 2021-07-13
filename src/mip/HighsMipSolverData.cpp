@@ -791,9 +791,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   }
 }
 
-bool HighsMipSolverData::rootSeparationRound(
-    const std::vector<HighsInt>& orbitCols,
-    const std::vector<HighsInt>& orbitStarts, HighsSeparation& sepa,
+bool HighsMipSolverData::rootSeparationRound(HighsSeparation& sepa,
     HighsInt& ncuts, HighsLpRelaxation::Status& status) {
   int64_t tmpLpIters = -lp.getNumLpIterations();
   ncuts = sepa.separationRound(domain, status);
@@ -802,7 +800,7 @@ bool HighsMipSolverData::rootSeparationRound(
   total_lp_iterations += tmpLpIters;
   sepa_lp_iterations += tmpLpIters;
 
-  status = evaluateRootLp(orbitCols, orbitStarts);
+  status = evaluateRootLp();
   if (status == HighsLpRelaxation::Status::kInfeasible) return true;
 
   const std::vector<double>& solvals = lp.getLpSolver().getSolution().col_value;
@@ -810,21 +808,19 @@ bool HighsMipSolverData::rootSeparationRound(
   if (mipsolver.submip || incumbent.empty()) {
     heuristics.randomizedRounding(solvals);
     heuristics.flushStatistics();
-    status = evaluateRootLp(orbitCols, orbitStarts);
+    status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return true;
   }
 
   return false;
 }
 
-HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp(
-    const std::vector<HighsInt>& orbitCols,
-    const std::vector<HighsInt>& orbitStarts) {
+HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   do {
     domain.propagate();
-    if (!orbitCols.empty() && !domain.infeasible()) {
-      HighsInt numFixed =
-          symmetries.orbitalFixing(orbitCols, orbitStarts, domain);
+
+    if ( globalOrbits && !domain.infeasible()) {
+      HighsInt numFixed = globalOrbits->orbitalFixing(domain);
       if (numFixed != 0) printf("root orbital fixing: %d fixed\n", numFixed);
     }
     if (domain.infeasible()) {
@@ -904,10 +900,8 @@ restart:
   domain.clearChangedCols();
   lp.setObjectiveLimit(upper_limit);
 
-  std::vector<HighsInt> orbitCols;
-  std::vector<HighsInt> orbitStarts;
   if (symmetries.numPerms != 0)
-    symmetries.computeStabilizedOrbits(domain, orbitCols, orbitStarts);
+    globalOrbits = symmetries.computeStabilizerOrbits(domain);
 
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
@@ -946,7 +940,7 @@ restart:
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
-  HighsLpRelaxation::Status status = evaluateRootLp(orbitCols, orbitStarts);
+  HighsLpRelaxation::Status status = evaluateRootLp();
   if (numRestarts == 0) firstrootlpiters = total_lp_iterations;
 
   lp.getLpSolver().setOptionValue("output_flag", false);
@@ -959,7 +953,7 @@ restart:
   heuristics.randomizedRounding(firstlpsol);
   heuristics.flushStatistics();
 
-  status = evaluateRootLp(orbitCols, orbitStarts);
+  status = evaluateRootLp();
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
   firstlpsol = lp.getSolution().col_value;
@@ -1013,14 +1007,13 @@ restart:
     ++nseparounds;
 
     HighsInt ncuts;
-    if (rootSeparationRound(orbitCols, orbitStarts, sepa, ncuts, status))
-      return;
+    if (rootSeparationRound(sepa, ncuts, status)) return;
     if (nseparounds >= 5 && !mipsolver.submip && !analyticCenterComputed) {
       analyticCenterComputed = true;
       heuristics.centralRounding();
       heuristics.flushStatistics();
 
-      status = evaluateRootLp(orbitCols, orbitStarts);
+      status = evaluateRootLp();
       if (status == HighsLpRelaxation::Status::kInfeasible) return;
     }
 
@@ -1073,7 +1066,7 @@ restart:
   }
 
   lp.setIterationLimit();
-  status = evaluateRootLp(orbitCols, orbitStarts);
+  status = evaluateRootLp();
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
 
   rootlpsol = lp.getLpSolver().getSolution().col_value;
@@ -1088,12 +1081,11 @@ restart:
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
     bool separate = !domain.getChangedCols().empty();
-    status = evaluateRootLp(orbitCols, orbitStarts);
+    status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate) {
       HighsInt ncuts;
-      if (rootSeparationRound(orbitCols, orbitStarts, sepa, ncuts, status))
-        return;
+      if (rootSeparationRound(sepa, ncuts, status)) return;
     }
   }
 
@@ -1113,12 +1105,11 @@ restart:
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
     bool separate = !domain.getChangedCols().empty();
-    status = evaluateRootLp(orbitCols, orbitStarts);
+    status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate) {
       HighsInt ncuts;
-      if (rootSeparationRound(orbitCols, orbitStarts, sepa, ncuts, status))
-        return;
+      if (rootSeparationRound(sepa, ncuts, status)) return;
 
       ++nseparounds;
       if (lastprint < 0.8 * nseparounds) {
@@ -1135,12 +1126,11 @@ restart:
     // if there are new global bound changes we reevaluate the LP and do one
     // more separation round
     separate = !domain.getChangedCols().empty();
-    status = evaluateRootLp(orbitCols, orbitStarts);
+    status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
     if (separate) {
       HighsInt ncuts;
-      if (rootSeparationRound(orbitCols, orbitStarts, sepa, ncuts, status))
-        return;
+      if (rootSeparationRound(sepa, ncuts, status)) return;
 
       ++nseparounds;
       if (lastprint < 0.8 * nseparounds) {
@@ -1153,7 +1143,7 @@ restart:
     heuristics.feasibilityPump();
     heuristics.flushStatistics();
 
-    status = evaluateRootLp(orbitCols, orbitStarts);
+    status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
   } while (false);
 
@@ -1168,12 +1158,11 @@ restart:
   // if there are new global bound changes we reevaluate the LP and do one
   // more separation round
   bool separate = !domain.getChangedCols().empty();
-  status = evaluateRootLp(orbitCols, orbitStarts);
+  status = evaluateRootLp();
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
   if (separate) {
     HighsInt ncuts;
-    if (rootSeparationRound(orbitCols, orbitStarts, sepa, ncuts, status))
-      return;
+    if (rootSeparationRound(sepa, ncuts, status)) return;
 
     ++nseparounds;
     if (lastprint < 0.8 * nseparounds) {
