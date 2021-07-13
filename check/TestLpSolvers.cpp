@@ -19,11 +19,6 @@ void testSolver(Highs& highs, const std::string solver,
   HighsStatus return_status;
   const bool perform_timeout_test = false;  // true;  //
   bool use_simplex = solver == "simplex";
-  // Only use IPX if IPX_ON and using 32-bit arithmetic
-  //#ifdef HIGHSINT64
-  //  use_simplex = true;
-  //#endif
-
   const HighsInfo& info = highs.getInfo();
 
   if (!dev_run) highs.setOptionValue("output_flag", false);
@@ -228,7 +223,10 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
     model_iteration_count.simplex = simplex_strategy_iteration_count[i];
     testSolver(highs, "simplex", model_iteration_count, i);
   }
+  // Only use IPX with 32-bit arithmetic
+#ifndef HIGHSINT64
   testSolver(highs, "ipm", model_iteration_count);
+#endif
 }
 
 // No commas in test case name.
