@@ -66,6 +66,8 @@ void HighsConflictPool::addConflictCut(
   double feastol = domain.feastol();
   for (HighsInt pos : reasonSideFrontier) {
     assert(i < end);
+    assert(pos >= 0);
+    assert(pos < (HighsInt)domchgStack_.size());
     conflictEntries_[i] = domchgStack_[pos];
     if (domain.variableType(conflictEntries_[i].column) ==
         HighsVarType::kContinuous) {
@@ -135,6 +137,8 @@ void HighsConflictPool::addReconvergenceCut(
   double feastol = domain.feastol();
   for (HighsInt pos : reconvergenceFrontier) {
     assert(i < end);
+    assert(pos >= 0);
+    assert(pos < (HighsInt)domchgStack_.size());
     conflictEntries_[i] = domchgStack_[pos];
     if (domain.variableType(conflictEntries_[i].column) ==
         HighsVarType::kContinuous) {

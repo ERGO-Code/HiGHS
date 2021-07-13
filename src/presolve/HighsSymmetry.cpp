@@ -159,14 +159,13 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
 
     assert(localdom.variableType(col) != HighsVarType::kContinuous);
 
-    // if we branch a variable upwards it is either binary and branch to one and
-    // needs to be stabilized or it is a general integer and needs to be
+    // if we branch a variable upwards it is either binary and branched to one
+    // and needs to be stabilized or it is a general integer and needs to be
     // stabilized regardless of branching direction.
     // if we branch downwards we only need to stabilize on this
     // branching column if it is a general integer
-    if (domchgStack[i].boundtype == HighsBoundType::kLower)
-      stabilizerOrbits.stabilizedCols.push_back(columnPosition[col]);
-    else if (prevBounds[i].first != 1.0)
+    if (domchgStack[i].boundtype == HighsBoundType::kLower ||
+        !localdom.isGlobalBinary(col))
       stabilizerOrbits.stabilizedCols.push_back(columnPosition[col]);
   }
 
@@ -193,31 +192,39 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     }
   }
 
+  stabilizerOrbits.stabilizedCols.clear();
+
   stabilizerOrbits.orbitCols.reserve(permLength);
   for (HighsInt i = 0; i < permLength; ++i) {
-    if (orbitSize[i] > 1 && localdom.variableType(permutationColumns[i]) !=
-                                HighsVarType::kContinuous)
+    if (localdom.variableType(permutationColumns[i]) ==
+        HighsVarType::kContinuous)
+      continue;
+    HighsInt orbit = getOrbit(permutationColumns[i]);
+    if (orbitSize[orbit] == 1)
+      stabilizerOrbits.stabilizedCols.push_back(permutationColumns[i]);
+    else
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
-  if (stabilizerOrbits.orbitCols.empty()) return nullptr;
   stabilizerOrbits.columnPosition = columnPosition.data();
   std::sort(stabilizerOrbits.stabilizedCols.begin(),
             stabilizerOrbits.stabilizedCols.end());
-  std::sort(stabilizerOrbits.orbitCols.begin(),
-            stabilizerOrbits.orbitCols.end(),
-            [&](HighsInt col1, HighsInt col2) {
-              return getOrbit(col1) < getOrbit(col2);
-            });
-  HighsInt numOrbitCols = stabilizerOrbits.orbitCols.size();
-  stabilizerOrbits.orbitStarts.reserve(numOrbitCols + 1);
-  stabilizerOrbits.orbitStarts.push_back(0);
+  if (!stabilizerOrbits.orbitCols.empty()) {
+    std::sort(stabilizerOrbits.orbitCols.begin(),
+              stabilizerOrbits.orbitCols.end(),
+              [&](HighsInt col1, HighsInt col2) {
+                return getOrbit(col1) < getOrbit(col2);
+              });
+    HighsInt numOrbitCols = stabilizerOrbits.orbitCols.size();
+    stabilizerOrbits.orbitStarts.reserve(numOrbitCols + 1);
+    stabilizerOrbits.orbitStarts.push_back(0);
 
-  for (HighsInt i = 1; i < numOrbitCols; ++i) {
-    if (getOrbit(stabilizerOrbits.orbitCols[i]) !=
-        getOrbit(stabilizerOrbits.orbitCols[i - 1]))
-      stabilizerOrbits.orbitStarts.push_back(i);
+    for (HighsInt i = 1; i < numOrbitCols; ++i) {
+      if (getOrbit(stabilizerOrbits.orbitCols[i]) !=
+          getOrbit(stabilizerOrbits.orbitCols[i - 1]))
+        stabilizerOrbits.orbitStarts.push_back(i);
+    }
+    stabilizerOrbits.orbitStarts.push_back(numOrbitCols);
   }
-  stabilizerOrbits.orbitStarts.push_back(numOrbitCols);
 
   return std::make_shared<const StabilizerOrbits>(std::move(stabilizerOrbits));
 }
@@ -247,7 +254,7 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
           ++numFixed;
           domain.changeBound(HighsBoundType::kLower, orbitCols[j], 1.0,
                              HighsDomain::Reason::unspecified());
-          if (domain.infeasible()) break;
+          if (domain.infeasible()) return numFixed;
         }
       } else {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
@@ -255,7 +262,7 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
           ++numFixed;
           domain.changeBound(HighsBoundType::kUpper, orbitCols[j], 0.0,
                              HighsDomain::Reason::unspecified());
-          if (domain.infeasible()) break;
+          if (domain.infeasible()) return numFixed;
         }
       }
 
@@ -263,6 +270,7 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
       if (newFixed != 0) {
         domain.propagate();
+        if (domain.infeasible()) return numFixed;
         if (domain.getDomainChangeStack().size() - oldSize > newFixed) i = -1;
       }
     }

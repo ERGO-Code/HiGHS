@@ -830,10 +830,9 @@ HighsLpRelaxation::Status HighsMipSolverData::evaluateRootLp() {
   do {
     domain.propagate();
 
-    if (globalOrbits && !domain.infeasible()) {
-      HighsInt numFixed = globalOrbits->orbitalFixing(domain);
-      if (numFixed != 0) printf("root orbital fixing: %d fixed\n", numFixed);
-    }
+    if (globalOrbits && !domain.infeasible())
+      globalOrbits->orbitalFixing(domain);
+
     if (domain.infeasible()) {
       lower_bound = std::min(kHighsInf, upper_bound);
       pruned_treeweight = 1.0;

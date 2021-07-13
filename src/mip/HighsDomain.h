@@ -391,9 +391,9 @@ class HighsDomain {
     for (HighsInt i = 0; i < (HighsInt)domchgstack_.size(); ++i) {
       // keep only the tightest bound change for each variable
       if ((domchgstack_[i].boundtype == HighsBoundType::kLower &&
-           colLower_[domchgstack_[i].column] != domchgstack_[i].boundval) ||
+           colLowerPos_[domchgstack_[i].column] != i) ||
           (domchgstack_[i].boundtype == HighsBoundType::kUpper &&
-           colUpper_[domchgstack_[i].column] != domchgstack_[i].boundval))
+           colUpperPos_[domchgstack_[i].column] != i))
         continue;
 
       if (domchgreason_[i].type == Reason::kBranching)
@@ -444,6 +444,12 @@ class HighsDomain {
   bool isBinary(HighsInt col) const {
     return mipsolver->variableType(col) != HighsVarType::kContinuous &&
            colLower_[col] == 0.0 && colUpper_[col] == 1.0;
+  }
+
+  bool isGlobalBinary(HighsInt col) const {
+    return mipsolver->variableType(col) != HighsVarType::kContinuous &&
+           mipsolver->model_->colLower_[col] == 0.0 &&
+           mipsolver->model_->colUpper_[col] == 1.0;
   }
 
   HighsVarType variableType(HighsInt col) const {

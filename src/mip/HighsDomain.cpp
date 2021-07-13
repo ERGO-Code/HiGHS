@@ -1246,25 +1246,28 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
   if (boundchg.boundtype == HighsBoundType::kLower) {
     oldbound = colLower_[boundchg.column];
     colLower_[boundchg.column] = boundchg.boundval;
-    if (!infeasible_)
-      updateActivityLbChange(boundchg.column, oldbound, boundchg.boundval);
+    if (oldbound != boundchg.boundval) {
+      if (!infeasible_)
+        updateActivityLbChange(boundchg.column, oldbound, boundchg.boundval);
 
-    if (!changedcolsflags_[boundchg.column]) {
-      changedcolsflags_[boundchg.column] = 1;
-      changedcols_.push_back(boundchg.column);
+      if (!changedcolsflags_[boundchg.column]) {
+        changedcolsflags_[boundchg.column] = 1;
+        changedcols_.push_back(boundchg.column);
+      }
     }
   } else {
     oldbound = colUpper_[boundchg.column];
     colUpper_[boundchg.column] = boundchg.boundval;
-    if (!infeasible_)
-      updateActivityUbChange(boundchg.column, oldbound, boundchg.boundval);
+    if (oldbound != boundchg.boundval) {
+      if (!infeasible_)
+        updateActivityUbChange(boundchg.column, oldbound, boundchg.boundval);
 
-    if (!changedcolsflags_[boundchg.column]) {
-      changedcolsflags_[boundchg.column] = 1;
-      changedcols_.push_back(boundchg.column);
+      if (!changedcolsflags_[boundchg.column]) {
+        changedcolsflags_[boundchg.column] = 1;
+        changedcols_.push_back(boundchg.column);
+      }
     }
   }
-  assert(oldbound != boundchg.boundval);
 
   return oldbound;
 }
@@ -1276,7 +1279,10 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
       *this, boundchg, reason.type == Reason::kBranching);
   HighsInt prevPos;
   if (boundchg.boundtype == HighsBoundType::kLower) {
-    if (boundchg.boundval <= colLower_[boundchg.column]) return;
+    if (boundchg.boundval <= colLower_[boundchg.column]) {
+      if (reason.type != Reason::kBranching) return;
+      boundchg.boundval = colLower_[boundchg.column];
+    }
     if (boundchg.boundval > colUpper_[boundchg.column]) {
       if (boundchg.boundval - colUpper_[boundchg.column] >
           mipsolver->mipdata_->feastol) {
@@ -1295,7 +1301,10 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     prevPos = colLowerPos_[boundchg.column];
     colLowerPos_[boundchg.column] = domchgstack_.size();
   } else {
-    if (boundchg.boundval >= colUpper_[boundchg.column]) return;
+    if (boundchg.boundval >= colUpper_[boundchg.column]) {
+      if (reason.type != Reason::kBranching) return;
+      boundchg.boundval = colUpper_[boundchg.column];
+    }
     if (boundchg.boundval < colLower_[boundchg.column]) {
       if (colLower_[boundchg.column] - boundchg.boundval >
           mipsolver->mipdata_->feastol) {
@@ -1329,8 +1338,8 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgreason_.push_back(reason);
 
   if (binary && !infeasible_)
-    mipsolver->mipdata_->cliquetable.addImplications(*this, boundchg.column,
-                                                     boundchg.boundval > 0.5);
+    mipsolver->mipdata_->cliquetable.addImplications(
+        *this, boundchg.column, colLower_[boundchg.column] > 0.5);
 }
 
 void HighsDomain::setDomainChangeStack(
@@ -1410,13 +1419,8 @@ void HighsDomain::setDomainChangeStack(
 
     if (k == stacksize) return;
 
-    if (domchgstack[k].boundtype == HighsBoundType::kLower &&
-        domchgstack[k].boundval <= colLower_[domchgstack[k].column])
-      continue;
-    if (domchgstack[k].boundtype == HighsBoundType::kUpper &&
-        domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
-      continue;
-
+    // do not skip redundant branching changes, as we need to keep their status
+    // as branching variables for computing correct stabilizers
     mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
                                                         true);
 
@@ -1470,9 +1474,11 @@ void HighsDomain::backtrackToGlobal() {
       colUpperPos_[domchgstack_[k].column] = prevpos;
     }
 
-    // change back to global bound
-    doChangeBound(
-        {prevbound, domchgstack_[k].column, domchgstack_[k].boundtype});
+    if (prevbound != domchgstack_[k].boundval) {
+      // change back to global bound
+      doChangeBound(
+          {prevbound, domchgstack_[k].column, domchgstack_[k].boundtype});
+    }
 
     if (infeasible_ && infeasible_pos == k) {
       assert(old_infeasible);
@@ -1966,6 +1972,8 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
       numNodes = nodequeue.numNodesUp(col);
     }
 
+    if (boundpos == -1) continue;
+
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
 
@@ -2202,6 +2210,8 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
       numNodes = nodequeue.numNodesDown(col);
     }
 
+    if (boundpos == -1) continue;
+
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
 
@@ -2268,6 +2278,8 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
       numNodes = nodequeue.numNodesUp(col);
     }
 
+    if (boundpos == -1) continue;
+
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
 
@@ -2329,7 +2341,7 @@ bool HighsDomain::ConflictSet::explainBoundChange(HighsInt pos) {
         localdom.getColUpperPos(col, pos, boundPos);
       }
 
-      resolvedDomainChanges.push_back(boundPos);
+      if (boundPos != -1) resolvedDomainChanges.push_back(boundPos);
 
       return true;
     }
@@ -2473,6 +2485,8 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
       delta = vals[i] * (ub - globaldom.colUpper_[col]);
       numNodes = nodequeue.numNodesDown(col);
     }
+
+    if (boundpos == -1) continue;
 
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }

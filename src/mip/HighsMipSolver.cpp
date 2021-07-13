@@ -186,9 +186,6 @@ restart:
 
     // propagate the global domain
     mipdata_->domain.propagate();
-    if (mipdata_->globalOrbits && !mipdata_->domain.infeasible() &&
-        !mipdata_->domain.getDomainChangeStack().empty())
-      mipdata_->globalOrbits->orbitalFixing(mipdata_->domain);
     mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
         mipdata_->domain, mipdata_->feastol);
 

@@ -62,19 +62,17 @@ double HighsSearch::checkSol(const std::vector<double>& sol,
 bool HighsSearch::orbitsValidInChildNode(
     const HighsDomainChange& branchChg) const {
   HighsInt branchCol = branchChg.column;
-  if (branchChg.boundtype == HighsBoundType::kUpper) {
-    // a down branch stays valid if the variable is binary
-    if (branchChg.boundval == 0.0 && localdom.colLower_[branchCol] == 0.0 &&
-        localdom.colUpper_[branchCol] == 1.0 &&
-        localdom.colBoundsAreGlobal(branchCol))
-      return true;
-  }
-
   // if the variable is integral or we are in an up branch the stabilizer only
   // stays valid if the column has been stabilized
   const NodeData& currNode = nodestack.back();
-  if (currNode.stabilizerOrbits &&
+  if (!currNode.stabilizerOrbits ||
+      currNode.stabilizerOrbits->orbitCols.empty() ||
       currNode.stabilizerOrbits->isStabilized(branchCol))
+    return true;
+
+  // a down branch stays valid if the variable is binary
+  if (branchChg.boundtype == HighsBoundType::kUpper &&
+      localdom.isGlobalBinary(branchChg.column))
     return true;
 
   return false;
@@ -825,17 +823,18 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   localdom.propagate();
 
-  if (mipsolver.mipdata_->symmetries.numPerms > 0 &&
-      !currnode.stabilizerOrbits &&
-      (parent == nullptr || (parent->stabilizerOrbits &&
-                             !parent->stabilizerOrbits->orbitCols.empty()))) {
-    currnode.stabilizerOrbits =
-        mipsolver.mipdata_->symmetries.computeStabilizerOrbits(localdom);
+  if (!localdom.infeasible()) {
+    if (mipsolver.mipdata_->symmetries.numPerms > 0 &&
+        !currnode.stabilizerOrbits &&
+        (parent == nullptr || !parent->stabilizerOrbits ||
+         !parent->stabilizerOrbits->orbitCols.empty())) {
+      currnode.stabilizerOrbits =
+          mipsolver.mipdata_->symmetries.computeStabilizerOrbits(localdom);
+    }
+
+    if (currnode.stabilizerOrbits)
+      currnode.stabilizerOrbits->orbitalFixing(localdom);
   }
-
-  if (currnode.stabilizerOrbits)
-    currnode.stabilizerOrbits->orbitalFixing(localdom);
-
   if (parent != nullptr) {
     int64_t inferences = domchgstack.size() - (currnode.domgchgStackPos + 1);
     pseudocost.addInferenceObservation(
