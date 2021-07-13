@@ -160,8 +160,8 @@ void minimal_api_lp() {
   double* rowvalue = (double*)malloc(sizeof(double) * numrow);
   double* rowdual = (double*)malloc(sizeof(double) * numrow);
 
-  HighsInt* colbasisstatus = (HighsInt*)malloc(sizeof(int) * numcol);
-  HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(int) * numrow);
+  HighsInt* colbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
+  HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
 
   HighsInt modelstatus;
 
@@ -350,8 +350,8 @@ void full_api_lp() {
   double* rowvalue = (double*)malloc(sizeof(double) * numrow);
   double* rowdual = (double*)malloc(sizeof(double) * numrow);
 
-  HighsInt* colbasisstatus = (HighsInt*)malloc(sizeof(int) * numcol);
-  HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(int) * numrow);
+  HighsInt* colbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numcol);
+  HighsInt* rowbasisstatus = (HighsInt*)malloc(sizeof(HighsInt) * numrow);
 
   // Add two columns to the empty LP
   assert( Highs_addCols(highs, numcol, colcost, collower, colupper, 0, NULL, NULL, NULL) == 0);
