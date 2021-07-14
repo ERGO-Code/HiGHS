@@ -2947,21 +2947,15 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         impliedDualRowBounds.getNumInfSumUpperOrig(col) == 1 &&
         model->colCost_[col] >= 0) {
       HighsInt row = colLowerSource[col];
+      HighsInt nzPos = findNonzero(row, col);
 
-      if (model->integrality_[col] != HighsVarType::kInteger)
-        changeImplRowDualLower(row, 0.0, col);
-      if (rowsizeInteger[row] == rowsize[row]) {
-        HighsInt nzPos = findNonzero(row, col);
-        if (rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos])) {
-          // The row is the only one that restricts this column from below
-          // and also implies the columns lower bound. Additionally the row is
-          // integral when scaling it so that the coefficient of this column
-          // is 1.0. Since the cost of the column is non-negative it can
-          // always be set to a value that makes this row an equality.
-          // Due to this it can imply a bound on the row dual even though it
-          // is integral.
+      if (model->integrality_[col] != HighsVarType::kInteger ||
+          (rowsizeInteger[row] == rowsize[row] &&
+           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+        if (Avalue[nzPos] > 0)
           changeImplRowDualLower(row, 0.0, col);
-        }
+        else
+          changeImplRowDualUpper(row, 0.0, col);
       }
     }
 
@@ -2969,19 +2963,15 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         impliedDualRowBounds.getNumInfSumLowerOrig(col) == 1 &&
         model->colCost_[col] <= 0) {
       HighsInt row = colUpperSource[col];
-      if (model->integrality_[col] != HighsVarType::kInteger)
-        changeImplRowDualUpper(row, 0.0, col);
-      else if (rowsizeInteger[row] == rowsize[row]) {
-        HighsInt nzPos = findNonzero(row, col);
+      HighsInt nzPos = findNonzero(row, col);
 
-        if (rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos])) {
-          // The row is the only one that restricts this column from above
-          // and implies the columns upper bound. Additionally the row is
-          // integral when scaling it so that the coefficient of this column
-          // is 1.0. Since the cost of the column is non-positive it can
-          // always be set to the value that makes this row hold with equality
+      if (model->integrality_[col] != HighsVarType::kInteger ||
+          (rowsizeInteger[row] == rowsize[row] &&
+           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+        if (Avalue[nzPos] > 0)
           changeImplRowDualUpper(row, 0.0, col);
-        }
+        else
+          changeImplRowDualLower(row, 0.0, col);
       }
     }
 
