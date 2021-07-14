@@ -1489,17 +1489,11 @@ void HEkk::computePrimal() {
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
   if (primal_col.count) {
-    HVector nla_primal_col = primal_col;
     assert(analysis_.primal_col_density == info_.primal_col_density);
-    factor_.ftranCall(primal_col, analysis_.primal_col_density,  analysis_.pointer_serial_factor_clocks);
-    simplex_nla_.ftran(nla_primal_col, analysis_.primal_col_density, analysis_.pointer_serial_factor_clocks);
-    assert(nla_primal_col.isEqual(primal_col));
-    
+    simplex_nla_.ftran(primal_col, analysis_.primal_col_density, analysis_.pointer_serial_factor_clocks);
     const double local_primal_col_density = (double)primal_col.count / num_row;
     updateOperationResultDensity(local_primal_col_density,
                                  info_.primal_col_density);
-    updateOperationResultDensity(local_primal_col_density,
-                                 analysis_.primal_col_density);
   }
   for (HighsInt i = 0; i < num_row; i++) {
     HighsInt iCol = basis_.basicIndex_[i];
