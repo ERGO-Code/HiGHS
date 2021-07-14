@@ -307,7 +307,7 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
 }
 
 void HFactor::ftranCall(HVector& vector, const double expected_density,
-                    HighsTimerClock* factor_timer_clock_pointer) const {
+                        HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
   ftranL(vector, expected_density, factor_timer_clock_pointer);
@@ -316,7 +316,7 @@ void HFactor::ftranCall(HVector& vector, const double expected_density,
 }
 
 void HFactor::btranCall(HVector& vector, const double expected_density,
-                    HighsTimerClock* factor_timer_clock_pointer) const {
+                        HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtran, factor_timer_clock_pointer);
   btranU(vector, expected_density, factor_timer_clock_pointer);

@@ -818,24 +818,22 @@ HighsInt Highs_crossover(void* highs) {  //!< HiGHS object reference
   return (HighsInt)((Highs*)highs)->crossover();
 }
 
-HighsInt Highs_crossover_set(void* highs, const int n, const int m, double* col_value,
-                        double* col_dual, double* row_dual) {
+HighsInt Highs_crossover_set(void* highs, const int n, const int m,
+                             double* col_value, double* col_dual,
+                             double* row_dual) {
   HighsSolution solution;
   if (col_value) {
     solution.value_valid = true;
     solution.col_value.resize(n);
-    for (int col = 0; col < n; col++) 
-      solution.col_value[col] = col_value[col];
+    for (int col = 0; col < n; col++) solution.col_value[col] = col_value[col];
   }
 
   if (col_dual && row_dual) {
     solution.dual_valid = true;
     solution.col_dual.resize(n);
     solution.row_dual.resize(m);
-    for (int col = 0; col < n; col++)
-      solution.col_dual[col] = col_dual[col];
-    for (int row = 0; row < m; row++)
-      solution.row_dual[row] = row_dual[row];
+    for (int col = 0; col < n; col++) solution.col_dual[col] = col_dual[col];
+    for (int row = 0; row < m; row++) solution.row_dual[row] = row_dual[row];
   }
 
   return (HighsInt)((Highs*)highs)->crossover(solution);

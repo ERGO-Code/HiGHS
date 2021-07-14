@@ -27,8 +27,8 @@ const double inverse_excessive_error = sqrt(inverse_large_error);
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor,
-				  const HSimplexNla& simplex_nla,
-				  const bool force) {
+                                  const HSimplexNla& simplex_nla,
+                                  const bool force) {
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
     return HighsDebugStatus::kNotChecked;
   if (force)

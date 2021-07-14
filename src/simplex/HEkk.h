@@ -19,8 +19,8 @@
 #include "lp_data/HStruct.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
-#include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/HSimplexNla.h"
+#include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
 
@@ -149,7 +149,8 @@ class HEkk {
                                   const double numerical_trouble_tolerance);
 
   void flipBound(const HighsInt iCol);
-  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow, HighsInt* hint);
+  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
+                    HighsInt* hint);
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);

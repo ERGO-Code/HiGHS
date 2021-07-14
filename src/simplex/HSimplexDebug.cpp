@@ -85,7 +85,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
 
   if (status.has_invert) {
     const bool invert_ok =
-      debugDebugToHighsStatus(debugCheckInvert(options, factor, simplex_nla)) != HighsStatus::kError;
+        debugDebugToHighsStatus(debugCheckInvert(
+            options, factor, simplex_nla)) != HighsStatus::kError;
     if (!invert_ok) {
       highsLogUser(
           options.log_options, HighsLogType::kError,

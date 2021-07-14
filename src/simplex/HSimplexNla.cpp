@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HSimplexNla.cpp 
+/**@file simplex/HSimplexNla.cpp
  *
  * @brief Interface to HFactor allowing non-HFactor updates, NLA-only
  * scaling and shifting of NLA analysis below simplex level.
@@ -20,20 +20,15 @@
 //#include <algorithm>
 #include <stdio.h>
 
-//using std::max;
-//using std::min;
-//using std::vector;
+// using std::max;
+// using std::min;
+// using std::vector;
 
-void HSimplexNla::setup(HighsInt num_col,
-			HighsInt num_row,
-			const HighsInt* a_start,
-			const HighsInt* a_index,
-			const double* a_value,
-			HighsInt* base_index,
-			double factor_pivot_threshold,
-			HighsOptions* options,
-			HighsTimer* timer,
-			HighsSimplexAnalysis* analysis) {
+void HSimplexNla::setup(HighsInt num_col, HighsInt num_row,
+                        const HighsInt* a_start, const HighsInt* a_index,
+                        const double* a_value, HighsInt* base_index,
+                        double factor_pivot_threshold, HighsOptions* options,
+                        HighsTimer* timer, HighsSimplexAnalysis* analysis) {
   //  printf("In HSimplexNla::setup\n");
   num_col_ = num_col;
   num_row_ = num_row;
@@ -45,10 +40,10 @@ void HSimplexNla::setup(HighsInt num_col,
   timer_ = timer;
   analysis_ = analysis;
   factor_.setup(num_col_, num_row_, a_start_, a_index_, a_value_, base_index_,
-		factor_pivot_threshold, options_->factor_pivot_tolerance,
-		options_->highs_debug_level, options_->output_flag,
-		options_->log_file_stream, options_->log_to_console,
-		options_->log_dev_level);
+                factor_pivot_threshold, options_->factor_pivot_tolerance,
+                options_->highs_debug_level, options_->output_flag,
+                options_->log_file_stream, options_->log_to_console,
+                options_->log_dev_level);
 }
 
 HighsInt HSimplexNla::invert() {
@@ -59,18 +54,19 @@ HighsInt HSimplexNla::invert() {
 }
 
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
-			HighsTimerClock* factor_timer_clock_pointer) const {
+                        HighsTimerClock* factor_timer_clock_pointer) const {
   //  printf("In HSimplexNla::btran\n");
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
-			HighsTimerClock* factor_timer_clock_pointer) const {
+                        HighsTimerClock* factor_timer_clock_pointer) const {
   //  printf("In HSimplexNla::ftran\n");
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
 }
 
-void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint) {
+void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
+                         HighsInt* hint) {
   //  printf("In HSimplexNla::update\n");
   factor_.update(aq, ep, iRow, hint);
 }

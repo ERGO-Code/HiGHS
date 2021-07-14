@@ -83,13 +83,16 @@ bool HEkk::switchToDevex() {
   costly_DSE_measure_denominator = max(
       max(info_.row_ep_density, info_.col_aq_density), info_.row_ap_density);
   if (costly_DSE_measure_denominator > 0) {
-    info_.costly_DSE_measure = info_.row_DSE_density / costly_DSE_measure_denominator;
-    info_.costly_DSE_measure = info_.costly_DSE_measure * info_.costly_DSE_measure;
+    info_.costly_DSE_measure =
+        info_.row_DSE_density / costly_DSE_measure_denominator;
+    info_.costly_DSE_measure =
+        info_.costly_DSE_measure * info_.costly_DSE_measure;
   } else {
     info_.costly_DSE_measure = 0;
   }
-  bool costly_DSE_iteration = info_.costly_DSE_measure > kCostlyDseMeasureLimit &&
-                              info_.row_DSE_density > kCostlyDseMinimumDensity;
+  bool costly_DSE_iteration =
+      info_.costly_DSE_measure > kCostlyDseMeasureLimit &&
+      info_.row_DSE_density > kCostlyDseMinimumDensity;
   info_.costly_DSE_frequency =
       (1 - kRunningAverageMultiplier) * info_.costly_DSE_frequency;
   if (costly_DSE_iteration) {

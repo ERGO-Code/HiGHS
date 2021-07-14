@@ -22,7 +22,7 @@
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor,
-				  const HSimplexNla& simplex_nla,
+                                  const HSimplexNla& simplex_nla,
                                   const bool force = false);
 
 void debugReportRankDeficiency(

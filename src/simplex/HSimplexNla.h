@@ -10,7 +10,7 @@
 /*    and Michael Feldmeier                                              */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HSimplexNla.h 
+/**@file simplex/HSimplexNla.h
  *
  * @brief Interface to HFactor allowing non-HFactor updates, NLA-only
  * scaling and shifting of NLA analysis below simplex level.
@@ -25,35 +25,29 @@
 
 //#include <algorithm>
 
-//using std::max;
-//using std::min;
-//using std::vector;
+// using std::max;
+// using std::min;
+// using std::vector;
 //
-//class HVector;
+// class HVector;
 
 class HSimplexNla {
  public:
-
-  void setup(HighsInt num_row,
-	     HighsInt num_col,
-	     const HighsInt* a_start,
-	     const HighsInt* a_index,
-	     const double* a_value,
-	     HighsInt* base_index,
-	     double factor_pivot_threshold,
-	     HighsOptions* options,
-	     HighsTimer* timer,
-	     HighsSimplexAnalysis* analysis);
+  void setup(HighsInt num_row, HighsInt num_col, const HighsInt* a_start,
+             const HighsInt* a_index, const double* a_value,
+             HighsInt* base_index, double factor_pivot_threshold,
+             HighsOptions* options, HighsTimer* timer,
+             HighsSimplexAnalysis* analysis);
   HighsInt invert();
   void btran(HVector& rhs, const double expected_density,
-	     HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void ftran(HVector& rhs, const double expected_density,
-	     HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
   HighsInt build_synthetic_tick_;
 
-private:
+ private:
   // References:
   //
   // Pointers:
@@ -71,7 +65,6 @@ private:
 
   HMatrix matrix_;
   HFactor factor_;
-
 };
 
 #endif /* HSIMPLEXNLA_H_ */

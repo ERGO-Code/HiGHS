@@ -155,16 +155,18 @@ class HFactor {
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
-  void ftranCall(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
-             const double expected_density,  //!< Expected density of the result
-             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void ftranCall(
+      HVector& vector,                //!< RHS vector \f$\mathbf{b}\f$
+      const double expected_density,  //!< Expected density of the result
+      HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
-  void btranCall(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
-             const double expected_density,  //!< Expected density of the result
-             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void btranCall(
+      HVector& vector,                //!< RHS vector \f$\mathbf{b}\f$
+      const double expected_density,  //!< Expected density of the result
+      HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Update according to
