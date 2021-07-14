@@ -107,7 +107,7 @@ void HEkkDual::majorChooseRow() {
 
     if (initialCount == 0 || choiceCount <= initialCount / 3) {
       // Need to do the list again
-      dualRHS.createInfeasList(analysis->col_aq_density);
+      dualRHS.createInfeasList(ekk_instance_.info_.col_aq_density);
       continue;
     }
 
@@ -193,7 +193,7 @@ void HEkkDual::majorChooseRowBtran() {
 
   if (analysis->analyse_simplex_data) {
     for (HighsInt i = 0; i < multi_ntasks; i++)
-      analysis->operationRecordBefore(kSimplexNlaBtranEp, 1, analysis->row_ep_density);
+      analysis->operationRecordBefore(kSimplexNlaBtranEp, 1, ekk_instance_.info_.row_ep_density);
   }
   // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
@@ -207,9 +207,7 @@ void HEkkDual::majorChooseRowBtran() {
     work_ep->packFlag = true;
     HighsTimerClock* factor_timer_clock_pointer =
         analysis->getThreadFactorTimerClockPointer();
-    assert(analysis->row_ep_density == ekk_instance_.info_.row_ep_density);
-    assert(1==0);
-    factor->btranCall(*work_ep, analysis->row_ep_density,
+    ekk_instance_.simplex_nla_.btran(*work_ep, ekk_instance_.info_.row_ep_density,
 		      factor_timer_clock_pointer);
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // For Dual steepest edge we know the exact weight as the 2-norm of
@@ -604,16 +602,16 @@ void HEkkDual::majorUpdateFtranParallel() {
   HVector_ptr multi_vector[kHighsThreadLimit * 2 + 1];
   // BFRT first
   if (analysis->analyse_simplex_data)
-    analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT.count, analysis->col_aq_density);
-  multi_density[multi_ntasks] = analysis->col_aq_density;
+    analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT.count, ekk_instance_.info_.col_aq_density);
+  multi_density[multi_ntasks] = ekk_instance_.info_.col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
   if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
     // Then DSE
     for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
       if (analysis->analyse_simplex_data)
-        analysis->operationRecordBefore(kSimplexNlaFtranDse, multi_finish[iFn].row_ep->count, analysis->row_DSE_density);
-      multi_density[multi_ntasks] = analysis->row_DSE_density;
+        analysis->operationRecordBefore(kSimplexNlaFtranDse, multi_finish[iFn].row_ep->count, ekk_instance_.info_.row_DSE_density);
+      multi_density[multi_ntasks] = ekk_instance_.info_.row_DSE_density;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
       multi_ntasks++;
     }
@@ -621,10 +619,8 @@ void HEkkDual::majorUpdateFtranParallel() {
   // Then Column
   for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     if (analysis->analyse_simplex_data)
-      analysis->operationRecordBefore(kSimplexNlaFtran, multi_finish[iFn].col_aq->count, analysis->col_aq_density);
-
-    assert(analysis->col_aq_density == ekk_instance_.info_.col_aq_density);
-    multi_density[multi_ntasks] = analysis->col_aq_density;
+      analysis->operationRecordBefore(kSimplexNlaFtran, multi_finish[iFn].col_aq->count, ekk_instance_.info_.col_aq_density);
+    multi_density[multi_ntasks] = ekk_instance_.info_.col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
   }
@@ -636,8 +632,7 @@ void HEkkDual::majorUpdateFtranParallel() {
     double density = multi_density[i];
     HighsTimerClock* factor_timer_clock_pointer =
         analysis->getThreadFactorTimerClockPointer();
-    assert(1==0);
-    factor->ftranCall(*rhs, density, factor_timer_clock_pointer);
+    ekk_instance_.simplex_nla_.ftran(*rhs, density, factor_timer_clock_pointer);
   }
 
   // Update ticks
