@@ -1459,15 +1459,11 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   //
   // Get expected_density from analysis during simplex solve.
   const double expected_density = 1;
-  HVector nla_solve_vector = solve_vector;
   if (transpose) {
-    ekk_instance.factor_.btranCall(solve_vector, expected_density);
-    ekk_instance.simplex_nla_.btran(nla_solve_vector, expected_density);
+    ekk_instance.simplex_nla_.btran(solve_vector, expected_density);
   } else {
-    ekk_instance.factor_.ftranCall(solve_vector, expected_density);
-    ekk_instance.simplex_nla_.ftran(nla_solve_vector, expected_density);
+    ekk_instance.simplex_nla_.ftran(solve_vector, expected_density);
   }
-  assert(nla_solve_vector.isEqual(solve_vector));
   // Extract the solution
   if (solution_indices == NULL) {
     // Nonzeros in the solution not required

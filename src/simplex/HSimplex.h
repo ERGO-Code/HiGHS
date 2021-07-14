@@ -98,10 +98,4 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
-/*
-void computeDualObjectiveValue(HighsModelObject& highs_model_object, HighsInt
-phase = 2); void computePrimalObjectiveValue(HighsModelObject&
-highs_model_object); double computeBasisCondition(const HighsModelObject&
-highs_model_object);
-*/
 #endif  // SIMPLEX_HSIMPLEX_H_
