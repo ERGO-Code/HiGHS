@@ -70,10 +70,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       rhs.array[index] += value;
     }
   }
-  HVector nla_rhs = rhs;
-  factor.ftranCall(rhs, expected_density);
-  simplex_nla.ftran(nla_rhs, expected_density);
-  assert(nla_rhs.isEqual(rhs));
+  simplex_nla.ftran(rhs, expected_density);
 
   double solve_error_norm = 0;
   for (HighsInt iRow = 0; iRow < numRow; iRow++) {
@@ -127,11 +124,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       column.index[column.count++] = index;
     }
 
-    HVector nla_column = column;
-    factor.ftranCall(column, expected_density);
-    simplex_nla.ftran(nla_column, expected_density);
-    assert(nla_column.isEqual(column));
-
+    simplex_nla.ftran(column, expected_density);
 
     double inverse_column_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < numRow; lc_iRow++) {
