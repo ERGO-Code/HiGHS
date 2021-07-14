@@ -1331,7 +1331,11 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         }
       }
 
-      assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+      assert(
+          (branchchg.boundtype == HighsBoundType::kLower &&
+           branchchg.boundval >= nodestack.back().branchingdecision.boundval) ||
+          (branchchg.boundtype == HighsBoundType::kUpper &&
+           branchchg.boundval <= nodestack.back().branchingdecision.boundval));
       assert(branchchg.boundtype ==
              nodestack.back().branchingdecision.boundtype);
       assert(branchchg.column == nodestack.back().branchingdecision.column);
@@ -1434,7 +1438,11 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
         }
       }
 
-      assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+      assert(
+          (branchchg.boundtype == HighsBoundType::kLower &&
+           branchchg.boundval >= nodestack.back().branchingdecision.boundval) ||
+          (branchchg.boundtype == HighsBoundType::kUpper &&
+           branchchg.boundval <= nodestack.back().branchingdecision.boundval));
       assert(branchchg.boundtype ==
              nodestack.back().branchingdecision.boundtype);
       assert(branchchg.column == nodestack.back().branchingdecision.column);
@@ -1599,7 +1607,9 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
 
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
-  lp->setStoredBasis(nodestack.back().nodeBasis);
+  if (nodestack.back().nodeBasis &&
+      nodestack.back().nodeBasis->row_status.size() == lp->getLp().numRow_)
+    lp->setStoredBasis(nodestack.back().nodeBasis);
   lp->recoverBasis();
 
   return true;
