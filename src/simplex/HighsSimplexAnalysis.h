@@ -210,15 +210,15 @@ class HighsSimplexAnalysis {
   double max_dual_phase_1_lp_dual_infeasibility = 0;
   double sum_dual_phase_1_lp_dual_infeasibility = 0;
   HighsInt num_devex_framework = 0;
-  double col_aq_density;
-  double row_ep_density;
-  double row_ap_density;
-  double row_DSE_density;
-  double col_basic_feasibility_change_density;
-  double row_basic_feasibility_change_density;
-  double col_BFRT_density;
-  double primal_col_density;
-  double dual_col_density;
+  // JHan  double col_aq_density;
+  // JHan  double row_ep_density;
+  // JHan  double row_ap_density;
+  // JHan  double row_DSE_density;
+  // JHan  double col_basic_feasibility_change_density;
+  // JHan  double row_basic_feasibility_change_density;
+  // JHan  double col_BFRT_density;
+  // JHan  double primal_col_density;
+  // JHan  double dual_col_density;
   HighsInt num_costly_DSE_iteration;
   double costly_DSE_measure;
 

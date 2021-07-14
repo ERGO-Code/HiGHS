@@ -1919,9 +1919,9 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
   analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
   const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
   if (analysis->analyse_simplex_data)
-    analysis->operationRecordBefore(kSimplexNlaBtranBasicFeasibilityChange, col_basic_feasibility_change, analysis->col_basic_feasibility_change_density);
+    analysis->operationRecordBefore(kSimplexNlaBtranBasicFeasibilityChange, col_basic_feasibility_change, ekk_instance_.info_.col_basic_feasibility_change_density);
   ekk_instance_.simplex_nla_.btran(col_basic_feasibility_change,
-                              analysis->col_basic_feasibility_change_density,
+                              ekk_instance_.info_.col_basic_feasibility_change_density,
                               analysis->pointer_serial_factor_clocks);
   
   if (analysis->analyse_simplex_data)
@@ -1949,10 +1949,10 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
       analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange, col_basic_feasibility_change, expected_density);
       analysis->num_col_price++;
     } else if (use_row_price_w_switch) {
-      analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange, col_basic_feasibility_change, analysis->col_basic_feasibility_change_density);
+      analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange, col_basic_feasibility_change, ekk_instance_.info_.col_basic_feasibility_change_density);
       analysis->num_row_price_with_switch++;
     } else {
-      analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange, col_basic_feasibility_change, analysis->col_basic_feasibility_change_density);
+      analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange, col_basic_feasibility_change, ekk_instance_.info_.col_basic_feasibility_change_density);
       analysis->num_row_price++;
     }
   }
@@ -1967,7 +1967,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     const double switch_density = ekk_instance_.matrix_.hyperPRICE;
     ekk_instance_.matrix_.priceByRowSparseResultWithSwitch(
         row_basic_feasibility_change, col_basic_feasibility_change,
-        analysis->row_basic_feasibility_change_density, 0, switch_density);
+        info.row_basic_feasibility_change_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
     ekk_instance_.matrix_.priceByRowSparseResult(row_basic_feasibility_change,
@@ -2121,15 +2121,15 @@ void HEkkPrimal::iterationAnalysisData() {
   if ((analysis->edge_weight_mode == DualEdgeWeightMode::kDevex) &&
       (num_devex_iterations == 0))
     analysis->num_devex_framework++;
-  analysis->col_aq_density = info.col_aq_density;
-  analysis->row_ep_density = info.row_ep_density;
-  analysis->row_ap_density = info.row_ap_density;
-  analysis->row_DSE_density = info.row_DSE_density;
-  analysis->col_basic_feasibility_change_density = info.col_basic_feasibility_change_density;
-  analysis->row_basic_feasibility_change_density = info.row_basic_feasibility_change_density;
-  analysis->col_BFRT_density = info.col_BFRT_density;
-  analysis->primal_col_density = info.primal_col_density;
-  analysis->dual_col_density = info.dual_col_density;
+  // JHan  analysis->col_aq_density = info.col_aq_density;
+  // JHan  analysis->row_ep_density = info.row_ep_density;
+  // JHan  analysis->row_ap_density = info.row_ap_density;
+  // JHan  analysis->row_DSE_density = info.row_DSE_density;
+  // JHan  analysis->col_basic_feasibility_change_density = info.col_basic_feasibility_change_density;
+  // JHan  analysis->row_basic_feasibility_change_density = info.row_basic_feasibility_change_density;
+  // JHan  analysis->col_BFRT_density = info.col_BFRT_density;
+  // JHan  analysis->primal_col_density = info.primal_col_density;
+  // JHan  analysis->dual_col_density = info.dual_col_density;
   analysis->num_costly_DSE_iteration = info.num_costly_DSE_iteration;
   analysis->costly_DSE_measure = info.costly_DSE_measure;
 }

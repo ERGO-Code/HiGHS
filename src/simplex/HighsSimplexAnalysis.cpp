@@ -82,17 +82,17 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   // Copy messaging parameter from options
   messaging(options.log_options);
   // Initialise the densities
-  col_aq_density = 0;
-  row_ep_density = 0;
-  row_ap_density = 0;
-  row_DSE_density = 0;
-  col_basic_feasibility_change_density = 0;
-  row_basic_feasibility_change_density = 0;
-  col_BFRT_density = 0;
-  primal_col_density = 0;
+  // JHan  col_aq_density = 0;
+  // JHan  row_ep_density = 0;
+  // JHan  row_ap_density = 0;
+  // JHan  row_DSE_density = 0;
+  // JHan  col_basic_feasibility_change_density = 0;
+  // JHan  row_basic_feasibility_change_density = 0;
+  // JHan  col_BFRT_density = 0;
+  // JHan  primal_col_density = 0;
   // Set the row_dual_density to 1 since it's assumed all costs are at
   // least perturbed from zero, if not initially nonzero
-  dual_col_density = 1;
+  // JHan  dual_col_density = 1;
   // Set up the data structures for scatter data
   tran_stage.resize(NUM_TRAN_STAGE_TYPE);
   tran_stage[TRAN_STAGE_FTRAN_LOWER].name_ = "FTRAN lower";
@@ -413,66 +413,6 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
   }
 }
 
-/*
-bool HighsSimplexAnalysis::switchToDevex() {
-  bool switch_to_devex = false;
-  // Firstly consider switching on the basis of NLA cost
-  const double kAnIterCostlyDseMeasureLimit = 1000.0;
-  const double kAnIterCostlyDseMnDensity = 0.01;
-  const double kAnIterFracNumTotItBfSw = 0.1;
-  const double kAnIterFracNumCostlyDseItbfSw = 0.05;
-  double AnIterCostlyDseMeasureDen;
-  AnIterCostlyDseMeasureDen =
-      max(max(row_ep_density, col_aq_density), row_ap_density);
-  if (AnIterCostlyDseMeasureDen > 0) {
-    AnIterCostlyDseMeasure = row_DSE_density / AnIterCostlyDseMeasureDen;
-    AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
-  } else {
-    AnIterCostlyDseMeasure = 0;
-  }
-  bool CostlyDseIt = AnIterCostlyDseMeasure > kAnIterCostlyDseMeasureLimit &&
-                     row_DSE_density > kAnIterCostlyDseMnDensity;
-  AnIterCostlyDseFq = (1 - kRunningAverageMultiplier) * AnIterCostlyDseFq;
-  if (CostlyDseIt) {
-    AnIterNumCostlyDseIt++;
-    AnIterCostlyDseFq += kRunningAverageMultiplier * 1.0;
-    HighsInt lcNumIter = simplex_iteration_count - AnIterIt0;
-    // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations
-    // have been costly
-    switch_to_devex =
-        allow_dual_steepest_edge_to_devex_switch &&
-        (AnIterNumCostlyDseIt > lcNumIter * kAnIterFracNumCostlyDseItbfSw) &&
-        (lcNumIter > kAnIterFracNumTotItBfSw * numTot);
-    if (switch_to_devex) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
-                   " costly DSE iterations of %" HIGHSINT_FORMAT
-                   " with "
-                   "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
-                   "%11.4g; DSE = %11.4g\n",
-                   AnIterNumCostlyDseIt, lcNumIter, col_aq_density,
-                   row_ep_density, row_ap_density, row_DSE_density);
-    }
-  }
-  if (!switch_to_devex) {
-    // Secondly consider switching on the basis of weight accuracy
-    double dse_weight_error_measure =
-        average_log_low_dual_steepest_edge_weight_error +
-        average_log_high_dual_steepest_edge_weight_error;
-    double dse_weight_error_threshold =
-        dual_steepest_edge_weight_log_error_threshold;
-    switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-                      dse_weight_error_measure > dse_weight_error_threshold;
-    if (switch_to_devex) {
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Switch from DSE to Devex with log error measure of %g > "
-                   "%g = threshold",
-                   dse_weight_error_measure, dse_weight_error_threshold);
-    }
-  }
-  return switch_to_devex;
-}
-*/
 bool HighsSimplexAnalysis::predictEndDensity(const HighsInt tran_stage_type,
                                              const double start_density,
                                              double& end_density) {
@@ -662,18 +602,18 @@ void HighsSimplexAnalysis::iterationRecord() {
       } else {
         lcAnIter.AnIterTraceMulti = 0;
       }
-      lcAnIter.AnIterTraceDensity[kSimplexNlaFtran] = col_aq_density;
-      lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp] = row_ep_density;
-      lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] = row_ap_density;
-      lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] = col_aq_density;
-      if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = row_DSE_density;
-        lcAnIter.AnIterTraceCostlyDse = costly_DSE_measure;
-      } else {
-        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
-        lcAnIter.AnIterTraceCostlyDse = 0;
-      }
-      lcAnIter.AnIterTrace_dual_edge_weight_mode = (HighsInt)edge_weight_mode;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaFtran] = col_aq_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp] = row_ep_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] = row_ap_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] = col_aq_density;
+      // JHan      if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
+      // JHan        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = row_DSE_density;
+      // JHan        lcAnIter.AnIterTraceCostlyDse = costly_DSE_measure;
+      // JHan      } else {
+      // JHan        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
+      // JHan        lcAnIter.AnIterTraceCostlyDse = 0;
+      // JHan      }
+      // JHan      lcAnIter.AnIterTrace_dual_edge_weight_mode = (HighsInt)edge_weight_mode;
     }
   }
   AnIterPrevIt = AnIterCuIt;
@@ -940,17 +880,16 @@ void HighsSimplexAnalysis::summaryReport() {
       } else {
         lcAnIter.AnIterTraceMulti = 0;
       }
-      lcAnIter.AnIterTraceDensity[kSimplexNlaFtran] =
-          col_aq_density;
-      lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp] =
-          row_ep_density;
-      lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] =
-          row_ap_density;
-      lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] =
-          col_aq_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaFtran] =
+      // JHan          col_aq_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaBtranEp] =
+      // JHan          row_ep_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaPriceAp] =
+      // JHan          row_ap_density;
+      // JHan      lcAnIter.AnIterTraceDensity[kSimplexNlaFtranBfrt] =
+      // JHan          col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
-        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] =
-            row_DSE_density;
+	// JHan        lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = row_DSE_density;
         lcAnIter.AnIterTraceCostlyDse = costly_DSE_measure;
       } else {
         lcAnIter.AnIterTraceDensity[kSimplexNlaFtranDse] = 0;
@@ -1302,16 +1241,16 @@ void HighsSimplexAnalysis::reportDensity(const bool header) {
       *analysis_log << highsFormatToString("     ");
     }
   } else {
-    reportOneDensity(col_aq_density);
-    reportOneDensity(row_ep_density);
-    reportOneDensity(row_ap_density);
-    double use_row_DSE_density;
-    if (rp_dual_steepest_edge) {
-      use_row_DSE_density = row_DSE_density;
-    } else {
-      use_row_DSE_density = 0;
-    }
-    reportOneDensity(use_row_DSE_density);
+    // JHan    reportOneDensity(col_aq_density);
+    // JHan    reportOneDensity(row_ep_density);
+    // JHan    reportOneDensity(row_ap_density);
+    // JHan    double use_row_DSE_density;
+    // JHan    if (rp_dual_steepest_edge) {
+    // JHan      use_row_DSE_density = row_DSE_density;
+    // JHan    } else {
+    // JHan      use_row_DSE_density = 0;
+    // JHan    }
+    // JHan    reportOneDensity(use_row_DSE_density);
   }
 }
 
