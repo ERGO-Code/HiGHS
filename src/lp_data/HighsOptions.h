@@ -585,10 +585,9 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &write_solution_pretty, false);
     records.push_back(record_bool);
 
-    record_bool =
-        new OptionRecordBool("mip_detect_symmetry",
-                             "Whether symmetry should be detected",
-                             advanced, &mip_detect_symmetry, true);
+    record_bool = new OptionRecordBool("mip_detect_symmetry",
+                                       "Whether symmetry should be detected",
+                                       advanced, &mip_detect_symmetry, true);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt("mip_max_nodes",
@@ -649,15 +648,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
         &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
+    records.push_back(record_double);
 
     record_double =
         new OptionRecordDouble("mip_epsilon", "MIP epsilon tolerance", advanced,
                                &mip_epsilon, 1e-15, 1e-9, kHighsInf);
+    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
-
     records.push_back(record_double);
 
     // Advanced options

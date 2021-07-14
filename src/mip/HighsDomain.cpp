@@ -1274,6 +1274,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
 
 void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   assert(boundchg.column >= 0);
+  assert(boundchg.column < (HighsInt)colUpper_.size());
   // assert(infeasible_ == 0);
   mipsolver->mipdata_->debugSolution.boundChangeAdded(
       *this, boundchg, reason.type == Reason::kBranching);
