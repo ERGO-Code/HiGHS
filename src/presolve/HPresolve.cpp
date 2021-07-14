@@ -2985,6 +2985,15 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   // same for the columns
   for (HighsInt col = 0; col != model->numCol_; ++col) {
     if (colDeleted[col]) continue;
+    if (model->integrality_[col] != HighsVarType::kContinuous) {
+      double ceilLower =
+          std::ceil(model->colLower_[col] - options->mip_feasibility_tolerance);
+      double floorUpper = std::floor(model->colUpper_[col] +
+                                     options->mip_feasibility_tolerance);
+
+      if (ceilLower > model->colLower_[col]) changeColLower(col, ceilLower);
+      if (floorUpper < model->colUpper_[col]) changeColUpper(col, floorUpper);
+    }
     HPRESOLVE_CHECKED_CALL(colPresolve(postSolveStack, col));
     changedColFlag[col] = false;
   }

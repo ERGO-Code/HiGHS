@@ -185,6 +185,8 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   lp.colLower_ = {-inf};
   lp.colUpper_ = {1.5};
   lp.integrality_ = {HighsVarType::kInteger};
+  lp.orientation_ = MatrixOrientation::kRowwise;
+  lp.Astart_.resize(1, 0);
 
   double double_equal_tolerance = 1e-6;
   double required_objective_value = -2;
