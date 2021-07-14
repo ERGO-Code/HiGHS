@@ -393,8 +393,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchUpwards(col, upval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
-        treeweight += std::pow(0.5, getCurrentDepth() - 1);
-        ++nnodes;
+        nodestack[nodestack.size() - 2].skipDepthCount = 1;
+        depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
@@ -469,8 +469,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchUpwards(col, upval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
-            treeweight += std::pow(0.5, getCurrentDepth() - 1);
-            ++nnodes;
+            nodestack[nodestack.size() - 2].skipDepthCount = 1;
+            depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -486,8 +486,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchUpwards(col, upval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
-            treeweight += std::pow(0.5, getCurrentDepth() - 1);
-            ++nnodes;
+            nodestack[nodestack.size() - 2].skipDepthCount = 1;
+            depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -502,8 +502,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchUpwards(col, upval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
-        treeweight += std::pow(0.5, getCurrentDepth() - 1);
-        ++nnodes;
+        nodestack[nodestack.size() - 2].skipDepthCount = 1;
+        depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -546,8 +546,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchDownwards(col, downval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
-        treeweight += std::pow(0.5, getCurrentDepth() - 1);
-        ++nnodes;
+        nodestack[nodestack.size() - 2].skipDepthCount = 1;
+        depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         return -1;
@@ -622,8 +622,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
-            treeweight += std::pow(0.5, getCurrentDepth() - 1);
-            ++nnodes;
+            nodestack[nodestack.size() - 2].skipDepthCount = 1;
+            depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -639,8 +639,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
             branchDownwards(col, downval, fracval);
             nodestack[nodestack.size() - 2].opensubtrees = 0;
-            treeweight += std::pow(0.5, getCurrentDepth() - 1);
-            ++nnodes;
+            nodestack[nodestack.size() - 2].skipDepthCount = 1;
+            depthoffset -= 1;
 
             lp->setStoredBasis(nodestack.back().nodeBasis);
             if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -655,8 +655,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         branchDownwards(col, downval, fracval);
         nodestack[nodestack.size() - 2].opensubtrees = 0;
-        treeweight += std::pow(0.5, getCurrentDepth() - 1);
-        ++nnodes;
+        nodestack[nodestack.size() - 2].skipDepthCount = 1;
+        depthoffset -= 1;
 
         lp->setStoredBasis(nodestack.back().nodeBasis);
         if (numiters > basisstart_threshold) lp->recoverBasis();
@@ -1301,6 +1301,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
 
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
+      depthoffset += nodestack.back().skipDepthCount;
       nodestack.pop_back();
 
       if (nodestack.empty()) {
@@ -1404,6 +1405,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
 
   while (true) {
     while (nodestack.back().opensubtrees == 0) {
+      depthoffset += nodestack.back().skipDepthCount;
       nodestack.pop_back();
 
       if (nodestack.empty()) {
@@ -1551,6 +1553,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   if (getCurrentDepth() >= targetDepth) nodestack.back().opensubtrees = 0;
 
   while (nodestack.back().opensubtrees == 0) {
+    depthoffset += nodestack.back().skipDepthCount;
     nodestack.pop_back();
 
 #ifndef NDEBUG

@@ -88,6 +88,7 @@ class HighsSearch {
     std::shared_ptr<const StabilizerOrbits> stabilizerOrbits;
     HighsDomainChange branchingdecision;
     HighsInt domgchgStackPos;
+    uint8_t skipDepthCount;
     uint8_t opensubtrees;
 
     NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf,
@@ -99,6 +100,7 @@ class HighsSearch {
           nodeBasis(std::move(parentBasis)),
           stabilizerOrbits(std::move(stabilizerOrbits)),
           domgchgStackPos(-1),
+          skipDepthCount(0),
           opensubtrees(2) {}
   };
 
