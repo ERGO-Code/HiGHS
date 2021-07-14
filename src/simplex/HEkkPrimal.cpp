@@ -1264,7 +1264,7 @@ void HEkkPrimal::update() {
 
   // Perform pivoting
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
-  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason, &nla_col_aq, &nla_row_ep);
+  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   ekk_instance_.updateMatrix(variable_in, variable_out);
   if (info.update_count >= info.update_limit)
     rebuild_reason = kRebuildReasonUpdateLimitReached;

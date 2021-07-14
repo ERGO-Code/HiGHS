@@ -1772,18 +1772,9 @@ bool HEkk::reinvertOnNumericalTrouble(
 // The major model updates. Factor calls factor_.update; Matrix
 // calls matrix_.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
-void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
-                        HighsInt* hint, HVector* nla_column, HVector* nla_row_ep) {
+void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow, HighsInt* hint) {
   analysis_.simplexTimerStart(UpdateFactorClock);
-  HighsInt nla_iRow = *iRow;
-  HighsInt nla_hint = *hint;
-  //  printf("updateFactor: ticks(%g; %g)\n", (*nla_row_ep).synthetic_tick, (*row_ep).synthetic_tick);
-  assert((*nla_column).isEqual(*column));
-  assert((*nla_row_ep).isEqual(*row_ep));
-  factor_.update(column, row_ep, iRow, hint);
-  assert(nla_iRow == *iRow);
-  simplex_nla_.update(nla_column, nla_row_ep, &nla_iRow, &nla_hint);
-  assert(nla_hint == *hint);
+  simplex_nla_.update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   status_.has_invert = true;
   if (info_.update_count >= info_.update_limit)

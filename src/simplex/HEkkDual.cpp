@@ -1836,7 +1836,7 @@ void HEkkDual::updatePivots() {
   ekk_instance_.iteration_count_++;
   //
   // Update the invertible representation of the basis matrix
-  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason, &nla_col_aq, &nla_row_ep);
+  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   //
   // Update the row-wise representation of the nonbasic columns
   ekk_instance_.updateMatrix(variable_in, variable_out);

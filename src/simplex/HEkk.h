@@ -149,8 +149,7 @@ class HEkk {
                                   const double numerical_trouble_tolerance);
 
   void flipBound(const HighsInt iCol);
-  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
-                    HighsInt* hint, HVector* nla_column=NULL, HVector* nla_row_ep=NULL);
+  void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow, HighsInt* hint);
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
