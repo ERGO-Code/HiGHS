@@ -1,13 +1,8 @@
 import ctypes
 import os
-import platform
+from ctypes.util import find_library
 
-if platform.system() == 'Linux':
-   highslib = ctypes.cdll.LoadLibrary("libhighs.so") 
-elif platform.system() == 'Darwin': ## macOS (Darwin) use .dylib as Dynamic library
-   highslib = ctypes.cdll.LoadLibrary("libhighs.dylib") 
-elif platform.system() == 'Windows': ## Windows use .lib as Dynamic library
-   highslib = ctypes.cdll.LoadLibrary("libhighs.lib") 
+highslib = ctypes.cdll.LoadLibrary(ctypes.util.find_library("highs"))
 
 # highs lib folder must be in "LD_LIBRARY_PATH" environment variable
 # ============
