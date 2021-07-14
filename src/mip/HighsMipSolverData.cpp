@@ -916,7 +916,8 @@ restart:
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nAdding %" HIGHSINT_FORMAT " cuts to LP after restart\n",
+                 "\nAdding %" HIGHSINT_FORMAT
+                 " cuts to the LP after performing a restart\n",
                  cutpool.getNumCuts());
     assert(numRestarts != 0);
     HighsCutSet cutset;

@@ -1313,6 +1313,23 @@ bool HighsSearch::backtrack(bool recoverBasis) {
       HighsDomainChange branchchg =
 #endif
           localdom.backtrack();
+
+      if (nodestack.back().opensubtrees != 0) {
+        // repropagate the node, as it may have become infeasible due to
+        // conflicts
+        HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
+        HighsInt oldNumChangedCols = localdom.getChangedCols().size();
+        localdom.propagate();
+        if (nodestack.back().stabilizerOrbits && !localdom.infeasible() &&
+            oldNumDomchgs != localdom.getNumDomainChanges()) {
+          nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+        }
+        if (localdom.infeasible()) {
+          localdom.clearChangedCols(oldNumChangedCols);
+          nodestack.back().opensubtrees = 0;
+        }
+      }
+
       assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
       assert(branchchg.boundtype ==
              nodestack.back().branchingdecision.boundtype);
@@ -1347,6 +1364,11 @@ bool HighsSearch::backtrack(bool recoverBasis) {
                  localdom.infeasible();
     if (!prune) {
       localdom.propagate();
+      prune = localdom.infeasible();
+      if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+    }
+    if (!prune && passStabilizerToChildNode && currnode.stabilizerOrbits) {
+      currnode.stabilizerOrbits->orbitalFixing(localdom);
       prune = localdom.infeasible();
     }
     if (prune) {
@@ -1393,6 +1415,23 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       HighsDomainChange branchchg =
 #endif
           localdom.backtrack();
+
+      if (nodestack.back().opensubtrees != 0) {
+        // repropagate the node, as it may have become infeasible due to
+        // conflicts
+        HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
+        HighsInt oldNumChangedCols = localdom.getChangedCols().size();
+        localdom.propagate();
+        if (nodestack.back().stabilizerOrbits && !localdom.infeasible() &&
+            oldNumDomchgs != localdom.getNumDomainChanges()) {
+          nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+        }
+        if (localdom.infeasible()) {
+          localdom.clearChangedCols(oldNumChangedCols);
+          nodestack.back().opensubtrees = 0;
+        }
+      }
+
       assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
       assert(branchchg.boundtype ==
              nodestack.back().branchingdecision.boundtype);
@@ -1434,6 +1473,11 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
                  localdom.infeasible();
     if (!prune) {
       localdom.propagate();
+      prune = localdom.infeasible();
+      if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+    }
+    if (!prune && passStabilizerToChildNode && currnode.stabilizerOrbits) {
+      currnode.stabilizerOrbits->orbitalFixing(localdom);
       prune = localdom.infeasible();
     }
     if (prune) {

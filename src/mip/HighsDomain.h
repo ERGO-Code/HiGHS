@@ -89,8 +89,6 @@ class HighsDomain {
 
     HighsInt computeCuts(HighsInt depthLevel, HighsConflictPool& conflictPool);
 
-    void computeAllUIPCuts();
-
     bool explainInfeasibility();
 
     bool explainInfeasibilityConflict(const HighsDomainChange* conflict,
@@ -376,6 +374,8 @@ class HighsDomain {
   const std::vector<Reason>& getDomainChangeReason() const {
     return domchgreason_;
   }
+
+  HighsInt getNumDomainChanges() const { return domchgstack_.size(); }
 
   bool colBoundsAreGlobal(HighsInt col) const {
     return colLowerPos_[col] == -1 && colUpperPos_[col] == -1;

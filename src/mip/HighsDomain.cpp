@@ -1413,7 +1413,7 @@ void HighsDomain::setDomainChangeStack(
                                                           true);
 
       changeBound(domchgstack[k], Reason::unspecified());
-
+      if (!infeasible_) propagate();
       if (infeasible_) return;
     }
 
@@ -1425,7 +1425,7 @@ void HighsDomain::setDomainChangeStack(
                                                         true);
 
     changeBound(domchgstack[k], Reason::branching());
-
+    if (!infeasible_) propagate();
     if (infeasible_) return;
   }
 
@@ -1441,7 +1441,7 @@ void HighsDomain::setDomainChangeStack(
                                                         true);
 
     changeBound(domchgstack[k], Reason::unspecified());
-
+    if (!infeasible_) propagate();
     if (infeasible_) break;
   }
 }
@@ -2705,6 +2705,14 @@ void HighsDomain::ConflictSet::conflictAnalysis(
   HighsInt numConflicts = 0;
   for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
        --currDepth) {
+    if (currDepth > 0) {
+      // skip redundant branching changes which are just added for symmetry
+      // handling
+      HighsInt branchpos = localdom.branchPos_[currDepth - 1];
+      if (localdom.domchgstack_[branchpos].boundval ==
+          localdom.prevboundval_[branchpos].first)
+        continue;
+    }
     numConflicts += computeCuts(currDepth, conflictPool);
 
     if (numConflicts == 0) break;
@@ -2751,6 +2759,14 @@ void HighsDomain::ConflictSet::conflictAnalysis(
   HighsInt numConflicts = 0;
   for (HighsInt currDepth = localdom.branchPos_.size(); currDepth >= 0;
        --currDepth) {
+    if (currDepth > 0) {
+      // skip redundant branching changes which are just added for symmetry
+      // handling
+      HighsInt branchpos = localdom.branchPos_[currDepth - 1];
+      if (localdom.domchgstack_[branchpos].boundval ==
+          localdom.prevboundval_[branchpos].first)
+        continue;
+    }
     numConflicts += computeCuts(currDepth, conflictPool);
 
     // at least in the highest depth level conflicts must be found, otherwise we
