@@ -228,12 +228,6 @@ void HEkkPrimal::initialiseInstance() {
   col_basic_feasibility_change.setup(num_row);
   row_basic_feasibility_change.setup(num_col);
 
-  nla_col_aq.setup(num_row);
-  nla_row_ep.setup(num_row);
-  nla_row_ap.setup(num_col);
-  nla_col_basic_feasibility_change.setup(num_row);
-  nla_row_basic_feasibility_change.setup(num_col);
-
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
 
@@ -864,7 +858,7 @@ bool HEkkPrimal::useVariableIn() {
   // FTRAN
   //
   // Compute pivot column
-  ekk_instance_.pivotColumnFtran(variable_in, col_aq, nla_col_aq);
+  ekk_instance_.pivotColumnFtran(variable_in, col_aq);
   // Compute the dual for the pivot column and compare it with the
   // updated value
   double computed_theta_dual =
@@ -1170,7 +1164,7 @@ void HEkkPrimal::assessPivot() {
   // BTRAN
   //
   // Compute unit BTran for tableau row and FT update
-  ekk_instance_.unitBtran(row_out, row_ep, nla_row_ep);
+  ekk_instance_.unitBtran(row_out, row_ep);
   //
   // PRICE
   //

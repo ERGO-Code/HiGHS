@@ -1340,7 +1340,7 @@ void HEkk::initialiseNonbasicValueAndMove() {
   }
 }
 
-void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_col_aq) {
+void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   analysis_.simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
@@ -1354,10 +1354,9 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq, HVector& nla_c
   const double local_col_aq_density = (double)col_aq.count / num_row;
   updateOperationResultDensity(local_col_aq_density, info_.col_aq_density);
   analysis_.simplexTimerStop(FtranClock);
-  nla_col_aq = col_aq;
 }
 
-void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep) {
+void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep) {
   analysis_.simplexTimerStart(BtranClock);
   row_ep.clear();
   row_ep.count = 1;
@@ -1373,7 +1372,6 @@ void HEkk::unitBtran(const HighsInt iRow, HVector& row_ep, HVector& nla_row_ep) 
   const double local_row_ep_density = (double)row_ep.count / num_row;
   updateOperationResultDensity(local_row_ep_density, info_.row_ep_density);
   analysis_.simplexTimerStop(BtranClock);
-  nla_row_ep = row_ep;
 }
 
 void HEkk::fullBtran(HVector& buffer) {

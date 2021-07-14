@@ -365,11 +365,6 @@ void HEkkDual::initialiseInstance() {
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
 
-  nla_col_DSE.setup(solver_num_row);
-  nla_col_BFRT.setup(solver_num_row);
-  nla_col_aq.setup(solver_num_row);
-  nla_row_ep.setup(solver_num_row);
-  nla_row_ap.setup(solver_num_col);
   // Setup other buffers
   dualRow.setup();
   dualRHS.setup();
@@ -1053,8 +1048,7 @@ void HEkkDual::iterate() {
   updateFtran();
 
   // updateFtranDSE performs the DSE FTRAN on pi_p
-  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge)
-    updateFtranDSE(&row_ep, &nla_row_ep);
+  if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) updateFtranDSE(&row_ep);
   analysis->simplexTimerStop(IterateFtranClock);
 
   // updateVerify() Checks row-wise pivot against column-wise pivot for
@@ -1111,7 +1105,7 @@ void HEkkDual::iterateTasks() {
 #pragma omp task
     {
       col_DSE.copy(&row_ep);
-      updateFtranDSE(&col_DSE, NULL);
+      updateFtranDSE(&col_DSE);
     }
 #pragma omp task
     {
@@ -1246,7 +1240,6 @@ void HEkkDual::chooseRow() {
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(kSimplexNlaBtranEp, row_ep);
     analysis->simplexTimerStop(BtranClock);
-    nla_row_ep = row_ep;
     // Verify DSE weight
     if (dual_edge_weight_mode == DualEdgeWeightMode::kSteepestEdge) {
       // For DSE, see how accurate the updated weight is
@@ -1605,7 +1598,6 @@ void HEkkDual::updateFtran() {
   // Save the pivot value computed column-wise - used for numerical checking
   alpha_col = col_aq.array[row_out];
   analysis->simplexTimerStop(FtranClock);
-  nla_col_aq = col_aq;
 }
 
 void HEkkDual::updateFtranBFRT() {
@@ -1644,7 +1636,7 @@ void HEkkDual::updateFtranBFRT() {
   ekk_instance_.updateOperationResultDensity(local_col_BFRT_density, ekk_instance_.info_.col_BFRT_density);
 }
 
-void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
+void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   // Compute the vector required to update DSE weights - being FTRAN
   // applied to the pivotal column (FTRAN-DSE)
   //
@@ -1662,7 +1654,6 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector, HVector* nla_DSE_Vector) {
   const double local_row_DSE_density =
       (double)DSE_Vector->count / solver_num_row;
   ekk_instance_.updateOperationResultDensity(local_row_DSE_density, ekk_instance_.info_.row_DSE_density);
-  *nla_DSE_Vector = *DSE_Vector;
 }
 
 void HEkkDual::updateVerify() {

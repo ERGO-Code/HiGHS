@@ -165,7 +165,6 @@ HighsStatus getRangingData(HighsRanging& ranging,
     // Form updated column
     column.clear();
     matrix.collect_aj(column, j, 1);
-    HVector nla_column = column;
     const double expected_density = ekk_instance.info_.col_aq_density;
     ekk_instance.simplex_nla_.ftran(column, expected_density);
     HighsInt nWork = 0;
