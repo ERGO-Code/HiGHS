@@ -2935,12 +2935,60 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
 
   // column is not (weakly) dominated
 
+  // the associated dual constraint has an upper bound if there is an infinite
+  // or redundant column lower bound as then the reduced cost of the column must
+  // not be positive i.e. <= 0
+  bool dualConsHasUpper = isUpperImplied(col);
+  bool dualConsHasLower = isLowerImplied(col);
+
   // integer columns cannot be used to tighten bounds on dual multipliers
   if (mipsolver != nullptr) {
-    if (model->integrality_[col] == HighsVarType::kInteger)
-      return Result::kOk;
-    else if (model->integrality_[col] == HighsVarType::kContinuous &&
-             isImpliedInteger(col)) {
+    if (dualConsHasLower && colLowerSource[col] != -1 &&
+        impliedDualRowBounds.getNumInfSumUpperOrig(col) == 1 &&
+        model->colCost_[col] >= 0) {
+      HighsInt row = colLowerSource[col];
+
+      if (model->integrality_[col] != HighsVarType::kInteger)
+        changeImplRowDualLower(row, 0.0, col);
+      if (rowsizeInteger[row] == rowsize[row]) {
+        HighsInt nzPos = findNonzero(row, col);
+        if (rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos])) {
+          // The row is the only one that restricts this column from below
+          // and also implies the columns lower bound. Additionally the row is
+          // integral when scaling it so that the coefficient of this column
+          // is 1.0. Since the cost of the column is non-negative it can
+          // always be set to a value that makes this row an equality.
+          // Due to this it can imply a bound on the row dual even though it
+          // is integral.
+          changeImplRowDualLower(row, 0.0, col);
+        }
+      }
+    }
+
+    if (dualConsHasUpper && colUpperSource[col] != -1 &&
+        impliedDualRowBounds.getNumInfSumLowerOrig(col) == 1 &&
+        model->colCost_[col] <= 0) {
+      HighsInt row = colUpperSource[col];
+      if (model->integrality_[col] != HighsVarType::kInteger)
+        changeImplRowDualUpper(row, 0.0, col);
+      else if (rowsizeInteger[row] == rowsize[row]) {
+        HighsInt nzPos = findNonzero(row, col);
+
+        if (rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos])) {
+          // The row is the only one that restricts this column from above
+          // and implies the columns upper bound. Additionally the row is
+          // integral when scaling it so that the coefficient of this column
+          // is 1.0. Since the cost of the column is non-positive it can
+          // always be set to the value that makes this row hold with equality
+          changeImplRowDualUpper(row, 0.0, col);
+        }
+      }
+    }
+
+    if (model->integrality_[col] == HighsVarType::kInteger) return Result::kOk;
+
+    if (model->integrality_[col] == HighsVarType::kContinuous &&
+        isImpliedInteger(col)) {
       model->integrality_[col] = HighsVarType::kImplicitInteger;
       for (const HighsSliceNonzero& nonzero : getColumnVector(col))
         ++rowsizeImplInt[nonzero.index()];
@@ -2953,12 +3001,6 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       if (floorUpper < model->colUpper_[col]) changeColUpper(col, floorUpper);
     }
   }
-
-  // the associated dual constraint has an upper bound if there is an infinite
-  // or redundant column lower bound as then the reduced cost of the column must
-  // not be positive i.e. <= 0
-  bool dualConsHasUpper = isUpperImplied(col);
-  bool dualConsHasLower = isLowerImplied(col);
 
   // now check if we can expect to tighten at least one bound
   if ((dualConsHasLower && impliedDualRowBounds.getNumInfSumUpper(col) <= 1) ||
@@ -3336,9 +3378,13 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
       substitutionOpportunities[i].first = -1;
       continue;
     }
-    if (model->integrality_[col] == HighsVarType::kInteger &&
-        !isImpliedIntegral(col))
-      continue;
+    if (model->integrality_[col] == HighsVarType::kInteger) {
+      bool impliedIntegral =
+          (rowsizeInteger[row] == rowsize[row] &&
+           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos])) ||
+          isImpliedIntegral(col);
+      if (!impliedIntegral) continue;
+    }
 
     // in the case where the row has length two or the column has length two
     // we always do the substitution since the fillin can never be problematic
