@@ -186,6 +186,7 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   lp.colUpper_ = {1.5};
   lp.integrality_ = {HighsVarType::kInteger};
 
+  double double_equal_tolerance = 1e-6;
   double required_objective_value = -2;
   double required_x0_value = 1;
 

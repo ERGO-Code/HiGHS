@@ -239,9 +239,11 @@ restart:
 
       if (mipdata_->percentageInactiveIntegers() >= 10.0 &&
           mipdata_->num_nodes - mipdata_->num_nodes_before_run <= 1000) {
-        doRestart = currNodeEstim >=
-                    (100.0 / mipdata_->percentageInactiveIntegers()) *
-                        (mipdata_->num_nodes - mipdata_->num_nodes_before_run);
+        doRestart =
+            currNodeEstim >=
+                (100.0 / mipdata_->percentageInactiveIntegers()) *
+                    (mipdata_->num_nodes - mipdata_->num_nodes_before_run) &&
+            options_mip_->presolve != "off";
       }
 
       if (currNodeEstim >=
