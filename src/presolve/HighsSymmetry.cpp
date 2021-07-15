@@ -514,7 +514,7 @@ HighsInt HighsSymmetryDetection::selectTargetCell() {
 }
 
 bool HighsSymmetryDetection::checkStoredAutomorphism(HighsInt vertex) {
-  HighsInt numCheck = std::min(numAutomorphisms, 64);
+  HighsInt numCheck = std::min(numAutomorphisms, (HighsInt)64);
 
   for (HighsInt i = 0; i < numCheck; ++i) {
     const HighsInt* automorphism = automorphisms.data() + i * numVertices;
