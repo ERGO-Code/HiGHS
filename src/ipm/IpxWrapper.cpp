@@ -520,7 +520,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsIterationCounts& iteration_counts,
                        HighsModelStatus& model_status,
                        HighsSolutionParams& solution_params) {
-  printf("Calling IPX\n");
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
