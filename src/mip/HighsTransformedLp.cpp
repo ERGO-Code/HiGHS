@@ -18,7 +18,7 @@
 
 HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
                                        HighsImplications& implications)
-    : lprelaxation(lprelaxation), implications(implications) {
+    : lprelaxation(lprelaxation) {
   assert(lprelaxation.scaledOptimal(lprelaxation.getStatus()));
   const HighsMipSolver& mipsolver = implications.mipsolver;
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();

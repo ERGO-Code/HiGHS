@@ -125,6 +125,7 @@ class HighsDomain {
     std::vector<HighsInt> activitycutsinf_;
     std::vector<uint8_t> propagatecutflags_;
     std::vector<HighsInt> propagatecutinds_;
+    std::vector<double> capacityThreshold_;
 
     CutpoolPropagation(HighsInt cutpoolindex, HighsDomain* domain,
                        HighsCutPool& cutpool);
@@ -132,6 +133,8 @@ class HighsDomain {
     CutpoolPropagation(const CutpoolPropagation& other);
 
     ~CutpoolPropagation();
+
+    void recomputeCapacityThreshold(HighsInt cut);
 
     void cutAdded(HighsInt cut, bool propagate);
 
@@ -199,6 +202,7 @@ class HighsDomain {
   std::vector<HighsCDouble> activitymax_;
   std::vector<HighsInt> activitymininf_;
   std::vector<HighsInt> activitymaxinf_;
+  std::vector<double> capacityThreshold_;
   std::vector<uint8_t> propagateflags_;
   std::vector<HighsInt> propagateinds_;
 
@@ -215,6 +219,14 @@ class HighsDomain {
   void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
 
   void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
+
+  void updateThresholdLbChange(HighsInt col, double newbound, double val,
+                               double& threshold);
+
+  void updateThresholdUbChange(HighsInt col, double newbound, double val,
+                               double& threshold);
+
+  void recomputeCapacityThreshold(HighsInt row);
 
   double doChangeBound(const HighsDomainChange& boundchg);
 
@@ -238,6 +250,7 @@ class HighsDomain {
         activitymax_(other.activitymax_),
         activitymininf_(other.activitymininf_),
         activitymaxinf_(other.activitymaxinf_),
+        capacityThreshold_(other.capacityThreshold_),
         propagateflags_(other.propagateflags_),
         propagateinds_(other.propagateinds_),
         mipsolver(other.mipsolver),
@@ -266,6 +279,7 @@ class HighsDomain {
     activitymax_ = other.activitymax_;
     activitymininf_ = other.activitymininf_;
     activitymaxinf_ = other.activitymaxinf_;
+    capacityThreshold_ = other.capacityThreshold_;
     propagateflags_ = other.propagateflags_;
     propagateinds_ = other.propagateinds_;
     mipsolver = other.mipsolver;

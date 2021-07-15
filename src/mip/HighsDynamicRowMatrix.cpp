@@ -31,7 +31,7 @@ HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
 
   // insert the row in an existing empty space or append the values to the end
   // if no space that is large enough exists
-  std::set<std::pair<HighsInt, int>>::iterator it;
+  std::set<std::pair<HighsInt, HighsInt>>::iterator it;
   if (freespaces_.empty() || (it = freespaces_.lower_bound(std::make_pair(
                                   Rlen, HighsInt{-1}))) == freespaces_.end()) {
     start = ARindex_.size();

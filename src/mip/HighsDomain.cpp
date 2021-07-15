@@ -358,12 +358,32 @@ HighsDomain::CutpoolPropagation::CutpoolPropagation(
       activitycuts_(other.activitycuts_),
       activitycutsinf_(other.activitycutsinf_),
       propagatecutflags_(other.propagatecutflags_),
-      propagatecutinds_(other.propagatecutinds_) {
+      propagatecutinds_(other.propagatecutinds_),
+      capacityThreshold_(other.capacityThreshold_) {
   cutpool->addPropagationDomain(this);
 }
 
 HighsDomain::CutpoolPropagation::~CutpoolPropagation() {
   cutpool->removePropagationDomain(this);
+}
+
+void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
+  HighsInt start = cutpool->getMatrix().getRowStart(cut);
+  HighsInt end = cutpool->getMatrix().getRowEnd(cut);
+  const HighsInt* arindex = cutpool->getMatrix().getARindex();
+  const double* arvalue = cutpool->getMatrix().getARvalue();
+  capacityThreshold_[cut] = 0.0;
+  for (HighsInt i = start; i < end; ++i) {
+    double boundRange =
+        domain->variableType(arindex[i]) == HighsVarType::kContinuous
+            ? 0.7 * (domain->colUpper_[arindex[i]] -
+                     domain->colLower_[arindex[i]])
+            : domain->colUpper_[arindex[i]] - domain->colLower_[arindex[i]] -
+                  domain->mipsolver->mipdata_->feastol;
+    double threshold = std::abs(arvalue[i]) * boundRange;
+
+    capacityThreshold_[cut] = std::max(capacityThreshold_[cut], threshold);
+  }
 }
 
 void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
@@ -378,6 +398,7 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
       activitycuts_.resize(cut + 1);
       activitycutsinf_.resize(cut + 1);
       propagatecutflags_.resize(cut + 1, 2);
+      capacityThreshold_.resize(cut + 1);
     }
 
     propagatecutflags_[cut] &= ~uint8_t{2};
@@ -393,17 +414,15 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
       activitycuts_.resize(cut + 1);
       activitycutsinf_.resize(cut + 1);
       propagatecutflags_.resize(cut + 1, 2);
+      capacityThreshold_.resize(cut + 1);
     }
 
     propagatecutflags_[cut] &= ~uint8_t{2};
     domain->computeMinActivity(start, end, arindex, arvalue,
                                activitycutsinf_[cut], activitycuts_[cut]);
 
-    if (activitycutsinf_[cut] <= 1 && !propagatecutflags_[cut]) {
-      markPropagateCut(cut);
-      // propagatecutflags_[cut] = 1;
-      // propagatecutinds_.push_back(cut);
-    }
+    recomputeCapacityThreshold(cut);
+    markPropagateCut(cut);
   }
 }
 
@@ -415,8 +434,7 @@ void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
   if (!propagatecutflags_[cut] &&
       (activitycutsinf_[cut] == 1 ||
        (cutpool->getRhs()[cut] - double(activitycuts_[cut]) <
-        (1.0 - domain->mipsolver->mipdata_->feastol) *
-            cutpool->getMaxAbsCutCoef(cut)))) {
+        capacityThreshold_[cut]))) {
     propagatecutinds_.push_back(cut);
     propagatecutflags_[cut] |= 1;
   }
@@ -426,6 +444,16 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
                                                              double oldbound,
                                                              double newbound) {
   assert(!domain->infeasible_);
+
+  if (newbound < oldbound) {
+    cutpool->getMatrix().forEachNegativeColumnEntry(
+        col, [&](HighsInt row, double val) {
+          domain->updateThresholdLbChange(col, newbound, val,
+                                          capacityThreshold_[row]);
+          return true;
+        });
+  }
+
   cutpool->getMatrix().forEachPositiveColumnEntry(
       col, [&](HighsInt row, double val) {
         assert(val > 0);
@@ -442,7 +470,11 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
         }
         activitycuts_[row] += deltamin;
 
-        if (deltamin <= 0) return true;
+        if (deltamin <= 0) {
+          domain->updateThresholdLbChange(col, newbound, val,
+                                          capacityThreshold_[row]);
+          return true;
+        }
 
         if (activitycutsinf_[row] == 0 &&
             activitycuts_[row] - cutpool->getRhs()[row] >
@@ -456,11 +488,7 @@ void HighsDomain::CutpoolPropagation::updateActivityLbChange(HighsInt col,
           return false;
         }
 
-        if (activitycutsinf_[row] <= 1 && !propagatecutflags_[row]) {
-          markPropagateCut(row);
-          // propagatecutflags_[row] = 1;
-          // propagatecutinds_.push_back(row);
-        }
+        markPropagateCut(row);
 
         return true;
       });
@@ -496,6 +524,16 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
                                                              double oldbound,
                                                              double newbound) {
   assert(!domain->infeasible_);
+
+  if (newbound > oldbound) {
+    cutpool->getMatrix().forEachNegativeColumnEntry(
+        col, [&](HighsInt row, double val) {
+          domain->updateThresholdUbChange(col, newbound, val,
+                                          capacityThreshold_[row]);
+          return true;
+        });
+  }
+
   cutpool->getMatrix().forEachNegativeColumnEntry(
       col, [&](HighsInt row, double val) {
         assert(val < 0);
@@ -512,7 +550,11 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
         }
         activitycuts_[row] += deltamin;
 
-        if (deltamin <= 0) return true;
+        if (deltamin <= 0) {
+          domain->updateThresholdUbChange(col, newbound, val,
+                                          capacityThreshold_[row]);
+          return true;
+        }
 
         if (activitycutsinf_[row] == 0 &&
             activitycuts_[row] - cutpool->getRhs()[row] >
@@ -524,11 +566,7 @@ void HighsDomain::CutpoolPropagation::updateActivityUbChange(HighsInt col,
           return false;
         }
 
-        if (activitycutsinf_[row] <= 1 && !propagatecutflags_[row]) {
-          markPropagateCut(row);
-          // propagatecutflags_[row] = 1;
-          // propagatecutinds_.push_back(row);
-        }
+        markPropagateCut(row);
 
         return true;
       });
@@ -857,6 +895,35 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
   return numchgs;
 }
 
+void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
+                                          double val, double& threshold) {
+  double boundRange =
+      variableType(col) == HighsVarType::kContinuous
+          ? 0.7 * (colUpper_[col] - newbound)
+          : colUpper_[col] - newbound - mipsolver->mipdata_->feastol;
+  double thresholdNew = std::abs(val) * boundRange;
+
+  // the new threshold is now the maximum of the new threshold and the current
+  // one
+  threshold = std::max(threshold, thresholdNew);
+}
+
+void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
+                                          double val, double& threshold) {
+  // compute the new threshold for the residual activity that leads to a
+  // bound change for this variable, use arithmetic operations to avoid lots
+  // of conditional branches.
+  double boundRange =
+      variableType(col) == HighsVarType::kContinuous
+          ? 0.7 * (newbound - colLower_[col])
+          : newbound - colLower_[col] - mipsolver->mipdata_->feastol;
+  double thresholdNew = std::abs(val) * boundRange;
+
+  // the new threshold is now the maximum of the new threshold and the current
+  // one
+  threshold = std::max(threshold, thresholdNew);
+}
+
 void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
                                          double newbound) {
   auto mip = mipsolver->model_;
@@ -894,7 +961,11 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (deltamin <= 0) continue;
+      if (deltamin <= 0) {
+        updateThresholdLbChange(col, newbound, mip->Avalue_[i],
+                                capacityThreshold_[mip->Aindex_[i]]);
+        continue;
+      }
 
       if (mip->rowUpper_[mip->Aindex_[i]] != kHighsInf &&
           activitymininf_[mip->Aindex_[i]] == 0 &&
@@ -910,11 +981,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (activitymininf_[mip->Aindex_[i]] <= 1 &&
           !propagateflags_[mip->Aindex_[i]] &&
-          mip->rowUpper_[mip->Aindex_[i]] != kHighsInf) {
+          mip->rowUpper_[mip->Aindex_[i]] != kHighsInf)
         markPropagate(mip->Aindex_[i]);
-        // propagateflags_[mip->Aindex_[i]] = 1;
-        // propagateinds_.push_back(mip->Aindex_[i]);
-      }
     } else {
       double deltamax;
       if (oldbound == -kHighsInf) {
@@ -959,11 +1027,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (activitymaxinf_[mip->Aindex_[i]] <= 1 &&
           !propagateflags_[mip->Aindex_[i]] &&
-          mip->rowLower_[mip->Aindex_[i]] != -kHighsInf) {
+          mip->rowLower_[mip->Aindex_[i]] != -kHighsInf)
         markPropagate(mip->Aindex_[i]);
-        // propagateflags_[mip->Aindex_[i]] = 1;
-        // propagateinds_.push_back(mip->Aindex_[i]);
-      }
     }
   }
 
@@ -1050,7 +1115,11 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       }
 #endif
 
-      if (deltamax >= 0) continue;
+      if (deltamax >= 0) {
+        updateThresholdUbChange(col, newbound, mip->Avalue_[i],
+                                capacityThreshold_[mip->Aindex_[i]]);
+        continue;
+      }
 
       if (mip->rowLower_[mip->Aindex_[i]] != -kHighsInf &&
           activitymaxinf_[mip->Aindex_[i]] == 0 &&
@@ -1171,6 +1240,24 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
   }
 }
 
+void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
+  HighsInt start = mipsolver->mipdata_->ARstart_[row];
+  HighsInt end = mipsolver->mipdata_->ARstart_[row + 1];
+
+  capacityThreshold_[row] = 0.0;
+  for (HighsInt i = start; i < end; ++i) {
+    HighsInt col = mipsolver->mipdata_->ARindex_[i];
+
+    double boundRange =
+        variableType(col) == HighsVarType::kContinuous
+            ? 0.7 * (colUpper_[col] - colLower_[col])
+            : colUpper_[col] - colLower_[col] - mipsolver->mipdata_->feastol;
+    double threshold = std::abs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
+
+    capacityThreshold_[row] = std::max(capacityThreshold_[row], threshold);
+  }
+}
+
 void HighsDomain::markPropagateCut(Reason reason) {
   switch (reason.type) {
     case Reason::kUnknown:
@@ -1196,14 +1283,12 @@ void HighsDomain::markPropagate(HighsInt row) {
   if (!propagateflags_[row]) {
     bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
                      (activitymaxinf_[row] == 1 ||
-                      (double(activitymax_[row]) - mipsolver->rowLower(row)) /
-                              mipsolver->mipdata_->maxAbsRowCoef[row] <
-                          1.0 - mipsolver->mipdata_->feastol);
+                      (double(activitymax_[row]) - mipsolver->rowLower(row)) <
+                          capacityThreshold_[row]);
     bool propupper = mipsolver->rowUpper(row) != kHighsInf &&
                      (activitymininf_[row] == 1 ||
-                      (mipsolver->rowUpper(row) - double(activitymin_[row])) /
-                              mipsolver->mipdata_->maxAbsRowCoef[row] <
-                          1.0 - mipsolver->mipdata_->feastol);
+                      (mipsolver->rowUpper(row) - double(activitymin_[row])) <
+                          capacityThreshold_[row]);
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
@@ -1217,6 +1302,7 @@ void HighsDomain::computeRowActivities() {
   activitymininf_.resize(mipsolver->numRow());
   activitymax_.resize(mipsolver->numRow());
   activitymaxinf_.resize(mipsolver->numRow());
+  capacityThreshold_.resize(mipsolver->numRow());
   propagateflags_.resize(mipsolver->numRow());
   propagateinds_.reserve(mipsolver->numRow());
 
@@ -1230,6 +1316,8 @@ void HighsDomain::computeRowActivities() {
     computeMaxActivity(start, end, mipsolver->mipdata_->ARindex_.data(),
                        mipsolver->mipdata_->ARvalue_.data(), activitymaxinf_[i],
                        activitymax_[i]);
+
+    recomputeCapacityThreshold(i);
 
     if ((activitymininf_[i] <= 1 && mipsolver->rowUpper(i) != kHighsInf) ||
         (activitymaxinf_[i] <= 1 && mipsolver->rowLower(i) != -kHighsInf)) {
@@ -1680,8 +1768,9 @@ bool HighsDomain::propagate() {
         for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
         for (HighsInt k = 0; k != numproprows; ++k) {
+          HighsInt i = propagateinds[k];
+
           if (propRowNumChangedBounds_[k].first != 0) {
-            HighsInt i = propagateinds[k];
             HighsInt start = 2 * mipsolver->mipdata_->ARstart_[i];
             HighsInt end = start + propRowNumChangedBounds_[k].first;
             for (HighsInt j = start; j != end && !infeasible_; ++j)
@@ -1690,7 +1779,6 @@ bool HighsDomain::propagate() {
             if (infeasible_) break;
           }
           if (propRowNumChangedBounds_[k].second != 0) {
-            HighsInt i = propagateinds[k];
             HighsInt start = 2 * mipsolver->mipdata_->ARstart_[i] +
                              propRowNumChangedBounds_[k].first;
             HighsInt end = start + propRowNumChangedBounds_[k].second;
@@ -1699,6 +1787,8 @@ bool HighsDomain::propagate() {
 
             if (infeasible_) break;
           }
+
+          recomputeCapacityThreshold(i);
         }
       }
 
@@ -1748,13 +1838,16 @@ bool HighsDomain::propagate() {
           for (HighsInt k = 0; k != numproprows; ++k) propagateIndex(k);
 
           for (HighsInt k = 0; k != numproprows; ++k) {
-            if (propRowNumChangedBounds_[k].first == 0) continue;
             HighsInt i = propagateinds[k];
-            cutpoolprop.cutpool->resetAge(i);
-            HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
-            HighsInt end = start + propRowNumChangedBounds_[k].first;
-            for (HighsInt j = start; j != end && !infeasible_; ++j)
-              changeBound(changedbounds[j], Reason::cut(cutpool, i));
+            if (propRowNumChangedBounds_[k].first != 0) {
+              cutpoolprop.cutpool->resetAge(i);
+              HighsInt start = cutpoolprop.cutpool->getMatrix().getRowStart(i);
+              HighsInt end = start + propRowNumChangedBounds_[k].first;
+              for (HighsInt j = start; j != end && !infeasible_; ++j)
+                changeBound(changedbounds[j], Reason::cut(cutpool, i));
+            }
+
+            cutpoolprop.recomputeCapacityThreshold(i);
 
             if (infeasible_) break;
           }
