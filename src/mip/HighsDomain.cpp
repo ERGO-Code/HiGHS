@@ -2177,13 +2177,13 @@ bool HighsDomain::ConflictSet::explainInfeasibility() {
           HighsBoundType::kLower) {
         double ub =
             localdom.getColUpperPos(col, conflictingBoundPos, otherBoundPos);
-        assert(localdom.domchgstack_[conflictingBoundPos].boundval >
-               ub + localdom.mipsolver->mipdata_->feastol);
+        assert(localdom.domchgstack_[conflictingBoundPos].boundval - ub >
+               +localdom.mipsolver->mipdata_->feastol);
       } else {
         double lb =
             localdom.getColLowerPos(col, conflictingBoundPos, otherBoundPos);
-        assert(localdom.domchgstack_[conflictingBoundPos].boundval <
-               lb - localdom.mipsolver->mipdata_->feastol);
+        assert(localdom.domchgstack_[conflictingBoundPos].boundval - lb <
+               -localdom.mipsolver->mipdata_->feastol);
       }
       if (otherBoundPos != -1) resolvedDomainChanges.push_back(otherBoundPos);
       return true;

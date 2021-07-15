@@ -97,6 +97,7 @@ restart:
   HighsInt numHugeTreeEstim = 0;
   int64_t numNodesLastCheck = mipdata_->num_nodes;
   double treeweightLastCheck = 0.0;
+  double upperLimLastCheck = mipdata_->upper_limit;
   while (search.hasNode()) {
     mipdata_->conflictPool.performAging();
     // set iteration limit for each lp solve during the dive to 10 times the
@@ -246,8 +247,9 @@ restart:
             options_mip_->presolve != "off";
       }
 
-      if (currNodeEstim >=
-          1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
+      if (upperLimLastCheck == mipdata_->upper_limit &&
+          currNodeEstim >=
+              1000 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
         ++numHugeTreeEstim;
         // if (!submip)
         //   printf("%" HIGHSINT_FORMAT " (nodeestim: %.1f)\n",
@@ -256,6 +258,7 @@ restart:
         numHugeTreeEstim = 0;
         treeweightLastCheck = double(mipdata_->pruned_treeweight);
         numNodesLastCheck = mipdata_->num_nodes;
+        upperLimLastCheck = mipdata_->upper_limit;
       }
 
       double minHugeTreeOffset =
