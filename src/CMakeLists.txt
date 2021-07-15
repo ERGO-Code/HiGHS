@@ -257,6 +257,7 @@ set(headers
     presolve/HAggregator.h
     presolve/HighsLpPropagator.h
     presolve/HighsPostsolveStack.h
+    presolve/HighsSymmetry.h
     presolve/HPreData.h
     presolve/HPresolve.h
     presolve/PresolveAnalysis.h
