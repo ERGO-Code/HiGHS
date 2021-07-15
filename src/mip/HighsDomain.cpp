@@ -374,15 +374,21 @@ void HighsDomain::CutpoolPropagation::recomputeCapacityThreshold(HighsInt cut) {
   const double* arvalue = cutpool->getMatrix().getARvalue();
   capacityThreshold_[cut] = 0.0;
   for (HighsInt i = start; i < end; ++i) {
+    if (domain->colUpper_[arindex[i]] == domain->colLower_[arindex[i]])
+      continue;
+
     double boundRange =
-        domain->variableType(arindex[i]) == HighsVarType::kContinuous
-            ? 0.7 * (domain->colUpper_[arindex[i]] -
-                     domain->colLower_[arindex[i]])
-            : domain->colUpper_[arindex[i]] - domain->colLower_[arindex[i]] -
-                  domain->mipsolver->mipdata_->feastol;
+        domain->colUpper_[arindex[i]] - domain->colLower_[arindex[i]];
+
+    boundRange -= domain->variableType(arindex[i]) == HighsVarType::kContinuous
+                      ? std::max(0.3 * boundRange,
+                                 1000.0 * domain->mipsolver->mipdata_->feastol)
+                      : domain->mipsolver->mipdata_->feastol;
+
     double threshold = std::abs(arvalue[i]) * boundRange;
 
-    capacityThreshold_[cut] = std::max(capacityThreshold_[cut], threshold);
+    capacityThreshold_[cut] = std::max({capacityThreshold_[cut], threshold,
+                                        domain->mipsolver->mipdata_->feastol});
   }
 }
 
@@ -433,7 +439,7 @@ void HighsDomain::CutpoolPropagation::cutDeleted(HighsInt cut) {
 void HighsDomain::CutpoolPropagation::markPropagateCut(HighsInt cut) {
   if (!propagatecutflags_[cut] &&
       (activitycutsinf_[cut] == 1 ||
-       (cutpool->getRhs()[cut] - double(activitycuts_[cut]) <
+       (cutpool->getRhs()[cut] - double(activitycuts_[cut]) <=
         capacityThreshold_[cut]))) {
     propagatecutinds_.push_back(cut);
     propagatecutflags_[cut] |= 1;
@@ -897,31 +903,40 @@ HighsInt HighsDomain::propagateRowLower(const HighsInt* Rindex,
 
 void HighsDomain::updateThresholdLbChange(HighsInt col, double newbound,
                                           double val, double& threshold) {
-  double boundRange =
-      variableType(col) == HighsVarType::kContinuous
-          ? 0.7 * (colUpper_[col] - newbound)
-          : colUpper_[col] - newbound - mipsolver->mipdata_->feastol;
-  double thresholdNew = std::abs(val) * boundRange;
+  if (newbound != colUpper_[col]) {
+    double boundRange = (colUpper_[col] - newbound);
 
-  // the new threshold is now the maximum of the new threshold and the current
-  // one
-  threshold = std::max(threshold, thresholdNew);
+    boundRange -=
+        variableType(col) == HighsVarType::kContinuous
+            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
+            : mipsolver->mipdata_->feastol;
+
+    double thresholdNew = std::abs(val) * boundRange;
+
+    // the new threshold is now the maximum of the new threshold and the current
+    // one
+    threshold =
+        std::max({threshold, thresholdNew, mipsolver->mipdata_->feastol});
+  }
 }
 
 void HighsDomain::updateThresholdUbChange(HighsInt col, double newbound,
                                           double val, double& threshold) {
-  // compute the new threshold for the residual activity that leads to a
-  // bound change for this variable, use arithmetic operations to avoid lots
-  // of conditional branches.
-  double boundRange =
-      variableType(col) == HighsVarType::kContinuous
-          ? 0.7 * (newbound - colLower_[col])
-          : newbound - colLower_[col] - mipsolver->mipdata_->feastol;
-  double thresholdNew = std::abs(val) * boundRange;
+  if (newbound != colLower_[col]) {
+    double boundRange = (newbound - colLower_[col]);
 
-  // the new threshold is now the maximum of the new threshold and the current
-  // one
-  threshold = std::max(threshold, thresholdNew);
+    boundRange -=
+        variableType(col) == HighsVarType::kContinuous
+            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
+            : mipsolver->mipdata_->feastol;
+
+    double thresholdNew = std::abs(val) * boundRange;
+
+    // the new threshold is now the maximum of the new threshold and the current
+    // one
+    threshold =
+        std::max({threshold, thresholdNew, mipsolver->mipdata_->feastol});
+  }
 }
 
 void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
@@ -1248,13 +1263,19 @@ void HighsDomain::recomputeCapacityThreshold(HighsInt row) {
   for (HighsInt i = start; i < end; ++i) {
     HighsInt col = mipsolver->mipdata_->ARindex_[i];
 
-    double boundRange =
+    if (colUpper_[col] == colLower_[col]) continue;
+
+    double boundRange = colUpper_[col] - colLower_[col];
+
+    boundRange -=
         variableType(col) == HighsVarType::kContinuous
-            ? 0.7 * (colUpper_[col] - colLower_[col])
-            : colUpper_[col] - colLower_[col] - mipsolver->mipdata_->feastol;
+            ? std::max(0.3 * boundRange, 1000.0 * mipsolver->mipdata_->feastol)
+            : mipsolver->mipdata_->feastol;
+
     double threshold = std::abs(mipsolver->mipdata_->ARvalue_[i]) * boundRange;
 
-    capacityThreshold_[row] = std::max(capacityThreshold_[row], threshold);
+    capacityThreshold_[row] = std::max(
+        {capacityThreshold_[row], threshold, mipsolver->mipdata_->feastol});
   }
 }
 
@@ -1283,11 +1304,11 @@ void HighsDomain::markPropagate(HighsInt row) {
   if (!propagateflags_[row]) {
     bool proplower = mipsolver->rowLower(row) != -kHighsInf &&
                      (activitymaxinf_[row] == 1 ||
-                      (double(activitymax_[row]) - mipsolver->rowLower(row)) <
+                      (double(activitymax_[row]) - mipsolver->rowLower(row)) <=
                           capacityThreshold_[row]);
     bool propupper = mipsolver->rowUpper(row) != kHighsInf &&
                      (activitymininf_[row] == 1 ||
-                      (mipsolver->rowUpper(row) - double(activitymin_[row])) <
+                      (mipsolver->rowUpper(row) - double(activitymin_[row])) <=
                           capacityThreshold_[row]);
 
     if (proplower || propupper) {
