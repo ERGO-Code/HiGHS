@@ -46,6 +46,40 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<double> baseRowVals;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
+  if (mip.mipdata_->objintscale != 0.0 &&
+      std::abs(
+          std::round(mip.mipdata_->objintscale * lpRelaxation.getObjective()) /
+              mip.mipdata_->objintscale -
+          lpRelaxation.getObjective()) > 1000 * mip.mipdata_->feastol) {
+    HighsInt numRows = 0;
+    for (int j = 0; j != numrow; ++j) {
+      double weight = mip.mipdata_->objintscale * lpSolution.row_dual[j];
+      if (std::abs(weight) <= 10 * mip.mipdata_->epsilon ||
+          std::abs(weight) * lpRelaxation.getMaxAbsRowVal(j) <=
+              mip.mipdata_->feastol) {
+        continue;
+      }
+
+      lpAggregator.addRow(j, weight);
+    }
+
+    lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
+
+    if (baseRowInds.size() - numRows <= 1000 + 0.1 * mip.numCol()) {
+      double rhs = 0;
+      if (cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs) &&
+          !mip.submip)
+        printf("add obj cut\n");
+
+      lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
+      rhs = 0;
+      if (cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs) &&
+          !mip.submip)
+        printf("add neg obj cut\n");
+    }
+
+    lpAggregator.clear();
+  }
   std::vector<std::pair<double, HighsInt>> fractionalBasisvars;
   fractionalBasisvars.reserve(basisinds.size());
   for (HighsInt i = 0; i != HighsInt(basisinds.size()); ++i) {
