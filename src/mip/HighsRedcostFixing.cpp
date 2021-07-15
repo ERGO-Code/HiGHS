@@ -224,7 +224,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
                                      0.5);
 
       HighsInt step = 1;
-      if (maxub - lb > 128) step = (maxub - lb + 127);
+      if (maxub - lb > 1024) step = (maxub - lb + 1023) >> 10;
 
       for (HighsInt lurkub = lb; lurkub <= maxub; lurkub += step) {
         double fracbound = (lurkub - lb + 1) - 10 * mipsolver.mipdata_->feastol;
@@ -272,7 +272,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         minlb = (HighsInt)(mipsolver.mipdata_->domain.colLower_[col] + 1.5);
 
       HighsInt step = 1;
-      if (ub - minlb > 128) step = (ub - minlb + 127) >> 7;
+      if (ub - minlb > 1024) step = (ub - minlb + 1023) >> 10;
 
       for (HighsInt lurklb = minlb; lurklb <= ub; lurklb += step) {
         double fracbound = (lurklb - ub - 1) + 10 * mipsolver.mipdata_->feastol;
