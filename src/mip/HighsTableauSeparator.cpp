@@ -67,15 +67,11 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (baseRowInds.size() - numRows <= 1000 + 0.1 * mip.numCol()) {
       double rhs = 0;
-      if (cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs) &&
-          !mip.submip)
-        printf("add obj cut\n");
+      cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
       rhs = 0;
-      if (cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs) &&
-          !mip.submip)
-        printf("add neg obj cut\n");
+      cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
     }
 
     lpAggregator.clear();
