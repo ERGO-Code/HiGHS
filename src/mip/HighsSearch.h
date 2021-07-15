@@ -99,6 +99,7 @@ class HighsSearch {
           lp_objective(-kHighsInf),
           nodeBasis(std::move(parentBasis)),
           stabilizerOrbits(std::move(stabilizerOrbits)),
+          branchingdecision{0.0, -1, HighsBoundType::kLower},
           domgchgStackPos(-1),
           skipDepthCount(0),
           opensubtrees(2) {}
@@ -122,7 +123,6 @@ class HighsSearch {
   void markBranchingVarDownReliableAtNode(HighsInt col) {
     reliableatnode[col] |= 2;
   }
-
 
   bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 

@@ -751,7 +751,8 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
 
   lp->flushDomain(localdom);
   if (basis) {
-    lp->setStoredBasis(std::move(basis));
+    if (basis->row_status.size() == lp->numRows())
+      lp->setStoredBasis(std::move(basis));
     lp->recoverBasis();
   }
 }

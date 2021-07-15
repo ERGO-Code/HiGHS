@@ -916,6 +916,18 @@ class HighsHashTable {
   }
 
   size_t size() const { return numElements; }
+
+  HighsHashTable(HighsHashTable<K, V>&&) = default;
+  HighsHashTable<K, V>& operator=(HighsHashTable<K, V>&&) = default;
+
+  ~HighsHashTable() {
+    if (metadata) {
+      u32 capacity = tableSizeMask + 1;
+      for (u32 i = 0; i < capacity; ++i) {
+        if (occupied(metadata[i])) entries.get()[i].~Entry();
+      }
+    }
+  }
 };
 
 #endif
