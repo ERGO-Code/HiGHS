@@ -218,7 +218,7 @@ program fortrantest
        colbasisstatus, rowbasisstatus, modelstatus)
 
   if (runstatus .ne. runstatus_ok) then
-     write(*, '(a, i1, a, i2)')'Highs_lpCall run status is not ', runstatus, ' but ', runstatus
+     write(*, '(a, i1, a, i2)')'Highs_lpCall run status is ', runstatus, ' not ', runstatus_ok
      stop
   endif
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
@@ -490,7 +490,7 @@ program fortrantest
        qp_colbasisstatus, qp_rowbasisstatus, modelstatus)
 
   if (runstatus .ne. runstatus_ok) then
-     write(*, '(a, i1, a, i2)')'Highs_lpCall run status is not ', runstatus, ' but ', runstatus
+     write(*, '(a, i1, a, i2)')'Highs_lpCall run status is ', runstatus, ' not ', runstatus_ok
      stop
   endif
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
