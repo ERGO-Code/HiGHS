@@ -1,8 +1,10 @@
 import ctypes
 import os
+from ctypes.util import find_library
 
-highslib = ctypes.cdll.LoadLibrary("libhighs.so") # highs lib folder must be in "LD_LIBRARY_PATH" environment variable
+highslib = ctypes.cdll.LoadLibrary(ctypes.util.find_library("highs"))
 
+# highs lib folder must be in "LD_LIBRARY_PATH" environment variable
 # ============
 # Highs_lpCall
 highslib.Highs_lpCall.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, 
