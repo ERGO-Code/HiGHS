@@ -22,8 +22,8 @@
 #include "io/HighsIO.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsInfo.h"
-#include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
+#include "model/HighsModel.h"
 
 class HighsLp;
 struct IpxSolution;
@@ -48,12 +48,28 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsSolutionParams& solution_params);
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
+                    HighsSolutionParams& solution_params,
+                    HighsPrimalDualErrors& primal_dual_errors,
+                    const bool get_residuals = false);
+
+void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                      const HighsBasis& basis,
+                      HighsSolutionParams& solution_params);
+
+void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                      const HighsBasis& basis,
+                      HighsSolutionParams& solution_params,
+                      HighsPrimalDualErrors& primal_dual_errors,
+                      const bool get_residuals = false);
+
+void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
+                    const HighsSolution& solution, const HighsBasis& basis,
                     HighsSolutionParams& solution_params,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);

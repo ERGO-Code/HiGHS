@@ -110,7 +110,7 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
     }
     if (num_int)
       highsLogUser(log_options, HighsLogType::kInfo,
-                   "Integer  : %" HIGHSINT_FORMAT "\n", num_int);
+                   "Integer   : %" HIGHSINT_FORMAT "\n", num_int);
   }
 }
 

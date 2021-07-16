@@ -15,6 +15,7 @@
  */
 #include "model/HighsHessian.h"
 
+#include <cassert>
 #include <cstdio>
 
 void HighsHessian::clear() {
@@ -61,4 +62,32 @@ bool HighsHessian::operator==(const HighsHessian& hessian) {
   equal = this->q_index_ == hessian.q_index_ && equal;
   equal = this->q_value_ == hessian.q_value_ && equal;
   return equal;
+}
+
+void HighsHessian::product(const std::vector<double>& solution,
+                           std::vector<double>& product) const {
+  if (this->dim_ <= 0) return;
+  product.assign(this->dim_, 0);
+  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+    for (HighsInt iEl = this->q_start_[iCol]; iEl < this->q_start_[iCol + 1];
+         iEl++) {
+      const HighsInt iRow = this->q_index_[iEl];
+      product[iRow] += this->q_value_[iEl] * solution[iCol];
+    }
+  }
+}
+
+double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
+  double objective_function_value = 0;
+  for (HighsInt iCol = 0; iCol < this->dim_; iCol++) {
+    HighsInt iEl = this->q_start_[iCol];
+    assert(this->q_index_[iEl] == iCol);
+    objective_function_value +=
+        0.5 * solution[iCol] * this->q_value_[iEl] * solution[iCol];
+    for (HighsInt iEl = this->q_start_[iCol] + 1;
+         iEl < this->q_start_[iCol + 1]; iEl++)
+      objective_function_value +=
+          solution[iCol] * this->q_value_[iEl] * solution[this->q_index_[iEl]];
+  }
+  return objective_function_value;
 }

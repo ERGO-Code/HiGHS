@@ -38,7 +38,7 @@ class HighsLp {
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
 
-  MatrixOrientation orientation_ = MatrixOrientation::kNone;
+  MatrixFormat format_ = MatrixFormat::kNone;
   ObjSense sense_ = ObjSense::kMinimize;
   double offset_ = 0;
 
@@ -50,8 +50,9 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   bool operator==(const HighsLp& lp);
-  bool equalButForNames(const HighsLp& lp);
-  bool isMip();
+  bool equalButForNames(const HighsLp& lp) const;
+  bool isMip() const;
+  double objectiveValue(const std::vector<double>& solution) const;
   void clear();
 };
 

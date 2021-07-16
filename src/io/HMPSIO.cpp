@@ -476,6 +476,7 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
                             const bool free_format) {
   bool warning_found = false;
   const HighsLp& lp = model.lp_;
+  const HighsHessian& hessian = model.hessian_;
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
@@ -518,11 +519,16 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
       warning_found = true;
     }
   }
+  // If there is Hessian data to write out, writeMps assumes that hessian is
+  // triangular
+  if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);
+
   HighsStatus write_status = writeMps(
-      options.log_options, filename, lp.numRow_, lp.numCol_, lp.sense_,
-      lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
-      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
-      local_col_names, local_row_names, use_free_format);
+      options.log_options, filename, lp.model_name_, lp.numRow_, lp.numCol_,
+      hessian.dim_, lp.sense_, lp.offset_, lp.colCost_, lp.colLower_,
+      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.Astart_, lp.Aindex_,
+      lp.Avalue_, hessian.q_start_, hessian.q_index_, hessian.q_value_,
+      lp.integrality_, local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;
   return write_status;
@@ -530,12 +536,15 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
 
 HighsStatus writeMps(
     const HighsLogOptions& log_options, const std::string filename,
-    const HighsInt& numRow, const HighsInt& numCol, const ObjSense& objSense,
-    const double& objOffset, const vector<HighsInt>& Astart,
-    const vector<HighsInt>& Aindex, const vector<double>& Avalue,
-    const vector<double>& colCost, const vector<double>& colLower,
-    const vector<double>& colUpper, const vector<double>& rowLower,
-    const vector<double>& rowUpper, const vector<HighsVarType>& integerColumn,
+    const std::string model_name, const HighsInt& num_row,
+    const HighsInt& num_col, const HighsInt& q_dim, const ObjSense& sense,
+    const double& offset, const vector<double>& col_cost,
+    const vector<double>& col_lower, const vector<double>& col_upper,
+    const vector<double>& row_lower, const vector<double>& row_upper,
+    const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
+    const vector<double>& a_value, const vector<HighsInt>& q_start,
+    const vector<HighsInt>& q_index, const vector<double>& q_value,
+    const vector<HighsVarType>& integrality,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
@@ -554,8 +563,8 @@ HighsStatus writeMps(
   printf("writeMPS: Opened file  OK\n");
 #endif
   // Check that the names are no longer than 8 characters for fixed format write
-  HighsInt max_col_name_length = maxNameLength(numCol, col_names);
-  HighsInt max_row_name_length = maxNameLength(numRow, row_names);
+  HighsInt max_col_name_length = maxNameLength(num_col, col_names);
+  HighsInt max_row_name_length = maxNameLength(num_row, row_names);
   HighsInt max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
     highsLogUser(
@@ -571,26 +580,26 @@ HighsStatus writeMps(
   bool have_ranges = false;
   bool have_bounds = false;
   bool have_int = false;
-  r_ty.resize(numRow);
-  rhs.assign(numRow, 0);
-  ranges.assign(numRow, 0);
-  for (HighsInt r_n = 0; r_n < numRow; r_n++) {
-    if (rowLower[r_n] == rowUpper[r_n]) {
+  r_ty.resize(num_row);
+  rhs.assign(num_row, 0);
+  ranges.assign(num_row, 0);
+  for (HighsInt r_n = 0; r_n < num_row; r_n++) {
+    if (row_lower[r_n] == row_upper[r_n]) {
       // Equality constraint - Type E - range = 0
       r_ty[r_n] = MPS_ROW_TY_E;
-      rhs[r_n] = rowLower[r_n];
-    } else if (!highs_isInfinity(rowUpper[r_n])) {
+      rhs[r_n] = row_lower[r_n];
+    } else if (!highs_isInfinity(row_upper[r_n])) {
       // Upper bounded constraint - Type L
       r_ty[r_n] = MPS_ROW_TY_L;
-      rhs[r_n] = rowUpper[r_n];
-      if (!highs_isInfinity(-rowLower[r_n])) {
+      rhs[r_n] = row_upper[r_n];
+      if (!highs_isInfinity(-row_lower[r_n])) {
         // Boxed constraint - range = u-l
-        ranges[r_n] = rowUpper[r_n] - rowLower[r_n];
+        ranges[r_n] = row_upper[r_n] - row_lower[r_n];
       }
-    } else if (!highs_isInfinity(-rowLower[r_n])) {
+    } else if (!highs_isInfinity(-row_lower[r_n])) {
       // Lower bounded constraint - Type G
       r_ty[r_n] = MPS_ROW_TY_G;
-      rhs[r_n] = rowLower[r_n];
+      rhs[r_n] = row_lower[r_n];
     } else {
       // Free constraint - Type N
       r_ty[r_n] = MPS_ROW_TY_N;
@@ -598,7 +607,7 @@ HighsStatus writeMps(
     }
   }
 
-  for (HighsInt r_n = 0; r_n < numRow; r_n++) {
+  for (HighsInt r_n = 0; r_n < num_row; r_n++) {
     if (rhs[r_n]) {
       have_rhs = true;
       break;
@@ -606,30 +615,30 @@ HighsStatus writeMps(
   }
   // Check whether there is an objective offset - which will be defines as a RHS
   // on the cost row
-  if (objOffset) have_rhs = true;
-  for (HighsInt r_n = 0; r_n < numRow; r_n++) {
+  if (offset) have_rhs = true;
+  for (HighsInt r_n = 0; r_n < num_row; r_n++) {
     if (ranges[r_n]) {
       have_ranges = true;
       break;
     }
   }
   have_int = false;
-  if (integerColumn.size()) {
-    for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-      if (integerColumn[c_n] == HighsVarType::kInteger) {
+  if (integrality.size()) {
+    for (HighsInt c_n = 0; c_n < num_col; c_n++) {
+      if (integrality[c_n] == HighsVarType::kInteger) {
         have_int = true;
         break;
       }
     }
   }
-  for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-    if (colLower[c_n]) {
+  for (HighsInt c_n = 0; c_n < num_col; c_n++) {
+    if (col_lower[c_n]) {
       have_bounds = true;
       break;
     }
     bool discrete = false;
-    if (have_int) discrete = integerColumn[c_n] == HighsVarType::kInteger;
-    if (!highs_isInfinity(colUpper[c_n]) || discrete) {
+    if (have_int) discrete = integrality[c_n] == HighsVarType::kInteger;
+    if (!highs_isInfinity(col_upper[c_n]) || discrete) {
       // If the upper bound is finite, or the variable is integer then there is
       // a BOUNDS section. Integer variables with infinite upper bound are
       // indicated as LI
@@ -661,10 +670,10 @@ HighsStatus writeMps(
   // BOUNDS
   //  LO BOUND     CFOOD01           850.
   //
-  fprintf(file, "NAME\n");
+  fprintf(file, "NAME        %s\n", model_name.c_str());
   fprintf(file, "ROWS\n");
   fprintf(file, " N  COST\n");
-  for (HighsInt r_n = 0; r_n < numRow; r_n++) {
+  for (HighsInt r_n = 0; r_n < num_row; r_n++) {
     if (r_ty[r_n] == MPS_ROW_TY_E) {
       fprintf(file, " E  %-8s\n", row_names[r_n].c_str());
     } else if (r_ty[r_n] == MPS_ROW_TY_G) {
@@ -678,8 +687,8 @@ HighsStatus writeMps(
   bool integerFg = false;
   HighsInt nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
-  for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-    if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
+  for (HighsInt c_n = 0; c_n < num_col; c_n++) {
+    if (a_start[c_n] == a_start[c_n + 1] && col_cost[c_n] == 0) {
       // Possibly skip this column as it's zero and has no cost
       num_zero_no_cost_columns++;
       if (write_zero_no_cost_columns) {
@@ -690,7 +699,7 @@ HighsStatus writeMps(
       continue;
     }
     if (have_int) {
-      if (integerColumn[c_n] == HighsVarType::kInteger && !integerFg) {
+      if (integrality[c_n] == HighsVarType::kInteger && !integerFg) {
         // Start an integer section
         fprintf(file,
                 "    MARK%04" HIGHSINT_FORMAT
@@ -698,7 +707,7 @@ HighsStatus writeMps(
                 nIntegerMk);
         nIntegerMk++;
         integerFg = true;
-      } else if (integerColumn[c_n] != HighsVarType::kInteger && integerFg) {
+      } else if (integrality[c_n] != HighsVarType::kInteger && integerFg) {
         // End an integer section
         fprintf(file,
                 "    MARK%04" HIGHSINT_FORMAT
@@ -708,13 +717,13 @@ HighsStatus writeMps(
         integerFg = false;
       }
     }
-    if (colCost[c_n] != 0) {
-      double v = (HighsInt)objSense * colCost[c_n];
+    if (col_cost[c_n] != 0) {
+      double v = (HighsInt)sense * col_cost[c_n];
       fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
     }
-    for (HighsInt el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
-      double v = Avalue[el_n];
-      HighsInt r_n = Aindex[el_n];
+    for (HighsInt el_n = a_start[c_n]; el_n < a_start[c_n + 1]; el_n++) {
+      double v = a_value[el_n];
+      HighsInt r_n = a_index[el_n];
       fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
               row_names[r_n].c_str(), v);
     }
@@ -722,12 +731,12 @@ HighsStatus writeMps(
   have_rhs = true;
   if (have_rhs) {
     fprintf(file, "RHS\n");
-    if (objOffset) {
+    if (offset) {
       // Handle the objective offset as a RHS entry for the cost row
-      double v = -(HighsInt)objSense * objOffset;
+      double v = -(HighsInt)sense * offset;
       fprintf(file, "    RHS_V     COST      %.15g\n", v);
     }
-    for (HighsInt r_n = 0; r_n < numRow; r_n++) {
+    for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = rhs[r_n];
       if (v) {
         fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
@@ -736,7 +745,7 @@ HighsStatus writeMps(
   }
   if (have_ranges) {
     fprintf(file, "RANGES\n");
-    for (HighsInt r_n = 0; r_n < numRow; r_n++) {
+    for (HighsInt r_n = 0; r_n < num_row; r_n++) {
       double v = ranges[r_n];
       if (v) {
         fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
@@ -745,12 +754,12 @@ HighsStatus writeMps(
   }
   if (have_bounds) {
     fprintf(file, "BOUNDS\n");
-    for (HighsInt c_n = 0; c_n < numCol; c_n++) {
-      double lb = colLower[c_n];
-      double ub = colUpper[c_n];
+    for (HighsInt c_n = 0; c_n < num_col; c_n++) {
+      double lb = col_lower[c_n];
+      double ub = col_upper[c_n];
       bool discrete = false;
-      if (have_int) discrete = integerColumn[c_n] == HighsVarType::kInteger;
-      if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
+      if (have_int) discrete = integrality[c_n] == HighsVarType::kInteger;
+      if (a_start[c_n] == a_start[c_n + 1] && col_cost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
           // Column would have a bound to report
@@ -801,6 +810,24 @@ HighsStatus writeMps(
                     ub);
           }
         }
+      }
+    }
+  }
+  if (q_dim) {
+    // Write out Hessian info
+    assert((HighsInt)q_start.size() >= q_dim + 1);
+    HighsInt hessian_num_nz = q_start[q_dim];
+    assert((HighsInt)q_index.size() >= hessian_num_nz);
+    assert((HighsInt)q_value.size() >= hessian_num_nz);
+
+    // Assumes that Hessian entries are the lower triangle column-wise
+    fprintf(file, "QUADOBJ\n");
+    for (HighsInt col = 0; col < q_dim; col++) {
+      for (HighsInt el = q_start[col]; el < q_start[col + 1]; el++) {
+        HighsInt row = q_index[el];
+        assert(row >= col);
+        fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[col].c_str(),
+                col_names[row].c_str(), q_value[el]);
       }
     }
   }

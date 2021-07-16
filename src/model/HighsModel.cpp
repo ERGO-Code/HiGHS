@@ -17,19 +17,23 @@
 
 #include <cassert>
 
-bool HighsModel::isQp() {
-  HighsInt dim = this->hessian_.dim_;
-  HighsInt num_col = this->lp_.numCol_;
-  if (dim) {
-    // If there's a Hessian then it's a QP, but its dimension should
-    // be the same as the number of LP columns
-    assert(dim == num_col);
-    return true;
-  }
-  return false;
-}
-
 void HighsModel::clear() {
   this->lp_.clear();
   this->hessian_.clear();
+}
+
+double HighsModel::objectiveValue(const std::vector<double>& solution) const {
+  return this->hessian_.objectiveValue(solution) +
+         this->lp_.objectiveValue(solution);
+}
+
+void HighsModel::objectiveGradient(const std::vector<double>& solution,
+                                   std::vector<double>& gradient) const {
+  if (this->hessian_.dim_ > 0) {
+    this->hessian_.product(solution, gradient);
+  } else {
+    gradient.assign(this->lp_.numCol_, 0);
+  }
+  for (HighsInt iCol = 0; iCol < this->hessian_.dim_; iCol++)
+    gradient[iCol] += this->lp_.colCost_[iCol];
 }

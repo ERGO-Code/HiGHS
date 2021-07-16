@@ -51,7 +51,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
 
-  REQUIRE(highs_lp.orientation_ == MatrixOrientation::kNone);
+  REQUIRE(highs_lp.format_ == MatrixFormat::kNone);
 
   // Set up the LP externally
   HighsLp lp;
@@ -65,19 +65,19 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   lp.Astart_ = Astart;
   lp.Aindex_ = Aindex;
   lp.Avalue_ = Avalue;
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Make the external LP row-wise then pass and solve it
-  REQUIRE(setOrientation(lp, MatrixOrientation::kRowwise) == HighsStatus::kOk);
+  REQUIRE(setFormat(lp, MatrixFormat::kRowwise) == HighsStatus::kOk);
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Make the external LP col-wise then pass and solve it
-  REQUIRE(setOrientation(lp) == HighsStatus::kOk);
+  REQUIRE(setFormat(lp) == HighsStatus::kOk);
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);

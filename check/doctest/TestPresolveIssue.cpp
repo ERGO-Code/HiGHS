@@ -44,6 +44,8 @@ HighsStatus issue425() {
   lp.colCost_.push_back(1);
   lp.colCost_.push_back(2);
 
+  lp.format_ = MatrixFormat::kColwise;
+  
   Highs highs;
   HighsStatus status = highs.passModel(lp);
    assert(status == HighsStatus::kOk);

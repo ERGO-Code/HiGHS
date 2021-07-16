@@ -274,9 +274,8 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
-HighsStatus setOrientation(
-    HighsLp& lp,
-    const MatrixOrientation desired_orientation = MatrixOrientation::kColwise);
+HighsStatus setFormat(
+    HighsLp& lp, const MatrixFormat desired_format = MatrixFormat::kColwise);
 void ensureColWise(HighsLp& lp);
 void ensureRowWise(HighsLp& lp);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

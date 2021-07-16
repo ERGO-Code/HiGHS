@@ -59,8 +59,9 @@ HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
     // Check whether the first start is zero
     if (matrix_start[0]) {
       highsLogUser(log_options, HighsLogType::kWarning,
-                   "%s matrix start vector does not begin with 0\n",
-                   matrix_name.c_str());
+                   "%s matrix start vector begins with %" HIGHSINT_FORMAT
+                   " rather than 0\n",
+                   matrix_name.c_str(), matrix_start[0]);
       error_found = true;
     }
   }

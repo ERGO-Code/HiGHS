@@ -93,7 +93,7 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
   if (mipsolver == nullptr)
     model->integrality_.assign(model->numCol_, HighsVarType::kContinuous);
 
-  if (model_.orientation_ == MatrixOrientation::kRowwise)
+  if (model_.format_ == MatrixFormat::kRowwise)
     fromCSR(model->Avalue_, model->Aindex_, model->Astart_);
   else
     fromCSC(model->Avalue_, model->Aindex_, model->Astart_);

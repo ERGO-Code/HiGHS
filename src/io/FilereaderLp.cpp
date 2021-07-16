@@ -44,7 +44,11 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     // get objective
-    lp.offset_ = m.objective->offset;
+    if (m.objective->offset) {
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "Ignoring m.objective->offset = %g\n", m.objective->offset);
+      lp.offset_ = 0;  // m.objective->offset;
+    }
     lp.colCost_.resize(lp.numCol_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
@@ -78,6 +82,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     hessian.q_start_.push_back(qnnz);
+    hessian.format_ = HessianFormat::kSquare;
 
     // handle constraints
     std::map<std::shared_ptr<Variable>, std::vector<unsigned int>>
@@ -110,14 +115,13 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     lp.Astart_.push_back(nz);
-    lp.orientation_ = MatrixOrientation::kColwise;
+    lp.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::kParserError;
   }
-  if (setOrientation(lp) != HighsStatus::kOk)
-    return FilereaderRetcode::kParserError;
+  if (setFormat(lp) != HighsStatus::kOk) return FilereaderRetcode::kParserError;
   return FilereaderRetcode::kOk;
 }
 
@@ -145,7 +149,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-  assert(lp.orientation_ != MatrixOrientation::kRowwise);
+  assert(lp.format_ != MatrixFormat::kRowwise);
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
@@ -160,6 +164,20 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   for (HighsInt i = 0; i < lp.numCol_; i++) {
     this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.colCost_[i],
                       (i + 1));
+  }
+  if (model.isQp()) {
+    this->writeToFile(file, "+ [ ");
+    for (HighsInt col = 0; col < lp.numCol_; col++) {
+      for (HighsInt i = model.hessian_.q_start_[col];
+           i < model.hessian_.q_start_[col + 1]; i++) {
+        if (col <= model.hessian_.q_index_[i]) {
+          this->writeToFile(
+              file, "%+g x%" HIGHSINT_FORMAT " * x%" HIGHSINT_FORMAT " ",
+              model.hessian_.q_value_[i], col, model.hessian_.q_index_[i]);
+        }
+      }
+    }
+    this->writeToFile(file, " ]/2 ");
   }
   this->writeToFileLineend(file);
 

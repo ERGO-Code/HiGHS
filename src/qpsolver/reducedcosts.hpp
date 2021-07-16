@@ -2,39 +2,40 @@
 #define __SRC_LIB_REDUCEDCOSTS_HPP__
 
 #include "basis.hpp"
-#include "vector.hpp"
-#include "runtime.hpp"
 #include "gradient.hpp"
+#include "runtime.hpp"
+#include "vector.hpp"
 
 class ReducedCosts {
-   Runtime& runtime;
-   Basis& basis;
+  Runtime& runtime;
+  Basis& basis;
 
-   Gradient& gradient;
+  Gradient& gradient;
 
-   Vector reducedcosts;
-   bool uptodate;
+  Vector reducedcosts;
+  bool uptodate;
 
-   void recompute() {
-      basis.ftran(gradient.getGradient(), reducedcosts);
-      uptodate = true;
-   }
+  void recompute() {
+    basis.ftran(gradient.getGradient(), reducedcosts);
+    uptodate = true;
+  }
 
-public:
-   ReducedCosts(Runtime& rt, Basis& bas, Gradient& grad) : runtime(rt), basis(bas), gradient(grad), reducedcosts(Vector(rt.instance.num_var)), uptodate(false) {
-   
-   }
+ public:
+  ReducedCosts(Runtime& rt, Basis& bas, Gradient& grad)
+      : runtime(rt),
+        basis(bas),
+        gradient(grad),
+        reducedcosts(Vector(rt.instance.num_var)),
+        uptodate(false) {}
 
-   Vector& getReducedCosts() {
-      if (!uptodate) {
-         recompute();
-      }
-      return reducedcosts;
-   }
+  Vector& getReducedCosts() {
+    if (!uptodate) {
+      recompute();
+    }
+    return reducedcosts;
+  }
 
-   void update() {
-      uptodate = false;
-   }
+  void update() { uptodate = false; }
 };
 
 #endif
