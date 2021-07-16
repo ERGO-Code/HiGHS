@@ -1886,7 +1886,7 @@ double HighsDomain::getColLowerPos(HighsInt col, HighsInt stackpos,
                                    HighsInt& pos) const {
   double lb = colLower_[col];
   pos = colLowerPos_[col];
-  while (pos > stackpos) {
+  while (pos > stackpos || (pos != -1 && prevboundval_[pos].first == lb)) {
     lb = prevboundval_[pos].first;
     pos = prevboundval_[pos].second;
   }
@@ -1897,7 +1897,7 @@ double HighsDomain::getColUpperPos(HighsInt col, HighsInt stackpos,
                                    HighsInt& pos) const {
   double ub = colUpper_[col];
   pos = colUpperPos_[col];
-  while (pos > stackpos) {
+  while (pos > stackpos || (pos != -1 && prevboundval_[pos].first == ub)) {
     ub = prevboundval_[pos].first;
     pos = prevboundval_[pos].second;
   }
