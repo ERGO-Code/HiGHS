@@ -258,6 +258,10 @@ class HighsCliqueTable {
   void buildFrom(const HighsCliqueTable& init);
 
   HighsInt numCliques() const { return cliques.size() - freeslots.size(); }
+
+  HighsInt numCliques(HighsInt col, bool val) const {
+    return numcliquesvar[CliqueVar(col, val).index()];
+  }
 };
 
 #endif

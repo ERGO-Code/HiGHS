@@ -265,6 +265,8 @@ class HPresolve {
 
   Result runProbing(HighsPostsolveStack& postSolveStack);
 
+  Result dominatedColumns(HighsPostsolveStack& postSolveStack);
+
   Result doubletonEq(HighsPostsolveStack& postSolveStack, HighsInt row);
 
   Result singletonRow(HighsPostsolveStack& postSolveStack, HighsInt row);
