@@ -46,6 +46,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<double> baseRowVals;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
+#if 0
   if (mip.mipdata_->objintscale != 0.0 &&
       std::abs(
           std::round(mip.mipdata_->objintscale * lpRelaxation.getObjective()) /
@@ -76,6 +77,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpAggregator.clear();
   }
+#endif
   std::vector<std::pair<double, HighsInt>> fractionalBasisvars;
   fractionalBasisvars.reserve(basisinds.size());
   for (HighsInt i = 0; i != HighsInt(basisinds.size()); ++i) {
