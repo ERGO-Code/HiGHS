@@ -368,6 +368,10 @@ HighsInt Highs_getOptionType(void* highs,
  */
 HighsInt Highs_resetOptions(void* highs);
 
+HighsInt Highs_writeOptions(void* highs, const char* filename);
+
+HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename);
+
 /*
  * @brief
  */

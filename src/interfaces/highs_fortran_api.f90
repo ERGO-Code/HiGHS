@@ -304,6 +304,26 @@ module highs_fortran_api
       integer ( c_int ) :: s
     end function Highs_getOptionType
 
+    function Highs_resetOptions ( h ) result ( s ) bind( c, name='Highs_resetOptions' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: s
+    end function Highs_resetOptions
+
+    function Highs_writeOptions( h, f ) result ( s ) bind ( c, name='Highs_writeOptions' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: f(*)
+      integer ( c_int ) :: s
+    end function Highs_writeOptions
+
+    function Highs_writeOptionsDeviations( h, f ) result ( s ) bind ( c, name='Highs_writeOptionsDeviations' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: f(*)
+      integer ( c_int ) :: s
+    end function Highs_writeOptionsDeviations
+
     function Highs_getIntInfoValue ( h, o, v ) result( s ) bind ( c, name='Highs_getIntInfoValue' )
       use iso_c_binding
       type(c_ptr), VALUE :: h

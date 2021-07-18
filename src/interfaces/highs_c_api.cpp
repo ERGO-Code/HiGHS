@@ -354,6 +354,14 @@ HighsInt Highs_resetOptions(void* highs) {
   return (HighsInt)((Highs*)highs)->resetOptions();
 }
 
+HighsInt Highs_writeOptions(void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->writeOptions(filename);
+}
+
+HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename) {
+  return (HighsInt)((Highs*)highs)->writeOptions(filename, true);
+}
+
 HighsInt Highs_getIntInfoValue(void* highs, const char* info, HighsInt* value) {
   return (HighsInt)((Highs*)highs)->getInfoValue(info, *value);
 }

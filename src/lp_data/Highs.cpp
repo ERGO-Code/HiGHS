@@ -2371,6 +2371,28 @@ HighsStatus Highs::callSolveQp() {
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(model_, solution_, basis_, solution_params);
+  if (model_status_ == HighsModelStatus::kOptimal) {
+    // Determine whether optimality is justified
+    if (solution_params.num_primal_infeasibility ||
+        solution_params.num_dual_infeasibility) {
+      if ((solution_params.max_primal_infeasibility >
+           sqrt(options_.primal_feasibility_tolerance)) ||
+          (solution_params.max_dual_infeasibility >
+           sqrt(options_.dual_feasibility_tolerance))) {
+        highsLogUser(options_.log_options, HighsLogType::kWarning,
+                     "QP solver claim optimality, but with num/sum/max "
+                     "primal(%" HIGHSINT_FORMAT
+                     "/%g/%g) and dual(%" HIGHSINT_FORMAT
+                     "/%g/%g) infeasibility\n",
+                     solution_params.num_primal_infeasibility,
+                     solution_params.sum_primal_infeasibility,
+                     solution_params.max_primal_infeasibility,
+                     solution_params.num_dual_infeasibility,
+                     solution_params.sum_dual_infeasibility,
+                     solution_params.max_dual_infeasibility);
+      }
+    }
+  }
   // Set the values in HighsInfo instance info_.
   solution_params.objective_function_value = model_objective_function_value;
   //  Most come from solution_params...
