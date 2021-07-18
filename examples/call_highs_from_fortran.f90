@@ -423,13 +423,13 @@ program fortrantest
   runstatus = Highs_setBoolOptionValue(highs, "write_solution_pretty"//C_NULL_CHAR, write_solution_pretty)
 
   ! Report all the deviations from default options
-  runstatus = Highs_reportOptionsDeviations(highs, "OptionsDeviations.set"//C_NULL_CHAR)
+  runstatus = Highs_writeOptionsDeviations(highs, "OptionsDeviations.set"//C_NULL_CHAR)
   
   ! Reset all the options
   runstatus = Highs_resetOptions(highs)
   
   ! Report all the options
-  runstatus = Highs_reportOptions(highs, "Options.set"//C_NULL_CHAR)
+  runstatus = Highs_writeOptions(highs, "Options.set"//C_NULL_CHAR)
 
   if (no_highs_logging) then
      runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)

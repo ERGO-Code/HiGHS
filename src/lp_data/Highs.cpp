@@ -166,7 +166,7 @@ HighsStatus Highs::resetOptions() {
 }
 
 HighsStatus Highs::writeOptions(const std::string filename,
-                                const bool report_only_non_default_values) {
+                                const bool report_only_deviations) {
   HighsStatus return_status = HighsStatus::kOk;
   FILE* file;
   bool html;
@@ -176,8 +176,7 @@ HighsStatus Highs::writeOptions(const std::string filename,
   if (return_status == HighsStatus::kError) return return_status;
 
   return_status = interpretCallStatus(
-      writeOptionsToFile(file, options_.records, report_only_non_default_values,
-                         html),
+      writeOptionsToFile(file, options_.records, report_only_deviations, html),
       return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
   return return_status;

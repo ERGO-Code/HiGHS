@@ -208,7 +208,7 @@ class Highs {
   HighsStatus resetOptions();
 
   HighsStatus writeOptions(const std::string filename,  //!< The filename
-                           const bool report_only_non_default_values = true);
+                           const bool report_only_deviations = false);
 
   /**
    * @brief Gets an option value as int/double, and only if it's of the correct
