@@ -218,6 +218,8 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
+  if (mipsolver.numCol() == 0) addIncumbent(std::vector<double>(), 0, 'P');
+
   redcostfixing = HighsRedcostFixing();
   pseudocost = HighsPseudocost(mipsolver);
   nodequeue.setNumCol(mipsolver.numCol());
