@@ -453,7 +453,7 @@ class HighsDomain {
     return activitymaxinf_[row] == 0 ? double(activitymax_[row]) : kHighsInf;
   }
 
-  double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut);
+  double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) const;
 
   bool isBinary(HighsInt col) const {
     return mipsolver->variableType(col) != HighsVarType::kContinuous &&

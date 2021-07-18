@@ -320,6 +320,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
                                           downscore[k]);
       }
 
+      assert(score >= 0.0);
       int64_t upnodes = numNodesUp(k);
       int64_t downnodes = numNodesDown(k);
       double nodes = 0;
@@ -1009,7 +1010,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
       }
     }
 
-    double degeneracyFac = lp->computeLPDegneracy();
+    double degeneracyFac = lp->computeLPDegneracy(localdom);
     pseudocost.setDegeneracyFactor(degeneracyFac);
     if (degeneracyFac >= 10.0) pseudocost.setMinReliable(0);
     HighsInt branchcand = selectBranchingCandidate(sbmaxiters);

@@ -2003,7 +2003,7 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
 }
 
 double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool,
-                                      HighsInt cut) {
+                                      HighsInt cut) const {
   for (auto& cutpoolprop : cutpoolpropagation) {
     if (cutpoolprop.cutpool == &cutpool) {
       // assert((cutpoolprop.propagatecutflags_[cut] & 2) == 0);

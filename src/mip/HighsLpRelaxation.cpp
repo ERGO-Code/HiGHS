@@ -183,28 +183,55 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   return double(estimate);
 }
 
-double HighsLpRelaxation::computeLPDegneracy() const {
+double HighsLpRelaxation::computeLPDegneracy(
+    const HighsDomain& localdomain) const {
   if (!lpsolver.getSolution().dual_valid || !lpsolver.getBasis().valid) {
-    return 0.0;
+    return 1.0;
   }
+
+  double dualFeasTol = lpsolver.getInfo().max_dual_infeasibility;
 
   const HighsBasis& basis = lpsolver.getBasis();
   const HighsSolution& sol = lpsolver.getSolution();
-  HighsInt numNonbasicCols = 0;
-  HighsInt numZeroNonbasicCols = 0;
+
+  HighsInt numFixedRows = 0;
+  HighsInt numInequalities = 0;
+  HighsInt numBasicEqualities = 0;
+
+  for (HighsInt i = 0; i < numRows(); ++i) {
+    if (lpsolver.getLp().rowLower_[i] != lpsolver.getLp().rowUpper_[i]) {
+      ++numInequalities;
+
+      if (basis.row_status[i] != HighsBasisStatus::kBasic) {
+        if (std::abs(sol.row_dual[i]) > dualFeasTol) ++numFixedRows;
+      }
+    } else
+      numBasicEqualities += basis.row_status[i] == HighsBasisStatus::kBasic;
+  }
+
+  HighsInt numAlreadyFixedCols = 0;
+  HighsInt numFixedCols = 0;
   for (HighsInt i = 0; i < numCols(); ++i) {
     if (basis.col_status[i] != HighsBasisStatus::kBasic) {
-      ++numNonbasicCols;
-      numZeroNonbasicCols +=
-          std::abs(sol.col_dual[i]) <= mipsolver.mipdata_->feastol;
+      if (std::abs(sol.col_dual[i]) > dualFeasTol)
+        ++numFixedCols;
+      else if (localdomain.colLower_[i] == localdomain.colUpper_[i])
+        ++numAlreadyFixedCols;
     }
   }
 
-  double degenerateColumnShare =
-      numZeroNonbasicCols / (double)std::max(HighsInt{1}, numNonbasicCols);
-  double varConsRatio =
-      (numCols() + numZeroNonbasicCols - numNonbasicCols) / (double)numRows();
+  HighsInt base = numCols() - numAlreadyFixedCols + numInequalities +
+                  numBasicEqualities - numRows();
 
+  double degenerateColumnShare =
+      base > 0 ? 1.0 - double(numFixedCols + numFixedRows) / base : 0.0;
+
+  double varConsRatio =
+      numRows() > 0
+          ? double(numCols() + numInequalities + numBasicEqualities -
+                   numFixedCols - numFixedRows - numAlreadyFixedCols) /
+                numRows()
+          : 1.0;
   double fac1 = degenerateColumnShare < 0.8
                     ? 1.0
                     : std::pow(10.0, 10 * (degenerateColumnShare - 0.7));

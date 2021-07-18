@@ -109,6 +109,7 @@ class HighsPseudocost {
   }
 
   void setDegeneracyFactor(double degeneracyFactor) {
+    assert(degeneracyFactor >= 1.0);
     this->degeneracyFactor = degeneracyFactor;
   }
 

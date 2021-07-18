@@ -173,7 +173,7 @@ class HighsLpRelaxation {
 
   double computeBestEstimate(const HighsPseudocost& ps) const;
 
-  double computeLPDegneracy() const;
+  double computeLPDegneracy(const HighsDomain& localdomain) const;
 
   static bool scaledOptimal(Status status) {
     switch (status) {
