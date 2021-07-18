@@ -435,8 +435,10 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
 void HighsDomain::CutpoolPropagation::cutDeleted(
     HighsInt cut, bool deletedOnlyForPropagation) {
   if (deletedOnlyForPropagation &&
-      domain == &domain->mipsolver->mipdata_->domain)
+      domain == &domain->mipsolver->mipdata_->domain) {
+    assert(domain->branchPos_.empty());
     return;
+  }
 
   if (cut < (HighsInt)propagatecutflags_.size()) propagatecutflags_[cut] |= 2;
 }
@@ -1452,7 +1454,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgstack_.push_back(boundchg);
   domchgreason_.push_back(reason);
 
-  if (binary && !infeasible_)
+  if (binary && !infeasible_ && isFixed(boundchg.column))
     mipsolver->mipdata_->cliquetable.addImplications(
         *this, boundchg.column, colLower_[boundchg.column] > 0.5);
 }

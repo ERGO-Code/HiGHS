@@ -1574,7 +1574,11 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
       lp->flushDomain(localdom);
       return false;
     }
-    assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+    assert(
+        (branchchg.boundtype == HighsBoundType::kLower &&
+         branchchg.boundval >= nodestack.back().branchingdecision.boundval) ||
+        (branchchg.boundtype == HighsBoundType::kUpper &&
+         branchchg.boundval <= nodestack.back().branchingdecision.boundval));
     assert(branchchg.boundtype == nodestack.back().branchingdecision.boundtype);
     assert(branchchg.column == nodestack.back().branchingdecision.column);
 

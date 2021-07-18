@@ -205,12 +205,14 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           double ub = std::max(ubDown, ubUp);
 
           if (lb > globaldomain.colLower_[implcol]) {
-            globaldomain.changeBound(HighsBoundType::kLower, implcol, lb);
+            globaldomain.changeBound(HighsBoundType::kLower, implcol, lb,
+                                     HighsDomain::Reason::unspecified());
             ++numReductions;
           }
 
           if (ub < globaldomain.colUpper_[implcol]) {
-            globaldomain.changeBound(HighsBoundType::kUpper, implcol, ub);
+            globaldomain.changeBound(HighsBoundType::kUpper, implcol, ub,
+                                     HighsDomain::Reason::unspecified());
             ++numReductions;
           }
         }
