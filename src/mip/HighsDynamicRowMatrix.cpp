@@ -104,6 +104,52 @@ HighsInt HighsDynamicRowMatrix::addRow(HighsInt* Rindex, double* Rvalue,
   return rowindex;
 }
 
+void HighsDynamicRowMatrix::unlinkColumns(HighsInt rowindex) {
+  if (!colsLinked[rowindex]) return;
+
+  colsLinked[rowindex] = false;
+  HighsInt start = ARrange_[rowindex].first;
+  HighsInt end = ARrange_[rowindex].second;
+  for (HighsInt i = start; i != end; ++i) {
+    HighsInt col = ARindex_[i];
+    --Asize_[col];
+
+    if (ARvalue_[i] > 0) {
+      HighsInt prev = AprevPos_[i];
+      HighsInt next = AnextPos_[i];
+
+      if (next != -1) {
+        assert(AprevPos_[next] == i);
+        AprevPos_[next] = prev;
+      }
+
+      if (prev != -1) {
+        assert(AnextPos_[prev] == i);
+        AnextPos_[prev] = next;
+      } else {
+        assert(AheadPos_[col] == i);
+        AheadPos_[col] = next;
+      }
+    } else {
+      HighsInt prev = AprevNeg_[i];
+      HighsInt next = AnextNeg_[i];
+
+      if (next != -1) {
+        assert(AprevNeg_[next] == i);
+        AprevNeg_[next] = prev;
+      }
+
+      if (prev != -1) {
+        assert(AnextNeg_[prev] == i);
+        AnextNeg_[prev] = next;
+      } else {
+        assert(AheadNeg_[col] == i);
+        AheadNeg_[col] = next;
+      }
+    }
+  }
+}
+
 /// removes the row with the given index from the matrix, afterwards the index
 /// can be reused for new rows
 void HighsDynamicRowMatrix::removeRow(HighsInt rowindex) {

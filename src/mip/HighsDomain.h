@@ -138,7 +138,7 @@ class HighsDomain {
 
     void cutAdded(HighsInt cut, bool propagate);
 
-    void cutDeleted(HighsInt cut);
+    void cutDeleted(HighsInt cut, bool deletedOnlyForPropagation = false);
 
     void markPropagateCut(HighsInt cut);
 

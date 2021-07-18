@@ -139,6 +139,8 @@ void HighsCutPool::performAging() {
   for (HighsInt i = 0; i != cutIndexEnd; ++i) {
     if (ages_[i] < 0) continue;
 
+    bool isPropagated = matrix_.columnsLinked(i);
+    if (isPropagated) propRows.erase(std::make_pair(ages_[i], i));
     ageDistribution[ages_[i]] -= 1;
     ages_[i] += 1;
 
@@ -147,7 +149,7 @@ void HighsCutPool::performAging() {
            propagationDomains)
         propagationdomain->cutDeleted(i);
 
-      if (matrix_.columnsLinked(i)) {
+      if (isPropagated) {
         --numPropRows;
         numPropNzs -= getRowLength(i);
       }
@@ -155,8 +157,10 @@ void HighsCutPool::performAging() {
       matrix_.removeRow(i);
       ages_[i] = -1;
       rhs_[i] = kHighsInf;
-    } else
+    } else {
+      if (isPropagated) propRows.emplace(ages_[i], i);
       ageDistribution[ages_[i]] += 1;
+    }
   }
 }
 
@@ -197,6 +201,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
     ageDistribution[ages_[i]] -= 1;
+    bool isPropagated = matrix_.columnsLinked(i);
+    if (isPropagated) propRows.erase(std::make_pair(ages_[i], i));
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
@@ -207,7 +213,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
              propagationDomains)
           propagationdomain->cutDeleted(i);
 
-        if (matrix_.columnsLinked(i)) {
+        if (isPropagated) {
           --numPropRows;
           numPropNzs -= getRowLength(i);
         }
@@ -223,8 +229,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
             break;
           }
         }
-      } else
+      } else {
+        if (isPropagated) propRows.emplace(ages_[i], i);
         ageDistribution[ages_[i]] += 1;
+      }
       continue;
     }
 
@@ -255,6 +263,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     ages_[i] = 0;
     ++ageDistribution[0];
+    if (isPropagated) propRows.emplace(ages_[i], i);
     double score = viol / (numActiveNzs * sqrt(double(rownorm)));
 
     efficacious_cuts.emplace_back(score, i);
@@ -319,6 +328,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     --ageDistribution[ages_[p.second]];
     ++numLpCuts;
+    if (matrix_.columnsLinked(p.second)) {
+      propRows.erase(std::make_pair(ages_[p.second], p.second));
+      propRows.emplace(-1, p.second);
+    }
     ages_[p.second] = -1;
     cutset.cutindices.push_back(p.second);
     selectednnz += matrix_.getRowEnd(p.second) - matrix_.getRowStart(p.second);
@@ -363,6 +376,10 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   for (HighsInt i = 0; i != cutset.numCuts(); ++i) {
     --ageDistribution[ages_[i]];
     ++numLpCuts;
+    if (matrix_.columnsLinked(i)) {
+      propRows.erase(std::make_pair(ages_[i], i));
+      propRows.emplace(-1, i);
+    }
     ages_[i] = -1;
     cutset.ARstart_[i] = offset;
     HighsInt cut = cutset.cutindices[i];
@@ -425,9 +442,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     constexpr double alpha = 2.0;
     if (isConflict) {
       // for conflicts we allow an increased average propagation density
-      if (newAvgPropNzs >
-          std::min(std::max(alpha * avgModelNzs, minDensityLimConflict),
-                   maxDensityLim)) {
+      if (newAvgPropNzs > std::max(alpha * avgModelNzs, minDensityLim)) {
         propagate = false;
       } else {
         ++numPropRows;
@@ -436,14 +451,35 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     } else {
       // for cuts we do not want to accept any dense cuts and don't use the
       // average but its actual length
-      if (Rlen >= std::min(std::max(alpha * avgModelNzs, minDensityLim),
-                           maxDensityLim)) {
+      if (Rlen >= std::max(alpha * avgModelNzs, minDensityLim)) {
         propagate = false;
       } else {
         ++numPropRows;
         numPropNzs = newPropNzs;
       }
     }
+  }
+
+  // if we have more than twice the number of nonzeros of the model in use for
+  // propagation we stop propagating the rows with the highest age
+  HighsInt propRowExcessNzs = numPropNzs - 2 * mipsolver.numNonzero();
+  if (propRowExcessNzs > 0) {
+    auto it = propRows.rbegin();
+
+    while (propRowExcessNzs > 0 && it != propRows.rend()) {
+      propRowExcessNzs -= getRowLength(it->second);
+      ++it;
+    }
+
+    for (auto i = propRows.rbegin(); i != it; ++i) {
+      HighsInt row = i->second;
+      matrix_.unlinkColumns(row);
+      for (HighsDomain::CutpoolPropagation* propagationdomain :
+           propagationDomains)
+        propagationdomain->cutDeleted(row, true);
+    }
+
+    propRows.erase(it.base(), propRows.end());
   }
 
   // if no such cut exists we append the new cut
@@ -463,6 +499,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ages_[rowindex] = std::max((HighsInt)0, agelim_ - 5);
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
+  if (propagate) propRows.emplace(ages_[rowindex], rowindex);
 
   rownormalization_[rowindex] = normalization;
   maxabscoef_[rowindex] = maxabscoef;

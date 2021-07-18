@@ -57,6 +57,8 @@ class HighsDynamicRowMatrix {
 
   bool columnsLinked(HighsInt rowindex) const { return colsLinked[rowindex]; }
 
+  void unlinkColumns(HighsInt rowindex);
+
   /// adds a row to the matrix with the given values and returns its index
   HighsInt addRow(HighsInt* Rindex, double* Rvalue, HighsInt Rlen,
                   bool linkCols = true);

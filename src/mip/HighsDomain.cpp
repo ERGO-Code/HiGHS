@@ -432,7 +432,12 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
   }
 }
 
-void HighsDomain::CutpoolPropagation::cutDeleted(HighsInt cut) {
+void HighsDomain::CutpoolPropagation::cutDeleted(
+    HighsInt cut, bool deletedOnlyForPropagation) {
+  if (deletedOnlyForPropagation &&
+      domain == &domain->mipsolver->mipdata_->domain)
+    return;
+
   if (cut < (HighsInt)propagatecutflags_.size()) propagatecutflags_[cut] |= 2;
 }
 

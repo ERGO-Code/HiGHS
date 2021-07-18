@@ -63,12 +63,11 @@ class HighsCutPool {
   std::vector<uint8_t> rowintegral;
   std::unordered_multimap<uint32_t, int> supportmap;
   std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
+  std::set<std::pair<HighsInt, HighsInt>> propRows;
 
   double bestObservedScore;
   double minScoreFactor;
-  double minDensityLimConflict;
   double minDensityLim;
-  double maxDensityLim;
 
   HighsInt agelim_;
   HighsInt softlimit_;
@@ -92,9 +91,7 @@ class HighsCutPool {
     ageDistribution.resize(agelim_ + 1);
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
-    minDensityLimConflict = 0.3 * ncols;
     minDensityLim = 0.1 * ncols;
-    maxDensityLim = 0.8 * ncols;
   }
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 
@@ -102,6 +99,10 @@ class HighsCutPool {
 
   void resetAge(HighsInt cut) {
     if (ages_[cut] > 0) {
+      if (matrix_.columnsLinked(cut)) {
+        propRows.erase(std::make_pair(ages_[cut], cut));
+        propRows.emplace(0, cut);
+      }
       ageDistribution[ages_[cut]] -= 1;
       ageDistribution[0] += 1;
       ages_[cut] = 0;

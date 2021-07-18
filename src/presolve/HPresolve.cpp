@@ -3916,6 +3916,7 @@ void HPresolve::substitute(HighsInt substcol, HighsInt staycol, double offset,
 void HPresolve::fixColToLower(HighsPostsolveStack& postSolveStack,
                               HighsInt col) {
   double fixval = model->colLower_[col];
+  assert(fixval != -kHighsInf);
 
   // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
 
@@ -3959,7 +3960,7 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postSolveStack,
 void HPresolve::fixColToUpper(HighsPostsolveStack& postSolveStack,
                               HighsInt col) {
   double fixval = model->colUpper_[col];
-
+  assert(fixval != kHighsInf);
   // printf("fixing column %" HIGHSINT_FORMAT " to %.15g\n", col, fixval);
 
   // mark the column as deleted first so that it is not registered as singleton
