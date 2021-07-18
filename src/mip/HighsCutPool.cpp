@@ -166,6 +166,8 @@ void HighsCutPool::performAging() {
       ageDistribution[ages_[i]] += 1;
     }
   }
+
+  assert(propRows.size() == numPropRows);
 }
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
@@ -272,7 +274,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     efficacious_cuts.emplace_back(score, i);
   }
-
+  assert(propRows.size() == numPropRows);
   if (efficacious_cuts.empty()) return;
 
   std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
@@ -362,6 +364,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     }
   }
 
+  assert(propRows.size() == numPropRows);
   cutset.ARstart_[cutset.numCuts()] = offset;
 }
 
@@ -400,6 +403,8 @@ void HighsCutPool::separateLpCutsAfterRestart(HighsCutSet& cutset) {
   }
 
   cutset.ARstart_[cutset.numCuts()] = offset;
+
+  assert(propRows.size() == numPropRows);
 }
 
 HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
@@ -471,7 +476,10 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     auto it = propRows.rbegin();
 
     while (propRowExcessNzs > 0 && it != propRows.rend()) {
-      propRowExcessNzs -= getRowLength(it->second);
+      HighsInt len = getRowLength(it->second);
+      propRowExcessNzs -= len;
+      numPropNzs -= len;
+      --numPropRows;
       ++it;
     }
 
@@ -504,6 +512,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   ++ageDistribution[ages_[rowindex]];
   rowintegral[rowindex] = integral;
   if (propagate) propRows.emplace(ages_[rowindex], rowindex);
+  assert(propRows.size() == numPropRows);
 
   rownormalization_[rowindex] = normalization;
   maxabscoef_[rowindex] = maxabscoef;
