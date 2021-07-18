@@ -121,6 +121,10 @@ double HighsCutPool::getParallelism(HighsInt row1, HighsInt row2) const {
 }
 
 void HighsCutPool::lpCutRemoved(HighsInt cut) {
+  if (matrix_.columnsLinked(cut)) {
+    propRows.erase(std::make_pair(-1, cut));
+    propRows.emplace(1, cut);
+  }
   ages_[cut] = 1;
   --numLpCuts;
   ++ageDistribution[1];
