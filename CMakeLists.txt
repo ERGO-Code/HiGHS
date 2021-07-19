@@ -24,6 +24,18 @@ if(OpenMP_CXX_FOUND)
     set(OPENMP ON)
 endif()
 
+if(NOT MSVC)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT error)
+
+    if(ipo_supported)
+        message(STATUS "IPO / LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(STATUS "IPO / LTO not supported: <${error}>")
+    endif()
+endif()
+
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
@@ -511,19 +523,3 @@ endif()
 # # to header-only.
 # add_subdirectory(dev_presolve)
 
-
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported OUTPUT error)
-
-if(ipo_supported)
-    message(STATUS "IPO / LTO enabled")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    if(TARGET libhighs)
-        set_property(TARGET libhighs PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
-    if(TARGET highs)
-        set_property(TARGET highs PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif()
-else()
-    message(STATUS "IPO / LTO not supported: <${error}>")
-endif()
