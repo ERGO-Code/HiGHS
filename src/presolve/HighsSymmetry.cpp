@@ -98,7 +98,7 @@ void HighsSymmetryDetection::removeFixPoints() {
 
     // set the column partition link of the last started cell to point past the
     // end
-    assert((int)currentPartitionLinks.size()>0);
+    assert((int)currentPartitionLinks.size() > 0);
     currentPartitionLinks[cellStart] = numVertices;
 
     numActiveCols =
