@@ -96,7 +96,7 @@ void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
 }
 
 void HighsDebugSol::registerDomain(const HighsDomain& domain) {
-  conflictingBounds.emplace(&domain, std::set<HighsDomainChange>());
+  conflictingBounds.emplace(&domain, std::multiset<HighsDomainChange>());
 
   if (!debugSolActive) return;
 
@@ -146,7 +146,9 @@ void HighsDebugSol::boundChangeRemoved(const HighsDomain& domain,
 
   if (conflictingBounds.count(&domain) == 0) return;
 
-  conflictingBounds[&domain].erase(domchg);
+  auto i = conflictingBounds[&domain].find(domchg);
+  if (i != conflictingBounds[&domain].end())
+    conflictingBounds[&domain].erase(i);
 }
 
 void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue,

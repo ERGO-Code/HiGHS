@@ -3675,7 +3675,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
     if (mipsolver) {
       if (model->offset_ > mipsolver->mipdata_->upper_limit)
         return HighsModelStatus::kInfeasible;
-      mipsolver->mipdata_->upper_bound = 0;
+
       mipsolver->mipdata_->lower_bound = 0;
     }
     return HighsModelStatus::kOptimal;
