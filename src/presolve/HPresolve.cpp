@@ -4858,7 +4858,9 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
               col, duplicateCol,
               model->integrality_[col] == HighsVarType::kInteger,
               model->integrality_[duplicateCol] == HighsVarType::kInteger);
-
+          if (model->integrality_[duplicateCol] != HighsVarType::kInteger &&
+              model->integrality_[col] == HighsVarType::kInteger)
+            model->integrality_[col] = HighsVarType::kContinuous;
           markChangedCol(col);
           if (colsize[duplicateCol] == 1) {
             HighsInt row = Arow[colhead[duplicateCol]];
