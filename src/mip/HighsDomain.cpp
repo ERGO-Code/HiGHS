@@ -2091,6 +2091,8 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
 
+  if (domchgVal == 0) return false;
+
   std::sort(resolveBuffer.begin(), resolveBuffer.end(),
             [&](const std::tuple<double, HighsInt, HighsInt>& a,
                 const std::tuple<double, HighsInt, HighsInt>& b) {
@@ -2604,6 +2606,8 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
 
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
+
+  if (domchgVal == 0) return false;
 
   std::sort(resolveBuffer.begin(), resolveBuffer.end(),
             [&](const std::tuple<double, HighsInt, HighsInt>& a,
