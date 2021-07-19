@@ -1433,8 +1433,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
         --addednnz;
         continue;
       }
-      assert(findNonzero(cliqueextension.first, cliqueextension.second.col) ==
-             -1);
       double val;
       if (cliqueextension.second.val == 0) {
         model->rowLower_[cliqueextension.first] -= 1;
