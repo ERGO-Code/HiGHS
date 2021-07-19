@@ -1986,6 +1986,7 @@ void HEkkDual::assessPhase1Optimality() {
               dual_objective_value, ekk_instance_.info_.costs_perturbed);
   if (dual_objective_value > 0) {
     // Can this happen, and what does it mean?
+    // todo@Julian: It seems it can happen, this popped up on rocI-4-11
     fflush(stdout);
     assert(dual_objective_value < 0);
   }
