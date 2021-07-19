@@ -4501,7 +4501,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                                            Avalue[i] / rowMax[Arow[i]].first));
       HighsHashHelpers::sparse_combine(colHashes[Acol[i]], Arow[i],
                                        HighsHashHelpers::double_hash_code(
-                                           Avalue[i] / colMax[Acol[i]].second));
+                                           Avalue[i] / colMax[Acol[i]].first));
     }
   }
 
