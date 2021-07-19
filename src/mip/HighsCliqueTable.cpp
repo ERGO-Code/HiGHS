@@ -802,7 +802,10 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
                 std::make_pair(double(cliquevars[j].val), kHighsIInf));
             auto endV2 = v2Nodes.upper_bound(
                 std::make_pair(double(cliquevars[j].val), kHighsIInf));
-
+printf("Logic: ");fflush(stdout);
+printf("Bool1 = %d; ", itV1->second <= std::prev(endV2)->second);fflush(stdout);
+printf("Bool2 = %d: ", itV2->second <= std::prev(endV1)->second);fflush(stdout);
+printf("OK\n");fflush(stdout);
             if (itV1->second <= std::prev(endV2)->second ||
                 itV2->second <= std::prev(endV1)->second) {
               // node ranges overlap, check for nodes that can be pruned
