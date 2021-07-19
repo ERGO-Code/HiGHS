@@ -1152,7 +1152,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
         double ak = nonz.value() * bestRowPlusScale;
 
-        if ((upperImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
+        if (model->colLower_[k] != -kHighsInf &&
+            (upperImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
                                  HighsCliqueTable::CliqueVar(j, 1),
                                  HighsCliqueTable::CliqueVar(k, 1))) &&
             ajBestRowPlus <= ak + options->small_matrix_value &&
@@ -1163,7 +1164,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           fixColToLower(postSolveStack, k);
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
-        } else if ((upperImplied ||
+        } else if (model->colUpper_[k] != kHighsInf &&
+                   (upperImplied ||
                     mipsolver->mipdata_->cliquetable.haveCommonClique(
                         HighsCliqueTable::CliqueVar(j, 1),
                         HighsCliqueTable::CliqueVar(k, 0))) &&
@@ -1192,7 +1194,8 @@ HPresolve::Result HPresolve::dominatedColumns(
 
         double ak = nonz.value() * bestRowMinusScale;
 
-        if ((lowerImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
+        if (model->colUpper_[k] != kHighsInf &&
+            (lowerImplied || mipsolver->mipdata_->cliquetable.haveCommonClique(
                                  HighsCliqueTable::CliqueVar(j, 0),
                                  HighsCliqueTable::CliqueVar(k, 0))) &&
             -ajBestRowMinus <= -ak + options->small_matrix_value &&
@@ -1203,7 +1206,8 @@ HPresolve::Result HPresolve::dominatedColumns(
           ++numFixedCols;
           fixColToUpper(postSolveStack, k);
           HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
-        } else if ((lowerImplied ||
+        } else if (model->colLower_[k] != -kHighsInf &&
+                   (lowerImplied ||
                     mipsolver->mipdata_->cliquetable.haveCommonClique(
                         HighsCliqueTable::CliqueVar(j, 0),
                         HighsCliqueTable::CliqueVar(k, 1))) &&
