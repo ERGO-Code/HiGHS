@@ -85,7 +85,15 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
   HighsCDouble gap =
       HighsCDouble(mipsolver.mipdata_->upper_limit) - lpobjective;
 
-  double tolerance = 10 * mipsolver.mipdata_->feastol;
+  // we divide by the reduced cost value, so multiply by 1.0/redcost
+  // when deriving a bound for a column. To avoid numerical issues
+  // we do not use a multiplier above 1000.
+  double minRedCost =
+      std::max(1000 * mipsolver.mipdata_->feastol,
+               std::abs(lpobjective) * mipsolver.mipdata_->epsilon);
+  double tolerance = std::max(10 * mipsolver.mipdata_->feastol,
+                              mipsolver.mipdata_->epsilon * double(gap));
+
   assert(!localdomain.infeasible());
   std::vector<HighsDomainChange> boundChanges;
   boundChanges.reserve(mipsolver.mipdata_->integral_cols.size());
@@ -99,7 +107,9 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     //      col <= gap/redcost + lb
     // Therefore for a tightening to be possible we need:
     //   redcost >= / <=  gap * (ub - lb)
-    if (localdomain.colUpper_[col] == localdomain.colLower_[col]) continue;
+    if (localdomain.colUpper_[col] == localdomain.colLower_[col] ||
+        std::abs(lpredcost[col]) <= minRedCost)
+      continue;
 
     double threshold = double((HighsCDouble(localdomain.colUpper_[col]) -
                                localdomain.colLower_[col]) *
@@ -208,8 +218,12 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   lurkingColLower.resize(mipsolver.numCol());
   lurkingColUpper.resize(mipsolver.numCol());
 
+  double minRedCost =
+      std::max(1000 * mipsolver.mipdata_->feastol,
+               std::abs(lpobjective) * mipsolver.mipdata_->epsilon);
+
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    if (lpredcost[col] > mipsolver.mipdata_->feastol) {
+    if (lpredcost[col] > minRedCost) {
       // col <= (cutoffbound - lpobj)/redcost + lb
       // so for lurkub = lb to ub - 1 we can compute the necessary cutoff
       // bound to reach this bound which is:
@@ -257,7 +271,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
           }
         }
       }
-    } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
+    } else if (lpredcost[col] < -minRedCost) {
       // col >= (cutoffbound - lpobj)/redcost + ub
       // so for lurklb = lb + 1 to ub we can compute the necessary cutoff
       // bound to reach this bound which is:
