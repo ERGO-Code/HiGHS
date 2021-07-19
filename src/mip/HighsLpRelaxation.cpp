@@ -888,10 +888,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             while (subst != nullptr) {
               if (lpsolver.getLp().colLower_[subst->replace.col] ==
                   lpsolver.getLp().colUpper_[subst->replace.col]) {
-                if (domain)
+                if (domain) {
                   domain->fixCol(
                       col, subst->replace.weight(lpsolver.getLp().colLower_));
-                else
+                  if (domain->infeasible()) {
+                    objective = kHighsInf;
+                    status = Status::kInfeasible;
+                    return status;
+                  }
+                } else
                   break;
               }
 

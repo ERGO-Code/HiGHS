@@ -783,13 +783,30 @@ void HighsCliqueTable::addClique(const HighsMipSolver& mipsolver,
                         cliquevars[j].col);
 
           if (!v1Nodes.empty() && !v2Nodes.empty()) {
-            auto itV1 = v1Nodes.begin();
-            auto itV2 = v2Nodes.begin();
+            // general integer variables can become binary during the search
+            // and the cliques might be discovered. That means we need to take
+            // care here, since the set of nodes branched upwards or downwards
+            // are not necessarily containing domain changes setting the
+            // variables to the corresponding clique value but could be
+            // redundant bound changes setting the upper bound to u >= 1 or the
+            // lower bound to l <= 0.
 
-            if (itV1->second <= v2Nodes.rbegin()->second ||
-                itV2->second <= v1Nodes.rbegin()->second) {
+            // itV1 will point to the first node where v1 is fixed to val and
+            // endV1 to the end of the range of such nodes. Same for itV2/endV2
+            // with v2.
+            auto itV1 = v1Nodes.lower_bound(
+                std::make_pair(double(cliquevars[i].val), kHighsIInf));
+            auto endV1 = v1Nodes.upper_bound(
+                std::make_pair(double(cliquevars[i].val), kHighsIInf));
+            auto itV2 = v2Nodes.lower_bound(
+                std::make_pair(double(cliquevars[j].val), kHighsIInf));
+            auto endV2 = v2Nodes.upper_bound(
+                std::make_pair(double(cliquevars[j].val), kHighsIInf));
+
+            if (itV1->second <= std::prev(endV2)->second ||
+                itV2->second <= std::prev(endV1)->second) {
               // node ranges overlap, check for nodes that can be pruned
-              while (itV1 != v1Nodes.end() && itV2 != v2Nodes.end()) {
+              while (itV1 != endV1 && itV2 != endV2) {
                 if (itV1->second < itV2->second) {
                   ++itV1;
                 } else if (itV2->second < itV1->second) {

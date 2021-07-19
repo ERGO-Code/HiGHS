@@ -35,7 +35,7 @@ struct HighsDebugSol {
   double debugSolObjective;
   std::vector<double> debugSolution;
   bool debugSolActive;
-  std::unordered_map<const HighsDomain*, std::set<HighsDomainChange>>
+  std::unordered_map<const HighsDomain*, std::multiset<HighsDomainChange>>
       conflictingBounds;
 
   HighsDebugSol(HighsMipSolver& mipsolver);

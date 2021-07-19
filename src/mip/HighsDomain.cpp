@@ -306,6 +306,7 @@ void HighsDomain::ConflictPoolPropagation::propagateConflict(
   switch (numInactive) {
     case 0:
       assert(!domain->infeasible_);
+      domain->mipsolver->mipdata_->debugSolution.nodePruned(*domain);
       domain->infeasible_ = true;
       domain->infeasible_reason = Reason::cut(
           domain->cutpoolpropagation.size() + conflictpoolindex, conflict);
@@ -435,8 +436,10 @@ void HighsDomain::CutpoolPropagation::cutAdded(HighsInt cut, bool propagate) {
 void HighsDomain::CutpoolPropagation::cutDeleted(
     HighsInt cut, bool deletedOnlyForPropagation) {
   if (deletedOnlyForPropagation &&
-      domain == &domain->mipsolver->mipdata_->domain)
+      domain == &domain->mipsolver->mipdata_->domain) {
+    assert(domain->branchPos_.empty());
     return;
+  }
 
   if (cut < (HighsInt)propagatecutflags_.size()) propagatecutflags_[cut] |= 2;
 }
@@ -1452,7 +1455,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgstack_.push_back(boundchg);
   domchgreason_.push_back(reason);
 
-  if (binary && !infeasible_)
+  if (binary && !infeasible_ && isFixed(boundchg.column))
     mipsolver->mipdata_->cliquetable.addImplications(
         *this, boundchg.column, colLower_[boundchg.column] > 0.5);
 }
@@ -1483,9 +1486,6 @@ void HighsDomain::setDomainChangeStack(
     if (domchgstack[k].boundtype == HighsBoundType::kUpper &&
         domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
       continue;
-
-    mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
-                                                        true);
 
     changeBound(domchgstack[k], Reason::unspecified());
 
@@ -1524,9 +1524,6 @@ void HighsDomain::setDomainChangeStack(
           domchgstack[k].boundval >= colUpper_[domchgstack[k].column])
         continue;
 
-      mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
-                                                          true);
-
       changeBound(domchgstack[k], Reason::unspecified());
       if (!infeasible_) propagate();
       if (infeasible_) return;
@@ -1536,9 +1533,6 @@ void HighsDomain::setDomainChangeStack(
 
     // do not skip redundant branching changes, as we need to keep their status
     // as branching variables for computing correct stabilizers
-    mipsolver->mipdata_->debugSolution.boundChangeAdded(*this, domchgstack[k],
-                                                        true);
-
     changeBound(domchgstack[k], Reason::branching());
     if (!infeasible_) propagate();
     if (infeasible_) return;

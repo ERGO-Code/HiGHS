@@ -464,6 +464,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         if (lp->unscaledDualFeasible(status)) {
           if (solobj > getCutoffBound()) {
+            mipsolver.mipdata_->debugSolution.nodePruned(localdom);
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
@@ -496,6 +497,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           }
         }
       } else if (status == HighsLpRelaxation::Status::kInfeasible) {
+        mipsolver.mipdata_->debugSolution.nodePruned(localdom);
         addInfeasibleConflict();
         pseudocost.addCutoffObservation(col, false);
         localdom.backtrack();
@@ -617,6 +619,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         if (lp->unscaledDualFeasible(status)) {
           if (solobj > getCutoffBound()) {
+            mipsolver.mipdata_->debugSolution.nodePruned(localdom);
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
@@ -649,6 +652,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           }
         }
       } else if (status == HighsLpRelaxation::Status::kInfeasible) {
+        mipsolver.mipdata_->debugSolution.nodePruned(localdom);
         addInfeasibleConflict();
         pseudocost.addCutoffObservation(col, true);
         localdom.backtrack();
@@ -889,7 +893,20 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     int64_t oldnumiters = lp->getNumLpIterations();
     HighsLpRelaxation::Status status = lp->resolveLp(&localdom);
     lpiterations += lp->getNumLpIterations() - oldnumiters;
-    if (lp->scaledOptimal(status)) {
+
+    if (localdom.infeasible()) {
+      result = NodeResult::kDomainInfeasible;
+      localdom.clearChangedCols();
+      if (parent != nullptr && parent->lp_objective != -kHighsInf &&
+          parent->branching_point != parent->branchingdecision.boundval) {
+        HighsInt col = parent->branchingdecision.column;
+        bool upbranch =
+            parent->branchingdecision.boundtype == HighsBoundType::kLower;
+        pseudocost.addCutoffObservation(col, upbranch);
+      }
+
+      localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+    } else if (lp->scaledOptimal(status)) {
       lp->storeBasis();
       lp->resetAges();
 
@@ -1574,7 +1591,11 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
       lp->flushDomain(localdom);
       return false;
     }
-    assert(branchchg.boundval == nodestack.back().branchingdecision.boundval);
+    assert(
+        (branchchg.boundtype == HighsBoundType::kLower &&
+         branchchg.boundval >= nodestack.back().branchingdecision.boundval) ||
+        (branchchg.boundtype == HighsBoundType::kUpper &&
+         branchchg.boundval <= nodestack.back().branchingdecision.boundval));
     assert(branchchg.boundtype == nodestack.back().branchingdecision.boundtype);
     assert(branchchg.column == nodestack.back().branchingdecision.column);
 
