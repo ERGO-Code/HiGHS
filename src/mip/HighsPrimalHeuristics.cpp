@@ -1082,15 +1082,17 @@ void HighsPrimalHeuristics::centralRounding() {
         continue;
       if (sol[i] <=
           mipsolver.model_->colLower_[i] + mipsolver.mipdata_->feastol) {
-        mipsolver.mipdata_->domain.changeBound(HighsBoundType::kUpper, i,
-                                               mipsolver.model_->colLower_[i]);
+        mipsolver.mipdata_->domain.changeBound(
+            HighsBoundType::kUpper, i, mipsolver.model_->colLower_[i],
+            HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
       } else if (sol[i] >=
                  mipsolver.model_->colUpper_[i] - mipsolver.mipdata_->feastol) {
-        mipsolver.mipdata_->domain.changeBound(HighsBoundType::kLower, i,
-                                               mipsolver.model_->colUpper_[i]);
+        mipsolver.mipdata_->domain.changeBound(
+            HighsBoundType::kLower, i, mipsolver.model_->colUpper_[i],
+            HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;

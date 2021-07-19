@@ -61,6 +61,10 @@ void HighsSymmetryDetection::removeFixPoints() {
 
   if ((HighsInt)currentPartition.size() < numVertices) {
     numVertices = currentPartition.size();
+    if (numVertices == 0) {
+      numActiveCols = 0;
+      return;
+    }
     currentPartitionLinks.resize(numVertices);
     cellInRefinementQueue.assign(numVertices, false);
     assert(refinementQueue.empty());
@@ -910,8 +914,8 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   initializeHashValues();
   partitionRefinement();
   removeFixPoints();
-  initializeGroundSet();
   if (numActiveCols == 0) return;
+  initializeGroundSet();
   currNodeCertificate.clear();
   cellCreationStack.clear();
   createNode();
