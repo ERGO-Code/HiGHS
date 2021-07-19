@@ -1228,8 +1228,8 @@ HPresolve::Result HPresolve::dominatedColumns(
   }
 
   if (numFixedCols)
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Fixed %d dominated columns\n", numFixedCols);
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "Fixed %d dominated columns\n", numFixedCols);
 
   return Result::kOk;
 }
