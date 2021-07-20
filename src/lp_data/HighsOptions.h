@@ -303,7 +303,7 @@ struct HighsOptionsStruct {
   HighsInt allowed_simplex_cost_scale_factor;
   HighsInt simplex_dualise_strategy;
   HighsInt simplex_permute_strategy;
-  bool dual_simplex_cleanup;
+  HighsInt max_dual_simplex_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
@@ -320,6 +320,7 @@ struct HighsOptionsStruct {
   bool use_original_HFactor_logic;
 
   // Options for MIP solver
+  bool mip_detect_symmetry;
   HighsInt mip_max_nodes;
   HighsInt mip_max_stall_nodes;
   HighsInt mip_max_leaves;
@@ -584,6 +585,11 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &write_solution_pretty, false);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("mip_detect_symmetry",
+                                       "Whether symmetry should be detected",
+                                       advanced, &mip_detect_symmetry, true);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt("mip_max_nodes",
                                      "MIP solver max number of nodes", advanced,
                                      &mip_max_nodes, 0, kHighsIInf, kHighsIInf);
@@ -642,15 +648,16 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
         &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
+    records.push_back(record_double);
 
     record_double =
         new OptionRecordDouble("mip_epsilon", "MIP epsilon tolerance", advanced,
                                &mip_epsilon, 1e-15, 1e-9, kHighsInf);
+    records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
         "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
         &mip_heuristic_effort, 0.0, 0.05, 1.0);
-
     records.push_back(record_double);
 
     // Advanced options
@@ -718,10 +725,10 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsOptionOn);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("dual_simplex_cleanup",
-                                       "Perform dual simplex cleanup", advanced,
-                                       &dual_simplex_cleanup, true);
-    records.push_back(record_bool);
+    record_int = new OptionRecordInt(
+        "max_dual_simplex_cleanup_level", "Max level of dual simplex cleanup",
+        advanced, &max_dual_simplex_cleanup_level, 0, 1, kHighsIInf);
+    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,

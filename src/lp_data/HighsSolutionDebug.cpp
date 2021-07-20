@@ -210,7 +210,7 @@ void debugReportHighsSolution(const string message,
 }
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp lp,
+                                      const HighsLp& lp,
                                       const HighsBasis& basis) {
   // Cheap analysis of a HiGHS basis, checking vector sizes, numbers
   // of basic/nonbasic variables
@@ -229,7 +229,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
 }
 
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
-                                     const HighsLp lp,
+                                     const HighsLp& lp,
                                      const HighsBasis& basis) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
@@ -245,7 +245,7 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
 }
 
 HighsDebugStatus debugPrimalSolutionRightSize(const HighsOptions& options,
-                                              const HighsLp lp,
+                                              const HighsLp& lp,
                                               const HighsSolution& solution) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
@@ -261,7 +261,7 @@ HighsDebugStatus debugPrimalSolutionRightSize(const HighsOptions& options,
 }
 
 HighsDebugStatus debugDualSolutionRightSize(const HighsOptions& options,
-                                            const HighsLp lp,
+                                            const HighsLp& lp,
                                             const HighsSolution& solution) {
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;

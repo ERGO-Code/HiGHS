@@ -61,6 +61,7 @@ HighsStatus HEkk::solve() {
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
   iteration_count_ = 0;
+  dual_simplex_cleanup_level_ = 0;
   if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
 
   assert(status_.has_basis);
@@ -258,8 +259,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // with errors :-) ...
   if (debugBasisConsistent(options_, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Supposed to be a Highs basis, but not valid\n");
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
   HighsInt num_col = lp_.numCol_;
@@ -330,8 +331,8 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   // with errors :-) ...
   if (debugBasisConsistent(options_, lp_, basis) ==
       HighsDebugStatus::kLogicalError) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Supposed to be a Highs basis, but not valid\n");
+    highsLogDev(options_.log_options, HighsLogType::kError,
+                "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
   basis_.nonbasicFlag_ = basis.nonbasicFlag_;
@@ -429,8 +430,8 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   // otherwise set a logical basis
   if (!status_.has_basis) {
     if (only_from_known_basis) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Simplex basis should be known but isn't\n");
+      highsLogDev(options_.log_options, HighsLogType::kError,
+                  "Simplex basis should be known but isn't\n");
       return -(HighsInt)HighsStatus::kError;
     }
     setBasis();
@@ -440,8 +441,8 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     // Basis is rank deficient
     if (only_from_known_basis) {
       // If only this basis should be used, then return error
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Supposed to be a full-rank basis, but incorrect\n");
+      highsLogDev(options_.log_options, HighsLogType::kError,
+                  "Supposed to be a full-rank basis, but incorrect\n");
       return rank_deficiency;
     }
     // Account for rank deficiency by correcing nonbasicFlag
@@ -481,7 +482,7 @@ void HEkk::initialiseForNewLp() {
 bool HEkk::isUnconstrainedLp() {
   bool is_unconstrained_lp = lp_.numRow_ <= 0;
   if (is_unconstrained_lp)
-    highsLogUser(
+    highsLogDev(
         options_.log_options, HighsLogType::kError,
         "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
         ") number of constraints\n",
@@ -739,14 +740,14 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     HighsInt use_simplex_update_limit = info_.update_limit;
     HighsInt new_simplex_update_limit = simplex_update_count / 2;
     info_.update_limit = new_simplex_update_limit;
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "Rank deficiency of %" HIGHSINT_FORMAT
-                 " after %" HIGHSINT_FORMAT
-                 " simplex updates, so "
-                 "backtracking: max updates reduced from %" HIGHSINT_FORMAT
-                 " to %" HIGHSINT_FORMAT "\n",
-                 rank_deficiency, simplex_update_count,
-                 use_simplex_update_limit, new_simplex_update_limit);
+    highsLogDev(options_.log_options, HighsLogType::kWarning,
+                "Rank deficiency of %" HIGHSINT_FORMAT
+                " after %" HIGHSINT_FORMAT
+                " simplex updates, so "
+                "backtracking: max updates reduced from %" HIGHSINT_FORMAT
+                " to %" HIGHSINT_FORMAT "\n",
+                rank_deficiency, simplex_update_count, use_simplex_update_limit,
+                new_simplex_update_limit);
   } else {
     // Current basis is full rank so save it
     putBacktrackingBasis(basicIndex_before_compute_factor, workEdWtFull_);
@@ -2110,8 +2111,8 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   info_.valid_backtracking_basis_ = false;
 
   // Initialise the status of the primal and dual solutions
-  return_primal_solution_status = kSolutionStatusNone;
-  return_dual_solution_status = kSolutionStatusNone;
+  return_primal_solution_status_ = kSolutionStatusNone;
+  return_dual_solution_status_ = kSolutionStatusNone;
   // Nothing more is known about the solve after an error return
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -2128,10 +2129,18 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   }
   switch (model_status_) {
     case HighsModelStatus::kOptimal: {
-      assert(info_.num_primal_infeasibility == 0);
-      assert(info_.num_dual_infeasibility == 0);
-      return_primal_solution_status = kSolutionStatusFeasible;
-      return_dual_solution_status = kSolutionStatusFeasible;
+      if (info_.num_primal_infeasibility) {
+        // Optimal - but not to desired primal feasibilit tolerance
+        return_primal_solution_status_ = kSolutionStatusInfeasible;
+      } else {
+        return_primal_solution_status_ = kSolutionStatusFeasible;
+      }
+      if (info_.num_dual_infeasibility) {
+        // Optimal - but not to desired dual feasibilit tolerance
+        return_dual_solution_status_ = kSolutionStatusInfeasible;
+      } else {
+        return_dual_solution_status_ = kSolutionStatusFeasible;
+      }
       break;
     }
     case HighsModelStatus::kInfeasible: {
@@ -2139,7 +2148,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
       // dual simplex has identified dual unboundedness in phase 2. In
       // both cases there should be no primal or dual perturbations
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
-      if (exit_algorithm == SimplexAlgorithm::kPrimal) {
+      if (exit_algorithm_ == SimplexAlgorithm::kPrimal) {
         // Reset the simplex costs and recompute duals after primal
         // phase 1
         initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -2153,7 +2162,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kUnboundedOrInfeasible: {
       // Dual simplex has identified dual infeasibility in phase
       // 1. There should be no dual perturbations
-      assert(exit_algorithm == SimplexAlgorithm::kDual);
+      assert(exit_algorithm_ == SimplexAlgorithm::kDual);
       assert(!info_.costs_perturbed);
       // Reset the simplex bounds and recompute primals
       initialiseBound(SimplexAlgorithm::kDual, kSolvePhase2);
@@ -2166,7 +2175,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     case HighsModelStatus::kUnbounded: {
       // Primal simplex has identified unboundedness in phase 2. There
       // should be no primal or dual perturbations
-      assert(exit_algorithm == SimplexAlgorithm::kPrimal);
+      assert(exit_algorithm_ == SimplexAlgorithm::kPrimal);
       assert(!info_.costs_perturbed && !info_.bounds_perturbed);
       computeSimplexInfeasible();
       // Primal solution should be feasible
@@ -2193,7 +2202,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     }
     default: {
       std::string algorithm_name = "primal";
-      if (exit_algorithm == SimplexAlgorithm::kDual) algorithm_name = "dual";
+      if (exit_algorithm_ == SimplexAlgorithm::kDual) algorithm_name = "dual";
       highsLogDev(options_.log_options, HighsLogType::kError,
                   "EKK %s simplex solver returns status %s\n",
                   algorithm_name.c_str(),
@@ -2205,17 +2214,20 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   assert(info_.num_primal_infeasibility >= 0);
   assert(info_.num_dual_infeasibility >= 0);
   if (info_.num_primal_infeasibility == 0) {
-    return_primal_solution_status = kSolutionStatusFeasible;
+    return_primal_solution_status_ = kSolutionStatusFeasible;
   } else {
-    return_primal_solution_status = kSolutionStatusInfeasible;
+    return_primal_solution_status_ = kSolutionStatusInfeasible;
   }
   if (info_.num_dual_infeasibility == 0) {
-    return_dual_solution_status = kSolutionStatusFeasible;
+    return_dual_solution_status_ = kSolutionStatusFeasible;
   } else {
-    return_dual_solution_status = kSolutionStatusInfeasible;
+    return_dual_solution_status_ = kSolutionStatusInfeasible;
   }
   computePrimalObjectiveValue();
-
+  if (!options_.log_dev_level) {
+    const bool force = true;
+    analysis_.userInvertReport(force);
+  }
   return return_status;
 }
 

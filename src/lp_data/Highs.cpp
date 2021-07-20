@@ -2850,15 +2850,18 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   if (debugInfo(options_, model_.lp_, basis_, solution_, info_,
                 scaled_model_status_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
-  // Record that returnFromRun() has been called, and stop the Highs
-  // run clock
-  called_return_from_run = true;
 
+  // Record that returnFromRun() has been called
+  called_return_from_run = true;
+  // Unless solved as a MIP, report on the solution
+  const bool solved_as_mip =
+      !options_.solver.compare(kHighsChooseString) && model_.isMip();
+  if (!solved_as_mip) reportSolvedLpQpStats();
   return returnFromHighs(return_status);
 }
 
-// Applies checks before returning from HiGHS
 HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
+  // Applies checks before returning from HiGHS
   HighsStatus return_status = highs_return_status;
 
   forceHighsSolutionBasisSize();
@@ -2900,6 +2903,35 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   if (timer_.runningRunHighsClock()) timer_.stopRunHighsClock();
   return return_status;
 }
+
+void Highs::reportSolvedLpQpStats() {
+  HighsLogOptions& log_options = options_.log_options;
+  highsLogUser(log_options, HighsLogType::kInfo, "Model   status      : %s\n",
+               modelStatusToString(scaled_model_status_).c_str());
+  if (info_.simplex_iteration_count)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
+                 info_.simplex_iteration_count);
+  if (info_.ipm_iteration_count)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "IPM       iterations: %" HIGHSINT_FORMAT "\n",
+                 info_.ipm_iteration_count);
+  if (info_.crossover_iteration_count)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "Crossover iterations: %" HIGHSINT_FORMAT "\n",
+                 info_.crossover_iteration_count);
+  if (info_.qp_iteration_count)
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",
+                 info_.qp_iteration_count);
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Objective value     : %17.10e\n",
+               info_.objective_function_value);
+  double run_time = timer_.readRunHighsClock();
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "HiGHS run time      : %13.2f\n", run_time);
+}
+
 void Highs::underDevelopmentLogMessage(const std::string method_name) {
   highsLogUser(options_.log_options, HighsLogType::kWarning,
                "Method %s is still under development and behaviour may be "

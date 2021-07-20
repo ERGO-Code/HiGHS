@@ -1143,6 +1143,7 @@ class Highs {
 
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
+  void reportSolvedLpQpStats();
 
   void underDevelopmentLogMessage(const std::string method_name);
 

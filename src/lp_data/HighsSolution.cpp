@@ -904,17 +904,19 @@ void copyFromInfo(HighsSolutionParams& solution_params,
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   bool consistent = true;
   consistent = isBasisRightSize(lp, basis) && consistent;
-  HighsInt num_basic_variables = 0;
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
-      num_basic_variables++;
+  if (consistent) {
+    HighsInt num_basic_variables = 0;
+    for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+      if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+        num_basic_variables++;
+    }
+    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+      if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+        num_basic_variables++;
+    }
+    bool right_num_basic_variables = num_basic_variables == lp.numRow_;
+    consistent = right_num_basic_variables && consistent;
   }
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
-      num_basic_variables++;
-  }
-  bool right_num_basic_variables = num_basic_variables == lp.numRow_;
-  consistent = right_num_basic_variables && consistent;
   return consistent;
 }
 

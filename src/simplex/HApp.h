@@ -146,23 +146,23 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     assert(num_unscaled_primal_infeasibility > 0 ||
            num_unscaled_dual_infeasibility > 0);
     highs_model_object.unscaled_model_status_ = HighsModelStatus::kNotset;
-    highsLogUser(highs_model_object.options_.log_options, HighsLogType::kInfo,
-                 "Have num/max/sum primal (%" HIGHSINT_FORMAT
-                 "/%g/%g) and dual (%" HIGHSINT_FORMAT
-                 "/%g/%g) "
-                 "unscaled infeasibilities\n",
-                 num_unscaled_primal_infeasibility,
-                 solution_params.max_primal_infeasibility,
-                 solution_params.sum_primal_infeasibility,
-                 num_unscaled_dual_infeasibility,
-                 solution_params.max_dual_infeasibility,
-                 solution_params.sum_dual_infeasibility);
+    highsLogDev(highs_model_object.options_.log_options, HighsLogType::kInfo,
+                "Have num/max/sum primal (%" HIGHSINT_FORMAT
+                "/%g/%g) and dual (%" HIGHSINT_FORMAT
+                "/%g/%g) "
+                "unscaled infeasibilities\n",
+                num_unscaled_primal_infeasibility,
+                solution_params.max_primal_infeasibility,
+                solution_params.sum_primal_infeasibility,
+                num_unscaled_dual_infeasibility,
+                solution_params.max_dual_infeasibility,
+                solution_params.sum_dual_infeasibility);
     if (ekk_instance.model_status_ == HighsModelStatus::kOptimal)
-      highsLogUser(highs_model_object.options_.log_options, HighsLogType::kInfo,
-                   "Possibly re-solve with feasibility tolerances of %g "
-                   "primal and %g dual\n",
-                   new_primal_feasibility_tolerance,
-                   new_dual_feasibility_tolerance);
+      highsLogDev(highs_model_object.options_.log_options, HighsLogType::kInfo,
+                  "Possibly re-solve with feasibility tolerances of %g "
+                  "primal and %g dual\n",
+                  new_primal_feasibility_tolerance,
+                  new_dual_feasibility_tolerance);
     highs_model_object.solution_ = ekk_instance.getSolution();
     if (highs_model_object.scale_.is_scaled)
       unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);

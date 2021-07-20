@@ -998,6 +998,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
         // Mark the column as integer and binary
         col_integrality[colidx] = HighsVarType::kInteger;
         col_binary[colidx] = true;
+        assert(colLower[colidx] == 0.0);
+        colUpper[colidx] = 1.0;
       } else {
         // continuous: MI, PL or FR
         col_binary[colidx] = false;

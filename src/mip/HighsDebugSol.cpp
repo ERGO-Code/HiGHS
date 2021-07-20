@@ -68,19 +68,35 @@ void HighsDebugSol::activate() {
       highsLogUser(mipsolver->options_mip_->log_options, HighsLogType::kWarning,
                    "debug solution: could not open file '%s'\n",
                    mipsolver->options_mip_->mip_debug_solution_file.c_str());
-      HighsLp model = *mipsolver->model_;
-      model.col_names_.clear();
-      model.row_names_.clear();
-      model.colLower_ = mipsolver->mipdata_->domain.colLower_;
-      model.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
+      HighsModel model;
+      model.lp_ = *mipsolver->model_;
+      model.lp_.col_names_.clear();
+      model.lp_.row_names_.clear();
+      model.lp_.colLower_ = mipsolver->mipdata_->domain.colLower_;
+      model.lp_.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
                                        "debug_mip.mps", model);
     }
   }
 }
 
+void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
+  HighsInt oldNumCol = debugSolution.size();
+  for (HighsInt i = 0; i != oldNumCol; ++i)
+    if (newColIndex[i] != -1) debugSolution[newColIndex[i]] = debugSolution[i];
+
+  debugSolution.resize(mipsolver->model_->numCol_);
+  HighsCDouble debugsolobj = 0.0;
+  for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
+    debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
+
+  debugSolObjective = double(debugsolobj);
+
+  conflictingBounds.clear();
+}
+
 void HighsDebugSol::registerDomain(const HighsDomain& domain) {
-  conflictingBounds.emplace(&domain, std::set<HighsDomainChange>());
+  conflictingBounds.emplace(&domain, std::multiset<HighsDomainChange>());
 
   if (!debugSolActive) return;
 
@@ -130,7 +146,9 @@ void HighsDebugSol::boundChangeRemoved(const HighsDomain& domain,
 
   if (conflictingBounds.count(&domain) == 0) return;
 
-  conflictingBounds[&domain].erase(domchg);
+  auto i = conflictingBounds[&domain].find(domchg);
+  if (i != conflictingBounds[&domain].end())
+    conflictingBounds[&domain].erase(i);
 }
 
 void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue,
@@ -186,7 +204,7 @@ void HighsDebugSol::checkClique(const HighsCliqueTable::CliqueVar* clq,
 
 void HighsDebugSol::checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
                              double vubconstant) const {
-  if (!debugSolActive) return;
+  if (!debugSolActive || std::abs(vubcoef) == kHighsInf) return;
 
   assert(debugSolution[col] <= debugSolution[vubcol] * vubcoef + vubconstant +
                                    mipsolver->mipdata_->feastol);
@@ -194,10 +212,63 @@ void HighsDebugSol::checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
 
 void HighsDebugSol::checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
                              double vlbconstant) const {
-  if (!debugSolActive) return;
+  if (!debugSolActive || std::abs(vlbcoef) == kHighsInf) return;
 
   assert(debugSolution[col] >= debugSolution[vlbcol] * vlbcoef + vlbconstant -
                                    mipsolver->mipdata_->feastol);
+}
+
+void HighsDebugSol::checkConflictReasonFrontier(
+    const std::set<HighsInt>& reasonSideFrontier,
+    const std::vector<HighsDomainChange>& domchgstack) const {
+  if (!debugSolActive) return;
+
+  HighsInt numActiveBoundChgs = 0;
+  for (HighsInt i : reasonSideFrontier) {
+    HighsInt col = domchgstack[i].column;
+
+    if (domchgstack[i].boundtype == HighsBoundType::kLower) {
+      if (debugSolution[col] >=
+          domchgstack[i].boundval - mipsolver->mipdata_->feastol)
+        ++numActiveBoundChgs;
+    } else {
+      if (debugSolution[col] <=
+          domchgstack[i].boundval + mipsolver->mipdata_->feastol)
+        ++numActiveBoundChgs;
+    }
+  }
+
+  assert(numActiveBoundChgs < (HighsInt)reasonSideFrontier.size());
+}
+
+void HighsDebugSol::checkConflictReconvergenceFrontier(
+    const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+    const std::vector<HighsDomainChange>& domchgstack) const {
+  if (!debugSolActive) return;
+
+  HighsInt numActiveBoundChgs = 0;
+  for (HighsInt i : reconvergenceFrontier) {
+    HighsInt col = domchgstack[i].column;
+
+    if (domchgstack[i].boundtype == HighsBoundType::kLower) {
+      if (debugSolution[col] >= domchgstack[i].boundval) ++numActiveBoundChgs;
+    } else {
+      if (debugSolution[col] <= domchgstack[i].boundval) ++numActiveBoundChgs;
+    }
+  }
+
+  auto reconvChg =
+      mipsolver->mipdata_->domain.flip(domchgstack[reconvDomchgPos]);
+
+  if (reconvChg.boundtype == HighsBoundType::kLower) {
+    if (debugSolution[reconvChg.column] >= reconvChg.boundval)
+      ++numActiveBoundChgs;
+  } else {
+    if (debugSolution[reconvChg.column] <= reconvChg.boundval)
+      ++numActiveBoundChgs;
+  }
+
+  assert(numActiveBoundChgs <= (HighsInt)reconvergenceFrontier.size());
 }
 
 #endif

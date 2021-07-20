@@ -117,6 +117,34 @@ struct HighsHashHelpers {
     return result;
   }
 
+  /// mersenne prime 2^61 - 1
+  static constexpr u64 M31() { return u32{0x7fffffff}; };
+
+  /// compute a * b mod 2^61-1
+  static u32 multiply_modM31(u32 a, u32 b) {
+    u64 result = u64(a) * u64(b);
+    result = (result >> 31) + (result & M31());
+    if (result >= M31()) result -= M31();
+    return result;
+  }
+
+  static u32 modexp_M31(u32 a, u64 e) {
+    u32 result = a;
+
+    while (e != 1) {
+      // square
+      result = multiply_modM31(result, result);
+
+      // multiply with a if exponent is odd
+      if (e & 1) result = multiply_modM31(result, a);
+
+      // shift to next bit
+      e = e >> 1;
+    }
+
+    return result;
+  }
+
   template <HighsInt k>
   static u64 pair_hash(u32 a, u32 b) {
     return (a + c[2 * k]) * (b + c[2 * k + 1]);
@@ -147,6 +175,7 @@ struct HighsHashHelpers {
     hash += multiply_modM61(value, modexp_M61(a, degree));
     hash = (hash >> 61) + (hash & M61());
     if (hash >= M61()) hash -= M61();
+    assert(hash < M61());
   }
 
   static void sparse_inverse_combine(u64& hash, HighsInt index, u64 value) {
@@ -165,6 +194,54 @@ struct HighsHashHelpers {
     hash += M61() - multiply_modM61(value, modexp_M61(a, degree));
     hash = (hash >> 61) + (hash & M61());
     if (hash >= M61()) hash -= M61();
+    assert(hash < M61());
+  }
+
+  static void sparse_combine32(u32& hash, HighsInt index, u32 value) {
+    // we take each value of the sparse hash as coefficient for a polynomial
+    // of the finite field modulo the mersenne prime 2^61-1 where the monomial
+    // for a sparse entry has the degree of its index. We evaluate the
+    // polynomial at a random constant. This allows to compute the hashes of
+    // sparse vectors independently of each others nonzero contribution and
+    // therefore allows to use the order of best access patterns for cache
+    // performance. E.g. we can compute a strong hash value for parallel row and
+    // column detection and only need to loop over the nonzeros once in
+    // arbitrary order. This comes at the expense of more expensive hash
+    // calculations as it would be more efficient to evaluate the polynomial
+    // with horners scheme, but allows for parallelization and arbitrary order.
+    // Since we have 16 random constants available, we slightly improve
+    // the scheme by using a lower degree polynomial with 16 variables
+    // which we evaluate at the random vector of 16.
+
+    // make sure that the constant has at most 61 bits, as otherwise the modulo
+    // algorithm for multiplication mod M61 might not work properly due to
+    // overflow
+    u32 a = c[index & 15] & M31();
+    HighsInt degree = (index / 16) + 1;
+
+    hash += multiply_modM31(value, modexp_M31(a, degree));
+    hash = (hash >> 31) + (hash & M31());
+    if (hash >= M31()) hash -= M31();
+    assert(hash < M31());
+  }
+
+  static void sparse_inverse_combine32(u32& hash, HighsInt index, u32 value) {
+    // same hash algorithm as sparse_combine(), but for updating a hash value to
+    // the state before it was changed with a call to sparse_combine(). This is
+    // easily possible as the hash value just uses finite field arithmetic. We
+    // can simply add the additive inverse of the previous hash value. This is a
+    // very useful routine for symmetry detection. During partition refinement
+    // the hashes do not need to be recomputed but can be updated with this
+    // procedure.
+
+    u32 a = c[index & 15] & M31();
+    HighsInt degree = (index / 16) + 1;
+    // add the additive inverse (M61() - hashvalue) instead of the hash value
+    // itself
+    hash += M31() - multiply_modM31(value, modexp_M31(a, degree));
+    hash = (hash >> 31) + (hash & M31());
+    if (hash >= M31()) hash -= M31();
+    assert(hash < M31());
   }
 
   static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
@@ -839,6 +916,18 @@ class HighsHashTable {
   }
 
   size_t size() const { return numElements; }
+
+  HighsHashTable(HighsHashTable<K, V>&&) = default;
+  HighsHashTable<K, V>& operator=(HighsHashTable<K, V>&&) = default;
+
+  ~HighsHashTable() {
+    if (metadata) {
+      u32 capacity = tableSizeMask + 1;
+      for (u32 i = 0; i < capacity; ++i) {
+        if (occupied(metadata[i])) entries.get()[i].~Entry();
+      }
+    }
+  }
 };
 
 #endif

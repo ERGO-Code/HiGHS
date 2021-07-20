@@ -161,7 +161,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     intSystemIndex.push_back(lp.numCol_);
     intSystemValue.push_back(intrhs);
     intSystemStart.push_back(intSystemValue.size());
-    integralScales.emplace_back(row, intscale);
+    if (leqRow)
+      integralScales.emplace_back(row, intscale);
+    else
+      integralScales.emplace_back(row, -intscale);
   }
 
   if (integralScales.empty()) return;
@@ -191,12 +194,12 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpAggregator.getCurrentAggregation(inds, vals, false);
 
     rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs);
+    cutGen.generateCut(transLp, inds, vals, rhs, true);
 
     lpAggregator.getCurrentAggregation(inds, vals, true);
 
     rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs);
+    cutGen.generateCut(transLp, inds, vals, rhs, true);
   };
 
   k = 2;

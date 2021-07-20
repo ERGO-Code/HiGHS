@@ -15,8 +15,8 @@
 #define HIGHS_NODE_QUEUE_H_
 
 #include <cassert>
-#include <map>
 #include <queue>
+#include <set>
 #include <vector>
 
 #include "lp_data/HConst.h"
@@ -30,7 +30,8 @@ class HighsNodeQueue {
  public:
   struct OpenNode {
     std::vector<HighsDomainChange> domchgstack;
-    std::vector<std::multimap<double, int>::iterator> domchglinks;
+    std::vector<HighsInt> branchings;
+    std::vector<std::set<std::pair<double, HighsInt>>::iterator> domchglinks;
     double lower_bound;
     double estimate;
     HighsInt depth;
@@ -41,6 +42,8 @@ class HighsNodeQueue {
 
     OpenNode()
         : domchgstack(),
+          branchings(),
+          domchglinks(),
           lower_bound(-kHighsInf),
           estimate(-kHighsInf),
           depth(0),
@@ -49,9 +52,11 @@ class HighsNodeQueue {
           leftestimate(-1),
           rightestimate(-1) {}
 
-    OpenNode(std::vector<HighsDomainChange>&& domchgstack, double lower_bound,
+    OpenNode(std::vector<HighsDomainChange>&& domchgstack,
+             std::vector<HighsInt>&& branchings, double lower_bound,
              double estimate, HighsInt depth)
         : domchgstack(domchgstack),
+          branchings(branchings),
           lower_bound(lower_bound),
           estimate(estimate),
           depth(depth),
@@ -72,8 +77,8 @@ class HighsNodeQueue {
 
  private:
   std::vector<OpenNode> nodes;
-  std::vector<std::multimap<double, int>> colLowerNodes;
-  std::vector<std::multimap<double, int>> colUpperNodes;
+  std::vector<std::set<std::pair<double, HighsInt>>> colLowerNodes;
+  std::vector<std::set<std::pair<double, HighsInt>>> colUpperNodes;
   std::priority_queue<HighsInt, std::vector<HighsInt>, std::greater<HighsInt>>
       freeslots;
   HighsInt lowerroot = -1;
@@ -100,14 +105,13 @@ class HighsNodeQueue {
 
   void setNumCol(HighsInt numcol);
 
-  void emplaceNode(std::vector<HighsDomainChange>&& domchgs, double lower_bound,
+  void emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                   std::vector<HighsInt>&& branchings, double lower_bound,
                    double estimate, HighsInt depth);
 
   OpenNode popBestNode();
 
   OpenNode popBestBoundNode();
-
-  OpenNode popRelatedNode(const HighsLpRelaxation& lprelax);
 
   int64_t numNodesUp(HighsInt col) const { return colLowerNodes[col].size(); }
 
@@ -115,20 +119,30 @@ class HighsNodeQueue {
 
   int64_t numNodesUp(HighsInt col, double val) const {
     assert((HighsInt)colLowerNodes.size() > col);
-    auto it = colLowerNodes[col].upper_bound(val);
+    auto it = colLowerNodes[col].upper_bound(std::make_pair(val, kHighsIInf));
     if (it == colLowerNodes[col].begin()) return colLowerNodes[col].size();
-    return std::distance(colLowerNodes[col].upper_bound(val),
-                         colLowerNodes[col].end());
+    return std::distance(it, colLowerNodes[col].end());
   }
 
   int64_t numNodesDown(HighsInt col, double val) const {
     assert((HighsInt)colUpperNodes.size() > col);
-    auto it = colUpperNodes[col].lower_bound(val);
+    auto it = colUpperNodes[col].lower_bound(std::make_pair(val, -1));
     if (it == colUpperNodes[col].end()) return colUpperNodes[col].size();
     return std::distance(colUpperNodes[col].begin(), it);
   }
 
+  const std::set<std::pair<double, HighsInt>>& getUpNodes(HighsInt col) const {
+    return colLowerNodes[col];
+  }
+
+  const std::set<std::pair<double, HighsInt>>& getDownNodes(
+      HighsInt col) const {
+    return colUpperNodes[col];
+  }
+
   double pruneInfeasibleNodes(HighsDomain& globaldomain, double feastol);
+
+  double pruneNode(HighsInt nodeId);
 
   double getBestLowerBound();
 

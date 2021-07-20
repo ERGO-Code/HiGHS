@@ -17,12 +17,14 @@
 #include <queue>
 #include <vector>
 
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
+#include "presolve/HighsSymmetry.h"
 #include "util/HighsHash.h"
 
 class HighsMipSolver;
@@ -56,6 +58,7 @@ class HighsSearch {
     kBestCost,
     kWorstCost,
     kDisjunction,
+    kHybridInferenceCost,
   };
 
   enum class NodeResult {
@@ -81,18 +84,28 @@ class HighsSearch {
     // the objective for pseudocost updates and tiebreaking of best bound node
     // selection
     double lp_objective;
+    std::shared_ptr<const HighsBasis> nodeBasis;
+    std::shared_ptr<const StabilizerOrbits> stabilizerOrbits;
     HighsDomainChange branchingdecision;
     HighsInt domgchgStackPos;
+    uint8_t skipDepthCount;
     uint8_t opensubtrees;
 
-    NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf)
+    NodeData(double parentlb = -kHighsInf, double parentestimate = -kHighsInf,
+             std::shared_ptr<const HighsBasis> parentBasis = nullptr,
+             std::shared_ptr<const StabilizerOrbits> stabilizerOrbits = nullptr)
         : lower_bound(parentlb),
           estimate(parentestimate),
           lp_objective(-kHighsInf),
+          nodeBasis(std::move(parentBasis)),
+          stabilizerOrbits(std::move(stabilizerOrbits)),
+          branchingdecision{0.0, -1, HighsBoundType::kLower},
           domgchgStackPos(-1),
+          skipDepthCount(0),
           opensubtrees(2) {}
   };
 
+  std::vector<double> subrootsol;
   std::vector<NodeData> nodestack;
   HighsHashTable<HighsInt, int> reliableatnode;
 
@@ -110,6 +123,8 @@ class HighsSearch {
   void markBranchingVarDownReliableAtNode(HighsInt col) {
     reliableatnode[col] |= 2;
   }
+
+  bool orbitsValidInChildNode(const HighsDomainChange& branchChg) const;
 
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
@@ -135,7 +150,10 @@ class HighsSearch {
 
   void setMinReliable(HighsInt minreliable);
 
-  void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
+  void setHeuristic(bool inheuristic) {
+    this->inheuristic = inheuristic;
+    if (inheuristic) childselrule = ChildSelectionRule::kHybridInferenceCost;
+  }
 
   void addBoundExceedingConflict();
 
@@ -179,7 +197,13 @@ class HighsSearch {
 
   NodeResult branch();
 
-  bool backtrack();
+  /// backtrack one level in DFS manner
+  bool backtrack(bool recoverBasis = true);
+
+  /// backtrack an unspecified amount of depth level until the next
+  /// node that seems worthwhile to continue the plunge. Put unpromising nodes
+  /// to the node queue
+  bool backtrackPlunge(HighsNodeQueue& nodequeue);
 
   /// for heuristics. Will discard nodes above targetDepth regardless of their
   /// status
