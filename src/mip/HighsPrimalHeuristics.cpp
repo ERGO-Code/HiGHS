@@ -199,7 +199,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
     return;
   std::sort(lurkingBounds.begin(), lurkingBounds.end(),
             [](const std::pair<double, HighsDomainChange>& a,
-               std::pair<double, HighsDomainChange>& b) {
+               const std::pair<double, HighsDomainChange>& b) {
               return a.first > b.first;
             });
 
