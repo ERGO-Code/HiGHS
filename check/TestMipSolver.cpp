@@ -213,9 +213,9 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
 
   REQUIRE(model_status == HighsModelStatus::kOptimal);
   REQUIRE(fabs(info.objective_function_value - required_objective_value) <
-	  double_equal_tolerance);
+          double_equal_tolerance);
   REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
-	  double_equal_tolerance);
+          double_equal_tolerance);
 
   highs.changeColBounds(0, -2, 2);
 
