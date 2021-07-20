@@ -20,8 +20,6 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
                              const HighsModel& model);
-void reportSolvedLpStats(const HighsLogOptions& log_options,
-                         const HighsStatus run_status, Highs& highs);
 
 int main(int argc, char** argv) {
   // Load user options.
@@ -111,67 +109,5 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
     if (num_int)
       highsLogUser(log_options, HighsLogType::kInfo,
                    "Integer   : %" HIGHSINT_FORMAT "\n", num_int);
-  }
-}
-
-void reportSolvedLpStats(const HighsLogOptions& log_options,
-                         const HighsStatus run_status, Highs& highs) {
-  if (run_status == HighsStatus::kError) {
-    std::string statusname = HighsStatusToString(run_status);
-    highsLogUser(log_options, HighsLogType::kInfo, "HiGHS status: %s\n",
-                 statusname.c_str());
-  } else {
-    highsLogUser(log_options, HighsLogType::kInfo, "\n");
-    HighsModelStatus model_status = highs.getModelStatus();
-    HighsModelStatus scaled_model_status = highs.getModelStatus(true);
-    HighsInfo highs_info = highs.getInfo();
-    if (model_status != scaled_model_status) {
-      if (scaled_model_status == HighsModelStatus::kOptimal) {
-        // The scaled model has been solved to optimality, but not the
-        // unscaled model, flag this up, but report the scaled model
-        // status
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "Primal infeasibility: %10.3e (%" HIGHSINT_FORMAT ")\n",
-                     highs_info.max_primal_infeasibility,
-                     highs_info.num_primal_infeasibilities);
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "Dual   infeasibility: %10.3e (%" HIGHSINT_FORMAT ")\n",
-                     highs_info.max_dual_infeasibility,
-                     highs_info.num_dual_infeasibilities);
-        model_status = scaled_model_status;
-      }
-    }
-    highsLogUser(log_options, HighsLogType::kInfo, "Model   status      : %s\n",
-                 highs.modelStatusToString(model_status).c_str());
-    highsLogUser(log_options, HighsLogType::kInfo, "Primal  status      : %s\n",
-                 highs.solutionStatusToString(highs_info.primal_solution_status)
-                     .c_str());
-    highsLogUser(
-        log_options, HighsLogType::kInfo, "Dual    status      : %s\n",
-        highs.solutionStatusToString(highs_info.dual_solution_status).c_str());
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "Simplex   iterations: %" HIGHSINT_FORMAT "\n",
-                 highs_info.simplex_iteration_count);
-    if (highs_info.qp_iteration_count)
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "QP ASM    iterations: %" HIGHSINT_FORMAT "\n",
-                   highs_info.qp_iteration_count);
-    if (highs_info.ipm_iteration_count)
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "IPM       iterations: %" HIGHSINT_FORMAT "\n",
-                   highs_info.ipm_iteration_count);
-    if (highs_info.crossover_iteration_count)
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Crossover iterations: %" HIGHSINT_FORMAT "\n",
-                   highs_info.crossover_iteration_count);
-    if (model_status == HighsModelStatus::kOptimal) {
-      double objective_function_value;
-      highs.getInfoValue("objective_function_value", objective_function_value);
-      highsLogUser(log_options, HighsLogType::kInfo,
-                   "Objective value     : %17.10e\n", objective_function_value);
-    }
-    double run_time = highs.getRunTime();
-    highsLogUser(log_options, HighsLogType::kInfo,
-                 "HiGHS run time      : %13.2f\n", run_time);
   }
 }
