@@ -213,6 +213,9 @@ class HPresolve {
 
   void fixColToZero(HighsPostsolveStack& postsolveStack, HighsInt col);
 
+  void transformColumn(HighsPostsolveStack& postSolveStack, HighsInt col,
+                       double scale, double constant);
+
   void substitute(HighsInt row, HighsInt col, double rhs);
 
   void changeColUpper(HighsInt col, double newUpper);
@@ -232,6 +235,8 @@ class HPresolve {
 
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
+
+  void scaleMIP(HighsPostsolveStack& postSolveStack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postSolveStack);
 

@@ -114,6 +114,10 @@ class HighsImplications {
     return vlbs[col];
   }
 
+  std::map<HighsInt, VarBound>& getVUBs(HighsInt col) { return vubs[col]; }
+
+  std::map<HighsInt, VarBound>& getVLBs(HighsInt col) { return vlbs[col]; }
+
   bool runProbing(HighsInt col, HighsInt& numReductions);
 
   void rebuild(HighsInt ncols, const std::vector<HighsInt>& cIndex,

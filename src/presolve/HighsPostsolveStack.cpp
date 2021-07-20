@@ -58,6 +58,14 @@ void HighsPostsolveStack::compressIndexMaps(
   origColIndex.resize(numCol);
 }
 
+void HighsPostsolveStack::LinearTransform::undo(const HighsOptions& options,
+                                                HighsSolution& solution) {
+  solution.col_value[col] *= scale;
+  solution.col_value[col] += constant;
+
+  if (solution.dual_valid) solution.col_dual[col] /= scale;
+}
+
 void HighsPostsolveStack::FreeColSubstitution::undo(
     const HighsOptions& options, const std::vector<Nonzero>& rowValues,
     const std::vector<Nonzero>& colValues, HighsSolution& solution,
