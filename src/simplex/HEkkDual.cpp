@@ -369,7 +369,8 @@ void HEkkDual::initialiseInstance() {
   solver_num_tot = solver_num_col + solver_num_row;
 
   matrix = &ekk_instance_.matrix_;
-  factor = &ekk_instance_.factor_;
+  // JH_factor_use
+    factor = &ekk_instance_.factor_;
   analysis = &ekk_instance_.analysis_;
 
   // Copy pointers
@@ -2250,7 +2251,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
   const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
   HMatrix& matrix = ekk_instance_.matrix_;
-  HFactor& factor = ekk_instance_.factor_;
+  // JH_factor_use
+    HFactor& factor = ekk_instance_.factor_;
   // Create a local buffer for the pi vector
   HVector dual_col;
   dual_col.setup(lp.numRow_);

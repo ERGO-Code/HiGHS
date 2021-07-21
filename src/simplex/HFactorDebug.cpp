@@ -44,6 +44,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   const double* Avalue = factor.getAvalue();
   const HighsInt* baseIndex = factor.getBaseIndex();
 
+  printf("Calling debugCheckInvert\n");
   HVector column;
   HVector rhs;
   column.setup(numRow);

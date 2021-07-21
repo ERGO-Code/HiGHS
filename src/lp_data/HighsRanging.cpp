@@ -71,7 +71,6 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const vector<int8_t>& Nmove_ = simplex_basis.nonbasicMove_;
   const vector<HighsInt>& Bindex_ = simplex_basis.basicIndex_;
   const HMatrix& matrix = ekk_instance.matrix_;
-  const HFactor& factor = ekk_instance.factor_;
 
   // Local copies of scalars
 

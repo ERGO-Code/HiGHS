@@ -43,7 +43,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsLp& highs_lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = ekk_instance.lp_;
   const HighsScale& scale = highs_model_object.scale_;
-  const HFactor& factor = ekk_instance.factor_;
+  // JH_factor_use
+    const HFactor& factor = ekk_instance.factor_;
   const HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
   bool right_size = true;
@@ -84,16 +85,17 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (status.has_invert) {
-    const bool invert_ok =
-        debugDebugToHighsStatus(debugCheckInvert(
-            options, factor, simplex_nla)) != HighsStatus::kError;
-    if (!invert_ok) {
-      highsLogDev(
-          options.log_options, HighsLogType::kError,
-          "Supposed to be a Simplex basis inverse, but too inaccurate\n");
-      assert(invert_ok);
-      return_status = HighsDebugStatus::kLogicalError;
-    }
+    // JH_factor_use
+        const bool invert_ok =
+            debugDebugToHighsStatus(debugCheckInvert(
+                options, factor, simplex_nla)) != HighsStatus::kError;
+        if (!invert_ok) {
+          highsLogDev(
+              options.log_options, HighsLogType::kError,
+              "Supposed to be a Simplex basis inverse, but too inaccurate\n");
+          assert(invert_ok);
+          return_status = HighsDebugStatus::kLogicalError;
+        }
   }
   return return_status;
 }

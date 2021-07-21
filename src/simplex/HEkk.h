@@ -95,6 +95,7 @@ class HEkk {
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
   HMatrix matrix_;
+  // JH_factor_use
   HFactor factor_;
   HSimplexNla simplex_nla_;
 

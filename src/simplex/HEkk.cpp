@@ -463,15 +463,16 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
 }
 
 void HEkk::handleRankDeficiency() {
-  HighsInt rank_deficiency = factor_.rank_deficiency;
-  vector<HighsInt>& noPvC = factor_.noPvC;
-  vector<HighsInt>& noPvR = factor_.noPvR;
-  for (HighsInt k = 0; k < rank_deficiency; k++) {
-    HighsInt variable_in = lp_.numCol_ + noPvR[k];
-    HighsInt variable_out = noPvC[k];
-    basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
-    basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
-  }
+  // JH_factor_use
+    HighsInt rank_deficiency = factor_.rank_deficiency;
+    vector<HighsInt>& noPvC = factor_.noPvC;
+    vector<HighsInt>& noPvR = factor_.noPvR;
+    for (HighsInt k = 0; k < rank_deficiency; k++) {
+      HighsInt variable_in = lp_.numCol_ + noPvR[k];
+      HighsInt variable_out = noPvC[k];
+      basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
+      basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
+    }
   status_.has_matrix = false;
 }
 
@@ -873,12 +874,13 @@ HighsInt HEkk::computeFactor() {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
         nla_basis_ = basis_;
-        factor_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0], &lp_.Aindex_[0],
-                      &lp_.Avalue_[0], &nla_basis_.basicIndex_[0],
-                      info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
-                      options_.highs_debug_level, options_.output_flag,
-                      options_.log_file_stream, options_.log_to_console,
-                      options_.log_dev_level);
+	// JH_factor_use
+	        factor_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0], &lp_.Aindex_[0],
+	                      &lp_.Avalue_[0], &nla_basis_.basicIndex_[0],
+	                      info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
+	                      options_.highs_debug_level, options_.output_flag,
+	                      options_.log_file_stream, options_.log_to_console,
+	                      options_.log_dev_level);
     simplex_nla_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0],
                        &lp_.Aindex_[0], &lp_.Avalue_[0],
                        &basis_.basicIndex_[0], info_.factor_pivot_threshold,
@@ -886,13 +888,15 @@ HighsInt HEkk::computeFactor() {
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
-  const HighsInt rank_deficiency_nla = factor_.build(NULL);
+  // JH_factor_use
+    const HighsInt rank_deficiency_nla = factor_.build(NULL);
   const HighsInt rank_deficiency = simplex_nla_.invert();
   //  assert(rank_deficiency == rank_deficiency_nla);
-  if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
+    if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
-  debugCheckInvert(options_, factor_, simplex_nla_, force);
+  // JH_factor_use
+    debugCheckInvert(options_, factor_, simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
@@ -1763,7 +1767,8 @@ bool HEkk::reinvertOnNumericalTrouble(
                    "   Increasing Markowitz threshold to %g\n",
                    new_pivot_threshold);
       info_.factor_pivot_threshold = new_pivot_threshold;
-      factor_.setPivotThreshold(new_pivot_threshold);
+      // JH_factor_use
+            factor_.setPivotThreshold(new_pivot_threshold);
     }
   }
   return reinvert;
