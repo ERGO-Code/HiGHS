@@ -1750,8 +1750,8 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
   double oldImplLower = implRowDualLower[row];
   HighsInt oldLowerSource = rowDualLowerSource[row];
 
-  if (oldImplLower >= -options->dual_feasibility_tolerance &&
-      newLower < -options->dual_feasibility_tolerance)
+  if (oldImplLower <= options->dual_feasibility_tolerance &&
+      newLower > options->dual_feasibility_tolerance)
     markChangedRow(row);
 
   bool newDualImplied =
@@ -2831,13 +2831,25 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
   // non-redundant and non-infeasible row when considering variable and implied
   // bounds
   if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
-    if (model->rowLower_[row] == model->rowUpper_[row]) {
-      if (rowsize[row] == 2) return doubletonEq(postSolveStack, row);
+    double rowUpper =
+        implRowDualLower[row] > options->dual_feasibility_tolerance
+            ? model->rowLower_[row]
+            : model->rowUpper_[row];
+    double rowLower =
+        implRowDualUpper[row] < -options->dual_feasibility_tolerance
+            ? model->rowUpper_[row]
+            : model->rowLower_[row];
+    if (rowLower == rowUpper) {
+      if (rowsize[row] == 2) {
+        model->rowLower_[row] = rowLower;
+        model->rowUpper_[row] = rowUpper;
+        return doubletonEq(postSolveStack, row);
+      }
       // equation
       if (impliedRowLower != -kHighsInf && impliedRowUpper != kHighsInf &&
-          std::abs(impliedRowLower + impliedRowUpper -
-                   2 * model->rowUpper_[row]) <= options->mip_epsilon) {
-        double binCoef = std::abs(impliedRowUpper - model->rowUpper_[row]);
+          std::abs(impliedRowLower + impliedRowUpper - 2 * rowUpper) <=
+              options->mip_epsilon) {
+        double binCoef = std::abs(impliedRowUpper - rowUpper);
         // simple probing on equation case
         HighsInt binCol = -1;
         storeRow(row);
@@ -2945,7 +2957,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         }
 
         if (continuousCoef != 0.0) {
-          rowCoefsInt.push_back(model->rowUpper_[row]);
+          rowCoefsInt.push_back(rowUpper);
 
           double intScale = HighsIntegers::integralScale(
               rowCoefsInt, options->mip_epsilon, options->mip_epsilon);
@@ -2953,6 +2965,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
           if (intScale != 0 && intScale <= 1e3) {
             double scale = 1.0 / std::abs(continuousCoef * intScale);
             if (scale != 1.0) {
+              // printf(
+              //     "transform continuous column x to implicit integer z with x
+              //     "
+              //     "= %g * z\n",
+              //     scale);
               transformColumn(postSolveStack, continuousCol, scale, 0.0);
               model->integrality_[continuousCol] =
                   HighsVarType::kImplicitInteger;
@@ -2978,7 +2995,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
               rowCoefsInt, options->mip_epsilon, options->mip_epsilon);
 
           if (intScale != 0.0 && intScale <= 1e3) {
-            double rhs = model->rowUpper_[row] * intScale;
+            double rhs = rowUpper * intScale;
             if (std::abs(rhs - std::round(rhs)) >
                 options->mip_feasibility_tolerance)
               return Result::kPrimalInfeasible;
@@ -3021,6 +3038,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                 // the right hand side is integral, so we can substitute
                 // a1 * x1 = d * z, i.e. x1 = d * z / a1
                 double scale = d / std::abs(Avalue[x1Pos] * intScale);
+                // printf(
+                //     "substitute integral column x with integral column z with
+                //     " "x = %g * z\n", scale);
                 transformColumn(postSolveStack, x1, scale, 0.0);
               } else {
                 // we can substitute x1 = d * z + b, with b = a1^-1 rhs (mod d)
@@ -3033,6 +3053,10 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
 
                 // now compute b = a1^-1 rhs (mod d)
                 double b = HighsIntegers::mod(a1Inverse * rhs, (double)d);
+
+                // printf(
+                //     "substitute integral column x with integral column z with
+                //     " "x = %ld * z + %g\n", d, b);
 
                 // before we substitute, we check whether the resulting variable
                 // z is fixed after rounding its new bounds. If that is the case
