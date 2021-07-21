@@ -886,16 +886,7 @@ HighsInt HEkk::computeFactor() {
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
-  HighsTimerClock* factor_timer_clock_pointer = NULL;
-  if (analysis_.analyse_factor_time) {
-    HighsInt thread_id = 0;
-#ifdef OPENMP
-    thread_id = omp_get_thread_num();
-#endif
-    factor_timer_clock_pointer =
-        analysis_.getThreadFactorTimerClockPtr(thread_id);
-  }
-  const HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
+  const HighsInt rank_deficiency = factor_.build(NULL);
   const HighsInt rank_deficiency_nla = simplex_nla_.invert();
   assert(rank_deficiency == rank_deficiency_nla);
   if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);

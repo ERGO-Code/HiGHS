@@ -20,6 +20,10 @@
 //#include <algorithm>
 #include <stdio.h>
 
+#ifdef OPENMP
+#include "omp.h"
+#endif
+
 // using std::max;
 // using std::min;
 // using std::vector;
@@ -48,7 +52,16 @@ void HSimplexNla::setup(HighsInt num_col, HighsInt num_row,
 
 HighsInt HSimplexNla::invert() {
   //  printf("In HSimplexNla::invert\n");
-  HighsInt rank_deficiency = factor_.build(NULL);
+  HighsTimerClock* factor_timer_clock_pointer = NULL;
+  if (analysis_->analyse_factor_time) {
+    HighsInt thread_id = 0;
+#ifdef OPENMP
+    thread_id = omp_get_thread_num();
+#endif
+    factor_timer_clock_pointer =
+        analysis_->getThreadFactorTimerClockPtr(thread_id);
+  }
+  HighsInt rank_deficiency = factor_.build(factor_timer_clock_pointer);
   build_synthetic_tick_ = factor_.build_synthetic_tick;
   return rank_deficiency;
 }
