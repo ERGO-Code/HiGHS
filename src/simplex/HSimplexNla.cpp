@@ -83,3 +83,7 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
   //  printf("In HSimplexNla::update\n");
   factor_.update(aq, ep, iRow, hint);
 }
+
+void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
+  factor_.setPivotThreshold(new_pivot_threshold);
+}

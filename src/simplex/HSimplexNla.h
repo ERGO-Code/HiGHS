@@ -44,6 +44,7 @@ class HSimplexNla {
   void ftran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
+  void setPivotThreshold(const double new_pivot_threshold);
 
   HighsInt build_synthetic_tick_;
 
