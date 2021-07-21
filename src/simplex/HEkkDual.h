@@ -388,7 +388,7 @@ class HEkkDual {
   HighsInt solver_num_tot;
 
   const HMatrix* matrix;
-  const HFactor* factor;
+  const HSimplexNla* simplex_nla;
   HighsSimplexAnalysis* analysis;
 
   const int8_t* jMove;

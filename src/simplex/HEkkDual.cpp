@@ -166,7 +166,7 @@ HighsStatus HEkkDual::solve() {
               row_ep.index[0] = i;
               row_ep.array[i] = 1;
               row_ep.packFlag = false;
-              ekk_instance_.simplex_nla_.btran(
+              simplex_nla->btran(
                   row_ep, ekk_instance_.info_.row_ep_density,
                   analysis->pointer_serial_factor_clocks);
               const double local_row_ep_density =
@@ -362,15 +362,14 @@ HighsStatus HEkkDual::solve() {
 }
 
 void HEkkDual::initialiseInstance() {
-  // Copy size, matrix and factor
+  // Copy size, matrix and simplex NLA
 
   solver_num_col = ekk_instance_.lp_.numCol_;
   solver_num_row = ekk_instance_.lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
   matrix = &ekk_instance_.matrix_;
-  // JH_factor_use
-    factor = &ekk_instance_.factor_;
+  simplex_nla = &ekk_instance_.simplex_nla_;
   analysis = &ekk_instance_.analysis_;
 
   // Copy pointers
@@ -895,7 +894,7 @@ void HEkkDual::rebuild() {
 
   const HighsInt reason_for_rebuild = rebuild_reason;
   rebuild_reason = kRebuildReasonNo;
-  // Possibly Rebuild ekk_instance_.factor_
+  // Possibly rebuild factored inverse
   bool reInvert = info.update_count > 0;
   if (reInvert) {
     // Get a nonsingular inverse if possible. One of three things
@@ -993,10 +992,7 @@ void HEkkDual::rebuild() {
     reportRebuild(reason_for_rebuild);
   }
 
-  ekk_instance_.build_synthetic_tick_ = factor->build_synthetic_tick;
-  if (1 == 0)
-    assert(factor->build_synthetic_tick ==
-           ekk_instance_.simplex_nla_.build_synthetic_tick_);
+  ekk_instance_.build_synthetic_tick_ = simplex_nla->build_synthetic_tick_;
   ekk_instance_.total_synthetic_tick_ = 0;
 
   // Dual simplex doesn't maintain the number of primal
@@ -1264,7 +1260,7 @@ void HEkkDual::chooseRow() {
       analysis->operationRecordBefore(kSimplexNlaBtranEp, row_ep,
                                       ekk_instance_.info_.row_ep_density);
     // Perform BTRAN
-    ekk_instance_.simplex_nla_.btran(row_ep, ekk_instance_.info_.row_ep_density,
+    simplex_nla->btran(row_ep, ekk_instance_.info_.row_ep_density,
                                      analysis->pointer_serial_factor_clocks);
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(kSimplexNlaBtranEp, row_ep);
@@ -1622,7 +1618,7 @@ void HEkkDual::updateFtran() {
     analysis->operationRecordBefore(kSimplexNlaFtran, col_aq,
                                     ekk_instance_.info_.col_aq_density);
   // Perform FTRAN
-  ekk_instance_.simplex_nla_.ftran(col_aq, ekk_instance_.info_.col_aq_density,
+  simplex_nla->ftran(col_aq, ekk_instance_.info_.col_aq_density,
                                    analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(kSimplexNlaFtran, col_aq);
@@ -1659,7 +1655,7 @@ void HEkkDual::updateFtranBFRT() {
     if (analysis->analyse_simplex_data)
       analysis->operationRecordBefore(kSimplexNlaFtranBfrt, col_BFRT,
                                       ekk_instance_.info_.col_BFRT_density);
-    ekk_instance_.simplex_nla_.ftran(col_BFRT,
+    simplex_nla->ftran(col_BFRT,
                                      ekk_instance_.info_.col_BFRT_density,
                                      analysis->pointer_serial_factor_clocks);
     if (analysis->analyse_simplex_data)
@@ -1684,7 +1680,7 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
     analysis->operationRecordBefore(kSimplexNlaFtranDse, *DSE_Vector,
                                     ekk_instance_.info_.row_DSE_density);
   // Perform FTRAN DSE
-  ekk_instance_.simplex_nla_.ftran(*DSE_Vector,
+  simplex_nla->ftran(*DSE_Vector,
                                    ekk_instance_.info_.row_DSE_density,
                                    analysis->pointer_serial_factor_clocks);
   if (analysis->analyse_simplex_data)
@@ -2168,13 +2164,15 @@ bool HEkkDual::dualInfoOk(const HighsLp& lp) {
            lp_numCol, solver_num_col, lp_numRow, solver_num_row);
     return false;
   }
-  dimensions_ok = lp_numCol == factor->numCol && lp_numRow == factor->numRow;
+  dimensions_ok =
+    lp_numCol == simplex_nla->num_col_ &&
+    lp_numRow == simplex_nla->num_row_;
   assert(dimensions_ok);
   if (!dimensions_ok) {
     printf("LP-Factor dimension incompatibility (%" HIGHSINT_FORMAT
            ", %" HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
            ")\n",
-           lp_numCol, factor->numCol, lp_numRow, factor->numRow);
+           lp_numCol, simplex_nla->num_col_, lp_numRow, simplex_nla->num_row_);
     return false;
   }
   return true;
@@ -2251,8 +2249,6 @@ double HEkkDual::computeExactDualObjectiveValue() {
   const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
   HMatrix& matrix = ekk_instance_.matrix_;
-  // JH_factor_use
-    HFactor& factor = ekk_instance_.factor_;
   // Create a local buffer for the pi vector
   HVector dual_col;
   dual_col.setup(lp.numRow_);
@@ -2274,7 +2270,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   dual_row.clear();
   if (dual_col.count) {
     const double expected_density = 1;
-    ekk_instance_.simplex_nla_.btran(dual_col, expected_density);
+    simplex_nla->btran(dual_col, expected_density);
     matrix.priceByColumn(dual_row, dual_col);
   }
   double dual_objective = lp.offset_;
