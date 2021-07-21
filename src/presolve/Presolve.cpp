@@ -15,7 +15,6 @@
  */
 #include "presolve/Presolve.h"
 
-//#include "simplex/HFactor.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -4580,129 +4579,6 @@ void Presolve::setBasisElement(change c) {
       break;
   }
 }
-
-/* testing and dev
-HighsInt Presolve::testBasisMatrixSingularity() {
-
-        HFactor factor;
-
-        //resize matrix in M so we can pass to factor
-        HighsInt i, j, k;
-        HighsInt nz = 0;
-        HighsInt nR = 0;
-        HighsInt nC = 0;
-
-        numRowOriginal = rowLowerOriginal.size();
-        numColOriginal = colLowerOriginal.size();
-        //arrays to keep track of indices
-        vector<HighsInt> rIndex_(numRowOriginal, -1);
-        vector<HighsInt> cIndex_(numColOriginal, -1);
-
-        for (i=0;i<numRowOriginal;++i)
-                if (flagRow.at(i)) {
-                        for (j = ARstart.at(i); j<ARstart.at(i+1); ++j)
-                                if (flagCol[ARindex.at(j)])
-                                        nz ++;
-                        rIndex_.at(i) = nR;
-                        nR++;
-                        }
-
-        for (i=0;i<numColOriginal;++i)
-                if (flagCol.at(i)) {
-                        cIndex_.at(i) = nC;
-                        nC++;
-                }
-
-
-        //matrix
-        vector<HighsInt>    Mstart(nC + 1, 0);
-        vector<HighsInt>    Mindex(nz);
-        vector<double> Mvalue(nz);
-
-    vector<HighsInt> iwork(nC, 0);
-
-    for (i = 0;i<numRowOriginal; ++i)
-        if (flagRow.at(i))
-            for (HighsInt k = ARstart.at(i); k < ARstart.at(i+1);++k ) {
-                j = ARindex.at(k);
-                if (flagCol.at(j))
-                                iwork[cIndex_.at(j)]++;
-                        }
-    for (i = 1; i <= nC; ++i)
-        Mstart.at(i) = Mstart[i - 1] + iwork[i - 1];
-   for (i = 0; i < numColOriginal; ++i)
-        iwork.at(i) = Mstart.at(i);
-
-   for (i = 0; i < numRowOriginal; ++i) {
-        if (flagRow.at(i)) {
-                        HighsInt iRow = rIndex_.at(i);
-                    for (k = ARstart.at(i); k < ARstart[i + 1];++k ) {
-                        j = ARindex.at(k);
-                        if (flagCol.at(j)) {
-                                HighsInt iCol = cIndex_.at(j);
-                                    HighsInt iPut = iwork[iCol]++;
-                                    Mindex[iPut] = iRow;
-                                    Mvalue[iPut] = ARvalue.at(k);
-                                }
-                    }
-                }
-    }
-
-    vector<HighsInt>  bindex(nR);
-    HighsInt countBasic=0;
-
-    printf("To recover this test need to use col/row_status\n");
-     for (HighsInt i=0; i< nonbasicFlag.size();++i) {
-         if (nonbasicFlag.at(i) == 0)
-                         countBasic++;
-     }
-
-     if (countBasic != nR)
-         cout<<" Wrong count of basic variables: != numRow"<<endl;
-
-     HighsInt c=0;
-     for (HighsInt i=0; i< nonbasicFlag.size();++i) {
-         if (nonbasicFlag.at(i) == 0) {
-                        if (i < numColOriginal)
-                                bindex[c] = cIndex_.at(i);
-                        else
-                                bindex[c] = nC + rIndex_[i - numColOriginal];
-                        c++;
-         }
-    }
-
-        factor.setup(nC, nR, &Mstart[0], &Mindex[0], &Mvalue[0],  &bindex[0]);
-/ *	if (1) // for this check both A and M are the full matrix again
-        {
-                if (nC - numColOriginal != 0)
-                        cout<<"columns\n";
-                if (nR - numRowOriginal != 0)
-                        cout<<"rows\n";
-                for (HighsInt i=0; i< Mstart.size();++i)
-                        if (Mstart.at(i) - Astart.at(i) != 0)
-                                cout<<"Mstart "<<i<<"\n";
-                for (HighsInt i=0; i< Mindex.size();++i)
-                        if (Mindex.at(i) - Aindex.at(i) != 0)
-                                cout<<"Mindex "<<i<<"\n";
-                for (HighsInt i=0; i< Mvalue.size();++i)
-                        if (Mvalue.at(i) - Avalue.at(i) != 0)
-                                cout<<"Mvalue "<<i<<"\n";
-                for (HighsInt i=0; i< bindex.size();++i)
-                        if (nonbasicFlag.at(i) - nbffull.at(i) != 0)
-                                cout<<"nbf "<<i<<"\n";
-        } * /
-
-        try {
-        factor.build();
-    } catch (runtime_error& error) {
-        cout << error.what() << endl;
-        cout << "Postsolve: could not factorize basis matrix." << endl;
-        return 0;
-    }
-    cout << "Postsolve: basis matrix successfully factorized." << endl;
-
-    return 1;
-}*/
 
 /***
  * lo and up refer to the place storing the current bounds on y_row

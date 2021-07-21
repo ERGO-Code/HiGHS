@@ -17,7 +17,6 @@
 #define SIMPLEX_HEKK_H_
 
 #include "lp_data/HStruct.h"
-#include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
@@ -88,15 +87,12 @@ class HEkk {
   HighsSimplexInfo info_;
   HighsModelStatus model_status_;
   SimplexBasis basis_;
-  SimplexBasis nla_basis_;
   HighsRandom random_;
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
   HMatrix matrix_;
-  // JH_factor_use
-  HFactor factor_;
   HSimplexNla simplex_nla_;
 
   double build_synthetic_tick_;

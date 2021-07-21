@@ -648,7 +648,8 @@ void HEkkPrimal::rebuild() {
   reportRebuild(reason_for_rebuild);
 
   // Record the synthetic clock for INVERT, and zero it for UPDATE
-  ekk_instance_.build_synthetic_tick_ = ekk_instance_.simplex_nla_.build_synthetic_tick_;
+  ekk_instance_.build_synthetic_tick_ =
+      ekk_instance_.simplex_nla_.build_synthetic_tick_;
   ekk_instance_.total_synthetic_tick_ = 0;
 
   // Determine whether to use hyper-sparse CHUZC

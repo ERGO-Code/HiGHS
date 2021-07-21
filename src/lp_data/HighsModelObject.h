@@ -18,7 +18,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HEkk.h"
-#include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"

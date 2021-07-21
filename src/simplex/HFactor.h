@@ -138,10 +138,8 @@ class HFactor {
       double pivot_threshold = kDefaultPivotThreshold,  //!< Pivoting threshold
       double pivot_tolerance = kDefaultPivotTolerance,  //!< Min absolute pivot
       HighsInt highs_debug_level = kHighsDebugLevelMin,
-      bool output_flag = false,
-      FILE* logfile = NULL,
-      bool log_to_console = true,
-      HighsInt log_dev_level = 0,
+      bool output_flag = false, FILE* logfile = NULL,
+      bool log_to_console = true, HighsInt log_dev_level = 0,
       const bool use_original_HFactor_logic = true,
       const HighsInt updateMethod = kUpdateMethodFt);
 

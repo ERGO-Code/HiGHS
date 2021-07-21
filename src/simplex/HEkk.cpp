@@ -873,26 +873,16 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
-        nla_basis_ = basis_;
-	// JH_factor_use
-	        factor_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0], &lp_.Aindex_[0],
-	                      &lp_.Avalue_[0], &nla_basis_.basicIndex_[0],
-	                      info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
-	                      options_.highs_debug_level, options_.output_flag,
-	                      options_.log_file_stream, options_.log_to_console,
-	                      options_.log_dev_level);
     simplex_nla_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0],
-                       &lp_.Aindex_[0], &lp_.Avalue_[0],
-                       &basis_.basicIndex_[0], info_.factor_pivot_threshold,
-                       &options_, &timer_, &analysis_);
+                       &lp_.Aindex_[0], &lp_.Avalue_[0], &basis_.basicIndex_[0],
+                       info_.factor_pivot_threshold, &options_, &timer_,
+                       &analysis_);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
-  // JH_factor_use
-    const HighsInt rank_deficiency_nla = factor_.build(NULL);
   const HighsInt rank_deficiency = simplex_nla_.invert();
-  //  assert(rank_deficiency == rank_deficiency_nla);
-    if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
+  if (analysis_.analyse_factor_data)
+    analysis_.updateInvertFormData(simplex_nla_.factor_);
 
   const bool force = rank_deficiency;
   debugCheckInvert(options_, simplex_nla_, force);
@@ -1801,9 +1791,6 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 
   // Incoming variable
   basis_.basicIndex_[row_out] = variable_in;
-  HighsInt nla_variable_out = nla_basis_.basicIndex_[row_out];
-  assert(nla_variable_out == variable_out);
-  nla_basis_.basicIndex_[row_out] = variable_in;
   basis_.nonbasicFlag_[variable_in] = 0;
   basis_.nonbasicMove_[variable_in] = 0;
   info_.baseLower_[row_out] = info_.workLower_[variable_in];
