@@ -160,7 +160,7 @@ void HFactor::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
                     HighsInt* baseIndex_, double pivot_threshold_,
                     double pivot_tolerance_, HighsInt highs_debug_level_,
                     bool output_flag_, FILE* log_file_stream_,
-                    bool log_to_console_, int log_dev_level_,
+                    bool log_to_console_, HighsInt log_dev_level_,
                     const bool use_original_HFactor_logic_,
                     const HighsInt updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
