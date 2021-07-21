@@ -47,6 +47,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
       kHighsAnalysisLevelNlaData & options.highs_analysis_level;
   analyse_factor_time =
       kHighsAnalysisLevelNlaTime & options.highs_analysis_level;
+  last_user_log_time = -kHighsInf;
+  delta_user_log_time = 5e0;
 
   // Set up the thread clocks
   HighsInt omp_max_threads = 1;
@@ -295,22 +297,28 @@ void HighsSimplexAnalysis::iterationReport() {
 }
 
 void HighsSimplexAnalysis::invertReport() {
-  const bool header = (num_invert_report_since_last_header < 0) ||
-                      (num_invert_report_since_last_header > 49) ||
-                      (num_iteration_report_since_last_header >= 0);
-  if (header) {
-    invertReport(header);
-    num_invert_report_since_last_header = 0;
+  if (*log_options.log_dev_level) {
+    const bool header = (num_invert_report_since_last_header < 0) ||
+                        (num_invert_report_since_last_header > 49) ||
+                        (num_iteration_report_since_last_header >= 0);
+    if (header) {
+      invertReport(header);
+      num_invert_report_since_last_header = 0;
+    }
+    invertReport(false);
+    // Force an iteration report header if this is an INVERT report without an
+    // rebuild_reason
+    if (!rebuild_reason) num_iteration_report_since_last_header = -1;
+  } else {
+    const bool force = false;
+    userInvertReport(force);
   }
-  invertReport(false);
-  // Force an iteration report header if this is an INVERT report without an
-  // rebuild_reason
-  if (!rebuild_reason) num_iteration_report_since_last_header = -1;
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
   analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
-  reportAlgorithmPhaseIterationObjective(header);
+  reportAlgorithmPhase(header);
+  reportIterationObjective(header);
   if (analyse_simplex_data) {
     if (simplex_strategy == kSimplexStrategyDualMulti) {
       // Report on threads and PAMI
@@ -322,9 +330,32 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
     //  reportCondition(header);
   }
   reportInfeasibility(header);
+  highsLogDev(log_options, HighsLogType::kInfo, "%s\n",
+              analysis_log->str().c_str());
+  if (!header) num_invert_report_since_last_header++;
+}
+
+void HighsSimplexAnalysis::userInvertReport(const bool force) {
+  if (last_user_log_time < 0) {
+    const bool header = true;
+    userInvertReport(header, force);
+  }
+  userInvertReport(false, force);
+}
+
+void HighsSimplexAnalysis::userInvertReport(const bool header,
+                                            const bool force) {
+  const double highs_run_time = timer_->readRunHighsClock();
+  if (!force && highs_run_time < last_user_log_time + delta_user_log_time)
+    return;
+  analysis_log = std::unique_ptr<std::stringstream>(new std::stringstream());
+  reportIterationObjective(header);
+  reportInfeasibility(header);
+  reportRunTime(header, highs_run_time);
   highsLogUser(log_options, HighsLogType::kInfo, "%s\n",
                analysis_log->str().c_str());
-  if (!header) num_invert_report_since_last_header++;
+  if (!header) last_user_log_time = highs_run_time;
+  if (highs_run_time > 200 * delta_user_log_time) delta_user_log_time *= 10;
 }
 
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
@@ -1125,7 +1156,8 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
       if (entering_variable < 0) return;
     }
   }
-  reportAlgorithmPhaseIterationObjective(header);
+  reportAlgorithmPhase(header);
+  reportIterationObjective(header);
   if (analyse_simplex_data) {
     reportDensity(header);
     reportIterationData(header);
@@ -1135,10 +1167,9 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
   if (!header) num_iteration_report_since_last_header++;
 }
 
-void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
-    const bool header) {
+void HighsSimplexAnalysis::reportAlgorithmPhase(const bool header) {
   if (header) {
-    *analysis_log << "       Iteration        Objective    ";
+    *analysis_log << "       ";
   } else {
     std::string algorithm_name;
     if (dualAlgorithm()) {
@@ -1146,10 +1177,18 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
     } else {
       algorithm_name = "Pr";
     }
-    *analysis_log << highsFormatToString(
-        "%2sPh%1" HIGHSINT_FORMAT " %10" HIGHSINT_FORMAT " %20.10e",
-        algorithm_name.c_str(), solve_phase, simplex_iteration_count,
-        objective_value);
+    *analysis_log << highsFormatToString("%2sPh%1" HIGHSINT_FORMAT,
+                                         algorithm_name.c_str(), solve_phase);
+  }
+}
+
+void HighsSimplexAnalysis::reportIterationObjective(const bool header) {
+  if (header) {
+    *analysis_log << "  Iteration        Objective    ";
+  } else {
+    *analysis_log << highsFormatToString(" %10" HIGHSINT_FORMAT " %20.10e",
+                                         simplex_iteration_count,
+                                         objective_value);
   }
 }
 
@@ -1294,6 +1333,12 @@ void HighsSimplexAnalysis::reportIterationData(const bool header) {
         entering_variable, leaving_variable, pivotal_row_index, dual_step,
         primal_step);
   }
+}
+
+void HighsSimplexAnalysis::reportRunTime(const bool header,
+                                         const double run_time) {
+  if (header) return;
+  *analysis_log << highsFormatToString(" %ds", (int)run_time);
 }
 
 HighsInt HighsSimplexAnalysis::intLog10(const double v) {

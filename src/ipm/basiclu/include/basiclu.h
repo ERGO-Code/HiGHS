@@ -22,7 +22,7 @@ extern "C"{
 #include <limits.h>
 #include <stdint.h>
 #include "HConfig.h"
-
+  
 #ifdef HIGHSINT64
 typedef int64_t lu_int;
 #define LU_INT_MAX INT64_MAX

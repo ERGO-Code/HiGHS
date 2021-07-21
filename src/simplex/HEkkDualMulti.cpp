@@ -54,7 +54,7 @@ void HEkkDual::iterateMulti() {
     if (multi_nFinish) {
       majorUpdate();
     } else {
-      highsLogUser(
+      highsLogDev(
           ekk_instance_.options_.log_options, HighsLogType::kWarning,
           "PAMI skipping majorUpdate() due to multi_nFinish = %" HIGHSINT_FORMAT
           "; "

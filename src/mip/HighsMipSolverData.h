@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
@@ -29,11 +30,13 @@
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "presolve/HighsPostsolveStack.h"
+#include "presolve/HighsSymmetry.h"
 #include "util/HighsTimer.h"
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
   HighsCutPool cutpool;
+  HighsConflictPool conflictPool;
   HighsDomain domain;
   HighsLpRelaxation lp;
   HighsPseudocost pseudocost;
@@ -46,7 +49,9 @@ struct HighsMipSolverData {
   bool cliquesExtracted;
   bool rowMatrixSet;
   bool analyticCenterComputed;
+  bool detectSymmetries;
   HighsInt numRestarts;
+  HighsInt numRestartsRoot;
 
   std::vector<HighsInt> ARstart_;
   std::vector<HighsInt> ARindex_;
@@ -59,6 +64,9 @@ struct HighsMipSolverData {
   std::vector<HighsInt> implint_cols;
   std::vector<HighsInt> integral_cols;
   std::vector<HighsInt> continuous_cols;
+
+  HighsSymmetries symmetries;
+  std::shared_ptr<const StabilizerOrbits> globalOrbits;
 
   double objintscale;
 
@@ -101,6 +109,8 @@ struct HighsMipSolverData {
       : mipsolver(mipsolver),
         cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
                 mipsolver.options_mip_->mip_pool_soft_limit),
+        conflictPool(5 * mipsolver.options_mip_->mip_pool_age_limit,
+                     mipsolver.options_mip_->mip_pool_soft_limit),
         domain(mipsolver),
         lp(mipsolver),
         pseudocost(),
@@ -109,6 +119,7 @@ struct HighsMipSolverData {
         heuristics(mipsolver),
         debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
+    domain.addConflictPool(conflictPool);
   }
 
   bool moreHeuristicsAllowed();
@@ -122,9 +133,11 @@ struct HighsMipSolverData {
   double transformNewIncumbent(const std::vector<double>& sol);
   double percentageInactiveIntegers() const;
   void performRestart();
+  bool checkSolution(const std::vector<double>& solution);
   bool trySolution(const std::vector<double>& solution, char source = ' ');
   bool rootSeparationRound(HighsSeparation& sepa, HighsInt& ncuts,
                            HighsLpRelaxation::Status& status);
+  HighsLpRelaxation::Status evaluateRootLp();
   void evaluateRootNode();
   bool addIncumbent(const std::vector<double>& sol, double solobj, char source);
 

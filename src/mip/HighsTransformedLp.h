@@ -34,7 +34,6 @@ class HighsLpRelaxation;
 class HighsTransformedLp {
  private:
   const HighsLpRelaxation& lprelaxation;
-  HighsImplications& implications;
 
   std::vector<const std::pair<const HighsInt, HighsImplications::VarBound>*>
       bestVub;

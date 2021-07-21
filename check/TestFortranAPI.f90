@@ -1,13 +1,15 @@
 program fortrantest
   use, intrinsic :: iso_c_binding
-  use highs_lp_solver
+  use highs_fortran_api
   implicit none
 
 
   integer ( c_int ), parameter :: n = 2
   integer ( c_int ), parameter :: m = 2
   integer ( c_int ), parameter :: nz = 4
-!  integer ( c_int ), parameter :: rowwise = 0
+  integer ( c_int ), parameter :: aformat_colwise = 1
+  integer ( c_int ), parameter :: sense = 1
+  real ( c_double ), parameter :: offset = 0
 
   real ( c_double ) cc(n)
   real ( c_double ) cl(n)
@@ -24,9 +26,8 @@ program fortrantest
   real ( c_double ) rd(m)
   integer ( c_int ) cbs(n)
   integer ( c_int ) rbs(m)
-  integer ( c_int ) ms
+  integer ms
 
-  type (c_ptr) highs
   integer ( c_int ) status
 
   cc(1) = 1
@@ -51,7 +52,12 @@ program fortrantest
   av(3) = 3
   av(4) = 0.2
 
-  status = Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs, ms )
+  status = Highs_lpCall( n, m, nz,&
+       aformat_colwise, sense, offset,&
+       cc, cl, cu, rl, ru,&
+       as, ai, av,&
+       cv, cd, rv, rd, &
+       cbs, rbs, ms )
   
   write (*, *) status
   write (*, *) ms
