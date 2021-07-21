@@ -26,7 +26,6 @@ const double inverse_large_error = 1e-12;
 const double inverse_excessive_error = sqrt(inverse_large_error);
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
-                                  const HFactor& factor,
                                   const HSimplexNla& simplex_nla,
                                   const bool force) {
   if (options.highs_debug_level < kHighsDebugLevelCostly && !force)
@@ -37,6 +36,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
 
   HighsDebugStatus return_status = HighsDebugStatus::kNotChecked;
   return_status = HighsDebugStatus::kOk;
+  const HFactor& factor = simplex_nla.factor_;
   const HighsInt numRow = factor.numRow;
   const HighsInt numCol = factor.numCol;
   const HighsInt* Astart = factor.getAstart();
@@ -44,7 +44,6 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   const double* Avalue = factor.getAvalue();
   const HighsInt* baseIndex = factor.getBaseIndex();
 
-  printf("Calling debugCheckInvert\n");
   HVector column;
   HVector rhs;
   column.setup(numRow);

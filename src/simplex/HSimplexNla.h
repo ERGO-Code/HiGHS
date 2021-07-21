@@ -47,7 +47,7 @@ class HSimplexNla {
 
   HighsInt build_synthetic_tick_;
 
- private:
+  // private:
   // References:
   //
   // Pointers:

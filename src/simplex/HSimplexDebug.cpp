@@ -85,17 +85,14 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (status.has_invert) {
-    // JH_factor_use
-        const bool invert_ok =
-            debugDebugToHighsStatus(debugCheckInvert(
-                options, factor, simplex_nla)) != HighsStatus::kError;
-        if (!invert_ok) {
-          highsLogDev(
-              options.log_options, HighsLogType::kError,
-              "Supposed to be a Simplex basis inverse, but too inaccurate\n");
-          assert(invert_ok);
-          return_status = HighsDebugStatus::kLogicalError;
-        }
+    const bool invert_ok =
+      debugDebugToHighsStatus(debugCheckInvert(options, simplex_nla)) != HighsStatus::kError;
+    if (!invert_ok) {
+      highsLogDev(options.log_options, HighsLogType::kError,
+		  "Supposed to be a simplex basis inverse, but too inaccurate\n");
+      assert(invert_ok);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
   }
   return return_status;
 }
