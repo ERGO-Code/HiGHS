@@ -216,6 +216,10 @@ class HPresolve {
   void transformColumn(HighsPostsolveStack& postSolveStack, HighsInt col,
                        double scale, double constant);
 
+  void scaleRow(HighsInt row, double scale, bool integral = false);
+
+  void scaleStoredRow(HighsInt row, double scale, bool integral = false);
+
   void substitute(HighsInt row, HighsInt col, double rhs);
 
   void changeColUpper(HighsInt col, double newUpper);
