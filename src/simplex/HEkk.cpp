@@ -872,23 +872,23 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
-    factor_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0], &lp_.Aindex_[0],
-                  &lp_.Avalue_[0], &basis_.basicIndex_[0],
-                  info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
-                  options_.highs_debug_level, options_.output_flag,
-                  options_.log_file_stream, options_.log_to_console,
-                  options_.log_dev_level);
-    nla_basis_ = basis_;
+        nla_basis_ = basis_;
+        factor_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0], &lp_.Aindex_[0],
+                      &lp_.Avalue_[0], &nla_basis_.basicIndex_[0],
+                      info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
+                      options_.highs_debug_level, options_.output_flag,
+                      options_.log_file_stream, options_.log_to_console,
+                      options_.log_dev_level);
     simplex_nla_.setup(lp_.numCol_, lp_.numRow_, &lp_.Astart_[0],
                        &lp_.Aindex_[0], &lp_.Avalue_[0],
-                       &nla_basis_.basicIndex_[0], info_.factor_pivot_threshold,
+                       &basis_.basicIndex_[0], info_.factor_pivot_threshold,
                        &options_, &timer_, &analysis_);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
-  const HighsInt rank_deficiency = factor_.build(NULL);
-  const HighsInt rank_deficiency_nla = simplex_nla_.invert();
-  assert(rank_deficiency == rank_deficiency_nla);
+  const HighsInt rank_deficiency_nla = factor_.build(NULL);
+  const HighsInt rank_deficiency = simplex_nla_.invert();
+  //  assert(rank_deficiency == rank_deficiency_nla);
   if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
