@@ -17,7 +17,6 @@
 #define SIMPLEX_HFACTORDEBUG_H_
 
 #include "lp_data/HighsOptions.h"
-//#include "simplex/HFactor.h"
 #include "simplex/HSimplexNla.h"
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
