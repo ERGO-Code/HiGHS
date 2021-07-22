@@ -1804,21 +1804,34 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     // different rows so that it is equal to the largest integer coefficient
     double minScale = kHighsInf;
     double maxScale = -kHighsInf;
+    double logDiffAvg = 0;
+    HighsInt count = 0;
 
     for (const HighsSliceNonzero& nonz : getColumnVector(i)) {
       double maxAbsIntVal = rowMaxAbsIntVals[nonz.index()];
-      if (maxAbsIntVal == 0) continue;
+      if (maxAbsIntVal == 0.0) continue;
 
-      double thisScale = maxAbsIntVal / std::abs(nonz.value());
-      minScale = std::min(thisScale, minScale);
-      maxScale = std::max(thisScale, maxScale);
+      ++count;
+      logDiffAvg +=
+          (std::log2(maxAbsIntVal / std::abs(nonz.value())) - logDiffAvg) /
+          count;
+
+      // double thisScale = maxAbsIntVal / std::abs(nonz.value());
+      // minScale = std::min(thisScale, minScale);
+      // maxScale = std::max(thisScale, maxScale);
     }
 
-    if (minScale == kHighsInf) continue;
+    logDiffAvg = std::round(logDiffAvg);
+    if (logDiffAvg == 0.0) continue;
 
-    // scale the column by the geometric mean of the smallest and largest scale
-    double scale = std::sqrt(minScale * maxScale);
+    // minimize the squared sum of log distances to scale the continuous column
+    // close to the maximal absolute integer coefficient in its rows
+    // I.e. minimize over x, sum_i (x - c_i)^2, where c_i is the logdistance for
+    // the ith constraint. differentiating sum_i (x - c_i)^2 yields   sum_i 2x-
+    // 2c_i = 2x*m - 2 sum_i c_i setting the derivative to zero yields x = (1/m)
+    // * sum_i c_i, i.e. the arithmetic mean of log distances.
 
+    double scale = std::exp2(logDiffAvg);
     transformColumn(postSolveStack, i, scale, 0.0);
   }
 
@@ -1844,11 +1857,10 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
 
     assert(maxAbsVal != 0.0);
 
-    double scale = 1.0 / maxAbsVal;
+    double scale = std::exp2(std::round(-std::log2(maxAbsVal)));
+    if (scale == 1.0) continue;
 
     if (model->rowUpper_[i] == kHighsInf) scale = -scale;
-
-    if (scale == 1.0) continue;
 
     scaleStoredRow(i, scale);
   }
