@@ -782,7 +782,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     ub = upper_bound + offset;
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
-    gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
+    gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
