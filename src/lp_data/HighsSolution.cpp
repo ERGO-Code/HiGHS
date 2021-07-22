@@ -31,15 +31,42 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsSolutionParams& solution_params) {
   HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+  getKktFailures(model, solution, basis, solution_params, primal_dual_errors);
 }
 
-void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
+                    HighsSolutionParams& solution_params,
+                    HighsPrimalDualErrors& primal_dual_errors,
+                    const bool get_residuals) {
+  vector<double> gradient;
+  model.objectiveGradient(solution.col_value, gradient);
+  getKktFailures(model.lp_, gradient, solution, basis, solution_params,
+                 primal_dual_errors, get_residuals);
+}
+
+void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                      const HighsBasis& basis,
+                      HighsSolutionParams& solution_params) {
+  HighsPrimalDualErrors primal_dual_errors;
+  getLpKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+}
+
+void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+                      const HighsBasis& basis,
+                      HighsSolutionParams& solution_params,
+                      HighsPrimalDualErrors& primal_dual_errors,
+                      const bool get_residuals) {
+  getKktFailures(lp, lp.colCost_, solution, basis, solution_params,
+                 primal_dual_errors, get_residuals);
+}
+
+void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
+                    const HighsSolution& solution, const HighsBasis& basis,
                     HighsSolutionParams& solution_params,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
@@ -237,7 +264,8 @@ void getKktFailures(const HighsLp& lp, const HighsSolution& solution,
     }
     if (iVar < lp.numCol_ && get_residuals) {
       HighsInt iCol = iVar;
-      if (have_dual_solution) dual_activities[iCol] = lp.colCost_[iCol];
+      if (have_dual_solution)
+        dual_activities[iCol] = gradient[iCol];  // lp.colCost_[iCol];
       for (HighsInt el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
         HighsInt iRow = lp.Aindex_[el];
         double Avalue = lp.Avalue_[el];
@@ -876,17 +904,19 @@ void copyFromInfo(HighsSolutionParams& solution_params,
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   bool consistent = true;
   consistent = isBasisRightSize(lp, basis) && consistent;
-  HighsInt num_basic_variables = 0;
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
-      num_basic_variables++;
+  if (consistent) {
+    HighsInt num_basic_variables = 0;
+    for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+      if (basis.col_status[iCol] == HighsBasisStatus::kBasic)
+        num_basic_variables++;
+    }
+    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+      if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
+        num_basic_variables++;
+    }
+    bool right_num_basic_variables = num_basic_variables == lp.numRow_;
+    consistent = right_num_basic_variables && consistent;
   }
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (basis.row_status[iRow] == HighsBasisStatus::kBasic)
-      num_basic_variables++;
-  }
-  bool right_num_basic_variables = num_basic_variables == lp.numRow_;
-  consistent = right_num_basic_variables && consistent;
   return consistent;
 }
 

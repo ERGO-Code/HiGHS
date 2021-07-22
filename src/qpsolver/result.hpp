@@ -3,21 +3,15 @@
 
 #include "vector.hpp"
 
-enum class ProblemStatus {
-   INDETERMINED,
-   OPTIMAL,
-   UNBOUNDED,
-   INFEASIBLE
-};
+enum class ProblemStatus { INDETERMINED, OPTIMAL, UNBOUNDED, INFEASIBLE };
 
 struct Result {
-   ProblemStatus status;
-   Vector primalsolution;
-   Vector dualsolution;
+  ProblemStatus status;
+  Vector primalsolution;
+  Vector dualsolution;
 
-   Result(HighsInt num_var, HighsInt num_con) : primalsolution(num_var), dualsolution(num_con) {
-      
-   }
+  Result(HighsInt num_var, HighsInt num_con)
+      : primalsolution(num_var), dualsolution(num_con) {}
 };
 
 #endif

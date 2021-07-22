@@ -18,7 +18,7 @@
 
 HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
                                        HighsImplications& implications)
-    : lprelaxation(lprelaxation), implications(implications) {
+    : lprelaxation(lprelaxation) {
   assert(lprelaxation.scaledOptimal(lprelaxation.getStatus()));
   const HighsMipSolver& mipsolver = implications.mipsolver;
   const HighsSolution& lpSolution = lprelaxation.getLpSolver().getSolution();
@@ -117,7 +117,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     double bestub = mipsolver.mipdata_->domain.colUpper_[col];
     double bestlb = mipsolver.mipdata_->domain.colLower_[col];
-    if (bestub - bestlb < 100.5) {
+    // todo: use binary variable bounds on integers?
+    if (true || bestub - bestlb < 100.5) {
       if (bestlb == bestub) continue;
       lbDist[col] = lpSolution.col_value[col] - bestlb;
       if (lbDist[col] <= mipsolver.mipdata_->feastol) lbDist[col] = 0.0;
@@ -356,7 +357,6 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     vectorsum.cleanup(IsZero);
     if (maxError > mip.mipdata_->feastol) return false;
 
-    vectorsum.sort();
     inds = vectorsum.getNonzeros();
     numNz = inds.size();
 
@@ -564,7 +564,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
     }
     rhs = double(tmpRhs);
   }
-  vectorsum.sort();
+
   inds = vectorsum.getNonzeros();
   numNz = inds.size();
   vals.resize(numNz);

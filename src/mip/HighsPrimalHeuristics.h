@@ -47,6 +47,8 @@ class HighsPrimalHeuristics {
 
   double determineTargetFixingRate();
 
+  void rootReducedCost();
+
   void RENS(const std::vector<double>& relaxationsol);
 
   void RINS(const std::vector<double>& relaxationsol);

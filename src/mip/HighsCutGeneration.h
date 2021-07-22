@@ -54,6 +54,10 @@ class HighsCutGeneration {
   bool integralSupport;
   bool integralCoefficients;
   HighsInt rowlen;
+  double initialScale;
+
+  std::vector<HighsInt> integerinds;
+  std::vector<double> deltas;
 
   bool determineCover(bool lpSol = true);
 
@@ -63,7 +67,8 @@ class HighsCutGeneration {
 
   bool separateLiftedMixedIntegerCover();
 
-  bool cmirCutGenerationHeuristic();
+  bool cmirCutGenerationHeuristic(double minEfficacy,
+                                  bool onlyInitialCMIRScale = false);
 
   bool postprocessCut();
 
@@ -76,7 +81,8 @@ class HighsCutGeneration {
 
   /// separates the LP solution for the given single row relaxation
   bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
-                   std::vector<double>& vals, double& rhs);
+                   std::vector<double>& vals, double& rhs,
+                   bool onlyInitialCMIRScale = false);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain

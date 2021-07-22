@@ -178,6 +178,13 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     HighsInt currPathLen = 1;
+    const double maxWeight = 1. / mip.mipdata_->feastol;
+    const double minWeight = mip.mipdata_->feastol;
+
+    auto checkWeight = [&](double w) {
+      w = std::abs(w);
+      return w <= maxWeight && w >= minWeight;
+    };
 
     while (currPathLen != maxPathLen) {
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
@@ -194,7 +201,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       for (HighsInt j = 0; j != baseRowLen; ++j) {
         HighsInt col = baseRowInds[j];
-        if (transLp.boundDistance(col) == 0.0 ||
+        if (col >= lp.numCol_ || transLp.boundDistance(col) == 0.0 ||
             lpRelaxation.isColIntegral(col))
           continue;
 
@@ -254,13 +261,59 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         HighsInt row = inArcRows[inArcRow].first;
         double weight = -outArcColVal / inArcRows[inArcRow].second;
 
+        if (!checkWeight(weight)) {
+          bool success = false;
+          for (HighsInt nextRow = inArcRow + 1;
+               nextRow < colInArcs[bestOutArcCol].second && !success;
+               ++nextRow) {
+            row = inArcRows[nextRow].first;
+            weight = -outArcColVal / inArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          for (HighsInt nextRow = colInArcs[bestOutArcCol].first;
+               nextRow < inArcRow && !success; ++nextRow) {
+            row = inArcRows[nextRow].first;
+            weight = -outArcColVal / inArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          if (!success) {
+            if (bestInArcCol == -1)
+              break;
+            else
+              goto check_out_arc_col;
+          }
+        }
+
         lpAggregator.addRow(row, weight);
       } else {
+      check_out_arc_col:
         HighsInt outArcRow = randgen.integer(colOutArcs[bestInArcCol].first,
                                              colOutArcs[bestInArcCol].second);
 
         HighsInt row = outArcRows[outArcRow].first;
         double weight = -inArcColVal / outArcRows[outArcRow].second;
+
+        if (!checkWeight(weight)) {
+          bool success = false;
+          for (HighsInt nextRow = outArcRow + 1;
+               nextRow < colOutArcs[bestInArcCol].second && !success;
+               ++nextRow) {
+            row = outArcRows[nextRow].first;
+            weight = -inArcColVal / outArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          for (HighsInt nextRow = colOutArcs[bestInArcCol].first;
+               nextRow < outArcRow && !success; ++nextRow) {
+            row = outArcRows[nextRow].first;
+            weight = -inArcColVal / outArcRows[nextRow].second;
+            success = checkWeight(weight);
+          }
+
+          if (!success) break;
+        }
 
         lpAggregator.addRow(row, weight);
       }

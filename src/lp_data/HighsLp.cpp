@@ -17,7 +17,7 @@
 
 #include <cassert>
 
-bool HighsLp::isMip() {
+bool HighsLp::isMip() const {
   HighsInt integrality_size = this->integrality_.size();
   if (integrality_size) {
     assert(integrality_size == this->numCol_);
@@ -34,7 +34,7 @@ bool HighsLp::operator==(const HighsLp& lp) {
   return equal;
 }
 
-bool HighsLp::equalButForNames(const HighsLp& lp) {
+bool HighsLp::equalButForNames(const HighsLp& lp) const {
   bool equal = true;
   equal = this->numCol_ == lp.numCol_ && equal;
   equal = this->numRow_ == lp.numRow_ && equal;
@@ -49,8 +49,16 @@ bool HighsLp::equalButForNames(const HighsLp& lp) {
   equal = this->Astart_ == lp.Astart_ && equal;
   equal = this->Aindex_ == lp.Aindex_ && equal;
   equal = this->Avalue_ == lp.Avalue_ && equal;
-  equal = this->orientation_ == lp.orientation_ && equal;
+  equal = this->format_ == lp.format_ && equal;
   return equal;
+}
+
+double HighsLp::objectiveValue(const std::vector<double>& solution) const {
+  assert((int)solution.size() >= this->numCol_);
+  double objective_function_value = this->offset_;
+  for (HighsInt iCol = 0; iCol < this->numCol_; iCol++)
+    objective_function_value += this->colCost_[iCol] * solution[iCol];
+  return objective_function_value;
 }
 
 void HighsLp::clear() {
@@ -68,7 +76,7 @@ void HighsLp::clear() {
 
   this->sense_ = ObjSense::kMinimize;
   this->offset_ = 0;
-  this->orientation_ = MatrixOrientation::kNone;
+  this->format_ = MatrixFormat::kNone;
 
   this->model_name_ = "";
 

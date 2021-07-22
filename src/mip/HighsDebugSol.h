@@ -20,21 +20,22 @@
 class HighsDomain;
 class HighsMipSolver;
 
+#include <set>
+#include <vector>
+
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomainChange.h"
 
 #ifdef HIGHS_DEBUGSOL
 
-#include <set>
 #include <unordered_map>
-#include <vector>
 
 struct HighsDebugSol {
   const HighsMipSolver* mipsolver;
   double debugSolObjective;
   std::vector<double> debugSolution;
   bool debugSolActive;
-  std::unordered_map<const HighsDomain*, std::set<HighsDomainChange>>
+  std::unordered_map<const HighsDomain*, std::multiset<HighsDomainChange>>
       conflictingBounds;
 
   HighsDebugSol(HighsMipSolver& mipsolver);
@@ -42,6 +43,8 @@ struct HighsDebugSol {
   void newIncumbentFound();
 
   void activate();
+
+  void shrink(const std::vector<HighsInt>& newColIndex);
 
   void registerDomain(const HighsDomain& domain);
 
@@ -69,6 +72,14 @@ struct HighsDebugSol {
 
   void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
                 double vlbconstant) const;
+
+  void checkConflictReasonFrontier(
+      const std::set<HighsInt>& reasonSideFrontier,
+      const std::vector<HighsDomainChange>& domchgstack) const;
+
+  void checkConflictReconvergenceFrontier(
+      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::vector<HighsDomainChange>& domchgstack) const;
 };
 
 #else
@@ -77,7 +88,9 @@ struct HighsDebugSol {
 
   void newIncumbentFound() const {}
 
-  void activate() {}
+  void activate() const {}
+
+  void shrink(const std::vector<HighsInt>& newColIndex) const {}
 
   void registerDomain(const HighsDomain& domain) const {}
 
@@ -86,17 +99,17 @@ struct HighsDebugSol {
                         bool branching = false) const {}
 
   void boundChangeRemoved(const HighsDomain& domain,
-                          const HighsDomainChange& domchg) {}
+                          const HighsDomainChange& domchg) const {}
 
-  void resetDomain(const HighsDomain& domain) {}
+  void resetDomain(const HighsDomain& domain) const {}
 
-  void nodePruned(const HighsDomain& localdomain) {}
+  void nodePruned(const HighsDomain& localdomain) const {}
 
   void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double rhs) const {}
 
   void checkRow(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
-                double Rlower, double Rupper) {}
+                double Rlower, double Rupper) const {}
 
   void checkClique(const HighsCliqueTable::CliqueVar* clq,
                    HighsInt clqlen) const {}
@@ -106,6 +119,14 @@ struct HighsDebugSol {
 
   void checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
                 double vlbconstant) const {}
+
+  void checkConflictReasonFrontier(
+      const std::set<HighsInt>& reasonSideFrontier,
+      const std::vector<HighsDomainChange>& domchgstack) const {}
+
+  void checkConflictReconvergenceFrontier(
+      const std::set<HighsInt>& reconvergenceFrontier, HighsInt reconvDomchgPos,
+      const std::vector<HighsDomainChange>& domchgstack) const {}
 };
 #endif
 
