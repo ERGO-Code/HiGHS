@@ -222,19 +222,19 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records);
 
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
-                               const bool report_only_non_default_values = true,
+                               const bool report_only_deviations = false,
                                const bool html = false);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_non_default_values = true,
+                   const bool report_only_deviations = true,
                    const bool html = false);
 void reportOption(FILE* file, const OptionRecordBool& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 void reportOption(FILE* file, const OptionRecordInt& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 void reportOption(FILE* file, const OptionRecordDouble& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 void reportOption(FILE* file, const OptionRecordString& option,
-                  const bool report_only_non_default_values, const bool html);
+                  const bool report_only_deviations, const bool html);
 
 const string kSimplexString = "simplex";
 const string kIpmString = "ipm";

@@ -3,24 +3,23 @@
 
 #include "basis.hpp"
 #include "eventhandler.hpp"
+#include "instance.hpp"
+#include "nullspace.hpp"
+#include "factor.hpp"
 #include "runtime.hpp"
 
-#include "redhes/factor.hpp"
-#include "nullspace.hpp"
-
-#include "instance.hpp"
-
 struct Solver {
-   Solver(Runtime& rt);
-   
-   void solve(const Vector& x0, const Vector& ra, Basis& b0);
+  Solver(Runtime& rt);
 
-   void solve();
+  void solve(const Vector& x0, const Vector& ra, Basis& b0);
 
-private:
-   Runtime& runtime;
+  void solve();
 
-   void loginformation(Runtime& rt, Basis& basis, Nullspace& ns, NewCholeskyFactor& factor);
+ private:
+  Runtime& runtime;
+
+  void loginformation(Runtime& rt, Basis& basis, Nullspace& ns,
+                      NewCholeskyFactor& factor);
 };
 
 #endif

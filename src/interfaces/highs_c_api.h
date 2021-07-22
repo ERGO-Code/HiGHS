@@ -26,13 +26,13 @@ extern "C" {
  * @brief solves an LP using HiGHS
  */
 HighsInt Highs_lpCall(
-    const HighsInt numcol,   //!< number of columns
-    const HighsInt numrow,   //!< number of rows
-    const HighsInt numnz,    //!< number of entries in the constraint matrix
-    const HighsInt rowwise,  //!< whether the matrix is rowwise
-    const HighsInt sense,    //!< sense of the optimization
-    const double offset,     //!< objective constant
-    const double* colcost,   //!< array of length [numcol] with column costs
+    const HighsInt numcol,    //!< number of columns
+    const HighsInt numrow,    //!< number of rows
+    const HighsInt numnz,     //!< number of entries in the constraint matrix
+    const HighsInt a_format,  //!< format of the constraint matrix
+    const HighsInt sense,     //!< sense of the optimization
+    const double offset,      //!< objective constant
+    const double* colcost,    //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -60,13 +60,13 @@ HighsInt Highs_lpCall(
  * @brief solves a MIP using HiGHS
  */
 HighsInt Highs_mipCall(
-    const HighsInt numcol,   //!< number of columns
-    const HighsInt numrow,   //!< number of rows
-    const HighsInt numnz,    //!< number of entries in the constraint matrix
-    const HighsInt rowwise,  //!< whether the matrix is rowwise
-    const HighsInt sense,    //!< sense of the optimization
-    const double offset,     //!< objective constant
-    const double* colcost,   //!< array of length [numcol] with column costs
+    const HighsInt numcol,    //!< number of columns
+    const HighsInt numrow,    //!< number of rows
+    const HighsInt numnz,     //!< number of entries in the constraint matrix
+    const HighsInt a_format,  //!< format of the constraint matrix
+    const HighsInt sense,     //!< sense of the optimization
+    const double offset,      //!< objective constant
+    const double* colcost,    //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -84,7 +84,80 @@ HighsInt Highs_mipCall(
                        //!< variables are continuous (0) or integer (1)
     double* colvalue,  //!< array of length [numcol], filled with column values
     double* rowvalue,  //!< array of length [numrow], filled with row values
-    int* modelstatus   //!< status of the model will be saved here
+    HighsInt* modelstatus  //!< status of the model will be saved here
+);
+
+/*
+ * @brief solves a QP using HiGHS
+ */
+HighsInt Highs_qpCall(
+    const HighsInt numcol,    //!< number of columns
+    const HighsInt numrow,    //!< number of rows
+    const HighsInt numnz,     //!< number of entries in the constraint matrix
+    const HighsInt q_numnz,   //!< number of entries in the Hessian matrix
+    const HighsInt a_format,  //!< format of the constraint matrix
+    const HighsInt q_format,  //!< format of the Hessian matrix
+    const HighsInt sense,     //!< sense of the optimization
+    const double offset,      //!< objective constant
+    const double* colcost,    //!< array of length [numcol] with column costs
+    const double*
+        collower,  //!< array of length [numcol] with lower column bounds
+    const double*
+        colupper,  //!< array of length [numcol] with upper column bounds
+    const double* rowlower,  //!< array of length [numrow] with lower row bounds
+    const double* rowupper,  //!< array of length [numrow] with upper row bounds
+    const HighsInt*
+        astart,  //!< array of length [numcol+1] with column start indices
+    const HighsInt*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    const double*
+        avalue,  //!< array of length [numnz] with value of matrix entries
+    const HighsInt* qstart,  //!< array of length [numcol+1] with Hessian column
+                             //!< start indices
+    const HighsInt* qindex,  //!< array of length [numnz] with row indices of
+                             //!< Hessian matrix entries
+    const double* qvalue,    //!< array of length [numnz] with value of Hessian
+                             //!< matrix entries
+    double* colvalue,  //!< array of length [numcol], filled with column values
+    double* coldual,   //!< array of length [numcol], filled with column duals
+    double* rowvalue,  //!< array of length [numrow], filled with row values
+    double* rowdual,   //!< array of length [numrow], filled with row duals
+    HighsInt* colbasisstatus,  //!< array of length [numcol], filled with column
+                               //!< basis status
+    HighsInt* rowbasisstatus,  //!< array of length [numrow], filled with row
+                               //!< basis status
+    HighsInt* modelstatus      //!< status of the model will be saved here
+);
+
+/*
+ * @brief reads dimensions of an LP from an MPS file using HiGHS
+ */
+HighsInt Highs_lpDimMpsRead(
+    //    const char* filename,
+    HighsInt* numcol,  //!< number of columns
+    HighsInt* numrow,  //!< number of rows
+    HighsInt* numNz    //!< number of rows
+);
+
+/*
+ * @brief reads data for an LP from an MPS file using HiGHS - requires pointers
+ * to allocated memory
+ */
+HighsInt Highs_lpDataMpsRead(
+    //    const char* filename,
+    const HighsInt numcol,  //!< number of columns
+    const HighsInt numrow,  //!< number of rows
+    HighsInt* sense,        //!< sense of the optimization
+    double* offset,         //!< objective constant
+    double* colcost,        //!< array of length [numcol] with column costs
+    double* collower,  //!< array of length [numcol] with lower column bounds
+    double* colupper,  //!< array of length [numcol] with upper column bounds
+    double* rowlower,  //!< array of length [numrow] with lower row bounds
+    double* rowupper,  //!< array of length [numrow] with upper row bounds
+    HighsInt* astart,  //!< array of length [numcol+1] with column start indices
+    HighsInt*
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    double* avalue  //!< array of length [numnz] with value of matrix entries
 );
 
 /*
@@ -140,13 +213,13 @@ HighsInt Highs_writeSolutionPretty(void* highs,
  */
 HighsInt Highs_passLp(
     void* highs,
-    const HighsInt numcol,   //!< number of columns
-    const HighsInt numrow,   //!< number of rows
-    const HighsInt numnz,    //!< number of entries in the constraint matrix
-    const HighsInt rowwise,  //!< whether the matrix is rowwise
-    const HighsInt sense,    //!< sense of the optimization
-    const double offset,     //!< objective constant
-    const double* colcost,   //!< array of length [numcol] with column costs
+    const HighsInt numcol,    //!< number of columns
+    const HighsInt numrow,    //!< number of rows
+    const HighsInt numnz,     //!< number of entries in the constraint matrix
+    const HighsInt a_format,  //!< format of the constraint matrix
+    const HighsInt sense,     //!< sense of the optimization
+    const double offset,      //!< objective constant
+    const double* colcost,    //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -166,13 +239,13 @@ HighsInt Highs_passLp(
  */
 HighsInt Highs_passMip(
     void* highs,
-    const HighsInt numcol,   //!< number of columns
-    const HighsInt numrow,   //!< number of rows
-    const HighsInt numnz,    //!< number of entries in the constraint matrix
-    const HighsInt rowwise,  //!< whether the matrix is rowwise
-    const HighsInt sense,    //!< sense of the optimization
-    const double offset,     //!< objective constant
-    const double* colcost,   //!< array of length [numcol] with column costs
+    const HighsInt numcol,    //!< number of columns
+    const HighsInt numrow,    //!< number of rows
+    const HighsInt numnz,     //!< number of entries in the constraint matrix
+    const HighsInt a_format,  //!< format of the constraint matrix
+    const HighsInt sense,     //!< sense of the optimization
+    const double offset,      //!< objective constant
+    const double* colcost,    //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -195,14 +268,15 @@ HighsInt Highs_passMip(
  */
 HighsInt Highs_passModel(
     void* highs,
-    const HighsInt numcol,  //!< number of columns
-    const HighsInt numrow,  //!< number of rows
-    const HighsInt numnz,   //!< number of entries in the constraint matrix
-    const HighsInt hessian_num_nz,  //!< number of nonzeros in Hessian
-    const HighsInt rowwise,         //!< whether the matrix is rowwise
-    const HighsInt sense,           //!< sense of the optimization
-    const double offset,            //!< objective constant
-    const double* colcost,  //!< array of length [numcol] with column costs
+    const HighsInt numcol,    //!< number of columns
+    const HighsInt numrow,    //!< number of rows
+    const HighsInt numnz,     //!< number of entries in the constraint matrix
+    const HighsInt q_num_nz,  //!< number of nonzeros in Hessian
+    const HighsInt a_format,  //!< format of the constraint matrix
+    const HighsInt q_format,  //!< format of the Hessian matrix
+    const HighsInt sense,     //!< sense of the optimization
+    const double offset,      //!< objective constant
+    const double* colcost,    //!< array of length [numcol] with column costs
     const double*
         collower,  //!< array of length [numcol] with lower column bounds
     const double*
@@ -217,16 +291,23 @@ HighsInt Highs_passModel(
         avalue,  //!< array of length [numnz] with value of matrix entries
     const HighsInt* qstart,  //!< array of length [numcol] with Hessian start
                              //!< indices - or NULL if model is linear
-    const HighsInt*
-        qindex,  //!< array of length [hessian_num_nz] with indices of Hessian
-                 //!< entries - or NULL if model is linear
-    const double* qvalue,  //!< array of length [hessian_num_nz] with values of
-                           //!< Hessian entries - or NULL if model is linear
+    const HighsInt* qindex,  //!< array of length [q_num_nz] with indices of
+                             //!< Hessian entries - or NULL if model is linear
+    const double* qvalue,    //!< array of length [q_num_nz] with values of
+                             //!< Hessian entries - or NULL if model is linear
     const HighsInt*
         integrality  //!< array of length [numcol] indicating whether
                      //!< variables are continuous (0) or integer (1) - or NULL
                      //!< if model is continuous
 );
+
+/*
+ * @brief pass a hessian to HiGHS
+ */
+HighsInt Highs_passHessian(void* highs, const HighsInt dim,
+                           const HighsInt num_nz, const HighsInt format,
+                           const HighsInt* start, const HighsInt* index,
+                           const double* value);
 
 HighsInt Highs_setBoolOptionValue(void* highs,
                                   const char* option,   //!< name of the option
@@ -286,6 +367,10 @@ HighsInt Highs_getOptionType(void* highs,
  * @brief
  */
 HighsInt Highs_resetOptions(void* highs);
+
+HighsInt Highs_writeOptions(void* highs, const char* filename);
+
+HighsInt Highs_writeOptionsDeviations(void* highs, const char* filename);
 
 /*
  * @brief
@@ -715,6 +800,12 @@ HighsInt Highs_changeCoeff(
  * @brief Get the objective sense
  */
 HighsInt Highs_getObjectiveSense(void* highs, HighsInt* sense);
+
+/**
+ * @brief Get the objective offset
+ */
+HighsInt Highs_getObjectiveOffset(void* highs, double* offset);
+
 /**
  * @brief Get multiple columns from the model given by an interval
  */
@@ -935,8 +1026,9 @@ HighsInt Highs_getNumNz(void* highs);
  */
 HighsInt Highs_getHessianNumNz(void* highs);
 
-HighsInt Highs_getModel(void* highs, const HighsInt orientation,
-                        HighsInt* numcol, HighsInt* numrow, HighsInt* numnz,
+HighsInt Highs_getModel(void* highs, const HighsInt a_format,
+                        const HighsInt q_format, HighsInt* numcol,
+                        HighsInt* numrow, HighsInt* numnz,
                         HighsInt* hessian_num_nz, HighsInt* sense,
                         double* offset, double* colcost, double* collower,
                         double* colupper, double* rowlower, double* rowupper,

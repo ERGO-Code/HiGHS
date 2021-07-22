@@ -18,17 +18,21 @@
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "lp_data/HConst.h"
 
 class HighsHessian;
 
 class HighsHessian {
  public:
   HighsInt dim_ = 0;
+  HessianFormat format_ = HessianFormat::kTriangular;
   std::vector<HighsInt> q_start_;
   std::vector<HighsInt> q_index_;
   std::vector<double> q_value_;
   bool operator==(const HighsHessian& hessian);
+  void product(const std::vector<double>& solution,
+               std::vector<double>& product) const;
+  double objectiveValue(const std::vector<double>& solution) const;
   void clear();
   void print();
 };

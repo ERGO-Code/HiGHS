@@ -4,6 +4,7 @@
 
 const double inf = kHighsInf;
 const bool dev_run = false;
+const double double_equal_tolerance = 1e-5;
 
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
@@ -52,7 +53,7 @@ void distillationMIP(Highs& highs) {
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
   lp.Avalue_ = {2, 3, 2, 2, 4, 1};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
@@ -73,7 +74,7 @@ void rowlessMIP(Highs& highs) {
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {1, 1};
   lp.Astart_ = {0, 0, 0};
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
@@ -185,10 +186,6 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   lp.colLower_ = {-inf};
   lp.colUpper_ = {1.5};
   lp.integrality_ = {HighsVarType::kInteger};
-  lp.orientation_ = MatrixOrientation::kRowwise;
-  lp.Astart_.resize(1, 0);
-
-  double double_equal_tolerance = 1e-6;
   double required_objective_value = -2;
   double required_x0_value = 1;
 
@@ -214,14 +211,11 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
 
   HighsModelStatus model_status = highs.getModelStatus();
 
-  const bool issue0 = true;
-  if (issue0) {
-    REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(fabs(info.objective_function_value - required_objective_value) <
-            double_equal_tolerance);
-    REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
-            double_equal_tolerance);
-  }
+  REQUIRE(model_status == HighsModelStatus::kOptimal);
+  REQUIRE(fabs(info.objective_function_value - required_objective_value) <
+          double_equal_tolerance);
+  REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
+          double_equal_tolerance);
 
   highs.changeColBounds(0, -2, 2);
 

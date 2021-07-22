@@ -187,7 +187,7 @@ bool areLpRowEqual(const HighsInt num_row0, const double* rowLower0,
 bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
                 const double infinite_bound) {
   bool return_bool;
-  if (lp0.orientation_ != lp1.orientation_) return false;
+  if (lp0.format_ != lp1.format_) return false;
   if (lp0.numCol_ > 0 && lp1.numCol_ > 0) {
     HighsInt lp0_num_nz = lp0.Astart_[lp0.numCol_];
     HighsInt lp1_num_nz = lp1.Astart_[lp1.numCol_];
@@ -977,7 +977,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]) ==
           HighsStatus::kOk);
 
-  avgas_highs.setMatrixOrientation();
+  avgas_highs.setMatrixFormat();
   REQUIRE(
       areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound));
 

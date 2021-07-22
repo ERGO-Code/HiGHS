@@ -20,8 +20,6 @@ void printHighsVersionCopyright(const HighsLogOptions& log_options);
 void reportModelStatsOrError(const HighsLogOptions& log_options,
                              const HighsStatus read_status,
                              const HighsModel& model);
-void reportSolvedLpStats(const HighsLogOptions& log_options,
-                         const HighsStatus run_status, Highs& highs);
 
 int main(int argc, char** argv) {
   // Load user options.

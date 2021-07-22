@@ -142,7 +142,7 @@ set(sources
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/solver.cpp
-    qpsolver/ratiotest/ratiotest.cpp
+    qpsolver/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
@@ -559,7 +559,7 @@ target_sources(libhighs PRIVATE
     presolve/PresolveUtils.cpp
     qpsolver/basis.cpp
     qpsolver/solver.cpp
-    qpsolver/ratiotest/ratiotest.cpp
+    qpsolver/ratiotest.cpp
     simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp

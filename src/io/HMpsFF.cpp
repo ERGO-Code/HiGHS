@@ -36,7 +36,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
-  lp.orientation_ = MatrixOrientation::kColwise;
+  lp.format_ = MatrixFormat::kColwise;
   lp.Astart_ = std::move(Astart);
   lp.Aindex_ = std::move(Aindex);
   lp.Avalue_ = std::move(Avalue);
@@ -52,6 +52,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.integrality_ = std::move(col_integrality);
 
   hessian.dim_ = q_dim;
+  hessian.format_ = HessianFormat::kTriangular;
   hessian.q_start_ = std::move(q_start);
   hessian.q_index_ = std::move(q_index);
   hessian.q_value_ = std::move(q_value);
@@ -1252,15 +1253,17 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
       double coeff = atof(coeff_name.c_str());
       if (coeff) {
         if (qmatrix) {
-          // QMATRIX has the whole Hessian, so store the entry
-          q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
+          // QMATRIX has the whole Hessian, so store the entry if the
+          // entry is in the lower triangle
+          if (rowidx >= colidx)
+            q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
         } else {
           // QSECTION and QUADOBJ has the lower triangle of the
-          // Hessian, so also store the transpose entry if
-          // off-diagonal
+          // Hessian
           q_entries.push_back(std::make_tuple(rowidx, colidx, coeff));
-          if (rowidx != colidx)
-            q_entries.push_back(std::make_tuple(colidx, rowidx, coeff));
+          //          if (rowidx != colidx)
+          //            q_entries.push_back(std::make_tuple(colidx, rowidx,
+          //            coeff));
         }
       }
       end = end_coeff_name;
