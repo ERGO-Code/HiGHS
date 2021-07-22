@@ -95,10 +95,12 @@ void HighsNodeQueue::link_domchgs(HighsInt node) {
     HighsInt col = nodes[node].domchgstack[i].column;
     switch (nodes[node].domchgstack[i].boundtype) {
       case HighsBoundType::kLower:
-        nodes[node].domchglinks[i] = colLowerNodes[col].emplace(val, node);
+        nodes[node].domchglinks[i] =
+            colLowerNodes[col].emplace(val, node).first;
         break;
       case HighsBoundType::kUpper:
-        nodes[node].domchglinks[i] = colUpperNodes[col].emplace(val, node);
+        nodes[node].domchglinks[i] =
+            colUpperNodes[col].emplace(val, node).first;
     }
   }
 }
@@ -143,11 +145,13 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
                                        double feastol,
                                        HighsCDouble& treeweight) {
   std::set<HighsInt> delnodes;
-  auto prunestart = colLowerNodes[col].lower_bound(ub + feastol);
+  auto prunestart =
+      colLowerNodes[col].lower_bound(std::make_pair(ub + feastol, -1));
   for (auto it = prunestart; it != colLowerNodes[col].end(); ++it)
     delnodes.insert(it->second);
 
-  auto pruneend = colUpperNodes[col].upper_bound(lb - feastol);
+  auto pruneend =
+      colUpperNodes[col].upper_bound(std::make_pair(lb - feastol, kHighsIInf));
   for (auto it = colUpperNodes[col].begin(); it != pruneend; ++it)
     delnodes.insert(it->second);
 
@@ -204,6 +208,12 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
   return double(treeweight);
 }
 
+double HighsNodeQueue::pruneNode(HighsInt nodeId) {
+  double treeweight = std::pow(0.5, nodes[nodeId].depth - 1);
+  unlink(nodeId);
+  return treeweight;
+}
+
 double HighsNodeQueue::performBounding(double upper_limit) {
   if (lowerroot == -1) return 0.0;
 
@@ -253,7 +263,9 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 
       // release the memory for domain changes
       nodes[delroot].domchgstack.clear();
+      nodes[delroot].branchings.clear();
       nodes[delroot].domchgstack.shrink_to_fit();
+      nodes[delroot].branchings.shrink_to_fit();
 
       // remember the free position for reuse
       freeslots.push(delroot);
@@ -264,17 +276,20 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 }
 
 void HighsNodeQueue::emplaceNode(std::vector<HighsDomainChange>&& domchgs,
+                                 std::vector<HighsInt>&& branchPositions,
                                  double lower_bound, double estimate,
                                  HighsInt depth) {
   HighsInt pos;
 
   if (freeslots.empty()) {
     pos = nodes.size();
-    nodes.emplace_back(std::move(domchgs), lower_bound, estimate, depth);
+    nodes.emplace_back(std::move(domchgs), std::move(branchPositions),
+                       lower_bound, estimate, depth);
   } else {
     pos = freeslots.top();
     freeslots.pop();
-    nodes[pos] = OpenNode(std::move(domchgs), lower_bound, estimate, depth);
+    nodes[pos] = OpenNode(std::move(domchgs), std::move(branchPositions),
+                          lower_bound, estimate, depth);
   }
 
   assert(nodes[pos].lower_bound == lower_bound);
@@ -320,62 +335,6 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestBoundNode() {
   unlink(bestboundnode);
 
   return std::move(nodes[bestboundnode]);
-}
-
-HighsNodeQueue::OpenNode HighsNodeQueue::popRelatedNode(
-    const HighsLpRelaxation& lprelax) {
-  const HighsSolution& sol = lprelax.getSolution();
-  if ((HighsInt)sol.col_dual.size() != lprelax.numCols()) return popBestNode();
-  double bestRedCost = 0.0;
-  HighsInt bestCol = -1;
-  for (HighsInt i : lprelax.getMipSolver().mipdata_->integral_cols) {
-    if (sol.col_dual[i] > std::abs(bestRedCost)) {
-      if (numNodesDown(i, sol.col_value[i] - 0.5) > 0) {
-        bestCol = i;
-        bestRedCost = sol.col_dual[i];
-      }
-    } else if (sol.col_dual[i] < -std::abs(bestRedCost)) {
-      if (numNodesUp(i, sol.col_value[i] + 0.5) > 0) {
-        bestCol = i;
-        bestRedCost = sol.col_dual[i];
-      }
-    }
-  }
-
-  if (bestCol == -1) return popBestNode();
-
-  std::multimap<double, int>::iterator start;
-  std::multimap<double, int>::iterator end;
-  if (bestRedCost > 0) {
-    start = colUpperNodes[bestCol].begin();
-    end = colUpperNodes[bestCol].lower_bound(sol.col_value[bestCol] - 0.5);
-  } else {
-    start = colLowerNodes[bestCol].upper_bound(sol.col_value[bestCol] + 0.5);
-    end = colLowerNodes[bestCol].end();
-  }
-
-  HighsInt bestNode = -1;
-  double bestNodeCriterion = kHighsInf;
-  for (auto i = start; i != end; ++i) {
-    double nodeCriterion = ESTIMATE_WEIGHT * nodes[i->second].estimate +
-                           LOWERBOUND_WEIGHT * nodes[i->second].lower_bound;
-    if (nodeCriterion < bestNodeCriterion) {
-      bestNode = i->second;
-      bestNodeCriterion = nodeCriterion;
-    }
-  }
-
-  assert(bestNode != -1);
-
-  // printf(
-  //     "popping related node %" HIGHSINT_FORMAT " with lower bound %g and
-  //     estimate %g which has " "col %" HIGHSINT_FORMAT " with reduced cost %g
-  //     flipped\n", bestNode, nodes[bestNode].lower_bound,
-  //     nodes[bestNode].estimate, bestCol, bestRedCost);
-
-  unlink(bestNode);
-
-  return std::move(nodes[bestNode]);
 }
 
 double HighsNodeQueue::getBestLowerBound() {

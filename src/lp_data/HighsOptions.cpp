@@ -694,7 +694,7 @@ void resetLocalOptions(std::vector<OptionRecord*>& option_records) {
 
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
-                               const bool report_only_non_default_values,
+                               const bool report_only_deviations,
                                const bool html) {
   if (html) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
@@ -710,7 +710,7 @@ HighsStatus writeOptionsToFile(FILE* file,
     fprintf(file, "<h3>HiGHS Options</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
-  reportOptions(file, option_records, report_only_non_default_values, html);
+  reportOptions(file, option_records, report_only_deviations, html);
   if (html) {
     fprintf(file, "</ul>\n");
     fprintf(file, "</body>\n\n</html>\n");
@@ -719,7 +719,7 @@ HighsStatus writeOptionsToFile(FILE* file,
 }
 
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
-                   const bool report_only_non_default_values, const bool html) {
+                   const bool report_only_deviations, const bool html) {
   HighsInt num_options = option_records.size();
   for (HighsInt index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
@@ -728,24 +728,23 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
     if (html && option_records[index]->advanced) continue;
     if (type == HighsOptionType::kBool) {
       reportOption(file, ((OptionRecordBool*)option_records[index])[0],
-                   report_only_non_default_values, html);
+                   report_only_deviations, html);
     } else if (type == HighsOptionType::kInt) {
       reportOption(file, ((OptionRecordInt*)option_records[index])[0],
-                   report_only_non_default_values, html);
+                   report_only_deviations, html);
     } else if (type == HighsOptionType::kDouble) {
       reportOption(file, ((OptionRecordDouble*)option_records[index])[0],
-                   report_only_non_default_values, html);
+                   report_only_deviations, html);
     } else {
       reportOption(file, ((OptionRecordString*)option_records[index])[0],
-                   report_only_non_default_values, html);
+                   report_only_deviations, html);
     }
   }
 }
 
 void reportOption(FILE* file, const OptionRecordBool& option,
-                  const bool report_only_non_default_values, const bool html) {
-  if (!report_only_non_default_values ||
-      option.default_value != *option.value) {
+                  const bool report_only_deviations, const bool html) {
+  if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
               "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
@@ -770,9 +769,8 @@ void reportOption(FILE* file, const OptionRecordBool& option,
 }
 
 void reportOption(FILE* file, const OptionRecordInt& option,
-                  const bool report_only_non_default_values, const bool html) {
-  if (!report_only_non_default_values ||
-      option.default_value != *option.value) {
+                  const bool report_only_deviations, const bool html) {
+  if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
               "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
@@ -798,9 +796,8 @@ void reportOption(FILE* file, const OptionRecordInt& option,
 }
 
 void reportOption(FILE* file, const OptionRecordDouble& option,
-                  const bool report_only_non_default_values, const bool html) {
-  if (!report_only_non_default_values ||
-      option.default_value != *option.value) {
+                  const bool report_only_deviations, const bool html) {
+  if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
               "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",
@@ -823,11 +820,10 @@ void reportOption(FILE* file, const OptionRecordDouble& option,
 }
 
 void reportOption(FILE* file, const OptionRecordString& option,
-                  const bool report_only_non_default_values, const bool html) {
+                  const bool report_only_deviations, const bool html) {
   // Don't report for the options file if writing to an options file
   if (option.name == kOptionsFileString) return;
-  if (!report_only_non_default_values ||
-      option.default_value != *option.value) {
+  if (!report_only_deviations || option.default_value != *option.value) {
     if (html) {
       fprintf(file,
               "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n",

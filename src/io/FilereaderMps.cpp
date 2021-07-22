@@ -38,7 +38,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::kSuccess:
-        if (setOrientation(lp) != HighsStatus::kOk)
+        if (setFormat(lp) != HighsStatus::kOk)
           return FilereaderRetcode::kParserError;
         return FilereaderRetcode::kOk;
       case FreeFormatParserReturnCode::kParserError:
@@ -65,8 +65,8 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_, lp.col_names_,
       lp.row_names_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) {
-    lp.orientation_ = MatrixOrientation::kColwise;
-    if (setOrientation(lp) != HighsStatus::kOk)
+    lp.format_ = MatrixFormat::kColwise;
+    if (setFormat(lp) != HighsStatus::kOk)
       return FilereaderRetcode::kParserError;
   }
   if (namesWithSpaces(lp.numCol_, lp.col_names_)) {
@@ -89,6 +89,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsModel& model) {
-  assert(model.lp_.orientation_ != MatrixOrientation::kRowwise);
+  assert(model.lp_.format_ != MatrixFormat::kRowwise);
   return writeModelAsMps(options, filename, model);
 }

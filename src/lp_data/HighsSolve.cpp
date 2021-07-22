@@ -76,10 +76,10 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // ToDo: This should take model.basis_ and use it if it's valid
     //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
     //    model.solution_params_);
-    getKktFailures(model.lp_, model.solution_, model.basis_,
-                   model.solution_params_);
+    getLpKktFailures(model.lp_, model.solution_, model.basis_,
+                     model.solution_params_);
     const double objective_function_value =
-        computeObjectiveValue(model.lp_, model.solution_);
+        model.lp_.objectiveValue(model.solution_.col_value);
     model.solution_params_.objective_function_value = objective_function_value;
 
     HighsSolutionParams check_solution_params;
@@ -88,8 +88,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         options.primal_feasibility_tolerance;
     check_solution_params.dual_feasibility_tolerance =
         options.dual_feasibility_tolerance;
-    getKktFailures(model.lp_, model.solution_, model.basis_,
-                   check_solution_params);
+    getLpKktFailures(model.lp_, model.solution_, model.basis_,
+                     check_solution_params);
 
     if (debugCompareSolutionParams(options, model.solution_params_,
                                    check_solution_params) !=
@@ -145,7 +145,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     }
   }
   // Analyse the HiGHS (basic) solution
-  if (debugHighsSolution(message, model) == HighsDebugStatus::kLogicalError)
+  if (debugHighsLpSolution(message, model) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   return return_status;
 }

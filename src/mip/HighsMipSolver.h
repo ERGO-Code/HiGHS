@@ -18,7 +18,7 @@
 
 struct HighsMipSolverData;
 class HighsCutPool;
-class HighsPseudocostInitialization;
+struct HighsPseudocostInitialization;
 class HighsCliqueTable;
 class HighsImplications;
 
