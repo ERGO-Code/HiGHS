@@ -1077,19 +1077,21 @@ void HighsPrimalHeuristics::centralRounding() {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.mipdata_->domain.colLower_[i] ==
-          mipsolver.mipdata_->domain.colUpper_[i])
-        continue;
-      if (sol[i] <=
-          mipsolver.model_->colLower_[i] + mipsolver.mipdata_->feastol) {
+      double boundRange = mipsolver.mipdata_->domain.colUpper_[i] -
+                          mipsolver.mipdata_->domain.colLower_[i];
+      if (boundRange == 0.0) continue;
+
+      double tolerance =
+          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+
+      if (sol[i] <= mipsolver.model_->colLower_[i] + tolerance) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kUpper, i, mipsolver.model_->colLower_[i],
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
-      } else if (sol[i] >=
-                 mipsolver.model_->colUpper_[i] - mipsolver.mipdata_->feastol) {
+      } else if (sol[i] >= mipsolver.model_->colUpper_[i] - tolerance) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kLower, i, mipsolver.model_->colUpper_[i],
             HighsDomain::Reason::unspecified());
