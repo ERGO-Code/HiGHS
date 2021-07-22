@@ -16,7 +16,6 @@
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
 
-#include "HConfig.h"
 #include "simplex/SimplexConst.h"
 
 struct SimplexBasis {

@@ -143,6 +143,10 @@ class HFactor {
       const bool use_original_HFactor_logic = true,
       const HighsInt updateMethod = kUpdateMethodFt);
 
+  void setupMatrix(
+      const HighsInt* Astart,  //!< Column starts of constraint matrix
+      const HighsInt* Aindex,  //!< Row indices of constraint matrix
+      const double* Avalue);   //!< Row values of constraint matrix
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
    * deficiency.

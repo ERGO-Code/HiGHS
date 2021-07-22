@@ -16,7 +16,7 @@
 
 #include "simplex/HSimplex.h"
 
-#include "HConfig.h"
+//#include "HConfig.h"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsSort.h"
 
@@ -31,9 +31,10 @@ using std::runtime_error;
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
   // Possibly scale the LP
   bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
-                  highs_model_object.lp_.numCol_ > 0;
+                  lp.numCol_ > 0;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
     highsLogDev(options.log_options, HighsLogType::kWarning,
@@ -43,21 +44,33 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   const bool analyse_lp_data =
       kHighsAnalysisLevelModelData & options.highs_analysis_level;
   if (analyse_lp_data)
-    analyseLp(options.log_options, highs_model_object.lp_, "Unscaled");
+    analyseLp(options.log_options, lp, "Unscaled");
   // Possibly scale the LP. At least set the scaling factors to 1
   HighsScale& scale = highs_model_object.scale_;
-  if (scale_lp) {
-    HighsLp scaled_lp = highs_model_object.lp_;
-    // Perform scaling - if it's worth it.
-    scaleSimplexLp(options, scaled_lp, scale);
-    if (analyse_lp_data) analyseScaledLp(options.log_options, scale, scaled_lp);
-    // Pass the scaled LP to Ekk
-    ekk_instance.passLp(scaled_lp);
+  if (kRefineSimplex) {
+    if (scale_lp) {
+      scaleSimplexLp(options, lp, scale);
+      if (analyse_lp_data) analyseScaledLp(options.log_options, scale, lp);
+    } else {
+      // Initialise unit scaling factors
+      initialiseScale(lp, scale);
+    }
+    // Move the scaled LP to Ekk
+    ekk_instance.moveLp(std::move(lp));
   } else {
-    // Initialise unit scaling factors
-    initialiseScale(highs_model_object.lp_, scale);
-    // Pass the original LP to Ekk
-    ekk_instance.passLp(highs_model_object.lp_);
+    if (scale_lp) {
+      HighsLp scaled_lp = lp;
+      // Perform scaling - if it's worth it.
+      scaleSimplexLp(options, scaled_lp, scale);
+      if (analyse_lp_data) analyseScaledLp(options.log_options, scale, scaled_lp);
+      // Pass the scaled LP to Ekk
+      ekk_instance.passLp(scaled_lp);
+    } else {
+      // Initialise unit scaling factors
+      initialiseScale(lp, scale);
+      // Pass the original LP to Ekk
+      ekk_instance.passLp(lp);
+    }
   }
 }
 
@@ -583,7 +596,7 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;
+  const bool force_scaling = true;//false;
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");
@@ -1094,4 +1107,24 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
       right_size;
   right_size = (HighsInt)basis.basicIndex_.size() == lp.numRow_ && right_size;
   return right_size;
+}
+
+void unscaleSimplexLp(HighsLp& lp, const HighsScale& scale) {
+  // If the LP isn't scaled, then return
+  if (!scale.is_scaled) return;
+  // Unscale the bounds and costs and matrix
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+    lp.colLower_[iCol] *= scale.col[iCol];
+    lp.colUpper_[iCol] *= scale.col[iCol];
+    lp.colCost_[iCol] /= scale.col[iCol];
+    for (HighsInt iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol+1]; iEl++) {
+      HighsInt iRow = lp.Aindex_[iEl];
+      lp.Avalue_[iEl] /= (scale.col[iCol] * scale.row[iRow]);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+    lp.rowLower_[iRow] /= scale.row[iRow];
+    lp.rowUpper_[iRow] /= scale.row[iRow];
+  }
+  //  scale.is_scaled = false;
 }

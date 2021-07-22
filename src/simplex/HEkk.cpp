@@ -38,6 +38,24 @@
 // using std::cout;
 // using std::endl;
 
+HighsStatus HEkk::moveLp(HighsLp lp) {
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsStatus call_status;
+
+  lp_ = std::move(lp);
+  // Shouldn't have to check the incoming LP since this is an internal
+  // call, but it may be an LP that's set up internally with errors
+  // :-) ...
+  if (options_.highs_debug_level > kHighsDebugLevelNone) {
+    // ... so, if debugging, check the LP.
+    call_status = assessLp(lp_, options_);
+    return_status = interpretCallStatus(call_status, return_status, "assessLp");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  initialiseForNewLp();
+  return HighsStatus::kOk;
+}
+
 HighsStatus HEkk::passLp(const HighsLp& pass_lp) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;

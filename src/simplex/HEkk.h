@@ -37,6 +37,7 @@ class HEkk {
   HighsTimer& timer_;
   HighsSimplexAnalysis analysis_;
 
+  HighsStatus moveLp(HighsLp lp);
   HighsStatus passLp(const HighsLp& pass_lp);
   HighsStatus solve();
   HighsStatus cleanup();
@@ -51,6 +52,7 @@ class HEkk {
   HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
+  void initialiseMatrix();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,
@@ -115,7 +117,6 @@ class HEkk {
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const HighsInt phase = 2);
   HighsInt computeFactor();
-  void initialiseMatrix();
   void allocateWorkAndBaseArrays();
   void initialiseCost(const SimplexAlgorithm algorithm,
                       const HighsInt solve_phase, const bool perturb = false);

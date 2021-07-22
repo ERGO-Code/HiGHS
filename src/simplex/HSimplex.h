@@ -98,4 +98,6 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
+void unscaleSimplexLp(HighsLp& lp, const HighsScale& scale);
+
 #endif  // SIMPLEX_HSIMPLEX_H_

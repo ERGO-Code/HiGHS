@@ -267,6 +267,14 @@ void HFactor::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
   PFvalue.reserve(BlimitX * 4);
 }
 
+void HFactor::setupMatrix(const HighsInt* Astart_,
+			  const HighsInt* Aindex_,
+			  const double* Avalue_) {
+  Astart = Astart_;
+  Aindex = Aindex_;
+  Avalue = Avalue_;
+}
+
 HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   FactorTimer factor_timer;
   factor_timer.start(FactorInvert, factor_timer_clock_pointer);

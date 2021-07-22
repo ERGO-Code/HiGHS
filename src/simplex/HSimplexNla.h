@@ -18,7 +18,7 @@
 #ifndef HSIMPLEXNLA_H_
 #define HSIMPLEXNLA_H_
 
-//#include "lp_data/HStruct.h"
+#include "lp_data/HStruct.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
@@ -45,7 +45,13 @@ class HSimplexNla {
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
   void setPivotThreshold(const double new_pivot_threshold);
-
+  void passScaleAndMatrixPointers(const HighsScale* scale,
+				  const HighsInt* Astart, 
+				  const HighsInt* Aindex, 
+				  const double* Avalue);
+  bool sparseLoopStyle(const HighsInt count,
+		       const HighsInt dim,
+		       HighsInt& to_entry) const;
   HighsInt build_synthetic_tick_;
 
   // private:
@@ -56,6 +62,7 @@ class HSimplexNla {
   // Class data members
   HighsInt num_row_;
   HighsInt num_col_;
+  const HighsScale* scale_;
   const HighsInt* a_start_;
   const HighsInt* a_index_;
   const double* a_value_;
@@ -64,7 +71,7 @@ class HSimplexNla {
   HighsTimer* timer_;
   HighsSimplexAnalysis* analysis_;
 
-  HMatrix matrix_;
+  //  HMatrix matrix_;
   HFactor factor_;
 };
 
