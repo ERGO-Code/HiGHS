@@ -1822,8 +1822,10 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     // the ith constraint. differentiating sum_i (x - c_i)^2 yields   sum_i 2x-
     // 2c_i = 2x*m - 2 sum_i c_i setting the derivative to zero yields x = (1/m)
     // * sum_i c_i, i.e. the arithmetic mean of log distances.
-    double scale = std::exp2(logDiffAvg);
-
+    double scale =
+        std::min(std::exp2(logDiffAvg),
+                 std::exp2(std::round(8 + std::log2(model->colUpper_[i] -
+                                                    model->colLower_[i]))));
     if (scale == 1.0) continue;
     transformColumn(postSolveStack, i, scale, 0.0);
   }
