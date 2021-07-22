@@ -1824,7 +1824,7 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     // * sum_i c_i, i.e. the arithmetic mean of log distances.
     double scale =
         std::min(std::exp2(logDiffAvg),
-                 std::exp2(std::round(8 + std::log2(model->colUpper_[i] -
+                 std::exp2(std::round(6 + std::log2(model->colUpper_[i] -
                                                     model->colLower_[i]))));
     if (scale == 1.0) continue;
     transformColumn(postSolveStack, i, scale, 0.0);
