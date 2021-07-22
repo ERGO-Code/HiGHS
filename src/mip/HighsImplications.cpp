@@ -21,6 +21,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
   globaldomain.propagate();
   if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
+  const auto& domchgreason = globaldomain.getDomainChangeReason();
   HighsInt changedend = globaldomain.getChangedCols().size();
 
   HighsInt stackimplicstart = domchgstack.size() + 1;
@@ -49,16 +50,23 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
     return true;
   }
 
-  numImplications += domchgstack.size();
+  HighsInt stackimplicend = domchgstack.size();
+  numImplications += stackimplicend;
   mipsolver.mipdata_->pseudocost.addInferenceObservation(col, numImplications,
                                                          val);
-  HighsInt stackimplicend = domchgstack.size();
 
   HighsInt loc = 2 * col + val;
   HighsInt implstart = implications.size();
 
-  implications.insert(implications.end(), domchgstack.data() + stackimplicstart,
-                      domchgstack.data() + stackimplicend);
+  implications.reserve(implstart + numImplications);
+
+  for (HighsInt i = stackimplicstart; i < stackimplicend; ++i) {
+    if (domchgreason[i].type == HighsDomain::Reason::kCliqueTable &&
+        (domchgreason[i].index >> 1) == col)
+      continue;
+
+    implications.push_back(domchgstack[i]);
+  }
 
   globaldomain.backtrack();
   globaldomain.clearChangedCols(changedend);
@@ -197,12 +205,14 @@ bool HighsImplications::runProbing(HighsInt col, HighsInt& numReductions) {
           double ub = std::max(ubDown, ubUp);
 
           if (lb > globaldomain.colLower_[implcol]) {
-            globaldomain.changeBound(HighsBoundType::kLower, implcol, lb);
+            globaldomain.changeBound(HighsBoundType::kLower, implcol, lb,
+                                     HighsDomain::Reason::unspecified());
             ++numReductions;
           }
 
           if (ub < globaldomain.colUpper_[implcol]) {
-            globaldomain.changeBound(HighsBoundType::kUpper, implcol, ub);
+            globaldomain.changeBound(HighsBoundType::kUpper, implcol, ub,
+                                     HighsDomain::Reason::unspecified());
             ++numReductions;
           }
         }
@@ -380,7 +390,7 @@ void HighsImplications::separateImpliedBounds(
     if (infeas) {
       vals[0] = 1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, false);
+      cutpool.addCut(mipsolver, inds, vals, 1, 0.0, false, true, false);
       continue;
     }
 
@@ -417,7 +427,7 @@ void HighsImplications::separateImpliedBounds(
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
                            HighsVarType::kContinuous,
-                       false);
+                       false, false);
       }
     }
 
@@ -427,7 +437,7 @@ void HighsImplications::separateImpliedBounds(
     if (infeas) {
       vals[0] = -1.0;
       inds[0] = col;
-      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, false);
+      cutpool.addCut(mipsolver, inds, vals, 1, -1.0, false, true, false);
       continue;
     }
 
@@ -463,7 +473,7 @@ void HighsImplications::separateImpliedBounds(
         cutpool.addCut(mipsolver, inds, vals, 2, rhs,
                        mipsolver.variableType(implics[i].column) !=
                            HighsVarType::kContinuous,
-                       false);
+                       false, false);
       }
     }
   }

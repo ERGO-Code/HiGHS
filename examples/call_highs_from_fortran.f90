@@ -1,9 +1,9 @@
 program fortrantest
   use, intrinsic :: iso_c_binding
-  use highs_lp_solver
+  use highs_fortran_api
   implicit none
 
-  ! This illustrates the use of Highs_call, the simple F90 interface to
+  ! This illustrates the use of Highs_lpCall, the simple F90 interface to
   ! HiGHS. It's designed to solve the general LP problem
   !
   ! Min c^Tx subject to L <= Ax <= U; l <= x <= u
@@ -35,7 +35,7 @@ program fortrantest
   !
   ! Note that astart[0] must be zero
   !
-  ! After a successful call to Highs_call, the primal and dual
+  ! After a successful call to Highs_lpCall, the primal and dual
   ! solution, and the simplex basis are returned as follows
   !
   ! The vector x is colvalue
@@ -49,17 +49,19 @@ program fortrantest
   !
   ! To solve maximization problems, the values in c must be negated
   !
-  ! The use of Highs_call is illustrated for the LP
+  ! The use of Highs_lpCall is illustrated for the LP/MIP example
   !
   ! Min    f  = 2x_0 + 3x_1
   ! s.t.                x_1 <= 6
   !       10 <=  x_0 + 2x_1 <= 14
   !        8 <= 2x_0 +  x_1
   ! 0 <= x_0 <= 3; 1 <= x_1
-  
   integer ( c_int ), parameter :: numcol = 2
   integer ( c_int ), parameter :: numrow = 3
   integer ( c_int ), parameter :: numnz = 5
+  integer ( c_int ), parameter :: aformat_colwise = 1
+  integer ( c_int ), parameter :: sense = 1
+  real ( c_double ), parameter :: offset = 0
   
   real ( c_double ) colcost(numcol)
   real ( c_double ) collower(numcol)
@@ -79,6 +81,9 @@ program fortrantest
   integer modelstatus
   integer runstatus
   integer ( c_int ), parameter :: modelstatus_optimal = 7
+  integer ( c_int ), parameter :: runstatus_error = -1
+  integer ( c_int ), parameter :: runstatus_ok = 0
+  integer ( c_int ), parameter :: runstatus_warning = -1
   ! For the full API test
   type ( c_ptr ) :: highs
   
@@ -88,14 +93,15 @@ program fortrantest
   real ( c_double ) arvalue(numnz)
   
   real, parameter :: inf = 1e30
-  integer, parameter :: runstatus_ok = 0
-  integer col, row
+  integer col, row, el
+  integer from_el, to_el
   integer iteration_count, primal_solution_status, dual_solution_status
   double precision objective_function_value
+  double precision objective_error
   integer option_type
   integer dummy_info
 
-  integer sense
+  integer alt_sense
   integer scale_strategy
 
   integer, parameter :: default_scale_strategy = 2
@@ -108,6 +114,46 @@ program fortrantest
   integer, pointer :: integer_null(:)
   character( c_char ) :: file_name(7)
   
+  ! Illustrate the solution of a QP
+  !
+  ! minimize -x_2 - 3x_3 + (1/2)(2x_1^2 - 2x_1x_3 + 0.2x_2^2 + 2x_3^2)
+  !
+  ! subject to x_1 + x_3 <= 2; x>=0
+  !
+  ! Solution x_1 = 0.5; x_2 = 5.0; x_3 = 1.5
+  integer ( c_int ), parameter :: qp_numcol = 3
+  integer ( c_int ), parameter :: qp_numrow = 1
+  integer ( c_int ), parameter :: qp_numnz = 2
+  integer ( c_int ), parameter :: qp_hessian_numnz = 4
+  integer ( c_int ), parameter :: qformat_triangular = 1
+
+  real ( c_double ) qp_colcost(qp_numcol)
+  real ( c_double ) qp_collower(qp_numcol)
+  real ( c_double ) qp_colupper(qp_numcol)
+  real ( c_double ) qp_rowlower(qp_numrow)
+  real ( c_double ) qp_rowupper(qp_numrow)
+  integer ( c_int ) qp_astart(qp_numcol)
+  integer ( c_int ) qp_aindex(qp_numnz)
+  real ( c_double ) qp_avalue(qp_numnz)
+  integer ( c_int ) qp_qstart(qp_numcol)
+  integer ( c_int ) qp_qindex(qp_hessian_numnz)
+  real ( c_double ) qp_qvalue(qp_hessian_numnz)
+  
+  real ( c_double ) qp_sol(qp_numcol)
+  real ( c_double ) qp_colvalue(qp_numcol)
+  real ( c_double ) qp_coldual(qp_numcol)
+  real ( c_double ) qp_rowvalue(qp_numrow)
+  real ( c_double ) qp_rowdual(qp_numrow)
+  integer ( c_int ) qp_colbasisstatus(qp_numcol)
+  integer ( c_int ) qp_rowbasisstatus(qp_numrow)
+  integer qp_modelstatus
+  integer qp_runstatus
+  logical, parameter :: no_highs_logging = .TRUE.
+  
+  logical ( c_bool ), parameter :: logical_false = .false.
+  logical ( c_bool ), parameter :: logical_true = .true.
+
+  ! Set up the LP/MIP example
   colcost(1) = 2
   colcost(2) = 3
   
@@ -155,19 +201,24 @@ program fortrantest
   arvalue(4) = 2
   arvalue(5) = 1
 
+  qp_sol(1) = 0.5
+  qp_sol(2) = 5.0
+  qp_sol(3) = 1.5
+
   !================================================================================
-  ! Illustrate use of Highs_call to solve a given LP
+  ! Illustrate use of Highs_lpCall to solve a given LP
   print*, "*********"
   print*, "Section 1"
   print*, "*********"
-  runstatus = Highs_call( numcol, numrow, numnz,&
+  runstatus = Highs_lpCall( numcol, numrow, numnz,&
+       aformat_colwise, sense, offset, &
        colcost, collower, colupper, rowlower, rowupper,&
        astart, aindex, avalue,&
        colvalue, coldual, rowvalue, rowdual,&
        colbasisstatus, rowbasisstatus, modelstatus)
 
   if (runstatus .ne. runstatus_ok) then
-     write(*, '(a, i1, a, i2)')'Highs_call run status is not ', runstatus, ' but ', runstatus
+     write(*, '(a, i1, a, i2)')'Highs_lpCall run status is ', runstatus, ' not ', runstatus_ok
      stop
   endif
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
@@ -196,14 +247,17 @@ program fortrantest
   ! instance of the Highs class, then Highs_passLp to pass LP to
   ! HiGHS, and Highs_run to solve it
   highs = Highs_create()
-  runstatus = Highs_passLp(highs, numcol, numrow, numnz, &
-  colcost, collower, colupper, rowlower, rowupper, &
+  if (no_highs_logging) then
+     runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)
+  endif
+
+  runstatus = Highs_passLp(highs, numcol, numrow, numnz, aformat_colwise, &
+  sense, offset, colcost, collower, colupper, rowlower, rowupper, &
   astart, aindex, avalue)
-!  print*, "Suppressing all HiGHS output"; runstatus = Highs_runQuiet(highs)
   runstatus = Highs_run(highs)
   modelstatus = Highs_getModelStatus(highs);
   print*, "modelstatus = ", modelstatus
-  call assert(runstatus .eq. 0, "Highs_run runstatus")
+  call assert(runstatus .eq. runstatus_ok, "Highs_run runstatus")
   call assert(modelstatus .eq. modelstatus_optimal, "Highs_run modelstatus optimal")
   write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
   runstatus = Highs_getDoubleInfoValue(highs, "objective_function_value"//C_NULL_CHAR, objective_function_value);
@@ -218,6 +272,9 @@ program fortrantest
   print*, "Section 2"
   print*, "*********"
   highs = Highs_create()
+  if (no_highs_logging) then
+     runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)
+  endif
   ! Create double and integer values equal to NULL pointer
   call C_F_POINTER(C_NULL_PTR, double_null, [0])
   call C_F_POINTER(C_NULL_PTR, integer_null, [0])
@@ -228,14 +285,14 @@ program fortrantest
   ! Add three rows to the 2-column LP
   runstatus = Highs_addRows(highs, numrow, rowlower, rowupper, numnz, arstart, arindex, arvalue)
 
-  runstatus = Highs_getObjectiveSense(highs, sense);
-  write(*, '(a, i2)')"LP problem has objective sense = ", sense
-  call assert(sense .eq. 1, "Objective sense")
+  runstatus = Highs_getObjectiveSense(highs, alt_sense);
+  write(*, '(a, i2)')"LP problem has objective sense = ", alt_sense
+  call assert(alt_sense .eq. sense, "Objective sense")
   
-  sense = -1 * sense
-  runstatus = Highs_changeObjectiveSense(highs, sense);
-  runstatus = Highs_getObjectiveSense(highs, sense);
-  call assert(sense .eq. -1, "Changed Objective sense")
+  alt_sense = -1 * alt_sense
+  runstatus = Highs_changeObjectiveSense(highs, alt_sense);
+  runstatus = Highs_getObjectiveSense(highs, alt_sense);
+  call assert(alt_sense .eq. -1, "Changed Objective sense")
   
   ! Get and set option values
   runstatus = Highs_getIntOptionValue(highs, "simplex_scale_strategy"//C_NULL_CHAR, scale_strategy);
@@ -247,21 +304,21 @@ program fortrantest
        "scale_strategy .eq. new_scale_strategy")
 
   runstatus = Highs_setDoubleOptionValue(highs, "primal_feasibility_tolerance"//C_NULL_CHAR, 1d-6);
-  call assert(runstatus .eq. 0, "setDoubleOptionValue runstatus")
+  call assert(runstatus .eq. runstatus_ok, "setDoubleOptionValue runstatus")
   runstatus = Highs_setDoubleOptionValue(highs, "dual_feasibility_tolerance"//C_NULL_CHAR, dual_tolerance);
-  call assert(runstatus .eq. 0, "setDoubleOptionValue runstatus")
+  call assert(runstatus .eq. runstatus_ok, "setDoubleOptionValue runstatus")
 
   ! There are some functions to check what type of option value you should provide.
   runstatus = Highs_getOptionType(highs, "simplex_scale_strategy"//C_NULL_CHAR, option_type);
-  call assert(runstatus .eq. 0, "getOptionType runstatus = 0")
+  call assert(runstatus .eq. runstatus_ok, "getOptionType runstatus = 0")
   call assert(option_type .eq. 1, "getOptionType option_type")
   ! This is what happens if an invalid name is passed
   runstatus = Highs_getOptionType(highs, "bad_option"//C_NULL_CHAR, option_type)
-  call assert(runstatus .eq. 2, "getOptionType runstatus")
+  call assert(runstatus .eq. runstatus_error, "getOptionType runstatus")
 
   ! Suppress HiGHS output
   print*, "Suppressing all HiGHS output"
-  runstatus = Highs_runQuiet(highs);
+  runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)
   ! Solve the LP
   runstatus = Highs_run(highs);
   ! Get the model status
@@ -275,7 +332,7 @@ program fortrantest
   runstatus = Highs_getIntInfoValue(highs, "dual_solution_status"//C_NULL_CHAR, dual_solution_status);
   ! This is what happens if an invalid name is passed
   runstatus = Highs_getIntInfoValue(highs, "bad_info"//C_NULL_CHAR, dummy_info)
-  call assert(runstatus .eq. 2, "getOptionType runstatus")
+  call assert(runstatus .eq. runstatus_error, "getOptionType runstatus")
 
   write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value, "; Iteration count = ", iteration_count
   print*, "modelstatus = ", modelstatus
@@ -305,7 +362,8 @@ program fortrantest
 
   ! Write out model as MPS for use later
   runstatus = Highs_writeModel(highs, "F90.mps"//C_NULL_CHAR)
-  call assert(runstatus .eq. 1, "Highs_writeModel runstatus")
+  print*, "runstatus = ", runstatus
+  call assert(runstatus .ne. runstatus_warning, "Highs_writeModel runstatus")
   
   call Highs_destroy(highs)
   !================================================================================
@@ -315,13 +373,13 @@ program fortrantest
   print*, "Section 3"
   print*, "*********"
   highs = Highs_create()
-  ! Suppress HiGHS output
-  print*, "Suppressing all HiGHS output"
-!  runstatus = Highs_runQuiet(highs);
+  if (no_highs_logging) then
+     runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)
+  endif
 
   ! Read the LP
   runstatus = Highs_readModel(highs, "F90.mps"//C_NULL_CHAR)
-  call assert(runstatus .eq. 0, "Highs_readModel runstatus")
+  call assert(runstatus .eq. runstatus_ok, "Highs_readModel runstatus")
   ! Solve the LP
   runstatus = Highs_run(highs);
   ! Get the model status
@@ -342,6 +400,9 @@ program fortrantest
   print*, "Section 4"
   print*, "*********"
   highs = Highs_create()
+  if (no_highs_logging) then
+     runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)
+  endif
 
   ! Get and set string options
   runstatus = Highs_getStringOptionValue(highs, "solution_file"//C_NULL_CHAR, file_name)
@@ -361,6 +422,19 @@ program fortrantest
   write_solution_pretty = .true.
   runstatus = Highs_setBoolOptionValue(highs, "write_solution_pretty"//C_NULL_CHAR, write_solution_pretty)
 
+  ! Report all the deviations from default options
+  runstatus = Highs_writeOptionsDeviations(highs, "OptionsDeviations.set"//C_NULL_CHAR)
+  
+  ! Reset all the options
+  runstatus = Highs_resetOptions(highs)
+  
+  ! Report all the options
+  runstatus = Highs_writeOptions(highs, "Options.set"//C_NULL_CHAR)
+
+  if (no_highs_logging) then
+     runstatus = Highs_setBoolOptionValue(highs, "output_flag"//C_NULL_CHAR, logical_false)
+  endif
+  
   ! Read the LP
   runstatus = Highs_readModel(highs, "F90.mps"//C_NULL_CHAR)
   ! Solve the LP
@@ -374,6 +448,104 @@ program fortrantest
   write(*, '(a, f10.4, a, i6)')"Objective value = ", objective_function_value, "; Iteration count = ", iteration_count
   call Highs_destroy(highs)
   
+  !================================================================================
+  ! Illustrate use of Highs_qpCall to solve a given QP
+
+  print*, "**********"
+  print*, "QP Example"
+  print*, "**********"
+
+  qp_colcost(1) = 0
+  qp_colcost(2) = -1
+  qp_colcost(3) = -3
+  
+  qp_collower(1) = 0
+  qp_collower(2) = 0
+  qp_collower(3) = 0
+  
+  qp_colupper(1) = inf
+  qp_colupper(2) = inf
+  qp_colupper(3) = inf
+  
+  qp_rowlower(1) = -inf
+  qp_rowupper(1) = 2
+  
+  qp_astart(1) = 0
+  qp_astart(2) = 1
+  qp_astart(3) = 1
+  
+  qp_aindex(1) = 0
+  qp_aindex(2) = 0
+  
+  qp_avalue(1) = 1
+  qp_avalue(2) = 1
+
+  qp_qstart(1) = 0
+  qp_qstart(2) = 2
+  qp_qstart(3) = 3
+  
+  qp_qindex(1) = 0
+  qp_qindex(2) = 2
+  qp_qindex(3) = 1
+  qp_qindex(4) = 2
+  
+  qp_qvalue(1) = 2.0
+  qp_qvalue(2) = -1.0
+  qp_qvalue(3) = 0.2
+  qp_qvalue(4) = 2.0
+
+  runstatus = Highs_qpCall( qp_numcol, qp_numrow, qp_numnz, qp_hessian_numnz,&
+       aformat_colwise, qformat_triangular, sense, offset,&
+       qp_colcost, qp_collower, qp_colupper, qp_rowlower, qp_rowupper,&
+       qp_astart, qp_aindex, qp_avalue,&
+       qp_qstart, qp_qindex, qp_qvalue,&
+       qp_colvalue, qp_coldual, qp_rowvalue, qp_rowdual,&
+       qp_colbasisstatus, qp_rowbasisstatus, modelstatus)
+
+  if (runstatus .ne. runstatus_ok) then
+     write(*, '(a, i1, a, i2)')'Highs_lpCall run status is ', runstatus, ' not ', runstatus_ok
+     stop
+  endif
+  write(*, '(a, i1, a, i2)')'Run status = ', runstatus, '; Model status = ', modelstatus
+      
+  if (modelstatus .eq. modelstatus_optimal) then
+     objective_function_value = 0
+     ! Report the column primal and dual values, and basis status
+     do col = 1, qp_numcol
+       write(*, '(a, i1, a, f10.4, a, f10.4, a, i2)') &
+             'Col', col, ' = ', qp_colvalue(col), &
+             '; dual = ', qp_coldual(col)
+     call assert(abs(qp_colvalue(col)-qp_sol(col)) .le. 1e-4, "Solution error")
+     enddo
+     ! Report the row primal and dual values, and basis status
+     do row = 1, qp_numrow
+        write(*, '(a, i1, a, f10.4, a, f10.4, a, i2)') &
+             'Row', row, ' = ', qp_rowvalue(row), &
+             '; dual = ', qp_rowdual(row)
+     enddo
+     do col = 1, qp_numcol
+       objective_function_value = objective_function_value + qp_colvalue(col)*qp_colcost(col)
+     enddo
+     do col = 1, qp_numcol
+        from_el = qp_qstart(col)
+        if (col < qp_numcol) then
+           to_el = qp_qstart(col+1)-1
+        else
+           to_el = qp_hessian_numnz
+        endif
+        objective_function_value = &
+             objective_function_value + 0.5 * qp_colvalue(col) * qp_qvalue(from_el+1) * qp_colvalue(col)
+        do el = from_el+1, to_el
+           row = qp_qindex(el+1)+1
+           objective_function_value = &
+                objective_function_value + qp_colvalue(col) * qp_qvalue(el+1) * qp_colvalue(row)
+        enddo
+     enddo
+     write(*, '(a, f10.4)')'Optimal objective value = ', objective_function_value
+     objective_error = abs(objective_function_value+5.25)
+     call assert(objective_error .le. 1e-4, "Objective error")
+  endif
+
 end program fortrantest
 
 subroutine assert ( logic, message)

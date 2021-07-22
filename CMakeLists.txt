@@ -24,6 +24,18 @@ if(OpenMP_CXX_FOUND)
     set(OPENMP ON)
 endif()
 
+if(LINUX AND NOT MSVC)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT error)
+
+    if(ipo_supported)
+        message(STATUS "IPO / LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(STATUS "IPO / LTO not supported: <${error}>")
+    endif()
+endif()
+
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
@@ -247,10 +259,10 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/model
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/qpsolver
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver/feasibility
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver/pricing
-    ${HIGHS_SOURCE_DIR}/src/qpsolver/ratiotest
-#    ${HIGHS_SOURCE_DIR}/src/qpsolver/redhes
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver
+    ${HIGHS_SOURCE_DIR}/src/qpsolver
+#    ${HIGHS_SOURCE_DIR}/src/qpsolver
     ${HIGHS_SOURCE_DIR}/src/simplex
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)

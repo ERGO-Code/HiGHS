@@ -59,12 +59,15 @@ FilereaderRetcode readMps(
 
 HighsStatus writeMps(
     const HighsLogOptions& log_options, const std::string filename,
-    const HighsInt& numRow, const HighsInt& numCol, const ObjSense& objSense,
-    const double& objOffset, const vector<HighsInt>& Astart,
-    const vector<HighsInt>& Aindex, const vector<double>& Avalue,
-    const vector<double>& colCost, const vector<double>& colLower,
-    const vector<double>& colUpper, const vector<double>& rowLower,
-    const vector<double>& rowUpper, const vector<HighsVarType>& integerColumn,
+    const std::string model_name, const HighsInt& num_row,
+    const HighsInt& num_col, const HighsInt& q_dim, const ObjSense& sense,
+    const double& offset, const vector<double>& col_cost,
+    const vector<double>& col_lower, const vector<double>& col_upper,
+    const vector<double>& row_lower, const vector<double>& row_upper,
+    const vector<HighsInt>& a_start, const vector<HighsInt>& a_index,
+    const vector<double>& a_value, const vector<HighsInt>& q_start,
+    const vector<HighsInt>& q_index, const vector<double>& q_value,
+    const vector<HighsVarType>& integrality,
     const vector<std::string>& col_names, const vector<std::string>& row_names,
     const bool use_free_format = true);
 

@@ -3,21 +3,18 @@
 
 #include <vector>
 
-template<typename T> // T: void (*fncptr)(int, double)
+template <typename T>  // T: void (*fncptr)(int, double)
 class Eventhandler {
+  std::vector<std::function<void(T)>> subscribers;
 
-   std::vector<void(*)(T)> subscribers;
+ public:
+  void subscribe(std::function<void(T)> subscriber) { subscribers.push_back(subscriber); }
 
-public:
-   void subscribe(void(*subscriber)(T)) {
-      subscribers.push_back(subscriber);
-   }
-
-   void fire(T args) {
-      for (void(*fun)(T) : subscribers) {
-         fun(args);
-      }
-   }
+  void fire(T args) {
+    for (std::function<void(T)> fun : subscribers) {
+      fun(args);
+    }
+  }
 };
 
 #endif

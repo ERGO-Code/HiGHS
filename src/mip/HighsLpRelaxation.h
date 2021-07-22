@@ -20,7 +20,7 @@
 #include "mip/HighsMipSolver.h"
 
 class HighsDomain;
-class HighsCutSet;
+struct HighsCutSet;
 class HighsPseudocost;
 
 class HighsLpRelaxation {
@@ -44,6 +44,7 @@ class HighsLpRelaxation {
 
     Origin origin;
     HighsInt index;
+    HighsInt age;
 
     void get(const HighsMipSolver& mipsolver, HighsInt& len,
              const HighsInt*& inds, const double*& vals) const;
@@ -54,8 +55,8 @@ class HighsLpRelaxation {
 
     double getMaxAbsVal(const HighsMipSolver& mipsolver) const;
 
-    static LpRow cut(HighsInt index) { return LpRow{kCutPool, index}; }
-    static LpRow model(HighsInt index) { return LpRow{kModel, index}; }
+    static LpRow cut(HighsInt index) { return LpRow{kCutPool, index, 0}; }
+    static LpRow model(HighsInt index) { return LpRow{kModel, index, 0}; }
   };
 
   const HighsMipSolver& mipsolver;
@@ -172,6 +173,8 @@ class HighsLpRelaxation {
 
   double computeBestEstimate(const HighsPseudocost& ps) const;
 
+  double computeLPDegneracy(const HighsDomain& localdomain) const;
+
   static bool scaledOptimal(Status status) {
     switch (status) {
       case Status::kOptimal:
@@ -206,9 +209,7 @@ class HighsLpRelaxation {
 
   void recoverBasis();
 
-  void setObjectiveLimit(double objlim = kHighsInf) {
-    lpsolver.setOptionValue("objective_bound", objlim + 0.5);
-  }
+  void setObjectiveLimit(double objlim = kHighsInf);
 
   void storeBasis() {
     if (!currentbasisstored && lpsolver.getBasis().valid) {
@@ -222,7 +223,7 @@ class HighsLpRelaxation {
   }
 
   void setStoredBasis(std::shared_ptr<const HighsBasis> basis) {
-    basischeckpoint = basis;
+    basischeckpoint = std::move(basis);
     currentbasisstored = false;
   }
 
@@ -239,6 +240,8 @@ class HighsLpRelaxation {
   void addCuts(HighsCutSet& cutset);
 
   void performAging(bool useBasis = true);
+
+  void resetAges();
 
   void removeObsoleteRows(bool notifyPool = true);
 
@@ -258,7 +261,7 @@ class HighsLpRelaxation {
 
   bool computeDualProof(const HighsDomain& globaldomain, double upperbound,
                         std::vector<HighsInt>& inds, std::vector<double>& vals,
-                        double& rhs) const;
+                        double& rhs, bool extractCliques = true) const;
 
   bool computeDualInfProof(const HighsDomain& globaldomain,
                            std::vector<HighsInt>& inds,
