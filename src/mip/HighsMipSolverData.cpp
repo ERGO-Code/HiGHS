@@ -732,8 +732,7 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       new_upper_limit =
           (std::floor(objintscale * solobj - 0.5) / objintscale) + feastol;
     } else {
-      new_upper_limit =
-          solobj - std::max(feastol, kHighsTiny * std::abs(solobj));
+      new_upper_limit = solobj - feastol;
     }
     if (new_upper_limit < upper_limit) {
       ++numImprovingSols;
