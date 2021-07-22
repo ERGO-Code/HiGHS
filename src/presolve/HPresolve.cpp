@@ -1800,10 +1800,6 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     if (colDeleted[i] || model->integrality_[i] != HighsVarType::kContinuous)
       continue;
 
-    // determine the smalles ratio and the largest ratio of the columns scale in
-    // different rows so that it is equal to the largest integer coefficient
-    double minScale = kHighsInf;
-    double maxScale = -kHighsInf;
     double logDiffAvg = 0;
     HighsInt count = 0;
 
@@ -1815,10 +1811,6 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
       logDiffAvg +=
           (std::log2(maxAbsIntVal / std::abs(nonz.value())) - logDiffAvg) /
           count;
-
-      // double thisScale = maxAbsIntVal / std::abs(nonz.value());
-      // minScale = std::min(thisScale, minScale);
-      // maxScale = std::max(thisScale, maxScale);
     }
 
     logDiffAvg = std::round(logDiffAvg);
