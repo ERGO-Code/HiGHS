@@ -72,7 +72,6 @@ void HSimplexNla::btran(HVector& rhs, const double expected_density,
   //  printf("In HSimplexNla::btran\n");
   if (scale_ != NULL) {
     // Scale the RHS
-    printf("RHS:\n");
     const vector<double>& col_scale = scale_->col;
     const vector<double>& row_scale = scale_->row;
     HighsInt to_entry;
@@ -85,22 +84,16 @@ void HSimplexNla::btran(HVector& rhs, const double expected_density,
 	iCol = iEntry;
       }
       HighsInt iVar = base_index_[iCol];
-      double prev_array_value = rhs.array[iCol];
       if (iVar < num_col_) {
 	rhs.array[iCol] *= col_scale[iVar];
-	printf("Entry %d - basic variable Col %d - scales by %g from %g to %g\n",
-	       (int)iCol, (int)iVar, col_scale[iVar], prev_array_value, rhs.array[iCol]);
       } else {
 	rhs.array[iCol] /= row_scale[iVar-num_col_];
-	printf("Entry %d - basic variable Row %d - scales by %g from %g to %g\n",
-	       (int)iCol, (int)(iVar-num_col_), row_scale[iVar-num_col_], prev_array_value, rhs.array[iCol]);
       }
     }
   }
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
   if (scale_ != NULL) {
     // Scale the solution
-    printf("Solution:\n");
     const vector<double>& col_scale = scale_->col;
     const vector<double>& row_scale = scale_->row;
     HighsInt to_entry;
@@ -112,10 +105,7 @@ void HSimplexNla::btran(HVector& rhs, const double expected_density,
       } else {
 	iRow = iEntry;
       }
-      double prev_array_value = rhs.array[iRow];
       rhs.array[iRow] *= row_scale[iRow];
-      printf("Entry %d scales by %g from %g to %g\n",
-	     (int)iRow, row_scale[iRow], prev_array_value, rhs.array[iRow]);
     }
   }
 }
@@ -123,12 +113,59 @@ void HSimplexNla::btran(HVector& rhs, const double expected_density,
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   //  printf("In HSimplexNla::ftran\n");
+  if (scale_ != NULL) {
+    // Scale the RHS
+    const vector<double>& col_scale = scale_->col;
+    const vector<double>& row_scale = scale_->row;
+    HighsInt to_entry;
+    const bool use_row_indices = sparseLoopStyle(rhs.count, num_row_, to_entry);
+    for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+      HighsInt iRow;
+      if (use_row_indices) {
+	iRow = rhs.index[iEntry];
+      } else {
+	iRow = iEntry;
+      }
+      rhs.array[iRow] *= row_scale[iRow];
+    }
+  }
+  printf("Bf: ");
+  for(HighsInt iRow=0; iRow<num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]);
+  printf("\n");
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
+  printf("Af: ");
+  for(HighsInt iRow=0; iRow<num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]);
+  printf("\n");
+  if (scale_ != NULL) {
+    // Scale the Solution
+    const vector<double>& col_scale = scale_->col;
+    const vector<double>& row_scale = scale_->row;
+    HighsInt to_entry;
+    const bool use_row_indices = sparseLoopStyle(rhs.count, num_row_, to_entry);
+    for (HighsInt iEntry = 0; iEntry < to_entry; iEntry++) {
+      HighsInt iCol;
+      if (use_row_indices) {
+	iCol = rhs.index[iEntry];
+      } else {
+	iCol = iEntry;
+      }
+      HighsInt iVar = base_index_[iCol];
+      if (iVar < num_col_) {
+	rhs.array[iCol] *= col_scale[iVar];
+      } else {
+	rhs.array[iCol] /= row_scale[iVar-num_col_];
+      }
+    }
+  }
 }
 
 void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
                          HighsInt* hint) {
   //  printf("In HSimplexNla::update\n");
+  if (scale_ != NULL) {
+    printf("Abort in HSimplexNla::update\n"); fflush(stdout);
+    abort();
+  }
   factor_.update(aq, ep, iRow, hint);
 }
 

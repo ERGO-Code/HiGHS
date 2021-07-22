@@ -153,33 +153,50 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   } else {
     // Not optimal - should try refinement
     if (kRefineSimplex) {
-      // Move back the scaled LP
-      HighsLp& lp = highs_model_object.lp_;
-      HighsLp& ekk_lp = highs_model_object.ekk_instance_.lp_;
-      HSimplexNla& simplex_nla = highs_model_object.ekk_instance_.simplex_nla_;
-      lp = std::move(ekk_lp);
-      // Take a copy of the scaled LP
-      HighsLp scaled_lp = lp;
-      // Unscale the LP
-      unscaleSimplexLp(lp, highs_model_object.scale_);
-      writeSolutionToFile(stdout, lp, highs_model_object.basis_, highs_model_object.solution_, true);
-      // Move the unscaled LP to Ekk
-      ekk_lp = std::move(lp);
-      // Pass scaling factors and scaled matrix pointers to the
-      // simplex NLA
-      simplex_nla.passScaleAndMatrixPointers(&highs_model_object.scale_,
-					     &scaled_lp.Astart_[0], 
-					     &scaled_lp.Aindex_[0], 
-					     &scaled_lp.Avalue_[0]);
-      // Reinitialise the matrix for the simplex solver now that the
-      // LP is unscaled
-      ekk_instance.status_.has_matrix = false;
-      highs_model_object.ekk_instance_.initialiseMatrix();
+      const bool unscale = true;
+      HighsLp scaled_lp;
+      if (unscale) {
+	// Move back the scaled LP
+	HighsLp& lp = highs_model_object.lp_;
+	HighsLp& ekk_lp = highs_model_object.ekk_instance_.lp_;
+	HSimplexNla& simplex_nla = highs_model_object.ekk_instance_.simplex_nla_;
+	lp = std::move(ekk_lp);
+	// Take a copy of the scaled LP
+        scaled_lp = lp;
+	// Unscale the LP
+	unscaleSimplexLp(lp, highs_model_object.scale_);
+	writeSolutionToFile(stdout, lp, highs_model_object.basis_, highs_model_object.solution_, true);
+	// Move the unscaled LP to Ekk
+	ekk_lp = std::move(lp);
+	// Pass scaling factors and scaled matrix pointers to the
+	// simplex NLA
+	simplex_nla.passScaleAndMatrixPointers(&highs_model_object.scale_,
+					       &scaled_lp.Astart_[0], 
+					       &scaled_lp.Aindex_[0], 
+					       &scaled_lp.Avalue_[0]);
+	// Reinitialise the matrix for the simplex solver now that the
+	// LP is unscaled
+	ekk_instance.status_.has_matrix = false;
+	highs_model_object.ekk_instance_.initialiseMatrix();
+      }
+      // Restore the iteration limit (temp)
       options.simplex_iteration_limit = simplex_iteration_limit;
+      // Save the dual simplex cost perturbation multiplier and set
+      // the option to zero
       double dual_simplex_cost_perturbation_multiplier =
 	options.dual_simplex_cost_perturbation_multiplier;
       options.dual_simplex_cost_perturbation_multiplier = 0;
+      // Save the simplex dual edge weight strategy and set
+      // the option to Devex
+      HighsInt simplex_dual_edge_weight_strategy = ekk_instance.info_.dual_edge_weight_strategy;
+      ekk_instance.info_.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
       return_status = ekk_instance.solve();
+      // Restore the dual simplex cost perturbation multiplier and
+      // simplex dual edge weight strategy
+      options.dual_simplex_cost_perturbation_multiplier = dual_simplex_cost_perturbation_multiplier;
+      ekk_instance.info_.dual_edge_weight_strategy = simplex_dual_edge_weight_strategy;
+
+      printf("Abort in solveLpSimplex\n"); fflush(stdout);
       abort();
     } else {
       assert(num_unscaled_primal_infeasibility > 0 ||
