@@ -90,8 +90,8 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the column bounds
   return_status = interpretCallStatus(
-      assessBounds(options, "Col", lp.num_col_, index_collection, local_colLower,
-                   local_colUpper, options.infinite_bound),
+      assessBounds(options, "Col", lp.num_col_, index_collection,
+                   local_colLower, local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   // Append the columns to the LP vectors and matrix
@@ -270,8 +270,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   std::vector<double> local_rowUpper{XrowUpper, XrowUpper + XnumNewRow};
 
   return_status = interpretCallStatus(
-      assessBounds(options, "Row", lp.num_row_, index_collection, local_rowLower,
-                   local_rowUpper, options.infinite_bound),
+      assessBounds(options, "Row", lp.num_row_, index_collection,
+                   local_rowLower, local_rowUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 

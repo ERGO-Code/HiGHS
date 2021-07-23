@@ -1002,8 +1002,8 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
                     "up=%2" HIGHSINT_FORMAT
                     " but is  "
                     "%" HIGHSINT_FORMAT "\n",
-                    var, lp.num_col_, info.workLower_[var], info.workValue_[var],
-                    info.workUpper_[var], kNonbasicMoveUp,
+                    var, lp.num_col_, info.workLower_[var],
+                    info.workValue_[var], info.workUpper_[var], kNonbasicMoveUp,
                     basis.nonbasicMove_[var]);
         return ok;
       }
@@ -1060,8 +1060,9 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
                     ") [%11g, %11g, %11g] "
                     "so nonbasic "
                     "move should be zero but is  %" HIGHSINT_FORMAT "\n",
-                    var, lp.num_col_, info.workLower_[var], info.workValue_[var],
-                    info.workUpper_[var], basis.nonbasicMove_[var]);
+                    var, lp.num_col_, info.workLower_[var],
+                    info.workValue_[var], info.workUpper_[var],
+                    basis.nonbasicMove_[var]);
         return ok;
       }
       ok = info.workValue_[var] == 0.0;

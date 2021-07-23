@@ -175,8 +175,8 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
     assert(colLowerNodes.size() == globaldomain.col_lower_.size());
     HighsInt numcol = colLowerNodes.size();
     for (HighsInt i = 0; i != numcol; ++i) {
-      checkGlobalBounds(i, globaldomain.col_lower_[i], globaldomain.col_upper_[i],
-                        feastol, treeweight);
+      checkGlobalBounds(i, globaldomain.col_lower_[i],
+                        globaldomain.col_upper_[i], feastol, treeweight);
     }
 
     size_t numopennodes = numNodes();

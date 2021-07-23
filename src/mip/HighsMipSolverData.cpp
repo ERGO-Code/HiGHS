@@ -407,7 +407,8 @@ try_again:
   double integrality_violation_ = 0;
 
   HighsCDouble obj = mipsolver.orig_model_->offset_;
-  assert((HighsInt)solution.col_value.size() == mipsolver.orig_model_->num_col_);
+  assert((HighsInt)solution.col_value.size() ==
+         mipsolver.orig_model_->num_col_);
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
     obj += mipsolver.orig_model_->col_cost_[i] * solution.col_value[i];
 
@@ -648,13 +649,13 @@ void HighsMipSolverData::basisTransfer() {
         if (firstrootbasis.col_status[i] != HighsBasisStatus::kBasic)
           nonbasiccols.push_back(i);
       }
-      std::sort(nonbasiccols.begin(), nonbasiccols.end(),
-                [&](HighsInt col1, HighsInt col2) {
-                  HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
-                  HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
-                  return std::make_pair(len1, col1) <
-                         std::make_pair(len2, col2);
-                });
+      std::sort(
+          nonbasiccols.begin(), nonbasiccols.end(),
+          [&](HighsInt col1, HighsInt col2) {
+            HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
+            HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
+            return std::make_pair(len1, col1) < std::make_pair(len2, col2);
+          });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
       for (HighsInt i : nonbasiccols) {
         const HighsInt start = model.a_start_[i];

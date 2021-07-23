@@ -867,8 +867,8 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
-    factor_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0], &lp_.a_index_[0],
-                  &lp_.a_value_[0], &basis_.basicIndex_[0],
+    factor_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0],
+                  &lp_.a_index_[0], &lp_.a_value_[0], &basis_.basicIndex_[0],
                   info_.factor_pivot_threshold, options_.factor_pivot_tolerance,
                   options_.highs_debug_level, options_.output_flag,
                   options_.log_file_stream, options_.log_to_console,
@@ -914,8 +914,8 @@ HighsInt HEkk::computeFactor() {
 void HEkk::initialiseMatrix() {
   if (!status_.has_matrix) {
     analysis_.simplexTimerStart(matrixSetupClock);
-    matrix_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0], &lp_.a_index_[0],
-                  &lp_.a_value_[0], &basis_.nonbasicFlag_[0]);
+    matrix_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0],
+                  &lp_.a_index_[0], &lp_.a_value_[0], &basis_.nonbasicFlag_[0]);
     status_.has_matrix = true;
     analysis_.simplexTimerStop(matrixSetupClock);
   }
@@ -1265,7 +1265,8 @@ void HEkk::initialiseLpColCost() {
 }
 
 void HEkk::initialiseLpRowCost() {
-  for (HighsInt iCol = lp_.num_col_; iCol < lp_.num_col_ + lp_.num_row_; iCol++) {
+  for (HighsInt iCol = lp_.num_col_; iCol < lp_.num_col_ + lp_.num_row_;
+       iCol++) {
     info_.workCost_[iCol] = 0;
     info_.workShift_[iCol] = 0;
   }

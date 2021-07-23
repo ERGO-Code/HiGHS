@@ -32,7 +32,8 @@ using std::pair;
 
 void HEkkDualRHS::setup() {
   const HighsInt numRow = ekk_instance_.lp_.num_row_;
-  const HighsInt numTot = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+  const HighsInt numTot =
+      ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
   workMark.resize(numRow);
   workIndex.resize(numRow);
   work_infeasibility.resize(numRow);

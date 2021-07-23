@@ -40,8 +40,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (lp.num_col_ == 0) return HighsStatus::kOk;
   assert(lp.format_ == MatrixFormat::kColwise);
 
-  // From here, any LP has lp.num_col_ > 0 and lp.a_start_[lp.num_col_] exists (as
-  // the number of nonzeros)
+  // From here, any LP has lp.num_col_ > 0 and lp.a_start_[lp.num_col_] exists
+  // (as the number of nonzeros)
   assert(lp.num_col_ > 0);
 
   // Assess the LP column costs
@@ -75,9 +75,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   // Assess the LP matrix - even if there are no rows!
-  call_status = assessMatrix(
-      options.log_options, "LP", lp.num_row_, lp.num_col_, lp.a_start_, lp.a_index_,
-      lp.a_value_, options.small_matrix_value, options.large_matrix_value);
+  call_status =
+      assessMatrix(options.log_options, "LP", lp.num_row_, lp.num_col_,
+                   lp.a_start_, lp.a_index_, lp.a_value_,
+                   options.small_matrix_value, options.large_matrix_value);
   return_status =
       interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
@@ -176,8 +177,9 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   }
 
   // Assess matrix-related dimensions
-  if (assessMatrixDimensions(options.log_options, "LP", lp.num_col_, lp.a_start_,
-                             lp.a_index_, lp.a_value_) == HighsStatus::kError) {
+  if (assessMatrixDimensions(options.log_options, "LP", lp.num_col_,
+                             lp.a_start_, lp.a_index_,
+                             lp.a_value_) == HighsStatus::kError) {
     error_found = true;
   }
   assert(!error_found);
@@ -934,7 +936,8 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
     for (HighsInt col = lp.num_col_ - 1; col >= 0; col--) {
       HighsInt start_col_plus_1 = new_el;
       new_el -= Alength[col];
-      for (HighsInt el = lp.a_start_[col + 1] - 1; el >= lp.a_start_[col]; el--) {
+      for (HighsInt el = lp.a_start_[col + 1] - 1; el >= lp.a_start_[col];
+           el--) {
         new_el--;
         lp.a_index_[new_el] = lp.a_index_[el];
         lp.a_value_[new_el] = lp.a_value_[el];
@@ -1384,16 +1387,16 @@ HighsStatus changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_col_lower,
                               const vector<double>& new_col_upper) {
-  return changeBounds(log_options, lp.col_lower_, lp.col_upper_, index_collection,
-                      new_col_lower, new_col_upper);
+  return changeBounds(log_options, lp.col_lower_, lp.col_upper_,
+                      index_collection, new_col_lower, new_col_upper);
 }
 
 HighsStatus changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper) {
-  return changeBounds(log_options, lp.row_lower_, lp.row_upper_, index_collection,
-                      new_row_lower, new_row_upper);
+  return changeBounds(log_options, lp.row_lower_, lp.row_upper_,
+                      index_collection, new_row_lower, new_row_upper);
 }
 
 HighsStatus changeBounds(const HighsLogOptions& log_options,

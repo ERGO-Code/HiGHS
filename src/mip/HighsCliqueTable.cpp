@@ -1222,7 +1222,8 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver,
 
       for (HighsInt j = start; j != end; ++j) {
         HighsInt col = mipsolver.mipdata_->ARindex_[j];
-        if (globaldom.col_upper_[col] == 0.0 && globaldom.col_lower_[col] == 0.0)
+        if (globaldom.col_upper_[col] == 0.0 &&
+            globaldom.col_lower_[col] == 0.0)
           continue;
         if (!globaldom.isBinary(col)) {
           issetppc = false;
@@ -1859,13 +1860,14 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain,
     runCliqueSubsumption(globaldomain, clique);
 
     if (!clique.empty()) {
-      clique.erase(std::remove_if(clique.begin(), clique.end(),
-                                  [&](CliqueVar v) {
-                                    return globaldomain.isFixed(v.col) &&
-                                           int(globaldomain.col_lower_[v.col]) ==
-                                               (1 - v.val);
-                                  }),
-                   clique.end());
+      clique.erase(
+          std::remove_if(clique.begin(), clique.end(),
+                         [&](CliqueVar v) {
+                           return globaldomain.isFixed(v.col) &&
+                                  int(globaldomain.col_lower_[v.col]) ==
+                                      (1 - v.val);
+                         }),
+          clique.end());
     }
   }
 

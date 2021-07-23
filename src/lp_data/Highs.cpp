@@ -525,8 +525,8 @@ HighsStatus Highs::run() {
   if (!haveHmo("run")) return HighsStatus::kError;
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
-  HighsInt min_highs_debug_level = // kHighsDebugLevelMin;
-       kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+  //      kHighsDebugLevelCostly;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
                            //  kHighsDebugLevelCheap;
@@ -2062,12 +2062,12 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       " "
       "(%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n\n",
       message.c_str(), modelStatusToString(model_status).c_str(),
-      modelStatusToString(scaled_model_status).c_str(), lp.num_col_, lp.num_row_,
-      unscaled_primal_solution_status, (HighsInt)solution.col_value.size(),
-      (HighsInt)solution.row_value.size(), unscaled_dual_solution_status,
-      (HighsInt)solution.col_dual.size(), (HighsInt)solution.row_dual.size(),
-      basis.valid, (HighsInt)basis.col_status.size(),
-      (HighsInt)basis.row_status.size());
+      modelStatusToString(scaled_model_status).c_str(), lp.num_col_,
+      lp.num_row_, unscaled_primal_solution_status,
+      (HighsInt)solution.col_value.size(), (HighsInt)solution.row_value.size(),
+      unscaled_dual_solution_status, (HighsInt)solution.col_dual.size(),
+      (HighsInt)solution.row_dual.size(), basis.valid,
+      (HighsInt)basis.col_status.size(), (HighsInt)basis.row_status.size());
 }
 #endif
 
@@ -2156,8 +2156,10 @@ HighsPresolveStatus Highs::runPresolve() {
   switch (presolve_.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
-      presolve_.info_.n_cols_removed = model_.lp_.num_col_ - reduced_lp.num_col_;
-      presolve_.info_.n_rows_removed = model_.lp_.num_row_ - reduced_lp.num_row_;
+      presolve_.info_.n_cols_removed =
+          model_.lp_.num_col_ - reduced_lp.num_col_;
+      presolve_.info_.n_rows_removed =
+          model_.lp_.num_row_ - reduced_lp.num_row_;
       presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_value_.size() -
                                       (HighsInt)reduced_lp.a_value_.size();
       break;

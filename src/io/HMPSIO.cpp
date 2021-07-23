@@ -492,8 +492,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   HighsInt max_col_name_length = kHighsIInf;
   if (!free_format) max_col_name_length = 8;
   HighsStatus col_name_status =
-      normaliseNames(options.log_options, "Column", lp.num_col_, local_col_names,
-                     max_col_name_length);
+      normaliseNames(options.log_options, "Column", lp.num_col_,
+                     local_col_names, max_col_name_length);
   if (col_name_status == HighsStatus::kError) return col_name_status;
   warning_found = col_name_status == HighsStatus::kWarning || warning_found;
   //

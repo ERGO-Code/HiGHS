@@ -232,8 +232,8 @@ void testBasisSolve(Highs& highs) {
     if (var >= 0) {
       basic_col = var;
       for (HighsInt ix = 0; ix < numRow; ix++) rhs[ix] = 0;
-      for (HighsInt el = lp.a_start_[basic_col]; el < lp.a_start_[basic_col + 1];
-           el++)
+      for (HighsInt el = lp.a_start_[basic_col];
+           el < lp.a_start_[basic_col + 1]; el++)
         rhs[lp.a_index_[el]] = lp.a_value_[el];
 
       highs_status =

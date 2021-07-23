@@ -49,7 +49,8 @@ void HEkkDualRow::setupSlice(HighsInt size) {
 
 void HEkkDualRow::setup() {
   // Setup common vectors
-  const HighsInt numTot = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+  const HighsInt numTot =
+      ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
   setupSlice(numTot);
   workNumTotPermutation = &ekk_instance_.info_.numTotPermutation_[0];
 
@@ -309,7 +310,8 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
-      HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
+      HighsInt num_var =
+          ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
       debugDualChuzcFailQuad0(ekk_instance_.options_, workCount, workData,
                               num_var, workDual, selectTheta, remainTheta,
                               true);

@@ -175,7 +175,8 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   for (i = 0; i < numRow; ++i) {
     switch (gmoGetEquTypeOne(gh->gmo, i)) {
       case gmoequ_E:
-        gh->lp->row_lower_[i] = gh->lp->row_upper_[i] = gmoGetRhsOne(gh->gmo, i);
+        gh->lp->row_lower_[i] = gh->lp->row_upper_[i] =
+            gmoGetRhsOne(gh->gmo, i);
         break;
 
       case gmoequ_G:

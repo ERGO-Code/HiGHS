@@ -884,9 +884,11 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
 #ifndef NDEBUG
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      assert(lp->getLpSolver().getLp().col_lower_[i] == localdom.col_lower_[i] ||
+      assert(lp->getLpSolver().getLp().col_lower_[i] ==
+                 localdom.col_lower_[i] ||
              mipsolver.variableType(i) == HighsVarType::kContinuous);
-      assert(lp->getLpSolver().getLp().col_upper_[i] == localdom.col_upper_[i] ||
+      assert(lp->getLpSolver().getLp().col_upper_[i] ==
+                 localdom.col_upper_[i] ||
              mipsolver.variableType(i) == HighsVarType::kContinuous);
     }
 #endif

@@ -190,7 +190,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
       for (HighsInt var = 0; var < lp.num_col_; var++) {
-        for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1]; idx++) {
+        for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
+             idx++) {
           if (lp.a_index_[idx] == row) {
             this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
                               lp.a_value_[idx], var + 1);

@@ -1088,8 +1088,8 @@ void HighsPrimalHeuristics::centralRounding() {
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
-      } else if (sol[i] >=
-                 mipsolver.model_->col_upper_[i] - mipsolver.mipdata_->feastol) {
+      } else if (sol[i] >= mipsolver.model_->col_upper_[i] -
+                               mipsolver.mipdata_->feastol) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kLower, i, mipsolver.model_->col_upper_[i],
             HighsDomain::Reason::unspecified());

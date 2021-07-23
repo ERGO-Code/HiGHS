@@ -498,7 +498,8 @@ const CoinPackedMatrix* OsiHiGHSSolverInterface::getMatrixByCol() const {
   double* value = new double[nelements];
 
   // copy data
-  memcpy(start, &(this->highs->lp_.a_start_[0]), (ncols + 1) * sizeof(HighsInt));
+  memcpy(start, &(this->highs->lp_.a_start_[0]),
+         (ncols + 1) * sizeof(HighsInt));
   memcpy(index, &(this->highs->lp_.a_index_[0]), nelements * sizeof(HighsInt));
   memcpy(value, &(this->highs->lp_.a_value_[0]), nelements * sizeof(double));
 
