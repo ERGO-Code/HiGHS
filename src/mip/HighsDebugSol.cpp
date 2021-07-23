@@ -58,7 +58,7 @@ void HighsDebugSol::activate() {
 
       HighsCDouble debugsolobj = 0.0;
       for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
-        debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
+        debugsolobj += mipsolver->model_->col_cost_[i] * debugSolution[i];
 
       debugSolObjective = double(debugsolobj);
       debugSolActive = true;
@@ -72,8 +72,8 @@ void HighsDebugSol::activate() {
       model.lp_ = *mipsolver->model_;
       model.lp_.col_names_.clear();
       model.lp_.row_names_.clear();
-      model.lp_.colLower_ = mipsolver->mipdata_->domain.colLower_;
-      model.lp_.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
+      model.lp_.col_lower_ = mipsolver->mipdata_->domain.col_lower_;
+      model.lp_.col_upper_ = mipsolver->mipdata_->domain.col_upper_;
       FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
                                        "debug_mip.mps", model);
     }
@@ -88,7 +88,7 @@ void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
   debugSolution.resize(mipsolver->model_->num_col_);
   HighsCDouble debugsolobj = 0.0;
   for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
-    debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
+    debugsolobj += mipsolver->model_->col_cost_[i] * debugSolution[i];
 
   debugSolObjective = double(debugsolobj);
 
@@ -101,9 +101,9 @@ void HighsDebugSol::registerDomain(const HighsDomain& domain) {
   if (!debugSolActive) return;
 
   for (HighsInt i = 0; i != mipsolver->numCol(); ++i) {
-    assert(domain.colLower_[i] <=
+    assert(domain.col_lower_[i] <=
            debugSolution[i] + mipsolver->mipdata_->feastol);
-    assert(domain.colUpper_[i] >=
+    assert(domain.col_upper_[i] >=
            debugSolution[i] - mipsolver->mipdata_->feastol);
   }
 }

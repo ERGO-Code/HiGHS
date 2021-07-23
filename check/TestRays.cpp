@@ -43,10 +43,10 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   double ray_error_norm = 0;
-  const vector<double>& colLower = lp.colLower_;
-  const vector<double>& colUpper = lp.colUpper_;
-  const vector<double>& rowLower = lp.rowLower_;
-  const vector<double>& rowUpper = lp.rowUpper_;
+  const vector<double>& colLower = lp.col_lower_;
+  const vector<double>& colUpper = lp.col_upper_;
+  const vector<double>& rowLower = lp.row_lower_;
+  const vector<double>& rowUpper = lp.row_upper_;
   const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
   const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
   vector<double> tableau_row;
@@ -141,10 +141,10 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   double ray_error_norm = 0;
-  const vector<double>& colLower = lp.colLower_;
-  const vector<double>& colUpper = lp.colUpper_;
-  const vector<double>& rowLower = lp.rowLower_;
-  const vector<double>& rowUpper = lp.rowUpper_;
+  const vector<double>& colLower = lp.col_lower_;
+  const vector<double>& colUpper = lp.col_upper_;
+  const vector<double>& rowLower = lp.row_lower_;
+  const vector<double>& rowUpper = lp.row_upper_;
   double dual_feasibility_tolerance;
   highs.getOptionValue("dual_feasibility_tolerance",
                        dual_feasibility_tolerance);

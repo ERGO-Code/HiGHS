@@ -34,17 +34,17 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
 
   // For each row with bounds on both sides introduce explicit slack and
   // transfer bounds.
-  assert((HighsInt)lp.rowLower_.size() == num_row);
-  assert((HighsInt)lp.rowUpper_.size() == num_row);
+  assert((HighsInt)lp.row_lower_.size() == num_row);
+  assert((HighsInt)lp.row_upper_.size() == num_row);
 
   std::vector<HighsInt> general_bounded_rows;
   std::vector<HighsInt> free_rows;
 
   for (HighsInt row = 0; row < num_row; row++)
-    if (lp.rowLower_[row] < lp.rowUpper_[row] &&
-        lp.rowLower_[row] > -kHighsInf && lp.rowUpper_[row] < kHighsInf)
+    if (lp.row_lower_[row] < lp.row_upper_[row] &&
+        lp.row_lower_[row] > -kHighsInf && lp.row_upper_[row] < kHighsInf)
       general_bounded_rows.push_back(row);
-    else if (lp.rowLower_[row] <= -kHighsInf && lp.rowUpper_[row] >= kHighsInf)
+    else if (lp.row_lower_[row] <= -kHighsInf && lp.row_upper_[row] >= kHighsInf)
       free_rows.push_back(row);
 
   const HighsInt num_slack = general_bounded_rows.size();
@@ -55,18 +55,18 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   constraint_type.reserve(num_row);
 
   for (int row = 0; row < num_row; row++) {
-    if (lp.rowLower_[row] > -kHighsInf && lp.rowUpper_[row] >= kHighsInf) {
-      rhs.push_back(lp.rowLower_[row]);
+    if (lp.row_lower_[row] > -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
+      rhs.push_back(lp.row_lower_[row]);
       constraint_type.push_back('>');
-    } else if (lp.rowLower_[row] <= -kHighsInf &&
-               lp.rowUpper_[row] < kHighsInf) {
-      rhs.push_back(lp.rowUpper_[row]);
+    } else if (lp.row_lower_[row] <= -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
+      rhs.push_back(lp.row_upper_[row]);
       constraint_type.push_back('<');
-    } else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
-      rhs.push_back(lp.rowUpper_[row]);
+    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
+      rhs.push_back(lp.row_upper_[row]);
       constraint_type.push_back('=');
-    } else if (lp.rowLower_[row] > -kHighsInf &&
-               lp.rowUpper_[row] < kHighsInf) {
+    } else if (lp.row_lower_[row] > -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
       // general bounded
       rhs.push_back(0);
       constraint_type.push_back('=');
@@ -97,7 +97,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   for (HighsInt col = 0; col < lp.num_col_; col++)
     for (HighsInt k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
       HighsInt row = lp.a_index_[k];
-      if (lp.rowLower_[row] > -kHighsInf || lp.rowUpper_[row] < kHighsInf)
+      if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf)
         sizes[col]++;
     }
   // Copy Astart and Aindex to ipx::Int array.
@@ -123,7 +123,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   //  (int)num_col, (int)Ap[num_col]);
   for (HighsInt k = 0; k < nnz; k++) {
     HighsInt row = lp.a_index_[k];
-    if (lp.rowLower_[row] > -kHighsInf || lp.rowUpper_[row] < kHighsInf) {
+    if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf) {
       Ai.push_back(reduced_rowmap[lp.a_index_[k]]);
       Ax.push_back(lp.a_value_[k]);
     }
@@ -138,25 +138,25 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   col_lb.resize(num_col);
   col_ub.resize(num_col);
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    if (lp.colLower_[col] <= -kHighsInf)
+    if (lp.col_lower_[col] <= -kHighsInf)
       col_lb[col] = -INFINITY;
     else
-      col_lb[col] = lp.colLower_[col];
+      col_lb[col] = lp.col_lower_[col];
 
-    if (lp.colUpper_[col] >= kHighsInf)
+    if (lp.col_upper_[col] >= kHighsInf)
       col_ub[col] = INFINITY;
     else
-      col_ub[col] = lp.colUpper_[col];
+      col_ub[col] = lp.col_upper_[col];
   }
   for (HighsInt slack = 0; slack < num_slack; slack++) {
     const int row = general_bounded_rows[slack];
-    col_lb[lp.num_col_ + slack] = lp.rowLower_[row];
-    col_ub[lp.num_col_ + slack] = lp.rowUpper_[row];
+    col_lb[lp.num_col_ + slack] = lp.row_lower_[row];
+    col_ub[lp.num_col_ + slack] = lp.row_upper_[row];
   }
 
   obj.resize(num_col);
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    obj[col] = (HighsInt)lp.sense_ * lp.colCost_[col];
+    obj[col] = (HighsInt)lp.sense_ * lp.col_cost_[col];
   }
   obj.insert(obj.end(), num_slack, 0);
   /*

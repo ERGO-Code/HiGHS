@@ -2097,12 +2097,12 @@ void HEkkDual::exitPhase1ResetDuals() {
       double lp_lower;
       double lp_upper;
       if (iVar < lp.num_col_) {
-        lp_lower = lp.colLower_[iVar];
-        lp_upper = lp.colUpper_[iVar];
+        lp_lower = lp.col_lower_[iVar];
+        lp_upper = lp.col_upper_[iVar];
       } else {
         HighsInt iRow = iVar - lp.num_col_;
-        lp_lower = lp.rowLower_[iRow];
-        lp_upper = lp.rowUpper_[iRow];
+        lp_lower = lp.row_lower_[iRow];
+        lp_upper = lp.row_upper_[iRow];
       }
       if (lp_lower <= -kHighsInf && lp_upper >= kHighsInf) {
         const double shift = -info.workDual_[iVar];
@@ -2252,7 +2252,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     HighsInt iVar = basis.basicIndex_[iRow];
     if (iVar < lp.num_col_) {
-      const double value = lp.colCost_[iVar];
+      const double value = lp.col_cost_[iVar];
       if (value) {
         dual_col.array[iRow] = value;
         dual_col.index[dual_col.count++] = iRow;
@@ -2274,7 +2274,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   double norm_delta_dual = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (!basis.nonbasicFlag_[iCol]) continue;
-    double exact_dual = lp.colCost_[iCol] - dual_row.array[iCol];
+    double exact_dual = lp.col_cost_[iCol] - dual_row.array[iCol];
     double residual = fabs(exact_dual - info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;

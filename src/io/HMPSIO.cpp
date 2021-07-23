@@ -525,8 +525,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
 
   HighsStatus write_status = writeMps(
       options.log_options, filename, lp.model_name_, lp.num_row_, lp.num_col_,
-      hessian.dim_, lp.sense_, lp.offset_, lp.colCost_, lp.colLower_,
-      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.a_start_, lp.a_index_,
+      hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
+      lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_start_, lp.a_index_,
       lp.a_value_, hessian.q_start_, hessian.q_index_, hessian.q_value_,
       lp.integrality_, local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)

@@ -41,7 +41,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<RowType> rowtype;
   rowtype.resize(lp.num_row_);
   for (HighsInt i = 0; i != lp.num_row_; ++i) {
-    if (lp.rowLower_[i] == lp.rowUpper_[i]) {
+    if (lp.row_lower_[i] == lp.row_upper_[i]) {
       rowtype[i] = RowType::kEq;
       continue;
     }
@@ -49,11 +49,11 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     double lowerslack = kHighsInf;
     double upperslack = kHighsInf;
 
-    if (lp.rowLower_[i] != -kHighsInf)
-      lowerslack = lpSolution.row_value[i] - lp.rowLower_[i];
+    if (lp.row_lower_[i] != -kHighsInf)
+      lowerslack = lpSolution.row_value[i] - lp.row_lower_[i];
 
-    if (lp.rowUpper_[i] != kHighsInf)
-      upperslack = lp.rowUpper_[i] - lpSolution.row_value[i];
+    if (lp.row_upper_[i] != kHighsInf)
+      upperslack = lp.row_upper_[i] - lpSolution.row_value[i];
 
     if (lowerslack > mip.mipdata_->feastol &&
         upperslack > mip.mipdata_->feastol)

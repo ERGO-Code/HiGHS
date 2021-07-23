@@ -41,11 +41,11 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   equal = this->sense_ == lp.sense_ && equal;
   equal = this->offset_ == lp.offset_ && equal;
   equal = this->model_name_ == lp.model_name_ && equal;
-  equal = this->colCost_ == lp.colCost_ && equal;
-  equal = this->colUpper_ == lp.colUpper_ && equal;
-  equal = this->colLower_ == lp.colLower_ && equal;
-  equal = this->rowUpper_ == lp.rowUpper_ && equal;
-  equal = this->rowLower_ == lp.rowLower_ && equal;
+  equal = this->col_cost_ == lp.col_cost_ && equal;
+  equal = this->col_upper_ == lp.col_upper_ && equal;
+  equal = this->col_lower_ == lp.col_lower_ && equal;
+  equal = this->row_upper_ == lp.row_upper_ && equal;
+  equal = this->row_lower_ == lp.row_lower_ && equal;
   equal = this->a_start_ == lp.a_start_ && equal;
   equal = this->a_index_ == lp.a_index_ && equal;
   equal = this->a_value_ == lp.a_value_ && equal;
@@ -57,7 +57,7 @@ double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   assert((int)solution.size() >= this->num_col_);
   double objective_function_value = this->offset_;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    objective_function_value += this->colCost_[iCol] * solution[iCol];
+    objective_function_value += this->col_cost_[iCol] * solution[iCol];
   return objective_function_value;
 }
 
@@ -68,11 +68,11 @@ void HighsLp::clear() {
   this->a_start_.clear();
   this->a_index_.clear();
   this->a_value_.clear();
-  this->colCost_.clear();
-  this->colLower_.clear();
-  this->colUpper_.clear();
-  this->rowLower_.clear();
-  this->rowUpper_.clear();
+  this->col_cost_.clear();
+  this->col_lower_.clear();
+  this->col_upper_.clear();
+  this->row_lower_.clear();
+  this->row_upper_.clear();
 
   this->sense_ = ObjSense::kMinimize;
   this->offset_ = 0;

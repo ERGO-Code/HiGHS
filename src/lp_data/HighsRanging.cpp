@@ -602,15 +602,15 @@ void writeRanging(const HighsRanging& ranging,
                 "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
                 iCol,
                 statusToString(highs_model_object.basis_.col_status[iCol],
-                               lp.colLower_[iCol], lp.colUpper_[iCol])
+                               lp.col_lower_[iCol], lp.col_upper_[iCol])
                     .c_str(),
                 ranging.col_bound_dn.objective_[iCol],
-                ranging.col_bound_dn.value_[iCol], lp.colLower_[iCol],
+                ranging.col_bound_dn.value_[iCol], lp.col_lower_[iCol],
                 highs_model_object.solution_.col_value[iCol],
-                lp.colUpper_[iCol], ranging.col_bound_up.value_[iCol],
+                lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
                 ranging.col_bound_up.objective_[iCol],
                 ranging.col_cost_dn.objective_[iCol],
-                ranging.col_cost_dn.value_[iCol], lp.colCost_[iCol],
+                ranging.col_cost_dn.value_[iCol], lp.col_cost_[iCol],
                 ranging.col_cost_up.value_[iCol],
                 ranging.col_cost_up.objective_[iCol]);
   }
@@ -625,12 +625,12 @@ void writeRanging(const HighsRanging& ranging,
                 "%-10.4g |\n",
                 iRow,
                 statusToString(highs_model_object.basis_.row_status[iRow],
-                               lp.rowLower_[iRow], lp.rowUpper_[iRow])
+                               lp.row_lower_[iRow], lp.row_upper_[iRow])
                     .c_str(),
                 ranging.row_bound_dn.objective_[iRow],
-                ranging.row_bound_dn.value_[iRow], lp.rowLower_[iRow],
+                ranging.row_bound_dn.value_[iRow], lp.row_lower_[iRow],
                 highs_model_object.solution_.row_value[iRow],
-                lp.rowUpper_[iRow], ranging.row_bound_up.value_[iRow],
+                lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
                 ranging.row_bound_up.objective_[iRow]);
   }
 }

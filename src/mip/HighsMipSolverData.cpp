@@ -23,8 +23,8 @@
 
 bool HighsMipSolverData::checkSolution(const std::vector<double>& solution) {
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
-    if (solution[i] < mipsolver.model_->colLower_[i] - feastol) return false;
-    if (solution[i] > mipsolver.model_->colUpper_[i] + feastol) return false;
+    if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
+    if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
         std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
       return false;
@@ -53,8 +53,8 @@ bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
   HighsCDouble obj = 0;
 
   for (HighsInt i = 0; i != mipsolver.model_->num_col_; ++i) {
-    if (solution[i] < mipsolver.model_->colLower_[i] - feastol) return false;
-    if (solution[i] > mipsolver.model_->colUpper_[i] + feastol) return false;
+    if (solution[i] < mipsolver.model_->col_lower_[i] - feastol) return false;
+    if (solution[i] > mipsolver.model_->col_upper_[i] + feastol) return false;
     if (mipsolver.variableType(i) == HighsVarType::kInteger &&
         std::abs(solution[i] - std::floor(solution[i] + 0.5)) > feastol)
       return false;
@@ -243,13 +243,13 @@ void HighsMipSolverData::runSetup() {
       for (HighsInt j = start; j != end; ++j) {
         HighsInt row = model.a_index_[j];
 
-        if (model.rowLower_[row] != -kHighsInf) {
+        if (model.row_lower_[row] != -kHighsInf) {
           if (model.a_value_[j] < 0)
             ++uplocks[i];
           else
             ++downlocks[i];
         }
-        if (model.rowUpper_[row] != kHighsInf) {
+        if (model.row_upper_[row] != kHighsInf) {
           if (model.a_value_[j] < 0)
             ++downlocks[i];
           else
@@ -283,13 +283,13 @@ void HighsMipSolverData::runSetup() {
     }
 
     if (integral) {
-      if (presolvedModel.rowLower_[i] != -kHighsInf)
-        presolvedModel.rowLower_[i] =
-            std::ceil(presolvedModel.rowLower_[i] - feastol);
+      if (presolvedModel.row_lower_[i] != -kHighsInf)
+        presolvedModel.row_lower_[i] =
+            std::ceil(presolvedModel.row_lower_[i] - feastol);
 
-      if (presolvedModel.rowUpper_[i] != kHighsInf)
-        presolvedModel.rowUpper_[i] =
-            std::floor(presolvedModel.rowUpper_[i] + feastol);
+      if (presolvedModel.row_upper_[i] != kHighsInf)
+        presolvedModel.row_upper_[i] =
+            std::floor(presolvedModel.row_upper_[i] + feastol);
     }
 
     rowintegral[i] = integral;
@@ -361,8 +361,8 @@ void HighsMipSolverData::runSetup() {
   if (detectSymmetries) {
     bool haveBin = false;
     for (HighsInt i : integral_cols) {
-      if (mipsolver.model_->colLower_[i] == 0.0 &&
-          mipsolver.model_->colUpper_[i] == 1.0) {
+      if (mipsolver.model_->col_lower_[i] == 0.0 &&
+          mipsolver.model_->col_upper_[i] == 1.0) {
         haveBin = true;
         break;
       }
@@ -409,14 +409,14 @@ try_again:
   HighsCDouble obj = mipsolver.orig_model_->offset_;
   assert((HighsInt)solution.col_value.size() == mipsolver.orig_model_->num_col_);
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
-    obj += mipsolver.orig_model_->colCost_[i] * solution.col_value[i];
+    obj += mipsolver.orig_model_->col_cost_[i] * solution.col_value[i];
 
     bound_violation_ =
         std::max(bound_violation_,
-                 mipsolver.orig_model_->colLower_[i] - solution.col_value[i]);
+                 mipsolver.orig_model_->col_lower_[i] - solution.col_value[i]);
     bound_violation_ =
         std::max(bound_violation_,
-                 solution.col_value[i] - mipsolver.orig_model_->colUpper_[i]);
+                 solution.col_value[i] - mipsolver.orig_model_->col_upper_[i]);
 
     if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
       double intval = std::floor(solution.col_value[i] + 0.5);
@@ -428,10 +428,10 @@ try_again:
   for (HighsInt i = 0; i != mipsolver.orig_model_->num_row_; ++i) {
     row_violation_ =
         std::max(row_violation_,
-                 mipsolver.orig_model_->rowLower_[i] - solution.row_value[i]);
+                 mipsolver.orig_model_->row_lower_[i] - solution.row_value[i]);
     row_violation_ =
         std::max(row_violation_,
-                 solution.row_value[i] - mipsolver.orig_model_->rowUpper_[i]);
+                 solution.row_value[i] - mipsolver.orig_model_->row_upper_[i]);
   }
 
   bool feasible =
@@ -451,8 +451,8 @@ try_again:
     for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
       if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
         double solval = std::round(solution.col_value[i]);
-        fixedModel.colLower_[i] = std::max(fixedModel.colLower_[i], solval);
-        fixedModel.colUpper_[i] = std::min(fixedModel.colUpper_[i], solval);
+        fixedModel.col_lower_[i] = std::max(fixedModel.col_lower_[i], solval);
+        fixedModel.col_upper_[i] = std::min(fixedModel.col_upper_[i], solval);
       }
     }
     Highs tmpSolver;

@@ -32,17 +32,17 @@ HighsStatus issue425() {
   lp.a_index_.push_back(3);
   lp.a_value_.push_back(1);
 
-  lp.colLower_.assign(lp.num_col_, 0);
-  lp.colUpper_.assign(lp.num_col_, kHighsInf);
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
   
   std::vector<double> b{1, 2, 2, 4};
-  lp.rowLower_ = b;
-  lp.rowUpper_ = b;
+  lp.row_lower_ = b;
+  lp.row_upper_ = b;
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
 
   lp.format_ = MatrixFormat::kColwise;
   

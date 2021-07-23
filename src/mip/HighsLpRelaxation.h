@@ -127,22 +127,22 @@ class HighsLpRelaxation {
   double slackLower(HighsInt row) const;
 
   double rowLower(HighsInt row) const {
-    return lpsolver.getLp().rowLower_[row];
+    return lpsolver.getLp().row_lower_[row];
   }
 
   double rowUpper(HighsInt row) const {
-    return lpsolver.getLp().rowUpper_[row];
+    return lpsolver.getLp().row_upper_[row];
   }
 
   double colLower(HighsInt col) const {
     return col < lpsolver.getLp().num_col_
-               ? lpsolver.getLp().colLower_[col]
+               ? lpsolver.getLp().col_lower_[col]
                : slackLower(col - lpsolver.getLp().num_col_);
   }
 
   double colUpper(HighsInt col) const {
     return col < lpsolver.getLp().num_col_
-               ? lpsolver.getLp().colUpper_[col]
+               ? lpsolver.getLp().col_upper_[col]
                : slackUpper(col - lpsolver.getLp().num_col_);
   }
 

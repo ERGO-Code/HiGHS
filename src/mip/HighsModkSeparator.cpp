@@ -84,10 +84,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     if (skipRow[row]) continue;
 
     bool leqRow;
-    if (lp.rowUpper_[row] - lpSolution.row_value[row] <=
+    if (lp.row_upper_[row] - lpSolution.row_value[row] <=
         mipsolver.mipdata_->feastol)
       leqRow = true;
-    else if (lpSolution.row_value[row] - lp.rowLower_[row] <=
+    else if (lpSolution.row_value[row] - lp.row_lower_[row] <=
              mipsolver.mipdata_->feastol)
       leqRow = false;
     else
@@ -100,14 +100,14 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
 
     if (leqRow) {
-      rhs = lp.rowUpper_[row];
+      rhs = lp.row_upper_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.assign(rowvals, rowvals + rowlen);
     } else {
-      assert(lpSolution.row_value[row] - lp.rowLower_[row] <=
+      assert(lpSolution.row_value[row] - lp.row_lower_[row] <=
              mipsolver.mipdata_->feastol);
 
-      rhs = -lp.rowLower_[row];
+      rhs = -lp.row_lower_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.resize(rowlen);
       std::transform(rowvals, rowvals + rowlen, vals.begin(),

@@ -113,9 +113,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
   lp.model_name_ = "qod";
   lp.num_col_ = 1;
   lp.num_row_ = 0;
-  lp.colCost_ = {1.0};
-  lp.colLower_ = {-inf};
-  lp.colUpper_ = {inf};
+  lp.col_cost_ = {1.0};
+  lp.col_lower_ = {-inf};
+  lp.col_upper_ = {inf};
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0.25;
   hessian.dim_ = lp.num_col_;
@@ -256,9 +256,9 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   lp.model_name_ = "qjh";
   lp.num_col_ = 3;
   lp.num_row_ = 0;
-  lp.colCost_ = {0.0, -1.0, -3.0};
-  lp.colLower_ = {-inf, -inf, -inf};
-  lp.colUpper_ = {inf, inf, inf};
+  lp.col_cost_ = {0.0, -1.0, -3.0};
+  lp.col_lower_ = {-inf, -inf, -inf};
+  lp.col_upper_ = {inf, inf, inf};
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
   hessian.dim_ = lp.num_col_;
@@ -291,9 +291,9 @@ TEST_CASE("test-qjh", "[qpsolver]") {
 
   // Now with a constraint
   lp.num_row_ = 1;
-  lp.colLower_ = {0.0, 0.0, 0.0};
-  lp.rowLower_ = {-inf};
-  lp.rowUpper_ = {2};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {2};
   lp.a_start_ = {0, 1, 1, 2};
   lp.a_index_ = {0, 0};
   lp.a_value_ = {1.0, 1.0};

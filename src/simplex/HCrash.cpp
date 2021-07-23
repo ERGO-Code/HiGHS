@@ -276,9 +276,9 @@ bool HCrash::bixby_iz_da() {
   const HighsInt* Astart = &lp.a_start_[0];
   const double* Avalue = &lp.a_value_[0];
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
+  const double* colCost = &lp.col_cost_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
 
   // const double *primalColLowerImplied = lp.primalColLowerImplied_;
   // const double *primalColUpperImplied = lp.primalColUpperImplied_;
@@ -460,9 +460,9 @@ bool HCrash::bixby_iz_da() {
 void HCrash::bixby_rp_mrt() {
   HighsLp& lp = ekk_instance.lp_;
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
+  const double* colCost = &lp.col_cost_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
   double mx_co_v = -kHighsInf;
   for (HighsInt c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
@@ -1172,7 +1172,7 @@ void HCrash::ltssf_cz_r() {
 void HCrash::ltssf_cz_c() {
   HighsLp& lp = ekk_instance.lp_;
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
+  const double* colCost = &lp.col_cost_[0];
 
   cz_c_n = no_ix;
   HighsInt su_r_c_pri_v_lm = crsh_mx_pri_v;
@@ -1365,10 +1365,10 @@ void HCrash::ltssf_rp_pri_k_da() {
 
 void HCrash::crsh_iz_vr_ty() {
   HighsLp& lp = ekk_instance.lp_;
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
-  const double* rowLower = &lp.rowLower_[0];
-  const double* rowUpper = &lp.rowUpper_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
+  const double* rowLower = &lp.row_lower_[0];
+  const double* rowUpper = &lp.row_upper_[0];
   const int8_t* nonbasicFlag = &ekk_instance.basis_.nonbasicFlag_[0];
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
@@ -1458,9 +1458,9 @@ void HCrash::crsh_iz_vr_ty() {
 void HCrash::crsh_an_c_co() {
   HighsLp& lp = ekk_instance.lp_;
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
+  const double* colCost = &lp.col_cost_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
 
   HighsInt n_ze_c_co = 0;
   HighsInt n_fs_c_co = 0;

@@ -50,14 +50,14 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   index_collection.is_interval_ = true;
   index_collection.from_ = 0;
   index_collection.to_ = lp.num_col_ - 1;
-  call_status = assessCosts(options, 0, index_collection, lp.colCost_,
+  call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
                             options.infinite_cost);
   return_status =
       interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the LP column bounds
-  call_status = assessBounds(options, "Col", 0, index_collection, lp.colLower_,
-                             lp.colUpper_, options.infinite_bound);
+  call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
+                             lp.col_upper_, options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
@@ -68,8 +68,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.from_ = 0;
     index_collection.to_ = lp.num_row_ - 1;
     call_status =
-        assessBounds(options, "Row", 0, index_collection, lp.rowLower_,
-                     lp.rowUpper_, options.infinite_bound);
+        assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
+                     lp.row_upper_, options.infinite_bound);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
@@ -116,9 +116,9 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     error_found = true;
   } else {
     // Check the size of the column vectors
-    HighsInt col_cost_size = lp.colCost_.size();
-    HighsInt col_lower_size = lp.colLower_.size();
-    HighsInt col_upper_size = lp.colUpper_.size();
+    HighsInt col_cost_size = lp.col_cost_.size();
+    HighsInt col_lower_size = lp.col_lower_.size();
+    HighsInt col_upper_size = lp.col_upper_.size();
     HighsInt matrix_start_size = lp.a_start_.size();
     bool legal_col_cost_size = col_cost_size >= lp.num_col_;
     bool legal_col_lower_size = col_lower_size >= lp.num_col_;
@@ -155,8 +155,8 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
                  lp.num_row_);
     error_found = true;
   } else {
-    HighsInt row_lower_size = lp.rowLower_.size();
-    HighsInt row_upper_size = lp.rowUpper_.size();
+    HighsInt row_lower_size = lp.row_lower_.size();
+    HighsInt row_upper_size = lp.row_upper_.size();
     bool legal_row_lower_size = row_lower_size >= lp.num_row_;
     bool legal_row_upper_size = row_lower_size >= lp.num_row_;
     if (!legal_row_lower_size) {
@@ -399,37 +399,37 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   double max_residual = 0;
   HighsInt num_change = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    double residual = lp.colLower_[iCol] - lp.colUpper_[iCol];
+    double residual = lp.col_lower_[iCol] - lp.col_upper_[iCol];
     if (residual > options.primal_feasibility_tolerance) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Column %" HIGHSINT_FORMAT
                    " has inconsistent bounds [%g, %g] (residual = "
                    "%g) after presolve\n",
-                   iCol, lp.colLower_[iCol], lp.colUpper_[iCol], residual);
+                   iCol, lp.col_lower_[iCol], lp.col_upper_[iCol], residual);
       return HighsStatus::kError;
     } else if (residual > 0) {
       num_change++;
       max_residual = std::max(residual, max_residual);
-      double mid = 0.5 * (lp.colLower_[iCol] + lp.colUpper_[iCol]);
-      lp.colLower_[iCol] = mid;
-      lp.colUpper_[iCol] = mid;
+      double mid = 0.5 * (lp.col_lower_[iCol] + lp.col_upper_[iCol]);
+      lp.col_lower_[iCol] = mid;
+      lp.col_upper_[iCol] = mid;
     }
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    double residual = lp.rowLower_[iRow] - lp.rowUpper_[iRow];
+    double residual = lp.row_lower_[iRow] - lp.row_upper_[iRow];
     if (residual > options.primal_feasibility_tolerance) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "Row %" HIGHSINT_FORMAT
                    " has inconsistent bounds [%g, %g] (residual = %g) "
                    "after presolve\n",
-                   iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], residual);
+                   iRow, lp.row_lower_[iRow], lp.row_upper_[iRow], residual);
       return HighsStatus::kError;
     } else if (residual > 0) {
       num_change++;
       max_residual = std::max(residual, max_residual);
-      double mid = 0.5 * (lp.rowLower_[iRow] + lp.rowUpper_[iRow]);
-      lp.rowLower_[iRow] = mid;
-      lp.rowUpper_[iRow] = mid;
+      double mid = 0.5 * (lp.row_lower_[iRow] + lp.row_upper_[iRow]);
+      lp.row_lower_[iRow] = mid;
+      lp.row_upper_[iRow] = mid;
     }
   }
   if (num_change) {
@@ -511,7 +511,7 @@ HighsStatus applyScalingToLpColCost(
     }
     ml_col = ml_col_os + local_col;
     if (mask && !col_mask[local_col]) continue;
-    lp.colCost_[ml_col] *= colScale[ml_col];
+    lp.col_cost_[ml_col] *= colScale[ml_col];
   }
 
   return HighsStatus::kOk;
@@ -550,10 +550,10 @@ HighsStatus applyScalingToLpColBounds(
     }
     ml_col = ml_col_os + local_col;
     if (mask && !col_mask[local_col]) continue;
-    if (!highs_isInfinity(-lp.colLower_[ml_col]))
-      lp.colLower_[ml_col] /= colScale[ml_col];
-    if (!highs_isInfinity(lp.colUpper_[ml_col]))
-      lp.colUpper_[ml_col] /= colScale[ml_col];
+    if (!highs_isInfinity(-lp.col_lower_[ml_col]))
+      lp.col_lower_[ml_col] /= colScale[ml_col];
+    if (!highs_isInfinity(lp.col_upper_[ml_col]))
+      lp.col_upper_[ml_col] /= colScale[ml_col];
   }
 
   return HighsStatus::kOk;
@@ -592,10 +592,10 @@ HighsStatus applyScalingToLpRowBounds(
     }
     ml_row = ml_row_os + local_row;
     if (mask && !row_mask[local_row]) continue;
-    if (!highs_isInfinity(-lp.rowLower_[ml_row]))
-      lp.rowLower_[ml_row] *= rowScale[ml_row];
-    if (!highs_isInfinity(lp.rowUpper_[ml_row]))
-      lp.rowUpper_[ml_row] *= rowScale[ml_row];
+    if (!highs_isInfinity(-lp.row_lower_[ml_row]))
+      lp.row_lower_[ml_row] *= rowScale[ml_row];
+    if (!highs_isInfinity(lp.row_upper_[ml_row]))
+      lp.row_upper_[ml_row] *= rowScale[ml_row];
   }
 
   return HighsStatus::kOk;
@@ -698,14 +698,14 @@ HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
 
   for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++)
     lp.a_value_[el] *= colScale;
-  lp.colCost_[col] *= colScale;
+  lp.col_cost_[col] *= colScale;
   if (colScale > 0) {
-    lp.colLower_[col] /= colScale;
-    lp.colUpper_[col] /= colScale;
+    lp.col_lower_[col] /= colScale;
+    lp.col_upper_[col] /= colScale;
   } else {
-    const double new_upper = lp.colLower_[col] / colScale;
-    lp.colLower_[col] = lp.colUpper_[col] / colScale;
-    lp.colUpper_[col] = new_upper;
+    const double new_upper = lp.col_lower_[col] / colScale;
+    lp.col_lower_[col] = lp.col_upper_[col] / colScale;
+    lp.col_upper_[col] = new_upper;
   }
   return HighsStatus::kOk;
 }
@@ -722,12 +722,12 @@ HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
     }
   }
   if (rowScale > 0) {
-    lp.rowLower_[row] /= rowScale;
-    lp.rowUpper_[row] /= rowScale;
+    lp.row_lower_[row] /= rowScale;
+    lp.row_upper_[row] /= rowScale;
   } else {
-    const double new_upper = lp.rowLower_[row] / rowScale;
-    lp.rowLower_[row] = lp.rowUpper_[row] / rowScale;
-    lp.rowUpper_[row] = new_upper;
+    const double new_upper = lp.row_lower_[row] / rowScale;
+    lp.row_lower_[row] = lp.row_upper_[row] / rowScale;
+    lp.row_upper_[row] = new_upper;
   }
   return HighsStatus::kOk;
 }
@@ -739,16 +739,16 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
   if (num_new_col < 0) return HighsStatus::kError;
   if (num_new_col == 0) return HighsStatus::kOk;
   HighsInt new_num_col = lp.num_col_ + num_new_col;
-  lp.colCost_.resize(new_num_col);
-  lp.colLower_.resize(new_num_col);
-  lp.colUpper_.resize(new_num_col);
+  lp.col_cost_.resize(new_num_col);
+  lp.col_lower_.resize(new_num_col);
+  lp.col_upper_.resize(new_num_col);
   bool have_names = lp.col_names_.size();
   if (have_names) lp.col_names_.resize(new_num_col);
   for (HighsInt new_col = 0; new_col < num_new_col; new_col++) {
     HighsInt iCol = lp.num_col_ + new_col;
-    lp.colCost_[iCol] = colCost[new_col];
-    lp.colLower_[iCol] = colLower[new_col];
-    lp.colUpper_[iCol] = colUpper[new_col];
+    lp.col_cost_[iCol] = colCost[new_col];
+    lp.col_lower_[iCol] = colLower[new_col];
+    lp.col_upper_[iCol] = colUpper[new_col];
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
   }
@@ -761,15 +761,15 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   if (num_new_row < 0) return HighsStatus::kError;
   if (num_new_row == 0) return HighsStatus::kOk;
   HighsInt new_num_row = lp.num_row_ + num_new_row;
-  lp.rowLower_.resize(new_num_row);
-  lp.rowUpper_.resize(new_num_row);
+  lp.row_lower_.resize(new_num_row);
+  lp.row_upper_.resize(new_num_row);
   bool have_names = lp.row_names_.size();
   if (have_names) lp.row_names_.resize(new_num_row);
 
   for (HighsInt new_row = 0; new_row < num_new_row; new_row++) {
     HighsInt iRow = lp.num_row_ + new_row;
-    lp.rowLower_[iRow] = rowLower[new_row];
-    lp.rowUpper_[iRow] = rowUpper[new_row];
+    lp.row_lower_[iRow] = rowLower[new_row];
+    lp.row_upper_[iRow] = rowUpper[new_row];
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.row_names_[iRow] = "";
   }
@@ -1013,17 +1013,17 @@ HighsStatus deleteColsFromLpVectors(
     if (delete_to_col >= col_dim - 1) break;
     assert(delete_to_col < col_dim);
     for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
-      lp.colCost_[new_num_col] = lp.colCost_[col];
-      lp.colLower_[new_num_col] = lp.colLower_[col];
-      lp.colUpper_[new_num_col] = lp.colUpper_[col];
+      lp.col_cost_[new_num_col] = lp.col_cost_[col];
+      lp.col_lower_[new_num_col] = lp.col_lower_[col];
+      lp.col_upper_[new_num_col] = lp.col_upper_[col];
       if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
       new_num_col++;
     }
     if (keep_to_col >= col_dim - 1) break;
   }
-  lp.colCost_.resize(new_num_col);
-  lp.colLower_.resize(new_num_col);
-  lp.colUpper_.resize(new_num_col);
+  lp.col_cost_.resize(new_num_col);
+  lp.col_lower_.resize(new_num_col);
+  lp.col_upper_.resize(new_num_col);
   if (have_names) lp.col_names_.resize(new_num_col);
   return HighsStatus::kOk;
 }
@@ -1162,15 +1162,15 @@ HighsStatus deleteRowsFromLpVectors(
     if (delete_to_row >= row_dim - 1) break;
     assert(delete_to_row < row_dim);
     for (HighsInt row = keep_from_row; row <= keep_to_row; row++) {
-      lp.rowLower_[new_num_row] = lp.rowLower_[row];
-      lp.rowUpper_[new_num_row] = lp.rowUpper_[row];
+      lp.row_lower_[new_num_row] = lp.row_lower_[row];
+      lp.row_upper_[new_num_row] = lp.row_upper_[row];
       if (have_names) lp.row_names_[new_num_row] = lp.row_names_[row];
       new_num_row++;
     }
     if (keep_to_row >= row_dim - 1) break;
   }
-  lp.rowLower_.resize(new_num_row);
-  lp.rowUpper_.resize(new_num_row);
+  lp.row_lower_.resize(new_num_row);
+  lp.row_upper_.resize(new_num_row);
   if (have_names) lp.row_names_.resize(new_num_row);
   return HighsStatus::kOk;
 }
@@ -1375,7 +1375,7 @@ HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
       usr_col = k;
     }
     if (mask && !col_mask[col]) continue;
-    lp.colCost_[col] = new_col_cost[usr_col];
+    lp.col_cost_[col] = new_col_cost[usr_col];
   }
   return HighsStatus::kOk;
 }
@@ -1384,7 +1384,7 @@ HighsStatus changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_col_lower,
                               const vector<double>& new_col_upper) {
-  return changeBounds(log_options, lp.colLower_, lp.colUpper_, index_collection,
+  return changeBounds(log_options, lp.col_lower_, lp.col_upper_, index_collection,
                       new_col_lower, new_col_upper);
 }
 
@@ -1392,7 +1392,7 @@ HighsStatus changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper) {
-  return changeBounds(log_options, lp.rowLower_, lp.rowUpper_, index_collection,
+  return changeBounds(log_options, lp.row_lower_, lp.row_upper_, index_collection,
                       new_row_lower, new_row_upper);
 }
 
@@ -1454,7 +1454,7 @@ HighsStatus getLpCosts(const HighsLp& lp, const HighsInt from_col,
   if (from_col < 0 || to_col >= lp.num_col_) return HighsStatus::kError;
   if (from_col > to_col) return HighsStatus::kOk;
   for (HighsInt col = from_col; col < to_col + 1; col++)
-    XcolCost[col - from_col] = lp.colCost_[col];
+    XcolCost[col - from_col] = lp.col_cost_[col];
   return HighsStatus::kOk;
 }
 
@@ -1464,8 +1464,8 @@ HighsStatus getLpColBounds(const HighsLp& lp, const HighsInt from_col,
   if (from_col < 0 || to_col >= lp.num_col_) return HighsStatus::kError;
   if (from_col > to_col) return HighsStatus::kOk;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
-    if (XcolLower != NULL) XcolLower[col - from_col] = lp.colLower_[col];
-    if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.colUpper_[col];
+    if (XcolLower != NULL) XcolLower[col - from_col] = lp.col_lower_[col];
+    if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.col_upper_[col];
   }
   return HighsStatus::kOk;
 }
@@ -1476,8 +1476,8 @@ HighsStatus getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
   if (from_row < 0 || to_row >= lp.num_row_) return HighsStatus::kError;
   if (from_row > to_row) return HighsStatus::kOk;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
-    if (XrowLower != NULL) XrowLower[row - from_row] = lp.rowLower_[row];
-    if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.rowUpper_[row];
+    if (XrowLower != NULL) XrowLower[row - from_row] = lp.row_lower_[row];
+    if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.row_upper_[row];
   }
   return HighsStatus::kOk;
 }
@@ -1598,17 +1598,17 @@ void reportLpColVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
+    type = getBoundType(lp.col_lower_[iCol], lp.col_upper_[iCol]);
     count = lp.a_start_[iCol + 1] - lp.a_start_[iCol];
     highsLogUser(log_options, HighsLogType::kInfo,
                  "%8" HIGHSINT_FORMAT
                  " %12g %12g %12g         %2s %12" HIGHSINT_FORMAT "",
-                 iCol, lp.colLower_[iCol], lp.colUpper_[iCol],
-                 lp.colCost_[iCol], type.c_str(), count);
+                 iCol, lp.col_lower_[iCol], lp.col_upper_[iCol],
+                 lp.col_cost_[iCol], type.c_str(), count);
     if (have_integer_columns) {
       std::string integer_column = "";
       if (lp.integrality_[iCol] == HighsVarType::kInteger) {
-        if (lp.colLower_[iCol] == 0 && lp.colUpper_[iCol] == 1) {
+        if (lp.col_lower_[iCol] == 0 && lp.col_upper_[iCol] == 1) {
           integer_column = "Binary";
         } else {
           integer_column = "Integer";
@@ -1643,12 +1643,12 @@ void reportLpRowVectors(const HighsLogOptions& log_options, const HighsLp& lp) {
   highsLogUser(log_options, HighsLogType::kInfo, "\n");
 
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
+    type = getBoundType(lp.row_lower_[iRow], lp.row_upper_[iRow]);
     std::string name = "";
     highsLogUser(log_options, HighsLogType::kInfo,
                  "%8" HIGHSINT_FORMAT
                  " %12g %12g         %2s %12" HIGHSINT_FORMAT "",
-                 iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(),
+                 iRow, lp.row_lower_[iRow], lp.row_upper_[iRow], type.c_str(),
                  count[iRow]);
     if (have_row_names)
       highsLogUser(log_options, HighsLogType::kInfo, "  %-s",
@@ -1704,27 +1704,27 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
   colRange.resize(lp.num_col_);
   rowRange.resize(lp.num_row_);
   for (HighsInt col = 0; col < lp.num_col_; col++)
-    min_colBound[col] = min(fabs(lp.colLower_[col]), fabs(lp.colUpper_[col]));
+    min_colBound[col] = min(fabs(lp.col_lower_[col]), fabs(lp.col_upper_[col]));
   for (HighsInt row = 0; row < lp.num_row_; row++)
-    min_rowBound[row] = min(fabs(lp.rowLower_[row]), fabs(lp.rowUpper_[row]));
+    min_rowBound[row] = min(fabs(lp.row_lower_[row]), fabs(lp.row_upper_[row]));
   for (HighsInt col = 0; col < lp.num_col_; col++)
-    colRange[col] = lp.colUpper_[col] - lp.colLower_[col];
+    colRange[col] = lp.col_upper_[col] - lp.col_lower_[col];
   for (HighsInt row = 0; row < lp.num_row_; row++)
-    rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
+    rowRange[row] = lp.row_upper_[row] - lp.row_lower_[row];
 
   printf("\n%s model data: Analysis\n", message.c_str());
-  analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.colCost_);
+  analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_);
   analyseVectorValues(log_options, "Column lower bounds", lp.num_col_,
-                      lp.colLower_);
+                      lp.col_lower_);
   analyseVectorValues(log_options, "Column upper bounds", lp.num_col_,
-                      lp.colUpper_);
+                      lp.col_upper_);
   analyseVectorValues(log_options, "Column min abs bound", lp.num_col_,
                       min_colBound);
   analyseVectorValues(log_options, "Column range", lp.num_col_, colRange);
   analyseVectorValues(log_options, "Row lower bounds", lp.num_row_,
-                      lp.rowLower_);
+                      lp.row_lower_);
   analyseVectorValues(log_options, "Row upper bounds", lp.num_row_,
-                      lp.rowUpper_);
+                      lp.row_upper_);
   analyseVectorValues(log_options, "Row min abs bound", lp.num_row_,
                       min_rowBound);
   analyseVectorValues(log_options, "Row range", lp.num_row_, rowRange);
@@ -1732,10 +1732,10 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
                       lp.a_value_, true, lp.model_name_);
   analyseMatrixSparsity(log_options, "Constraint matrix", lp.num_col_,
                         lp.num_row_, lp.a_start_, lp.a_index_);
-  analyseModelBounds(log_options, "Column", lp.num_col_, lp.colLower_,
-                     lp.colUpper_);
-  analyseModelBounds(log_options, "Row", lp.num_row_, lp.rowLower_,
-                     lp.rowUpper_);
+  analyseModelBounds(log_options, "Column", lp.num_col_, lp.col_lower_,
+                     lp.col_upper_);
+  analyseModelBounds(log_options, "Row", lp.num_row_, lp.row_lower_,
+                     lp.row_upper_);
 }
 
 void analyseScaledLp(const HighsLogOptions& log_options,
@@ -1773,10 +1773,10 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
   }
   if (!have_value && !have_dual && !have_basis) return;
   if (pretty) {
-    writeModelBoundSol(file, true, lp.num_col_, lp.colLower_, lp.colUpper_,
+    writeModelBoundSol(file, true, lp.num_col_, lp.col_lower_, lp.col_upper_,
                        lp.col_names_, use_col_value, use_col_dual,
                        use_col_status);
-    writeModelBoundSol(file, false, lp.num_row_, lp.rowLower_, lp.rowUpper_,
+    writeModelBoundSol(file, false, lp.num_row_, lp.row_lower_, lp.row_upper_,
                        lp.row_names_, use_row_value, use_row_dual,
                        use_row_status);
   } else {
@@ -1928,7 +1928,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
       // @FlipRowDual -= became +=
       solution.col_dual[col] += solution.row_dual[row] * lp.a_value_[i];
     }
-    solution.col_dual[col] += lp.colCost_[col];
+    solution.col_dual[col] += lp.col_cost_[col];
   }
 
   return HighsStatus::kOk;
@@ -1957,9 +1957,9 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
 bool isBoundInfeasible(const HighsLogOptions& log_options, const HighsLp& lp) {
   HighsInt num_bound_infeasible = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    if (lp.colUpper_[iCol] < lp.colLower_[iCol]) num_bound_infeasible++;
+    if (lp.col_upper_[iCol] < lp.col_lower_[iCol]) num_bound_infeasible++;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-    if (lp.rowUpper_[iRow] < lp.rowLower_[iRow]) num_bound_infeasible++;
+    if (lp.row_upper_[iRow] < lp.row_lower_[iRow]) num_bound_infeasible++;
   if (num_bound_infeasible > 0)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Model infeasible due to %" HIGHSINT_FORMAT
@@ -2028,53 +2028,53 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
            (HighsInt)equality_lp.a_value_.size());
     const HighsInt nnz = equality_lp.a_start_[equality_lp.num_col_];
 
-    if (lp.rowLower_[row] <= -kHighsInf && lp.rowUpper_[row] >= kHighsInf) {
+    if (lp.row_lower_[row] <= -kHighsInf && lp.row_upper_[row] >= kHighsInf) {
       // free row
       equality_lp.a_start_.push_back(nnz + 1);
       equality_lp.a_index_.push_back(row);
       equality_lp.a_value_.push_back(1.0);
 
       equality_lp.num_col_++;
-      equality_lp.colLower_.push_back(-kHighsInf);
-      equality_lp.colUpper_.push_back(kHighsInf);
-      equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] > -kHighsInf &&
-               lp.rowUpper_[row] >= kHighsInf) {
+      equality_lp.col_lower_.push_back(-kHighsInf);
+      equality_lp.col_upper_.push_back(kHighsInf);
+      equality_lp.col_cost_.push_back(0);
+    } else if (lp.row_lower_[row] > -kHighsInf &&
+               lp.row_upper_[row] >= kHighsInf) {
       // only lower bound
-      rhs[row] = lp.rowLower_[row];
+      rhs[row] = lp.row_lower_[row];
 
       equality_lp.a_start_.push_back(nnz + 1);
       equality_lp.a_index_.push_back(row);
       equality_lp.a_value_.push_back(-1.0);
 
       equality_lp.num_col_++;
-      equality_lp.colLower_.push_back(0);
-      equality_lp.colUpper_.push_back(kHighsInf);
-      equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] <= -kHighsInf &&
-               lp.rowUpper_[row] < kHighsInf) {
+      equality_lp.col_lower_.push_back(0);
+      equality_lp.col_upper_.push_back(kHighsInf);
+      equality_lp.col_cost_.push_back(0);
+    } else if (lp.row_lower_[row] <= -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf) {
       // only upper bound
-      rhs[row] = lp.rowUpper_[row];
+      rhs[row] = lp.row_upper_[row];
 
       equality_lp.a_start_.push_back(nnz + 1);
       equality_lp.a_index_.push_back(row);
       equality_lp.a_value_.push_back(1.0);
 
       equality_lp.num_col_++;
-      equality_lp.colLower_.push_back(0);
-      equality_lp.colUpper_.push_back(kHighsInf);
-      equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] > -kHighsInf &&
-               lp.rowUpper_[row] < kHighsInf &&
-               lp.rowLower_[row] != lp.rowUpper_[row]) {
+      equality_lp.col_lower_.push_back(0);
+      equality_lp.col_upper_.push_back(kHighsInf);
+      equality_lp.col_cost_.push_back(0);
+    } else if (lp.row_lower_[row] > -kHighsInf &&
+               lp.row_upper_[row] < kHighsInf &&
+               lp.row_lower_[row] != lp.row_upper_[row]) {
       // both lower and upper bound that are different
       double rhs_value, coefficient;
-      double difference = lp.rowUpper_[row] - lp.rowLower_[row];
-      if (fabs(lp.rowLower_[row]) < fabs(lp.rowUpper_[row])) {
-        rhs_value = lp.rowLower_[row];
+      double difference = lp.row_upper_[row] - lp.row_lower_[row];
+      if (fabs(lp.row_lower_[row]) < fabs(lp.row_upper_[row])) {
+        rhs_value = lp.row_lower_[row];
         coefficient = -1;
       } else {
-        rhs_value = lp.rowUpper_[row];
+        rhs_value = lp.row_upper_[row];
         coefficient = 1;
       }
       rhs[row] = rhs_value;
@@ -2084,12 +2084,12 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
       equality_lp.a_value_.push_back(coefficient);
 
       equality_lp.num_col_++;
-      equality_lp.colLower_.push_back(0);
-      equality_lp.colUpper_.push_back(difference);
-      equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
+      equality_lp.col_lower_.push_back(0);
+      equality_lp.col_upper_.push_back(difference);
+      equality_lp.col_cost_.push_back(0);
+    } else if (lp.row_lower_[row] == lp.row_upper_[row]) {
       // equality row
-      rhs[row] = lp.rowLower_[row];
+      rhs[row] = lp.row_lower_[row];
     } else {
 #ifdef HiGHSDEV
       printf(
@@ -2098,8 +2098,8 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
       return HighsStatus::kError;
     }
   }
-  equality_lp.rowLower_ = rhs;
-  equality_lp.rowUpper_ = rhs;
+  equality_lp.row_lower_ = rhs;
+  equality_lp.row_upper_ = rhs;
   equality_lp.integrality_.assign(equality_lp.num_col_,
                                   HighsVarType::kContinuous);
   return HighsStatus::kOk;
@@ -2114,32 +2114,32 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
 //     st A'y + zl - zu = c
 //        y free, zl >=0, zu >= 0
 HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
-  std::vector<double> colCost = lp.colCost_;
+  std::vector<double> colCost = lp.col_cost_;
   if (lp.sense_ != ObjSense::kMinimize) {
     for (HighsInt col = 0; col < lp.num_col_; col++)
       colCost[col] = -colCost[col];
   }
 
-  assert(lp.rowLower_ == lp.rowUpper_);
+  assert(lp.row_lower_ == lp.row_upper_);
 
   const HighsInt ncols = lp.num_row_;
   const HighsInt nrows = lp.num_col_;
 
   dual.num_row_ = nrows;
-  dual.rowLower_ = colCost;
-  dual.rowUpper_ = colCost;
+  dual.row_lower_ = colCost;
+  dual.row_upper_ = colCost;
 
   // Add columns (y)
   dual.num_col_ = ncols;
-  dual.colLower_.resize(ncols);
-  dual.colUpper_.resize(ncols);
-  dual.colCost_.resize(ncols);
+  dual.col_lower_.resize(ncols);
+  dual.col_upper_.resize(ncols);
+  dual.col_cost_.resize(ncols);
 
   for (HighsInt col = 0; col < ncols; col++) {
-    dual.colLower_[col] = -kHighsInf;
-    dual.colUpper_[col] = kHighsInf;
+    dual.col_lower_[col] = -kHighsInf;
+    dual.col_upper_[col] = kHighsInf;
     // cost b'y
-    dual.colCost_[col] = lp.rowLower_[col];
+    dual.col_cost_[col] = lp.row_lower_[col];
   }
 
   // Get transpose of A
@@ -2164,13 +2164,13 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
 
   // Add columns (zl)
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    if (lp.colLower_[col] > -kHighsInf) {
+    if (lp.col_lower_[col] > -kHighsInf) {
       const HighsInt nnz = dual.a_start_[dual.num_col_];
 
-      dual.colLower_.push_back(0);
-      dual.colUpper_.push_back(kHighsInf);
+      dual.col_lower_.push_back(0);
+      dual.col_upper_.push_back(kHighsInf);
 
-      dual.colCost_.push_back(lp.colLower_[col]);
+      dual.col_cost_.push_back(lp.col_lower_[col]);
 
       // Add constaints
       dual.a_start_.push_back(nnz + 1);
@@ -2183,13 +2183,13 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
 
   // Add columns (zu)
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    if (lp.colUpper_[col] < kHighsInf) {
+    if (lp.col_upper_[col] < kHighsInf) {
       const HighsInt nnz = dual.a_start_[dual.num_col_];
 
-      dual.colLower_.push_back(0);
-      dual.colUpper_.push_back(kHighsInf);
+      dual.col_lower_.push_back(0);
+      dual.col_upper_.push_back(kHighsInf);
 
-      dual.colCost_.push_back(-lp.colUpper_[col]);
+      dual.col_cost_.push_back(-lp.col_upper_[col]);
 
       // Add constaints
       dual.a_start_.push_back(nnz + 1);
@@ -2202,7 +2202,7 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
 
   dual.sense_ = ObjSense::kMinimize;
   for (HighsInt col = 0; col < dual.num_col_; col++) {
-    dual.colCost_[col] = -dual.colCost_[col];
+    dual.col_cost_[col] = -dual.col_cost_[col];
   }
 
   dual.model_name_ = lp.model_name_ + "_dualized";

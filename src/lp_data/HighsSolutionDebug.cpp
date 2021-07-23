@@ -140,7 +140,7 @@ HighsDebugStatus debugHighsSolution(
     gradient.assign(lp.num_col_, 0);
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    gradient[iCol] += lp.colCost_[iCol];
+    gradient[iCol] += lp.col_cost_[iCol];
   getKktFailures(lp, gradient, solution, basis, local_solution_params,
                  primal_dual_errors, get_residuals);
   HighsInt& num_primal_infeasibility =

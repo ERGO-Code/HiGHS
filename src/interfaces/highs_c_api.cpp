@@ -198,11 +198,11 @@ HighsInt Highs_lpDataMpsRead(
   assert(lp.num_row_ == numrow);
   *sense = (HighsInt)lp.sense_;
   *offset = lp.offset_;
-  memcpy(colcost, &lp.colCost_[0], (numcol) * sizeof(double));
-  memcpy(collower, &lp.colLower_[0], (numcol) * sizeof(double));
-  memcpy(colupper, &lp.colUpper_[0], (numcol) * sizeof(double));
-  memcpy(rowlower, &lp.rowLower_[0], (numrow) * sizeof(double));
-  memcpy(rowupper, &lp.rowUpper_[0], (numrow) * sizeof(double));
+  memcpy(colcost, &lp.col_cost_[0], (numcol) * sizeof(double));
+  memcpy(collower, &lp.col_lower_[0], (numcol) * sizeof(double));
+  memcpy(colupper, &lp.col_upper_[0], (numcol) * sizeof(double));
+  memcpy(rowlower, &lp.row_lower_[0], (numrow) * sizeof(double));
+  memcpy(rowupper, &lp.row_upper_[0], (numrow) * sizeof(double));
   memcpy(astart, &lp.a_start_[0], (numcol + 1) * sizeof(HighsInt));
   memcpy(aindex, &lp.a_index_[0], (num_nz) * sizeof(HighsInt));
   memcpy(avalue, &lp.a_value_[0], (num_nz) * sizeof(double));
@@ -872,13 +872,13 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   *numcol = lp.num_col_;
   *numrow = lp.num_row_;
   if (*numcol > 0) {
-    memcpy(colcost, &lp.colCost_[0], *numcol * sizeof(double));
-    memcpy(collower, &lp.colLower_[0], *numcol * sizeof(double));
-    memcpy(colupper, &lp.colUpper_[0], *numcol * sizeof(double));
+    memcpy(colcost, &lp.col_cost_[0], *numcol * sizeof(double));
+    memcpy(collower, &lp.col_lower_[0], *numcol * sizeof(double));
+    memcpy(colupper, &lp.col_upper_[0], *numcol * sizeof(double));
   }
   if (*numrow > 0) {
-    memcpy(rowlower, &lp.rowLower_[0], *numrow * sizeof(double));
-    memcpy(rowupper, &lp.rowUpper_[0], *numrow * sizeof(double));
+    memcpy(rowlower, &lp.row_lower_[0], *numrow * sizeof(double));
+    memcpy(rowupper, &lp.row_upper_[0], *numrow * sizeof(double));
   }
 
   // Save the original orientation so that it is recovered

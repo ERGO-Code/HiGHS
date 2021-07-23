@@ -252,11 +252,11 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
     if (fixcol != -1) {
       HighsInt oldNumFixed = numFixed;
-      double fixVal = domain.colLower_[fixcol];
+      double fixVal = domain.col_lower_[fixcol];
       auto oldSize = domain.getDomainChangeStack().size();
-      if (domain.colLower_[fixcol] == 1.0) {
+      if (domain.col_lower_[fixcol] == 1.0) {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
-          if (domain.colLower_[orbitCols[j]] == 1.0) continue;
+          if (domain.col_lower_[orbitCols[j]] == 1.0) continue;
           ++numFixed;
           domain.changeBound(HighsBoundType::kLower, orbitCols[j], 1.0,
                              HighsDomain::Reason::unspecified());
@@ -264,7 +264,7 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
         }
       } else {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
-          if (domain.colUpper_[orbitCols[j]] == 0.0) continue;
+          if (domain.col_upper_[orbitCols[j]] == 0.0) continue;
           ++numFixed;
           domain.changeBound(HighsBoundType::kUpper, orbitCols[j], 0.0,
                              HighsDomain::Reason::unspecified());
@@ -750,9 +750,9 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numCol; ++i) {
     MatrixColumn matrixCol;
 
-    matrixCol.cost = coloring.color(model.colCost_[i]);
-    matrixCol.lb = coloring.color(model.colLower_[i]);
-    matrixCol.ub = coloring.color(model.colUpper_[i]);
+    matrixCol.cost = coloring.color(model.col_cost_[i]);
+    matrixCol.lb = coloring.color(model.col_lower_[i]);
+    matrixCol.ub = coloring.color(model.col_upper_[i]);
     matrixCol.integral = (u32)model.integrality_[i];
     matrixCol.len = Gstart[i + 1] - Gstart[i];
 
@@ -760,7 +760,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
 
     if (*columnCell == 0) {
       *columnCell = columnSet.size();
-      if (model.colLower_[i] != 0.0 || model.colUpper_[i] != 1.0 ||
+      if (model.col_lower_[i] != 0.0 || model.col_upper_[i] != 1.0 ||
           model.integrality_[i] == HighsVarType::kContinuous)
         *columnCell += indexOffset;
     }
@@ -772,8 +772,8 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numRow; ++i) {
     MatrixRow matrixRow;
 
-    matrixRow.lb = coloring.color(model.rowLower_[i]);
-    matrixRow.ub = coloring.color(model.rowUpper_[i]);
+    matrixRow.lb = coloring.color(model.row_lower_[i]);
+    matrixRow.ub = coloring.color(model.row_upper_[i]);
     matrixRow.len = Gstart[numCol + i + 1] - Gstart[numCol + i];
 
     HighsInt* rowCell = &rowSet[matrixRow];
@@ -903,7 +903,7 @@ bool HighsSymmetryDetection::isFromBinaryColumn(HighsInt pos) const {
 
   HighsInt col = currentPartition[pos];
 
-  if (model->colLower_[col] != 0.0 || model->colUpper_[col] != 1.0 ||
+  if (model->col_lower_[col] != 0.0 || model->col_upper_[col] != 1.0 ||
       model->integrality_[col] == HighsVarType::kContinuous)
     return false;
 

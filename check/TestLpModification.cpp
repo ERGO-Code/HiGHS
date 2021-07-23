@@ -192,9 +192,9 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
     HighsInt lp0_num_nz = lp0.a_start_[lp0.num_col_];
     HighsInt lp1_num_nz = lp1.a_start_[lp1.num_col_];
     return_bool = areLpColEqual(
-        lp0.num_col_, &lp0.colCost_[0], &lp0.colLower_[0], &lp0.colUpper_[0],
+        lp0.num_col_, &lp0.col_cost_[0], &lp0.col_lower_[0], &lp0.col_upper_[0],
         lp0_num_nz, &lp0.a_start_[0], &lp0.a_index_[0], &lp0.a_value_[0],
-        lp1.num_col_, &lp1.colCost_[0], &lp1.colLower_[0], &lp1.colUpper_[0],
+        lp1.num_col_, &lp1.col_cost_[0], &lp1.col_lower_[0], &lp1.col_upper_[0],
         lp1_num_nz, &lp1.a_start_[0], &lp1.a_index_[0], &lp1.a_value_[0],
         infinite_bound);
     if (!return_bool) return return_bool;
@@ -203,8 +203,8 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
     HighsInt lp0_num_nz = 0;
     HighsInt lp1_num_nz = 0;
     return_bool = areLpRowEqual(
-        lp0.num_row_, &lp0.rowLower_[0], &lp0.rowUpper_[0], lp0_num_nz, NULL,
-        NULL, NULL, lp1.num_row_, &lp1.rowLower_[0], &lp1.rowUpper_[0],
+        lp0.num_row_, &lp0.row_lower_[0], &lp0.row_upper_[0], lp0_num_nz, NULL,
+        NULL, NULL, lp1.num_row_, &lp1.row_lower_[0], &lp1.row_upper_[0],
         lp1_num_nz, NULL, NULL, NULL, infinite_bound);
   }
   return return_bool;
@@ -832,20 +832,20 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
   const HighsLp& local_lp = highs.getLp();
-  row0135789_lower[0] = local_lp.rowLower_[0];
-  row0135789_lower[1] = local_lp.rowLower_[1];
-  row0135789_lower[2] = local_lp.rowLower_[3];
-  row0135789_lower[3] = local_lp.rowLower_[5];
-  row0135789_lower[4] = local_lp.rowLower_[7];
-  row0135789_lower[5] = local_lp.rowLower_[8];
-  row0135789_lower[6] = local_lp.rowLower_[9];
-  row0135789_upper[0] = local_lp.rowLower_[0];
-  row0135789_upper[1] = local_lp.rowLower_[1];
-  row0135789_upper[2] = local_lp.rowLower_[3];
-  row0135789_upper[3] = local_lp.rowLower_[5];
-  row0135789_upper[4] = local_lp.rowLower_[7];
-  row0135789_upper[5] = local_lp.rowLower_[8];
-  row0135789_upper[6] = local_lp.rowLower_[9];
+  row0135789_lower[0] = local_lp.row_lower_[0];
+  row0135789_lower[1] = local_lp.row_lower_[1];
+  row0135789_lower[2] = local_lp.row_lower_[3];
+  row0135789_lower[3] = local_lp.row_lower_[5];
+  row0135789_lower[4] = local_lp.row_lower_[7];
+  row0135789_lower[5] = local_lp.row_lower_[8];
+  row0135789_lower[6] = local_lp.row_lower_[9];
+  row0135789_upper[0] = local_lp.row_lower_[0];
+  row0135789_upper[1] = local_lp.row_lower_[1];
+  row0135789_upper[2] = local_lp.row_lower_[3];
+  row0135789_upper[3] = local_lp.row_lower_[5];
+  row0135789_upper[4] = local_lp.row_lower_[7];
+  row0135789_upper[5] = local_lp.row_lower_[8];
+  row0135789_upper[6] = local_lp.row_lower_[9];
 
   REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
                                  row0135789_lower,
@@ -853,13 +853,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-  row0135789_upper[0] = local_lp.rowUpper_[0];
-  row0135789_upper[1] = local_lp.rowUpper_[1];
-  row0135789_upper[2] = local_lp.rowUpper_[3];
-  row0135789_upper[3] = local_lp.rowUpper_[5];
-  row0135789_upper[4] = local_lp.rowUpper_[7];
-  row0135789_upper[5] = local_lp.rowUpper_[8];
-  row0135789_upper[6] = local_lp.rowUpper_[9];
+  row0135789_upper[0] = local_lp.row_upper_[0];
+  row0135789_upper[1] = local_lp.row_upper_[1];
+  row0135789_upper[2] = local_lp.row_upper_[3];
+  row0135789_upper[3] = local_lp.row_upper_[5];
+  row0135789_upper[4] = local_lp.row_upper_[7];
+  row0135789_upper[5] = local_lp.row_upper_[8];
+  row0135789_upper[6] = local_lp.row_upper_[9];
 
   REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
                                  row0135789_lower,

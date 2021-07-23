@@ -211,8 +211,8 @@ HighsStatus HEkk::setBasis() {
   basis_.basicIndex_.resize(num_row);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     basis_.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
-    double lower = lp_.colLower_[iCol];
-    double upper = lp_.colUpper_[iCol];
+    double lower = lp_.col_lower_[iCol];
+    double upper = lp_.col_upper_[iCol];
     HighsInt move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
@@ -275,8 +275,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
 
-    const double lower = lp_.colLower_[iCol];
-    const double upper = lp_.colUpper_[iCol];
+    const double lower = lp_.col_lower_[iCol];
+    const double upper = lp_.col_upper_[iCol];
     if (highs_basis.col_status[iCol] == HighsBasisStatus::kBasic) {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
       basis_.nonbasicMove_[iVar] = 0;
@@ -299,8 +299,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
-    const double lower = lp_.rowLower_[iRow];
-    const double upper = lp_.rowUpper_[iRow];
+    const double lower = lp_.row_lower_[iRow];
+    const double upper = lp_.row_upper_[iRow];
     if (highs_basis.row_status[iRow] == HighsBasisStatus::kBasic) {
       basis_.nonbasicFlag_[iVar] = kNonbasicFlagFalse;
       basis_.nonbasicMove_[iVar] = 0;
@@ -382,8 +382,8 @@ HighsBasis HEkk::getHighsBasis() {
   highs_basis.valid = false;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     HighsInt iVar = iCol;
-    const double lower = lp_.colLower_[iCol];
-    const double upper = lp_.colUpper_[iCol];
+    const double lower = lp_.col_lower_[iCol];
+    const double upper = lp_.col_upper_[iCol];
     HighsBasisStatus basis_status = HighsBasisStatus::kNonbasic;
     if (!basis_.nonbasicFlag_[iVar]) {
       basis_status = HighsBasisStatus::kBasic;
@@ -402,8 +402,8 @@ HighsBasis HEkk::getHighsBasis() {
   }
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iVar = num_col + iRow;
-    const double lower = lp_.rowLower_[iRow];
-    const double upper = lp_.rowUpper_[iRow];
+    const double lower = lp_.row_lower_[iRow];
+    const double upper = lp_.row_upper_[iRow];
     HighsBasisStatus basis_status = HighsBasisStatus::kNonbasic;
     if (!basis_.nonbasicFlag_[iVar]) {
       basis_status = HighsBasisStatus::kBasic;
@@ -819,13 +819,13 @@ void HEkk::computePrimalObjectiveValue() {
     HighsInt iVar = basis_.basicIndex_[iRow];
     if (iVar < lp_.num_col_) {
       info_.primal_objective_value +=
-          info_.baseValue_[iRow] * lp_.colCost_[iVar];
+          info_.baseValue_[iRow] * lp_.col_cost_[iVar];
     }
   }
   for (HighsInt iCol = 0; iCol < lp_.num_col_; iCol++) {
     if (basis_.nonbasicFlag_[iCol])
       info_.primal_objective_value +=
-          info_.workValue_[iCol] * lp_.colCost_[iCol];
+          info_.workValue_[iCol] * lp_.col_cost_[iCol];
   }
   info_.primal_objective_value *= cost_scale_;
   // Objective value calculation is done using primal values and
@@ -939,12 +939,12 @@ void HEkk::setNonbasicMove() {
     }
     // Nonbasic variable
     if (iVar < lp_.num_col_) {
-      lower = lp_.colLower_[iVar];
-      upper = lp_.colUpper_[iVar];
+      lower = lp_.col_lower_[iVar];
+      upper = lp_.col_upper_[iVar];
     } else {
       HighsInt iRow = iVar - lp_.num_col_;
-      lower = -lp_.rowUpper_[iRow];
-      upper = -lp_.rowLower_[iRow];
+      lower = -lp_.row_upper_[iRow];
+      upper = -lp_.row_lower_[iRow];
     }
     HighsInt move = kIllegalMoveValue;
     if (lower == upper) {
@@ -1017,8 +1017,8 @@ void HEkk::allocateWorkAndBaseArrays() {
 
 void HEkk::initialiseLpColBound() {
   for (HighsInt iCol = 0; iCol < lp_.num_col_; iCol++) {
-    info_.workLower_[iCol] = lp_.colLower_[iCol];
-    info_.workUpper_[iCol] = lp_.colUpper_[iCol];
+    info_.workLower_[iCol] = lp_.col_lower_[iCol];
+    info_.workUpper_[iCol] = lp_.col_upper_[iCol];
     info_.workRange_[iCol] = info_.workUpper_[iCol] - info_.workLower_[iCol];
     info_.workLowerShift_[iCol] = 0;
     info_.workUpperShift_[iCol] = 0;
@@ -1028,8 +1028,8 @@ void HEkk::initialiseLpColBound() {
 void HEkk::initialiseLpRowBound() {
   for (HighsInt iRow = 0; iRow < lp_.num_row_; iRow++) {
     HighsInt iCol = lp_.num_col_ + iRow;
-    info_.workLower_[iCol] = -lp_.rowUpper_[iRow];
-    info_.workUpper_[iCol] = -lp_.rowLower_[iRow];
+    info_.workLower_[iCol] = -lp_.row_upper_[iRow];
+    info_.workUpper_[iCol] = -lp_.row_lower_[iRow];
     info_.workRange_[iCol] = info_.workUpper_[iCol] - info_.workLower_[iCol];
     info_.workLowerShift_[iCol] = 0;
     info_.workUpperShift_[iCol] = 0;
@@ -1098,8 +1098,8 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
 
   // Now do the perturbation
   for (HighsInt i = 0; i < lp_.num_col_; i++) {
-    double lower = lp_.colLower_[i];
-    double upper = lp_.colUpper_[i];
+    double lower = lp_.col_lower_[i];
+    double upper = lp_.col_upper_[i];
     double xpert = (fabs(info_.workCost_[i]) + 1) * base *
                    info_.dual_simplex_cost_perturbation_multiplier *
                    (1 + info_.numTotRandomValue_[i]);
@@ -1259,7 +1259,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
 
 void HEkk::initialiseLpColCost() {
   for (HighsInt iCol = 0; iCol < lp_.num_col_; iCol++) {
-    info_.workCost_[iCol] = (HighsInt)lp_.sense_ * lp_.colCost_[iCol];
+    info_.workCost_[iCol] = (HighsInt)lp_.sense_ * lp_.col_cost_[iCol];
     info_.workShift_[iCol] = 0;
   }
 }
@@ -1979,8 +1979,8 @@ void HEkk::computeSimplexLpDualInfeasible() {
     if (!basis_.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
     const double dual = info_.workDual_[iVar];
-    const double lower = lp_.colLower_[iCol];
-    const double upper = lp_.colUpper_[iCol];
+    const double lower = lp_.col_lower_[iCol];
+    const double upper = lp_.col_upper_[iCol];
     double dual_infeasibility = 0;
     if (highs_isInfinity(upper)) {
       if (highs_isInfinity(-lower)) {
@@ -2012,8 +2012,8 @@ void HEkk::computeSimplexLpDualInfeasible() {
     if (!basis_.nonbasicFlag_[iVar]) continue;
     // Nonbasic row
     const double dual = -info_.workDual_[iVar];
-    const double lower = lp_.rowLower_[iRow];
-    const double upper = lp_.rowUpper_[iRow];
+    const double lower = lp_.row_lower_[iRow];
+    const double upper = lp_.row_upper_[iRow];
     double dual_infeasibility = 0;
     if (highs_isInfinity(upper)) {
       if (highs_isInfinity(-lower)) {

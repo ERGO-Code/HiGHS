@@ -87,9 +87,9 @@ void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
   highs_basis.col_status.resize(newNumCol);
   // Make any new columns nonbasic
   for (HighsInt iCol = lp.num_col_; iCol < newNumCol; iCol++) {
-    if (!highs_isInfinity(-lp.colLower_[iCol])) {
+    if (!highs_isInfinity(-lp.col_lower_[iCol])) {
       highs_basis.col_status[iCol] = HighsBasisStatus::kLower;
-    } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
+    } else if (!highs_isInfinity(lp.col_upper_[iCol])) {
       highs_basis.col_status[iCol] = HighsBasisStatus::kUpper;
     } else {
       highs_basis.col_status[iCol] = HighsBasisStatus::kZero;
@@ -121,8 +121,8 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
   // Make any new columns nonbasic
   for (HighsInt iCol = lp.num_col_; iCol < newNumCol; iCol++) {
     basis.nonbasicFlag_[iCol] = kNonbasicFlagTrue;
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
     HighsInt move = kIllegalMoveValue;
     if (lower == upper) {
       // Fixed
@@ -560,11 +560,11 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   double* rowScale = &scale.row[0];
   HighsInt* Astart = &lp.a_start_[0];
   double* Avalue = &lp.a_value_[0];
-  double* colCost = &lp.colCost_[0];
-  double* colLower = &lp.colLower_[0];
-  double* colUpper = &lp.colUpper_[0];
-  double* rowLower = &lp.rowLower_[0];
-  double* rowUpper = &lp.rowUpper_[0];
+  double* colCost = &lp.col_cost_[0];
+  double* colLower = &lp.col_lower_[0];
+  double* colUpper = &lp.col_upper_[0];
+  double* rowLower = &lp.row_lower_[0];
+  double* rowUpper = &lp.row_upper_[0];
 
   // Allow a switch to/from the original scaling rules
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
@@ -635,8 +635,8 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
       pow(2.0, options.allowed_simplex_cost_scale_factor);
   double max_nonzero_cost = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    if (lp.colCost_[iCol]) {
-      max_nonzero_cost = max(fabs(lp.colCost_[iCol]), max_nonzero_cost);
+    if (lp.col_cost_[iCol]) {
+      max_nonzero_cost = max(fabs(lp.col_cost_[iCol]), max_nonzero_cost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -657,7 +657,7 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
   // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
   // most max_allowed_cost_scale
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    lp.colCost_[iCol] /= cost_scale;
+    lp.col_cost_[iCol] /= cost_scale;
   }
   max_nonzero_cost /= cost_scale;
 }
@@ -671,7 +671,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   HighsInt* Astart = &lp.a_start_[0];
   HighsInt* Aindex = &lp.a_index_[0];
   double* Avalue = &lp.a_value_[0];
-  double* colCost = &lp.colCost_[0];
+  double* colCost = &lp.col_cost_[0];
 
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
 

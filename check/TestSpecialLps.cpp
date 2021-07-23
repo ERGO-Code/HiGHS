@@ -339,11 +339,11 @@ void almostNotUnbounded(Highs& highs) {
   double epsilon = 1e-6;
   lp.num_col_ = 2;
   lp.num_row_ = 3;
-  lp.colCost_ = {-1, 1 - epsilon};
-  lp.colLower_ = {0, 0};
-  lp.colUpper_ = {inf, inf};
-  lp.rowLower_ = {-1 + epsilon, -1, 3};
-  lp.rowUpper_ = {inf, inf, inf};
+  lp.col_cost_ = {-1, 1 - epsilon};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-1 + epsilon, -1, 3};
+  lp.row_upper_ = {inf, inf, inf};
   lp.a_start_ = {0, 3, 6};
   lp.a_index_ = {0, 1, 2, 0, 1, 2};
   lp.a_value_ = {1 + epsilon, -1, 1, -1, 1, 1};
@@ -361,7 +361,7 @@ void almostNotUnbounded(Highs& highs) {
 
   // LP is feasible on [1+alpha, alpha] with objective -1 so optimal,
   // but has open set of optimal solutions
-  lp.colCost_ = {-1, 1};
+  lp.col_cost_ = {-1, 1};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   solve(highs, "off", "simplex", require_model_status1, optimal_objective1);
@@ -373,8 +373,8 @@ void almostNotUnbounded(Highs& highs) {
   // LP has bounded feasible region with optimal solution
   // [1+2/epsilon, 2/epsilon] and objective
   // value -3
-  lp.colCost_[1] = 1 - epsilon;
-  lp.rowLower_[0] = -1 - epsilon;
+  lp.col_cost_[1] = 1 - epsilon;
+  lp.row_lower_[0] = -1 - epsilon;
   lp.a_value_[0] = 1 - epsilon;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
@@ -396,11 +396,11 @@ void singularStartingBasis(Highs& highs) {
 
   lp.num_col_ = 3;
   lp.num_row_ = 2;
-  lp.colCost_ = {-3, -2, -1};
-  lp.colLower_ = {0, 0, 0};
-  lp.colUpper_ = {inf, inf, inf};
-  lp.rowLower_ = {-inf, -inf};
-  lp.rowUpper_ = {3, 2};
+  lp.col_cost_ = {-3, -2, -1};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {inf, inf, inf};
+  lp.row_lower_ = {-inf, -inf};
+  lp.row_upper_ = {3, 2};
   lp.a_start_ = {0, 2, 4, 6};
   lp.a_index_ = {0, 1, 0, 1, 0, 1};
   lp.a_value_ = {1, 2, 2, 4, 1, 3};
@@ -446,9 +446,9 @@ void unconstrained(Highs& highs) {
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 0;
-  lp.colCost_ = {1, -1};
-  lp.colLower_ = {4, 2};
-  lp.colUpper_ = {inf, 3};
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {4, 2};
+  lp.col_upper_ = {inf, 3};
   lp.a_start_ = {0, 0, 0};
   lp.format_ = MatrixFormat::kColwise;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);

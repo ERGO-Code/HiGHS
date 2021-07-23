@@ -358,35 +358,35 @@ const double* OsiHiGHSSolverInterface::getColLower() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::getColLower()\n");
-  return &(this->highs->lp_.colLower_[0]);
+  return &(this->highs->lp_.col_lower_[0]);
 }
 
 const double* OsiHiGHSSolverInterface::getColUpper() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::getColUpper()\n");
-  return &(this->highs->lp_.colUpper_[0]);
+  return &(this->highs->lp_.col_upper_[0]);
 }
 
 const double* OsiHiGHSSolverInterface::getRowLower() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::getRowLower()\n");
-  return &(this->highs->lp_.rowLower_[0]);
+  return &(this->highs->lp_.row_lower_[0]);
 }
 
 const double* OsiHiGHSSolverInterface::getRowUpper() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::getRowUpper()\n");
-  return &(this->highs->lp_.rowUpper_[0]);
+  return &(this->highs->lp_.row_upper_[0]);
 }
 
 const double* OsiHiGHSSolverInterface::getObjCoefficients() const {
   HighsOptions& options = this->highs->options_;
   highsLogDev(options.log_options, HighsLogType::kInfo,
               "Calling OsiHiGHSSolverInterface::getObjCoefficients()\n");
-  return &(this->highs->lp_.colCost_[0]);
+  return &(this->highs->lp_.col_cost_[0]);
 }
 
 // TODO: review: 10^20?
@@ -415,8 +415,8 @@ const double* OsiHiGHSSolverInterface::getRowRange() const {
 
   for (HighsInt i = 0; i < nrows; i++) {
     // compute range for row i
-    double lo = this->highs->lp_.rowLower_[i];
-    double hi = this->highs->lp_.rowUpper_[i];
+    double lo = this->highs->lp_.row_lower_[i];
+    double hi = this->highs->lp_.row_upper_[i];
     double t1;
     char t2;
     this->convertBoundToSense(lo, hi, t2, t1, this->rowRange[i]);
@@ -443,8 +443,8 @@ const double* OsiHiGHSSolverInterface::getRightHandSide() const {
 
   for (HighsInt i = 0; i < nrows; i++) {
     // compute rhs for row i
-    double lo = this->highs->lp_.rowLower_[i];
-    double hi = this->highs->lp_.rowUpper_[i];
+    double lo = this->highs->lp_.row_lower_[i];
+    double hi = this->highs->lp_.row_upper_[i];
     double t1;
     char t2;
     this->convertBoundToSense(lo, hi, t2, this->rhs[i], t1);
@@ -471,8 +471,8 @@ const char* OsiHiGHSSolverInterface::getRowSense() const {
 
   for (HighsInt i = 0; i < nrows; i++) {
     // compute sense for row i
-    double lo = this->highs->lp_.rowLower_[i];
-    double hi = this->highs->lp_.rowUpper_[i];
+    double lo = this->highs->lp_.row_lower_[i];
+    double hi = this->highs->lp_.row_upper_[i];
     double t1, t2;
     this->convertBoundToSense(lo, hi, this->rowSense[i], t1, t2);
   }
@@ -733,12 +733,12 @@ void OsiHiGHSSolverInterface::loadProblem(
   lp.num_col_ = numcols;
 
   // setup HighsLp data structures
-  lp.colCost_.resize(numcols);
-  lp.colUpper_.resize(numcols);
-  lp.colLower_.resize(numcols);
+  lp.col_cost_.resize(numcols);
+  lp.col_upper_.resize(numcols);
+  lp.col_lower_.resize(numcols);
 
-  lp.rowLower_.resize(numrows);
-  lp.rowUpper_.resize(numrows);
+  lp.row_lower_.resize(numrows);
+  lp.row_upper_.resize(numrows);
 
   lp.a_start_.resize(numcols + 1);
   lp.a_index_.resize(start[numcols]);
@@ -746,33 +746,33 @@ void OsiHiGHSSolverInterface::loadProblem(
 
   // copy data
   if (obj != NULL) {
-    lp.colCost_.assign(obj, obj + numcols);
+    lp.col_cost_.assign(obj, obj + numcols);
   } else {
-    lp.colCost_.assign(numcols, 0.0);
+    lp.col_cost_.assign(numcols, 0.0);
   }
 
   if (collb != NULL) {
-    lp.colLower_.assign(collb, collb + numcols);
+    lp.col_lower_.assign(collb, collb + numcols);
   } else {
-    lp.colLower_.assign(numcols, 0.0);
+    lp.col_lower_.assign(numcols, 0.0);
   }
 
   if (colub != NULL) {
-    lp.colUpper_.assign(colub, colub + numcols);
+    lp.col_upper_.assign(colub, colub + numcols);
   } else {
-    lp.colUpper_.assign(numcols, kHighsInf);
+    lp.col_upper_.assign(numcols, kHighsInf);
   }
 
   if (rowlb != NULL) {
-    lp.rowLower_.assign(rowlb, rowlb + numrows);
+    lp.row_lower_.assign(rowlb, rowlb + numrows);
   } else {
-    lp.rowLower_.assign(numrows, -kHighsInf);
+    lp.row_lower_.assign(numrows, -kHighsInf);
   }
 
   if (rowub != NULL) {
-    lp.rowUpper_.assign(rowub, rowub + numrows);
+    lp.row_upper_.assign(rowub, rowub + numrows);
   } else {
-    lp.rowUpper_.assign(numrows, kHighsInf);
+    lp.row_upper_.assign(numrows, kHighsInf);
   }
 
   lp.a_start_.assign(start, start + numcols + 1);
@@ -934,13 +934,13 @@ const double* OsiHiGHSSolverInterface::getColSolution() const {
       double num_cols = highs->lp_.num_col_;
       this->dummy_solution->col_value.resize(num_cols);
       for (HighsInt col = 0; col < highs->lp_.num_col_; col++) {
-        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+        if (highs->lp_.col_lower_[col] <= 0 && highs->lp_.col_upper_[col] >= 0)
           dummy_solution->col_value[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] <
-                           std::fabs(highs->lp_.colUpper_[col])))
-          dummy_solution->col_value[col] = highs->lp_.colLower_[col];
+        else if (std::fabs(highs->lp_.col_lower_[col] <
+                           std::fabs(highs->lp_.col_upper_[col])))
+          dummy_solution->col_value[col] = highs->lp_.col_lower_[col];
         else
-          dummy_solution->col_value[col] = highs->lp_.colUpper_[col];
+          dummy_solution->col_value[col] = highs->lp_.col_upper_[col];
       }
       return &dummy_solution->col_value[0];
     }
@@ -960,13 +960,13 @@ const double* OsiHiGHSSolverInterface::getRowPrice() const {
       double num_cols = highs->lp_.num_col_;
       this->dummy_solution->row_dual.resize(num_cols);
       for (HighsInt col = 0; col < highs->lp_.num_col_; col++) {
-        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+        if (highs->lp_.col_lower_[col] <= 0 && highs->lp_.col_upper_[col] >= 0)
           dummy_solution->row_dual[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] <
-                           std::fabs(highs->lp_.colUpper_[col])))
-          dummy_solution->row_dual[col] = highs->lp_.colLower_[col];
+        else if (std::fabs(highs->lp_.col_lower_[col] <
+                           std::fabs(highs->lp_.col_upper_[col])))
+          dummy_solution->row_dual[col] = highs->lp_.col_lower_[col];
         else
-          dummy_solution->row_dual[col] = highs->lp_.colUpper_[col];
+          dummy_solution->row_dual[col] = highs->lp_.col_upper_[col];
       }
       return &dummy_solution->row_dual[0];
     }
@@ -987,7 +987,7 @@ const double* OsiHiGHSSolverInterface::getReducedCost() const {
       double num_cols = lp.num_col_;
       this->dummy_solution->col_dual.resize(num_cols);
       for (HighsInt col = 0; col < num_cols; col++) {
-        dummy_solution->col_dual[col] = lp.colCost_[col];
+        dummy_solution->col_dual[col] = lp.col_cost_[col];
         for (HighsInt i = lp.a_start_[col]; i < lp.a_start_[col + 1]; i++) {
           const HighsInt row = lp.a_index_[i];
           assert(row >= 0);
@@ -1015,13 +1015,13 @@ const double* OsiHiGHSSolverInterface::getRowActivity() const {
       double num_cols = highs->lp_.num_col_;
       this->dummy_solution->row_value.resize(num_cols);
       for (HighsInt col = 0; col < highs->lp_.num_col_; col++) {
-        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+        if (highs->lp_.col_lower_[col] <= 0 && highs->lp_.col_upper_[col] >= 0)
           dummy_solution->row_value[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] <
-                           std::fabs(highs->lp_.colUpper_[col])))
-          dummy_solution->row_value[col] = highs->lp_.colLower_[col];
+        else if (std::fabs(highs->lp_.col_lower_[col] <
+                           std::fabs(highs->lp_.col_upper_[col])))
+          dummy_solution->row_value[col] = highs->lp_.col_lower_[col];
         else
-          dummy_solution->row_value[col] = highs->lp_.colUpper_[col];
+          dummy_solution->row_value[col] = highs->lp_.col_upper_[col];
       }
       return &dummy_solution->row_value[0];
     }

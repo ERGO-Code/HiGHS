@@ -31,17 +31,17 @@ HighsStatus zeroCostColSing() {
   lp.a_index_.push_back(0);
   lp.a_value_.push_back(0.5);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0.1);
-  lp.rowUpper_.push_back(0.9);
+  lp.row_lower_.push_back(0.1);
+  lp.row_upper_.push_back(0.9);
 
-  lp.colCost_.push_back(0);
-  lp.colCost_.push_back(1);
+  lp.col_cost_.push_back(0);
+  lp.col_cost_.push_back(1);
 
   lp.format_ = MatrixFormat::kColwise;
   
@@ -78,27 +78,27 @@ HighsStatus colSingDoubletonEquality()
   lp.a_value_.push_back(1);
   lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(1);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
 
   lp.format_ = MatrixFormat::kColwise;
   
@@ -134,27 +134,27 @@ HighsStatus colSingDoubletonInequality()
   lp.a_value_.push_back(1);
   lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(1);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(1);
 
   lp.format_ = MatrixFormat::kColwise;
   
@@ -183,17 +183,17 @@ HighsStatus twoColSingDoubletonEquality()
   lp.a_value_.push_back(1);
   lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(1);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(1);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
 
   lp.format_ = MatrixFormat::kColwise;
   
@@ -222,17 +222,17 @@ HighsStatus twoColSingDoubletonInequality()
   lp.a_value_.push_back(1);
   lp.a_value_.push_back(1);
 
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
   
-  lp.colLower_.push_back(0);
-  lp.colUpper_.push_back(1);
+  lp.col_lower_.push_back(0);
+  lp.col_upper_.push_back(1);
 
-  lp.rowLower_.push_back(0);
-  lp.rowUpper_.push_back(1);
+  lp.row_lower_.push_back(0);
+  lp.row_upper_.push_back(1);
 
-  lp.colCost_.push_back(1);
-  lp.colCost_.push_back(2);
+  lp.col_cost_.push_back(1);
+  lp.col_cost_.push_back(2);
 
   lp.format_ = MatrixFormat::kColwise;
   

@@ -53,17 +53,17 @@ class HighsMipSolver {
 
   HighsInt numNonzero() const { return model_->a_index_.size(); }
 
-  const double* colCost() const { return model_->colCost_.data(); }
+  const double* colCost() const { return model_->col_cost_.data(); }
 
-  double colCost(HighsInt col) const { return model_->colCost_[col]; }
+  double colCost(HighsInt col) const { return model_->col_cost_[col]; }
 
-  const double* rowLower() const { return model_->rowLower_.data(); }
+  const double* rowLower() const { return model_->row_lower_.data(); }
 
-  double rowLower(HighsInt col) const { return model_->rowLower_[col]; }
+  double rowLower(HighsInt col) const { return model_->row_lower_[col]; }
 
-  const double* rowUpper() const { return model_->rowUpper_.data(); }
+  const double* rowUpper() const { return model_->row_upper_.data(); }
 
-  double rowUpper(HighsInt col) const { return model_->rowUpper_[col]; }
+  double rowUpper(HighsInt col) const { return model_->row_upper_[col]; }
 
   bool isSolutionFeasible(const std::vector<double>& solution) const;
 

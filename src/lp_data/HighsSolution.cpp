@@ -61,7 +61,7 @@ void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
                       HighsSolutionParams& solution_params,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals) {
-  getKktFailures(lp, lp.colCost_, solution, basis, solution_params,
+  getKktFailures(lp, lp.col_cost_, solution, basis, solution_params,
                  primal_dual_errors, get_residuals);
 }
 
@@ -206,15 +206,15 @@ void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
     if (iVar < lp.num_col_) {
       HighsInt iCol = iVar;
-      lower = lp.colLower_[iCol];
-      upper = lp.colUpper_[iCol];
+      lower = lp.col_lower_[iCol];
+      upper = lp.col_upper_[iCol];
       value = solution.col_value[iCol];
       if (have_dual_solution) dual = solution.col_dual[iCol];
       if (have_basis) status = basis.col_status[iCol];
     } else {
       HighsInt iRow = iVar - lp.num_col_;
-      lower = lp.rowLower_[iRow];
-      upper = lp.rowUpper_[iRow];
+      lower = lp.row_lower_[iRow];
+      upper = lp.row_upper_[iRow];
       value = solution.row_value[iRow];
       // @FlipRowDual -solution.row_dual[iRow]; became solution.row_dual[iRow];
       if (have_dual_solution) dual = solution.row_dual[iRow];
@@ -265,7 +265,7 @@ void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
     if (iVar < lp.num_col_ && get_residuals) {
       HighsInt iCol = iVar;
       if (have_dual_solution)
-        dual_activities[iCol] = gradient[iCol];  // lp.colCost_[iCol];
+        dual_activities[iCol] = gradient[iCol];  // lp.col_cost_[iCol];
       for (HighsInt el = lp.a_start_[iCol]; el < lp.a_start_[iCol + 1]; el++) {
         HighsInt iRow = lp.a_index_[el];
         double Avalue = lp.a_value_[el];
@@ -374,7 +374,7 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
 double computeObjectiveValue(const HighsLp& lp, const HighsSolution& solution) {
   double objective_value = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-    objective_value += lp.colCost_[iCol] * solution.col_value[iCol];
+    objective_value += lp.col_cost_[iCol] * solution.col_value[iCol];
   objective_value += lp.offset_;
   return objective_value;
 }
@@ -391,8 +391,8 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
   const HighsInt num_row = lp.num_row_;
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (basis.col_status[iCol] != HighsBasisStatus::kNonbasic) continue;
-    const double lower = lp.colLower_[iCol];
-    const double upper = lp.colUpper_[iCol];
+    const double lower = lp.col_lower_[iCol];
+    const double upper = lp.col_upper_[iCol];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
     if (lower == upper) {
       status = HighsBasisStatus::kLower;
@@ -425,8 +425,8 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
 
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     if (basis.row_status[iRow] != HighsBasisStatus::kNonbasic) continue;
-    const double lower = lp.rowLower_[iRow];
-    const double upper = lp.rowUpper_[iRow];
+    const double lower = lp.row_lower_[iRow];
+    const double upper = lp.row_upper_[iRow];
     HighsBasisStatus status = HighsBasisStatus::kNonbasic;
     if (lower == upper) {
       status = HighsBasisStatus::kLower;
@@ -494,8 +494,8 @@ HighsStatus ipxSolutionToHighsSolution(
   HighsInt ipx_slack = lp.num_col_;
   HighsInt num_boxed_rows = 0;
   for (HighsInt row = 0; row < lp.num_row_; row++) {
-    double lower = lp.rowLower_[row];
-    double upper = lp.rowUpper_[row];
+    double lower = lp.row_lower_[row];
+    double upper = lp.row_upper_[row];
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so set it to its row activity
       highs_solution.row_value[row] = row_activity[row];
@@ -587,8 +587,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     }
     if (unrecognised) {
       highsLogDev(log_options, HighsLogType::kError,
-                  "Bounds [%11.4g, %11.4g]\n", lp.colLower_[col],
-                  lp.colUpper_[col]);
+                  "Bounds [%11.4g, %11.4g]\n", lp.col_lower_[col],
+                  lp.col_upper_[col]);
       highsLogDev(log_options, HighsLogType::kError,
                   "Col %2" HIGHSINT_FORMAT " ipx_col_status[%2" HIGHSINT_FORMAT
                   "] = %2" HIGHSINT_FORMAT "; x[%2" HIGHSINT_FORMAT
@@ -619,8 +619,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
   HighsInt num_boxed_row_slacks_basic = 0;
   for (HighsInt row = 0; row < lp.num_row_; row++) {
     bool unrecognised = false;
-    double lower = lp.rowLower_[row];
-    double upper = lp.rowUpper_[row];
+    double lower = lp.row_lower_[row];
+    double upper = lp.row_upper_[row];
     HighsInt this_ipx_row = ipx_row;
     if (lower <= -kHighsInf && upper >= kHighsInf) {
       // Free row - removed by IPX so make it basic at its row activity
@@ -715,8 +715,8 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     }
     if (unrecognised) {
       highsLogDev(log_options, HighsLogType::kError,
-                  "Bounds [%11.4g, %11.4g]\n", lp.rowLower_[row],
-                  lp.rowUpper_[row]);
+                  "Bounds [%11.4g, %11.4g]\n", lp.row_lower_[row],
+                  lp.row_upper_[row]);
       highsLogDev(log_options, HighsLogType::kError,
                   "Row %2" HIGHSINT_FORMAT " ipx_row_status[%2" HIGHSINT_FORMAT
                   "] = %2" HIGHSINT_FORMAT "; s[%2" HIGHSINT_FORMAT

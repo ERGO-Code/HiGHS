@@ -575,9 +575,9 @@ HighsStatus Highs::getColsInterface(
     assert(out_to_col < col_dim);
     assert(in_to_col < col_dim);
     for (HighsInt col = out_from_col; col <= out_to_col; col++) {
-      if (col_cost != NULL) col_cost[num_col] = lp.colCost_[col];
-      if (col_lower != NULL) col_lower[num_col] = lp.colLower_[col];
-      if (col_upper != NULL) col_upper[num_col] = lp.colUpper_[col];
+      if (col_cost != NULL) col_cost[num_col] = lp.col_cost_[col];
+      if (col_lower != NULL) col_lower[num_col] = lp.col_lower_[col];
+      if (col_upper != NULL) col_upper[num_col] = lp.col_upper_[col];
       if (col_matrix_start != NULL)
         col_matrix_start[num_col] =
             num_nz + lp.a_start_[col] - lp.a_start_[out_from_col];
@@ -688,8 +688,8 @@ HighsStatus Highs::getRowsInterface(
     HighsInt new_row = new_index[row];
     if (new_row >= 0) {
       assert(new_row < num_row);
-      if (row_lower != NULL) row_lower[new_row] = lp.rowLower_[row];
-      if (row_upper != NULL) row_upper[new_row] = lp.rowUpper_[row];
+      if (row_lower != NULL) row_lower[new_row] = lp.row_lower_[row];
+      if (row_upper != NULL) row_upper[new_row] = lp.row_upper_[row];
       row_matrix_length[new_row] = 0;
     }
   }
@@ -1242,8 +1242,8 @@ HighsStatus Highs::setNonbasicStatusInterface(
       for (HighsInt iCol = set_from_ix; iCol <= set_to_ix; iCol++) {
         if (basis.col_status[iCol] == HighsBasisStatus::kBasic) continue;
         // Nonbasic column
-        double lower = lp.colLower_[iCol];
-        double upper = lp.colUpper_[iCol];
+        double lower = lp.col_lower_[iCol];
+        double upper = lp.col_upper_[iCol];
         if (!highs_isInfinity(-lower)) {
           basis.col_status[iCol] = HighsBasisStatus::kLower;
         } else if (!highs_isInfinity(upper)) {
@@ -1285,8 +1285,8 @@ HighsStatus Highs::setNonbasicStatusInterface(
       for (HighsInt iRow = set_from_ix; iRow <= set_to_ix; iRow++) {
         if (basis.row_status[iRow] == HighsBasisStatus::kBasic) continue;
         // Nonbasic column
-        double lower = lp.rowLower_[iRow];
-        double upper = lp.rowUpper_[iRow];
+        double lower = lp.row_lower_[iRow];
+        double upper = lp.row_upper_[iRow];
         if (!highs_isInfinity(-lower)) {
           basis.row_status[iRow] = HighsBasisStatus::kLower;
         } else if (!highs_isInfinity(upper)) {

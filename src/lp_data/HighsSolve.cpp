@@ -205,10 +205,10 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution_params.sum_dual_infeasibility = 0;
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    double cost = lp.colCost_[iCol];
+    double cost = lp.col_cost_[iCol];
     double dual = (HighsInt)lp.sense_ * cost;
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
     double value;
     double primal_infeasibility = 0;
     double dual_infeasibility = -1;

@@ -2299,11 +2299,11 @@ void HEkkPrimal::adjustPerturbedEquationOut() {
   double lp_lower;
   double lp_upper;
   if (variable_out < num_col) {
-    lp_lower = lp.colLower_[variable_out];
-    lp_upper = lp.colUpper_[variable_out];
+    lp_lower = lp.col_lower_[variable_out];
+    lp_upper = lp.col_upper_[variable_out];
   } else {
-    lp_lower = -lp.rowUpper_[variable_out - num_col];
-    lp_upper = -lp.rowLower_[variable_out - num_col];
+    lp_lower = -lp.row_upper_[variable_out - num_col];
+    lp_upper = -lp.row_lower_[variable_out - num_col];
   }
   if (lp_lower < lp_upper) return;
   // Leaving variable is fixed

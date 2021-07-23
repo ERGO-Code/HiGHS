@@ -566,12 +566,12 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
     if (!basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic variable
     if (iVar < lp.num_col_) {
-      lower = lp.colLower_[iVar];
-      upper = lp.colUpper_[iVar];
+      lower = lp.col_lower_[iVar];
+      upper = lp.col_upper_[iVar];
     } else {
       HighsInt iRow = iVar - lp.num_col_;
-      lower = -lp.rowUpper_[iRow];
-      upper = -lp.rowLower_[iRow];
+      lower = -lp.row_upper_[iRow];
+      upper = -lp.row_lower_[iRow];
     }
 
     if (highs_isInfinity(upper)) {
@@ -804,23 +804,23 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
       HighsInt var = col;
       if (!highs_isInfinity(-info.workLower_[var])) {
         double lp_lower = info.workLower_[var];
-        ok = lp_lower == lp.colLower_[col];
+        ok = lp_lower == lp.col_lower_[col];
         if (!ok) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "For col %" HIGHSINT_FORMAT
                       ", info.workLower_ should be %g but is %g\n",
-                      col, lp.colLower_[col], lp_lower);
+                      col, lp.col_lower_[col], lp_lower);
           return ok;
         }
       }
       if (!highs_isInfinity(info.workUpper_[var])) {
         double lp_upper = info.workUpper_[var];
-        ok = lp_upper == lp.colUpper_[col];
+        ok = lp_upper == lp.col_upper_[col];
         if (!ok) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "For col %" HIGHSINT_FORMAT
                       ", info.workUpper_ should be %g but is %g\n",
-                      col, lp.colUpper_[col], lp_upper);
+                      col, lp.col_upper_[col], lp_upper);
           return ok;
         }
       }
@@ -829,23 +829,23 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
       HighsInt var = lp.num_col_ + row;
       if (!highs_isInfinity(-info.workLower_[var])) {
         double lp_lower = info.workLower_[var];
-        ok = lp_lower == -lp.rowUpper_[row];
+        ok = lp_lower == -lp.row_upper_[row];
         if (!ok) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "For row %" HIGHSINT_FORMAT
                       ", info.workLower_ should be %g but is %g\n",
-                      row, -lp.rowUpper_[row], lp_lower);
+                      row, -lp.row_upper_[row], lp_lower);
           return ok;
         }
       }
       if (!highs_isInfinity(info.workUpper_[var])) {
         double lp_upper = info.workUpper_[var];
-        ok = lp_upper == -lp.rowLower_[row];
+        ok = lp_upper == -lp.row_lower_[row];
         if (!ok) {
           highsLogDev(options.log_options, HighsLogType::kError,
                       "For row %" HIGHSINT_FORMAT
                       ", info.workUpper_ should be %g but is %g\n",
-                      row, -lp.rowLower_[row], lp_upper);
+                      row, -lp.row_lower_[row], lp_upper);
           return ok;
         }
       }
@@ -874,7 +874,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
     for (HighsInt col = 0; col < lp.num_col_; ++col) {
       HighsInt var = col;
       double work_cost = info.workCost_[var];
-      double ok_cost = (HighsInt)lp.sense_ * lp.colCost_[col];
+      double ok_cost = (HighsInt)lp.sense_ * lp.col_cost_[col];
       ok = work_cost == ok_cost;
       if (!ok) {
         highsLogDev(options.log_options, HighsLogType::kError,

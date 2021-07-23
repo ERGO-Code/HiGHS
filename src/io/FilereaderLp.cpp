@@ -38,8 +38,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     lp.num_row_ = m.constraints.size();
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
-      lp.colLower_.push_back(m.variables[i]->lowerbound);
-      lp.colUpper_.push_back(m.variables[i]->upperbound);
+      lp.col_lower_.push_back(m.variables[i]->lowerbound);
+      lp.col_upper_.push_back(m.variables[i]->upperbound);
       lp.col_names_.push_back(m.variables[i]->name);
     }
 
@@ -49,10 +49,10 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                    "Ignoring m.objective->offset = %g\n", m.objective->offset);
       lp.offset_ = 0;  // m.objective->offset;
     }
-    lp.colCost_.resize(lp.num_col_, 0.0);
+    lp.col_cost_.resize(lp.num_col_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
-      lp.colCost_[varindex[lt->var->name]] = lt->coef;
+      lp.col_cost_[varindex[lt->var->name]] = lt->coef;
     }
 
     std::map<std::shared_ptr<Variable>, std::vector<std::shared_ptr<Variable>>>
@@ -100,8 +100,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
         consofvarmap_value[lt->var].push_back(lt->coef);
       }
 
-      lp.rowLower_.push_back(con->lowerbound);
-      lp.rowUpper_.push_back(con->upperbound);
+      lp.row_lower_.push_back(con->lowerbound);
+      lp.row_upper_.push_back(con->upperbound);
     }
 
     HighsInt nz = 0;
@@ -162,7 +162,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (HighsInt i = 0; i < lp.num_col_; i++) {
-    this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.colCost_[i],
+    this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.col_cost_[i],
                       (i + 1));
   }
   if (model.isQp()) {
@@ -186,7 +186,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFile(file, "st");
   this->writeToFileLineend(file);
   for (HighsInt row = 0; row < lp.num_row_; row++) {
-    if (lp.rowLower_[row] == lp.rowUpper_[row]) {
+    if (lp.row_lower_[row] == lp.row_upper_[row]) {
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
       for (HighsInt var = 0; var < lp.num_col_; var++) {
@@ -197,10 +197,10 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
           }
         }
       }
-      this->writeToFile(file, "= %+g", lp.rowLower_[row]);
+      this->writeToFile(file, "= %+g", lp.row_lower_[row]);
       this->writeToFileLineend(file);
     } else {
-      if (lp.rowLower_[row] > -kHighsInf) {
+      if (lp.row_lower_[row] > -kHighsInf) {
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
@@ -212,9 +212,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
             }
           }
         }
-        this->writeToFile(file, ">= %+g", lp.rowLower_[row]);
+        this->writeToFile(file, ">= %+g", lp.row_lower_[row]);
         this->writeToFileLineend(file);
-      } else if (lp.rowUpper_[row] < kHighsInf) {
+      } else if (lp.row_upper_[row] < kHighsInf) {
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
@@ -226,7 +226,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
             }
           }
         }
-        this->writeToFile(file, "<= %+g", lp.rowUpper_[row]);
+        this->writeToFile(file, "<= %+g", lp.row_upper_[row]);
         this->writeToFileLineend(file);
       } else {
         // constraint has infinite lower & upper bounds so not a proper
@@ -240,18 +240,18 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
   for (HighsInt i = 0; i < lp.num_col_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (lp.colLower_[i] > -kHighsInf && lp.colUpper_[i] < kHighsInf) {
+    if (lp.col_lower_[i] > -kHighsInf && lp.col_upper_[i] < kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= %+g",
-                        lp.colLower_[i], i + 1, lp.colUpper_[i]);
+                        lp.col_lower_[i], i + 1, lp.col_upper_[i]);
       this->writeToFileLineend(file);
-    } else if (lp.colLower_[i] <= -kHighsInf && lp.colUpper_[i] < kHighsInf) {
+    } else if (lp.col_lower_[i] <= -kHighsInf && lp.col_upper_[i] < kHighsInf) {
       this->writeToFile(file, " -inf <= x%" HIGHSINT_FORMAT " <= %+g", i + 1,
-                        lp.colUpper_[i]);
+                        lp.col_upper_[i]);
       this->writeToFileLineend(file);
 
-    } else if (lp.colLower_[i] > -kHighsInf && lp.colUpper_[i] >= kHighsInf) {
+    } else if (lp.col_lower_[i] > -kHighsInf && lp.col_upper_[i] >= kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= +inf",
-                        lp.colLower_[i], i + 1);
+                        lp.col_lower_[i], i + 1);
       this->writeToFileLineend(file);
     } else {
       this->writeToFile(file, " x%" HIGHSINT_FORMAT " free", i + 1);

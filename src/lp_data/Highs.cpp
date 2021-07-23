@@ -310,15 +310,15 @@ HighsStatus Highs::passModel(
     assert(costs != NULL);
     assert(col_lower != NULL);
     assert(col_upper != NULL);
-    lp.colCost_.assign(costs, costs + num_col);
-    lp.colLower_.assign(col_lower, col_lower + num_col);
-    lp.colUpper_.assign(col_upper, col_upper + num_col);
+    lp.col_cost_.assign(costs, costs + num_col);
+    lp.col_lower_.assign(col_lower, col_lower + num_col);
+    lp.col_upper_.assign(col_upper, col_upper + num_col);
   }
   if (num_row > 0) {
     assert(row_lower != NULL);
     assert(row_upper != NULL);
-    lp.rowLower_.assign(row_lower, row_lower + num_row);
-    lp.rowUpper_.assign(row_upper, row_upper + num_row);
+    lp.row_lower_.assign(row_lower, row_lower + num_row);
+    lp.row_upper_.assign(row_upper, row_upper + num_row);
   }
   if (num_nz > 0) {
     assert(num_col > 0);
@@ -2279,11 +2279,11 @@ HighsStatus Highs::callSolveQp() {
   instance.A.mat.start = lp.a_start_;
   instance.A.mat.index = lp.a_index_;
   instance.A.mat.value = lp.a_value_;
-  instance.c.value = lp.colCost_;
-  instance.con_lo = lp.rowLower_;
-  instance.con_up = lp.rowUpper_;
-  instance.var_lo = lp.colLower_;
-  instance.var_up = lp.colUpper_;
+  instance.c.value = lp.col_cost_;
+  instance.con_lo = lp.row_lower_;
+  instance.con_up = lp.row_upper_;
+  instance.var_lo = lp.col_lower_;
+  instance.var_up = lp.col_upper_;
   instance.Q.mat.num_col = lp.num_col_;
   instance.Q.mat.num_row = lp.num_col_;
   if (kHessianFormatInternal == HessianFormat::kSquare) {

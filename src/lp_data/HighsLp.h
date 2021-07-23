@@ -32,11 +32,11 @@ class HighsLp {
   std::vector<HighsInt> a_start_;
   std::vector<HighsInt> a_index_;
   std::vector<double> a_value_;
-  std::vector<double> colCost_;
-  std::vector<double> colLower_;
-  std::vector<double> colUpper_;
-  std::vector<double> rowLower_;
-  std::vector<double> rowUpper_;
+  std::vector<double> col_cost_;
+  std::vector<double> col_lower_;
+  std::vector<double> col_upper_;
+  std::vector<double> row_lower_;
+  std::vector<double> row_upper_;
 
   MatrixFormat format_ = MatrixFormat::kNone;
   ObjSense sense_ = ObjSense::kMinimize;

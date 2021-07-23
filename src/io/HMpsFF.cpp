@@ -40,11 +40,11 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.a_start_ = std::move(Astart);
   lp.a_index_ = std::move(Aindex);
   lp.a_value_ = std::move(Avalue);
-  lp.colCost_ = std::move(colCost);
-  lp.colLower_ = std::move(colLower);
-  lp.colUpper_ = std::move(colUpper);
-  lp.rowLower_ = std::move(rowLower);
-  lp.rowUpper_ = std::move(rowUpper);
+  lp.col_cost_ = std::move(colCost);
+  lp.col_lower_ = std::move(colLower);
+  lp.col_upper_ = std::move(colUpper);
+  lp.row_lower_ = std::move(rowLower);
+  lp.row_upper_ = std::move(rowUpper);
 
   lp.row_names_ = std::move(rowNames);
   lp.col_names_ = std::move(colNames);
