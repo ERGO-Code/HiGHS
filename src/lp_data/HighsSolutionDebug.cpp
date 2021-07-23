@@ -139,7 +139,7 @@ HighsDebugStatus debugHighsSolution(
   } else {
     gradient.assign(lp.numCol_, 0);
   }
-  for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
+  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++)
     gradient[iCol] += lp.colCost_[iCol];
   getKktFailures(lp, gradient, solution, basis, local_solution_params,
                  primal_dual_errors, get_residuals);
