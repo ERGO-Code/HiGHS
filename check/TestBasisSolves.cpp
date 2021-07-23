@@ -52,7 +52,7 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
   const double residual_tolerance = 1e-8;
   double residual_norm = 0;
   if (transpose) {
-    for (HighsInt k = 0; k < lp.numRow_; k++) {
+    for (HighsInt k = 0; k < lp.num_row_; k++) {
       double residual = 0;
       HighsInt var = basic_variables[k];
       if (var < 0) {
@@ -65,9 +65,9 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         }
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-          HighsInt row = lp.Aindex_[el];
-          residual += lp.Avalue_[el] * solution[row];
+        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
+          HighsInt row = lp.a_index_[el];
+          residual += lp.a_value_[el] * solution[row];
         }
         residual = fabs(rhs[k] - residual);
         if (residual > residual_tolerance) {
@@ -80,21 +80,21 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
     }
   } else {
     vector<double> basis_matrix_times_solution;
-    basis_matrix_times_solution.assign(lp.numRow_, 0);
-    for (HighsInt k = 0; k < lp.numRow_; k++) {
+    basis_matrix_times_solution.assign(lp.num_row_, 0);
+    for (HighsInt k = 0; k < lp.num_row_; k++) {
       HighsInt var = basic_variables[k];
       if (var < 0) {
         HighsInt row = -(1 + var);
         basis_matrix_times_solution[row] += solution[k];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-          HighsInt row = lp.Aindex_[el];
-          basis_matrix_times_solution[row] += lp.Avalue_[el] * solution[k];
+        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
+          HighsInt row = lp.a_index_[el];
+          basis_matrix_times_solution[row] += lp.a_value_[el] * solution[k];
         }
       }
     }
-    for (HighsInt k = 0; k < lp.numRow_; k++) {
+    for (HighsInt k = 0; k < lp.num_row_; k++) {
       double residual = fabs(rhs[k] - basis_matrix_times_solution[k]);
       if (residual > residual_tolerance) {
         if (dev_run)
@@ -110,7 +110,7 @@ void GetBasisSolvesFormRHS(HighsLp& lp, vector<HighsInt>& basic_variables,
                            vector<double>& solution, vector<double>& rhs,
                            const bool transpose = false) {
   if (transpose) {
-    for (HighsInt k = 0; k < lp.numRow_; k++) {
+    for (HighsInt k = 0; k < lp.num_row_; k++) {
       rhs[k] = 0;
       HighsInt var = basic_variables[k];
       if (var < 0) {
@@ -118,24 +118,24 @@ void GetBasisSolvesFormRHS(HighsLp& lp, vector<HighsInt>& basic_variables,
         rhs[k] = solution[row];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-          HighsInt row = lp.Aindex_[el];
-          rhs[k] += lp.Avalue_[el] * solution[row];
+        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
+          HighsInt row = lp.a_index_[el];
+          rhs[k] += lp.a_value_[el] * solution[row];
         }
       }
     }
   } else {
-    for (HighsInt k = 0; k < lp.numRow_; k++) rhs[k] = 0;
-    for (HighsInt k = 0; k < lp.numRow_; k++) {
+    for (HighsInt k = 0; k < lp.num_row_; k++) rhs[k] = 0;
+    for (HighsInt k = 0; k < lp.num_row_; k++) {
       HighsInt var = basic_variables[k];
       if (var < 0) {
         HighsInt row = -(1 + var);
         rhs[row] += solution[k];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-          HighsInt row = lp.Aindex_[el];
-          rhs[row] += lp.Avalue_[el] * solution[k];
+        for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
+          HighsInt row = lp.a_index_[el];
+          rhs[row] += lp.a_value_[el] * solution[k];
         }
       }
     }
@@ -149,8 +149,8 @@ void testBasisSolve(Highs& highs) {
   vector<double> rhs, known_solution, solution_row, solution_col;
 
   HighsLp lp = highs.getLp();
-  HighsInt numRow = lp.numRow_;
-  HighsInt numCol = lp.numCol_;
+  HighsInt numRow = lp.num_row_;
+  HighsInt numCol = lp.num_col_;
   basic_variables.resize(numRow);
   known_solution.resize(numRow);
   rhs.resize(numRow);
@@ -232,9 +232,9 @@ void testBasisSolve(Highs& highs) {
     if (var >= 0) {
       basic_col = var;
       for (HighsInt ix = 0; ix < numRow; ix++) rhs[ix] = 0;
-      for (HighsInt el = lp.Astart_[basic_col]; el < lp.Astart_[basic_col + 1];
-           el++)
-        rhs[lp.Aindex_[el]] = lp.Avalue_[el];
+      for (HighsInt el = lp.a_start_[basic_col];
+           el < lp.a_start_[basic_col + 1]; el++)
+        rhs[lp.a_index_[el]] = lp.a_value_[el];
 
       highs_status =
           highs.getBasisSolve(&rhs[0], &solution_col[0], &solution_num_nz,
@@ -409,9 +409,9 @@ void testBasisSolve(Highs& highs) {
     REQUIRE(highs_status == HighsStatus::kOk);
     // Check solution
     for (HighsInt row = 0; row < numRow; row++) rhs[row] = 0;
-    for (HighsInt el = lp.Astart_[check_col]; el < lp.Astart_[check_col + 1];
+    for (HighsInt el = lp.a_start_[check_col]; el < lp.a_start_[check_col + 1];
          el++)
-      rhs[lp.Aindex_[el]] = lp.Avalue_[el];
+      rhs[lp.a_index_[el]] = lp.a_value_[el];
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs,
                                                 solution_col, false);
     max_residual_norm = std::max(residual_norm, max_residual_norm);

@@ -46,16 +46,14 @@ class HSimplexNla {
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
   void setPivotThreshold(const double new_pivot_threshold);
   void passScaleAndMatrixPointers(const HighsScale* scale,
-				  const HighsInt* Astart, 
-				  const HighsInt* Aindex, 
-				  const double* Avalue);
-  void applyBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const ;
-  void applyBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const ;
-  void undoBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const ;
-  void undoBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const ;
-  bool sparseLoopStyle(const HighsInt count,
-		       const HighsInt dim,
-		       HighsInt& to_entry) const;
+                                  const HighsInt* Astart,
+                                  const HighsInt* Aindex, const double* Avalue);
+  void applyBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const;
+  void applyBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const;
+  void undoBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const;
+  void undoBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const;
+  bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
+                       HighsInt& to_entry) const;
   HighsInt build_synthetic_tick_;
 
   // private:

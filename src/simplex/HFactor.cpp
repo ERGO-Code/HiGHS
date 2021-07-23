@@ -267,9 +267,8 @@ void HFactor::setup(HighsInt numCol_, HighsInt numRow_, const HighsInt* Astart_,
   PFvalue.reserve(BlimitX * 4);
 }
 
-void HFactor::setupMatrix(const HighsInt* Astart_,
-			  const HighsInt* Aindex_,
-			  const double* Avalue_) {
+void HFactor::setupMatrix(const HighsInt* Astart_, const HighsInt* Aindex_,
+                          const double* Avalue_) {
   Astart = Astart_;
   Aindex = Aindex_;
   Avalue = Avalue_;

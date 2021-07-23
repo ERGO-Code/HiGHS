@@ -46,17 +46,17 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsMipSolver& mipsolver = lpRelaxation.getMipSolver();
   const HighsLp& lp = lpRelaxation.getLp();
 
-  std::vector<uint8_t> skipRow(lp.numRow_);
+  std::vector<uint8_t> skipRow(lp.num_row_);
 
   // mark all rows that have continuous variables with a nonzero solution value
   // in the transformed LP to be skipped
   for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0) continue;
 
-    const HighsInt start = lp.Astart_[col];
-    const HighsInt end = lp.Astart_[col + 1];
+    const HighsInt start = lp.a_start_[col];
+    const HighsInt end = lp.a_start_[col + 1];
 
-    for (HighsInt i = start; i != end; ++i) skipRow[lp.Aindex_[i]] = true;
+    for (HighsInt i = start; i != end; ++i) skipRow[lp.a_index_[i]] = true;
   }
 
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
@@ -66,9 +66,9 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<HighsInt> intSystemIndex;
   std::vector<HighsInt> intSystemStart;
 
-  intSystemValue.reserve(lp.Avalue_.size() + lp.numRow_);
+  intSystemValue.reserve(lp.a_value_.size() + lp.num_row_);
   intSystemIndex.reserve(intSystemValue.size());
-  intSystemStart.reserve(lp.numRow_ + 1);
+  intSystemStart.reserve(lp.num_row_ + 1);
   intSystemStart.push_back(0);
   std::vector<HighsInt> inds;
   std::vector<double> vals;
@@ -80,14 +80,14 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
-  for (HighsInt row = 0; row != lp.numRow_; ++row) {
+  for (HighsInt row = 0; row != lp.num_row_; ++row) {
     if (skipRow[row]) continue;
 
     bool leqRow;
-    if (lp.rowUpper_[row] - lpSolution.row_value[row] <=
+    if (lp.row_upper_[row] - lpSolution.row_value[row] <=
         mipsolver.mipdata_->feastol)
       leqRow = true;
-    else if (lpSolution.row_value[row] - lp.rowLower_[row] <=
+    else if (lpSolution.row_value[row] - lp.row_lower_[row] <=
              mipsolver.mipdata_->feastol)
       leqRow = false;
     else
@@ -100,14 +100,14 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
 
     if (leqRow) {
-      rhs = lp.rowUpper_[row];
+      rhs = lp.row_upper_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.assign(rowvals, rowvals + rowlen);
     } else {
-      assert(lpSolution.row_value[row] - lp.rowLower_[row] <=
+      assert(lpSolution.row_value[row] - lp.row_lower_[row] <=
              mipsolver.mipdata_->feastol);
 
-      rhs = -lp.rowLower_[row];
+      rhs = -lp.row_lower_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.resize(rowlen);
       std::transform(rowvals, rowvals + rowlen, vals.begin(),
@@ -158,7 +158,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       }
     }
 
-    intSystemIndex.push_back(lp.numCol_);
+    intSystemIndex.push_back(lp.num_col_);
     intSystemValue.push_back(intrhs);
     intSystemStart.push_back(intSystemValue.size());
     if (leqRow)
@@ -205,27 +205,27 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   k = 2;
   HighsInt numCuts = -cutpool.getNumCuts();
   separateModKCuts<2>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.numCol_, foundCut);
+                      lp.num_col_, foundCut);
   numCuts += cutpool.getNumCuts();
   if (numCuts > 0) return;
 
   k = 3;
   numCuts = -cutpool.getNumCuts();
   separateModKCuts<3>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.numCol_, foundCut);
+                      lp.num_col_, foundCut);
   numCuts += cutpool.getNumCuts();
   if (numCuts > 0) return;
 
   k = 5;
   numCuts = -cutpool.getNumCuts();
   separateModKCuts<5>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.numCol_, foundCut);
+                      lp.num_col_, foundCut);
   numCuts += cutpool.getNumCuts();
   if (numCuts > 0) return;
 
   k = 7;
   numCuts = -cutpool.getNumCuts();
   separateModKCuts<7>(intSystemValue, intSystemIndex, intSystemStart,
-                      lp.numCol_, foundCut);
+                      lp.num_col_, foundCut);
   numCuts += cutpool.getNumCuts();
 }

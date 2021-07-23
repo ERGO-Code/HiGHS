@@ -19,7 +19,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   model.lp_ = lp;
   // Add an identity Hessian
   HighsHessian& hessian = model.hessian_;
-  HighsInt dim = lp.numCol_;
+  HighsInt dim = lp.num_col_;
   hessian.dim_ = dim;
   hessian.q_start_.resize(dim + 1);
   hessian.q_index_.resize(dim);
@@ -43,7 +43,7 @@ TEST_CASE("HighsModel", "[highs_model]") {
   double optimal_objective;
   special_lps.distillationLp(model.lp_, require_model_status,
                              optimal_objective);
-  dim = model.lp_.numCol_;
+  dim = model.lp_.num_col_;
   // A Hessian with dimesion but no nonzeros (ie identically zero)
   // should be ignored OK
   hessian.dim_ = dim;

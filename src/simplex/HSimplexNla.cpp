@@ -69,18 +69,22 @@ HighsInt HSimplexNla::invert() {
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   applyBasisMatrixColScale(rhs, scale_);
-  //  printf("BTRAN:  Bf: "); for(HighsInt iRow=0; iRow<num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  printf("BTRAN:  Bf: "); for(HighsInt iRow=0; iRow<num_row_; iRow++)
+  //  printf("%7.4f ", rhs.array[iRow]); printf("\n");
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
-  //  printf("BTRAN:  Af: "); for(HighsInt iRow=0; iRow<num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  printf("BTRAN:  Af: "); for(HighsInt iRow=0; iRow<num_row_; iRow++)
+  //  printf("%7.4f ", rhs.array[iRow]); printf("\n");
   applyBasisMatrixRowScale(rhs, scale_);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
   applyBasisMatrixRowScale(rhs, scale_);
-  //  printf("FTRAN:  Bf: "); for(HighsInt iRow=0; iRow<num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  printf("FTRAN:  Bf: "); for(HighsInt iRow=0; iRow<num_row_; iRow++)
+  //  printf("%7.4f ", rhs.array[iRow]); printf("\n");
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
-  //  printf("FTRAN:  Af: "); for(HighsInt iRow=0; iRow<num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  printf("FTRAN:  Af: "); for(HighsInt iRow=0; iRow<num_row_; iRow++)
+  //  printf("%7.4f ", rhs.array[iRow]); printf("\n");
   applyBasisMatrixColScale(rhs, scale_);
 }
 
@@ -96,9 +100,9 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
 }
 
 void HSimplexNla::passScaleAndMatrixPointers(const HighsScale* scale,
-					     const HighsInt* a_start, 
-					     const HighsInt* a_index, 
-					     const double* a_value) {
+                                             const HighsInt* a_start,
+                                             const HighsInt* a_index,
+                                             const double* a_value) {
   scale_ = scale;
   a_start_ = a_start;
   a_index_ = a_index;
@@ -106,7 +110,8 @@ void HSimplexNla::passScaleAndMatrixPointers(const HighsScale* scale,
   factor_.setupMatrix(a_start, a_index, a_value);
 }
 
-void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const {
+void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs,
+                                           const HighsScale* scale) const {
   if (scale == NULL) return;
   const vector<double>& col_scale = scale->col;
   const vector<double>& row_scale = scale->row;
@@ -123,7 +128,8 @@ void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs, const HighsScale* scale
   }
 }
 
-void HSimplexNla::applyBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const {
+void HSimplexNla::applyBasisMatrixColScale(HVector& rhs,
+                                           const HighsScale* scale) const {
   if (scale == NULL) return;
   const vector<double>& col_scale = scale->col;
   const vector<double>& row_scale = scale->row;
@@ -140,12 +146,13 @@ void HSimplexNla::applyBasisMatrixColScale(HVector& rhs, const HighsScale* scale
     if (iVar < num_col_) {
       rhs.array[iCol] *= col_scale[iVar];
     } else {
-      rhs.array[iCol] /= row_scale[iVar-num_col_];
+      rhs.array[iCol] /= row_scale[iVar - num_col_];
     }
   }
 }
 
-void HSimplexNla::undoBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const {
+void HSimplexNla::undoBasisMatrixRowScale(HVector& rhs,
+                                          const HighsScale* scale) const {
   if (scale == NULL) return;
   const vector<double>& col_scale = scale->col;
   const vector<double>& row_scale = scale->row;
@@ -162,7 +169,8 @@ void HSimplexNla::undoBasisMatrixRowScale(HVector& rhs, const HighsScale* scale)
   }
 }
 
-void HSimplexNla::undoBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const {
+void HSimplexNla::undoBasisMatrixColScale(HVector& rhs,
+                                          const HighsScale* scale) const {
   if (scale == NULL) return;
   const vector<double>& col_scale = scale->col;
   const vector<double>& row_scale = scale->row;
@@ -179,13 +187,13 @@ void HSimplexNla::undoBasisMatrixColScale(HVector& rhs, const HighsScale* scale)
     if (iVar < num_col_) {
       rhs.array[iCol] /= col_scale[iVar];
     } else {
-      rhs.array[iCol] *= row_scale[iVar-num_col_];
+      rhs.array[iCol] *= row_scale[iVar - num_col_];
     }
   }
 }
 
 bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
-				  HighsInt& to_entry) const {
+                                  HighsInt& to_entry) const {
   // Parameter to decide whether to use just the values in a HVector, or
   // use the indices of their nonzeros
   const double density_for_indexing = 0.4;
@@ -197,4 +205,3 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
   }
   return use_indices;
 }
-

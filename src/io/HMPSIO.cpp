@@ -481,8 +481,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
   std::vector<std::string> local_row_names;
-  local_col_names.resize(lp.numCol_);
-  local_row_names.resize(lp.numRow_);
+  local_col_names.resize(lp.num_col_);
+  local_row_names.resize(lp.num_row_);
   //
   // Initialise the local names to any existing names
   if (have_col_names) local_col_names = lp.col_names_;
@@ -492,8 +492,8 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   HighsInt max_col_name_length = kHighsIInf;
   if (!free_format) max_col_name_length = 8;
   HighsStatus col_name_status =
-      normaliseNames(options.log_options, "Column", lp.numCol_, local_col_names,
-                     max_col_name_length);
+      normaliseNames(options.log_options, "Column", lp.num_col_,
+                     local_col_names, max_col_name_length);
   if (col_name_status == HighsStatus::kError) return col_name_status;
   warning_found = col_name_status == HighsStatus::kWarning || warning_found;
   //
@@ -501,7 +501,7 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   HighsInt max_row_name_length = kHighsIInf;
   if (!free_format) max_row_name_length = 8;
   HighsStatus row_name_status =
-      normaliseNames(options.log_options, "Row", lp.numRow_, local_row_names,
+      normaliseNames(options.log_options, "Row", lp.num_row_, local_row_names,
                      max_row_name_length);
   if (row_name_status == HighsStatus::kError) return col_name_status;
   warning_found = row_name_status == HighsStatus::kWarning || warning_found;
@@ -524,10 +524,10 @@ HighsStatus writeModelAsMps(const HighsOptions& options,
   if (hessian.dim_) assert(hessian.format_ == HessianFormat::kTriangular);
 
   HighsStatus write_status = writeMps(
-      options.log_options, filename, lp.model_name_, lp.numRow_, lp.numCol_,
-      hessian.dim_, lp.sense_, lp.offset_, lp.colCost_, lp.colLower_,
-      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.Astart_, lp.Aindex_,
-      lp.Avalue_, hessian.q_start_, hessian.q_index_, hessian.q_value_,
+      options.log_options, filename, lp.model_name_, lp.num_row_, lp.num_col_,
+      hessian.dim_, lp.sense_, lp.offset_, lp.col_cost_, lp.col_lower_,
+      lp.col_upper_, lp.row_lower_, lp.row_upper_, lp.a_start_, lp.a_index_,
+      lp.a_value_, hessian.q_start_, hessian.q_index_, hessian.q_value_,
       lp.integrality_, local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::kOk && warning_found)
     return HighsStatus::kWarning;

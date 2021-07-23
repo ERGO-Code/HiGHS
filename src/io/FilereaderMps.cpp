@@ -60,27 +60,27 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 
   // else use fixed format parser
   FilereaderRetcode return_code = readMps(
-      options.log_options, filename, -1, -1, lp.numRow_, lp.numCol_, lp.sense_,
-      lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
-      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_, lp.col_names_,
-      lp.row_names_, options.keep_n_rows);
+      options.log_options, filename, -1, -1, lp.num_row_, lp.num_col_,
+      lp.sense_, lp.offset_, lp.a_start_, lp.a_index_, lp.a_value_,
+      lp.col_cost_, lp.col_lower_, lp.col_upper_, lp.row_lower_, lp.row_upper_,
+      lp.integrality_, lp.col_names_, lp.row_names_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) {
     lp.format_ = MatrixFormat::kColwise;
     if (setFormat(lp) != HighsStatus::kOk)
       return FilereaderRetcode::kParserError;
   }
-  if (namesWithSpaces(lp.numCol_, lp.col_names_)) {
+  if (namesWithSpaces(lp.num_col_, lp.col_names_)) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has column names with spaces\n");
 #ifdef HiGHSDEV
-    namesWithSpaces(lp.numCol_, lp.col_names_, true);
+    namesWithSpaces(lp.num_col_, lp.col_names_, true);
 #endif
   }
-  if (namesWithSpaces(lp.numRow_, lp.row_names_)) {
+  if (namesWithSpaces(lp.num_row_, lp.row_names_)) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has row names with spaces\n");
 #ifdef HiGHSDEV
-    namesWithSpaces(lp.numRow_, lp.row_names_, true);
+    namesWithSpaces(lp.num_row_, lp.row_names_, true);
 #endif
   }
   return return_code;

@@ -45,7 +45,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
 #endif
-  if (!model.lp_.numRow_) {
+  if (!model.lp_.num_row_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(model);
     return_status =
@@ -170,17 +170,17 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   resetModelStatusAndSolutionParams(model_status, solution_params, options);
 
   // Check that the LP really is unconstrained!
-  assert(lp.numRow_ == 0);
-  if (lp.numRow_ != 0) return HighsStatus::kError;
+  assert(lp.num_row_ == 0);
+  if (lp.num_row_ != 0) return HighsStatus::kError;
 
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Solving an unconstrained LP with %" HIGHSINT_FORMAT
                " columns\n",
-               lp.numCol_);
+               lp.num_col_);
 
-  solution.col_value.assign(lp.numCol_, 0);
-  solution.col_dual.assign(lp.numCol_, 0);
-  basis.col_status.assign(lp.numCol_, HighsBasisStatus::kNonbasic);
+  solution.col_value.assign(lp.num_col_, 0);
+  solution.col_dual.assign(lp.num_col_, 0);
+  basis.col_status.assign(lp.num_col_, HighsBasisStatus::kNonbasic);
   // No rows for primal solution, dual solution or basis
   solution.row_value.clear();
   solution.row_dual.clear();
@@ -204,11 +204,11 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution_params.max_dual_infeasibility = 0;
   solution_params.sum_dual_infeasibility = 0;
 
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
-    double cost = lp.colCost_[iCol];
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    double cost = lp.col_cost_[iCol];
     double dual = (HighsInt)lp.sense_ * cost;
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
+    double lower = lp.col_lower_[iCol];
+    double upper = lp.col_upper_[iCol];
     double value;
     double primal_infeasibility = 0;
     double dual_infeasibility = -1;

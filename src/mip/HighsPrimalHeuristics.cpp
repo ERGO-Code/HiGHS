@@ -71,8 +71,8 @@ bool HighsPrimalHeuristics::solveSubMip(
   HighsLp submip = lp;
 
   // set bounds and restore integrality of the lp relaxation copy
-  submip.colLower_ = std::move(colLower);
-  submip.colUpper_ = std::move(colUpper);
+  submip.col_lower_ = std::move(colLower);
+  submip.col_upper_ = std::move(colUpper);
   submip.integrality_ = mipsolver.model_->integrality_;
   submip.offset_ = 0;
 
@@ -103,7 +103,7 @@ bool HighsPrimalHeuristics::solveSubMip(
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
     double adjustmentfactor = submipsolver.numCol() / std::max(1.0, numUnfixed);
-    // (double)mipsolver.orig_model_->Avalue_.size();
+    // (double)mipsolver.orig_model_->a_value_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
@@ -171,7 +171,7 @@ class HeuristicNeighborhood {
         startCheckedChanges(localdom.getDomainChangeStack().size()),
         nCheckedChanges(startCheckedChanges) {
     for (HighsInt i : mipsolver.mipdata_->integral_cols)
-      if (localdom.colLower_[i] == localdom.colUpper_[i]) ++numFixed;
+      if (localdom.col_lower_[i] == localdom.col_upper_[i]) ++numFixed;
 
     numTotal = mipsolver.mipdata_->integral_cols.size() - numFixed;
   }
@@ -244,7 +244,7 @@ void HighsPrimalHeuristics::rootReducedCost() {
   if (fixingRate < 0.3) return;
 
   solveSubMip(*mipsolver.model_, mipsolver.mipdata_->firstrootbasis, fixingRate,
-              localdom.colLower_, localdom.colUpper_,
+              localdom.col_lower_, localdom.col_upper_,
               500,  // std::max(50, int(0.05 *
                     // (mipsolver.mipdata_->num_leaves))),
               200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12);
@@ -267,8 +267,8 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& tmp) {
   heur.setLpRelaxation(&heurlp);
 
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-                                        localdom.colLower_.data(),
-                                        localdom.colUpper_.data());
+                                        localdom.col_lower_.data(),
+                                        localdom.col_upper_.data());
   localdom.clearChangedCols();
   heur.createNewNode();
 
@@ -331,15 +331,15 @@ retry:
         1.0 - (1.0 - neighborhood.getFixingRate()) * 0.9, maxfixingrate);
     const auto& relaxationsol = heurlp.getSolution().col_value;
     for (HighsInt i : intcols) {
-      if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
+      if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
 
       double downval =
           std::floor(relaxationsol[i] + mipsolver.mipdata_->feastol);
       double upval = std::ceil(relaxationsol[i] - mipsolver.mipdata_->feastol);
 
-      downval = std::min(downval, localdom.colUpper_[i]);
-      upval = std::max(upval, localdom.colLower_[i]);
-      if (localdom.colLower_[i] < downval) {
+      downval = std::min(downval, localdom.col_upper_[i]);
+      upval = std::max(upval, localdom.col_lower_[i]);
+      if (localdom.col_lower_[i] < downval) {
         ++numBranched;
         heur.branchUpwards(i, downval, downval - 0.5);
         localdom.propagate();
@@ -348,7 +348,7 @@ retry:
           break;
         }
       }
-      if (localdom.colUpper_[i] > upval) {
+      if (localdom.col_upper_[i] > upval) {
         ++numBranched;
         heur.branchDownwards(i, upval, upval + 0.5);
         localdom.propagate();
@@ -376,15 +376,15 @@ retry:
           fixval = std::ceil(fracval);
         else if (rootchange <= -0.4)
           fixval = std::floor(fracval);
-        if (mipsolver.model_->colCost_[col] > 0.0)
+        if (mipsolver.model_->col_cost_[col] > 0.0)
           fixval = std::ceil(fracval);
-        else if (mipsolver.model_->colCost_[col] < 0.0)
+        else if (mipsolver.model_->col_cost_[col] < 0.0)
           fixval = std::floor(fracval);
         else
           fixval = std::floor(fracval + 0.5);
         // make sure we do not set an infeasible domain
-        fixval = std::min(localdom.colUpper_[col], fixval);
-        fixval = std::max(localdom.colLower_[col], fixval);
+        fixval = std::min(localdom.col_upper_[col], fixval);
+        fixval = std::max(localdom.col_lower_[col], fixval);
         return fixval;
       };
 
@@ -409,7 +409,7 @@ retry:
       for (auto fracint : heurlp.getFractionalIntegers()) {
         double fixval = getFixVal(fracint.first, fracint.second);
 
-        if (localdom.colLower_[fracint.first] < fixval) {
+        if (localdom.col_lower_[fracint.first] < fixval) {
           ++numBranched;
           heur.branchUpwards(fracint.first, fixval, fracint.second);
           localdom.propagate();
@@ -421,7 +421,7 @@ retry:
           fixingrate = neighborhood.getFixingRate();
         }
 
-        if (localdom.colUpper_[fracint.first] > fixval) {
+        if (localdom.col_upper_[fracint.first] > fixval) {
           ++numBranched;
           heur.branchDownwards(fracint.first, fixval, fracint.second);
           localdom.propagate();
@@ -469,7 +469,7 @@ retry:
 
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-                   localdom.colLower_, localdom.colUpper_,
+                   localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
@@ -501,8 +501,8 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
   heur.setLpRelaxation(&heurlp);
 
   heurlp.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-                                        localdom.colLower_.data(),
-                                        localdom.colUpper_.data());
+                                        localdom.col_lower_.data(),
+                                        localdom.col_upper_.data());
   localdom.clearChangedCols();
   heur.createNewNode();
 
@@ -588,16 +588,16 @@ retry:
           fixval = std::ceil(fracval);
         else if (rootchange <= -0.4)
           fixval = std::floor(fracval);
-        if (mipsolver.model_->colCost_[col] > 0.0)
+        if (mipsolver.model_->col_cost_[col] > 0.0)
           fixval = std::ceil(fracval);
-        else if (mipsolver.model_->colCost_[col] < 0.0)
+        else if (mipsolver.model_->col_cost_[col] < 0.0)
           fixval = std::floor(fracval);
         else
           fixval = std::floor(fracval + 0.5);
       }
       // make sure we do not set an infeasible domain
-      fixval = std::min(localdom.colUpper_[col], fixval);
-      fixval = std::max(localdom.colLower_[col], fixval);
+      fixval = std::min(localdom.col_upper_[col], fixval);
+      fixval = std::max(localdom.col_lower_[col], fixval);
       return fixval;
     };
 
@@ -611,13 +611,13 @@ retry:
           std::min(maxfixingrate, 1.0 - (1.0 - fixingrate) * 0.9);
       const auto& currlpsol = heurlp.getSolution().col_value;
       for (HighsInt i : intcols) {
-        if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
+        if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
 
         if (std::abs(currlpsol[i] - mipsolver.mipdata_->incumbent[i]) <=
             mipsolver.mipdata_->feastol) {
           double fixval = std::round(currlpsol[i]);
           HighsInt oldNumBranched = numBranched;
-          if (localdom.colLower_[i] < fixval) {
+          if (localdom.col_lower_[i] < fixval) {
             ++numBranched;
             heur.branchUpwards(i, fixval, fixval - 0.5);
             localdom.propagate();
@@ -628,7 +628,7 @@ retry:
 
             fixingrate = neighborhood.getFixingRate();
           }
-          if (localdom.colUpper_[i] > fixval) {
+          if (localdom.col_upper_[i] > fixval) {
             ++numBranched;
             heur.branchDownwards(i, fixval, fixval + 0.5);
             localdom.propagate();
@@ -684,7 +684,7 @@ retry:
     for (auto fracint : heurlp.getFractionalIntegers()) {
       double fixval = getFixVal(fracint.first, fracint.second);
 
-      if (localdom.colLower_[fracint.first] < fixval) {
+      if (localdom.col_lower_[fracint.first] < fixval) {
         ++numBranched;
         heur.branchUpwards(fracint.first, fixval, fracint.second);
         if (localdom.infeasible()) {
@@ -695,7 +695,7 @@ retry:
         fixingrate = neighborhood.getFixingRate();
       }
 
-      if (localdom.colUpper_[fracint.first] > fixval) {
+      if (localdom.col_upper_[fracint.first] > fixval) {
         ++numBranched;
         heur.branchDownwards(fracint.first, fixval, fracint.second);
         if (localdom.infeasible()) {
@@ -743,7 +743,7 @@ retry:
 
   heurlp.removeObsoleteRows(false);
   if (!solveSubMip(heurlp.getLp(), heurlp.getLpSolver().getBasis(), fixingrate,
-                   localdom.colLower_, localdom.colUpper_,
+                   localdom.col_lower_, localdom.col_upper_,
                    500,  // std::max(50, int(0.05 *
                          // (mipsolver.mipdata_->num_leaves))),
                    200 + int(0.05 * (mipsolver.mipdata_->num_nodes)), 12)) {
@@ -763,8 +763,8 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
   for (HighsInt i = 0; i != numintcols; ++i) {
     HighsInt col = intcols[i];
     double intval = point[col];
-    intval = std::min(localdom.colUpper_[col], intval);
-    intval = std::max(localdom.colLower_[col], intval);
+    intval = std::min(localdom.col_upper_[col], intval);
+    intval = std::max(localdom.col_lower_[col], intval);
 
     localdom.fixCol(col, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) {
@@ -782,8 +782,8 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-                                           localdom.colLower_.data(),
-                                           localdom.colUpper_.data());
+                                           localdom.col_lower_.data(),
+                                           localdom.col_upper_.data());
 
     if (numintcols / (double)mipsolver.numCol() >= 0.2)
       lprelax.getLpSolver().setOptionValue("presolve", "on");
@@ -810,7 +810,7 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
     }
   }
 
-  return mipsolver.mipdata_->trySolution(localdom.colLower_, source);
+  return mipsolver.mipdata_->trySolution(localdom.col_lower_, source);
 }
 
 bool HighsPrimalHeuristics::linesearchRounding(
@@ -884,8 +884,8 @@ void HighsPrimalHeuristics::randomizedRounding(
     else
       intval = std::floor(relaxationsol[i] + randgen.real(0.1, 0.9));
 
-    intval = std::min(localdom.colUpper_[i], intval);
-    intval = std::max(localdom.colLower_[i], intval);
+    intval = std::min(localdom.col_upper_[i], intval);
+    intval = std::max(localdom.col_lower_[i], intval);
 
     localdom.fixCol(i, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) {
@@ -903,8 +903,8 @@ void HighsPrimalHeuristics::randomizedRounding(
     HighsLpRelaxation lprelax(mipsolver);
     lprelax.loadModel();
     lprelax.getLpSolver().changeColsBounds(0, mipsolver.numCol() - 1,
-                                           localdom.colLower_.data(),
-                                           localdom.colUpper_.data());
+                                           localdom.col_lower_.data(),
+                                           localdom.col_upper_.data());
     // lprelax.getLpSolver().setHighsOptionValue("presolve", "on");
     lprelax.getLpSolver().setBasis(mipsolver.mipdata_->firstrootbasis);
     HighsLpRelaxation::Status st = lprelax.resolveLp();
@@ -924,7 +924,7 @@ void HighsPrimalHeuristics::randomizedRounding(
           lprelax.getLpSolver().getSolution().col_value, lprelax.getObjective(),
           'R');
   } else {
-    mipsolver.mipdata_->trySolution(localdom.colLower_, 'R');
+    mipsolver.mipdata_->trySolution(localdom.col_lower_, 'R');
   }
 }
 
@@ -939,8 +939,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
   std::vector<double> fracintcost;
   std::vector<HighsInt> fracintset;
 
-  std::vector<HighsInt> mask(mipsolver.model_->numCol_, 1);
-  std::vector<double> cost(mipsolver.model_->numCol_, 0.0);
+  std::vector<HighsInt> mask(mipsolver.model_->num_col_, 1);
+  std::vector<double> cost(mipsolver.model_->num_col_, 0.0);
   if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
@@ -974,8 +974,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
     for (HighsInt i : mipsolver.mipdata_->integer_cols) {
       assert(mipsolver.variableType(i) == HighsVarType::kInteger);
       double intval = std::floor(roundedsol[i] + randgen.real(0.4, 0.6));
-      intval = std::max(intval, localdom.colLower_[i]);
-      intval = std::min(intval, localdom.colUpper_[i]);
+      intval = std::max(intval, localdom.col_lower_[i]);
+      intval = std::min(intval, localdom.col_upper_[i]);
       roundedsol[i] = intval;
       referencepoint.push_back((HighsInt)intval);
       if (!localdom.infeasible()) {
@@ -1003,10 +1003,10 @@ void HighsPrimalHeuristics::feasibilityPump() {
           roundedsol[col] = (HighsInt)std::floor(lpsol[col]);
         else if (roundedsol[col] < lpsol[col])
           roundedsol[col] = (HighsInt)std::ceil(lpsol[col]);
-        else if (roundedsol[col] < mipsolver.mipdata_->domain.colUpper_[col])
-          roundedsol[col] = mipsolver.mipdata_->domain.colUpper_[col];
+        else if (roundedsol[col] < mipsolver.mipdata_->domain.col_upper_[col])
+          roundedsol[col] = mipsolver.mipdata_->domain.col_upper_[col];
         else
-          roundedsol[col] = mipsolver.mipdata_->domain.colLower_[col];
+          roundedsol[col] = mipsolver.mipdata_->domain.col_lower_[col];
 
         referencepoint[flippos] = (HighsInt)roundedsol[col];
       }
@@ -1052,9 +1052,9 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setOptionValue("ipm_iteration_limit", 200);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
-  // lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
-  // lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
-  lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);
+  // lpmodel.col_lower_ = mipsolver.mipdata_->domain.col_lower_;
+  // lpmodel.col_upper_ = mipsolver.mipdata_->domain.col_upper_;
+  lpmodel.col_cost_.assign(lpmodel.num_col_, 0.0);
   ipm.passModel(std::move(lpmodel));
 
   if (mipsolver.mipdata_->upper_limit != kHighsInf) {
@@ -1077,21 +1077,21 @@ void HighsPrimalHeuristics::centralRounding() {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.mipdata_->domain.colLower_[i] ==
-          mipsolver.mipdata_->domain.colUpper_[i])
+      if (mipsolver.mipdata_->domain.col_lower_[i] ==
+          mipsolver.mipdata_->domain.col_upper_[i])
         continue;
       if (sol[i] <=
-          mipsolver.model_->colLower_[i] + mipsolver.mipdata_->feastol) {
+          mipsolver.model_->col_lower_[i] + mipsolver.mipdata_->feastol) {
         mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kUpper, i, mipsolver.model_->colLower_[i],
+            HighsBoundType::kUpper, i, mipsolver.model_->col_lower_[i],
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
-      } else if (sol[i] >=
-                 mipsolver.model_->colUpper_[i] - mipsolver.mipdata_->feastol) {
+      } else if (sol[i] >= mipsolver.model_->col_upper_[i] -
+                               mipsolver.mipdata_->feastol) {
         mipsolver.mipdata_->domain.changeBound(
-            HighsBoundType::kLower, i, mipsolver.model_->colUpper_[i],
+            HighsBoundType::kLower, i, mipsolver.model_->col_upper_[i],
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
@@ -1128,7 +1128,7 @@ void HighsPrimalHeuristics::clique() {
     if (val == 0.0) continue;
 
     if (!globaldom.isBinary(col)) {
-      offset += val * globaldom.colLower_[col];
+      offset += val * globaldom.col_lower_[col];
       continue;
     }
 

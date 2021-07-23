@@ -32,8 +32,8 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
                                  const HighsOptions& options,
                                  const HighsInt simplex_iteration_count_) {
   // Copy Problem size
-  numRow = lp.numRow_;
-  numCol = lp.numCol_;
+  numRow = lp.num_row_;
+  numCol = lp.num_col_;
   numTot = numRow + numCol;
   model_name_ = lp.model_name_;
   lp_name_ = lp_name;
