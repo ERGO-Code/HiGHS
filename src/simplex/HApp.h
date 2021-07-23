@@ -83,8 +83,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   HighsInt simplex_iteration_limit = options.simplex_iteration_limit;
-  if (kRefineSimplex)
-    options.simplex_iteration_limit = 7;
+  //  if (kRefineSimplex) options.simplex_iteration_limit = 3;
   // Solve the LP!
   return_status = ekk_instance.solve();
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -152,6 +151,20 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     highs_model_object.unscaled_model_status_ = HighsModelStatus::kOptimal;
   } else {
     // Not optimal - should try refinement
+    assert(num_unscaled_primal_infeasibility > 0 ||
+	   num_unscaled_dual_infeasibility > 0);
+    highs_model_object.unscaled_model_status_ = HighsModelStatus::kNotset;
+    highsLogDev(highs_model_object.options_.log_options, HighsLogType::kInfo,
+		"Have num/max/sum primal (%" HIGHSINT_FORMAT
+		"/%g/%g) and dual (%" HIGHSINT_FORMAT
+		"/%g/%g) "
+		"unscaled infeasibilities\n",
+		num_unscaled_primal_infeasibility,
+		solution_params.max_primal_infeasibility,
+		solution_params.sum_primal_infeasibility,
+		num_unscaled_dual_infeasibility,
+		solution_params.max_dual_infeasibility,
+		solution_params.sum_dual_infeasibility);
     if (kRefineSimplex) {
       const bool unscale = true;
       HighsLp scaled_lp;
@@ -165,7 +178,6 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
         scaled_lp = lp;
 	// Unscale the LP
 	unscaleSimplexLp(lp, highs_model_object.scale_);
-	writeSolutionToFile(stdout, lp, highs_model_object.basis_, highs_model_object.solution_, true);
 	// Move the unscaled LP to Ekk
 	ekk_lp = std::move(lp);
 	// Pass scaling factors and scaled matrix pointers to the
@@ -199,20 +211,6 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       printf("Abort in solveLpSimplex\n"); fflush(stdout);
       abort();
     } else {
-      assert(num_unscaled_primal_infeasibility > 0 ||
-	     num_unscaled_dual_infeasibility > 0);
-      highs_model_object.unscaled_model_status_ = HighsModelStatus::kNotset;
-      highsLogDev(highs_model_object.options_.log_options, HighsLogType::kInfo,
-		  "Have num/max/sum primal (%" HIGHSINT_FORMAT
-		  "/%g/%g) and dual (%" HIGHSINT_FORMAT
-		  "/%g/%g) "
-		  "unscaled infeasibilities\n",
-		  num_unscaled_primal_infeasibility,
-		  solution_params.max_primal_infeasibility,
-		  solution_params.sum_primal_infeasibility,
-		  num_unscaled_dual_infeasibility,
-		  solution_params.max_dual_infeasibility,
-		  solution_params.sum_dual_infeasibility);
       if (ekk_instance.model_status_ == HighsModelStatus::kOptimal)
 	highsLogDev(highs_model_object.options_.log_options, HighsLogType::kInfo,
 		    "Possibly re-solve with feasibility tolerances of %g "

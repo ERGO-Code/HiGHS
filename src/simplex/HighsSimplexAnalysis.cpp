@@ -1169,7 +1169,7 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
 
 void HighsSimplexAnalysis::reportAlgorithmPhase(const bool header) {
   if (header) {
-    *analysis_log << "       ";
+    *analysis_log << "     ";
   } else {
     std::string algorithm_name;
     if (dualAlgorithm()) {
