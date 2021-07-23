@@ -85,16 +85,16 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
         problem_type = "LP  ";
       }
     }
-    const HighsInt a_num_nz = lp.Astart_[lp.numCol_];
+    const HighsInt a_num_nz = lp.a_start_[lp.num_col_];
     HighsInt q_num_nz = 0;
-    if (hessian.dim_) q_num_nz = hessian.q_start_[lp.numCol_];
+    if (hessian.dim_) q_num_nz = hessian.q_start_[lp.num_col_];
     if (*log_options.log_dev_level) {
       highsLogDev(log_options, HighsLogType::kInfo, "%4s      : %s\n",
                   problem_type.c_str(), lp.model_name_.c_str());
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Rows      : %" HIGHSINT_FORMAT "\n", lp.numRow_);
+                  "Rows      : %" HIGHSINT_FORMAT "\n", lp.num_row_);
       highsLogDev(log_options, HighsLogType::kInfo,
-                  "Cols      : %" HIGHSINT_FORMAT "\n", lp.numCol_);
+                  "Cols      : %" HIGHSINT_FORMAT "\n", lp.num_col_);
       if (q_num_nz) {
         highsLogDev(log_options, HighsLogType::kInfo,
                     "Matrix Nz : %" HIGHSINT_FORMAT "\n", a_num_nz);
@@ -115,7 +115,7 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
                      lp.model_name_.c_str());
       highsLogUser(log_options, HighsLogType::kInfo,
                    " has %" HIGHSINT_FORMAT " rows; %" HIGHSINT_FORMAT " cols",
-                   lp.numRow_, lp.numCol_);
+                   lp.num_row_, lp.num_col_);
       if (q_num_nz) {
         highsLogUser(log_options, HighsLogType::kInfo,
                      "; %" HIGHSINT_FORMAT " matrix nonzeros", a_num_nz);

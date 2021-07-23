@@ -39,10 +39,10 @@ void HighsDebugSol::activate() {
       double varval;
       std::map<std::string, int> nametoidx;
 
-      for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
+      for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
         nametoidx["C" + std::to_string(i)] = i;
 
-      debugSolution.resize(mipsolver->model_->numCol_, 0.0);
+      debugSolution.resize(mipsolver->model_->num_col_, 0.0);
       while (!file.eof()) {
         file >> varname;
         auto it = nametoidx.find(varname);
@@ -57,7 +57,7 @@ void HighsDebugSol::activate() {
       }
 
       HighsCDouble debugsolobj = 0.0;
-      for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
+      for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
         debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
 
       debugSolObjective = double(debugsolobj);
@@ -85,9 +85,9 @@ void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
   for (HighsInt i = 0; i != oldNumCol; ++i)
     if (newColIndex[i] != -1) debugSolution[newColIndex[i]] = debugSolution[i];
 
-  debugSolution.resize(mipsolver->model_->numCol_);
+  debugSolution.resize(mipsolver->model_->num_col_);
   HighsCDouble debugsolobj = 0.0;
-  for (HighsInt i = 0; i != mipsolver->model_->numCol_; ++i)
+  for (HighsInt i = 0; i != mipsolver->model_->num_col_; ++i)
     debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
 
   debugSolObjective = double(debugsolobj);

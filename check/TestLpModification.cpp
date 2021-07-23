@@ -188,23 +188,23 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
                 const double infinite_bound) {
   bool return_bool;
   if (lp0.format_ != lp1.format_) return false;
-  if (lp0.numCol_ > 0 && lp1.numCol_ > 0) {
-    HighsInt lp0_num_nz = lp0.Astart_[lp0.numCol_];
-    HighsInt lp1_num_nz = lp1.Astart_[lp1.numCol_];
+  if (lp0.num_col_ > 0 && lp1.num_col_ > 0) {
+    HighsInt lp0_num_nz = lp0.a_start_[lp0.num_col_];
+    HighsInt lp1_num_nz = lp1.a_start_[lp1.num_col_];
     return_bool = areLpColEqual(
-        lp0.numCol_, &lp0.colCost_[0], &lp0.colLower_[0], &lp0.colUpper_[0],
-        lp0_num_nz, &lp0.Astart_[0], &lp0.Aindex_[0], &lp0.Avalue_[0],
-        lp1.numCol_, &lp1.colCost_[0], &lp1.colLower_[0], &lp1.colUpper_[0],
-        lp1_num_nz, &lp1.Astart_[0], &lp1.Aindex_[0], &lp1.Avalue_[0],
+        lp0.num_col_, &lp0.colCost_[0], &lp0.colLower_[0], &lp0.colUpper_[0],
+        lp0_num_nz, &lp0.a_start_[0], &lp0.a_index_[0], &lp0.a_value_[0],
+        lp1.num_col_, &lp1.colCost_[0], &lp1.colLower_[0], &lp1.colUpper_[0],
+        lp1_num_nz, &lp1.a_start_[0], &lp1.a_index_[0], &lp1.a_value_[0],
         infinite_bound);
     if (!return_bool) return return_bool;
   }
-  if (lp0.numRow_ > 0 && lp1.numRow_ > 0) {
+  if (lp0.num_row_ > 0 && lp1.num_row_ > 0) {
     HighsInt lp0_num_nz = 0;
     HighsInt lp1_num_nz = 0;
     return_bool = areLpRowEqual(
-        lp0.numRow_, &lp0.rowLower_[0], &lp0.rowUpper_[0], lp0_num_nz, NULL,
-        NULL, NULL, lp1.numRow_, &lp1.rowLower_[0], &lp1.rowUpper_[0],
+        lp0.num_row_, &lp0.rowLower_[0], &lp0.rowUpper_[0], lp0_num_nz, NULL,
+        NULL, NULL, lp1.num_row_, &lp1.rowLower_[0], &lp1.rowUpper_[0],
         lp1_num_nz, NULL, NULL, NULL, infinite_bound);
   }
   return return_bool;
@@ -1151,9 +1151,9 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   vector<double> og_col2345_cost;
   vector<double> set_col2345_cost;
   vector<double> get_col2345_cost;
-  og_col2345_cost.resize(lp.numCol_);
+  og_col2345_cost.resize(lp.num_col_);
   set_col2345_cost.resize(set_num_col);
-  get_col2345_cost.resize(lp.numCol_);
+  get_col2345_cost.resize(lp.num_col_);
   set_col2345_cost[0] = 2.0;
   set_col2345_cost[1] = 3.0;
   set_col2345_cost[2] = 4.0;
@@ -1187,10 +1187,10 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   vector<double> og_col01234_upper;
   vector<double> set_col01234_lower;
   vector<double> get_col01234_lower;
-  og_col01234_lower.resize(lp.numCol_);
-  og_col01234_upper.resize(lp.numCol_);
+  og_col01234_lower.resize(lp.num_col_);
+  og_col01234_upper.resize(lp.num_col_);
   set_col01234_lower.resize(set_num_col);
-  get_col01234_lower.resize(lp.numCol_);
+  get_col01234_lower.resize(lp.num_col_);
   set_col01234_lower[0] = 0.0;
   set_col01234_lower[1] = 1.0;
   set_col01234_lower[2] = 2.0;
@@ -1225,10 +1225,10 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   vector<double> og_row56789_upper;
   vector<double> set_row56789_lower;
   vector<double> get_row56789_lower;
-  og_row56789_lower.resize(lp.numRow_);
-  og_row56789_upper.resize(lp.numRow_);
+  og_row56789_lower.resize(lp.num_row_);
+  og_row56789_upper.resize(lp.num_row_);
   set_row56789_lower.resize(set_num_row);
-  get_row56789_lower.resize(lp.numRow_);
+  get_row56789_lower.resize(lp.num_row_);
   set_row56789_lower[0] = 5.0;
   set_row56789_lower[1] = 6.0;
   set_row56789_lower[2] = 7.0;

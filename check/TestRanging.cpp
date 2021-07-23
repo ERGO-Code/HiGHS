@@ -77,8 +77,8 @@ void testRanging(Highs& highs) {
   vector<double>& row_dual = solution.row_dual;
 
   lp = highs.getLp();
-  HighsInt numRow = lp.numRow_;
-  HighsInt numCol = lp.numCol_;
+  HighsInt numRow = lp.num_row_;
+  HighsInt numCol = lp.num_col_;
 
   const double relative_error_tolerance = 1e-10;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));

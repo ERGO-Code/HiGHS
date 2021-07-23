@@ -1631,7 +1631,7 @@ bool HighsSearch::backtrackUntilDepth(HighsInt targetDepth) {
   lp->flushDomain(localdom);
   nodestack.back().domgchgStackPos = domchgPos;
   if (nodestack.back().nodeBasis &&
-      nodestack.back().nodeBasis->row_status.size() == lp->getLp().numRow_)
+      nodestack.back().nodeBasis->row_status.size() == lp->getLp().num_row_)
     lp->setStoredBasis(nodestack.back().nodeBasis);
   lp->recoverBasis();
 

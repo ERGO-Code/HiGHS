@@ -150,8 +150,8 @@ static HighsInt setupProblem(gamshighs_t* gh) {
 
   gh->lp = new HighsLp();
 
-  gh->lp->numRow_ = numRow;
-  gh->lp->numCol_ = numCol;
+  gh->lp->num_row_ = numRow;
+  gh->lp->num_col_ = numCol;
   //  gh->lp->nnz_ = numNz;
 
   /* columns */
@@ -198,11 +198,11 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   }
 
   /* coefficients matrix */
-  gh->lp->Astart_.resize(numCol + 1);
-  gh->lp->Aindex_.resize(numNz);
-  gh->lp->Avalue_.resize(numNz);
-  gmoGetMatrixCol(gh->gmo, &gh->lp->Astart_[0], &gh->lp->Aindex_[0],
-                  &gh->lp->Avalue_[0], NULL);
+  gh->lp->a_start_.resize(numCol + 1);
+  gh->lp->a_index_.resize(numNz);
+  gh->lp->a_value_.resize(numNz);
+  gmoGetMatrixCol(gh->gmo, &gh->lp->a_start_[0], &gh->lp->a_index_[0],
+                  &gh->lp->a_value_[0], NULL);
 
   gh->highs->passModel(*gh->lp);
 

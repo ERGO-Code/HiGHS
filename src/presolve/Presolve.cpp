@@ -49,12 +49,12 @@ using std::stringstream;
 
 void Presolve::load(const HighsLp& lp, bool mip) {
   timer.recordStart(kMatrixCopy);
-  numCol = lp.numCol_;
-  numRow = lp.numRow_;
+  numCol = lp.num_col_;
+  numRow = lp.num_row_;
   numTot = numTot;
-  Astart = lp.Astart_;
-  Aindex = lp.Aindex_;
-  Avalue = lp.Avalue_;
+  Astart = lp.a_start_;
+  Aindex = lp.a_index_;
+  Avalue = lp.a_value_;
   this->mip = mip;
 
   colCost = lp.colCost_;

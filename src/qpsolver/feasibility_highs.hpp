@@ -12,17 +12,17 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   highs.setOptionValue("output_flag", false);
 
   HighsLp lp;
-  lp.Aindex_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);
-  lp.Astart_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.start);
-  lp.Avalue_ = runtime.instance.A.mat.value;
+  lp.a_index_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.index);
+  lp.a_start_ = *((std::vector<HighsInt>*)&runtime.instance.A.mat.start);
+  lp.a_value_ = runtime.instance.A.mat.value;
   lp.colCost_.assign(runtime.instance.num_var, 0.0);
   // lp.colCost_ = runtime.instance.c.value;
   lp.colLower_ = runtime.instance.var_lo;
   lp.colUpper_ = runtime.instance.var_up;
   lp.rowLower_ = runtime.instance.con_lo;
   lp.rowUpper_ = runtime.instance.con_up;
-  lp.numCol_ = runtime.instance.num_var;
-  lp.numRow_ = runtime.instance.num_con;
+  lp.num_col_ = runtime.instance.num_var;
+  lp.num_row_ = runtime.instance.num_con;
   lp.format_ = MatrixFormat::kColwise;
 
   highs.passModel(lp);

@@ -67,8 +67,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     }
     f >> AcountX;
 
-    lp.numCol_ = numCol;
-    lp.numRow_ = numRow;
+    lp.num_col_ = numCol;
+    lp.num_row_ = numRow;
 
     // matrix
     std::getline(f, line);
@@ -79,21 +79,21 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       return FilereaderRetcode::kParserError;
     }
     lp.format_ = MatrixFormat::kColwise;
-    lp.Astart_.resize(numCol + 1);
-    lp.Aindex_.resize(AcountX);
-    lp.Avalue_.resize(AcountX);
+    lp.a_start_.resize(numCol + 1);
+    lp.a_index_.resize(AcountX);
+    lp.a_value_.resize(AcountX);
 
     for (i = 0; i < numCol + 1; i++) {
-      f >> lp.Astart_[i];
-      if (indices_from_one) lp.Astart_[i]--;
+      f >> lp.a_start_[i];
+      if (indices_from_one) lp.a_start_[i]--;
     }
 
     for (i = 0; i < AcountX; i++) {
-      f >> lp.Aindex_[i];
-      if (indices_from_one) lp.Aindex_[i]--;
+      f >> lp.a_index_[i];
+      if (indices_from_one) lp.a_index_[i]--;
     }
 
-    for (i = 0; i < AcountX; i++) f >> lp.Avalue_[i];
+    for (i = 0; i < AcountX; i++) f >> lp.a_value_[i];
 
     // cost and bounds
     std::getline(f, line);
@@ -157,7 +157,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "integer_columns") {
       f >> num_int;
       if (num_int) {
-        lp.integrality_.resize(lp.numCol_, HighsVarType::kContinuous);
+        lp.integrality_.resize(lp.num_col_, HighsVarType::kContinuous);
         HighsInt iCol;
         for (i = 0; i < num_int; i++) {
           f >> iCol;
@@ -230,48 +230,48 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   std::ofstream f;
   f.open(filename, std::ios::out);
   const HighsLp& lp = model.lp_;
-  HighsInt num_nz = lp.Astart_[lp.numCol_];
+  HighsInt num_nz = lp.a_start_[lp.num_col_];
 
   // counts
   f << "n_rows" << std::endl;
-  f << lp.numRow_ << std::endl;
+  f << lp.num_row_ << std::endl;
   f << "n_columns" << std::endl;
-  f << lp.numCol_ << std::endl;
+  f << lp.num_col_ << std::endl;
   f << "n_matrix_elements" << std::endl;
   f << num_nz << std::endl;
 
   // matrix
   f << "matrix" << std::endl;
-  for (HighsInt i = 0; i < lp.numCol_ + 1; i++) f << lp.Astart_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_col_ + 1; i++) f << lp.a_start_[i] << " ";
   f << std::endl;
 
-  for (HighsInt i = 0; i < num_nz; i++) f << lp.Aindex_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << lp.a_index_[i] << " ";
   f << std::endl;
 
   f << std::setprecision(9);
-  for (HighsInt i = 0; i < num_nz; i++) f << lp.Avalue_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << lp.a_value_[i] << " ";
   f << std::endl;
 
   // cost and bounds
   f << std::setprecision(9);
 
   f << "column_bounds" << std::endl;
-  for (HighsInt i = 0; i < lp.numCol_; i++) f << lp.colLower_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_col_; i++) f << lp.colLower_[i] << " ";
   f << std::endl;
 
-  for (HighsInt i = 0; i < lp.numCol_; i++) f << lp.colUpper_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_col_; i++) f << lp.colUpper_[i] << " ";
   f << std::endl;
 
   f << "row_bounds" << std::endl;
   f << std::setprecision(9);
-  for (HighsInt i = 0; i < lp.numRow_; i++) f << lp.rowLower_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_row_; i++) f << lp.rowLower_[i] << " ";
   f << std::endl;
 
-  for (HighsInt i = 0; i < lp.numRow_; i++) f << lp.rowUpper_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_row_; i++) f << lp.rowUpper_[i] << " ";
   f << std::endl;
 
   f << "column_costs" << std::endl;
-  for (HighsInt i = 0; i < lp.numCol_; i++)
+  for (HighsInt i = 0; i < lp.num_col_; i++)
     f << (HighsInt)lp.sense_ * lp.colCost_[i] << " ";
   f << std::endl;
 

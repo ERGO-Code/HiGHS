@@ -47,11 +47,11 @@ class HighsMipSolver {
 
   void run();
 
-  HighsInt numCol() const { return model_->numCol_; }
+  HighsInt numCol() const { return model_->num_col_; }
 
-  HighsInt numRow() const { return model_->numRow_; }
+  HighsInt numRow() const { return model_->num_row_; }
 
-  HighsInt numNonzero() const { return model_->Aindex_.size(); }
+  HighsInt numNonzero() const { return model_->a_index_.size(); }
 
   const double* colCost() const { return model_->colCost_.data(); }
 

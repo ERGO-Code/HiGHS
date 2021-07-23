@@ -103,7 +103,7 @@ bool HighsPrimalHeuristics::solveSubMip(
     double numUnfixed = mipsolver.mipdata_->integral_cols.size() +
                         mipsolver.mipdata_->continuous_cols.size();
     double adjustmentfactor = submipsolver.numCol() / std::max(1.0, numUnfixed);
-    // (double)mipsolver.orig_model_->Avalue_.size();
+    // (double)mipsolver.orig_model_->a_value_.size();
     int64_t adjusted_lp_iterations =
         (size_t)(adjustmentfactor * submipsolver.mipdata_->total_lp_iterations);
     lp_iterations += adjusted_lp_iterations;
@@ -939,8 +939,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
   std::vector<double> fracintcost;
   std::vector<HighsInt> fracintset;
 
-  std::vector<HighsInt> mask(mipsolver.model_->numCol_, 1);
-  std::vector<double> cost(mipsolver.model_->numCol_, 0.0);
+  std::vector<HighsInt> mask(mipsolver.model_->num_col_, 1);
+  std::vector<double> cost(mipsolver.model_->num_col_, 0.0);
   if (mipsolver.mipdata_->upper_limit != kHighsInf) {
     std::vector<HighsInt> objinds;
     std::vector<double> objval;
@@ -1054,7 +1054,7 @@ void HighsPrimalHeuristics::centralRounding() {
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   // lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
   // lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
-  lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);
+  lpmodel.colCost_.assign(lpmodel.num_col_, 0.0);
   ipm.passModel(std::move(lpmodel));
 
   if (mipsolver.mipdata_->upper_limit != kHighsInf) {

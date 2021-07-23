@@ -30,16 +30,16 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   status = fillHessian();
   if (status) return FreeFormatParserReturnCode::kParserError;
 
-  lp.numRow_ = std::move(numRow);
-  lp.numCol_ = std::move(numCol);
+  lp.num_row_ = std::move(numRow);
+  lp.num_col_ = std::move(numCol);
 
   lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
   lp.format_ = MatrixFormat::kColwise;
-  lp.Astart_ = std::move(Astart);
-  lp.Aindex_ = std::move(Aindex);
-  lp.Avalue_ = std::move(Avalue);
+  lp.a_start_ = std::move(Astart);
+  lp.a_index_ = std::move(Aindex);
+  lp.a_value_ = std::move(Avalue);
   lp.colCost_ = std::move(colCost);
   lp.colLower_ = std::move(colLower);
   lp.colUpper_ = std::move(colUpper);

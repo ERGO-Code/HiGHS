@@ -149,14 +149,14 @@ void HighsLpRelaxation::loadModel() {
   lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
   lpmodel.offset_ = 0;
   lprows.clear();
-  lprows.reserve(lpmodel.numRow_);
-  for (HighsInt i = 0; i != lpmodel.numRow_; ++i)
+  lprows.reserve(lpmodel.num_row_);
+  for (HighsInt i = 0; i != lpmodel.num_row_; ++i)
     lprows.push_back(LpRow::model(i));
   lpmodel.integrality_.clear();
   lpsolver.clearSolver();
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
-  mask.resize(lpmodel.numCol_);
+  mask.resize(lpmodel.num_col_);
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
@@ -242,9 +242,9 @@ double HighsLpRelaxation::computeLPDegneracy(
 
 void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   HighsInt numcuts = cutset.numCuts();
-  assert(lpsolver.getLp().numRow_ ==
+  assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
-  assert(lpsolver.getLp().numRow_ == (HighsInt)lprows.size());
+  assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
   if (numcuts > 0) {
     status = Status::kNotSet;
     currentbasisstored = false;
@@ -261,7 +261,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
                          cutset.ARvalue_.data()) == HighsStatus::kOk;
     assert(success);
     (void)success;
-    assert(lpsolver.getLp().numRow_ ==
+    assert(lpsolver.getLp().num_row_ ==
            (HighsInt)lpsolver.getLp().rowLower_.size());
     cutset.clear();
   }
@@ -288,7 +288,7 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
 
 void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
                                    std::vector<HighsInt>& deletemask) {
-  assert(lpsolver.getLp().numRow_ ==
+  assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
   if (ndelcuts > 0) {
     HighsBasis basis = lpsolver.getBasis();
@@ -301,20 +301,20 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
       }
     }
 
-    assert(lpsolver.getLp().numRow_ ==
+    assert(lpsolver.getLp().num_row_ ==
            (HighsInt)lpsolver.getLp().rowLower_.size());
 
     basis.row_status.resize(basis.row_status.size() - ndelcuts);
     lprows.resize(lprows.size() - ndelcuts);
 
-    assert(lpsolver.getLp().numRow_ == (HighsInt)lprows.size());
+    assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     lpsolver.setBasis(basis);
     lpsolver.run();
   }
 }
 
 void HighsLpRelaxation::removeCuts() {
-  assert(lpsolver.getLp().numRow_ ==
+  assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
   HighsInt nlprows = lpsolver.getNumRow();
   HighsInt modelrows = mipsolver.numRow();
@@ -325,12 +325,12 @@ void HighsLpRelaxation::removeCuts() {
       mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
   }
   lprows.resize(modelrows);
-  assert(lpsolver.getLp().numRow_ ==
+  assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
 }
 
 void HighsLpRelaxation::performAging(bool useBasis) {
-  assert(lpsolver.getLp().numRow_ ==
+  assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
 
   size_t agelimit = mipsolver.options_mip_->mip_lp_age_limit;
@@ -374,7 +374,7 @@ void HighsLpRelaxation::performAging(bool useBasis) {
 }
 
 void HighsLpRelaxation::resetAges() {
-  assert(lpsolver.getLp().numRow_ ==
+  assert(lpsolver.getLp().num_row_ ==
          (HighsInt)lpsolver.getLp().rowLower_.size());
 
   HighsInt nlprows = numRows();
@@ -421,7 +421,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   assert(std::isfinite(upperbound));
   HighsCDouble upper = upperbound;
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     // @FlipRowDual row_dual[i] < 0 became row_dual[i] > 0
     if (row_dual[i] > 0) {
       if (lp.rowLower_[i] != -kHighsInf)
@@ -441,18 +441,18 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   inds.clear();
   vals.clear();
-  inds.reserve(lp.numCol_);
-  vals.reserve(lp.numCol_);
-  for (HighsInt i = 0; i != lp.numCol_; ++i) {
-    HighsInt start = lp.Astart_[i];
-    HighsInt end = lp.Astart_[i + 1];
+  inds.reserve(lp.num_col_);
+  vals.reserve(lp.num_col_);
+  for (HighsInt i = 0; i != lp.num_col_; ++i) {
+    HighsInt start = lp.a_start_[i];
+    HighsInt end = lp.a_start_[i + 1];
 
     HighsCDouble sum = lp.colCost_[i];
 
     for (HighsInt j = start; j != end; ++j) {
-      if (row_dual[lp.Aindex_[j]] == 0) continue;
+      if (row_dual[lp.a_index_[j]] == 0) continue;
       // @FlipRowDual += became -=
-      sum -= lp.Avalue_[j] * row_dual[lp.Aindex_[j]];
+      sum -= lp.a_value_[j] * row_dual[lp.a_index_[j]];
     }
 
     double val = double(sum);
@@ -529,14 +529,14 @@ void HighsLpRelaxation::storeDualInfProof() {
   HighsCDouble upper = 0.0;
 
   double maxval = 0;
-  for (HighsInt i = 0; i != lp.numRow_; ++i)
+  for (HighsInt i = 0; i != lp.num_row_; ++i)
     maxval = std::max(maxval, std::abs(dualray[i]));
 
   int expscal;
   std::frexp(maxval, &expscal);
   expscal = -expscal;
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     dualray[i] = std::ldexp(dualray[i], expscal);
     if (std::abs(dualray[i]) <= mipsolver.mipdata_->epsilon ||
         std::abs(dualray[i]) * getMaxAbsRowVal(i) <=
@@ -549,7 +549,7 @@ void HighsLpRelaxation::storeDualInfProof() {
     }
   }
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     if (dualray[i] < 0) {
       assert(lp.rowUpper_[i] != kHighsInf);
       upper -= dualray[i] * lp.rowUpper_[i];
@@ -559,15 +559,15 @@ void HighsLpRelaxation::storeDualInfProof() {
     }
   }
 
-  for (HighsInt i = 0; i != lp.numCol_; ++i) {
-    HighsInt start = lp.Astart_[i];
-    HighsInt end = lp.Astart_[i + 1];
+  for (HighsInt i = 0; i != lp.num_col_; ++i) {
+    HighsInt start = lp.a_start_[i];
+    HighsInt end = lp.a_start_[i + 1];
 
     HighsCDouble sum = 0.0;
 
     for (HighsInt j = start; j != end; ++j) {
-      if (dualray[lp.Aindex_[j]] == 0.0) continue;
-      sum -= lp.Avalue_[j] * dualray[lp.Aindex_[j]];
+      if (dualray[lp.a_index_[j]] == 0.0) continue;
+      sum -= lp.a_value_[j] * dualray[lp.a_index_[j]];
     }
 
     double val = double(sum);
