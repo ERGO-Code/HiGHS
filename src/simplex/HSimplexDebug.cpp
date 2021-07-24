@@ -24,8 +24,8 @@
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDualRow.h"
-#include "simplex/HFactorDebug.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HSimplexNlaDebug.h"
 #include "simplex/SimplexTimer.h"
 
 // Methods for Ekk
@@ -83,8 +83,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (status.has_invert) {
-    const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
-                               options, simplex_nla)) != HighsStatus::kError;
+    const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(simplex_lp, simplex_nla)) != HighsStatus::kError;
     if (!invert_ok) {
       highsLogDev(
           options.log_options, HighsLogType::kError,

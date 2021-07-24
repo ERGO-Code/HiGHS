@@ -17,11 +17,6 @@
 #define SIMPLEX_HFACTORDEBUG_H_
 
 #include "lp_data/HighsOptions.h"
-#include "simplex/HSimplexNla.h"
-
-HighsDebugStatus debugCheckInvert(const HighsOptions& options,
-                                  const HSimplexNla& simplex_nla,
-                                  const bool force = false);
 
 void debugReportRankDeficiency(
     const HighsInt call_id, const HighsInt highs_debug_level,
