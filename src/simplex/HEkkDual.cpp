@@ -2161,14 +2161,15 @@ bool HEkkDual::dualInfoOk(const HighsLp& lp) {
            lp_num_col, solver_num_col, lp_num_row, solver_num_row);
     return false;
   }
-  dimensions_ok =
-      lp_num_col == simplex_nla->lp_->num_col_ && lp_num_row == simplex_nla->lp_->num_row_;
+  dimensions_ok = lp_num_col == simplex_nla->lp_->num_col_ &&
+                  lp_num_row == simplex_nla->lp_->num_row_;
   assert(dimensions_ok);
   if (!dimensions_ok) {
     printf("LP-Factor dimension incompatibility (%" HIGHSINT_FORMAT
            ", %" HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
            ")\n",
-           lp_num_col, simplex_nla->lp_->num_col_, lp_num_row, simplex_nla->lp_->num_row_);
+           lp_num_col, simplex_nla->lp_->num_col_, lp_num_row,
+           simplex_nla->lp_->num_row_);
     return false;
   }
   return true;

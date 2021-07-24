@@ -15,6 +15,7 @@
  * @brief Debugging code for simplex NLA
  */
 #include "simplex/HSimplexNlaDebug.h"
+
 #include "util/HighsRandom.h"
 
 //#include <stdio.h>
@@ -26,8 +27,9 @@ const double kInverseLargeError = 1e-12;
 const double kInverseExcessiveError = sqrt(kInverseLargeError);
 
 HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
-				  const bool force) {
-  if (simplex_nla.options_->highs_debug_level < kHighsDebugLevelCostly && !force)
+                                  const bool force) {
+  if (simplex_nla.options_->highs_debug_level < kHighsDebugLevelCostly &&
+      !force)
     return HighsDebugStatus::kNotChecked;
   if (force)
     highsLogDev(simplex_nla.options_->log_options, HighsLogType::kInfo,

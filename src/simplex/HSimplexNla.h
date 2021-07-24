@@ -33,12 +33,9 @@
 
 class HSimplexNla {
  public:
-  void setup(const HighsLp* lp,
-             HighsInt* base_index,
-	     const double factor_pivot_threshold,
-             const HighsOptions* options,
-	     HighsTimer* timer,
-             HighsSimplexAnalysis* analysis);
+  void setup(const HighsLp* lp, HighsInt* base_index,
+             const double factor_pivot_threshold, const HighsOptions* options,
+             HighsTimer* timer, HighsSimplexAnalysis* analysis);
   HighsInt invert();
   void btran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
@@ -47,9 +44,9 @@ class HSimplexNla {
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
   void setPivotThreshold(const double new_pivot_threshold);
   void passScaleAndFactorMatrixPointers(const HighsScale* scale,
-					const HighsInt* factor_a_start,
-					const HighsInt* factor_a_index,
-					const double* factor_a_value);
+                                        const HighsInt* factor_a_start,
+                                        const HighsInt* factor_a_index,
+                                        const double* factor_a_value);
   void applyBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const;
   void applyBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const;
   void undoBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const;

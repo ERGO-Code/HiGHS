@@ -29,6 +29,6 @@
 // class HVector;
 
 HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
-				  const bool force = false);
+                                  const bool force = false);
 
 #endif /* HSIMPLEXNLADEBUG_H_ */
