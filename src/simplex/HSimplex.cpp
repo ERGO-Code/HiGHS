@@ -596,7 +596,7 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;  // true;
+  const bool force_scaling = true;//false;  // true;
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");

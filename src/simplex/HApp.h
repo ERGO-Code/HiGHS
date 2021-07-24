@@ -83,7 +83,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   HighsInt simplex_iteration_limit = options.simplex_iteration_limit;
-  //  if (kRefineSimplex) options.simplex_iteration_limit = 3;
+    if (kRefineSimplex) options.simplex_iteration_limit = 3;
   // Solve the LP!
   return_status = ekk_instance.solve();
   if (return_status == HighsStatus::kError) return HighsStatus::kError;

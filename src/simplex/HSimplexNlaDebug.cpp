@@ -114,6 +114,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     column.clear();
     column.packFlag = true;
     if (iCol < num_col) {
+      printf("Basic column %d is variable %d\n", (int)iRow, (int)iCol);
       for (HighsInt k = a_start[iCol]; k < a_start[iCol + 1]; k++) {
         HighsInt index = a_index[k];
         column.array[index] = a_value[k];
@@ -121,6 +122,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       }
     } else {
       HighsInt index = iCol - num_col;
+      printf("Basic column %d is logical %d\n", (int)iRow, (int)index);
       column.array[index] = 1.0;
       column.index[column.count++] = index;
     }

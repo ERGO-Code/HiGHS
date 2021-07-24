@@ -16,7 +16,7 @@
 #ifndef SIMPLEX_SIMPLEXCONST_H_
 #define SIMPLEX_SIMPLEXCONST_H_
 
-const bool kRefineSimplex = false;
+const bool kRefineSimplex = true;
 
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
 

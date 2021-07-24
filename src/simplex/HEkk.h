@@ -151,6 +151,9 @@ class HEkk {
   void updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
                     HighsInt* hint);
 
+  void transformForUpdate(HVector* column, HVector* row_ep,
+			  const HighsInt variable_in, HighsInt* row_out);
+
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);
   void updateMatrix(const HighsInt variable_in, const HighsInt variable_out);

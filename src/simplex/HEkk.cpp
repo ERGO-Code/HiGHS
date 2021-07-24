@@ -1784,6 +1784,10 @@ bool HEkk::reinvertOnNumericalTrouble(
 // The major model updates. Factor calls factor_.update; Matrix
 // calls matrix_.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
+void HEkk::transformForUpdate(HVector* column, HVector* row_ep, const HighsInt variable_in, HighsInt* row_out) {
+  simplex_nla_.transformForUpdate(column, row_ep, variable_in, *row_out);
+}
+
 void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
                         HighsInt* hint) {
   analysis_.simplexTimerStart(UpdateFactorClock);

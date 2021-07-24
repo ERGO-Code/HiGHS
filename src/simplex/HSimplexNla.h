@@ -42,6 +42,10 @@ class HSimplexNla {
   void ftran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
+
+  void transformForUpdate(HVector* column, HVector* row_ep,
+			  const HighsInt variable_in, const HighsInt row_out);
+
   void setPivotThreshold(const double new_pivot_threshold);
   void passScaleAndFactorMatrixPointers(const HighsScale* scale,
                                         const HighsInt* factor_a_start,
