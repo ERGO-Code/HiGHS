@@ -129,17 +129,19 @@ class HFactor {
    * count-link-list, L factor and U factor
    */
   void setup(
-      HighsInt numCol,         //!< Number of columns
-      HighsInt numRow,         //!< Number of rows
+      const HighsInt numCol,         //!< Number of columns
+      const HighsInt numRow,         //!< Number of rows
       const HighsInt* Astart,  //!< Column starts of constraint matrix
       const HighsInt* Aindex,  //!< Row indices of constraint matrix
       const double* Avalue,    //!< Row values of constraint matrix
       HighsInt* baseIndex,     //!< Indices of basic variables
-      double pivot_threshold = kDefaultPivotThreshold,  //!< Pivoting threshold
-      double pivot_tolerance = kDefaultPivotTolerance,  //!< Min absolute pivot
-      HighsInt highs_debug_level = kHighsDebugLevelMin,
-      bool output_flag = false, FILE* logfile = NULL,
-      bool log_to_console = true, HighsInt log_dev_level = 0,
+      const double pivot_threshold = kDefaultPivotThreshold,  //!< Pivoting threshold
+      const double pivot_tolerance = kDefaultPivotTolerance,  //!< Min absolute pivot
+      const HighsInt highs_debug_level = kHighsDebugLevelMin,
+      const bool output_flag = false,
+      FILE* logfile = NULL,
+      const bool log_to_console = true,
+      const HighsInt log_dev_level = 0,
       const bool use_original_HFactor_logic = true,
       const HighsInt updateMethod = kUpdateMethodFt);
 

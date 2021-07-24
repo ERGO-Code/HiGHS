@@ -2149,26 +2149,26 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
 }
 
 bool HEkkDual::dualInfoOk(const HighsLp& lp) {
-  HighsInt lp_numCol = lp.num_col_;
-  HighsInt lp_numRow = lp.num_row_;
+  HighsInt lp_num_col = lp.num_col_;
+  HighsInt lp_num_row = lp.num_row_;
   bool dimensions_ok;
-  dimensions_ok = lp_numCol == solver_num_col && lp_numRow == solver_num_row;
+  dimensions_ok = lp_num_col == solver_num_col && lp_num_row == solver_num_row;
   assert(dimensions_ok);
   if (!dimensions_ok) {
     printf("LP-Solver dimension incompatibility (%" HIGHSINT_FORMAT
            ", %" HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
            ")\n",
-           lp_numCol, solver_num_col, lp_numRow, solver_num_row);
+           lp_num_col, solver_num_col, lp_num_row, solver_num_row);
     return false;
   }
   dimensions_ok =
-      lp_numCol == simplex_nla->num_col_ && lp_numRow == simplex_nla->num_row_;
+      lp_num_col == simplex_nla->lp_->num_col_ && lp_num_row == simplex_nla->lp_->num_row_;
   assert(dimensions_ok);
   if (!dimensions_ok) {
     printf("LP-Factor dimension incompatibility (%" HIGHSINT_FORMAT
            ", %" HIGHSINT_FORMAT ") != (%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT
            ")\n",
-           lp_numCol, simplex_nla->num_col_, lp_numRow, simplex_nla->num_row_);
+           lp_num_col, simplex_nla->lp_->num_col_, lp_num_row, simplex_nla->lp_->num_row_);
     return false;
   }
   return true;

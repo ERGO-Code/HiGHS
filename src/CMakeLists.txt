@@ -160,6 +160,7 @@ set(sources
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexNla.cpp
+    simplex/HSimplexNlaDebug.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/DevKkt.cpp
@@ -251,6 +252,7 @@ set(headers
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
+    simplex/HSimplexNlaDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
@@ -579,6 +581,7 @@ target_sources(libhighs PRIVATE
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexNla.cpp
+    simplex/HSimplexNlaDebug.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCh2.cpp
@@ -681,6 +684,7 @@ set(headers_fast_build_
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/HSimplexNla.h
+    simplex/HSimplexNlaDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h

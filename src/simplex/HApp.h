@@ -187,7 +187,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
         ekk_lp = std::move(lp);
         // Pass scaling factors and scaled matrix pointers to the
         // simplex NLA
-        simplex_nla.passScaleAndMatrixPointers(
+        simplex_nla.passScaleAndFactorMatrixPointers(
             &highs_model_object.scale_, &scaled_lp.a_start_[0],
             &scaled_lp.a_index_[0], &scaled_lp.a_value_[0]);
         // Reinitialise the matrix for the simplex solver now that the
