@@ -24,8 +24,9 @@
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
-#include "simplex/HFactorDebug.h"
+//#include "simplex/HFactorDebug.h"
 #include "simplex/HSimplexDebug.h"
+#include "simplex/HSimplexNlaDebug.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
@@ -902,7 +903,7 @@ HighsInt HEkk::computeFactor() {
     analysis_.updateInvertFormData(simplex_nla_.factor_);
 
   const bool force = rank_deficiency;
-  debugCheckInvert(options_, simplex_nla_, force);
+  debugCheckInvert(lp_, simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
