@@ -75,23 +75,28 @@ struct HighsHashHelpers {
 
   /// mersenne prime 2^61 - 1
   static constexpr u64 M61() { return u64{0x1fffffffffffffff}; };
-
+  static constexpr u64 M29() { return u64{0x1fffffff}; };
   /// compute a * b mod 2^61-1
   static u64 multiply_modM61(u64 a, u64 b) {
-    u64 ahi = a >> 32;
-    u64 bhi = b >> 32;
-    u64 alo = a & 0xffffffffu;
-    u64 blo = b & 0xffffffffu;
+    u64 ahi = a >> 32;          // < 2^29
+    u64 bhi = b >> 32;          // < 2^29
+    u64 alo = a & 0xffffffffu;  // < 2^32
+    u64 blo = b & 0xffffffffu;  // < 2^32
 
     // compute the different order terms with adicities 2^64, 2^32, 2^0
-    u64 term_64 = ahi * bhi;
-    u64 term_32 = ahi * blo + bhi * alo;
-    u64 term_0 = blo * blo;
+    u64 term_64 = ahi * bhi;              // < 2^58
+    u64 term_32 = ahi * blo + bhi * alo;  // < 2^62
+    u64 term_0 = alo * blo;               // < 2^64
 
     // now extract the upper 61 and the lower 61 bits of the result a * b
-    u64 ab61 = term_64 << 3 | (term_32 + (term_0 >> 32)) >> 61;
-    u64 ab0 = (term_0 + term_32) & M61();
+    u64 ab61 = (term_64 << 3) + (term_32 >> 29) + (term_0 >> 61);
+    u64 ab0 = ((term_0 & M61()) + ((term_32 & M29()) << 32));
 
+    // ab0 may be greater than 2^61
+    if (ab0 > M61()) ab61++;
+    ab0 &= M61();
+    // ab61 may be greater than (2^61 - 1)
+    if (ab61 >= M61()) ab61 -= M61();
     // finally take the result modulo M61 which is computed by exploiting
     // that M61 is a mersenne prime, particularly, if a * b = q * 2^61 + r
     // then a * b = (q + r) (mod 2^61 - 1)
@@ -117,10 +122,10 @@ struct HighsHashHelpers {
     return result;
   }
 
-  /// mersenne prime 2^61 - 1
+  /// mersenne prime 2^31 - 1
   static constexpr u64 M31() { return u32{0x7fffffff}; };
 
-  /// compute a * b mod 2^61-1
+  /// compute a * b mod 2^31-1
   static u32 multiply_modM31(u32 a, u32 b) {
     u64 result = u64(a) * u64(b);
     result = (result >> 31) + (result & M31());
@@ -599,8 +604,8 @@ class HighsHashTable {
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0)->value())>::type;
+  using ValueType = typename std::remove_reference<
+      decltype(reinterpret_cast<Entry*>(0)->value())>::type;
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
