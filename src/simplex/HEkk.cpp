@@ -903,7 +903,7 @@ HighsInt HEkk::computeFactor() {
     analysis_.updateInvertFormData(simplex_nla_.factor_);
 
   const bool force = rank_deficiency;
-  debugCheckInvert(lp_, simplex_nla_, force);
+  debugCheckInvert(simplex_nla_, force);
   analysis_.simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
