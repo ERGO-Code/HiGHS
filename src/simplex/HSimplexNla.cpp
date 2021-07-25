@@ -111,7 +111,7 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
 	   aq->array[row_out]);
     reportPackValue("pack aq Bf ", aq);
   }
-  double scale_factor = 1.0;
+  double scale_factor;
   if (variable_in < lp_->num_col_) {
     scale_factor = scale_->col[variable_in];
     if (report) {
@@ -123,34 +123,32 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
       printf("transformForUpdate: aq scale_factor = 1 / scale_->row[variable_in-lp_->num_col_] = %g\n", scale_factor);
     }
   }
-  for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) {
-    aq->array[iRow] *= scale_factor;
-  }
   for (HighsInt ix = 0; ix < aq->packCount; ix++) {
     aq->packValue[ix] *= scale_factor;
   }
 
   reportPackValue("pack aq Bf ", aq);
-  /*
+  double pivot0 = aq->array[row_out];
+  aq->array[row_out] *= scale_factor;
+  double pivot1 = aq->array[row_out];
+  undoBasisMatrixColScale(*aq, scale_);
+
+
   HighsInt iVar = base_index_[row_out];
   if (iVar < lp_->num_col_) {
-  if (report) {
-  printf("transformForUpdate: scaling aq->array[row_out] = %7.4f down by col factor = %7.4f\n", aq->array[row_out], scale_->col[iVar]);
-  }
-    aq->array[row_out] /= scale_->col[iVar];
+    scale_factor = 1.0 / scale_->col[iVar];
   } else {
-  if (report) {
-  printf("transformForUpdate: scaling aq->array[row_out] = %7.4f up   by row factor = %7.4f\n", aq->array[row_out], scale_->row[iVar - lp_->num_col_]);
+    scale_factor = scale_->row[iVar - lp_->num_col_];
   }
-    aq->array[row_out] *= scale_->row[iVar - lp_->num_col_];
+  double pivot2 = aq->array[row_out];
+  if (fabs(scale_factor - pivot2/pivot1)>1e-10) {
+    printf("Scaling error\n"); fflush(stdout); abort();
   }
-  */
-  undoBasisMatrixColScale(*aq, scale_);
   // For (\hat)ep, UPDATE needs packValue to correspond to
   // \bar{B}^{-T}ep, but R.\bar{B}^{-T}(CB.ep) has been computed.
   //
   // Hence packValue needs to be unscaled by cp
-  HighsInt iVar = base_index_[row_out];
+  iVar = base_index_[row_out];
   if (iVar < lp_->num_col_) {
     scale_factor = scale_->col[iVar];
   } else {
