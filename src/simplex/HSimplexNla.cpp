@@ -63,33 +63,34 @@ HighsInt HSimplexNla::invert() {
 
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
-  printf("BTRAN:  Bf0 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("BTRAN:  Bf0 ", &rhs);
   applyBasisMatrixColScale(rhs, scale_);
-  printf("BTRAN:  Bf1 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("BTRAN:  Bf1 ", &rhs);
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
-  printf("BTRAN:  Af1 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("BTRAN:  Af1 ", &rhs);
   applyBasisMatrixRowScale(rhs, scale_);
-  printf("BTRAN:  Af0 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("BTRAN:  Af0 ", &rhs);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
-  printf("FTRAN:  Bf0 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("FTRAN:  Bf0 ", &rhs);
   applyBasisMatrixRowScale(rhs, scale_);
-  printf("FTRAN:  Bf1 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("FTRAN:  Bf1 ", &rhs);
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
-  printf("FTRAN:  Af1 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("FTRAN:  Af1 ", &rhs);
   applyBasisMatrixColScale(rhs, scale_);
-  printf("FTRAN:  Af0 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", rhs.array[iRow]); printf("\n");
+  //  reportArray("FTRAN:  Af0 ", &rhs);
 }
 
 void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
                          HighsInt* hint) {
-  printf("Before factor_.update: aq->array[%d] = %g\n", (int)(*iRow), aq->array[*iRow]);
-  printf("UPDATE: aq Bf "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", aq->array[iRow]); printf("\n");
-  printf("  pack: aq Bf "); for(HighsInt ix=0; ix<aq->packCount; ix++) printf("%7.4f ", aq->packValue[ix]); printf("\n");
-  printf("UPDATE: ep Bf "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", ep->array[iRow]); printf("\n");
-  printf("  pack: ep Bf "); for(HighsInt ix=0; ix<ep->packCount; ix++) printf("%7.4f ", ep->packValue[ix]); printf("\n");
+  if (report) 
+    printf("Before factor_.update: aq->array[%d] = %g\n", (int)(*iRow), aq->array[*iRow]);
+  //  reportArray("UPDATE: aq Bf ", aq);
+  reportPackValue("  pack: aq Bf ", aq);
+  //  reportArray("UPDATE: ep Bf ", ep);
+  reportPackValue("  pack: ep Bf ", ep);
   factor_.update(aq, ep, iRow, hint);
 }
 
@@ -105,25 +106,42 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   // array[row_out] has to be unscaled by the corresponding entry of
   // CB
   //
-  printf("transformForUpdate: variable_in = %d, row_out = %d\n", (int)variable_in, (int)row_out);
-  printf("UPDATE: Bf0 "); for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) printf("%7.4f ", aq->array[iRow]); printf("\n");
+  if (report) {
+    printf("transformForUpdate: variable_in = %d, aq->array[row_out = %d] = %g, \n", (int)variable_in, (int)row_out,
+	   aq->array[row_out]);
+    reportPackValue("pack aq Bf ", aq);
+  }
+  double scale_factor = 1.0;
   if (variable_in < lp_->num_col_) {
-    double scale_factor = scale_->col[variable_in];
-    printf("transformForUpdate: aq scale_factor = %g\n", scale_factor);
-    for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) {
-      aq->array[iRow] *= scale_factor;
+    scale_factor = scale_->col[variable_in];
+    if (report) {
+      printf("transformForUpdate: aq scale_factor = 1 / scale_->col[variable_in] = %g\n", scale_factor);
     }
-    for (HighsInt ix = 0; ix < aq->packCount; ix++) {
-      aq->packValue[ix] *= scale_factor;
+  } else {
+    scale_factor = 1.0 / scale_->row[variable_in-lp_->num_col_];
+    if (report) {
+      printf("transformForUpdate: aq scale_factor = 1 / scale_->row[variable_in-lp_->num_col_] = %g\n", scale_factor);
     }
   }
+  for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) {
+    aq->array[iRow] *= scale_factor;
+  }
+  for (HighsInt ix = 0; ix < aq->packCount; ix++) {
+    aq->packValue[ix] *= scale_factor;
+  }
+
+  reportPackValue("pack aq Bf ", aq);
   /*
   HighsInt iVar = base_index_[row_out];
   if (iVar < lp_->num_col_) {
-    printf("transformForUpdate: scaling aq->array[row_out] = %7.4f down by col factor = %7.4f\n", aq->array[row_out], scale_->col[iVar]);
+  if (report) {
+  printf("transformForUpdate: scaling aq->array[row_out] = %7.4f down by col factor = %7.4f\n", aq->array[row_out], scale_->col[iVar]);
+  }
     aq->array[row_out] /= scale_->col[iVar];
   } else {
-    printf("transformForUpdate: scaling aq->array[row_out] = %7.4f up   by row factor = %7.4f\n", aq->array[row_out], scale_->row[iVar - lp_->num_col_]);
+  if (report) {
+  printf("transformForUpdate: scaling aq->array[row_out] = %7.4f up   by row factor = %7.4f\n", aq->array[row_out], scale_->row[iVar - lp_->num_col_]);
+  }
     aq->array[row_out] *= scale_->row[iVar - lp_->num_col_];
   }
   */
@@ -133,13 +151,14 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   //
   // Hence packValue needs to be unscaled by cp
   HighsInt iVar = base_index_[row_out];
-  double scale_factor;
   if (iVar < lp_->num_col_) {
     scale_factor = scale_->col[iVar];
   } else {
     scale_factor = 1.0 / scale_->row[iVar - lp_->num_col_];
   }
-  printf("transformForUpdate: ep scale_factor = %g\n", scale_factor);
+  if (report) {
+    //    printf("transformForUpdate: ep scale_factor = %g\n", scale_factor);
+  }
   for(HighsInt iRow=0; iRow<lp_->num_row_; iRow++) {
     ep->array[iRow] /= scale_factor;
   }
@@ -260,3 +279,54 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
   }
   return use_indices;
 }
+
+void HSimplexNla::reportArray(const std::string message, const HVector* vector) const {
+  if (!report) return;
+  const HighsInt num_row = lp_->num_row_;
+  if (num_row > 25) {
+    reportArraySparse(message, vector);
+  } else {
+    printf("%s", message.c_str());
+    for (HighsInt iRow=0; iRow<num_row; iRow++) {
+      if (iRow % 5 == 0) printf("\n");
+      printf("%10.4g ", vector->array[iRow]);
+    }
+    printf("\n");
+  }
+}
+
+void HSimplexNla::reportArraySparse(const std::string message, const HVector* vector) const {
+  if (!report) return;
+  const HighsInt num_row = lp_->num_row_;
+  if (vector->count > 25) return;
+  if (vector->count < num_row) {
+    printf("%s", message.c_str());
+    for (HighsInt en=0; en<vector->count; en++) {
+      HighsInt iRow = vector->index[en];
+      if (en % 5 == 0) printf("\n");
+      printf("(%4d %10.4g) ", (int)iRow, vector->array[iRow]);
+    }
+  } else {
+    if (num_row > 25) return;
+    printf("%s", message.c_str());
+    for (HighsInt iRow=0; iRow<num_row; iRow++) {
+      if (iRow % 5 == 0) printf("\n");
+      printf("%10.4g ", vector->array[iRow]);
+    }
+  }
+  printf("\n");
+}
+						
+void HSimplexNla::reportPackValue(const std::string message, const HVector* vector) const {
+  if (!report) return;
+  const HighsInt num_row = lp_->num_row_;
+  if (vector->packCount > 25) return;
+  printf("%s", message.c_str());
+  for (HighsInt en=0; en<vector->packCount; en++) {
+    HighsInt iRow = vector->packIndex[en];
+    if (en % 5 == 0) printf("\n");
+    printf("(%4d %10.4g) ", (int)iRow, vector->packValue[en]);
+  }
+  printf("\n");
+}
+						

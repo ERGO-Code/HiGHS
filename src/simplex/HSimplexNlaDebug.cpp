@@ -93,7 +93,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
-      report_level = HighsLogType::kInfo;
+      report_level = HighsLogType::kVerbose;
     }
 
     if (force) report_level = HighsLogType::kInfo;
@@ -114,7 +114,6 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     column.clear();
     column.packFlag = true;
     if (iCol < num_col) {
-      printf("Basic column %d is variable %d\n", (int)iRow, (int)iCol);
       for (HighsInt k = a_start[iCol]; k < a_start[iCol + 1]; k++) {
         HighsInt index = a_index[k];
         column.array[index] = a_value[k];
@@ -122,7 +121,6 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       }
     } else {
       HighsInt index = iCol - num_col;
-      printf("Basic column %d is logical %d\n", (int)iRow, (int)index);
       column.array[index] = 1.0;
       column.index[column.count++] = index;
     }
@@ -156,7 +154,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
-      report_level = HighsLogType::kInfo;
+      report_level = HighsLogType::kVerbose;
     }
     highsLogDev(options->log_options, report_level,
                 "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",

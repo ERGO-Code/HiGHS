@@ -215,6 +215,33 @@ HighsInt HEkkDualRow::chooseFinal() {
   analysis->simplexTimerStart(Chuzc3cClock);
 
   HighsInt move_out = workDelta < 0 ? -1 : 1;
+
+  /*
+  int iter = (int)ekk_instance_.iteration_count_;
+  if (iter == 0) {breakIndex = (HighsInt)44; move_out = (HighsInt)-1;}
+   if (iter == 1) {breakIndex = (HighsInt)30; move_out = (HighsInt)1;}
+   if (iter == 2) {breakIndex = (HighsInt)2; move_out = (HighsInt)-1;}
+   if (iter == 3) {breakIndex = (HighsInt)5; move_out = (HighsInt)-1;}
+   if (iter == 4) {breakIndex = (HighsInt)1; move_out = (HighsInt)-1;}
+   if (iter == 5) {breakIndex = (HighsInt)1; move_out = (HighsInt)-1;}
+   if (iter == 6) {breakIndex = (HighsInt)0; move_out = (HighsInt)-1;}
+   if (iter == 7) {breakIndex = (HighsInt)2; move_out = (HighsInt)-1;}
+   if (iter == 8) {breakIndex = (HighsInt)1; move_out = (HighsInt)-1;}
+   if (iter == 9) {breakIndex = (HighsInt)1; move_out = (HighsInt)-1;}
+   if (iter == 10) {breakIndex = (HighsInt)2; move_out = (HighsInt)-1;}
+   if (iter == 11) {breakIndex = (HighsInt)0; move_out = (HighsInt)-1;}
+   if (iter == 12) {breakIndex = (HighsInt)0; move_out = (HighsInt)1;}
+   if (iter == 13) {breakIndex = (HighsInt)0; move_out = (HighsInt)-1;}
+   if (iter == 14) {breakIndex = (HighsInt)1; move_out = (HighsInt)-1;}
+   if (iter == 15) {breakIndex = (HighsInt)0; move_out = (HighsInt)1;}
+   if (iter == 16) {breakIndex = (HighsInt)7; move_out = (HighsInt)1;}
+   if (iter == 17) {breakIndex = (HighsInt)0; move_out = (HighsInt)-1;}
+   if (iter == 18) {breakIndex = (HighsInt)3; move_out = (HighsInt)1;}
+   if (iter == 19) {breakIndex = (HighsInt)1; move_out = (HighsInt)-1;}
+   if (iter == 20) {breakIndex = (HighsInt)4; move_out = (HighsInt)-1;}
+  printf("   if (iter == %d) {breakIndex = (HighsInt)%d; move_out = (HighsInt)%d;}\n*****\n",
+	 iter, (int)breakIndex, (int)move_out);
+  */
   assert(breakIndex >= 0);
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;

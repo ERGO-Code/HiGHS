@@ -305,6 +305,7 @@ struct HighsOptionsStruct {
   HighsInt simplex_permute_strategy;
   HighsInt max_dual_simplex_cleanup_level;
   HighsInt simplex_price_strategy;
+  HighsInt simplex_unscaled_solution_strategy;
   HighsInt presolve_substitution_maxfillin;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
@@ -734,6 +735,12 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,
         &simplex_price_strategy, kSimplexPriceStrategyMin,
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "simplex_unscaled_solution_strategy", "Strategy for solving unscaled LP in simplex", advanced,
+        &simplex_unscaled_solution_strategy, kSimplexUnscaledSolutionStrategyMin,
+        kSimplexUnscaledSolutionStrategyRefine, kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
     record_bool =

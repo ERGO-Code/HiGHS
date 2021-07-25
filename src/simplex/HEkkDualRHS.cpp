@@ -132,6 +132,36 @@ void HEkkDualRHS::chooseNormal(HighsInt* chIndex) {
     }
     *chIndex = bestIndex;
   }
+  /*
+  int iter = (int)ekk_instance_.iteration_count_;
+   if (iter == 0) *chIndex = (HighsInt)6;
+   if (iter == 1) *chIndex = (HighsInt)11;
+   if (iter == 2) *chIndex = (HighsInt)6;
+   if (iter == 3) *chIndex = (HighsInt)6;
+   if (iter == 4) *chIndex = (HighsInt)6;
+   if (iter == 5) *chIndex = (HighsInt)6;
+   if (iter == 6) *chIndex = (HighsInt)6;
+   if (iter == 7) *chIndex = (HighsInt)136;
+   if (iter == 8) *chIndex = (HighsInt)11;
+   if (iter == 9) *chIndex = (HighsInt)136;
+   if (iter == 10) *chIndex = (HighsInt)11;
+   if (iter == 11) *chIndex = (HighsInt)11;
+   if (iter == 12) *chIndex = (HighsInt)26;
+   if (iter == 13) *chIndex = (HighsInt)136;
+   if (iter == 14) *chIndex = (HighsInt)133;
+   if (iter == 15) *chIndex = (HighsInt)100;
+   if (iter == 16) *chIndex = (HighsInt)8;
+   if (iter == 17) *chIndex = (HighsInt)100;
+   if (iter == 18) *chIndex = (HighsInt)115;
+   if (iter == 19) *chIndex = (HighsInt)139;
+   if (iter == 20) *chIndex = (HighsInt)134;
+   if (iter == 21) *chIndex = (HighsInt)143;
+   if (iter == 22) *chIndex = (HighsInt)138;
+
+   printf("*****\n   if (iter == %d) *chIndex = (HighsInt)%d;\n*****\n", iter, (int)(*chIndex));
+   if (iter > 19) {fflush(stdout); abort();}
+  */
+
   // Since chooseNormal calls itself, only stop the clock if it's not currently
   // running
   if (!keep_timer_running) analysis->simplexTimerStop(ChuzrDualClock);

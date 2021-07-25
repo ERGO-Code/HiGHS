@@ -77,12 +77,13 @@ void highsLogDev(const HighsLogOptions& log_options_, const HighsLogType type,
       (log_options_.log_file_stream == NULL && !*log_options_.log_to_console) ||
       !*log_options_.log_dev_level)
     return;
-  // Always report HighsLogType INFO, WARNING or ERROR
+  // Always report HighsLogType::kInfo, HighsLogType::kWarning or
+  // HighsLogType::kError
   //
-  // Report HighsLogType DETAILED if *log_options_.log_dev_level >=
+  // Report HighsLogType::kDetailed if *log_options_.log_dev_level >=
   // kHighsLogDevLevelDetailed
   //
-  // Report HighsLogType VERBOSE if *log_options_.log_dev_level >=
+  // Report HighsLogType::kVerbose if *log_options_.log_dev_level >=
   // kHighsLogDevLevelVerbose
   if (type == HighsLogType::kDetailed &&
       *log_options_.log_dev_level < kHighsLogDevLevelDetailed)

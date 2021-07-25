@@ -57,6 +57,9 @@ class HSimplexNla {
   void undoBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const;
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
                        HighsInt& to_entry) const;
+  void reportArray(const std::string message, const HVector* vector) const;
+  void reportArraySparse(const std::string message, const HVector* vector) const;
+  void reportPackValue(const std::string message, const HVector* vector) const;
   HighsInt build_synthetic_tick_;
 
   // private:
@@ -74,6 +77,7 @@ class HSimplexNla {
 
   //  HMatrix matrix_;
   HFactor factor_;
+  const bool report = false;
 };
 
 #endif /* HSIMPLEXNLA_H_ */
