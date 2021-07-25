@@ -63,16 +63,16 @@ HighsInt HSimplexNla::invert() {
 
 void HSimplexNla::btran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
-  applyBasisMatrixColScale(rhs, scale_);
+  applyBasisMatrixColScale(rhs);
   factor_.btranCall(rhs, expected_density, factor_timer_clock_pointer);
-  applyBasisMatrixRowScale(rhs, scale_);
+  applyBasisMatrixRowScale(rhs);
 }
 
 void HSimplexNla::ftran(HVector& rhs, const double expected_density,
                         HighsTimerClock* factor_timer_clock_pointer) const {
-  applyBasisMatrixRowScale(rhs, scale_);
+  applyBasisMatrixRowScale(rhs);
   factor_.ftranCall(rhs, expected_density, factor_timer_clock_pointer);
-  applyBasisMatrixColScale(rhs, scale_);
+  applyBasisMatrixColScale(rhs);
 }
 
 void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
@@ -83,7 +83,8 @@ void HSimplexNla::update(HVector* aq, HVector* ep, HighsInt* iRow,
 }
 
 void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
-				     const HighsInt variable_in, const HighsInt row_out) {
+                                     const HighsInt variable_in,
+                                     const HighsInt row_out) {
   if (scale_ == NULL) return;
   // For (\hat)aq, UPDATE needs packValue and array[row_out] to
   // correspond to \bar{B}^{-1}(R.aq.cq), but CB.\bar{B}^{-1}(R.aq)
@@ -99,11 +100,10 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   if (variable_in < lp_->num_col_) {
     scale_factor = scale_->col[variable_in];
   } else {
-    scale_factor = 1.0 / scale_->row[variable_in-lp_->num_col_];
+    scale_factor = 1.0 / scale_->row[variable_in - lp_->num_col_];
   }
-  for (HighsInt ix = 0; ix < aq->packCount; ix++) {
+  for (HighsInt ix = 0; ix < aq->packCount; ix++)
     aq->packValue[ix] *= scale_factor;
-  }
   reportPackValue("pack aq Af ", aq);
   //
   // Now focus on the pivot value, aq->array[row_out]
@@ -111,7 +111,7 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   // First scale by cq
   aq->array[row_out] *= scale_factor;
   //
-  // Also have to un scale by cp
+  // Also have to unscale by cp
   HighsInt variable_out = base_index_[row_out];
   if (variable_out < lp_->num_col_) {
     scale_factor = scale_->col[variable_out];
@@ -123,7 +123,8 @@ void HSimplexNla::transformForUpdate(HVector* aq, HVector* ep,
   // \bar{B}^{-T}ep, but R.\bar{B}^{-T}(CB.ep) has been computed.
   //
   // Hence packValue needs to be unscaled by cp
-  for (HighsInt ix = 0; ix < ep->packCount; ix++) ep->packValue[ix] /= scale_factor;
+  for (HighsInt ix = 0; ix < ep->packCount; ix++)
+    ep->packValue[ix] /= scale_factor;
 }
 
 void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
@@ -137,11 +138,10 @@ void HSimplexNla::passScaleAndFactorMatrixPointers(
   factor_.setupMatrix(factor_a_start, factor_a_index, factor_a_value);
 }
 
-void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs,
-                                           const HighsScale* scale) const {
-  if (scale == NULL) return;
-  const vector<double>& col_scale = scale->col;
-  const vector<double>& row_scale = scale->row;
+void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
+  if (scale_ == NULL) return;
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
   const bool use_row_indices =
       sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
@@ -156,11 +156,10 @@ void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs,
   }
 }
 
-void HSimplexNla::applyBasisMatrixColScale(HVector& rhs,
-                                           const HighsScale* scale) const {
-  if (scale == NULL) return;
-  const vector<double>& col_scale = scale->col;
-  const vector<double>& row_scale = scale->row;
+void HSimplexNla::applyBasisMatrixColScale(HVector& rhs) const {
+  if (scale_ == NULL) return;
+  const vector<double>& col_scale = scale_->col;
+  const vector<double>& row_scale = scale_->row;
   HighsInt to_entry;
   const bool use_row_indices =
       sparseLoopStyle(rhs.count, lp_->num_row_, to_entry);
@@ -194,14 +193,15 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
   return use_indices;
 }
 
-void HSimplexNla::reportArray(const std::string message, const HVector* vector) const {
+void HSimplexNla::reportArray(const std::string message,
+                              const HVector* vector) const {
   if (!report) return;
   const HighsInt num_row = lp_->num_row_;
   if (num_row > 25) {
     reportArraySparse(message, vector);
   } else {
     printf("%s", message.c_str());
-    for (HighsInt iRow=0; iRow<num_row; iRow++) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       if (iRow % 5 == 0) printf("\n");
       printf("%10.4g ", vector->array[iRow]);
     }
@@ -209,13 +209,14 @@ void HSimplexNla::reportArray(const std::string message, const HVector* vector) 
   }
 }
 
-void HSimplexNla::reportArraySparse(const std::string message, const HVector* vector) const {
+void HSimplexNla::reportArraySparse(const std::string message,
+                                    const HVector* vector) const {
   if (!report) return;
   const HighsInt num_row = lp_->num_row_;
   if (vector->count > 25) return;
   if (vector->count < num_row) {
     printf("%s", message.c_str());
-    for (HighsInt en=0; en<vector->count; en++) {
+    for (HighsInt en = 0; en < vector->count; en++) {
       HighsInt iRow = vector->index[en];
       if (en % 5 == 0) printf("\n");
       printf("(%4d %10.4g) ", (int)iRow, vector->array[iRow]);
@@ -223,24 +224,24 @@ void HSimplexNla::reportArraySparse(const std::string message, const HVector* ve
   } else {
     if (num_row > 25) return;
     printf("%s", message.c_str());
-    for (HighsInt iRow=0; iRow<num_row; iRow++) {
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       if (iRow % 5 == 0) printf("\n");
       printf("%10.4g ", vector->array[iRow]);
     }
   }
   printf("\n");
 }
-						
-void HSimplexNla::reportPackValue(const std::string message, const HVector* vector) const {
+
+void HSimplexNla::reportPackValue(const std::string message,
+                                  const HVector* vector) const {
   if (!report) return;
   const HighsInt num_row = lp_->num_row_;
   if (vector->packCount > 25) return;
   printf("%s", message.c_str());
-  for (HighsInt en=0; en<vector->packCount; en++) {
+  for (HighsInt en = 0; en < vector->packCount; en++) {
     HighsInt iRow = vector->packIndex[en];
     if (en % 5 == 0) printf("\n");
     printf("(%4d %10.4g) ", (int)iRow, vector->packValue[en]);
   }
   printf("\n");
 }
-						

@@ -16,6 +16,8 @@
 #ifndef SIMPLEX_SIMPLEXCONST_H_
 #define SIMPLEX_SIMPLEXCONST_H_
 
+const bool kRefineSimplex = false;
+
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
 
 enum SimplexStrategy {
@@ -32,9 +34,10 @@ enum SimplexStrategy {
 
 enum SimplexUnscaledSolutionStrategy {
   kSimplexUnscaledSolutionStrategyMin = 0,
-  kSimplexUnscaledSolutionStrategyNone = kSimplexUnscaledSolutionStrategyMin,      // 0
-  kSimplexUnscaledSolutionStrategyRefine,  // 1
-  kSimplexUnscaledSolutionStrategyDirect,  // 2
+  kSimplexUnscaledSolutionStrategyNone =
+      kSimplexUnscaledSolutionStrategyMin,  // 0
+  kSimplexUnscaledSolutionStrategyRefine,   // 1
+  kSimplexUnscaledSolutionStrategyDirect,   // 2
   kSimplexUnscaledSolutionStrategyMax = kSimplexUnscaledSolutionStrategyDirect,
   kSimplexUnscaledSolutionStrategyNum
 };

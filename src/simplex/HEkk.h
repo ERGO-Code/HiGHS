@@ -152,7 +152,7 @@ class HEkk {
                     HighsInt* hint);
 
   void transformForUpdate(HVector* column, HVector* row_ep,
-			  const HighsInt variable_in, HighsInt* row_out);
+                          const HighsInt variable_in, HighsInt* row_out);
 
   void updatePivots(const HighsInt variable_in, const HighsInt row_out,
                     const HighsInt move_out);

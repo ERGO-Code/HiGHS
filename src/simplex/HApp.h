@@ -83,8 +83,6 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
   HighsInt simplex_iteration_limit = options.simplex_iteration_limit;
-  const bool kRefineSimplex = true;
-  //  if (kRefineSimplex) options.simplex_iteration_limit = 35;
   // Solve the LP!
   return_status = ekk_instance.solve();
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -171,7 +169,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
                 solution_params.max_dual_infeasibility,
                 solution_params.sum_dual_infeasibility);
     HighsLp scaled_lp;
-    if (options.simplex_unscaled_solution_strategy == kSimplexUnscaledSolutionStrategyRefine) {
+    if (options.simplex_unscaled_solution_strategy ==
+        kSimplexUnscaledSolutionStrategyRefine) {
       // Move back the scaled LP
       HighsLp& lp = highs_model_object.lp_;
       HighsLp& ekk_lp = ekk_instance.lp_;
@@ -186,8 +185,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       // Pass scaling factors and scaled matrix pointers to the
       // simplex NLA
       simplex_nla.passScaleAndFactorMatrixPointers(
-						   &highs_model_object.scale_, &scaled_lp.a_start_[0],
-						   &scaled_lp.a_index_[0], &scaled_lp.a_value_[0]);
+          &highs_model_object.scale_, &scaled_lp.a_start_[0],
+          &scaled_lp.a_index_[0], &scaled_lp.a_value_[0]);
       // Reinitialise the matrix for the simplex solver now that the
       // LP is unscaled
       ekk_instance.status_.has_matrix = false;
@@ -198,25 +197,27 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     // Save the dual simplex cost perturbation multiplier and set
     // the option to zero
     double dual_simplex_cost_perturbation_multiplier =
-      options.dual_simplex_cost_perturbation_multiplier;
+        options.dual_simplex_cost_perturbation_multiplier;
     options.dual_simplex_cost_perturbation_multiplier = 0;
     // Save the simplex dual edge weight strategy and set
     // the option to Devex
     HighsInt simplex_dual_edge_weight_strategy =
-      ekk_instance.info_.dual_edge_weight_strategy;
+        ekk_instance.info_.dual_edge_weight_strategy;
     ekk_instance.info_.dual_edge_weight_strategy =
-      kSimplexDualEdgeWeightStrategyDevex;
+        kSimplexDualEdgeWeightStrategyDevex;
     return_status = ekk_instance.solve();
     // Restore the dual simplex cost perturbation multiplier and
     // simplex dual edge weight strategy
     options.dual_simplex_cost_perturbation_multiplier =
-      dual_simplex_cost_perturbation_multiplier;
+        dual_simplex_cost_perturbation_multiplier;
     ekk_instance.info_.dual_edge_weight_strategy =
-      simplex_dual_edge_weight_strategy;
+        simplex_dual_edge_weight_strategy;
 
-    printf("Abort in solveLpSimplex\n");
-    fflush(stdout);
-    abort();
+    if (kRefineSimplex) {
+      printf("Abort in solveLpSimplex\n");
+      fflush(stdout);
+      abort();
+    }
 
     highs_model_object.solution_ = ekk_instance.getSolution();
     if (highs_model_object.scale_.is_scaled)

@@ -737,10 +737,13 @@ class HighsOptions : public HighsOptionsStruct {
         kSimplexPriceStrategyRowSwitchColSwitch, kSimplexPriceStrategyMax);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "simplex_unscaled_solution_strategy", "Strategy for solving unscaled LP in simplex", advanced,
-        &simplex_unscaled_solution_strategy, kSimplexUnscaledSolutionStrategyMin,
-        kSimplexUnscaledSolutionStrategyRefine, kSimplexUnscaledSolutionStrategyMax);
+    record_int =
+        new OptionRecordInt("simplex_unscaled_solution_strategy",
+                            "Strategy for solving unscaled LP in simplex",
+                            advanced, &simplex_unscaled_solution_strategy,
+                            kSimplexUnscaledSolutionStrategyMin,
+                            kSimplexUnscaledSolutionStrategyRefine,
+                            kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 
     record_bool =

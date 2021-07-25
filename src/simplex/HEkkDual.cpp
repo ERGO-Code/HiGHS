@@ -32,7 +32,6 @@
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplexReport.h"
-#include "simplex/HSimplexNlaDebug.h" // for debugCheckInvert
 #include "simplex/SimplexTimer.h"
 #include "util/HighsTimer.h"
 
@@ -1850,7 +1849,8 @@ void HEkkDual::updatePivots() {
   //
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
-  // Transform the vectors used in updateFactor if the simplex NLA involves scaling
+  // Transform the vectors used in updateFactor if the simplex NLA involves
+  // scaling
   ekk_instance_.transformForUpdate(&col_aq, &row_ep, variable_in, &row_out);
   //
   // Update the sets of indices of basic and nonbasic variables
@@ -1865,9 +1865,6 @@ void HEkkDual::updatePivots() {
   // Update the invertible representation of the basis matrix
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   //
-  if (ekk_instance_.simplex_nla_.report) printf("\nAfter UPDATE\n");
-  debugCheckInvert(ekk_instance_.simplex_nla_);
-
   // Update the row-wise representation of the nonbasic columns
   ekk_instance_.updateMatrix(variable_in, variable_out);
   //

@@ -44,19 +44,20 @@ class HSimplexNla {
   void update(HVector* aq, HVector* ep, HighsInt* iRow, HighsInt* hint);
 
   void transformForUpdate(HVector* column, HVector* row_ep,
-			  const HighsInt variable_in, const HighsInt row_out);
+                          const HighsInt variable_in, const HighsInt row_out);
 
   void setPivotThreshold(const double new_pivot_threshold);
   void passScaleAndFactorMatrixPointers(const HighsScale* scale,
                                         const HighsInt* factor_a_start,
                                         const HighsInt* factor_a_index,
                                         const double* factor_a_value);
-  void applyBasisMatrixColScale(HVector& rhs, const HighsScale* scale) const;
-  void applyBasisMatrixRowScale(HVector& rhs, const HighsScale* scale) const;
+  void applyBasisMatrixColScale(HVector& rhs) const;
+  void applyBasisMatrixRowScale(HVector& rhs) const;
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
                        HighsInt& to_entry) const;
   void reportArray(const std::string message, const HVector* vector) const;
-  void reportArraySparse(const std::string message, const HVector* vector) const;
+  void reportArraySparse(const std::string message,
+                         const HVector* vector) const;
   void reportPackValue(const std::string message, const HVector* vector) const;
   HighsInt build_synthetic_tick_;
 
