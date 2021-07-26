@@ -3080,12 +3080,11 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
               if (std::abs(std::round(rhs2) - rhs2) <=
                   mipsolver->mipdata_->epsilon) {
                 // the right hand side is integral, so we can substitute
-                // a1 * x1 = d * z, i.e. x1 = d * z / a1
-                double scale = d / std::abs(Avalue[x1Pos] * intScale);
+                // a1 * x1 = d * z
                 // printf(
                 //    "substitute integral column x with integral column z with
-                //    " "x = %g * z\n", scale);
-                transformColumn(postSolveStack, x1, scale, 0.0);
+                //    " "x = %ld * z\n", d);
+                transformColumn(postSolveStack, x1, d, 0.0);
               } else {
                 // we can substitute x1 = d * z + b, with b = a1^-1 rhs (mod d)
 
