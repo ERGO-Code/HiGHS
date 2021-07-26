@@ -401,7 +401,7 @@ HighsInt HighsFullOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
       if (colj0[i] != 0 && colj1[i] != 1) return i;
     }
 
-    return -1;
+    return HighsInt{-1};
   };
 
   for (HighsInt j = rowLength - 2; j >= 0; --j) {
