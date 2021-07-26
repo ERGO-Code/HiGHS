@@ -86,16 +86,26 @@ struct HighsHashHelpers {
     // compute the different order terms with adicities 2^64, 2^32, 2^0
     u64 term_64 = ahi * bhi;
     u64 term_32 = ahi * blo + bhi * alo;
-    u64 term_0 = blo * blo;
+    u64 term_0 = alo * blo;
 
-    // now extract the upper 61 and the lower 61 bits of the result a * b
-    u64 ab61 = term_64 << 3 | (term_32 + (term_0 >> 32)) >> 61;
-    u64 ab0 = (term_0 + term_32) & M61();
+    // Partially reduce term_0 and term_32 modulo M61() individually to not deal
+    // with a possible carry bit (thanks @https://github.com/WTFHCN for catching
+    // the bug with this). We do not need to completely reduce by an additional
+    // check for the range of the resulting term as this is done in the end in
+    // any case and the reduced sizes do not cause troubles with the available
+    // 64 bits.
+    term_0 = (term_0 & M61()) + (term_0 >> 61);
+    term_0 += ((term_32 >> 29) + (term_32 << 32)) & M61();
+
+    // The lower 61 bits of term_0 are now the lower 61 bits of the result that
+    // we need. Now extract the upper 61 of the result so that we can compute
+    // the result of the multiplication modulo M61()
+    u64 ab61 = (term_64 << 3) | (term_0 >> 61);
 
     // finally take the result modulo M61 which is computed by exploiting
     // that M61 is a mersenne prime, particularly, if a * b = q * 2^61 + r
     // then a * b = (q + r) (mod 2^61 - 1)
-    u64 result = ab0 + ab61;
+    u64 result = (term_0 & M61()) + ab61;
     if (result >= M61()) result -= M61();
     return result;
   }

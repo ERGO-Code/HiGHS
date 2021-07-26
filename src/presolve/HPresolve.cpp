@@ -4715,7 +4715,8 @@ HighsInt HPresolve::strengthenInequalities() {
       for (HighsInt i = indices.size() - 1; i >= 0; --i) {
         double delta = upper[indices[i]] * reducedcost[indices[i]];
 
-        if (reducedcost[indices[i]] > smallVal && lambda - delta <= smallVal)
+        if (upper[indices[i]] <= 1000.0 && reducedcost[indices[i]] > smallVal &&
+            lambda - delta <= smallVal)
           cover.push_back(indices[i]);
         else
           lambda -= delta;
