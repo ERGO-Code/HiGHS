@@ -74,13 +74,13 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
                         vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
-void getUnscaledInfeasibilitiesAndNewTolerances(
-    const HighsOptions& options, const HighsLp& lp,
-    const HighsModelStatus model_status, const SimplexBasis& basis,
-    const HighsSimplexInfo& info, const HighsScale& scale,
-    HighsSolutionParams& solution_params,
-    double& new_primal_feasibility_tolerance,
-    double& new_dual_feasibility_tolerance);
+void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
+                                const HighsModelStatus model_status,
+                                const SimplexBasis& basis,
+                                const HighsSimplexInfo& info,
+                                const HighsScale& scale,
+                                HighsSolutionParams& solution_params,
+                                const bool scaled_simplex_lp = true);
 
 // SCALE:
 

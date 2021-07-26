@@ -388,13 +388,13 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
   return HighsStatus::kOk;
 }
 
-void getUnscaledInfeasibilitiesAndNewTolerances(
-    const HighsOptions& options, const HighsLp& lp,
-    const HighsModelStatus model_status, const SimplexBasis& basis,
-    const HighsSimplexInfo& info, const HighsScale& scale,
-    HighsSolutionParams& solution_params,
-    double& new_primal_feasibility_tolerance,
-    double& new_dual_feasibility_tolerance) {
+void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
+                                const HighsModelStatus model_status,
+                                const SimplexBasis& basis,
+                                const HighsSimplexInfo& info,
+                                const HighsScale& scale,
+                                HighsSolutionParams& solution_params,
+                                const bool scaled_simplex_lp) {
   const double primal_feasibility_tolerance =
       options.primal_feasibility_tolerance;
   const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
@@ -414,17 +414,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
   max_dual_infeasibility = 0;
   sum_dual_infeasibility = 0;
 
-  // If the scaled LP has beeen solved to optimality, look at the
-  // scaled solution and, if there are infeasibilities, identify new
-  // feasibility tolerances for the scaled LP
-  const bool get_new_scaled_feasibility_tolerances =
-      model_status == HighsModelStatus::kOptimal;
-
-  if (get_new_scaled_feasibility_tolerances) {
-    new_primal_feasibility_tolerance = kHighsInf;
-    new_dual_feasibility_tolerance = kHighsInf;
-  }
-
+  double scale_mu = 1.0;
   assert(int(scale.col.size()) == lp.num_col_);
   assert(int(scale.row.size()) == lp.num_row_);
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
@@ -432,53 +422,38 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasiblity for fixed rows and columns
     if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
-    bool col = iVar < lp.num_col_;
-    double scale_mu;
-    HighsInt iCol = 0;
-    HighsInt iRow = 0;
-    if (col) {
-      iCol = iVar;
-      assert(int(scale.col.size()) > iCol);
-      scale_mu = 1 / (scale.col[iCol] / scale.cost);
-    } else {
-      iRow = iVar - lp.num_col_;
-      assert(int(scale.row.size()) > iRow);
-      scale_mu = scale.row[iRow] * scale.cost;
+    if (scaled_simplex_lp) {
+      bool col = iVar < lp.num_col_;
+      HighsInt iCol = 0;
+      HighsInt iRow = 0;
+      if (col) {
+        iCol = iVar;
+        assert(int(scale.col.size()) > iCol);
+        scale_mu = 1 / (scale.col[iCol] / scale.cost);
+      } else {
+        iRow = iVar - lp.num_col_;
+        assert(int(scale.row.size()) > iRow);
+        scale_mu = scale.row[iRow] * scale.cost;
+      }
     }
-    const double scaled_dual = info.workDual_[iVar];
-    const double scaled_lower = info.workLower_[iVar];
-    const double scaled_upper = info.workUpper_[iVar];
-    const double dual = scaled_dual * scale_mu;
+    const double dual = info.workDual_[iVar];
+    const double lower = info.workLower_[iVar];
+    const double upper = info.workUpper_[iVar];
+    const double unscaled_dual = dual * scale_mu;
 
-    //    double scaled_dual_infeasibility;
     double dual_infeasibility;
-    if (highs_isInfinity(-scaled_lower) && highs_isInfinity(scaled_upper)) {
+    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free: any nonzero dual value is infeasible
-      dual_infeasibility = fabs(dual);
+      dual_infeasibility = fabs(unscaled_dual);
     } else {
       // Not fixed: any dual infeasibility is given by value signed by
       // nonbasicMove. This assumes that nonbasicMove=0 for fixed
       // variables
-      dual_infeasibility = -basis.nonbasicMove_[iVar] * dual;
+      dual_infeasibility = -basis.nonbasicMove_[iVar] * unscaled_dual;
     }
     if (dual_infeasibility > 0) {
-      if (dual_infeasibility >= dual_feasibility_tolerance) {
+      if (dual_infeasibility >= dual_feasibility_tolerance)
         num_dual_infeasibility++;
-        if (get_new_scaled_feasibility_tolerances) {
-          double multiplier = dual_feasibility_tolerance / scale_mu;
-          //          double scaled_value = info.workValue_[iVar];
-          //          highsLogDev(options.log_options, HighsLogType::kInfo,
-          //                          "Var %6" HIGHSINT_FORMAT " (%6"
-          //                          HIGHSINT_FORMAT ", %6" HIGHSINT_FORMAT "):
-          //                          [%11.4g, %11.4g, %11.4g] %11.4g
-          //          s=%11.4g %11.4g: Mu = %g\n", iVar, iCol, iRow,
-          //          scaled_lower, scaled_value, scaled_upper,
-          //          scaled_dual_infeasibility, scale_mu, dual_infeasibility,
-          //          multiplier);
-          new_dual_feasibility_tolerance =
-              min(multiplier, new_dual_feasibility_tolerance);
-        }
-      }
       max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
@@ -486,63 +461,30 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
   // Look at the primal infeasibilities of basic variables
   for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
     HighsInt iVar = basis.basicIndex_[ix];
-    bool col = iVar < lp.num_col_;
-    double scale_mu;
-    HighsInt iCol = 0;
-    HighsInt iRow = 0;
-    if (col) {
-      iCol = iVar;
-      scale_mu = scale.col[iCol];
-    } else {
-      iRow = iVar - lp.num_col_;
-      scale_mu = 1 / scale.row[iRow];
-    }
-    // Look at the basic primal infeasibilities
-
-    const bool report = false;
-    double scaled_lower;
-    double scaled_upper;
-    double scaled_value;
-    double scaled_primal_infeasibility;
-    if (report) {
-      scaled_lower = info.baseLower_[ix];
-      scaled_upper = info.baseUpper_[ix];
-      scaled_value = info.baseValue_[ix];
-      // @primal_infeasibility calculation
-      scaled_primal_infeasibility = 0;
-      if (scaled_value < scaled_lower - primal_feasibility_tolerance) {
-        scaled_primal_infeasibility = scaled_lower - scaled_value;
-      } else if (scaled_value > scaled_upper + primal_feasibility_tolerance) {
-        scaled_primal_infeasibility = scaled_value - scaled_upper;
+    if (scaled_simplex_lp) {
+      bool col = iVar < lp.num_col_;
+      HighsInt iCol = 0;
+      HighsInt iRow = 0;
+      if (col) {
+        iCol = iVar;
+        scale_mu = scale.col[iCol];
+      } else {
+        iRow = iVar - lp.num_col_;
+        scale_mu = 1 / scale.row[iRow];
       }
     }
-    double lower = info.baseLower_[ix] * scale_mu;
-    double value = info.baseValue_[ix] * scale_mu;
-    double upper = info.baseUpper_[ix] * scale_mu;
+    double unscaled_lower = info.baseLower_[ix] * scale_mu;
+    double unscaled_value = info.baseValue_[ix] * scale_mu;
+    double unscaled_upper = info.baseUpper_[ix] * scale_mu;
     // @primal_infeasibility calculation
     double primal_infeasibility = 0;
-    if (value < lower - primal_feasibility_tolerance) {
-      primal_infeasibility = lower - value;
-    } else if (value > upper + primal_feasibility_tolerance) {
-      primal_infeasibility = value - upper;
+    if (unscaled_value < unscaled_lower - primal_feasibility_tolerance) {
+      primal_infeasibility = unscaled_lower - unscaled_value;
+    } else if (unscaled_value > unscaled_upper + primal_feasibility_tolerance) {
+      primal_infeasibility = unscaled_value - unscaled_upper;
     }
     if (primal_infeasibility > 0) {
       num_primal_infeasibility++;
-      if (get_new_scaled_feasibility_tolerances) {
-        double multiplier = primal_feasibility_tolerance / scale_mu;
-        if (report) {
-          highsLogDev(options.log_options, HighsLogType::kInfo,
-                      "Var %6" HIGHSINT_FORMAT " (%6" HIGHSINT_FORMAT
-                      ", %6" HIGHSINT_FORMAT
-                      "): [%11.4g, %11.4g, %11.4g] %11.4g "
-                      "s=%11.4g %11.4g: Mu = %g\n",
-                      iVar, iCol, iRow, scaled_lower, scaled_value,
-                      scaled_upper, scaled_primal_infeasibility, scale_mu,
-                      primal_infeasibility, multiplier);
-        }
-        new_primal_feasibility_tolerance =
-            min(multiplier, new_primal_feasibility_tolerance);
-      }
       max_primal_infeasibility =
           max(primal_infeasibility, max_primal_infeasibility);
       sum_primal_infeasibility += primal_infeasibility;
