@@ -1779,7 +1779,7 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 }
 
 void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
-  std::vector<double> rowMaxAbsIntVals(model->numRow_);
+  std::vector<double> rowLogMeanIntVals(model->numRow_);
 
   // determine the maximal absolute values of integral variables in each row
   HighsInt numNnz = Avalue.size();
@@ -1789,8 +1789,10 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     if (model->integrality_[Acol[i]] == HighsVarType::kContinuous) continue;
 
     HighsInt row = Arow[i];
-    rowMaxAbsIntVals[row] =
-        std::max(std::abs(Avalue[i]), rowMaxAbsIntVals[row]);
+    HighsInt numInts = rowsizeInteger[row] + rowsizeImplInt[row];
+    // avoid using big-M coefficients as scaling reference
+    if (numInts == 1) continue;
+    rowLogMeanIntVals[row] += std::log2(std::abs(Avalue[i])) / numInts;
   }
 
   // scale continuous columns to be somewhat equal in magnitude to the largest
@@ -1804,12 +1806,13 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     HighsInt count = 0;
 
     for (const HighsSliceNonzero& nonz : getColumnVector(i)) {
-      double maxAbsIntVal = rowMaxAbsIntVals[nonz.index()];
+      double maxAbsIntVal = rowLogMeanIntVals[nonz.index()];
       if (maxAbsIntVal == 0.0) continue;
 
       ++count;
       logDiffAvg +=
-          (std::log2(maxAbsIntVal / std::abs(nonz.value())) - logDiffAvg) /
+          (std::log2(std::exp2(maxAbsIntVal) / std::abs(nonz.value())) -
+           logDiffAvg) /
           count;
     }
 
