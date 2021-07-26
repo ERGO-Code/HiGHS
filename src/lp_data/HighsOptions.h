@@ -742,7 +742,7 @@ class HighsOptions : public HighsOptionsStruct {
                             "Strategy for solving unscaled LP in simplex",
                             advanced, &simplex_unscaled_solution_strategy,
                             kSimplexUnscaledSolutionStrategyMin,
-                            kSimplexUnscaledSolutionStrategyRefine,
+                            kSimplexUnscaledSolutionStrategyNone,  // Refine,
                             kSimplexUnscaledSolutionStrategyMax);
     records.push_back(record_int);
 

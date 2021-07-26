@@ -82,7 +82,6 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     return_status = ekk_instance.setBasis(highs_model_object.basis_);
     if (return_status == HighsStatus::kError) return HighsStatus::kError;
   }
-  HighsInt simplex_iteration_limit = options.simplex_iteration_limit;
   // Solve the LP!
   return_status = ekk_instance.solve();
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -107,9 +106,9 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       solution_params, new_primal_feasibility_tolerance,
       new_dual_feasibility_tolerance);
 
-  HighsInt num_unscaled_primal_infeasibility =
+  HighsInt& num_unscaled_primal_infeasibility =
       solution_params.num_primal_infeasibility;
-  HighsInt num_unscaled_dual_infeasibility =
+  HighsInt& num_unscaled_dual_infeasibility =
       solution_params.num_dual_infeasibility;
 
   if (num_unscaled_primal_infeasibility > 0) {
@@ -125,26 +124,14 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 
   // Handle non-optimal status
   if (ekk_instance.model_status_ != HighsModelStatus::kOptimal) {
-    if (kRefineSimplex) {
-      printf("Ignoring non-optimal status %s\n",
-             utilModelStatusToString(ekk_instance.model_status_).c_str());
-    } else {
-      highs_model_object.unscaled_model_status_ = ekk_instance.model_status_;
-      return_status =
-          highsStatusFromHighsModelStatus(ekk_instance.model_status_);
-      return return_status;
-    }
+    highs_model_object.unscaled_model_status_ = ekk_instance.model_status_;
+    return_status = highsStatusFromHighsModelStatus(ekk_instance.model_status_);
+    return return_status;
   }
 
   // Now interpret the status of the unscaled solution when the scaled
   // LP is solved to optimailty
-  if (kRefineSimplex) {
-    printf(
-        "Ignoring assert(ekk_instance.model_status_ == "
-        "HighsModelStatus::kOptimal)\n");
-  } else {
-    assert(ekk_instance.model_status_ == HighsModelStatus::kOptimal);
-  }
+  assert(ekk_instance.model_status_ == HighsModelStatus::kOptimal);
 
   // Set the model and solution status according to the unscaled solution
   // parameters
@@ -171,6 +158,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     HighsLp scaled_lp;
     if (options.simplex_unscaled_solution_strategy ==
         kSimplexUnscaledSolutionStrategyRefine) {
+      highsLogUser(options.log_options, HighsLogType::kInfo,
+                   "Removing unscaled primal/dual infeasibilities\n");
       // Move back the scaled LP
       HighsLp& lp = highs_model_object.lp_;
       HighsLp& ekk_lp = ekk_instance.lp_;
@@ -187,41 +176,108 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       simplex_nla.passScaleAndFactorMatrixPointers(
           &highs_model_object.scale_, &scaled_lp.a_start_[0],
           &scaled_lp.a_index_[0], &scaled_lp.a_value_[0]);
-      // Reinitialise the matrix for the simplex solver now that the
-      // LP is unscaled
-      ekk_instance.status_.has_matrix = false;
-      ekk_instance.initialiseMatrix();
-    }
-    // Restore the iteration limit (temp)
-    options.simplex_iteration_limit = kHighsIInf;
-    // Save the dual simplex cost perturbation multiplier and set
-    // the option to zero
-    double dual_simplex_cost_perturbation_multiplier =
-        options.dual_simplex_cost_perturbation_multiplier;
-    options.dual_simplex_cost_perturbation_multiplier = 0;
-    // Save the simplex dual edge weight strategy and set
-    // the option to Devex
-    HighsInt simplex_dual_edge_weight_strategy =
-        ekk_instance.info_.dual_edge_weight_strategy;
-    ekk_instance.info_.dual_edge_weight_strategy =
-        kSimplexDualEdgeWeightStrategyDevex;
-    return_status = ekk_instance.solve();
-    // Restore the dual simplex cost perturbation multiplier and
-    // simplex dual edge weight strategy
-    options.dual_simplex_cost_perturbation_multiplier =
-        dual_simplex_cost_perturbation_multiplier;
-    ekk_instance.info_.dual_edge_weight_strategy =
-        simplex_dual_edge_weight_strategy;
+      // Force reinitialisation of the matrix for the simplex solver
+      // now that the LP is unscaled
+      ekk_instance.initialiseMatrix(true);
+      // Save options/strategies that may be changed
+      HighsInt simplex_strategy = options.simplex_strategy;
+      double dual_simplex_cost_perturbation_multiplier =
+          options.dual_simplex_cost_perturbation_multiplier;
+      HighsInt simplex_dual_edge_weight_strategy =
+          ekk_instance.info_.dual_edge_weight_strategy;
+      //      if (num_unscaled_primal_infeasibility == 0) {
+      //	// Only dual infeasibilities, so use primal simplex
+      //	options.simplex_strategy = kSimplexStrategyPrimal;
+      //      } else {
+      // Unsing dual simplex, so force Devex
+      // options.dual_simplex_cost_perturbation_multiplier = 0;
+      ekk_instance.info_.dual_edge_weight_strategy =
+          kSimplexDualEdgeWeightStrategyDevex;
+      //      }
+      // Solve the unscaled LP!
+      return_status = ekk_instance.solve();
+      // Restore the options/strategies that may have been changed
+      options.simplex_strategy = simplex_strategy;
+      options.dual_simplex_cost_perturbation_multiplier =
+          dual_simplex_cost_perturbation_multiplier;
+      ekk_instance.info_.dual_edge_weight_strategy =
+          simplex_dual_edge_weight_strategy;
+      // Restore the unscaled LP
+      lp = std::move(ekk_lp);
+      // Move the scaled LP to Ekk to leave HiGHS and the simplex
+      // solver in their traditional state
+      ekk_lp = std::move(scaled_lp);
 
-    if (kRefineSimplex) {
-      printf("Abort in solveLpSimplex\n");
-      fflush(stdout);
-      abort();
-    }
+      if (return_status == HighsStatus::kError) return HighsStatus::kError;
 
-    highs_model_object.solution_ = ekk_instance.getSolution();
-    if (highs_model_object.scale_.is_scaled)
-      unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
+      // Tidy up as above - until refinement is directed from calling method
+      //
+      // Copy solution data into the HMO
+      highs_model_object.scaled_model_status_ = ekk_instance.model_status_;
+      solution_params.objective_function_value =
+          ekk_instance.info_.primal_objective_value;
+      highs_model_object.iteration_counts_.simplex +=
+          ekk_instance.iteration_count_;
+      highs_model_object.solution_ = ekk_instance.getSolution();
+      highs_model_object.basis_ = ekk_instance.getHighsBasis();
+
+      // Determine whether the unscaled LP has been solved
+      getUnscaledInfeasibilitiesAndNewTolerances(
+          ekk_instance.options_, ekk_instance.lp_, ekk_instance.model_status_,
+          ekk_instance.basis_, ekk_instance.info_, highs_model_object.scale_,
+          solution_params, new_primal_feasibility_tolerance,
+          new_dual_feasibility_tolerance);
+      if (num_unscaled_primal_infeasibility > 0) {
+        solution_params.primal_solution_status = kSolutionStatusInfeasible;
+      } else {
+        solution_params.primal_solution_status = kSolutionStatusFeasible;
+      }
+      if (num_unscaled_dual_infeasibility > 0) {
+        solution_params.dual_solution_status = kSolutionStatusInfeasible;
+      } else {
+        solution_params.dual_solution_status = kSolutionStatusFeasible;
+      }
+
+      // Handle non-optimal status
+      if (ekk_instance.model_status_ != HighsModelStatus::kOptimal) {
+        highs_model_object.unscaled_model_status_ = ekk_instance.model_status_;
+        return_status =
+            highsStatusFromHighsModelStatus(ekk_instance.model_status_);
+        return return_status;
+      }
+
+      // Now interpret the status of the unscaled solution when the scaled
+      // LP is solved to optimailty
+      assert(ekk_instance.model_status_ == HighsModelStatus::kOptimal);
+
+      // Set the model and solution status according to the unscaled solution
+      // parameters
+      if (num_unscaled_primal_infeasibility == 0 &&
+          num_unscaled_dual_infeasibility == 0) {
+        // Optimal
+        highs_model_object.unscaled_model_status_ = HighsModelStatus::kOptimal;
+      } else {
+        // Should be optimal!
+        highsLogDev(options.log_options, HighsLogType::kError,
+                    "Still have num/max/sum primal (%" HIGHSINT_FORMAT
+                    "/%g/%g) and dual (%" HIGHSINT_FORMAT
+                    "/%g/%g) "
+                    "unscaled infeasibilities\n",
+                    num_unscaled_primal_infeasibility,
+                    solution_params.max_primal_infeasibility,
+                    solution_params.sum_primal_infeasibility,
+                    num_unscaled_dual_infeasibility,
+                    solution_params.max_dual_infeasibility,
+                    solution_params.sum_dual_infeasibility);
+        assert(num_unscaled_primal_infeasibility == 0 &&
+               num_unscaled_dual_infeasibility == 0);
+        return HighsStatus::kError;
+      }
+    }
+    //    highs_model_object.solution_ = ekk_instance.getSolution();
+    //    if (highs_model_object.scale_.is_scaled)
+    //      unscaleSolution(highs_model_object.solution_,
+    //      highs_model_object.scale_);
     highs_model_object.basis_ = ekk_instance.getHighsBasis();
   }
   return return_status;
