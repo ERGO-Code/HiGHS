@@ -3080,7 +3080,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
               if (std::abs(std::round(rhs2) - rhs2) <=
                   mipsolver->mipdata_->epsilon) {
                 // the right hand side is integral, so we can substitute
-                // a1 * x1 = d * z
+                // x1 = d * z
+
                 // printf(
                 //    "substitute integral column x with integral column z with
                 //    " "x = %ld * z\n", d);
