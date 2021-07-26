@@ -1720,16 +1720,18 @@ void HighsCliqueTable::cleanupFixed(HighsDomain& globaldom) {
 
 HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
   assert(stack.empty());
-  HighsInt numimplics = 0;
+  // first count all cliques as one implication, so that cliques of size two
+  // are accounted for already
+  HighsInt numimplics = numcliquesvar[CliqueVar(col, 0).index()] +
+                        numcliquesvar[CliqueVar(col, 1).index()];
 
+  // now loop over cliques larger than size two and add the cliquelength - 1 as
+  // implication but subtract 1 more as each clique is already counted as one
+  // implication
   if (cliquesetroot[CliqueVar(col, 1).index()] != -1)
     stack.emplace_back(cliquesetroot[CliqueVar(col, 1).index()]);
   if (cliquesetroot[CliqueVar(col, 0).index()] != -1)
     stack.emplace_back(cliquesetroot[CliqueVar(col, 0).index()]);
-  if (sizeTwoCliquesetRoot[CliqueVar(col, 1).index()] != -1)
-    stack.emplace_back(sizeTwoCliquesetRoot[CliqueVar(col, 1).index()]);
-  if (sizeTwoCliquesetRoot[CliqueVar(col, 0).index()] != -1)
-    stack.emplace_back(sizeTwoCliquesetRoot[CliqueVar(col, 0).index()]);
 
   while (!stack.empty()) {
     HighsInt node = stack.back();
@@ -1742,8 +1744,7 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
     HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
                         cliques[cliquesets[node].cliqueid].start - 1;
     nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
-
-    numimplics += nimplics;
+    numimplics += nimplics - 1;
   }
 
   return numimplics;
@@ -1751,26 +1752,25 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
 
 HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
   assert(stack.empty());
-  HighsInt numimplics = 0;
+  HighsInt numimplics = numcliquesvar[CliqueVar(col, val).index()];
 
-  if (cliquesetroot[CliqueVar(col, val).index()] != -1)
+  if (cliquesetroot[CliqueVar(col, val).index()] != -1) {
     stack.emplace_back(cliquesetroot[CliqueVar(col, val).index()]);
-  if (sizeTwoCliquesetRoot[CliqueVar(col, val).index()] != -1)
-    stack.emplace_back(sizeTwoCliquesetRoot[CliqueVar(col, val).index()]);
 
-  while (!stack.empty()) {
-    HighsInt node = stack.back();
-    stack.pop_back();
+    while (!stack.empty()) {
+      HighsInt node = stack.back();
+      stack.pop_back();
 
-    if (cliquesets[node].left != -1) stack.emplace_back(cliquesets[node].left);
-    if (cliquesets[node].right != -1)
-      stack.emplace_back(cliquesets[node].right);
+      if (cliquesets[node].left != -1)
+        stack.emplace_back(cliquesets[node].left);
+      if (cliquesets[node].right != -1)
+        stack.emplace_back(cliquesets[node].right);
 
-    HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
-                        cliques[cliquesets[node].cliqueid].start - 1;
-    nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
-
-    numimplics += nimplics;
+      HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
+                          cliques[cliquesets[node].cliqueid].start - 1;
+      nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
+      numimplics += nimplics - 1;
+    }
   }
 
   return numimplics;

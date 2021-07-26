@@ -84,6 +84,7 @@ struct HighsHashHelpers {
     u64 blo = b & 0xffffffffu;  // < 2^32
 
     // compute the different order terms with adicities 2^64, 2^32, 2^0
+
     u64 term_64 = ahi * bhi;              // < 2^58
     u64 term_32 = ahi * blo + bhi * alo;  // < 2^62
     u64 term_0 = alo * blo;               // < 2^64
@@ -98,7 +99,9 @@ struct HighsHashHelpers {
     // finally take the result modulo M61 which is computed by exploiting
     // that M61 is a mersenne prime, particularly, if a * b = q * 2^61 + r
     // then a * b = (q + r) (mod 2^61 - 1)
+
     u64 result = (ab0 & M61()) + ab61;
+
     if (result >= M61()) result -= M61();
     return result;
   }
