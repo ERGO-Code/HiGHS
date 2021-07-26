@@ -89,18 +89,16 @@ struct HighsHashHelpers {
     u64 term_0 = alo * blo;               // < 2^64
 
     // now extract the upper 61 and the lower 61 bits of the result a * b
-    u64 ab61 = (term_64 << 3) + (term_32 >> 29) + (term_0 >> 61);
     u64 ab0 = ((term_0 & M61()) + ((term_32 & M29()) << 32));
+    u64 ab61 = (term_64 << 3) + (term_32 >> 29) + (term_0 >> 61) + (ab0 >> 61);
 
-    // ab0 may be greater than 2^61
-    if (ab0 > M61()) ab61++;
-    ab0 &= M61();
     // ab61 may be greater than (2^61 - 1)
     if (ab61 >= M61()) ab61 -= M61();
+
     // finally take the result modulo M61 which is computed by exploiting
     // that M61 is a mersenne prime, particularly, if a * b = q * 2^61 + r
     // then a * b = (q + r) (mod 2^61 - 1)
-    u64 result = ab0 + ab61;
+    u64 result = (ab0 & M61()) + ab61;
     if (result >= M61()) result -= M61();
     return result;
   }
