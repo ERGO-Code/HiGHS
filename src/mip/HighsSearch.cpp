@@ -377,12 +377,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       localdom.changeBound(domchg);
       localdom.propagate();
 
-      if (localdom.infeasible()) orbitalFixing = false;
-
-      if (orbitalFixing) {
-        HighsInt numFix =
-            nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
-        if (numFix == 0) orbitalFixing = false;
+      if (!localdom.infeasible()) {
+        if (orbitalFixing)
+          nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+        else
+          mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
       }
 
       inferences += localdom.getDomainChangeStack().size();
@@ -535,10 +534,12 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       localdom.changeBound(domchg);
       localdom.propagate();
 
-      if (localdom.infeasible()) orbitalFixing = false;
-
-      if (orbitalFixing)
-        nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+      if (!localdom.infeasible()) {
+        if (orbitalFixing)
+          nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+        else
+          mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+      }
 
       inferences += localdom.getDomainChangeStack().size();
       if (localdom.infeasible()) {
@@ -856,6 +857,8 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
     if (currnode.stabilizerOrbits)
       currnode.stabilizerOrbits->orbitalFixing(localdom);
+    else
+      mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
   }
   if (parent != nullptr) {
     int64_t inferences = domchgstack.size() - (currnode.domgchgStackPos + 1);
@@ -1340,9 +1343,12 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
         HighsInt oldNumChangedCols = localdom.getChangedCols().size();
         localdom.propagate();
-        if (nodestack.back().stabilizerOrbits && !localdom.infeasible() &&
+        if (!localdom.infeasible() &&
             oldNumDomchgs != localdom.getNumDomainChanges()) {
-          nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+          if (nodestack.back().stabilizerOrbits)
+            nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+          else
+            mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
@@ -1390,6 +1396,10 @@ bool HighsSearch::backtrack(bool recoverBasis) {
       localdom.propagate();
       prune = localdom.infeasible();
       if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+    }
+    if (!prune) {
+      mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+      prune = localdom.infeasible();
     }
     if (!prune && passStabilizerToChildNode && currnode.stabilizerOrbits) {
       currnode.stabilizerOrbits->orbitalFixing(localdom);
@@ -1447,9 +1457,12 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
         HighsInt oldNumDomchgs = localdom.getNumDomainChanges();
         HighsInt oldNumChangedCols = localdom.getChangedCols().size();
         localdom.propagate();
-        if (nodestack.back().stabilizerOrbits && !localdom.infeasible() &&
+        if (!localdom.infeasible() &&
             oldNumDomchgs != localdom.getNumDomainChanges()) {
-          nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+          if (nodestack.back().stabilizerOrbits)
+            nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
+          else
+            mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
@@ -1504,6 +1517,10 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       localdom.propagate();
       prune = localdom.infeasible();
       if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+    }
+    if (!prune) {
+      mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+      prune = localdom.infeasible();
     }
     if (!prune && passStabilizerToChildNode && currnode.stabilizerOrbits) {
       currnode.stabilizerOrbits->orbitalFixing(localdom);

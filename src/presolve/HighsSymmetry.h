@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "lp_data/HighsLp.h"
+#include "util/HighsDisjointSets.h"
 #include "util/HighsHash.h"
 #include "util/HighsInt.h"
 
@@ -53,20 +54,24 @@ class HighsMatrixColoring {
 };
 
 class HighsDomain;
-
+struct HighsSymmetries;
 struct StabilizerOrbits {
   std::vector<HighsInt> orbitCols;
   std::vector<HighsInt> orbitStarts;
   std::vector<HighsInt> stabilizedCols;
-  const HighsInt* columnPosition;
+  const HighsSymmetries* symmetries;
 
   HighsInt orbitalFixing(HighsDomain& domain) const;
 
-  bool isStabilized(HighsInt col) const {
-    return columnPosition[col] == -1 ||
-           std::binary_search(stabilizedCols.begin(), stabilizedCols.end(),
-                              col);
-  }
+  bool isStabilized(HighsInt col) const;
+};
+
+struct HighsFullOrbitopeMatrix {
+  HighsInt rowLength;
+  HighsInt numRows;
+  std::vector<HighsInt> matrix;
+
+  HighsInt orbitalFixing(HighsDomain& domain) const;
 };
 
 struct HighsSymmetries {
@@ -76,10 +81,17 @@ struct HighsSymmetries {
   std::vector<HighsInt> orbitSize;
   std::vector<HighsInt> columnPosition;
   std::vector<HighsInt> linkCompressionStack;
+  std::vector<HighsFullOrbitopeMatrix> fullOrbitopes;
+  HighsHashTable<HighsInt, HighsInt> columnToFullOrbitope;
   HighsInt numPerms = 0;
+  HighsInt numGenerators = 0;
 
+  void clear();
   void mergeOrbits(HighsInt col1, HighsInt col2);
   HighsInt getOrbit(HighsInt col);
+
+  HighsInt fullOrbitopalFixing(HighsDomain& domain) const;
+
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
       const HighsDomain& localdom);
 };
@@ -182,6 +194,39 @@ class HighsSymmetryDetection {
   }
 
   bool isFromBinaryColumn(HighsInt vertex) const;
+
+  struct ComponentData {
+    HighsDisjointSets<> components;
+    std::vector<HighsInt> componentStarts;
+    std::vector<HighsInt> componentSets;
+    std::vector<HighsInt> componentNumOrbits;
+    std::vector<HighsInt> componentNumber;
+    std::vector<HighsInt> permComponentStarts;
+    std::vector<HighsInt> permComponents;
+    std::vector<HighsInt> firstUnfixed;
+    std::vector<HighsInt> numUnfixed;
+
+    HighsInt getComponentByIndex(HighsInt compIndex) const {
+      return componentNumber[compIndex];
+    }
+    HighsInt numComponents() const { return componentStarts.size() - 1; }
+    HighsInt componentSize(HighsInt component) const {
+      return componentStarts[component + 1] - componentStarts[component];
+    }
+
+    HighsInt getVertexComponent(HighsInt vertexPosition) {
+      return components.getSet(vertexPosition);
+    }
+
+    HighsInt getPermuationComponent(HighsInt permIndex) {
+      return components.getSet(firstUnfixed[permIndex]);
+    }
+  };
+
+  ComponentData computeComponentData(const HighsSymmetries& symmetries);
+
+  bool isFullOrbitope(const ComponentData& componentData, HighsInt component,
+                      HighsSymmetries& symmetries);
 
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);
