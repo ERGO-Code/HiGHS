@@ -1742,8 +1742,9 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col) {
       stack.emplace_back(cliquesets[node].right);
 
     HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
-                        cliques[cliquesets[node].cliqueid].start - 2;
-    numimplics += nimplics;
+                        cliques[cliquesets[node].cliqueid].start - 1;
+    nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
+    numimplics += nimplics - 1;
   }
 
   return numimplics;
@@ -1766,8 +1767,9 @@ HighsInt HighsCliqueTable::getNumImplications(HighsInt col, bool val) {
         stack.emplace_back(cliquesets[node].right);
 
       HighsInt nimplics = cliques[cliquesets[node].cliqueid].end -
-                          cliques[cliquesets[node].cliqueid].start - 2;
-      numimplics += nimplics;
+                          cliques[cliquesets[node].cliqueid].start - 1;
+      nimplics *= (1 + cliques[cliquesets[node].cliqueid].equality);
+      numimplics += nimplics - 1;
     }
   }
 
