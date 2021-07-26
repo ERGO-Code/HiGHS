@@ -90,7 +90,8 @@ void initialiseScale(const HighsLp& lp, HighsScale& scale);
 
 void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
                     HighsScale& scale);
-void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale);
+void scaleSimplexCost(const HighsOptions& options, HighsLp& lp, double& cost_scale);
+void unscaleSimplexCost(HighsLp& lp, double cost_scale);
 bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                      HighsScale& scale);
 bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,

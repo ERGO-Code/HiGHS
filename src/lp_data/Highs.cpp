@@ -34,6 +34,7 @@
 #include "model/HighsHessianUtils.h"
 #include "presolve/ICrashX.h"
 #include "qpsolver/solver.hpp"
+#include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -272,6 +273,7 @@ HighsStatus Highs::passModel(HighsModel model) {
       hessian.clear();
     }
   }
+    
 
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
@@ -570,6 +572,7 @@ HighsStatus Highs::run() {
   // Set this so that calls to returnFromRun() can be checked
   called_return_from_run = false;
   // From here all return statements execute returnFromRun()
+  hmos_[0].scale_.cost = 1.0;  
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Initialise the HiGHS model status values
@@ -641,6 +644,7 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
 
+  scaleSimplexCost(options_, hmos_[0].lp_, hmos_[0].scale_.cost);
   // Solve the model as an LP
   //
   // Record the initial time and set the component times and postsolve
@@ -2860,6 +2864,8 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   const bool solved_as_mip =
       !options_.solver.compare(kHighsChooseString) && model_.isMip();
   if (!solved_as_mip) reportSolvedLpQpStats();
+  unscaleSimplexCost(hmos_[0].lp_, hmos_[0].scale_.cost);
+
   return returnFromHighs(return_status);
 }
 

@@ -2287,77 +2287,33 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   vector<HighsInt> col_length_k;
   col_length_k.resize(1 + max_assess_col_num_en, 0);
   bool LiDSE_candidate = true;
-  bool all_unit_nonzeros = true;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     // Check limit on number of entries in the column has not been breached
     HighsInt col_num_en = lp.a_start_[col + 1] - lp.a_start_[col];
     max_col_num_en = std::max(col_num_en, max_col_num_en);
-    if (col_num_en > max_assess_col_num_en) {
-#ifdef HiGHSDEV
-      if (LiDSE_candidate)
-        printf("Column %" HIGHSINT_FORMAT " has %" HIGHSINT_FORMAT
-               " > %" HIGHSINT_FORMAT " entries so LP is not LiDSE candidate\n",
-               col, col_num_en, max_allowed_col_num_en);
-      LiDSE_candidate = false;
-#else
-      LiDSE_candidate = false;
-      return LiDSE_candidate;
-#endif
-    } else {
-      col_length_k[col_num_en]++;
-    }
+    if (col_num_en > max_assess_col_num_en) return false;
+    col_length_k[col_num_en]++;
     for (HighsInt en = lp.a_start_[col]; en < lp.a_start_[col + 1]; en++) {
       double value = lp.a_value_[en];
       // All nonzeros must be +1 or -1
-      if (fabs(value) != 1) {
-        all_unit_nonzeros = false;
-#ifdef HiGHSDEV
-        if (LiDSE_candidate)
-          printf("Column %" HIGHSINT_FORMAT " has entry %" HIGHSINT_FORMAT
-                 " with value %g so LP is not LiDSE "
-                 "candidate\n",
-                 col, en - lp.a_start_[col], value);
-        LiDSE_candidate = false;
-#else
-        LiDSE_candidate = false;
-        return LiDSE_candidate;
-#endif
-      }
+      if (fabs(value) != 1) return false;
     }
   }
-#ifdef HiGHSDEV
-  /*
-  printf("LP has\n");
-  HighsInt to_num_en = std::min(max_assess_col_num_en, max_col_num_en);
-  for (HighsInt col_num_en = 0; col_num_en < to_num_en+1; col_num_en++)
-    printf("%7" HIGHSINT_FORMAT " columns of count %1" HIGHSINT_FORMAT "\n",
-  col_length_k[col_num_en], col_num_en);
-  */
-#endif
   double average_col_num_en = lp.a_start_[lp.num_col_];
   average_col_num_en = average_col_num_en / lp.num_col_;
   LiDSE_candidate =
       LiDSE_candidate && average_col_num_en <= max_average_col_num_en;
-  std::string logic0 = "has";
-  if (!all_unit_nonzeros) logic0 = "does not have";
   std::string logic1 = "is not";
   if (LiDSE_candidate) logic1 = "is";
   highsLogUser(log_options, HighsLogType::kInfo,
-               "LP %s %s all |entries|=1; max column count = %" HIGHSINT_FORMAT
+               "LP %s has all |entries|=1; max column count = %" HIGHSINT_FORMAT
                " (limit %" HIGHSINT_FORMAT
                "); average "
                "column count = %0.2g (limit %" HIGHSINT_FORMAT
                "): So %s a candidate for LiDSE\n",
-               lp.model_name_.c_str(), logic0.c_str(), max_col_num_en,
+               lp.model_name_.c_str(), max_col_num_en,
                max_allowed_col_num_en, average_col_num_en,
                max_average_col_num_en, logic1.c_str());
-#ifdef HiGHSDEV
-  HighsInt int_average_col_num_en = average_col_num_en;
-  printf("grep_count_distrib,%s,%" HIGHSINT_FORMAT ",%" HIGHSINT_FORMAT
-         ",%" HIGHSINT_FORMAT "\n",
-         lp.model_name_.c_str(), max_col_num_en, int_average_col_num_en,
-         LiDSE_candidate);
-#endif
   return LiDSE_candidate;
 }
 

@@ -523,7 +523,7 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
 
   // Allow a switch to/from the original scaling rules
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
-  bool allow_cost_scaling = options.allowed_simplex_cost_scale_factor > 0;
+  bool allow_cost_scaling = false;//options.allowed_simplex_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -577,14 +577,14 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
     }
   }
   // Possibly scale the costs
-  if (allow_cost_scaling) scaleCosts(options, lp, scale.cost);
+  if (allow_cost_scaling) scaleSimplexCost(options, lp, scale.cost);
 
   // If matrix is unscaled, then LP is only scaled if there is a cost scaling
   // factor
   if (!scaled_matrix) scale.is_scaled = scale.cost != 1;
 }
 
-void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
+void scaleSimplexCost(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
   // Scale the costs by no less than minAlwCostScale
   double max_allowed_cost_scale =
       pow(2.0, options.allowed_simplex_cost_scale_factor);
@@ -608,13 +608,24 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
     cost_scale = pow(2.0, floor(log(cost_scale) / ln2 + 0.5));
     cost_scale = min(cost_scale, max_allowed_cost_scale);
   }
-  if (cost_scale == 1) return;
+  if (cost_scale == 1) {
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+		 "LP cost vector not scaled down: max cost is %g\n", max_nonzero_cost);
+    return;
+  }
   // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
   // most max_allowed_cost_scale
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     lp.col_cost_[iCol] /= cost_scale;
   }
   max_nonzero_cost /= cost_scale;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+	       "LP cost vector scaled down by %g: max cost is %g\n", cost_scale, max_nonzero_cost);
+}
+
+void unscaleSimplexCost(HighsLp& lp, double cost_scale) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    lp.col_cost_[iCol] *= cost_scale;
 }
 
 bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,

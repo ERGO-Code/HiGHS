@@ -37,10 +37,6 @@
 #include "simplex/SimplexTimer.h"
 #include "util/HighsUtils.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
-
 // Single method to solve an LP with the simplex method. Solves the
 // scaled LP then analyses the unscaled solution. If it doesn't satisfy
 // the required tolerances, tolerances for the scaled LP are
