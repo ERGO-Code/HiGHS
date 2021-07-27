@@ -3475,7 +3475,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   if (options->presolve != "off") {
     if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
       highsLogUser(options->log_options, HighsLogType::kInfo,
-                  "\nPresolving model\n");
+                   "\nPresolving model\n");
 
     auto report = [&]() {
       if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
