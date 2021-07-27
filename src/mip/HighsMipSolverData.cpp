@@ -801,7 +801,7 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
 
 void HighsMipSolverData::printDisplayLine(char first) {
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  if (time - last_disptime < 5.) return;
+  if (first == ' ' && time - last_disptime < 5.) return;
 
   last_disptime = time;
 
