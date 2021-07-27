@@ -63,6 +63,20 @@ class HighsLinearSumBounds {
     this->implVarUpperSource = implVarUpperSource;
   }
 
+  void sumScaled(HighsInt sum, double scale) {
+    sumLowerOrig[sum] *= scale;
+    sumUpperOrig[sum] *= scale;
+    sumLower[sum] *= scale;
+    sumUpper[sum] *= scale;
+
+    if (scale < 0) {
+      std::swap(sumLower[sum], sumUpper[sum]);
+      std::swap(sumLowerOrig[sum], sumUpperOrig[sum]);
+      std::swap(numInfSumLower[sum], numInfSumUpper[sum]);
+      std::swap(numInfSumLowerOrig[sum], numInfSumUpperOrig[sum]);
+    }
+  }
+
   void add(HighsInt sum, HighsInt var, double coefficient);
 
   void remove(HighsInt sum, HighsInt var, double coefficient);

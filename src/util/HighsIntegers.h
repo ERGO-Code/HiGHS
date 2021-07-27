@@ -13,6 +13,7 @@
 #ifndef HIGHS_UTIL_INTEGERS_H_
 #define HIGHS_UTIL_INTEGERS_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -24,6 +25,42 @@
 
 class HighsIntegers {
  public:
+  static int64_t mod(int64_t a, int64_t m) {
+    int64_t r = a % m;
+    return r + (r < 0) * m;
+  }
+
+  static double mod(double a, double m) {
+    int64_t r = std::fmod(a, m);
+    return r + (a < 0) * m;
+  }
+
+  static int64_t modularInverse(int64_t a, int64_t m) {
+    int64_t y = 0;
+    int64_t x = 1;
+
+    if (m == 1) return 0;
+
+    a = mod(a, m);
+
+    while (a > 1) {
+      // compute quotient q = a / m and remainder r = a % m
+      int64_t q = a / m;
+      int64_t r = a - q * m;
+
+      // update (a,m) = (m,r)
+      a = m;
+      m = r;
+
+      // update x and y of extended euclidean algorithm
+      r = x - q * y;
+      x = y;
+      y = r;
+    }
+
+    return x;
+  }
+
   static int64_t gcd(int64_t a, int64_t b) {
     int64_t h;
     if (a < 0) a = -a;
