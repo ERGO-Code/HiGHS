@@ -161,13 +161,7 @@ restart:
           options_mip_->mip_pool_soft_limit)
         mipdata_->conflictPool.performAging();
 
-      if (mipdata_->dispfreq != 0) {
-        if (mipdata_->num_leaves - mipdata_->last_displeave >=
-            std::min(mipdata_->dispfreq,
-                     3 + int64_t(0.1 * mipdata_->num_leaves)))
-          mipdata_->printDisplayLine();
-      }
-
+      mipdata_->printDisplayLine();
       // printf("continue plunging due to good esitmate\n");
     }
     search.openNodesToQueue(mipdata_->nodequeue);
@@ -176,11 +170,7 @@ restart:
 
     if (limit_reached) break;
 
-    if (mipdata_->dispfreq != 0) {
-      if (mipdata_->num_leaves - mipdata_->last_displeave >=
-          std::min(mipdata_->dispfreq, 3 + int64_t(0.1 * mipdata_->num_leaves)))
-        mipdata_->printDisplayLine();
-    }
+    mipdata_->printDisplayLine();
 
     // the search datastructure should have no installed node now
     assert(!search.hasNode());
@@ -274,6 +264,8 @@ restart:
                                << nTreeRestarts);
 
       if (doRestart) {
+        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                     "\nRestarting search from the root node\n");
         mipdata_->performRestart();
         goto restart;
       }
@@ -340,12 +332,7 @@ restart:
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
 
-        if (mipdata_->dispfreq != 0) {
-          if (mipdata_->num_leaves - mipdata_->last_displeave >=
-              std::min(mipdata_->dispfreq,
-                       3 + int64_t(0.1 * mipdata_->num_leaves)))
-            mipdata_->printDisplayLine();
-        }
+        mipdata_->printDisplayLine();
         continue;
       }
 

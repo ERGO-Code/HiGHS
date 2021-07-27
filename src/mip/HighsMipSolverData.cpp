@@ -175,7 +175,6 @@ void HighsMipSolverData::init() {
   sepa_lp_iterations = 0;
   sb_lp_iterations = 0;
   num_disp_lines = 0;
-  last_displeave = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
@@ -212,6 +211,8 @@ void HighsMipSolverData::runPresolve() {
 
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
+
+  last_disptime = -kHighsInf;
 
   // transform the objective limit to the current model
   upper_limit -= mipsolver.model_->offset_;
@@ -327,6 +328,7 @@ void HighsMipSolverData::runSetup() {
   basisTransfer();
   rootlpsol.clear();
   firstlpsol.clear();
+  HighsInt numBin = 0;
 
   for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
     switch (mipsolver.variableType(i)) {
@@ -340,9 +342,34 @@ void HighsMipSolverData::runSetup() {
       case HighsVarType::kInteger:
         integer_cols.push_back(i);
         integral_cols.push_back(i);
+        numBin += ((mipsolver.model_->colLower_[i] == 0.0) &
+                   (mipsolver.model_->colUpper_[i] == 1.0));
     }
   }
   numintegercols = integer_cols.size();
+  detectSymmetries = detectSymmetries && numBin > 0;
+
+  if (numRestarts == 0) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 // clang-format off
+               "\nSolving MIP model with:\n"
+               "   %" HIGHSINT_FORMAT " rows\n"
+               "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int.)\n"
+               "   %" HIGHSINT_FORMAT " nonzeros\n\n",
+                 // clang-format on
+                 mipsolver.numRow(), mipsolver.numCol(), numBin,
+                 numintegercols - numBin, (HighsInt)implint_cols.size(),
+                 mipsolver.numNonzero());
+  } else {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "Model after restart has %" HIGHSINT_FORMAT
+                 " rows, %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT
+                 " bin., %" HIGHSINT_FORMAT " int., %" HIGHSINT_FORMAT
+                 " impl.), and %" HIGHSINT_FORMAT " nonzeros\n",
+                 mipsolver.numRow(), mipsolver.numCol(), numBin,
+                 numintegercols - numBin, (HighsInt)implint_cols.size(),
+                 mipsolver.numNonzero());
+  }
 
   heuristics.setupIntCols();
 
@@ -359,35 +386,29 @@ void HighsMipSolverData::runSetup() {
   symmetries.numPerms = 0;
 
   if (detectSymmetries) {
-    bool haveBin = false;
-    for (HighsInt i : integral_cols) {
-      if (mipsolver.model_->colLower_[i] == 0.0 &&
-          mipsolver.model_->colUpper_[i] == 1.0) {
-        haveBin = true;
-        break;
-      }
-    }
-    if (haveBin) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "(%4.1fs) Starting symmetry detection\n",
+                 mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+    HighsSymmetryDetection symDetection;
+    symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
+                                  mipsolver.options_mip_->small_matrix_value);
+    symDetection.run(symmetries);
+    if (symmetries.numPerms == 0) {
+      detectSymmetries = false;
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "(%4.1fs) Starting symmetry computation\n",
+                   "(%4.1fs) No symmetry present\n",
                    mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-      HighsSymmetryDetection symDetection;
-      symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
-                                    mipsolver.options_mip_->small_matrix_value);
-      symDetection.run(symmetries);
-      if (symmetries.numPerms == 0) {
-        detectSymmetries = false;
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) No symmetry present\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-      } else {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                     symmetries.numPerms);
-      }
+    } else {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
+                   mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                   symmetries.numPerms);
     }
   }
+
+  if (numRestarts != 0)
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "\n");
 }
 
 double HighsMipSolverData::transformNewIncumbent(
@@ -759,19 +780,60 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   return true;
 }
 
+static std::array<char, 16> convertToPrintString(int64_t val) {
+  double l = std::log10(std::max(1.0, double(val)));
+  std::array<char, 16> printString;
+  switch (int(l)) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+      std::snprintf(printString.data(), 16, "%ld", val);
+      break;
+    case 6:
+    case 7:
+    case 8:
+      std::snprintf(printString.data(), 16, "%ldk", val / 1000);
+      break;
+    default:
+      std::snprintf(printString.data(), 16, "%ldm", val / 1000000);
+  }
+
+  return printString;
+}
+
 void HighsMipSolverData::printDisplayLine(char first) {
+  double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  if (first == ' ' && time - last_disptime < 5.) return;
+
+  last_disptime = time;
+
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-        "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
-        "| %8s | %8s\n",
-        "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
-        "primal bound", "cutpool", "confl.", "gap", "explored");
+        // clang-format off
+        "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
+          "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
+        // clang-format on
+    );
+
+    //"   %7s | %10s | %10s | %10s | %10s | %-15s | %-15s | %7s | %7s "
+    //"| %8s | %8s\n",
+    //"time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
+    //"primal bound", "cutpool", "confl.", "gap", "explored");
   }
 
   ++num_disp_lines;
-  last_displeave = num_leaves;
+
+  std::array<char, 16> print_nodes = convertToPrintString(num_nodes);
+  std::array<char, 16> queue_nodes = convertToPrintString(nodequeue.numNodes());
+  std::array<char, 16> print_leaves =
+      convertToPrintString(num_leaves - num_leaves_before_run);
+
+  double explored = 100 * double(pruned_treeweight);
 
   double lb = lower_bound + offset;
   if (std::abs(lb) <= epsilon) lb = 0;
@@ -782,25 +844,36 @@ void HighsMipSolverData::printDisplayLine(char first) {
     ub = upper_bound + offset;
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
-    gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
+    gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
+  }
 
-    highsLogUser(
-        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-        " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
-        "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %7.2f%% | %7.2f%%\n",
-        first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-        nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
-        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap,
-        100 * double(pruned_treeweight));
+  std::array<char, 16> print_lp_iters =
+      convertToPrintString(total_lp_iterations);
+
+  if (upper_bound != kHighsInf) {
+    ub = upper_bound + offset;
+    if (std::abs(ub) <= epsilon) ub = 0;
+    lb = std::min(ub, lb);
+    gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
+
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 // clang-format off
+                 " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 // clang-format on
+                 first, print_nodes.data(), queue_nodes.data(),
+                 print_leaves.data(), explored, lb, ub, gap,
+                 cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
+                 conflictPool.getNumConflicts(), print_lp_iters.data(), time);
   } else {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-        " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
-        "%7" HIGHSINT_FORMAT " | %7" HIGHSINT_FORMAT " | %8.2f | %7.2f%%\n",
-        first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-        nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
-        ub, cutpool.getNumCuts(), conflictPool.getNumConflicts(), gap,
-        100 * double(pruned_treeweight));
+        // clang-format off
+        " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        // clang-format on
+        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        explored, lb, ub, gap, cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
   }
 }
 
@@ -920,10 +993,10 @@ restart:
 
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nAdding %" HIGHSINT_FORMAT
-                 " cuts to the LP after performing a restart\n",
-                 cutpool.getNumCuts());
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                "\nAdding %" HIGHSINT_FORMAT
+                " cuts to the LP after performing a restart\n",
+                cutpool.getNumCuts());
     assert(numRestarts != 0);
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);
@@ -937,12 +1010,12 @@ restart:
 #endif
     lp.addCuts(cutset);
     // solve the first root lp
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Solving root node LP relaxation\n\n");
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                "Solving root node LP relaxation\n");
   } else {
     // solve the first root lp
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nSolving root node LP relaxation\n\n");
+                 "\nSolving root node LP relaxation\n");
   }
 
   if (firstrootbasis.valid)
@@ -998,16 +1071,13 @@ restart:
   HighsInt stall = 0;
   double smoothprogress = 0.0;
   HighsInt nseparounds = 0;
-  HighsInt lastprint = -1;
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
-    if (lastprint < 0.8 * nseparounds) {
-      lastprint = nseparounds;
-      printDisplayLine();
-    }
+    printDisplayLine();
+
     if (checkLimits()) return;
 
     if (nseparounds == maxSepaRounds) break;
@@ -1102,13 +1172,12 @@ restart:
     if (separate) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
+      ++nseparounds;
+      printDisplayLine();
     }
   }
 
-  if (lastprint != nseparounds) {
-    lastprint = nseparounds;
-    printDisplayLine();
-  }
+  printDisplayLine();
 
   do {
     if (rootlpsol.empty()) break;
@@ -1128,10 +1197,7 @@ restart:
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
       ++nseparounds;
-      if (lastprint < 0.8 * nseparounds) {
-        lastprint = nseparounds;
-        printDisplayLine();
-      }
+      printDisplayLine();
     }
 
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
@@ -1149,10 +1215,8 @@ restart:
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
       ++nseparounds;
-      if (lastprint < 0.8 * nseparounds) {
-        lastprint = nseparounds;
-        printDisplayLine();
-      }
+
+      printDisplayLine();
     }
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
@@ -1181,20 +1245,14 @@ restart:
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
     ++nseparounds;
-    if (lastprint < 0.8 * nseparounds) {
-      lastprint = nseparounds;
-      printDisplayLine();
-    }
+    printDisplayLine();
   }
 
   removeFixedIndices();
   if (lp.getLpSolver().getBasis().valid) lp.removeObsoleteRows();
   rootlpsolobj = lp.getObjective();
 
-  if (lastprint != nseparounds) {
-    lastprint = nseparounds;
-    printDisplayLine();
-  }
+  printDisplayLine();
 
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip &&
@@ -1203,7 +1261,7 @@ restart:
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "%.1f%% inactive integer columns, restarting\n",
+                     "\n%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         performRestart();
@@ -1287,8 +1345,10 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Objective function is integral with scale %g\n", objintscale);
+    if (numRestarts == 0)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Objective function is integral with scale %g\n",
+                   objintscale);
   }
 }
 
