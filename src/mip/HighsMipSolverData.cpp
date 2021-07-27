@@ -175,7 +175,6 @@ void HighsMipSolverData::init() {
   sepa_lp_iterations = 0;
   sb_lp_iterations = 0;
   num_disp_lines = 0;
-  last_disptime = -kHighsInf;
   cliquesExtracted = false;
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
@@ -212,6 +211,8 @@ void HighsMipSolverData::runPresolve() {
 
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
+
+  last_disptime = -kHighsInf;
 
   // transform the objective limit to the current model
   upper_limit -= mipsolver.model_->offset_;
