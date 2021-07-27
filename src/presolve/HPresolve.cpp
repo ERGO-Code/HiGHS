@@ -1789,6 +1789,8 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     if (model->integrality_[Acol[i]] == HighsVarType::kContinuous) continue;
 
     HighsInt row = Arow[i];
+    if (postSolveStack.getOrigRowIndex(row) >= mipsolver->orig_model_->numRow_)
+      continue;
     HighsInt numInts = rowsizeInteger[row] + rowsizeImplInt[row];
     // avoid using big-M coefficients as scaling reference
     if (numInts == 1) continue;
