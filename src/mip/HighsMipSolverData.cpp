@@ -347,6 +347,7 @@ void HighsMipSolverData::runSetup() {
     }
   }
   numintegercols = integer_cols.size();
+  detectSymmetries = detectSymmetries && numBin > 0;
 
   if (numRestarts == 0) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -354,7 +355,7 @@ void HighsMipSolverData::runSetup() {
                "\nSolving MIP model with:\n"
                "   %" HIGHSINT_FORMAT " rows\n"
                "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int.)\n"
-               "   %" HIGHSINT_FORMAT " nonzeros\n",
+               "   %" HIGHSINT_FORMAT " nonzeros\n\n",
                  // clang-format on
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
@@ -364,7 +365,7 @@ void HighsMipSolverData::runSetup() {
                  "Model after restart has %" HIGHSINT_FORMAT
                  " rows, %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT
                  " bin., %" HIGHSINT_FORMAT " int., %" HIGHSINT_FORMAT
-                 " impl.), and %" HIGHSINT_FORMAT " nonzeros\n\n",
+                 " impl.), and %" HIGHSINT_FORMAT " nonzeros\n",
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
                  mipsolver.numNonzero());
@@ -385,35 +386,29 @@ void HighsMipSolverData::runSetup() {
   symmetries.numPerms = 0;
 
   if (detectSymmetries) {
-    bool haveBin = false;
-    for (HighsInt i : integral_cols) {
-      if (mipsolver.model_->colLower_[i] == 0.0 &&
-          mipsolver.model_->colUpper_[i] == 1.0) {
-        haveBin = true;
-        break;
-      }
-    }
-    if (haveBin) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "(%4.1fs) Starting symmetry detection\n",
+                 mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+    HighsSymmetryDetection symDetection;
+    symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
+                                  mipsolver.options_mip_->small_matrix_value);
+    symDetection.run(symmetries);
+    if (symmetries.numPerms == 0) {
+      detectSymmetries = false;
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\n(%4.1fs) Starting symmetry detection\n",
+                   "(%4.1fs) No symmetry present\n",
                    mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-      HighsSymmetryDetection symDetection;
-      symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
-                                    mipsolver.options_mip_->small_matrix_value);
-      symDetection.run(symmetries);
-      if (symmetries.numPerms == 0) {
-        detectSymmetries = false;
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) No symmetry present\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-      } else {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                     symmetries.numPerms);
-      }
+    } else {
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
+                   mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                   symmetries.numPerms);
     }
   }
+
+  if (numRestarts != 0)
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "\n");
 }
 
 double HighsMipSolverData::transformNewIncumbent(
