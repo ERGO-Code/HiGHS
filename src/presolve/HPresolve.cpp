@@ -1779,7 +1779,7 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 }
 
 void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
-#ifdef MIP_COLUMN_SCALING
+#ifdef HIGHS_MIP_COLUMN_SCALING
   std::vector<double> rowLogMeanIntVals(model->numRow_);
 
   // determine the maximal absolute values of integral variables in each row
@@ -1790,11 +1790,8 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     if (model->integrality_[Acol[i]] == HighsVarType::kContinuous) continue;
 
     HighsInt row = Arow[i];
-    if (postSolveStack.getOrigRowIndex(row) >= mipsolver->orig_model_->numRow_)
-      continue;
     HighsInt numInts = rowsizeInteger[row] + rowsizeImplInt[row];
-    // avoid using big-M coefficients as scaling reference
-    if (numInts == 1) continue;
+
     rowLogMeanIntVals[row] += std::log2(std::abs(Avalue[i])) / numInts;
   }
 
