@@ -804,8 +804,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |      Work      \n"
-          "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters    Time\n\n"
+        "\n        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      \n"
+          "     Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time\n\n"
         // clang-format on
     );
 
@@ -850,7 +850,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   highsLogUser(
       mipsolver.options_mip_->log_options, HighsLogType::kInfo,
       // clang-format off
-      " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %6.1fs\n",
+      " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
       // clang-format on
       first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
       explored, lb, ub, gap, cutpool.getNumCuts(),
