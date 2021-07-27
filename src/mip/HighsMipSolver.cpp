@@ -264,6 +264,8 @@ restart:
                                << nTreeRestarts);
 
       if (doRestart) {
+        highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
+                     "\nRestarting search from the root node\n\n");
         mipdata_->performRestart();
         goto restart;
       }
