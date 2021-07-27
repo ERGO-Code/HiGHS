@@ -3876,17 +3876,20 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   }
 
   if (options->presolve != "off") {
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "\nPresolving model\n");
+    if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "\nPresolving model\n");
 
     auto report = [&]() {
-      HighsInt numCol = model->numCol_ - numDeletedCols;
-      HighsInt numRow = model->numRow_ - numDeletedRows;
-      HighsInt numNonz = Avalue.size() - freeslots.size();
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-                   " cols, %" HIGHSINT_FORMAT " nonzeros\n",
-                   numRow, numCol, numNonz);
+      if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
+        HighsInt numCol = model->numCol_ - numDeletedCols;
+        HighsInt numRow = model->numRow_ - numDeletedRows;
+        HighsInt numNonz = Avalue.size() - freeslots.size();
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+                     " cols, %" HIGHSINT_FORMAT " nonzeros\n",
+                     numRow, numCol, numNonz);
+      }
     };
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
