@@ -860,17 +860,26 @@ void HighsMipSolverData::printDisplayLine(char first) {
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
     gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
-  }
 
-  highsLogUser(
-      mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-      // clang-format off
-      " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
-      // clang-format on
-      first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-      explored, lb, ub, gap, cutpool.getNumCuts(),
-      lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-      print_lp_iters.data(), time);
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 // clang-format off
+                 " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 // clang-format on
+                 first, print_nodes.data(), queue_nodes.data(),
+                 print_leaves.data(), explored, lb, ub, gap,
+                 cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
+                 conflictPool.getNumConflicts(), print_lp_iters.data(), time);
+  } else {
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+        // clang-format off
+        " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        // clang-format on
+        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        explored, lb, ub, gap, cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
+  }
 }
 
 bool HighsMipSolverData::rootSeparationRound(
