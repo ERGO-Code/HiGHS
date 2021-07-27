@@ -175,7 +175,7 @@ void HighsMipSolverData::init() {
   sepa_lp_iterations = 0;
   sb_lp_iterations = 0;
   num_disp_lines = 0;
-  last_displeave = 0;
+  last_disptime = -kHighsInf;
   cliquesExtracted = false;
   rowMatrixSet = false;
   lower_bound = -kHighsInf;
@@ -347,16 +347,18 @@ void HighsMipSolverData::runSetup() {
   }
   numintegercols = integer_cols.size();
 
-  highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-               // clang-format off
+  if (numRestarts == 0) {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 // clang-format off
                "\nSolving MIP model with:\n"
                "   %" HIGHSINT_FORMAT " rows\n"
                "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int.)\n"
                "   %" HIGHSINT_FORMAT " nonzeros\n",
-               // clang-format on
-               mipsolver.numRow(), mipsolver.numCol(), numBin,
-               numintegercols - numBin, (HighsInt)implint_cols.size(),
-               mipsolver.numNonzero());
+                 // clang-format on
+                 mipsolver.numRow(), mipsolver.numCol(), numBin,
+                 numintegercols - numBin, (HighsInt)implint_cols.size(),
+                 mipsolver.numNonzero());
+  }
 
   heuristics.setupIntCols();
 
@@ -543,7 +545,6 @@ void HighsMipSolverData::performRestart() {
       pseudocost, mipsolver.options_mip_->mip_pscost_minreliable,
       postSolveStack);
 
-  num_disp_lines = 0;
   mipsolver.pscostinit = &pscostinit;
   ++numRestarts;
   num_leaves_before_run = num_leaves;
@@ -799,6 +800,11 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
 }
 
 void HighsMipSolverData::printDisplayLine(char first) {
+  double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
+  if (time - last_disptime < 5.) return;
+
+  last_disptime = time;
+
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
     highsLogUser(
@@ -816,7 +822,6 @@ void HighsMipSolverData::printDisplayLine(char first) {
   }
 
   ++num_disp_lines;
-  last_displeave = num_leaves;
 
   std::array<char, 16> print_nodes = convertToPrintString(num_nodes);
   std::array<char, 16> queue_nodes = convertToPrintString(nodequeue.numNodes());
@@ -855,8 +860,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
       first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
       explored, lb, ub, gap, cutpool.getNumCuts(),
       lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
-      print_lp_iters.data(),
-      mipsolver.timer_.read(mipsolver.timer_.solve_clock));
+      print_lp_iters.data(), time);
 }
 
 bool HighsMipSolverData::rootSeparationRound(
@@ -975,10 +979,10 @@ restart:
 
   // add all cuts again after restart
   if (cutpool.getNumCuts() != 0) {
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "\nAdding %" HIGHSINT_FORMAT
-                 " cuts to the LP after performing a restart\n",
-                 cutpool.getNumCuts());
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                "\nAdding %" HIGHSINT_FORMAT
+                " cuts to the LP after performing a restart\n",
+                cutpool.getNumCuts());
     assert(numRestarts != 0);
     HighsCutSet cutset;
     cutpool.separateLpCutsAfterRestart(cutset);
@@ -992,8 +996,8 @@ restart:
 #endif
     lp.addCuts(cutset);
     // solve the first root lp
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Solving root node LP relaxation\n");
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                "Solving root node LP relaxation\n");
   } else {
     // solve the first root lp
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -1053,16 +1057,13 @@ restart:
   HighsInt stall = 0;
   double smoothprogress = 0.0;
   HighsInt nseparounds = 0;
-  HighsInt lastprint = -1;
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
-    if (lastprint < 0.8 * nseparounds) {
-      lastprint = nseparounds;
-      printDisplayLine();
-    }
+    printDisplayLine();
+
     if (checkLimits()) return;
 
     if (nseparounds == maxSepaRounds) break;
@@ -1157,13 +1158,12 @@ restart:
     if (separate) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
+      ++nseparounds;
+      printDisplayLine();
     }
   }
 
-  if (lastprint != nseparounds) {
-    lastprint = nseparounds;
-    printDisplayLine();
-  }
+  printDisplayLine();
 
   do {
     if (rootlpsol.empty()) break;
@@ -1183,10 +1183,7 @@ restart:
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
       ++nseparounds;
-      if (lastprint < 0.8 * nseparounds) {
-        lastprint = nseparounds;
-        printDisplayLine();
-      }
+      printDisplayLine();
     }
 
     if (upper_limit != kHighsInf && !moreHeuristicsAllowed()) break;
@@ -1204,10 +1201,8 @@ restart:
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
       ++nseparounds;
-      if (lastprint < 0.8 * nseparounds) {
-        lastprint = nseparounds;
-        printDisplayLine();
-      }
+
+      printDisplayLine();
     }
 
     if (upper_limit != kHighsInf || mipsolver.submip) break;
@@ -1236,20 +1231,14 @@ restart:
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
     ++nseparounds;
-    if (lastprint < 0.8 * nseparounds) {
-      lastprint = nseparounds;
-      printDisplayLine();
-    }
+    printDisplayLine();
   }
 
   removeFixedIndices();
   if (lp.getLpSolver().getBasis().valid) lp.removeObsoleteRows();
   rootlpsolobj = lp.getObjective();
 
-  if (lastprint != nseparounds) {
-    lastprint = nseparounds;
-    printDisplayLine();
-  }
+  printDisplayLine();
 
   if (lower_bound <= upper_limit) {
     if (!mipsolver.submip &&
@@ -1258,7 +1247,7 @@ restart:
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "%.1f%% inactive integer columns, restarting\n",
+                     "\n%.1f%% inactive integer columns, restarting\n\n",
                      fixingRate);
         maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         performRestart();
