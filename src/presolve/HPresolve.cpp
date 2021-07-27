@@ -1779,6 +1779,7 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 }
 
 void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
+#ifdef MIP_COLUMN_SCALING
   std::vector<double> rowLogMeanIntVals(model->numRow_);
 
   // determine the maximal absolute values of integral variables in each row
@@ -1834,7 +1835,7 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     if (scale == 1.0) continue;
     transformColumn(postSolveStack, i, scale, 0.0);
   }
-
+#endif
   // scale mixed integer rows so that the largest absolute coefficient of
   // continuous variables is 1.0, leave integral rows untouched
   for (HighsInt i = 0; i < model->numRow_; ++i) {
