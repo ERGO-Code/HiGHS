@@ -774,9 +774,9 @@ bool HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   return true;
 }
 
-static std::array<char, 8> convertToPrintString(int64_t val) {
+static std::array<char, 16> convertToPrintString(int64_t val) {
   double l = std::log10(std::max(1.0, double(val)));
-  std::array<char, 8> printString;
+  std::array<char, 16> printString;
   switch (int(l)) {
     case 0:
     case 1:
@@ -784,15 +784,15 @@ static std::array<char, 8> convertToPrintString(int64_t val) {
     case 3:
     case 4:
     case 5:
-      std::snprintf(printString.data(), 8, "%ld", val);
+      std::snprintf(printString.data(), 16, "%ld", val);
       break;
     case 6:
     case 7:
     case 8:
-      std::snprintf(printString.data(), 8, "%ldk", val / 1000);
+      std::snprintf(printString.data(), 16, "%ldk", val / 1000);
       break;
     default:
-      std::snprintf(printString.data(), 8, "%ldm", val / 1000000);
+      std::snprintf(printString.data(), 16, "%ldm", val / 1000000);
   }
 
   return printString;
@@ -818,9 +818,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
   ++num_disp_lines;
   last_displeave = num_leaves;
 
-  std::array<char, 8> print_nodes = convertToPrintString(num_nodes);
-  std::array<char, 8> queue_nodes = convertToPrintString(nodequeue.numNodes());
-  std::array<char, 8> print_leaves =
+  std::array<char, 16> print_nodes = convertToPrintString(num_nodes);
+  std::array<char, 16> queue_nodes = convertToPrintString(nodequeue.numNodes());
+  std::array<char, 16> print_leaves =
       convertToPrintString(num_leaves - num_leaves_before_run);
 
   double explored = 100 * double(pruned_treeweight);
@@ -837,7 +837,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
   }
 
-  std::array<char, 8> print_lp_iters =
+  std::array<char, 16> print_lp_iters =
       convertToPrintString(total_lp_iterations);
 
   if (upper_bound != kHighsInf) {
