@@ -359,6 +359,15 @@ void HighsMipSolverData::runSetup() {
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
                  mipsolver.numNonzero());
+  } else {
+    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                 "Model after restart has %" HIGHSINT_FORMAT
+                 " rows, %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT
+                 " bin., %" HIGHSINT_FORMAT " int., %" HIGHSINT_FORMAT
+                 " impl.), and %" HIGHSINT_FORMAT " nonzeros\n\n",
+                 mipsolver.numRow(), mipsolver.numCol(), numBin,
+                 numintegercols - numBin, (HighsInt)implint_cols.size(),
+                 mipsolver.numNonzero());
   }
 
   heuristics.setupIntCols();
@@ -1248,7 +1257,7 @@ restart:
       if (fixingRate >= 2.5 + 7.5 * mipsolver.submip ||
           (!mipsolver.submip && fixingRate > 0 && numRestarts == 0)) {
         highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "\n%.1f%% inactive integer columns, restarting\n\n",
+                     "\n%.1f%% inactive integer columns, restarting\n",
                      fixingRate);
         maxSepaRounds = std::min(maxSepaRounds, nseparounds);
         performRestart();
