@@ -354,21 +354,22 @@ void HighsMipSolverData::runSetup() {
                  // clang-format off
                "\nSolving MIP model with:\n"
                "   %" HIGHSINT_FORMAT " rows\n"
-               "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int.)\n"
+               "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int., %" HIGHSINT_FORMAT " continuous)\n"
                "   %" HIGHSINT_FORMAT " nonzeros\n\n",
                  // clang-format on
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
-                 mipsolver.numNonzero());
+                 (HighsInt)continuous_cols.size(), mipsolver.numNonzero());
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has %" HIGHSINT_FORMAT
                  " rows, %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT
                  " bin., %" HIGHSINT_FORMAT " int., %" HIGHSINT_FORMAT
-                 " impl.), and %" HIGHSINT_FORMAT " nonzeros\n",
+                 " impl., %" HIGHSINT_FORMAT " cont.), and %" HIGHSINT_FORMAT
+                 " nonzeros\n",
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
-                 mipsolver.numNonzero());
+                 (HighsInt)continuous_cols.size(), mipsolver.numNonzero());
   }
 
   heuristics.setupIntCols();
