@@ -1162,7 +1162,7 @@ restart:
     bool separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-    if (separate) {
+    if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
       ++nseparounds;
@@ -1185,7 +1185,7 @@ restart:
     bool separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-    if (separate) {
+    if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
@@ -1203,7 +1203,7 @@ restart:
     separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-    if (separate) {
+    if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
@@ -1233,7 +1233,7 @@ restart:
   bool separate = !domain.getChangedCols().empty();
   status = evaluateRootLp();
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
-  if (separate) {
+  if (separate && lp.scaledOptimal(status)) {
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
 

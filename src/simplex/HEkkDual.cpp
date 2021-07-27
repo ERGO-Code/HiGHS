@@ -698,6 +698,13 @@ void HEkkDual::solvePhase1() {
     }
   }
 
+  // todo @ Julian: this assert fails on miplib2017 models arki001, momentum1,
+  // and glass4 if the one about num_shift_skipped in HEkk.cpp with the other
+  // todo is commented out.
+  // A hotfix suggestion of mine was to put returns above
+  // at the cases where you set model_status = HighsModelStatus::kSolveError. I
+  // think this error can lead to infinite looping, or at least plays a part in
+  // some of the cases where the simplex gets stuck infinitely.
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
          solve_phase == kSolvePhaseExit);
   if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {
