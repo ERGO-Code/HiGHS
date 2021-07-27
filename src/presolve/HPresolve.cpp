@@ -1779,62 +1779,6 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 }
 
 void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
-#ifdef HIGHS_MIP_COLUMN_SCALING
-  std::vector<double> rowLogMeanIntVals(model->numRow_);
-
-  // determine the maximal absolute values of integral variables in each row
-  HighsInt numNnz = Avalue.size();
-  for (HighsInt i = 0; i < numNnz; ++i) {
-    if (Avalue[i] == 0.0) continue;
-
-    if (model->integrality_[Acol[i]] == HighsVarType::kContinuous) continue;
-
-    HighsInt row = Arow[i];
-    HighsInt numInts = rowsizeInteger[row] + rowsizeImplInt[row];
-
-    rowLogMeanIntVals[row] += std::log2(std::abs(Avalue[i])) / numInts;
-  }
-
-  // scale continuous columns to be somewhat equal in magnitude to the largest
-  // integral coefficients of the rows in which they have a nonzero coefficient
-  // value
-  for (HighsInt i = 0; i < model->numCol_; ++i) {
-    if (colDeleted[i] || model->integrality_[i] != HighsVarType::kContinuous)
-      continue;
-
-    double logDiffAvg = 0;
-    HighsInt count = 0;
-
-    for (const HighsSliceNonzero& nonz : getColumnVector(i)) {
-      double logMeanIntVal = rowLogMeanIntVals[nonz.index()];
-      if (logMeanIntVal == 0.0) continue;
-
-      ++count;
-      logDiffAvg +=
-          (std::log2(std::exp2(logMeanIntVal) / std::abs(nonz.value())) -
-           logDiffAvg) /
-          count;
-    }
-
-    logDiffAvg = std::round(logDiffAvg);
-    if (logDiffAvg == 0.0) continue;
-
-    // minimize the squared sum of log distances to scale the continuous column
-    // close to the maximal absolute integer coefficient in its rows
-    // I.e. minimize over x, sum_i (x - c_i)^2, where c_i is the logdistance for
-    // the ith constraint. differentiating sum_i (x - c_i)^2 yields   sum_i 2x-
-    // 2c_i = 2x*m - 2 sum_i c_i setting the derivative to zero yields x = (1/m)
-    // * sum_i c_i, i.e. the arithmetic mean of log distances.
-    double scale =
-        std::min(std::exp2(logDiffAvg),
-                 std::exp2(std::round(4 + std::log2(model->colUpper_[i] -
-                                                    model->colLower_[i]))));
-    if (scale == 1.0) continue;
-    transformColumn(postSolveStack, i, scale, 0.0);
-  }
-#endif
-  // scale mixed integer rows so that the largest absolute coefficient of
-  // continuous variables is 1.0, leave integral rows untouched
   for (HighsInt i = 0; i < model->numRow_; ++i) {
     if (rowDeleted[i] || rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i])
       continue;
@@ -1861,6 +1805,22 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     if (model->rowUpper_[i] == kHighsInf) scale = -scale;
 
     scaleStoredRow(i, scale);
+  }
+
+  for (HighsInt i = 0; i < model->numCol_; ++i) {
+    if (colDeleted[i] || model->integrality_[i] != HighsVarType::kContinuous)
+      continue;
+
+    double maxAbsVal = 0;
+
+    for (const HighsSliceNonzero& nonz : getColumnVector(i)) {
+      maxAbsVal = std::max(std::abs(nonz.value()), maxAbsVal);
+    }
+
+    double scale = std::exp2(std::round(-std::log2(maxAbsVal)));
+    if (scale == 1.0) continue;
+
+    transformColumn(postSolveStack, i, scale, 0.0);
   }
 }
 
