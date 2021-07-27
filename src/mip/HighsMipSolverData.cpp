@@ -383,7 +383,7 @@ void HighsMipSolverData::runSetup() {
     }
     if (haveBin) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\n(%4.1fs) Starting symmetry computation\n",
+                   "\n(%4.1fs) Starting symmetry detection\n",
                    mipsolver.timer_.read(mipsolver.timer_.solve_clock));
       HighsSymmetryDetection symDetection;
       symDetection.loadModelAsGraph(mipsolver.mipdata_->presolvedModel,
