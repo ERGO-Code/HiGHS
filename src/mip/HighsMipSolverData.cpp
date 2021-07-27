@@ -1332,8 +1332,10 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "Objective function is integral with scale %g\n", objintscale);
+    if (numRestarts == 0)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "Objective function is integral with scale %g\n",
+                   objintscale);
   }
 }
 
