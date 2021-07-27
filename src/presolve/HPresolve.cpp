@@ -1806,12 +1806,12 @@ void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
     HighsInt count = 0;
 
     for (const HighsSliceNonzero& nonz : getColumnVector(i)) {
-      double maxAbsIntVal = rowLogMeanIntVals[nonz.index()];
-      if (maxAbsIntVal == 0.0) continue;
+      double logMeanIntVal = rowLogMeanIntVals[nonz.index()];
+      if (logMeanIntVal == 0.0) continue;
 
       ++count;
       logDiffAvg +=
-          (std::log2(std::exp2(maxAbsIntVal) / std::abs(nonz.value())) -
+          (std::log2(std::exp2(logMeanIntVal) / std::abs(nonz.value())) -
            logDiffAvg) /
           count;
     }
