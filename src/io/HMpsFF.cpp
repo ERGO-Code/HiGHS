@@ -820,6 +820,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
 
 HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
                                      std::ifstream& file) {
+  HighsInt numWarnings = 0;
   std::string strline, word;
 
   HighsInt num_mi = 0;
@@ -957,10 +958,21 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
 
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
-      highsLogUser(
-          log_options, HighsLogType::kWarning,
-          "BOUNDS section contains col %s not in COLS section: ignored\n",
-          marker.c_str());
+      if (numWarnings < 10) {
+        ++numWarnings;
+        if (numWarnings == 10) {
+          highsLogUser(
+              log_options, HighsLogType::kWarning,
+              "BOUNDS section contains col %s not in COLS section: "
+              "ignored\nFurther warnings of this type are not printed\n",
+              marker.c_str());
+        } else {
+          highsLogUser(
+              log_options, HighsLogType::kWarning,
+              "BOUNDS section contains col %s not in COLS section: ignored\n",
+              marker.c_str());
+        }
+      }
       continue;
     };
 

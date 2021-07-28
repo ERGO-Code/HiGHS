@@ -38,28 +38,33 @@ void HighsPrimalHeuristics::setupIntCols() {
   intcols = mipsolver.mipdata_->integer_cols;
 
   std::sort(intcols.begin(), intcols.end(), [&](HighsInt c1, HighsInt c2) {
-    HighsInt uplocks1 = mipsolver.mipdata_->uplocks[c1];
-    HighsInt downlocks1 = mipsolver.mipdata_->downlocks[c1];
+    double lockScore1 =
+        (mipsolver.mipdata_->feastol + mipsolver.mipdata_->uplocks[c1]) *
+        (mipsolver.mipdata_->feastol + mipsolver.mipdata_->downlocks[c1]);
 
-    HighsInt cliqueImplicsUp1 =
-        mipsolver.mipdata_->cliquetable.getNumImplications(c1, 1);
-    HighsInt cliqueImplicsDown1 =
-        mipsolver.mipdata_->cliquetable.getNumImplications(c1, 0);
+    double lockScore2 =
+        (mipsolver.mipdata_->feastol + mipsolver.mipdata_->uplocks[c2]) *
+        (mipsolver.mipdata_->feastol + mipsolver.mipdata_->downlocks[c2]);
 
-    HighsInt uplocks2 = mipsolver.mipdata_->uplocks[c2];
-    HighsInt downlocks2 = mipsolver.mipdata_->downlocks[c2];
+    if (lockScore1 > lockScore2) return true;
+    if (lockScore2 > lockScore1) return false;
 
-    HighsInt cliqueImplicsUp2 =
-        mipsolver.mipdata_->cliquetable.getNumImplications(c2, 1);
-    HighsInt cliqueImplicsDown2 =
-        mipsolver.mipdata_->cliquetable.getNumImplications(c2, 0);
+    double cliqueScore1 =
+        (mipsolver.mipdata_->feastol +
+         mipsolver.mipdata_->cliquetable.getNumImplications(c1, 1)) *
+        (mipsolver.mipdata_->feastol +
+         mipsolver.mipdata_->cliquetable.getNumImplications(c1, 0));
 
-    return std::make_tuple(uplocks1 * downlocks1,
-                           cliqueImplicsUp1 * cliqueImplicsDown1,
-                           HighsHashHelpers::hash(uint64_t(c1)), c1) >
-           std::make_tuple(uplocks2 * downlocks2,
-                           cliqueImplicsUp2 * cliqueImplicsDown2,
-                           HighsHashHelpers::hash(uint64_t(c2)), c2);
+    double cliqueScore2 =
+        (mipsolver.mipdata_->feastol +
+         mipsolver.mipdata_->cliquetable.getNumImplications(c2, 1)) *
+        (mipsolver.mipdata_->feastol +
+         mipsolver.mipdata_->cliquetable.getNumImplications(c2, 0));
+
+    return std::make_tuple(cliqueScore1, HighsHashHelpers::hash(uint64_t(c1)),
+                           c1) >
+           std::make_tuple(cliqueScore2, HighsHashHelpers::hash(uint64_t(c2)),
+                           c2);
   });
 }
 
@@ -1077,19 +1082,21 @@ void HighsPrimalHeuristics::centralRounding() {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.mipdata_->domain.col_lower_[i] ==
-          mipsolver.mipdata_->domain.col_upper_[i])
-        continue;
-      if (sol[i] <=
-          mipsolver.model_->col_lower_[i] + mipsolver.mipdata_->feastol) {
+      double boundRange = mipsolver.mipdata_->domain.col_upper_[i] -
+                          mipsolver.mipdata_->domain.col_lower_[i];
+      if (boundRange == 0.0) continue;
+
+      double tolerance =
+          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+
+      if (sol[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kUpper, i, mipsolver.model_->col_lower_[i],
             HighsDomain::Reason::unspecified());
         if (mipsolver.mipdata_->domain.infeasible()) return;
         ++nfixed;
         if (mipsolver.variableType(i) == HighsVarType::kInteger) ++nintfixed;
-      } else if (sol[i] >= mipsolver.model_->col_upper_[i] -
-                               mipsolver.mipdata_->feastol) {
+      } else if (sol[i] >= mipsolver.model_->col_upper_[i] - tolerance) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kLower, i, mipsolver.model_->col_upper_[i],
             HighsDomain::Reason::unspecified());
