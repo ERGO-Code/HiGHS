@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <numeric>
 
+#include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
 #include "util/HighsDisjointSets.h"
 
@@ -119,8 +120,8 @@ void HighsSymmetries::clear() {
   orbitSize.clear();
   columnPosition.clear();
   linkCompressionStack.clear();
-  columnToFullOrbitope.clear();
-  fullOrbitopes.clear();
+  columnToOrbitope.clear();
+  orbitopes.clear();
   numPerms = 0;
   numGenerators = 0;
 }
@@ -165,21 +166,23 @@ HighsInt HighsSymmetries::getOrbit(HighsInt col) {
   return orbit;
 }
 
-HighsInt HighsSymmetries::fullOrbitopalFixing(HighsDomain& domain) const {
-  if (columnToFullOrbitope.size() == 0 || domain.getBranchDepth() == 0)
-    return 0;
+HighsInt HighsSymmetries::propagateOrbitopes(HighsDomain& domain) const {
+  if (columnToOrbitope.size() == 0 || domain.getBranchDepth() == 0) return 0;
 
   std::set<HighsInt> propagationOrbitopes;
   const auto& domchgstack = domain.getDomainChangeStack();
   for (HighsInt pos : domain.getBranchingPositions()) {
-    const HighsInt* orbitope =
-        columnToFullOrbitope.find(domchgstack[pos].column);
+    const HighsInt* orbitope = columnToOrbitope.find(domchgstack[pos].column);
     if (orbitope) propagationOrbitopes.insert(*orbitope);
+  }
+
+  for (HighsInt i = 0; i < (HighsInt)orbitopes.size(); ++i) {
+    if (orbitopes[i].numSetPackingRows != 0) propagationOrbitopes.insert(i);
   }
 
   HighsInt numFixed = 0;
   for (HighsInt i : propagationOrbitopes) {
-    numFixed += fullOrbitopes[i].orbitalFixing(domain);
+    numFixed += orbitopes[i].orbitalFixing(domain);
     if (domain.infeasible()) break;
   }
 
@@ -274,7 +277,7 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
 }
 
 HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
-  HighsInt numFixed = symmetries->fullOrbitopalFixing(domain);
+  HighsInt numFixed = symmetries->propagateOrbitopes(domain);
   if (domain.infeasible() || orbitCols.empty()) return numFixed;
 
   HighsInt numOrbits = orbitStarts.size() - 1;
@@ -328,46 +331,90 @@ bool StabilizerOrbits::isStabilized(HighsInt col) const {
          std::binary_search(stabilizedCols.begin(), stabilizedCols.end(), col);
 }
 
-HighsInt HighsFullOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
-  std::vector<int8_t> Mminimal(matrix.size(), -1);
-  std::vector<int8_t> Mmaximal(matrix.size(), -1);
+void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
+                                                HighsDomain& domain) {
+  HighsHashTable<HighsInt, HighsInt> columnToRow;
 
-  const auto& domchgReason = domain.getDomainChangeReason();
-  std::vector<HighsInt> rowOrder(numRows, kHighsIInf);
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numRows; ++i) {
-      assert(i * rowLength + j < (HighsInt)matrix.size());
-      HighsInt colij = matrix[i + j * numRows];
-      assert(colij >= 0 && colij < domain.colLower_.size());
-      if (domain.colLower_[colij] == 1.0) {
-        HighsInt pos;
-        domain.getColLowerPos(colij, kHighsIInf, pos);
-
-        if (pos != -1 &&
-            domchgReason[pos].type == HighsDomain::Reason::kBranching)
-          rowOrder[i] = std::min(rowOrder[i], pos);
-      } else if (domain.colUpper_[colij] == 0.0) {
-        HighsInt pos;
-        domain.getColUpperPos(colij, kHighsIInf, pos);
-        if (pos != -1 &&
-            domchgReason[pos].type == HighsDomain::Reason::kBranching)
-          rowOrder[i] = std::min(rowOrder[i], pos);
-      }
+      columnToRow.insert(entry(i, j), i);
     }
   }
 
-  std::vector<HighsInt> rows(numRows);
-  std::iota(rows.begin(), rows.end(), 0);
-  rows.erase(
-      std::remove_if(rows.begin(), rows.end(),
-                     [&](HighsInt r) { return rowOrder[r] == kHighsIInf; }),
-      rows.end());
-  if (rows.empty()) return 0;
-  std::sort(rows.begin(), rows.end(), [&](HighsInt r1, HighsInt r2) {
-    return rowOrder[r1] < rowOrder[r2];
-  });
+  rowIsSetPacking.assign(numRows, -1);
+  numSetPackingRows = 0;
+
+  for (HighsInt j = 1; j < rowLength; ++j) {
+    HighsInt* colj1 = &entry(0, j);
+
+    for (HighsInt j0 = 0; j0 < j; ++j0) {
+      HighsInt* colj0 = &entry(0, j0);
+
+      for (HighsInt i = 0; i < numRows; ++i) {
+        if (rowIsSetPacking[i] != -1) continue;
+
+        HighsInt xj0 = colj0[i];
+        HighsInt xj1 = colj1[i];
+
+        auto commonClique = cliquetable.findCommonClique({xj0, 1}, {xj1, 1});
+
+        if (commonClique.first == nullptr) {
+          rowIsSetPacking[i] = false;
+          continue;
+        }
+
+        HighsInt overlap = 0;
+
+        for (HighsInt k = 0; k < commonClique.second; ++k) {
+          if (commonClique.first[k].val == 0) continue;
+
+          HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
+          if (cliqueColRow && *cliqueColRow == i) ++overlap;
+        }
+
+        if (overlap == rowLength) {
+          rowIsSetPacking[i] = true;
+          ++numSetPackingRows;
+          if (numSetPackingRows == numRows) break;
+        }
+      }
+
+      if (numSetPackingRows == numRows) break;
+    }
+
+    if (numSetPackingRows == numRows) break;
+  }
+
+  if (numSetPackingRows != 0) {
+    HighsInt numFixed = 0;
+    HighsInt numStaticRows = std::min(rowLength, numSetPackingRows);
+    HighsInt k = 0;
+    for (HighsInt i = 0; i < numRows; ++i) {
+      if (rowIsSetPacking[i]) {
+        for (HighsInt j = k + 1; j < rowLength; ++j) {
+          domain.changeBound(HighsBoundType::kUpper, entry(i, j), 0.0,
+                             HighsDomain::Reason::unspecified());
+        }
+
+        ++k;
+        if (k == numStaticRows) break;
+      }
+    }
+  }
+}
+
+HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
+    const std::vector<HighsInt>& rows, HighsDomain& domain) const {
+  return orbitalFixingForFullOrbitope(rows, domain);
+}
+
+HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
+    const std::vector<HighsInt>& rows, HighsDomain& domain) const {
+  std::vector<int8_t> Mminimal(matrix.size(), -1);
+  std::vector<int8_t> Mmaximal(matrix.size(), -1);
 
   HighsInt numDynamicRows = rows.size();
+
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numDynamicRows; ++i) {
       HighsInt r = rows[i];
@@ -489,7 +536,7 @@ HighsInt HighsFullOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
         domain.changeBound(HighsBoundType::kLower, colrj, 1.0,
                            HighsDomain::Reason::unspecified());
       else
-        domain.changeBound(HighsBoundType::kUpper, colrj, 1.0,
+        domain.changeBound(HighsBoundType::kUpper, colrj, 0.0,
                            HighsDomain::Reason::unspecified());
       if (domain.infeasible()) break;
     }
@@ -499,6 +546,82 @@ HighsInt HighsFullOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
   if (!domain.infeasible()) domain.propagate();
 
   return numFixed;
+}
+
+HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
+  const auto& domchgReason = domain.getDomainChangeReason();
+  std::vector<HighsInt> rowOrder(numRows, kHighsIInf);
+
+  HighsInt numStaticRows = 0;
+  std::vector<HighsInt> rows(numRows);
+
+  if (numSetPackingRows != 0) {
+    // we we have rows that have a packing structure we fix a static order
+    // for up to numCol many rows with such structure. The set packing orbitope
+    // propagation can then fix the upper triangle in those rows immediately
+    HighsInt maxNumStaticRows = std::min(numSetPackingRows, rowLength);
+    for (HighsInt i = 0; i < numRows; ++i) {
+      if (rowIsSetPacking[i]) {
+        rows[numStaticRows++] = i;
+
+        if (!upperTriangleFixed) {
+          for (HighsInt j = i + 1; j < rowLength; ++j) {
+            domain.changeBound(HighsBoundType::kUpper, entry(i, j), 0.0,
+                               HighsDomain::Reason::unspecified());
+          }
+        }
+        if (numStaticRows == maxNumStaticRows) break;
+      }
+    }
+  }
+
+  for (HighsInt j = 0; j < rowLength; ++j) {
+    for (HighsInt i = 0; i < numRows; ++i) {
+      assert(i * rowLength + j < (HighsInt)matrix.size());
+      HighsInt colij = matrix[i + j * numRows];
+      assert(colij >= 0 && colij < domain.colLower_.size());
+      if (domain.colLower_[colij] == 1.0) {
+        HighsInt pos;
+        domain.getColLowerPos(colij, kHighsIInf, pos);
+
+        if (pos != -1 &&
+            domchgReason[pos].type == HighsDomain::Reason::kBranching)
+          rowOrder[i] = std::min(rowOrder[i], pos);
+      } else if (domain.colUpper_[colij] == 0.0) {
+        HighsInt pos;
+        domain.getColUpperPos(colij, kHighsIInf, pos);
+        if (pos != -1 &&
+            domchgReason[pos].type == HighsDomain::Reason::kBranching)
+          rowOrder[i] = std::min(rowOrder[i], pos);
+      }
+    }
+  }
+
+  std::iota(rows.begin() + numStaticRows, rows.end(), 0);
+  rows.erase(
+      std::remove_if(rows.begin() + numStaticRows, rows.end(),
+                     [&](HighsInt r) { return rowOrder[r] == kHighsIInf; }),
+      rows.end());
+  if (rows.empty()) return 0;
+  std::sort(
+      rows.begin() + numStaticRows, rows.end(),
+      [&](HighsInt r1, HighsInt r2) { return rowOrder[r1] < rowOrder[r2]; });
+
+  // check if the dynamic rows retain the set packing structure to determine
+  // whether we can use the fixing algorithm for packing orbitopes
+  HighsInt numDynamicRows = rows.size();
+  bool isPacking = true;
+  for (HighsInt i = numStaticRows; i < numDynamicRows; ++i) {
+    if (!rowIsSetPacking[i]) {
+      isPacking = false;
+      break;
+    }
+  }
+
+  if (isPacking)
+    return orbitalFixingForFullOrbitope(rows, domain);
+  else
+    return orbitalFixingForPackingOrbitope(rows, domain);
 }
 
 void HighsSymmetryDetection::initializeGroundSet() {
@@ -1291,12 +1414,13 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
 
   // set up the first two columns of the orbitope matrix based on the first
   // permutation.
-  HighsFullOrbitopeMatrix orbitopeMatrix;
+  HighsOrbitopeMatrix orbitopeMatrix;
+  orbitopeMatrix.upperTriangleFixed = false;
   orbitopeMatrix.matrix.resize(componentSize, -1);
   orbitopeMatrix.numRows = orbitopeNumRows;
   orbitopeMatrix.rowLength = orbitopeOrbitSize;
   assert(componentSize == orbitopeMatrix.numRows * orbitopeMatrix.rowLength);
-  HighsInt orbitopeIndex = symmetries.fullOrbitopes.size();
+  HighsInt orbitopeIndex = symmetries.orbitopes.size();
 
   const HighsInt* perm = symmetries.permutations.data() + p0 * numActiveCols;
   HighsHashTable<HighsInt> colSet;
@@ -1375,10 +1499,9 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   }
 
   for (HighsInt col : orbitopeMatrix.matrix)
-    symmetries.columnToFullOrbitope.insert(col,
-                                           symmetries.fullOrbitopes.size());
+    symmetries.columnToOrbitope.insert(col, symmetries.orbitopes.size());
 
-  symmetries.fullOrbitopes.emplace_back(std::move(orbitopeMatrix));
+  symmetries.orbitopes.emplace_back(std::move(orbitopeMatrix));
 
   // printf("component %d is full orbitope: size %d and %d orbits\n", component,
   //        componentSize, componentData.componentNumOrbits[component]);
@@ -1540,7 +1663,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
       HighsInt* perm = symmetries.permutations.data() + p * numActiveCols;
       for (HighsInt i = 0; i < numActiveCols; ++i) {
         if (perm[i] != vertexGroundSet[i] &&
-            symmetries.columnToFullOrbitope.find(perm[i])) {
+            symmetries.columnToOrbitope.find(perm[i])) {
           deletedPerms.insert(p);
           break;
         }
@@ -1551,7 +1674,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
     HighsInt numFixed = 0;
     for (HighsInt i = 0; i < numActiveCols; ++i) {
       if (orbitSize[getOrbit(vertexGroundSet[i])] == 1 ||
-          symmetries.columnToFullOrbitope.find(vertexGroundSet[i])) {
+          symmetries.columnToOrbitope.find(vertexGroundSet[i])) {
         vertexPosition[vertexGroundSet[i]] = -1;
         vertexGroundSet[i] = -1;
         numFixed += 1;

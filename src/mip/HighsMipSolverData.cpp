@@ -397,20 +397,34 @@ void HighsMipSolverData::runSetup() {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "(%4.1fs) No symmetry present\n",
                    mipsolver.timer_.read(mipsolver.timer_.solve_clock));
-    } else if (symmetries.fullOrbitopes.size() == 0) {
+    } else if (symmetries.orbitopes.size() == 0) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "(%4.1fs) Found %" HIGHSINT_FORMAT " generators\n",
                    mipsolver.timer_.read(mipsolver.timer_.solve_clock),
                    symmetries.numGenerators);
 
     } else {
-      highsLogUser(
-          mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-          "(%4.1fs) Found %" HIGHSINT_FORMAT " generators and %" HIGHSINT_FORMAT
-          " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n",
-          mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-          symmetries.numPerms, (HighsInt)symmetries.fullOrbitopes.size(),
-          (HighsInt)symmetries.columnToFullOrbitope.size());
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "(%4.1fs) Found %" HIGHSINT_FORMAT
+                   " generators and %" HIGHSINT_FORMAT
+                   " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n",
+                   mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                   symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
+                   (HighsInt)symmetries.columnToOrbitope.size());
+
+      for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
+        orbitope.determineOrbitopeType(cliquetable, domain);
+
+      if (!domain.getChangedCols().empty()) {
+        domain.propagate();
+        if (domain.infeasible()) {
+          mipsolver.modelstatus_ = HighsModelStatus::kInfeasible;
+          lower_bound = kHighsInf;
+          pruned_treeweight = 1.0;
+          return;
+        }
+        domain.clearChangedCols();
+      }
     }
   }
 

@@ -381,7 +381,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         if (orbitalFixing)
           nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
         else
-          mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+          mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
       }
 
       inferences += localdom.getDomainChangeStack().size();
@@ -538,7 +538,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         if (orbitalFixing)
           nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
         else
-          mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+          mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
       }
 
       inferences += localdom.getDomainChangeStack().size();
@@ -858,7 +858,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
     if (currnode.stabilizerOrbits)
       currnode.stabilizerOrbits->orbitalFixing(localdom);
     else
-      mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+      mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
   }
   if (parent != nullptr) {
     int64_t inferences = domchgstack.size() - (currnode.domgchgStackPos + 1);
@@ -1348,7 +1348,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
           if (nodestack.back().stabilizerOrbits)
             nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
           else
-            mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+            mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
@@ -1398,7 +1398,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
       if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
     }
     if (!prune) {
-      mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+      mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
       prune = localdom.infeasible();
     }
     if (!prune && passStabilizerToChildNode && currnode.stabilizerOrbits) {
@@ -1462,7 +1462,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
           if (nodestack.back().stabilizerOrbits)
             nodestack.back().stabilizerOrbits->orbitalFixing(localdom);
           else
-            mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+            mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
@@ -1519,7 +1519,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
       if (prune) localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
     }
     if (!prune) {
-      mipsolver.mipdata_->symmetries.fullOrbitopalFixing(localdom);
+      mipsolver.mipdata_->symmetries.propagateOrbitopes(localdom);
       prune = localdom.infeasible();
     }
     if (!prune && passStabilizerToChildNode && currnode.stabilizerOrbits) {

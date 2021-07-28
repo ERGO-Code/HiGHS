@@ -54,6 +54,7 @@ class HighsMatrixColoring {
 };
 
 class HighsDomain;
+class HighsCliqueTable;
 struct HighsSymmetries;
 struct StabilizerOrbits {
   std::vector<HighsInt> orbitCols;
@@ -66,12 +67,40 @@ struct StabilizerOrbits {
   bool isStabilized(HighsInt col) const;
 };
 
-struct HighsFullOrbitopeMatrix {
+struct HighsOrbitopeMatrix {
+  enum Type {
+    kFull,
+    kPacking,
+  };
   HighsInt rowLength;
   HighsInt numRows;
+  HighsInt numSetPackingRows;
+  bool upperTriangleFixed;
+  std::vector<int8_t> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
+  HighsInt& entry(HighsInt i, HighsInt j) { return matrix[i + j * numRows]; }
+
+  const HighsInt& entry(HighsInt i, HighsInt j) const {
+    return matrix[i + j * numRows];
+  }
+
+  HighsInt& operator()(HighsInt i, HighsInt j) { return entry(i, j); }
+
+  const HighsInt& operator()(HighsInt i, HighsInt j) const {
+    return entry(i, j);
+  }
+
   HighsInt orbitalFixing(HighsDomain& domain) const;
+
+  void determineOrbitopeType(HighsCliqueTable& cliquetable, HighsDomain& domain);
+
+ private:
+  HighsInt orbitalFixingForFullOrbitope(const std::vector<HighsInt>& rows,
+                                        HighsDomain& domain) const;
+
+  HighsInt orbitalFixingForPackingOrbitope(const std::vector<HighsInt>& rows,
+                                           HighsDomain& domain) const;
 };
 
 struct HighsSymmetries {
@@ -81,8 +110,8 @@ struct HighsSymmetries {
   std::vector<HighsInt> orbitSize;
   std::vector<HighsInt> columnPosition;
   std::vector<HighsInt> linkCompressionStack;
-  std::vector<HighsFullOrbitopeMatrix> fullOrbitopes;
-  HighsHashTable<HighsInt, HighsInt> columnToFullOrbitope;
+  std::vector<HighsOrbitopeMatrix> orbitopes;
+  HighsHashTable<HighsInt, HighsInt> columnToOrbitope;
   HighsInt numPerms = 0;
   HighsInt numGenerators = 0;
 
@@ -90,7 +119,7 @@ struct HighsSymmetries {
   void mergeOrbits(HighsInt col1, HighsInt col2);
   HighsInt getOrbit(HighsInt col);
 
-  HighsInt fullOrbitopalFixing(HighsDomain& domain) const;
+  HighsInt propagateOrbitopes(HighsDomain& domain) const;
 
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
       const HighsDomain& localdom);
