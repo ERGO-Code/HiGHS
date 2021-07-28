@@ -817,14 +817,8 @@ static std::array<char, 16> convertToPrintString(double val) {
   std::array<char, 16> printString;
   switch (int(l)) {
     case 0:
-      std::snprintf(printString.data(), 16, "%.7g", val);
-      break;
     case 1:
-      std::snprintf(printString.data(), 16, "%.8g", val);
-      break;
     case 2:
-      std::snprintf(printString.data(), 16, "%.9g", val);
-      break;
     case 3:
       std::snprintf(printString.data(), 16, "%.10g", val);
       break;
