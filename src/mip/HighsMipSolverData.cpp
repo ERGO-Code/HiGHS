@@ -809,11 +809,6 @@ static std::array<char, 16> convertToPrintString(double val) {
   double l = std::log10(std::max(1.0, std::abs(double(val))));
   std::array<char, 16> printString;
   switch (int(l)) {
-    case 0:
-    case 1:
-    case 2:
-      std::snprintf(printString.data(), 16, "%.9g", val);
-      break;
     case 3:
       std::snprintf(printString.data(), 16, "%.10g", val);
       break;
