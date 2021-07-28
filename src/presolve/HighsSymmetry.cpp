@@ -405,7 +405,99 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
 
 HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
     const std::vector<HighsInt>& rows, HighsDomain& domain) const {
-  return orbitalFixingForFullOrbitope(rows, domain);
+  HighsInt numDynamicRows = rows.size();
+
+  // printf("propagate packing orbitope\n");
+
+  std::vector<HighsInt> firstOneInRow(numDynamicRows, -1);
+
+  for (HighsInt j = 0; j < rowLength; ++j) {
+    HighsInt end = std::min(j + 1, numDynamicRows);
+    for (HighsInt i = 0; i < end; ++i) {
+      if (firstOneInRow[i] != -1) continue;
+      HighsInt r = rows[i];
+      HighsInt colrj = entry(r, j);
+      if (domain.col_lower_[colrj] > 0.5) firstOneInRow[i] = j;
+    }
+  }
+
+  // we start looping over the rows and keep the index j at the column that
+  // is the right most possible location for a 1 entry.
+  // For the first row this position is 0.
+
+  HighsInt j = 0;
+  HighsInt numFixed = 0;
+  for (HighsInt i = 0; i < numDynamicRows; ++i) {
+    // at this position we know that the last possible position
+    // of a 1-entry in this row is j. If we have a 1 behind j
+    // the face of the orbitope intersecting the set of initial fixings is empty
+    if (firstOneInRow[i] > j) {
+      domain.markInfeasible();
+      // printf("packing orbitope propagation found infeasibility\n");
+      return numFixed;
+    }
+    HighsInt col_ij = entry(rows[i], j);
+
+    // as long as the entry is fixed to zero
+    // the frontier stays at the same column
+    // if we ecounter an entry that is not fixed to zero
+    // we need to proceed with the next column and found a frontier step
+    if (domain.col_upper_[col_ij] > 0.5) {
+      // found a frontier step. Now we first check for the current column
+      // if it can be fixed to 1.
+      // For this we check if we find an infeasibility in the case where this
+      // column was fixed to zero in which case the frontier would have stayed
+      // at j for the following rows.
+      HighsInt j0 = j;
+      for (HighsInt k = i + 1; k < numDynamicRows; ++k) {
+        if (firstOneInRow[k] > j0) {
+          domain.changeBound(HighsBoundType::kLower, col_ij, 1.0,
+                             HighsDomain::Reason::unspecified());
+          ++numFixed;
+          if (domain.infeasible()) {
+            // printf("packing orbitope propagation found infeasibility\n");
+            return numFixed;
+          }
+          break;
+        }
+
+        if (domain.col_upper_[entry(rows[k], j0)] > 0.5) {
+          ++j0;
+          if (j0 == rowLength) break;
+        }
+      }
+
+      ++j;
+      if (j == rowLength) break;
+
+      for (HighsInt k = j; k <= i; ++k) {
+        // we should have checked this row at the frontier position
+        assert(firstOneInRow[k] < j);
+
+        HighsInt col_kj = entry(rows[k], j);
+        if (domain.col_upper_[col_kj] < 0.5) continue;
+
+        domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
+                           HighsDomain::Reason::unspecified());
+        ++numFixed;
+        if (domain.infeasible()) {
+          // this can happen due to deductions from earlier fixings
+          // otherwise it would have been caughgt by the infeasibility
+          // check within the next loop that goes over i
+          // printf("packing orbitope propagation found infeasibility\n");
+          return numFixed;
+        }
+      }
+    }
+  }
+
+  if (!domain.infeasible() && numFixed) domain.propagate();
+
+  // if (numFixed)
+  //   printf("orbital fixing for packing case fixed %d columns\n", numFixed);
+
+  return numFixed;
+  // return orbitalFixingForFullOrbitope(rows, domain);
 }
 
 HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
@@ -619,9 +711,9 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
   }
 
   if (isPacking)
-    return orbitalFixingForFullOrbitope(rows, domain);
-  else
     return orbitalFixingForPackingOrbitope(rows, domain);
+  else
+    return orbitalFixingForFullOrbitope(rows, domain);
 }
 
 void HighsSymmetryDetection::initializeGroundSet() {
