@@ -648,8 +648,11 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
 
   if (numSetPackingRows != 0) {
     // we we have rows that have a packing structure we fix a static order
-    // for up to numCol many rows with such structure. The set packing orbitope
-    // propagation can then fix the upper triangle in those rows immediately
+    // for up to numCol-1 many rows with such structure. The set packing
+    // orbitope propagation can then fix the upper triangle in those rows
+    // immediately, which was already done at detection time. The remaining rows
+    // are considered in the orbitope in a dynamic manner based on the branching
+    // decisions
     HighsInt maxNumStaticRows = std::min(rowLength - 1, numSetPackingRows);
     for (HighsInt i = 0; i < numRows; ++i) {
       if (rowIsSetPacking[i]) {
