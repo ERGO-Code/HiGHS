@@ -805,6 +805,38 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
   return printString;
 }
 
+static std::array<char, 16> convertToPrintString(double val) {
+  double l = std::log10(std::max(1.0, std::abs(double(val))));
+  std::array<char, 16> printString;
+  switch (int(l)) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+      std::snprintf(printString.data(), 16, "%.6f", val);
+      break;
+    case 7:
+      std::snprintf(printString.data(), 16, "%.5f", val);
+      break;
+    case 8:
+      std::snprintf(printString.data(), 16, "%.4f", val);
+      break;
+    case 9:
+      std::snprintf(printString.data(), 16, "%.3f", val);
+      break;
+    case 10:
+      std::snprintf(printString.data(), 16, "%.2f", val);
+      break;
+    default:
+      std::snprintf(printString.data(), 16, "%.9g", val);
+  }
+
+  return printString;
+}
+
 void HighsMipSolverData::printDisplayLine(char first) {
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   if (first == ' ' && time - last_disptime < 5.) return;
@@ -843,29 +875,35 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
   std::array<char, 16> print_lp_iters =
       convertToPrintString(total_lp_iterations);
-
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
     gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
 
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
-                 // clang-format on
-                 first, print_nodes.data(), queue_nodes.data(),
-                 print_leaves.data(), explored, lb, ub, gap,
-                 cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
-                 conflictPool.getNumConflicts(), print_lp_iters.data(), time);
-  } else {
+    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> ub_string = convertToPrintString(ub);
+
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
         first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb, ub, gap, cutpool.getNumCuts(),
+        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
+  } else {
+    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> ub_string = convertToPrintString(ub);
+
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+        // clang-format off
+        " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        // clang-format on
+        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   }
