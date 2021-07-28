@@ -23,7 +23,7 @@
 #include "util/HighsUtils.h"
 
 class HighsLp;
-struct HighsScale;
+struct SimplexScale;
 struct HighsBasis;
 struct HighsSolution;
 class HighsOptions;
@@ -54,7 +54,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
-                             const HighsScale& scale);
+                             const SimplexScale& scale);
 
 HighsStatus applyScalingToLpColCost(
     const HighsLogOptions& log_options, HighsLp& lp,
@@ -245,7 +245,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
 
 // Analyse the scaling and data in a scaled LP problem
 void analyseScaledLp(const HighsLogOptions& log_options,
-                     const HighsScale& scale, const HighsLp& scaled_lp);
+                     const SimplexScale& scale, const HighsLp& scaled_lp);
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty);

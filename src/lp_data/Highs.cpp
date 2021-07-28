@@ -273,7 +273,6 @@ HighsStatus Highs::passModel(HighsModel model) {
       hessian.clear();
     }
   }
-    
 
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS

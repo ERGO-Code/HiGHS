@@ -16,6 +16,7 @@
 #ifndef SIMPLEX_SIMPLEXCONST_H_
 #define SIMPLEX_SIMPLEXCONST_H_
 
+#include "util/HighsInt.h"
 const bool kRefineSimplex = false;
 
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
@@ -57,11 +58,12 @@ enum SimplexSolvePhase {
 enum SimplexScaleStrategy {
   kSimplexScaleStrategyMin = 0,
   kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
-  kSimplexScaleStrategyHighs,                           // 1
-  kSimplexScaleStrategyHighsForced,                     // 2
-  kSimplexScaleStrategy015,                             // 3
-  kSimplexScaleStrategy0157,                            // 4
-  kSimplexScaleStrategyMax = kSimplexScaleStrategy0157
+  kSimplexScaleStrategyChoose,                          // 1
+  kSimplexScaleStrategyEquilibration,                   // 2
+  kSimplexScaleStrategyForcedEquilibration,             // 3
+  kSimplexScaleStrategyMaxValue015,                     // 4
+  kSimplexScaleStrategyMaxValue0157,                    // 5
+  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValue0157
 };
 
 enum SimplexCrashStrategy {

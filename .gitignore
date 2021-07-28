@@ -48,10 +48,11 @@ local.properties
 x64/
 build32/
 build64/
+test32/
+test64/
 [Bb]in/
 [Oo]bj/
 test/
-test64/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/

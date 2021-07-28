@@ -446,7 +446,7 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
 }
 
 HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
-                             const HighsScale& scale) {
+                             const SimplexScale& scale) {
   if (!scale.is_scaled) return HighsStatus::kOk;
   if ((HighsInt)scale.col.size() < lp.num_col_) return HighsStatus::kError;
   if ((HighsInt)scale.row.size() < lp.num_row_) return HighsStatus::kError;
@@ -1742,7 +1742,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
 }
 
 void analyseScaledLp(const HighsLogOptions& log_options,
-                     const HighsScale& scale, const HighsLp& scaled_lp) {
+                     const SimplexScale& scale, const HighsLp& scaled_lp) {
   if (!scale.is_scaled) return;
   analyseVectorValues(log_options, "Column scaling factors", scaled_lp.num_col_,
                       scale.col);
@@ -2311,9 +2311,8 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                "); average "
                "column count = %0.2g (limit %" HIGHSINT_FORMAT
                "): So %s a candidate for LiDSE\n",
-               lp.model_name_.c_str(), max_col_num_en,
-               max_allowed_col_num_en, average_col_num_en,
-               max_average_col_num_en, logic1.c_str());
+               lp.model_name_.c_str(), max_col_num_en, max_allowed_col_num_en,
+               average_col_num_en, max_average_col_num_en, logic1.c_str());
   return LiDSE_candidate;
 }
 

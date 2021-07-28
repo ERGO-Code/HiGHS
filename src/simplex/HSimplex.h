@@ -33,6 +33,9 @@ enum class LpAction {
   kBacktracking
 };
 
+void getSimplexScaling(const HighsOptions& options, const HighsLp& lp,
+                       SimplexScale& scale);
+
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
 
 void choosePriceTechnique(const HighsInt price_strategy,
@@ -68,7 +71,7 @@ void updateSimplexLpStatus(
     LpAction action              // !< Action prompting update
 );
 
-void unscaleSolution(HighsSolution& solution, const HighsScale scale);
+void unscaleSolution(HighsSolution& solution, const SimplexScale scale);
 
 HighsStatus deleteScale(const HighsLogOptions& log_options,
                         vector<double>& scale,
@@ -78,7 +81,7 @@ void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
                                 const HighsModelStatus model_status,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
-                                const HighsScale& scale,
+                                const SimplexScale& scale,
                                 HighsSolutionParams& solution_params,
                                 const bool scaled_simplex_lp = true);
 
@@ -86,19 +89,19 @@ void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
 
 // void initialiseScale(HighsModelObject& highs_model);
 
-void initialiseScale(const HighsLp& lp, HighsScale& scale);
+void initialiseScale(const HighsLp& lp, SimplexScale& scale);
 
-void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
-                    HighsScale& scale);
-void scaleSimplexCost(const HighsOptions& options, HighsLp& lp, double& cost_scale);
+void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale);
+void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
+                      double& cost_scale);
 void unscaleSimplexCost(HighsLp& lp, double cost_scale);
 bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
-                                     HighsScale& scale);
+                                     SimplexScale& scale);
 bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
-                                HighsScale& scale);
+                                SimplexScale& scale);
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
-void unscaleSimplexLp(HighsLp& lp, const HighsScale& scale);
+void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale);
 
 #endif  // SIMPLEX_HSIMPLEX_H_

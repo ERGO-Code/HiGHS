@@ -294,6 +294,7 @@ struct HighsOptionsStruct {
 
   // Advanced options
   HighsInt log_dev_level;
+  bool use_solveLpSimplex0;
   bool run_crossover;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
@@ -497,9 +498,10 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_scale_strategy",
-        "Strategy for scaling before simplex solver: off / on (0/1)", advanced,
-        &simplex_scale_strategy, kSimplexScaleStrategyMin,
-        kSimplexScaleStrategyHighsForced, kSimplexScaleStrategyMax);
+        "Simplex scaling strategy: off / choose / equilibration / forced "
+        "equilibration / max value 0 / max value 1 (0/1/2/3/4/5)",
+        advanced, &simplex_scale_strategy, kSimplexScaleStrategyMin,
+        kSimplexScaleStrategyChoose, kSimplexScaleStrategyMax);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -670,6 +672,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
         kHighsLogDevLevelMax);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "use_solveLpSimplex0", "Use the original code for use_solveLpSimplex",
+        advanced, &use_solveLpSimplex0, true);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("run_crossover",
                                        "Run the crossover routine for IPX",

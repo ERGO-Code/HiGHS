@@ -47,7 +47,7 @@ class HighsModelObject {
   HighsBasis basis_;
   HighsSolution solution_;
 
-  HighsScale scale_;
+  SimplexScale scale_;
   HEkk ekk_instance_;
 };
 

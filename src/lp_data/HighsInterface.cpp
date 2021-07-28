@@ -42,7 +42,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
 
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = highs_model_object.basis_;
-  HighsScale& scale = highs_model_object.scale_;
+  SimplexScale& scale = highs_model_object.scale_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
   HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
@@ -232,7 +232,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = highs_model_object.basis_;
-  HighsScale& scale = highs_model_object.scale_;
+  SimplexScale& scale = highs_model_object.scale_;
   HighsSimplexStatus& simplex_status = ekk_instance.status_;
   HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
@@ -1057,7 +1057,7 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = ekk_instance.lp_;
-    HighsScale& scale = highs_model_object.scale_;
+    SimplexScale& scale = highs_model_object.scale_;
     double scaledXnewValue = XnewValue * scale.row[Xrow] * scale.col[Xcol];
     changeLpMatrixCoefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
   }
@@ -1412,7 +1412,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HVector solve_vector;
   HighsInt numRow = ekk_instance.lp_.num_row_;
   HighsInt numCol = ekk_instance.lp_.num_col_;
-  HighsScale& scale = highs_model_object.scale_;
+  SimplexScale& scale = highs_model_object.scale_;
   // Set up solve vector with suitably scaled RHS
   solve_vector.setup(numRow);
   solve_vector.clear();

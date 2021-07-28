@@ -42,7 +42,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsOptions& options = ekk_instance.options_;
   const HighsLp& highs_lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = ekk_instance.lp_;
-  const HighsScale& scale = highs_model_object.scale_;
+  const SimplexScale& scale = highs_model_object.scale_;
   const HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
   bool right_size = true;

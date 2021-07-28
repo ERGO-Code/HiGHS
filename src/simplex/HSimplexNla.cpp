@@ -132,7 +132,7 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
 }
 
 void HSimplexNla::passScaleAndFactorMatrixPointers(
-    const HighsScale* scale, const HighsInt* factor_a_start,
+    const SimplexScale* scale, const HighsInt* factor_a_start,
     const HighsInt* factor_a_index, const double* factor_a_value) {
   scale_ = scale;
   factor_.setupMatrix(factor_a_start, factor_a_index, factor_a_value);

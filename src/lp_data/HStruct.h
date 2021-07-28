@@ -27,13 +27,6 @@ struct HighsIterationCounts {
   HighsInt qp = 0;
 };
 
-struct HighsScale {
-  bool is_scaled = false;
-  double cost;
-  std::vector<double> col;
-  std::vector<double> row;
-};
-
 struct HighsSolution {
   bool value_valid = false;
   bool dual_valid = false;

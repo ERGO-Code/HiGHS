@@ -18,10 +18,11 @@
 #ifndef HSIMPLEXNLA_H_
 #define HSIMPLEXNLA_H_
 
-#include "lp_data/HStruct.h"
+//#include "lp_data/HStruct.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/SimplexStruct.h"
 
 //#include <algorithm>
 
@@ -47,7 +48,7 @@ class HSimplexNla {
                           const HighsInt variable_in, const HighsInt row_out);
 
   void setPivotThreshold(const double new_pivot_threshold);
-  void passScaleAndFactorMatrixPointers(const HighsScale* scale,
+  void passScaleAndFactorMatrixPointers(const SimplexScale* scale,
                                         const HighsInt* factor_a_start,
                                         const HighsInt* factor_a_index,
                                         const double* factor_a_value);
@@ -68,7 +69,7 @@ class HSimplexNla {
 
   // Class data members
   const HighsLp* lp_;
-  const HighsScale* scale_;
+  const SimplexScale* scale_;
   HighsInt* base_index_;
   const HighsOptions* options_;
   HighsTimer* timer_;

@@ -16,7 +16,18 @@
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
 
+#include <vector>
+
+#include "lp_data/HConst.h"
 #include "simplex/SimplexConst.h"
+
+struct SimplexScale {
+  bool is_scaled = false;
+  HighsInt strategy = kSimplexScaleStrategyOff;
+  double cost;
+  std::vector<double> col;
+  std::vector<double> row;
+};
 
 struct SimplexBasis {
   // The basis for the simplex method consists of basicIndex,
@@ -33,7 +44,6 @@ struct HighsSimplexStatus {
   // Status of LP solved by the simplex method and its data
   bool initialised = false;
   bool valid = false;
-  bool scaling_tried = false;
   bool has_basis = false;   // The simplex LP has a valid simplex basis
   bool has_matrix = false;  // The HMatrix matrices are valid
   bool has_factor_arrays =

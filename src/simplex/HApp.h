@@ -43,11 +43,45 @@
 // identified which, if used, might yield an unscaled solution that
 // satisfies the required tolerances.
 //
-// It sets the HiGHS basis within highs_model_object and, if optimal,
-// the HiGHS solution, too
-HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
+// If possible, it sets the HiGHS basis and solution
+
+HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
+  printf("Calling solveLpSimplex1\n");
   HighsStatus return_status = HighsStatus::kOk;
-  //  HighsStatus call_status;
+  SimplexScale& scale = highs_model_object.scale_;
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsSimplexStatus& status = ekk_instance.status_;
+
+  // Reset the model status and solution parameters for the unscaled
+  // LP in case of premature return
+  resetModelStatusAndSolutionParams(highs_model_object);
+
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLp
+  bool positive_num_row = highs_model_object.lp_.num_row_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) {
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "solveLpSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
+        ") "
+        "number of constraints\n",
+        lp.num_row_);
+    return HighsStatus::kError;
+  }
+  // If the simplex LP isn't initialised, get its scaling factors
+  if (!status.initialised) {
+    getSimplexScaling(options, lp, scale);
+  }
+
+  return return_status;
+}
+
+HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
+  printf("Calling solveLpSimplex0\n");
+  HighsStatus return_status = HighsStatus::kOk;
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
   HighsSimplexStatus& status = ekk_instance.status_;
