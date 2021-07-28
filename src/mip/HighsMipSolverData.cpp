@@ -354,21 +354,22 @@ void HighsMipSolverData::runSetup() {
                  // clang-format off
                "\nSolving MIP model with:\n"
                "   %" HIGHSINT_FORMAT " rows\n"
-               "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int.)\n"
+               "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int., %" HIGHSINT_FORMAT " continuous)\n"
                "   %" HIGHSINT_FORMAT " nonzeros\n\n",
                  // clang-format on
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
-                 mipsolver.numNonzero());
+                 (HighsInt)continuous_cols.size(), mipsolver.numNonzero());
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has %" HIGHSINT_FORMAT
                  " rows, %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT
                  " bin., %" HIGHSINT_FORMAT " int., %" HIGHSINT_FORMAT
-                 " impl.), and %" HIGHSINT_FORMAT " nonzeros\n",
+                 " impl., %" HIGHSINT_FORMAT " cont.), and %" HIGHSINT_FORMAT
+                 " nonzeros\n",
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
-                 mipsolver.numNonzero());
+                 (HighsInt)continuous_cols.size(), mipsolver.numNonzero());
   }
 
   heuristics.setupIntCols();
@@ -804,6 +805,36 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
   return printString;
 }
 
+static std::array<char, 16> convertToPrintString(double val) {
+  double l = std::log10(std::max(1e-6, std::abs(double(val))));
+  std::array<char, 16> printString;
+  switch (int(l)) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      std::snprintf(printString.data(), 16, "%.10g", val);
+      break;
+    case 4:
+      std::snprintf(printString.data(), 16, "%.11g", val);
+      break;
+    case 5:
+      std::snprintf(printString.data(), 16, "%.12g", val);
+      break;
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+      std::snprintf(printString.data(), 16, "%.13g", val);
+      break;
+    default:
+      std::snprintf(printString.data(), 16, "%.9g", val);
+  }
+
+  return printString;
+}
+
 void HighsMipSolverData::printDisplayLine(char first) {
   double time = mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   if (first == ' ' && time - last_disptime < 5.) return;
@@ -840,38 +871,37 @@ void HighsMipSolverData::printDisplayLine(char first) {
   double ub = kHighsInf;
   double gap = kHighsInf;
 
-  if (upper_bound != kHighsInf) {
-    ub = upper_bound + offset;
-    if (std::abs(ub) <= epsilon) ub = 0;
-    lb = std::min(ub, lb);
-    gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
-  }
-
   std::array<char, 16> print_lp_iters =
       convertToPrintString(total_lp_iterations);
-
   if (upper_bound != kHighsInf) {
     ub = upper_bound + offset;
     if (std::abs(ub) <= epsilon) ub = 0;
     lb = std::min(ub, lb);
     gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
 
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 // clang-format off
-                 " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
-                 // clang-format on
-                 first, print_nodes.data(), queue_nodes.data(),
-                 print_leaves.data(), explored, lb, ub, gap,
-                 cutpool.getNumCuts(), lp.numRows() - lp.getNumModelRows(),
-                 conflictPool.getNumConflicts(), print_lp_iters.data(), time);
-  } else {
+    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> ub_string = convertToPrintString(ub);
+
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
-        " %c %7s %7s   %7s %6.2f%%   %-15.9g %-15.9g %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+                 " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %7.2f%%   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
         // clang-format on
         first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
-        explored, lb, ub, gap, cutpool.getNumCuts(),
+        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
+        lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
+        print_lp_iters.data(), time);
+  } else {
+    std::array<char, 16> lb_string = convertToPrintString(lb);
+    std::array<char, 16> ub_string = convertToPrintString(ub);
+
+    highsLogUser(
+        mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+        // clang-format off
+        " %c %7s %7s   %7s %6.2f%%   %-15s %-15s %8.2f   %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT " %6" HIGHSINT_FORMAT "   %7s %7.1fs\n",
+        // clang-format on
+        first, print_nodes.data(), queue_nodes.data(), print_leaves.data(),
+        explored, lb_string.data(), ub_string.data(), gap, cutpool.getNumCuts(),
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   }
@@ -1169,7 +1199,7 @@ restart:
     bool separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-    if (separate) {
+    if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
       ++nseparounds;
@@ -1192,7 +1222,7 @@ restart:
     bool separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-    if (separate) {
+    if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
@@ -1210,7 +1240,7 @@ restart:
     separate = !domain.getChangedCols().empty();
     status = evaluateRootLp();
     if (status == HighsLpRelaxation::Status::kInfeasible) return;
-    if (separate) {
+    if (separate && lp.scaledOptimal(status)) {
       HighsInt ncuts;
       if (rootSeparationRound(sepa, ncuts, status)) return;
 
@@ -1240,7 +1270,7 @@ restart:
   bool separate = !domain.getChangedCols().empty();
   status = evaluateRootLp();
   if (status == HighsLpRelaxation::Status::kInfeasible) return;
-  if (separate) {
+  if (separate && lp.scaledOptimal(status)) {
     HighsInt ncuts;
     if (rootSeparationRound(sepa, ncuts, status)) return;
 
