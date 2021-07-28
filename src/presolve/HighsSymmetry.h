@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "lp_data/HighsLp.h"
+#include "util/HighsDisjointSets.h"
 #include "util/HighsHash.h"
 #include "util/HighsInt.h"
 
@@ -53,20 +54,53 @@ class HighsMatrixColoring {
 };
 
 class HighsDomain;
-
+class HighsCliqueTable;
+struct HighsSymmetries;
 struct StabilizerOrbits {
   std::vector<HighsInt> orbitCols;
   std::vector<HighsInt> orbitStarts;
   std::vector<HighsInt> stabilizedCols;
-  const HighsInt* columnPosition;
+  const HighsSymmetries* symmetries;
 
   HighsInt orbitalFixing(HighsDomain& domain) const;
 
-  bool isStabilized(HighsInt col) const {
-    return columnPosition[col] == -1 ||
-           std::binary_search(stabilizedCols.begin(), stabilizedCols.end(),
-                              col);
+  bool isStabilized(HighsInt col) const;
+};
+
+struct HighsOrbitopeMatrix {
+  enum Type {
+    kFull,
+    kPacking,
+  };
+  HighsInt rowLength;
+  HighsInt numRows;
+  HighsInt numSetPackingRows;
+  bool upperTriangleFixed;
+  std::vector<int8_t> rowIsSetPacking;
+  std::vector<HighsInt> matrix;
+
+  HighsInt& entry(HighsInt i, HighsInt j) { return matrix[i + j * numRows]; }
+
+  const HighsInt& entry(HighsInt i, HighsInt j) const {
+    return matrix[i + j * numRows];
   }
+
+  HighsInt& operator()(HighsInt i, HighsInt j) { return entry(i, j); }
+
+  const HighsInt& operator()(HighsInt i, HighsInt j) const {
+    return entry(i, j);
+  }
+
+  HighsInt orbitalFixing(HighsDomain& domain) const;
+
+  void determineOrbitopeType(HighsCliqueTable& cliquetable, HighsDomain& domain);
+
+ private:
+  HighsInt orbitalFixingForFullOrbitope(const std::vector<HighsInt>& rows,
+                                        HighsDomain& domain) const;
+
+  HighsInt orbitalFixingForPackingOrbitope(const std::vector<HighsInt>& rows,
+                                           HighsDomain& domain) const;
 };
 
 struct HighsSymmetries {
@@ -76,10 +110,17 @@ struct HighsSymmetries {
   std::vector<HighsInt> orbitSize;
   std::vector<HighsInt> columnPosition;
   std::vector<HighsInt> linkCompressionStack;
+  std::vector<HighsOrbitopeMatrix> orbitopes;
+  HighsHashTable<HighsInt, HighsInt> columnToOrbitope;
   HighsInt numPerms = 0;
+  HighsInt numGenerators = 0;
 
+  void clear();
   void mergeOrbits(HighsInt col1, HighsInt col2);
   HighsInt getOrbit(HighsInt col);
+
+  HighsInt propagateOrbitopes(HighsDomain& domain) const;
+
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
       const HighsDomain& localdom);
 };
@@ -182,6 +223,39 @@ class HighsSymmetryDetection {
   }
 
   bool isFromBinaryColumn(HighsInt vertex) const;
+
+  struct ComponentData {
+    HighsDisjointSets<> components;
+    std::vector<HighsInt> componentStarts;
+    std::vector<HighsInt> componentSets;
+    std::vector<HighsInt> componentNumOrbits;
+    std::vector<HighsInt> componentNumber;
+    std::vector<HighsInt> permComponentStarts;
+    std::vector<HighsInt> permComponents;
+    std::vector<HighsInt> firstUnfixed;
+    std::vector<HighsInt> numUnfixed;
+
+    HighsInt getComponentByIndex(HighsInt compIndex) const {
+      return componentNumber[compIndex];
+    }
+    HighsInt numComponents() const { return componentStarts.size() - 1; }
+    HighsInt componentSize(HighsInt component) const {
+      return componentStarts[component + 1] - componentStarts[component];
+    }
+
+    HighsInt getVertexComponent(HighsInt vertexPosition) {
+      return components.getSet(vertexPosition);
+    }
+
+    HighsInt getPermuationComponent(HighsInt permIndex) {
+      return components.getSet(firstUnfixed[permIndex]);
+    }
+  };
+
+  ComponentData computeComponentData(const HighsSymmetries& symmetries);
+
+  bool isFullOrbitope(const ComponentData& componentData, HighsInt component,
+                      HighsSymmetries& symmetries);
 
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);

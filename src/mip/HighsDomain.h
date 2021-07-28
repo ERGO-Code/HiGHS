@@ -348,6 +348,12 @@ class HighsDomain {
 
   void computeRowActivities();
 
+  void markInfeasible(Reason reason = Reason::unspecified()) {
+    infeasible_ = true;
+    infeasible_pos = domchgstack_.size();
+    infeasible_reason = reason;
+  }
+
   bool infeasible() const { return infeasible_; }
 
   void changeBound(HighsDomainChange boundchg,
