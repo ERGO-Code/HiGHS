@@ -813,7 +813,7 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
 }
 
 static std::array<char, 16> convertToPrintString(double val) {
-  double l = std::log10(std::max(1.0, std::abs(double(val))));
+  double l = std::log10(std::max(1e-6, std::abs(double(val))));
   std::array<char, 16> printString;
   switch (int(l)) {
     case 0:
