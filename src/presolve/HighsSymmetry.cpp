@@ -387,7 +387,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
 
   if (numSetPackingRows != 0) {
     HighsInt numFixed = 0;
-    HighsInt numStaticRows = std::min(rowLength, numSetPackingRows);
+    HighsInt numStaticRows = std::min(rowLength - 1, numSetPackingRows);
     HighsInt k = 0;
     for (HighsInt i = 0; i < numRows; ++i) {
       if (rowIsSetPacking[i]) {
@@ -494,10 +494,9 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
   if (!domain.infeasible() && numFixed) domain.propagate();
 
   // if (numFixed)
-  //   printf("orbital fixing for packing case fixed %d columns\n", numFixed);
+  //  printf("orbital fixing for packing case fixed %d columns\n", numFixed);
 
   return numFixed;
-  // return orbitalFixingForFullOrbitope(rows, domain);
 }
 
 HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
@@ -651,17 +650,10 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
     // we we have rows that have a packing structure we fix a static order
     // for up to numCol many rows with such structure. The set packing orbitope
     // propagation can then fix the upper triangle in those rows immediately
-    HighsInt maxNumStaticRows = std::min(numSetPackingRows, rowLength);
+    HighsInt maxNumStaticRows = std::min(rowLength - 1, numSetPackingRows);
     for (HighsInt i = 0; i < numRows; ++i) {
       if (rowIsSetPacking[i]) {
         rows[numStaticRows++] = i;
-
-        if (!upperTriangleFixed) {
-          for (HighsInt j = i + 1; j < rowLength; ++j) {
-            domain.changeBound(HighsBoundType::kUpper, entry(i, j), 0.0,
-                               HighsDomain::Reason::unspecified());
-          }
-        }
         if (numStaticRows == maxNumStaticRows) break;
       }
     }
@@ -1507,7 +1499,6 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   // set up the first two columns of the orbitope matrix based on the first
   // permutation.
   HighsOrbitopeMatrix orbitopeMatrix;
-  orbitopeMatrix.upperTriangleFixed = false;
   orbitopeMatrix.matrix.resize(componentSize, -1);
   orbitopeMatrix.numRows = orbitopeNumRows;
   orbitopeMatrix.rowLength = orbitopeOrbitSize;

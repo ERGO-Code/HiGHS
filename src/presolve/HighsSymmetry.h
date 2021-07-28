@@ -75,7 +75,6 @@ struct HighsOrbitopeMatrix {
   HighsInt rowLength;
   HighsInt numRows;
   HighsInt numSetPackingRows;
-  bool upperTriangleFixed;
   std::vector<int8_t> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
@@ -93,7 +92,8 @@ struct HighsOrbitopeMatrix {
 
   HighsInt orbitalFixing(HighsDomain& domain) const;
 
-  void determineOrbitopeType(HighsCliqueTable& cliquetable, HighsDomain& domain);
+  void determineOrbitopeType(HighsCliqueTable& cliquetable,
+                             HighsDomain& domain);
 
  private:
   HighsInt orbitalFixingForFullOrbitope(const std::vector<HighsInt>& rows,
