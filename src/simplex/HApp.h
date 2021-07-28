@@ -45,38 +45,12 @@
 //
 // If possible, it sets the HiGHS basis and solution
 
-HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
-  printf("Calling solveLpSimplex1\n");
-  HighsStatus return_status = HighsStatus::kOk;
-  SimplexScale& scale = highs_model_object.scale_;
-  HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  HEkk& ekk_instance = highs_model_object.ekk_instance_;
-  HighsSimplexStatus& status = ekk_instance.status_;
-
-  // Reset the model status and solution parameters for the unscaled
-  // LP in case of premature return
-  resetModelStatusAndSolutionParams(highs_model_object);
-
-  // Assumes that the LP has a positive number of rows, since
-  // unconstrained LPs should be solved in solveLp
-  bool positive_num_row = highs_model_object.lp_.num_row_ > 0;
-  assert(positive_num_row);
-  if (!positive_num_row) {
-    highsLogUser(
-        options.log_options, HighsLogType::kError,
-        "solveLpSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
-        ") "
-        "number of constraints\n",
-        lp.num_row_);
-    return HighsStatus::kError;
-  }
-  // If the simplex LP isn't initialised, get its scaling factors
-  if (!status.initialised) {
-    getSimplexScaling(options, lp, scale);
-  }
-
-  return return_status;
+void recoverUnscaledIncumbentLp(const bool incumbent_lp_scaled,
+				       const bool incumbent_lp_moved,
+				       HighsLp& lp, const SimplexScale& scale,
+				       HEkk& ekk_instance) {
+  if (incumbent_lp_moved) lp = std::move(ekk_instance.lp_);
+  if (incumbent_lp_scaled) unscaleSimplexLp(lp, scale);
 }
 
 HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
@@ -128,9 +102,11 @@ HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
   highs_model_object.basis_ = ekk_instance.getHighsBasis();
 
   // Determine whether the unscaled LP has been solved
-  getUnscaledInfeasibilities(ekk_instance.options_, ekk_instance.lp_,
-                             ekk_instance.model_status_, ekk_instance.basis_,
-                             ekk_instance.info_, highs_model_object.scale_,
+  getUnscaledInfeasibilities(ekk_instance.options_,
+			     ekk_instance.lp_,
+                             ekk_instance.basis_,
+                             ekk_instance.info_,
+			     highs_model_object.scale_,
                              solution_params);
 
   HighsInt& num_unscaled_primal_infeasibility =
@@ -250,10 +226,13 @@ HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
 
       // Determine whether the unscaled LP has been solved
       const bool scaled_simplex_lp = false;
-      getUnscaledInfeasibilities(
-          ekk_instance.options_, ekk_instance.lp_, ekk_instance.model_status_,
-          ekk_instance.basis_, ekk_instance.info_, highs_model_object.scale_,
-          solution_params, scaled_simplex_lp);
+      getUnscaledInfeasibilities(ekk_instance.options_,
+				 ekk_instance.lp_, 
+				 ekk_instance.basis_,
+				 ekk_instance.info_,
+				 highs_model_object.scale_,
+				 solution_params,
+				 scaled_simplex_lp);
       if (num_unscaled_primal_infeasibility > 0) {
         solution_params.primal_solution_status = kSolutionStatusInfeasible;
       } else {
@@ -321,4 +300,190 @@ HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
   }
   return return_status;
 }
+
+HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
+  printf("Calling solveLpSimplex1\n");
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  SimplexScale& scale = highs_model_object.scale_;
+  HighsSolution& solution = highs_model_object.solution_;
+  HighsModelStatus& unscaled_model_status = highs_model_object.unscaled_model_status_;
+  HighsModelStatus& scaled_model_status = highs_model_object.scaled_model_status_;
+  HighsSolutionParams& solution_params = highs_model_object.solution_params_;
+  HighsBasis& basis = highs_model_object.basis_;
+
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsSimplexStatus& status = ekk_instance.status_;
+
+  // Reset the model status and solution parameters for the unscaled
+  // LP in case of premature return
+  resetModelStatusAndSolutionParams(highs_model_object);
+
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLp
+  bool positive_num_row = highs_model_object.lp_.num_row_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) {
+    highsLogUser(
+        options.log_options, HighsLogType::kError,
+        "solveLpSimplex called for LP with non-positive (%" HIGHSINT_FORMAT
+        ") "
+        "number of constraints\n",
+        lp.num_row_);
+    return HighsStatus::kError;
+  }
+  // On entry to solveLpSimplex, the incumbent LP is assumed to be
+  // unscaled and, if the simplex instance is initialised, it is
+  // assumed to contain the scaled LP.
+  //
+  // Have to keep track of whether the incumbent LP is scaled, and
+  // whether it has been moved to the simplex instance. Currently it
+  // is unscaled and has not been moved.
+  bool incumbent_lp_scaled = false;
+  bool incumbent_lp_moved = false;
+  //
+  // On return from solveLpSimplex, the incumbent LP must be unscaled
+  // and the simplex instance must contain the scaled LP.
+  const bool changed_scaling_strategy =
+    options.simplex_scale_strategy != kSimplexScaleStrategyChoose &&
+    options.simplex_scale_strategy != scale.strategy;
+  if (!status.initialised || changed_scaling_strategy) {
+    // The simplex instance isn't initialised or the scaling factors
+    // for the incumbent LP correspond to a different strategy, so
+    // consider finding scaling factors
+    getSimplexScaling(options, lp, scale);
+    incumbent_lp_scaled = true;
+    // Any scaling has been applied to the incumbent LP in the course
+    // of finding the scaling factors, so move the LP to Ekk
+    ekk_instance.moveLp(std::move(lp));
+    incumbent_lp_moved = true;
+  }
+  // If there is no simplex basis, use the HiGHS basis
+  if (!status.has_basis && basis.valid) {
+    return_status = ekk_instance.setBasis(basis);
+    if (return_status == HighsStatus::kError) {
+      recoverUnscaledIncumbentLp(incumbent_lp_scaled, incumbent_lp_moved, lp, scale, ekk_instance);
+      return return_status;
+    }
+  }
+  if (options.simplex_unscaled_solution_strategy == kSimplexUnscaledSolutionStrategyNone ||
+      options.simplex_unscaled_solution_strategy == kSimplexUnscaledSolutionStrategyRefine) {
+    // Solve the scaled LP!
+    return_status = ekk_instance.solve();
+    if (return_status == HighsStatus::kError) {
+      recoverUnscaledIncumbentLp(incumbent_lp_scaled, incumbent_lp_moved, lp, scale, ekk_instance);
+      return return_status;
+    }
+    // Copy solution data into the HMO
+    scaled_model_status = ekk_instance.model_status_;
+    solution_params.objective_function_value = ekk_instance.info_.primal_objective_value;
+    highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
+    solution = ekk_instance.getSolution();
+    if (scale.is_scaled)
+      unscaleSolution(solution, scale);
+    basis = ekk_instance.getHighsBasis();
+
+    // Determine whether the unscaled LP has been solved
+    getUnscaledInfeasibilities(ekk_instance.options_,
+			       ekk_instance.lp_,
+			       ekk_instance.basis_,
+			       ekk_instance.info_,
+			       scale,
+			       solution_params);
+
+    HighsInt num_unscaled_primal_infeasibility = solution_params.num_primal_infeasibility;
+    HighsInt num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
+
+    if (num_unscaled_primal_infeasibility > 0) {
+      solution_params.primal_solution_status = kSolutionStatusInfeasible;
+    } else {
+      solution_params.primal_solution_status = kSolutionStatusFeasible;
+    }
+    if (num_unscaled_dual_infeasibility > 0) {
+      solution_params.dual_solution_status = kSolutionStatusInfeasible;
+    } else {
+      solution_params.dual_solution_status = kSolutionStatusFeasible;
+    }
+
+    if ((scaled_model_status == HighsModelStatus::kOptimal) &&
+	(num_unscaled_primal_infeasibility > 0 ||
+	 num_unscaled_dual_infeasibility > 0)) {
+	  // The scaled LP has been solved to optimality, but not the
+	  // unscaled LP
+	  unscaled_model_status = HighsModelStatus::kNotset;
+	  highsLogDev(options.log_options, HighsLogType::kInfo,
+		      "Have num/max/sum primal (%" HIGHSINT_FORMAT
+		      "/%g/%g) and dual (%" HIGHSINT_FORMAT
+		      "/%g/%g) "
+		      "unscaled infeasibilities\n",
+		      num_unscaled_primal_infeasibility,
+		      solution_params.max_primal_infeasibility,
+		      solution_params.sum_primal_infeasibility,
+		      num_unscaled_dual_infeasibility,
+		      solution_params.max_dual_infeasibility,
+		      solution_params.sum_dual_infeasibility);
+    }
+
+    const bool refine_solution = options.simplex_unscaled_solution_strategy ==
+      kSimplexUnscaledSolutionStrategyRefine && (
+      scaled_model_status == HighsModelStatus::kOptimal ||
+      scaled_model_status == HighsModelStatus::kInfeasible ||
+      scaled_model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+      scaled_model_status == HighsModelStatus::kUnbounded ||
+      scaled_model_status == HighsModelStatus::kObjectiveBound ||
+      scaled_model_status == HighsModelStatus::kObjectiveTarget);
+    // Handle a model status that cannot be refined
+    if (!refine_solution) {
+      unscaled_model_status = scaled_model_status;
+      return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
+      recoverUnscaledIncumbentLp(incumbent_lp_scaled, incumbent_lp_moved,
+				 lp, scale, ekk_instance);
+      return return_status;
+    }
+  }
+  assert(options.simplex_unscaled_solution_strategy == kSimplexUnscaledSolutionStrategyDirect ||
+	 options.simplex_unscaled_solution_strategy == kSimplexUnscaledSolutionStrategyRefine);
+  // Solve the unscaled LP using scaled NLA
+  //
+  // Possibly move back the incumbent LP
+  if (incumbent_lp_moved) {
+    lp = std::move(ekk_instance.lp_);
+    incumbent_lp_moved = false;
+  }
+  HighsLp scaled_lp;
+  if (incumbent_lp_scaled) {
+    // Take a copy of the scaled incumbent LP and unscale the incumbent
+    // LP
+    scaled_lp = lp;
+    unscaleSimplexLp(lp, scale);
+    incumbent_lp_scaled = false;
+  } else {
+    // Take a copy of the (unscaled) incumbent LP and scale the copy
+    scaled_lp = lp;
+    scaleSimplexLp(scaled_lp, scale);
+  }
+  // Now the incumbent LP is unscaled and it is scaled as scaled_lp
+  //
+  // Move the incumbent LP to simplex
+  ekk_instance.moveLp(std::move(lp));
+  incumbent_lp_moved = true;
+    
+
+
+  // Now interpret the status of the unscaled solution
+    
+    /*
+    if (num_unscaled_primal_infeasibility == 0 &&
+	num_unscaled_dual_infeasibility == 0) {
+      // Optimal
+      unscaled_model_status = HighsModelStatus::kOptimal;
+    }
+    */    
+  // Incumbent LP is now assumed to have been scaled, so take a copy
+  
+  return return_status;
+}
+
+
 #endif

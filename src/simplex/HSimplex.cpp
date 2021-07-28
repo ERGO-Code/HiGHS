@@ -28,8 +28,30 @@ using std::runtime_error;
 #include "omp.h"
 #endif
 
-void getSimplexScaling(const HighsOptions& options, const HighsLp& lp,
-                       SimplexScale& scale) {}
+void getSimplexScaling(HighsOptions& options, HighsLp& lp,
+                       SimplexScale& scale) {
+  // Possibly scale the LP
+  bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
+                  lp.num_col_ > 0;
+  const bool force_no_scaling = false;  // true;//
+  if (force_no_scaling) {
+    highsLogDev(options.log_options, HighsLogType::kWarning,
+                "Forcing no scaling\n");
+    scale_lp = false;
+  }
+  const bool analyse_lp_data =
+      kHighsAnalysisLevelModelData & options.highs_analysis_level;
+  if (analyse_lp_data) analyseLp(options.log_options, lp, "Unscaled");
+  // Possibly scale the LP. At least set the scaling factors to 1
+  if (scale_lp) {
+    scaleSimplexLp(options, lp, scale);
+    if (analyse_lp_data) analyseScaledLp(options.log_options, scale, lp);
+  } else {
+    // Initialise unit scaling factors
+    initialiseScale(lp, scale);
+  }
+}
+
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
@@ -389,7 +411,6 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
 }
 
 void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
-                                const HighsModelStatus model_status,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
                                 const SimplexScale& scale,
@@ -592,7 +613,8 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   // If matrix is unscaled, then LP is only scaled if there is a cost scaling
   // factor
   if (!scaled_matrix) scale.is_scaled = scale.cost != 1;
-  // Recover the scaling strategy
+  // Record the scaling strategy used and recover the scaling strategy option
+  scale.strategy = use_scale_strategy;  
   options.simplex_scale_strategy = simplex_scale_strategy;
 }
 
@@ -1075,6 +1097,26 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
       right_size;
   right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_ && right_size;
   return right_size;
+}
+
+void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale) {
+  // If the LP isscaled, then return
+  if (scale.is_scaled) return;
+  // Scale the bounds and costs and matrix
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    lp.col_lower_[iCol] /= scale.col[iCol];
+    lp.col_upper_[iCol] /= scale.col[iCol];
+    lp.col_cost_[iCol] *= scale.col[iCol];
+    for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++) {
+      HighsInt iRow = lp.a_index_[iEl];
+      lp.a_value_[iEl] *= (scale.col[iCol] * scale.row[iRow]);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    lp.row_lower_[iRow] *= scale.row[iRow];
+    lp.row_upper_[iRow] *= scale.row[iRow];
+  }
+  //  scale.is_scaled = true;
 }
 
 void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale) {
