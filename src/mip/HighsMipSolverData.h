@@ -83,9 +83,9 @@ struct HighsMipSolverData {
 
   HighsCDouble pruned_treeweight;
   double avgrootlpiters;
+  double last_disptime;
   int64_t firstrootlpiters;
   int64_t num_nodes;
-  int64_t last_displeave;
   int64_t num_leaves;
   int64_t num_leaves_before_run;
   int64_t num_nodes_before_run;
