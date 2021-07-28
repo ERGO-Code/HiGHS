@@ -419,9 +419,9 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     for (HighsInt i = 0; i < numDynamicRows; ++i) {
       HighsInt r = rows[i];
       HighsInt colij = matrix[r + j * numRows];
-      if (domain.colLower_[colij] == 1.0)
+      if (domain.col_lower_[colij] == 1.0)
         Mminimal[i + j * numDynamicRows] = 1;
-      else if (domain.colUpper_[colij] == 0.0)
+      else if (domain.col_upper_[colij] == 0.0)
         Mminimal[i + j * numDynamicRows] = 0;
     }
   }
@@ -579,15 +579,15 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
     for (HighsInt i = 0; i < numRows; ++i) {
       assert(i * rowLength + j < (HighsInt)matrix.size());
       HighsInt colij = matrix[i + j * numRows];
-      assert(colij >= 0 && colij < domain.colLower_.size());
-      if (domain.colLower_[colij] == 1.0) {
+      assert(colij >= 0 && colij < domain.col_lower_.size());
+      if (domain.col_lower_[colij] == 1.0) {
         HighsInt pos;
         domain.getColLowerPos(colij, kHighsIInf, pos);
 
         if (pos != -1 &&
             domchgReason[pos].type == HighsDomain::Reason::kBranching)
           rowOrder[i] = std::min(rowOrder[i], pos);
-      } else if (domain.colUpper_[colij] == 0.0) {
+      } else if (domain.col_upper_[colij] == 0.0) {
         HighsInt pos;
         domain.getColUpperPos(colij, kHighsIInf, pos);
         if (pos != -1 &&
@@ -1363,7 +1363,7 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
        i < componentData.componentStarts[component + 1]; ++i) {
     HighsInt col = componentData.componentSets[i];
     if (model->integrality_[col] == HighsVarType::kContinuous ||
-        model->colLower_[col] != 0.0 || model->colUpper_[col] != 1.0)
+        model->col_lower_[col] != 0.0 || model->col_upper_[col] != 1.0)
       return false;
   }
 
