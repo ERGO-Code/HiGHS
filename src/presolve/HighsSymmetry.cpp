@@ -293,11 +293,11 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
     if (fixcol != -1) {
       HighsInt oldNumFixed = numFixed;
-      double fixVal = domain.colLower_[fixcol];
+      double fixVal = domain.col_lower_[fixcol];
       auto oldSize = domain.getDomainChangeStack().size();
-      if (domain.colLower_[fixcol] == 1.0) {
+      if (domain.col_lower_[fixcol] == 1.0) {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
-          if (domain.colLower_[orbitCols[j]] == 1.0) continue;
+          if (domain.col_lower_[orbitCols[j]] == 1.0) continue;
           ++numFixed;
           domain.changeBound(HighsBoundType::kLower, orbitCols[j], 1.0,
                              HighsDomain::Reason::unspecified());
@@ -305,7 +305,7 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
         }
       } else {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
-          if (domain.colUpper_[orbitCols[j]] == 0.0) continue;
+          if (domain.col_upper_[orbitCols[j]] == 0.0) continue;
           ++numFixed;
           domain.changeBound(HighsBoundType::kUpper, orbitCols[j], 0.0,
                              HighsDomain::Reason::unspecified());
@@ -1025,8 +1025,8 @@ struct MatrixRow {
 void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
                                               double epsilon) {
   this->model = &model;
-  numCol = model.numCol_;
-  numRow = model.numRow_;
+  numCol = model.num_col_;
+  numRow = model.num_row_;
   numVertices = numRow + numCol;
 
   cellInRefinementQueue.resize(numVertices);
@@ -1039,22 +1039,22 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   HighsMatrixColoring coloring(epsilon);
   edgeBuffer.resize(numVertices);
   // set up row and column based incidence matrix
-  HighsInt numNz = model.Aindex_.size();
+  HighsInt numNz = model.a_index_.size();
   Gedge.resize(2 * numNz);
-  std::transform(model.Aindex_.begin(), model.Aindex_.end(), Gedge.begin(),
+  std::transform(model.a_index_.begin(), model.a_index_.end(), Gedge.begin(),
                  [&](HighsInt rowIndex) {
                    return std::make_pair(rowIndex + numCol, HighsUInt{0});
                  });
 
   Gstart.resize(numVertices + 1);
-  std::copy(model.Astart_.begin(), model.Astart_.end(), Gstart.begin());
+  std::copy(model.a_start_.begin(), model.a_start_.end(), Gstart.begin());
 
   // set up the column colors and count row sizes
   std::vector<HighsInt> rowSizes(numRow);
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      Gedge[j].second = coloring.color(model.Avalue_[j]);
-      rowSizes[model.Aindex_[j]] += 1;
+      Gedge[j].second = coloring.color(model.a_value_[j]);
+      rowSizes[model.a_index_[j]] += 1;
     }
   }
 
@@ -1071,7 +1071,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // finally add the nonzeros to the row major matrix
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      HighsInt row = model.Aindex_[j];
+      HighsInt row = model.a_index_[j];
       HighsInt ARpos = Gstart[numCol + row + 1] - rowSizes[row];
       rowSizes[row] -= 1;
       Gedge[ARpos].first = i;
@@ -1089,9 +1089,9 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numCol; ++i) {
     MatrixColumn matrixCol;
 
-    matrixCol.cost = coloring.color(model.colCost_[i]);
-    matrixCol.lb = coloring.color(model.colLower_[i]);
-    matrixCol.ub = coloring.color(model.colUpper_[i]);
+    matrixCol.cost = coloring.color(model.col_cost_[i]);
+    matrixCol.lb = coloring.color(model.col_lower_[i]);
+    matrixCol.ub = coloring.color(model.col_upper_[i]);
     matrixCol.integral = (u32)model.integrality_[i];
     matrixCol.len = Gstart[i + 1] - Gstart[i];
 
@@ -1099,7 +1099,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
 
     if (*columnCell == 0) {
       *columnCell = columnSet.size();
-      if (model.colLower_[i] != 0.0 || model.colUpper_[i] != 1.0 ||
+      if (model.col_lower_[i] != 0.0 || model.col_upper_[i] != 1.0 ||
           model.integrality_[i] == HighsVarType::kContinuous)
         *columnCell += indexOffset;
     }
@@ -1111,8 +1111,8 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numRow; ++i) {
     MatrixRow matrixRow;
 
-    matrixRow.lb = coloring.color(model.rowLower_[i]);
-    matrixRow.ub = coloring.color(model.rowUpper_[i]);
+    matrixRow.lb = coloring.color(model.row_lower_[i]);
+    matrixRow.ub = coloring.color(model.row_upper_[i]);
     matrixRow.len = Gstart[numCol + i + 1] - Gstart[numCol + i];
 
     HighsInt* rowCell = &rowSet[matrixRow];
@@ -1242,7 +1242,7 @@ bool HighsSymmetryDetection::isFromBinaryColumn(HighsInt pos) const {
 
   HighsInt col = currentPartition[pos];
 
-  if (model->colLower_[col] != 0.0 || model->colUpper_[col] != 1.0 ||
+  if (model->col_lower_[col] != 0.0 || model->col_upper_[col] != 1.0 ||
       model->integrality_[col] == HighsVarType::kContinuous)
     return false;
 

@@ -22,7 +22,7 @@ HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
     for (auto it = lurkingColLower[col].begin();
          it != lurkingColLower[col].end(); ++it) {
-      if (it->second > mipsolver.mipdata_->domain.colLower_[col])
+      if (it->second > mipsolver.mipdata_->domain.col_lower_[col])
         domchgs.emplace_back(
             it->first,
             HighsDomainChange{(double)it->second, col, HighsBoundType::kLower});
@@ -30,7 +30,7 @@ HighsRedcostFixing::getLurkingBounds(const HighsMipSolver& mipsolver) const {
 
     for (auto it = lurkingColUpper[col].begin();
          it != lurkingColUpper[col].end(); ++it) {
-      if (it->second < mipsolver.mipdata_->domain.colUpper_[col])
+      if (it->second < mipsolver.mipdata_->domain.col_upper_[col])
         domchgs.emplace_back(
             it->first,
             HighsDomainChange{(double)it->second, col, HighsBoundType::kUpper});
@@ -54,7 +54,7 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
     for (auto it =
              lurkingColLower[col].lower_bound(mipsolver.mipdata_->upper_limit);
          it != lurkingColLower[col].end(); ++it) {
-      if (it->second > mipsolver.mipdata_->domain.colLower_[col]) {
+      if (it->second > mipsolver.mipdata_->domain.col_lower_[col]) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kLower, col, (double)it->second,
             HighsDomain::Reason::unspecified());
@@ -65,7 +65,7 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
     for (auto it =
              lurkingColUpper[col].lower_bound(mipsolver.mipdata_->upper_limit);
          it != lurkingColUpper[col].end(); ++it) {
-      if (it->second < mipsolver.mipdata_->domain.colUpper_[col]) {
+      if (it->second < mipsolver.mipdata_->domain.col_upper_[col]) {
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::kUpper, col, (double)it->second,
             HighsDomain::Reason::unspecified());
@@ -101,23 +101,23 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     //      col <= gap/redcost + lb
     // Therefore for a tightening to be possible we need:
     //   redcost >= / <=  gap * (ub - lb)
-    if (localdomain.colUpper_[col] == localdomain.colLower_[col]) continue;
+    if (localdomain.col_upper_[col] == localdomain.col_lower_[col]) continue;
 
-    double threshold = double((HighsCDouble(localdomain.colUpper_[col]) -
-                               localdomain.colLower_[col]) *
+    double threshold = double((HighsCDouble(localdomain.col_upper_[col]) -
+                               localdomain.col_lower_[col]) *
                                   gap +
                               tolerance);
 
-    if ((localdomain.colUpper_[col] == kHighsInf &&
+    if ((localdomain.col_upper_[col] == kHighsInf &&
          lpredcost[col] > tolerance) ||
         lpredcost[col] > threshold) {
-      assert(localdomain.colLower_[col] != -kHighsInf);
+      assert(localdomain.col_lower_[col] != -kHighsInf);
       assert(lpredcost[col] > tolerance);
       double newub =
-          double(floor(gap / lpredcost[col] + localdomain.colLower_[col] +
+          double(floor(gap / lpredcost[col] + localdomain.col_lower_[col] +
                        mipsolver.mipdata_->feastol));
-      if (newub >= localdomain.colUpper_[col]) continue;
-      assert(newub < localdomain.colUpper_[col]);
+      if (newub >= localdomain.col_upper_[col]) continue;
+      assert(newub < localdomain.col_upper_[col]);
 
       if (mipsolver.mipdata_->domain.isBinary(col)) {
         boundChanges.emplace_back(
@@ -127,17 +127,17 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                 HighsDomain::Reason::unspecified());
         if (localdomain.infeasible()) return;
       }
-    } else if ((localdomain.colLower_[col] == -kHighsInf &&
+    } else if ((localdomain.col_lower_[col] == -kHighsInf &&
                 lpredcost[col] < -tolerance) ||
                lpredcost[col] < -threshold) {
-      assert(localdomain.colUpper_[col] != kHighsInf);
+      assert(localdomain.col_upper_[col] != kHighsInf);
       assert(lpredcost[col] < -tolerance);
       double newlb =
-          double(ceil(gap / lpredcost[col] + localdomain.colUpper_[col] -
+          double(ceil(gap / lpredcost[col] + localdomain.col_upper_[col] -
                       mipsolver.mipdata_->feastol));
 
-      if (newlb <= localdomain.colLower_[col]) continue;
-      assert(newlb > localdomain.colLower_[col]);
+      if (newlb <= localdomain.col_lower_[col]) continue;
+      assert(newlb > localdomain.col_lower_[col]);
 
       if (mipsolver.mipdata_->domain.isBinary(col)) {
         boundChanges.emplace_back(
@@ -217,13 +217,13 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       // bound to reach this bound which is:
       //  lurkub = (cutoffbound - lpobj)/redcost + lb
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
-      HighsInt lb = (HighsInt)mipsolver.mipdata_->domain.colLower_[col];
+      HighsInt lb = (HighsInt)mipsolver.mipdata_->domain.col_lower_[col];
       HighsInt maxub;
-      if (mipsolver.mipdata_->domain.colUpper_[col] == kHighsInf)
+      if (mipsolver.mipdata_->domain.col_upper_[col] == kHighsInf)
         maxub = lb + 1024;
       else
-        maxub = (HighsInt)std::floor(mipsolver.mipdata_->domain.colUpper_[col] -
-                                     0.5);
+        maxub = (HighsInt)std::floor(
+            mipsolver.mipdata_->domain.col_upper_[col] - 0.5);
 
       HighsInt step = 1;
       if (maxub - lb > 1024) step = (maxub - lb + 1023) >> 10;
@@ -266,12 +266,12 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       //  lurklb = (cutoffbound - lpobj)/redcost + ub
       //  cutoffbound = (lurklb - ub) * redcost + lpobj
 
-      HighsInt ub = (HighsInt)mipsolver.mipdata_->domain.colUpper_[col];
+      HighsInt ub = (HighsInt)mipsolver.mipdata_->domain.col_upper_[col];
       HighsInt minlb;
-      if (mipsolver.mipdata_->domain.colLower_[col] == -kHighsInf)
+      if (mipsolver.mipdata_->domain.col_lower_[col] == -kHighsInf)
         minlb = ub - 1024;
       else
-        minlb = (HighsInt)(mipsolver.mipdata_->domain.colLower_[col] + 1.5);
+        minlb = (HighsInt)(mipsolver.mipdata_->domain.col_lower_[col] + 1.5);
 
       HighsInt step = 1;
       if (ub - minlb > 1024) step = (ub - minlb + 1023) >> 10;

@@ -40,13 +40,13 @@ void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,
 
 void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   const HighsLp& lp = highs.getLp();
-  HighsInt numCol = lp.numCol_;
-  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
   double ray_error_norm = 0;
-  const vector<double>& colLower = lp.colLower_;
-  const vector<double>& colUpper = lp.colUpper_;
-  const vector<double>& rowLower = lp.rowLower_;
-  const vector<double>& rowUpper = lp.rowUpper_;
+  const vector<double>& colLower = lp.col_lower_;
+  const vector<double>& colUpper = lp.col_upper_;
+  const vector<double>& rowLower = lp.row_lower_;
+  const vector<double>& rowUpper = lp.row_upper_;
   const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
   const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
   vector<double> tableau_row;
@@ -54,8 +54,8 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (col_status[iCol] == HighsBasisStatus::kBasic) continue;
     // Get the tableau row entry for this nonbasic column
-    for (HighsInt iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
-      tableau_row[iCol] += dual_ray_value[lp.Aindex_[iEl]] * lp.Avalue_[iEl];
+    for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++)
+      tableau_row[iCol] += dual_ray_value[lp.a_index_[iEl]] * lp.a_value_[iEl];
   }
 
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -138,22 +138,22 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
 
 void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   const HighsLp& lp = highs.getLp();
-  HighsInt numCol = lp.numCol_;
-  HighsInt numRow = lp.numRow_;
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
   double ray_error_norm = 0;
-  const vector<double>& colLower = lp.colLower_;
-  const vector<double>& colUpper = lp.colUpper_;
-  const vector<double>& rowLower = lp.rowLower_;
-  const vector<double>& rowUpper = lp.rowUpper_;
+  const vector<double>& colLower = lp.col_lower_;
+  const vector<double>& colUpper = lp.col_upper_;
+  const vector<double>& rowLower = lp.row_lower_;
+  const vector<double>& rowUpper = lp.row_upper_;
   double dual_feasibility_tolerance;
   highs.getOptionValue("dual_feasibility_tolerance",
                        dual_feasibility_tolerance);
   vector<double> row_ray_value;
   row_ray_value.assign(numRow, 0.0);
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    for (HighsInt iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
-      row_ray_value[lp.Aindex_[iEl]] +=
-          primal_ray_value[iCol] * lp.Avalue_[iEl];
+    for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++)
+      row_ray_value[lp.a_index_[iEl]] +=
+          primal_ray_value[iCol] * lp.a_value_[iEl];
   }
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
@@ -227,7 +227,7 @@ void testInfeasibleMps(const std::string model) {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == require_model_status);
   // Check that there is a dual ray
-  dual_ray_value.resize(lp.numRow_);
+  dual_ray_value.resize(lp.num_row_);
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == true);
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
@@ -272,7 +272,7 @@ void testUnboundedMps(const std::string model,
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == false);
   // Check that there is a primal ray
-  primal_ray_value.resize(lp.numCol_);
+  primal_ray_value.resize(lp.num_col_);
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
   REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
@@ -311,7 +311,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Check that there is a dual ray
-  dual_ray_value.resize(lp.numRow_);
+  dual_ray_value.resize(lp.num_row_);
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::kOk);
   REQUIRE(has_dual_ray == true);
   // Get the dual ray
@@ -320,7 +320,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
   if (dev_run) {
     printf("Dual ray:\nRow    computed    expected\n");
-    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
              dual_ray_value[iRow], expected_dual_ray[iRow]);
   }
@@ -359,7 +359,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(has_dual_ray == false);
 
   // Check that a primal ray can be obtained
-  primal_ray_value.resize(lp.numCol_);
+  primal_ray_value.resize(lp.num_col_);
   REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::kOk);
   REQUIRE(has_primal_ray == true);
   REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
@@ -367,11 +367,11 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   vector<double> expected_primal_ray = {0.5, -1};
   if (dev_run) {
     printf("Primal ray:\nRow    computed    expected\n");
-    for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++)
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       printf("%3" HIGHSINT_FORMAT " %11.4g %11.4g\n", iRow,
              primal_ray_value[iRow], expected_primal_ray[iRow]);
   }
-  checkRayDirection(lp.numRow_, dual_ray_value, expected_dual_ray);
+  checkRayDirection(lp.num_row_, dual_ray_value, expected_dual_ray);
   checkPrimalRayValue(highs, primal_ray_value);
 
   // Test that there's no primal or dual ray for this LP that is both

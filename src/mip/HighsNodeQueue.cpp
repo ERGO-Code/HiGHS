@@ -172,11 +172,11 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 
     numchgs = globaldomain.getDomainChangeStack().size();
 
-    assert(colLowerNodes.size() == globaldomain.colLower_.size());
+    assert(colLowerNodes.size() == globaldomain.col_lower_.size());
     HighsInt numcol = colLowerNodes.size();
     for (HighsInt i = 0; i != numcol; ++i) {
-      checkGlobalBounds(i, globaldomain.colLower_[i], globaldomain.colUpper_[i],
-                        feastol, treeweight);
+      checkGlobalBounds(i, globaldomain.col_lower_[i],
+                        globaldomain.col_upper_[i], feastol, treeweight);
     }
 
     size_t numopennodes = numNodes();
@@ -185,7 +185,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
     for (HighsInt i = 0; i != numcol; ++i) {
       if (colLowerNodes[i].size() == numopennodes) {
         double globallb = colLowerNodes[i].begin()->first;
-        if (globallb > globaldomain.colLower_[i]) {
+        if (globallb > globaldomain.col_lower_[i]) {
           globaldomain.changeBound(HighsBoundType::kLower, i, globallb,
                                    HighsDomain::Reason::unspecified());
           if (globaldomain.infeasible()) break;
@@ -194,7 +194,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 
       if (colUpperNodes[i].size() == numopennodes) {
         double globalub = colUpperNodes[i].rbegin()->first;
-        if (globalub < globaldomain.colUpper_[i]) {
+        if (globalub < globaldomain.col_upper_[i]) {
           globaldomain.changeBound(HighsBoundType::kUpper, i, globalub,
                                    HighsDomain::Reason::unspecified());
           if (globaldomain.infeasible()) break;

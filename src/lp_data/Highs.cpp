@@ -232,15 +232,15 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
   hessian = std::move(model.hessian_);
-  if (lp.numCol_ == 0 || lp.numRow_ == 0) {
+  if (lp.num_col_ == 0 || lp.num_row_ == 0) {
     // Model constraint matrix has either no columns or no
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
     lp.format_ = MatrixFormat::kColwise;
-    lp.Astart_.assign(lp.numCol_ + 1, 0);
-    lp.Aindex_.clear();
-    lp.Avalue_.clear();
+    lp.a_start_.assign(lp.num_col_ + 1, 0);
+    lp.a_index_.clear();
+    lp.a_value_.clear();
   } else {
     // Matrix has rows and columns, so a_format must be valid, even if
     // there are no nonzeros. However, the number of nonzeros can only
@@ -304,21 +304,21 @@ HighsStatus Highs::passModel(
   bool a_rowwise = false;
   if (num_nz) a_rowwise = a_format == (HighsInt)MatrixFormat::kRowwise;
 
-  lp.numCol_ = num_col;
-  lp.numRow_ = num_row;
+  lp.num_col_ = num_col;
+  lp.num_row_ = num_row;
   if (num_col > 0) {
     assert(costs != NULL);
     assert(col_lower != NULL);
     assert(col_upper != NULL);
-    lp.colCost_.assign(costs, costs + num_col);
-    lp.colLower_.assign(col_lower, col_lower + num_col);
-    lp.colUpper_.assign(col_upper, col_upper + num_col);
+    lp.col_cost_.assign(costs, costs + num_col);
+    lp.col_lower_.assign(col_lower, col_lower + num_col);
+    lp.col_upper_.assign(col_upper, col_upper + num_col);
   }
   if (num_row > 0) {
     assert(row_lower != NULL);
     assert(row_upper != NULL);
-    lp.rowLower_.assign(row_lower, row_lower + num_row);
-    lp.rowUpper_.assign(row_upper, row_upper + num_row);
+    lp.row_lower_.assign(row_lower, row_lower + num_row);
+    lp.row_upper_.assign(row_upper, row_upper + num_row);
   }
   if (num_nz > 0) {
     assert(num_col > 0);
@@ -327,20 +327,20 @@ HighsStatus Highs::passModel(
     assert(aindex != NULL);
     assert(avalue != NULL);
     if (a_rowwise) {
-      lp.Astart_.assign(astart, astart + num_row);
+      lp.a_start_.assign(astart, astart + num_row);
     } else {
-      lp.Astart_.assign(astart, astart + num_col);
+      lp.a_start_.assign(astart, astart + num_col);
     }
-    lp.Aindex_.assign(aindex, aindex + num_nz);
-    lp.Avalue_.assign(avalue, avalue + num_nz);
+    lp.a_index_.assign(aindex, aindex + num_nz);
+    lp.a_value_.assign(avalue, avalue + num_nz);
   }
   if (a_rowwise) {
-    lp.Astart_.resize(num_row + 1);
-    lp.Astart_[num_row] = num_nz;
+    lp.a_start_.resize(num_row + 1);
+    lp.a_start_[num_row] = num_nz;
     lp.format_ = MatrixFormat::kRowwise;
   } else {
-    lp.Astart_.resize(num_col + 1);
-    lp.Astart_[num_col] = num_nz;
+    lp.a_start_.resize(num_col + 1);
+    lp.a_start_[num_col] = num_nz;
     lp.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
@@ -416,7 +416,7 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
                                const HighsInt* index, const double* value) {
   HighsHessian hessian;
   if (!qFormatOk(num_nz, format)) return HighsStatus::kError;
-  HighsInt num_col = model_.lp_.numCol_;
+  HighsInt num_col = model_.lp_.num_col_;
   if (dim != num_col) return HighsStatus::kError;
   hessian.dim_ = num_col;
   hessian.format_ = HessianFormat::kTriangular;
@@ -540,7 +540,7 @@ HighsStatus Highs::run() {
                 "from %" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT "\n",
                 options_.highs_debug_level, min_highs_debug_level);
     //  writeModel("HighsRunModel.mps");
-    //  if (model_.lp_.numRow_>0 && model_.lp_.numCol_>0)
+    //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
     //  writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
 #endif
   if (options_.highs_debug_level < min_highs_debug_level)
@@ -583,7 +583,7 @@ HighsStatus Highs::run() {
   // Start the HiGHS run clock
   timer_.startRunHighsClock();
   // Return immediately if the model has no columns
-  if (!model_.lp_.numCol_) {
+  if (!model_.lp_.num_col_) {
     setHighsModelStatusAndInfo(HighsModelStatus::kModelEmpty);
     return returnFromRun(HighsStatus::kOk);
   }
@@ -1099,7 +1099,7 @@ HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  HighsInt numRow = model_.lp_.numRow_;
+  HighsInt numRow = model_.lp_.num_row_;
   if (row < 0 || row >= numRow) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Row index %" HIGHSINT_FORMAT
@@ -1133,7 +1133,7 @@ HighsStatus Highs::getBasisInverseCol(const HighsInt col, double* col_vector,
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  HighsInt numRow = model_.lp_.numRow_;
+  HighsInt numRow = model_.lp_.num_row_;
   if (col < 0 || col >= numRow) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Column index %" HIGHSINT_FORMAT
@@ -1178,7 +1178,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                  "No invertible representation for getBasisSolve\n");
     return HighsStatus::kError;
   }
-  HighsInt numRow = model_.lp_.numRow_;
+  HighsInt numRow = model_.lp_.num_row_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (HighsInt row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
@@ -1210,7 +1210,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                  "No invertible representation for getBasisTransposeSolve\n");
     return HighsStatus::kError;
   }
-  HighsInt numRow = model_.lp_.numRow_;
+  HighsInt numRow = model_.lp_.num_row_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (HighsInt row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
@@ -1237,11 +1237,11 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not pass_basis_inverse_row_vector
   // NULL - it's the trigger to determine whether it's computed or not
-  if (row < 0 || row >= lp.numRow_) {
+  if (row < 0 || row >= lp.num_row_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Row index %" HIGHSINT_FORMAT
                  " out of range [0, %" HIGHSINT_FORMAT "] in getReducedRow\n",
-                 row, lp.numRow_ - 1);
+                 row, lp.num_row_ - 1);
     return HighsStatus::kError;
   }
   bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
@@ -1250,7 +1250,7 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                  "No invertible representation for getReducedRow\n");
     return HighsStatus::kError;
   }
-  HighsInt numRow = lp.numRow_;
+  HighsInt numRow = lp.num_row_;
   vector<double> basis_inverse_row;
   double* basis_inverse_row_vector = (double*)pass_basis_inverse_row_vector;
   if (basis_inverse_row_vector == NULL) {
@@ -1265,11 +1265,11 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   }
   bool return_indices = row_num_nz != NULL;
   if (return_indices) *row_num_nz = 0;
-  for (HighsInt col = 0; col < lp.numCol_; col++) {
+  for (HighsInt col = 0; col < lp.num_col_; col++) {
     double value = 0;
-    for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-      HighsInt row = lp.Aindex_[el];
-      value += lp.Avalue_[el] * basis_inverse_row_vector[row];
+    for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
+      HighsInt row = lp.a_index_[el];
+      value += lp.a_value_[el] * basis_inverse_row_vector[row];
     }
     row_vector[col] = 0;
     if (fabs(value) > kHighsTiny) {
@@ -1297,12 +1297,12 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  if (col < 0 || col >= lp.numCol_) {
+  if (col < 0 || col >= lp.num_col_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Column index %" HIGHSINT_FORMAT
                  " out of range [0, %" HIGHSINT_FORMAT
                  "] in getReducedColumn\n",
-                 col, lp.numCol_ - 1);
+                 col, lp.num_col_ - 1);
     return HighsStatus::kError;
   }
   bool has_invert = hmos_[0].ekk_instance_.status_.has_invert;
@@ -1311,11 +1311,11 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                  "No invertible representation for getReducedColumn\n");
     return HighsStatus::kError;
   }
-  HighsInt numRow = lp.numRow_;
+  HighsInt numRow = lp.num_row_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
-  for (HighsInt el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++)
-    rhs[lp.Aindex_[el]] = lp.Avalue_[el];
+  for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++)
+    rhs[lp.a_index_[el]] = lp.a_value_[el];
   basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
   return HighsStatus::kOk;
 }
@@ -1323,13 +1323,13 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::kOk;
   // Check if primal solution is valid.
-  if (model_.lp_.numCol_ > 0 &&
-      solution.col_value.size() >= model_.lp_.numCol_) {
+  if (model_.lp_.num_col_ > 0 &&
+      solution.col_value.size() >= model_.lp_.num_col_) {
     // Worth considering the column values
     solution_.col_value = solution.col_value;
-    if (model_.lp_.numRow_ > 0) {
+    if (model_.lp_.num_row_ > 0) {
       // Worth computing the row values
-      solution_.row_value.resize(model_.lp_.numRow_);
+      solution_.row_value.resize(model_.lp_.num_row_);
       return_status =
           interpretCallStatus(calculateRowValues(model_.lp_, solution_),
                               return_status, "calculateRowValues");
@@ -1341,13 +1341,13 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     solution_.value_valid = false;
   }
   // Check if dual solution is valid.
-  if (model_.lp_.numRow_ > 0 &&
-      solution.row_dual.size() >= model_.lp_.numRow_) {
+  if (model_.lp_.num_row_ > 0 &&
+      solution.row_dual.size() >= model_.lp_.num_row_) {
     // Worth considering the row duals
     solution_.row_dual = solution.row_dual;
-    if (model_.lp_.numCol_ > 0) {
+    if (model_.lp_.num_col_ > 0) {
       // Worth computing the column duals
-      solution_.col_dual.resize(model_.lp_.numCol_);
+      solution_.col_dual.resize(model_.lp_.num_col_);
       return_status =
           interpretCallStatus(calculateColDuals(model_.lp_, solution_),
                               return_status, "calculateColDuals");
@@ -1472,7 +1472,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
@@ -1495,7 +1495,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1515,9 +1515,9 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt* mask,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.numCol_};
+  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsIntegrality")) return HighsStatus::kError;
@@ -1538,7 +1538,7 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
@@ -1560,7 +1560,7 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1579,9 +1579,9 @@ HighsStatus Highs::changeColsCost(const HighsInt* mask, const double* cost) {
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.numCol_};
+  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsCost")) return HighsStatus::kError;
@@ -1604,7 +1604,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
@@ -1627,7 +1627,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1647,9 +1647,9 @@ HighsStatus Highs::changeColsBounds(const HighsInt* mask, const double* lower,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.numCol_};
+  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsBounds")) return HighsStatus::kError;
@@ -1672,7 +1672,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_row;
   index_collection.to_ = to_row;
@@ -1695,7 +1695,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1715,9 +1715,9 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.numRow_};
+  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_row_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeRowsBounds")) return HighsStatus::kError;
@@ -1759,7 +1759,7 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
@@ -1782,7 +1782,7 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1803,9 +1803,9 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.numCol_};
+  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getCols")) return HighsStatus::kError;
@@ -1823,7 +1823,7 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_row;
   index_collection.to_ = to_row;
@@ -1846,7 +1846,7 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1866,9 +1866,9 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.numRow_};
+  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_row_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getRows")) return HighsStatus::kError;
@@ -1896,7 +1896,7 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
@@ -1917,7 +1917,7 @@ HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1933,7 +1933,7 @@ HighsStatus Highs::deleteCols(HighsInt* mask) {
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numCol_;
+  index_collection.dimension_ = model_.lp_.num_col_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteCols")) return HighsStatus::kError;
@@ -1948,7 +1948,7 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_row;
   index_collection.to_ = to_row;
@@ -1969,7 +1969,7 @@ HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
   // cannot be const as it may change if the set is not ordered
   vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_set_ = true;
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
@@ -1985,7 +1985,7 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
   clearPresolve();
   HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.numRow_;
+  index_collection.dimension_ = model_.lp_.num_row_;
   index_collection.is_mask_ = true;
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteRows")) return HighsStatus::kError;
@@ -2062,12 +2062,12 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       " "
       "(%" HIGHSINT_FORMAT ", %" HIGHSINT_FORMAT ")\n\n",
       message.c_str(), modelStatusToString(model_status).c_str(),
-      modelStatusToString(scaled_model_status).c_str(), lp.numCol_, lp.numRow_,
-      unscaled_primal_solution_status, (HighsInt)solution.col_value.size(),
-      (HighsInt)solution.row_value.size(), unscaled_dual_solution_status,
-      (HighsInt)solution.col_dual.size(), (HighsInt)solution.row_dual.size(),
-      basis.valid, (HighsInt)basis.col_status.size(),
-      (HighsInt)basis.row_status.size());
+      modelStatusToString(scaled_model_status).c_str(), lp.num_col_,
+      lp.num_row_, unscaled_primal_solution_status,
+      (HighsInt)solution.col_value.size(), (HighsInt)solution.row_value.size(),
+      unscaled_dual_solution_status, (HighsInt)solution.col_dual.size(),
+      (HighsInt)solution.row_dual.size(), basis.valid,
+      (HighsInt)basis.col_status.size(), (HighsInt)basis.row_status.size());
 }
 #endif
 
@@ -2107,7 +2107,7 @@ HighsPresolveStatus Highs::runPresolve() {
   // Ensure that the LP is column-wise
   // setFormat(model_.lp_);
 
-  if (model_.lp_.numCol_ == 0 && model_.lp_.numRow_ == 0)
+  if (model_.lp_.num_col_ == 0 && model_.lp_.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
   // Clear info from previous runs if model_.lp_ has been modified.
@@ -2156,16 +2156,18 @@ HighsPresolveStatus Highs::runPresolve() {
   switch (presolve_.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
-      presolve_.info_.n_cols_removed = model_.lp_.numCol_ - reduced_lp.numCol_;
-      presolve_.info_.n_rows_removed = model_.lp_.numRow_ - reduced_lp.numRow_;
-      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.Avalue_.size() -
-                                      (HighsInt)reduced_lp.Avalue_.size();
+      presolve_.info_.n_cols_removed =
+          model_.lp_.num_col_ - reduced_lp.num_col_;
+      presolve_.info_.n_rows_removed =
+          model_.lp_.num_row_ - reduced_lp.num_row_;
+      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_value_.size() -
+                                      (HighsInt)reduced_lp.a_value_.size();
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
-      presolve_.info_.n_cols_removed = model_.lp_.numCol_;
-      presolve_.info_.n_rows_removed = model_.lp_.numRow_;
-      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.Avalue_.size();
+      presolve_.info_.n_cols_removed = model_.lp_.num_col_;
+      presolve_.info_.n_rows_removed = model_.lp_.num_row_;
+      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_value_.size();
       break;
     }
     default:
@@ -2256,11 +2258,11 @@ HighsStatus Highs::callSolveQp() {
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   assert(lp.format_ != MatrixFormat::kRowwise);
-  if (hessian.dim_ != lp.numCol_) {
+  if (hessian.dim_ != lp.num_col_) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "Hessian dimension = %" HIGHSINT_FORMAT
                 " incompatible with matrix dimension = %" HIGHSINT_FORMAT "\n",
-                hessian.dim_, lp.numCol_);
+                hessian.dim_, lp.num_col_);
     scaled_model_status_ = HighsModelStatus::kModelError;
     model_status_ = scaled_model_status_;
     solution_.value_valid = false;
@@ -2269,23 +2271,23 @@ HighsStatus Highs::callSolveQp() {
   }
   //
   // Run the QP solver
-  Instance instance(lp.numCol_, lp.numRow_);
+  Instance instance(lp.num_col_, lp.num_row_);
 
-  instance.num_con = lp.numRow_;
-  instance.num_var = lp.numCol_;
+  instance.num_con = lp.num_row_;
+  instance.num_var = lp.num_col_;
 
-  instance.A.mat.num_col = lp.numCol_;
-  instance.A.mat.num_row = lp.numRow_;
-  instance.A.mat.start = lp.Astart_;
-  instance.A.mat.index = lp.Aindex_;
-  instance.A.mat.value = lp.Avalue_;
-  instance.c.value = lp.colCost_;
-  instance.con_lo = lp.rowLower_;
-  instance.con_up = lp.rowUpper_;
-  instance.var_lo = lp.colLower_;
-  instance.var_up = lp.colUpper_;
-  instance.Q.mat.num_col = lp.numCol_;
-  instance.Q.mat.num_row = lp.numCol_;
+  instance.A.mat.num_col = lp.num_col_;
+  instance.A.mat.num_row = lp.num_row_;
+  instance.A.mat.start = lp.a_start_;
+  instance.A.mat.index = lp.a_index_;
+  instance.A.mat.value = lp.a_value_;
+  instance.c.value = lp.col_cost_;
+  instance.con_lo = lp.row_lower_;
+  instance.con_up = lp.row_upper_;
+  instance.var_lo = lp.col_lower_;
+  instance.var_up = lp.col_upper_;
+  instance.Q.mat.num_col = lp.num_col_;
+  instance.Q.mat.num_row = lp.num_col_;
   if (kHessianFormatInternal == HessianFormat::kSquare) {
     instance.Q.mat.start = hessian.q_start_;
     instance.Q.mat.index = hessian.q_index_;
@@ -2341,15 +2343,15 @@ HighsStatus Highs::callSolveQp() {
                                    ? HighsModelStatus::kUnbounded
                                    : HighsModelStatus::kInfeasible;
   model_status_ = scaled_model_status_;
-  solution_.col_value.resize(lp.numCol_);
-  solution_.col_dual.resize(lp.numCol_);
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+  solution_.col_value.resize(lp.num_col_);
+  solution_.col_dual.resize(lp.num_col_);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     solution_.col_value[iCol] = runtime.primal.value[iCol];
     solution_.col_dual[iCol] = runtime.dualvar.value[iCol];
   }
-  solution_.row_value.resize(lp.numRow_);
-  solution_.row_dual.resize(lp.numRow_);
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+  solution_.row_value.resize(lp.num_row_);
+  solution_.row_dual.resize(lp.num_row_);
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     solution_.row_value[iRow] = runtime.rowactivity.value[iRow];
     solution_.row_dual[iRow] = runtime.dualcon.value[iRow];
   }
@@ -2429,15 +2431,15 @@ HighsStatus Highs::callSolveMip() {
   if (solver.solution_objective_ != kHighsInf) {
     // There is a primal solution
     HighsInt solver_solution_size = solver.solution_.size();
-    assert(solver_solution_size >= model_.lp_.numCol_);
-    solution_.col_value.resize(model_.lp_.numCol_);
-    solution_.row_value.assign(model_.lp_.numRow_, 0);
-    for (HighsInt iCol = 0; iCol < model_.lp_.numCol_; iCol++) {
+    assert(solver_solution_size >= model_.lp_.num_col_);
+    solution_.col_value.resize(model_.lp_.num_col_);
+    solution_.row_value.assign(model_.lp_.num_row_, 0);
+    for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++) {
       double value = solver.solution_[iCol];
-      for (HighsInt iEl = model_.lp_.Astart_[iCol];
-           iEl < model_.lp_.Astart_[iCol + 1]; iEl++) {
-        HighsInt iRow = model_.lp_.Aindex_[iEl];
-        solution_.row_value[iRow] += value * model_.lp_.Avalue_[iEl];
+      for (HighsInt iEl = model_.lp_.a_start_[iCol];
+           iEl < model_.lp_.a_start_[iCol + 1]; iEl++) {
+        HighsInt iRow = model_.lp_.a_index_[iEl];
+        solution_.row_value[iRow] += value * model_.lp_.a_value_[iEl];
       }
       solution_.col_value[iCol] = value;
     }
@@ -2517,18 +2519,18 @@ void Highs::newHighsBasis() {
 // basis
 void Highs::forceHighsSolutionBasisSize() {
   // Ensure that the HiGHS solution vectors are the right size
-  solution_.col_value.resize(model_.lp_.numCol_);
-  solution_.row_value.resize(model_.lp_.numRow_);
-  solution_.col_dual.resize(model_.lp_.numCol_);
-  solution_.row_dual.resize(model_.lp_.numRow_);
+  solution_.col_value.resize(model_.lp_.num_col_);
+  solution_.row_value.resize(model_.lp_.num_row_);
+  solution_.col_dual.resize(model_.lp_.num_col_);
+  solution_.row_dual.resize(model_.lp_.num_row_);
   // Ensure that the HiGHS basis vectors are the right size,
   // invalidating the basis if they aren't
-  if ((HighsInt)basis_.col_status.size() != model_.lp_.numCol_) {
-    basis_.col_status.resize(model_.lp_.numCol_);
+  if ((HighsInt)basis_.col_status.size() != model_.lp_.num_col_) {
+    basis_.col_status.resize(model_.lp_.num_col_);
     basis_.valid = false;
   }
-  if ((HighsInt)basis_.row_status.size() != model_.lp_.numRow_) {
-    basis_.row_status.resize(model_.lp_.numRow_);
+  if ((HighsInt)basis_.row_status.size() != model_.lp_.num_row_) {
+    basis_.row_status.resize(model_.lp_.num_row_);
     basis_.valid = false;
   }
 }

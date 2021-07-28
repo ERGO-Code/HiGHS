@@ -756,13 +756,13 @@ bool HighsCutGeneration::postprocessCut() {
     if (vals[i] == 0) continue;
     if (std::abs(vals[i]) <= minCoefficientValue) {
       if (vals[i] < 0) {
-        double ub = globaldomain.colUpper_[inds[i]];
+        double ub = globaldomain.col_upper_[inds[i]];
         if (ub == kHighsInf)
           return false;
         else
           rhs -= ub * vals[i];
       } else {
-        double lb = globaldomain.colLower_[inds[i]];
+        double lb = globaldomain.col_lower_[inds[i]];
         if (lb == -kHighsInf)
           return false;
         else
@@ -815,12 +815,12 @@ bool HighsCutGeneration::postprocessCut() {
         // upperbound constraint to make it exactly integral instead and
         // therefore weaken the right hand side
         if (delta < 0.0) {
-          double ub = globaldomain.colUpper_[inds[i]];
+          double ub = globaldomain.col_upper_[inds[i]];
           if (ub == kHighsInf) return false;
 
           rhs -= delta * ub;
         } else {
-          double lb = globaldomain.colLower_[inds[i]];
+          double lb = globaldomain.col_lower_[inds[i]];
           if (lb == -kHighsInf) return false;
 
           rhs -= delta * lb;
@@ -1298,20 +1298,20 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
 
-    upper[i] = globaldomain.colUpper_[col] - globaldomain.colLower_[col];
+    upper[i] = globaldomain.col_upper_[col] - globaldomain.col_lower_[col];
 
     solval[i] =
-        vals[i] < 0 ? localdomain.colUpper_[col] : localdomain.colLower_[col];
-    if (vals[i] < 0 && globaldomain.colUpper_[col] != kHighsInf) {
-      rhs -= globaldomain.colUpper_[col] * vals[i];
+        vals[i] < 0 ? localdomain.col_upper_[col] : localdomain.col_lower_[col];
+    if (vals[i] < 0 && globaldomain.col_upper_[col] != kHighsInf) {
+      rhs -= globaldomain.col_upper_[col] * vals[i];
       vals[i] = -vals[i];
       complementation[i] = 1;
 
-      solval[i] = globaldomain.colUpper_[col] - solval[i];
+      solval[i] = globaldomain.col_upper_[col] - solval[i];
     } else {
-      rhs -= globaldomain.colLower_[col] * vals[i];
+      rhs -= globaldomain.col_lower_[col] * vals[i];
       complementation[i] = 0;
-      solval[i] = solval[i] - globaldomain.colLower_[col];
+      solval[i] = solval[i] - globaldomain.col_lower_[col];
     }
   }
 
@@ -1396,10 +1396,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   if (!complementation.empty()) {
     for (HighsInt i = 0; i != rowlen; ++i) {
       if (complementation[i]) {
-        rhs -= globaldomain.colUpper_[inds[i]] * vals[i];
+        rhs -= globaldomain.col_upper_[inds[i]] * vals[i];
         vals[i] = -vals[i];
       } else
-        rhs += globaldomain.colLower_[inds[i]] * vals[i];
+        rhs += globaldomain.col_lower_[inds[i]] * vals[i];
     }
   }
 
