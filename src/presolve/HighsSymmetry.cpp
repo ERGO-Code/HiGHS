@@ -491,6 +491,29 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
     }
   }
 
+  // check if there are more columns that can be completely fixed to zero
+  while (++j < rowLength) {
+    for (HighsInt k = j; k < numDynamicRows; ++k) {
+      // we should have checked this row at the frontier position
+      assert(firstOneInRow[k] < j);
+
+      HighsInt col_kj = entry(rows[k], j);
+      if (domain.col_upper_[col_kj] < 0.5) continue;
+
+      domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
+                         HighsDomain::Reason::unspecified());
+      // printf("new fixed\n");
+      ++numFixed;
+      if (domain.infeasible()) {
+        // this can happen due to deductions from earlier fixings
+        // otherwise it would have been caughgt by the infeasibility
+        // check within the next loop that goes over i
+        // printf("packing orbitope propagation found infeasibility\n");
+        return numFixed;
+      }
+    }
+  }
+
   if (!domain.infeasible() && numFixed) domain.propagate();
 
   // if (numFixed)
