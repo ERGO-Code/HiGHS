@@ -806,9 +806,15 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
 }
 
 static std::array<char, 16> convertToPrintString(double val) {
-  double l = std::log10(std::max(1.0, std::abs(double(val))));
+  double l = std::log10(std::max(1e-6, std::abs(double(val))));
   std::array<char, 16> printString;
   switch (int(l)) {
+    case -4:
+    case -3:
+    case -2:
+    case -1:
+      std::snprintf(printString.data(), 16, "%.9g", val);
+      break;
     case 0:
     case 1:
     case 2:
