@@ -1759,8 +1759,8 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
   double oldImplLower = implRowDualLower[row];
   HighsInt oldLowerSource = rowDualLowerSource[row];
 
-  if (oldImplLower >= -options->dual_feasibility_tolerance &&
-      newLower < -options->dual_feasibility_tolerance)
+  if (oldImplLower <= options->dual_feasibility_tolerance &&
+      newLower > options->dual_feasibility_tolerance)
     markChangedRow(row);
 
   bool newDualImplied =
@@ -1784,6 +1784,52 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 
     if (newDualImplied && isImpliedFree(nonzero.index()))
       substitutionOpportunities.emplace_back(row, nonzero.index());
+  }
+}
+
+void HPresolve::scaleMIP(HighsPostsolveStack& postSolveStack) {
+  for (HighsInt i = 0; i < model->num_row_; ++i) {
+    if (rowDeleted[i] || rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i])
+      continue;
+
+    storeRow(i);
+
+    double maxAbsVal = 0.0;
+
+    HighsInt rowlen = rowpositions.size();
+
+    for (HighsInt j = 0; j < rowlen; ++j) {
+      HighsInt nzPos = rowpositions[j];
+      if (model->integrality_[Acol[nzPos]] != HighsVarType::kContinuous)
+        continue;
+
+      maxAbsVal = std::max(std::abs(Avalue[nzPos]), maxAbsVal);
+    }
+
+    assert(maxAbsVal != 0.0);
+
+    double scale = std::exp2(std::round(-std::log2(maxAbsVal)));
+    if (scale == 1.0) continue;
+
+    if (model->row_upper_[i] == kHighsInf) scale = -scale;
+
+    scaleStoredRow(i, scale);
+  }
+
+  for (HighsInt i = 0; i < model->num_col_; ++i) {
+    if (colDeleted[i] || model->integrality_[i] != HighsVarType::kContinuous)
+      continue;
+
+    double maxAbsVal = 0;
+
+    for (const HighsSliceNonzero& nonz : getColumnVector(i)) {
+      maxAbsVal = std::max(std::abs(nonz.value()), maxAbsVal);
+    }
+
+    double scale = std::exp2(std::round(-std::log2(maxAbsVal)));
+    if (scale == 1.0) continue;
+
+    transformColumn(postSolveStack, i, scale, 0.0);
   }
 }
 
@@ -2041,6 +2087,137 @@ bool HPresolve::checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
   return true;
 }
 
+void HPresolve::transformColumn(HighsPostsolveStack& postSolveStack,
+                                HighsInt col, double scale, double constant) {
+  if (mipsolver != nullptr) {
+    for (std::pair<const HighsInt, HighsImplications::VarBound>& vbd :
+         mipsolver->mipdata_->implications.getVLBs(col)) {
+      vbd.second.constant -= constant;
+      vbd.second.constant /= scale;
+      vbd.second.coef /= scale;
+    }
+
+    for (std::pair<const HighsInt, HighsImplications::VarBound>& vbd :
+         mipsolver->mipdata_->implications.getVUBs(col)) {
+      vbd.second.constant -= constant;
+      vbd.second.constant /= scale;
+      vbd.second.coef /= scale;
+    }
+
+    if (scale < 0)
+      mipsolver->mipdata_->implications.getVLBs(col).swap(
+          mipsolver->mipdata_->implications.getVUBs(col));
+  }
+
+  postSolveStack.linearTransform(col, scale, constant);
+
+  double oldLower = model->col_lower_[col];
+  double oldUpper = model->col_upper_[col];
+  model->col_upper_[col] -= constant;
+  model->col_lower_[col] -= constant;
+
+  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+    impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
+                                     oldLower);
+    impliedRowBounds.updatedVarUpper(nonzero.index(), col, nonzero.value(),
+                                     oldUpper);
+  }
+
+  double oldImplLower = implColLower[col];
+  double oldImplUpper = implColUpper[col];
+  implColLower[col] -= constant;
+  implColUpper[col] -= constant;
+
+  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+    impliedRowBounds.updatedImplVarLower(nonzero.index(), col, nonzero.value(),
+                                         oldImplLower, colLowerSource[col]);
+    impliedRowBounds.updatedImplVarUpper(nonzero.index(), col, nonzero.value(),
+                                         oldImplUpper, colUpperSource[col]);
+  }
+
+  // now apply the scaling, which does not change the contributions to the
+  // implied row bounds, but requires adjusting the implied bounds of the
+  // columns dual constraint
+  impliedDualRowBounds.sumScaled(col, scale);
+
+  double boundScale = 1.0 / scale;
+  model->col_lower_[col] *= boundScale;
+  model->col_upper_[col] *= boundScale;
+  implColLower[col] *= boundScale;
+  implColUpper[col] *= boundScale;
+  if (model->integrality_[col] != HighsVarType::kContinuous) {
+    // we rely on the integrality status being already updated to the newly
+    // scaled column by the caller, if necessary
+    model->col_upper_[col] =
+        std::floor(model->col_upper_[col] + options->mip_feasibility_tolerance);
+    model->col_lower_[col] =
+        std::ceil(model->col_lower_[col] - options->mip_feasibility_tolerance);
+  }
+
+  if (scale < 0) {
+    std::swap(model->col_lower_[col], model->col_upper_[col]);
+    std::swap(implColLower[col], implColUpper[col]);
+    std::swap(colLowerSource[col], colUpperSource[col]);
+  }
+
+  model->offset_ += model->col_cost_[col] * constant;
+  model->col_cost_[col] *= scale;
+
+  for (HighsInt coliter = colhead[col]; coliter != -1;
+       coliter = Anext[coliter]) {
+    double val = Avalue[coliter];
+    Avalue[coliter] *= scale;
+    HighsInt row = Arow[coliter];
+    double rowConstant = val * constant;
+    if (model->row_lower_[row] != -kHighsInf)
+      model->row_lower_[row] -= rowConstant;
+    if (model->row_upper_[row] != kHighsInf)
+      model->row_upper_[row] -= rowConstant;
+  }
+
+  markChangedCol(col);
+}
+
+void HPresolve::scaleRow(HighsInt row, double scale, bool integral) {
+  storeRow(row);
+
+  scaleStoredRow(row, scale, integral);
+}
+
+void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
+  HighsInt rowlen = rowpositions.size();
+
+  model->row_upper_[row] *= scale;
+  model->row_lower_[row] *= scale;
+  implRowDualLower[row] /= scale;
+  implRowDualUpper[row] /= scale;
+
+  if (integral) {
+    if (model->row_upper_[row] != kHighsInf)
+      model->row_upper_[row] = std::round(model->row_upper_[row]);
+    if (model->row_lower_[row] != kHighsInf)
+      model->row_lower_[row] = std::round(model->row_lower_[row]);
+    for (HighsInt j = 0; j < rowlen; ++j) {
+      Avalue[rowpositions[j]] *= scale;
+      if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
+        unlink(rowpositions[j]);
+    }
+  } else
+    for (HighsInt j = 0; j < rowlen; ++j) {
+      Avalue[rowpositions[j]] *= scale;
+      if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
+        unlink(rowpositions[j]);
+    }
+
+  impliedRowBounds.sumScaled(row, scale);
+  if (scale < 0) {
+    std::swap(rowDualLower[row], rowDualUpper[row]);
+    std::swap(implRowDualLower[row], implRowDualUpper[row]);
+    std::swap(rowDualLowerSource[row], rowDualUpperSource[row]);
+    std::swap(model->row_lower_[row], model->row_upper_[row]);
+  }
+}
+
 void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
   assert(!rowDeleted[row]);
   assert(!colDeleted[col]);
@@ -2125,7 +2302,9 @@ void HPresolve::substitute(HighsInt row, HighsInt col, double rhs) {
           options->small_matrix_value)
         model->col_cost_[Acol[rowiter]] = 0.0;
     }
-    assert(model->col_cost_[col] == 0);
+    assert(std::abs(model->col_cost_[col]) <=
+           std::max(options->dual_feasibility_tolerance,
+                    kHighsTiny * std::abs(double(objscale))));
     model->col_cost_[col] = 0.0;
   }
 
@@ -2665,17 +2844,28 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
     return checkLimits(postSolveStack);
   }
 
+  double rowUpper = implRowDualLower[row] > options->dual_feasibility_tolerance
+                        ? model->row_lower_[row]
+                        : model->row_upper_[row];
+  double rowLower = implRowDualUpper[row] < -options->dual_feasibility_tolerance
+                        ? model->row_upper_[row]
+                        : model->row_lower_[row];
+  if (rowsize[row] == 2 && rowLower == rowUpper) {
+    model->row_lower_[row] = rowLower;
+    model->row_upper_[row] = rowUpper;
+    return doubletonEq(postSolveStack, row);
+  }
+
   // todo: do additional single row presolve for mip here. It may assume a
   // non-redundant and non-infeasible row when considering variable and implied
   // bounds
   if (rowsizeInteger[row] != 0 || rowsizeImplInt[row] != 0) {
-    if (model->row_lower_[row] == model->row_upper_[row]) {
-      if (rowsize[row] == 2) return doubletonEq(postSolveStack, row);
+    if (rowLower == rowUpper) {
       // equation
       if (impliedRowLower != -kHighsInf && impliedRowUpper != kHighsInf &&
-          std::abs(impliedRowLower + impliedRowUpper -
-                   2 * model->row_upper_[row]) <= options->mip_epsilon) {
-        double binCoef = std::abs(impliedRowUpper - model->row_upper_[row]);
+          std::abs(impliedRowLower + impliedRowUpper - 2 * rowUpper) <=
+              options->mip_epsilon) {
+        double binCoef = std::abs(impliedRowUpper - rowUpper);
         // simple probing on equation case
         HighsInt binCol = -1;
         storeRow(row);
@@ -2763,6 +2953,159 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
           return removeRowSingletons(postSolveStack);
         }
       }
+
+      if (rowsizeInteger[row] + rowsizeImplInt[row] >= rowsize[row] - 1) {
+        HighsInt continuousCol = -1;
+        double continuousCoef = 0.0;
+        std::vector<double> rowCoefsInt;
+        rowCoefsInt.reserve(rowsize[row]);
+        storeRow(row);
+
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          if (model->integrality_[nonz.index()] == HighsVarType::kContinuous) {
+            assert(continuousCoef == 0.0);
+            continuousCoef = nonz.value();
+            continuousCol = nonz.index();
+            continue;
+          }
+
+          rowCoefsInt.push_back(nonz.value());
+        }
+
+        if (continuousCoef != 0.0) {
+          rowCoefsInt.push_back(rowUpper);
+
+          double intScale = HighsIntegers::integralScale(
+              rowCoefsInt, options->mip_epsilon, options->mip_epsilon);
+
+          if (intScale != 0 && intScale <= 1e3) {
+            double scale = 1.0 / std::abs(continuousCoef * intScale);
+            if (scale != 1.0) {
+              // printf(
+              //     "transform continuous column x to implicit integer z with x
+              //     "
+              //     "= %g * z\n",
+              //     scale);
+              transformColumn(postSolveStack, continuousCol, scale, 0.0);
+              model->integrality_[continuousCol] =
+                  HighsVarType::kImplicitInteger;
+              for (const HighsSliceNonzero& nonzero :
+                   getColumnVector(continuousCol))
+                ++rowsizeImplInt[nonzero.index()];
+              double ceilLower = std::ceil(model->col_lower_[continuousCol] -
+                                           options->mip_feasibility_tolerance);
+              double floorUpper =
+                  std::floor(model->col_upper_[continuousCol] +
+                             options->mip_feasibility_tolerance);
+
+              if (ceilLower > model->col_lower_[continuousCol])
+                changeColLower(continuousCol, ceilLower);
+              if (floorUpper < model->col_upper_[continuousCol])
+                changeColUpper(continuousCol, floorUpper);
+            }
+
+            if (intScale != 1.0) scaleStoredRow(row, intScale, true);
+          }
+        } else {
+          double intScale = HighsIntegers::integralScale(
+              rowCoefsInt, options->mip_epsilon, options->mip_epsilon);
+
+          if (intScale != 0.0 && intScale <= 1e3) {
+            double rhs = rowUpper * intScale;
+            if (std::abs(rhs - std::round(rhs)) >
+                options->mip_feasibility_tolerance)
+              return Result::kPrimalInfeasible;
+
+            rhs = std::round(rhs);
+
+            HighsInt rowlen = rowpositions.size();
+            HighsInt x1Cand = -1;
+            int64_t d = 0;
+
+            for (HighsInt i = 0; i < rowlen; ++i) {
+              int64_t newgcd =
+                  d == 0 ? int64_t(std::abs(
+                               std::round(intScale * Avalue[rowpositions[i]])))
+                         : HighsIntegers::gcd(
+                               std::abs(std::round(intScale *
+                                                   Avalue[rowpositions[i]])),
+                               d);
+              if (newgcd == 1) {
+                // adding this variable would set the gcd to 1, therefore it
+                // must be our candidate x1 for substitution. If another
+                // candidate already exists no reduction is possible except for
+                // scaling the equation
+                if (x1Cand != -1) {
+                  x1Cand = -1;
+                  break;
+                }
+                x1Cand = i;
+              } else {
+                d = newgcd;
+              }
+            }
+
+            if (x1Cand != -1) {
+              HighsInt x1Pos = rowpositions[x1Cand];
+              HighsInt x1 = Acol[x1Pos];
+              double rhs2 = rhs / d;
+              if (std::abs(std::round(rhs2) - rhs2) <=
+                  mipsolver->mipdata_->epsilon) {
+                // the right hand side is integral, so we can substitute
+                // x1 = d * z
+
+                // printf(
+                //    "substitute integral column x with integral column z with
+                //    " "x = %ld * z\n", d);
+                transformColumn(postSolveStack, x1, d, 0.0);
+              } else {
+                // we can substitute x1 = d * z + b, with b = a1^-1 rhs (mod d)
+
+                // first compute the modular multiplciative inverse of a1^-1
+                // (mod d) of a1
+                int64_t a1 = std::round(intScale * Avalue[x1Pos]);
+                a1 = HighsIntegers::mod(a1, d);
+                int64_t a1Inverse = HighsIntegers::modularInverse(a1, d);
+
+                // now compute b = a1^-1 rhs (mod d)
+                double b = HighsIntegers::mod(a1Inverse * rhs, (double)d);
+
+                // printf(
+                //     "substitute integral column x with integral column z with
+                //     " "x = %ld * z + %g\n", d, b);
+
+                // before we substitute, we check whether the resulting variable
+                // z is fixed after rounding its new bounds. If that is the case
+                // we directly fix x1 instead of first substituting with d * z +
+                // b.
+                double zLower = std::ceil((model->col_lower_[x1] - b) / d -
+                                          options->mip_feasibility_tolerance);
+                double zUpper = std::floor((model->col_upper_[x1] - b) / d +
+                                           options->mip_feasibility_tolerance);
+
+                if (zLower == zUpper) {
+                  // rounded bounds are equal, so fix x1 to the corresponding
+                  // bound
+                  double fixVal = zLower * d + b;
+                  if (std::abs(model->col_lower_[x1] - fixVal) <=
+                      options->mip_feasibility_tolerance)
+                    fixColToLower(postSolveStack, x1);
+                  else
+                    fixColToUpper(postSolveStack, x1);
+
+                  rowpositions.erase(rowpositions.begin() + x1Cand);
+                } else {
+                  transformColumn(postSolveStack, x1, d, b);
+                }
+              }
+
+              intScale /= d;
+            }
+
+            if (intScale != 1.0) scaleStoredRow(row, intScale, true);
+          }
+        }
+      }
     } else {
       // inequality or ranged row
 
@@ -2794,12 +3137,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             HighsCDouble rhs = model->row_upper_[row] * intScale;
             bool success = true;
             double minRhsTightening = 0.0;
+            double maxVal = 0.0;
             for (HighsInt i = 0; i != rowsize[row]; ++i) {
               double coef = rowCoefs[i];
               HighsCDouble scaleCoef = HighsCDouble(coef) * intScale;
               HighsCDouble intCoef = floor(scaleCoef + 0.5);
               HighsCDouble coefDelta = intCoef - scaleCoef;
               rowCoefs[i] = double(intCoef);
+              maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
               if (coefDelta < -options->mip_epsilon) {
                 minRhsTightening =
                     std::max(-double(coefDelta), minRhsTightening);
@@ -2818,7 +3163,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   floor(rhs + options->mip_feasibility_tolerance);
               if (rhs - roundRhs >= minRhsTightening - options->mip_epsilon) {
                 // scaled and rounded is not weaker than the original constraint
-                if (intScale < 100.0) {
+                if (maxVal <= 1000.0 || intScale <= 100.0) {
                   // printf(
                   //     "scaling constraint to integral values with scale %g, "
                   //     "rounded scaled side from %g to %g\n",
@@ -2856,12 +3201,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             HighsCDouble rhs = model->row_lower_[row] * intScale;
             bool success = true;
             double minRhsTightening = 0.0;
+            double maxVal = 0.0;
             for (HighsInt i = 0; i != rowsize[row]; ++i) {
               double coef = rowCoefs[i];
               HighsCDouble scaleCoef = HighsCDouble(coef) * intScale;
               HighsCDouble intCoef = floor(scaleCoef + 0.5);
               HighsCDouble coefDelta = intCoef - scaleCoef;
               rowCoefs[i] = double(intCoef);
+              maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
               if (coefDelta < -options->mip_epsilon) {
                 if (model->col_upper_[rowIndex[i]] == kHighsInf) {
                   success = false;
@@ -2880,7 +3227,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                   ceil(rhs - options->mip_feasibility_tolerance);
               if (rhs - roundRhs <= minRhsTightening + options->mip_epsilon) {
                 // scaled and rounded is not weaker than the original constraint
-                if (intScale < 100.0) {
+                if (maxVal <= 1000.0 || intScale <= 100.0) {
                   // printf(
                   //     "scaling constraint to integral values with scale %g, "
                   //     "rounded scaled side from %g to %g\n",
@@ -2920,12 +3267,14 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
             bool success = true;
             double minRhsTightening = 0.0;
             double minLhsTightening = 0.0;
+            double maxVal = 0.0;
             for (HighsInt i = 0; i != rowsize[row]; ++i) {
               double coef = rowCoefs[i];
               HighsCDouble scaleCoef = HighsCDouble(coef) * intScale;
               HighsCDouble intCoef = floor(scaleCoef + 0.5);
               HighsCDouble coefDelta = intCoef - scaleCoef;
               rowCoefs[i] = double(intCoef);
+              maxVal = std::max(std::abs(rowCoefs[i]), maxVal);
               if (coefDelta < -options->mip_epsilon) {
                 // for the >= side of the constraint a smaller coefficient is
                 // stronger: Therefore we relax the left hand side using the
@@ -2971,7 +3320,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                                   minRhsTightening + options->mip_epsilon) {
                 // scaled row with adjusted coefficients and sides is not weaker
                 // than the original row
-                if (intScale < 100.0) {
+                if (maxVal <= 1000.0 || intScale <= 100.0) {
                   // printf(
                   //     "scaling constraint to integral values with scale %g, "
                   //     "rounded scaled sides from %g to %g and %g to %g\n",
@@ -3187,9 +3536,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
     }
   }
 
-  if (rowsize[row] == 2 && model->row_lower_[row] == model->row_upper_[row])
-    return doubletonEq(postSolveStack, row);
-
   bool hasRowUpper =
       model->row_upper_[row] != kHighsInf ||
       implRowDualUpper[row] < -options->dual_feasibility_tolerance;
@@ -3371,8 +3717,6 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       }
     }
 
-    if (model->integrality_[col] == HighsVarType::kInteger) return Result::kOk;
-
     if (model->integrality_[col] == HighsVarType::kContinuous &&
         isImpliedInteger(col)) {
       model->integrality_[col] = HighsVarType::kImplicitInteger;
@@ -3386,6 +3730,25 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
       if (ceilLower > model->col_lower_[col]) changeColLower(col, ceilLower);
       if (floorUpper < model->col_upper_[col]) changeColUpper(col, floorUpper);
     }
+
+    // shift integral variables to have a lower bound of zero
+    if (model->integrality_[col] != HighsVarType::kContinuous &&
+        model->col_lower_[col] != 0.0 &&
+        (model->col_lower_[col] != -kHighsInf ||
+         model->col_upper_[col] != kHighsInf) &&
+        model->col_upper_[col] - model->col_lower_[col] > 0.5) {
+      // substitute with the bound that is smaller in magnitude and only
+      // suibstitute if bound is not large for an integer
+      if (std::abs(model->col_upper_[col]) > std::abs(model->col_lower_[col])) {
+        if (std::abs(model->col_lower_[col]) < 1000.5)
+          transformColumn(postSolveStack, col, 1.0, model->col_lower_[col]);
+      } else {
+        if (std::abs(model->col_upper_[col]) < 1000.5)
+          transformColumn(postSolveStack, col, -1.0, model->col_upper_[col]);
+      }
+    }
+
+    if (model->integrality_[col] == HighsVarType::kInteger) return Result::kOk;
   }
 
   // now check if we can expect to tighten at least one bound
@@ -3484,17 +3847,20 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
   }
 
   if (options->presolve != "off") {
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "\nPresolving model\n");
+    if (!mipsolver || mipsolver->mipdata_->numRestarts == 0)
+      highsLogUser(options->log_options, HighsLogType::kInfo,
+                   "\nPresolving model\n");
 
     auto report = [&]() {
-      HighsInt numCol = model->num_col_ - numDeletedCols;
-      HighsInt numRow = model->num_row_ - numDeletedRows;
-      HighsInt numNonz = Avalue.size() - freeslots.size();
-      highsLogUser(options->log_options, HighsLogType::kInfo,
-                   "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
-                   " cols, %" HIGHSINT_FORMAT " nonzeros\n",
-                   numRow, numCol, numNonz);
+      if (!mipsolver || mipsolver->mipdata_->numRestarts == 0) {
+        HighsInt numCol = model->num_col_ - numDeletedCols;
+        HighsInt numRow = model->num_row_ - numDeletedRows;
+        HighsInt numNonz = Avalue.size() - freeslots.size();
+        highsLogUser(options->log_options, HighsLogType::kInfo,
+                     "%" HIGHSINT_FORMAT " rows, %" HIGHSINT_FORMAT
+                     " cols, %" HIGHSINT_FORMAT " nonzeros\n",
+                     numRow, numCol, numNonz);
+      }
     };
 
     HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postSolveStack));
@@ -3612,6 +3978,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "\nPresolve is switched off\n");
   }
+
+  if (mipsolver != nullptr) scaleMIP(postSolveStack);
 
   return Result::kOk;
 }
@@ -4326,7 +4694,8 @@ HighsInt HPresolve::strengthenInequalities() {
       for (HighsInt i = indices.size() - 1; i >= 0; --i) {
         double delta = upper[indices[i]] * reducedcost[indices[i]];
 
-        if (reducedcost[indices[i]] > smallVal && lambda - delta <= smallVal)
+        if (upper[indices[i]] <= 1000.0 && reducedcost[indices[i]] > smallVal &&
+            lambda - delta <= smallVal)
           cover.push_back(indices[i]);
         else
           lambda -= delta;
