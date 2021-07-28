@@ -810,25 +810,29 @@ static std::array<char, 16> convertToPrintString(double val) {
   std::array<char, 16> printString;
   switch (int(l)) {
     case 0:
+      std::snprintf(printString.data(), 16, "%.7g", val);
+      break;
     case 1:
+      std::snprintf(printString.data(), 16, "%.8g", val);
+      break;
     case 2:
+      std::snprintf(printString.data(), 16, "%.9g", val);
+      break;
     case 3:
+      std::snprintf(printString.data(), 16, "%.10g", val);
+      break;
     case 4:
+      std::snprintf(printString.data(), 16, "%.11g", val);
+      break;
     case 5:
+      std::snprintf(printString.data(), 16, "%.12g", val);
+      break;
     case 6:
-      std::snprintf(printString.data(), 16, "%.6f", val);
-      break;
     case 7:
-      std::snprintf(printString.data(), 16, "%.5f", val);
-      break;
     case 8:
-      std::snprintf(printString.data(), 16, "%.4f", val);
-      break;
     case 9:
-      std::snprintf(printString.data(), 16, "%.3f", val);
-      break;
     case 10:
-      std::snprintf(printString.data(), 16, "%.2f", val);
+      std::snprintf(printString.data(), 16, "%.13g", val);
       break;
     default:
       std::snprintf(printString.data(), 16, "%.9g", val);
