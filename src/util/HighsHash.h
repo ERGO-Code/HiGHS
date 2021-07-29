@@ -111,9 +111,11 @@ struct HighsHashHelpers {
   }
 
   static u64 modexp_M61(u64 a, u64 e) {
-    u64 result = 1;
+    // the exponent need to be greater than zero
+    assert(e > 0);
+    u64 result = a;
 
-    while (e) {
+    while (e != 1) {
       // square
       result = multiply_modM61(result, result);
 
@@ -139,9 +141,11 @@ struct HighsHashHelpers {
   }
 
   static u32 modexp_M31(u32 a, u64 e) {
-    u32 result = 1;
+    // the exponent need to be greater than zero
+    assert(e > 0);
+    u32 result = a;
 
-    while (e) {
+    while (e != 1) {
       // square
       result = multiply_modM31(result, result);
 
@@ -609,8 +613,8 @@ class HighsHashTable {
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
-  using ValueType = typename std::remove_reference<decltype(
-      reinterpret_cast<Entry*>(0)->value())>::type;
+  using ValueType = typename std::remove_reference<
+      decltype(reinterpret_cast<Entry*>(0)->value())>::type;
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
