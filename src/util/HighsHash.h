@@ -111,6 +111,8 @@ struct HighsHashHelpers {
   }
 
   static u64 modexp_M61(u64 a, u64 e) {
+    // the exponent need to be greater than zero
+    assert(e > 0);
     u64 result = a;
 
     while (e != 1) {
@@ -127,10 +129,10 @@ struct HighsHashHelpers {
     return result;
   }
 
-  /// mersenne prime 2^61 - 1
+  /// mersenne prime 2^31 - 1
   static constexpr u64 M31() { return u32{0x7fffffff}; };
 
-  /// compute a * b mod 2^61-1
+  /// compute a * b mod 2^31-1
   static u32 multiply_modM31(u32 a, u32 b) {
     u64 result = u64(a) * u64(b);
     result = (result >> 31) + (result & M31());
@@ -139,6 +141,8 @@ struct HighsHashHelpers {
   }
 
   static u32 modexp_M31(u32 a, u64 e) {
+    // the exponent need to be greater than zero
+    assert(e > 0);
     u32 result = a;
 
     while (e != 1) {
