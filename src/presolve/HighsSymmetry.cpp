@@ -432,14 +432,15 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
   }
 }
 
-HighsInt HighsOrbitopeMatrix::getBranchingColumn(const HighsDomain& domain,
-                                                 HighsInt col) const {
+HighsInt HighsOrbitopeMatrix::getBranchingColumn(
+    const std::vector<double>& colLower, const std::vector<double>& colUpper,
+    HighsInt col) const {
   const HighsInt* i = columnToRow.find(col);
-  if (i && rowIsSetPacking[*i]) {
+  if (i) {
     for (HighsInt j = 0; j < rowLength; ++j) {
       HighsInt branchCol = entry(*i, j);
       if (branchCol == col) break;
-      if (!domain.isFixed(branchCol)) return branchCol;
+      if (colLower[branchCol] != colUpper[branchCol]) return branchCol;
     }
   }
 
