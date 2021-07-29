@@ -75,6 +75,7 @@ struct HighsOrbitopeMatrix {
   HighsInt rowLength;
   HighsInt numRows;
   HighsInt numSetPackingRows;
+  HighsHashTable<HighsInt, HighsInt> columnToRow;
   std::vector<int8_t> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
@@ -94,6 +95,8 @@ struct HighsOrbitopeMatrix {
 
   void determineOrbitopeType(HighsCliqueTable& cliquetable,
                              HighsDomain& domain);
+
+  HighsInt getBranchingColumn(const HighsDomain& domain, HighsInt col) const;
 
  private:
   HighsInt orbitalFixingForFullOrbitope(const std::vector<HighsInt>& rows,
@@ -120,6 +123,14 @@ struct HighsSymmetries {
   HighsInt getOrbit(HighsInt col);
 
   HighsInt propagateOrbitopes(HighsDomain& domain) const;
+
+  HighsInt getBranchingColumn(const HighsDomain& domain, HighsInt col) const {
+    if (columnToOrbitope.size() == 0) return col;
+    const HighsInt* orbitope = columnToOrbitope.find(col);
+    if (!orbitope) return col;
+
+    return orbitopes[*orbitope].getBranchingColumn(domain, col);
+  }
 
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
       const HighsDomain& localdom);
