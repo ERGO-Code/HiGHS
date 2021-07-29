@@ -745,6 +745,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
 
 HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
   std::vector<HighsInt> rows;
+  std::vector<uint8_t> rowUsed(numRows);
 
   rows.reserve(numRows);
 
@@ -754,7 +755,8 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
   bool isPacking = true;
   for (HighsInt pos : branchpos) {
     const HighsInt* i = columnToRow.find(domchgstack[pos].column);
-    if (i) {
+    if (i && !rowUsed[*i]) {
+      rowUsed[*i] = true;
       isPacking = isPacking && rowIsSetPacking[*i] != 0;
       rows.push_back(*i);
     }
