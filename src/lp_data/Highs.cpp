@@ -526,8 +526,8 @@ HighsStatus Highs::run() {
   if (!haveHmo("run")) return HighsStatus::kError;
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
-  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
-  //    kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level =  // kHighsDebugLevelMin;
+      kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
@@ -945,13 +945,18 @@ HighsStatus Highs::run() {
                       hmos_[original_hmo].basis_);
 
           hmos_[solved_hmo].ekk_instance_.lp_name_ = "Postsolve LP";
-          HighsInt iteration_count0 = info_.simplex_iteration_count;
+          // Set up the iteration count and timing records so that
+          // adding the corresponding values after callSolveLp gives
+          // difference
+          postsolve_iteration_count = -iteration_counts_.simplex;
           this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
           timer_.start(timer_.solve_clock);
           call_status = callSolveLp(
               solved_hmo,
               "Solving the original LP from the solution after postsolve");
           timer_.stop(timer_.solve_clock);
+          // Determine the iteration count and timing records
+          postsolve_iteration_count += iteration_counts_.simplex;
           this_solve_original_lp_time += timer_.read(timer_.solve_clock);
           return_status =
               interpretCallStatus(call_status, return_status, "callSolveLp");
@@ -959,8 +964,6 @@ HighsStatus Highs::run() {
           options = save_options;
           if (return_status == HighsStatus::kError)
             return returnFromRun(return_status);
-          postsolve_iteration_count =
-              info_.simplex_iteration_count - iteration_count0;
         } else {
           highsLogUser(options_.log_options, HighsLogType::kError,
                        "Postsolve return status is %d\n",

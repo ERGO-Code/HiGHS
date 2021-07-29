@@ -614,7 +614,7 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   // factor
   if (!scaled_matrix) scale.is_scaled = scale.cost != 1;
   // Record the scaling strategy used and recover the scaling strategy option
-  scale.strategy = use_scale_strategy;  
+  scale.strategy = use_scale_strategy;
   options.simplex_scale_strategy = simplex_scale_strategy;
 }
 

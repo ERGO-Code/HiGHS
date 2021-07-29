@@ -33,9 +33,7 @@ enum class LpAction {
   kBacktracking
 };
 
-void getSimplexScaling(HighsOptions& options,
-		       HighsLp& lp,
-                       SimplexScale& scale);
+void getSimplexScaling(HighsOptions& options, HighsLp& lp, SimplexScale& scale);
 
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
 

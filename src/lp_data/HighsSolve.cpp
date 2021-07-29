@@ -314,8 +314,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.value_valid = true;
   solution.dual_valid = true;
   basis.valid = true;
-  assert(solution_params.num_primal_infeasibility>=0);
-  assert(solution_params.num_dual_infeasibility>=0);
+  assert(solution_params.num_primal_infeasibility >= 0);
+  assert(solution_params.num_dual_infeasibility >= 0);
   if (solution_params.num_primal_infeasibility) {
     solution_params.primal_solution_status = kSolutionStatusInfeasible;
   } else {
