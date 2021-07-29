@@ -905,6 +905,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
               subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
             }
+            if (domain)
+              col = mipsolver.mipdata_->symmetries.getBranchingColumn(*domain,
+                                                                      col);
             auto& pair = fracints[col];
             pair.first += val;
             pair.second += 1;

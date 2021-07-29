@@ -362,8 +362,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
     lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
 
-    HighsInt col = mipsolver.mipdata_->symmetries.getBranchingColumn(
-        localdom, fracints[candidate].first);
+    HighsInt col = fracints[candidate].first;
     double fracval = fracints[candidate].second;
     double upval = std::ceil(fracval);
     double downval = std::floor(fracval);
@@ -1040,9 +1039,7 @@ HighsSearch::NodeResult HighsSearch::branch() {
     NodeData& currnode = nodestack.back();
     if (branchcand != -1) {
       auto branching = lp->getFractionalIntegers()[branchcand];
-      currnode.branchingdecision.column =
-          mipsolver.mipdata_->symmetries.getBranchingColumn(localdom,
-                                                            branching.first);
+      currnode.branchingdecision.column = branching.first;
       currnode.branching_point = branching.second;
 
       HighsInt col = branching.first;

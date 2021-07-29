@@ -435,7 +435,7 @@ void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
 HighsInt HighsOrbitopeMatrix::getBranchingColumn(const HighsDomain& domain,
                                                  HighsInt col) const {
   const HighsInt* i = columnToRow.find(col);
-  if (i) {
+  if (i && rowIsSetPacking[*i]) {
     for (HighsInt j = 0; j < rowLength; ++j) {
       HighsInt branchCol = entry(*i, j);
       if (branchCol == col) break;
