@@ -39,40 +39,37 @@
 // using std::cout;
 // using std::endl;
 
-HighsStatus HEkk::moveLp(HighsLp lp) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-
+HighsStatus HEkk::moveNewLp(HighsLp lp) {
   lp_ = std::move(lp);
-  // Shouldn't have to check the incoming LP since this is an internal
-  // call, but it may be an LP that's set up internally with errors
-  // :-) ...
-  if (options_.highs_debug_level > kHighsDebugLevelNone) {
-    // ... so, if debugging, check the LP.
-    call_status = assessLp(lp_, options_);
-    return_status = interpretCallStatus(call_status, return_status, "assessLp");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
-  initialiseForNewLp();
-  return HighsStatus::kOk;
+  return setup();
 }
 
-HighsStatus HEkk::passLp(const HighsLp& pass_lp) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-
+HighsStatus HEkk::passNewLp(const HighsLp& pass_lp) {
   lp_ = pass_lp;
-  // Shouldn't have to check the incoming LP since this is an internal
-  // call, but it may be an LP that's set up internally with errors
-  // :-) ...
-  if (options_.highs_debug_level > kHighsDebugLevelNone) {
-    // ... so, if debugging, check the LP.
-    call_status = assessLp(lp_, options_);
-    return_status = interpretCallStatus(call_status, return_status, "assessLp");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
-  initialiseForNewLp();
-  return HighsStatus::kOk;
+  return setup();
+}
+
+void HEkk::moveUnscaledLp(HighsLp lp,
+			  const SimplexScale* scale,
+			  const HighsInt* scaled_a_start,
+			  const HighsInt* scaled_a_index,
+			  const double* scaled_a_value) {
+  lp_ = std::move(lp);
+  if (status_.has_matrix) initialiseMatrix(true);
+  scale_ = scale;
+  factor_a_start_ = scaled_a_start;
+  factor_a_index_ = scaled_a_index;
+  factor_a_value_ = scaled_a_value;
+}
+
+void HEkk::passScaledLp(const HighsLp& lp) {
+  lp_ = lp;
+  initialiseMatrix(true);
+  scale_ = NULL;
+  factor_a_start_ = &lp_.a_start_[0];
+  factor_a_index_ = &lp_.a_index_[0];
+  factor_a_value_ = &lp_.a_value_[0];
+  simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_, factor_a_value_);
 }
 
 HighsStatus HEkk::solve() {
@@ -460,6 +457,9 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     }
     setBasis();
   }
+  if (status_.has_invert) {
+    printf("In initialiseSimplexLpBasisAndFactor: Ekk has INVERT\n");
+  }
   const HighsInt rank_deficiency = computeFactor();
   if (rank_deficiency) {
     // Basis is rank deficient
@@ -497,10 +497,29 @@ void HEkk::handleRankDeficiency() {
 
 // Private methods
 
+HighsStatus HEkk::setup() {
+  HighsStatus return_status = HighsStatus::kOk;
+  // Shouldn't have to check the incoming LP since this is an internal
+  // call, but it may be an LP that's set up internally with errors
+  // :-) ...
+  if (options_.highs_debug_level > kHighsDebugLevelNone) {
+    // ... so, if debugging, check the LP.
+    HighsStatus call_status = assessLp(lp_, options_);
+    return_status = interpretCallStatus(call_status, return_status, "assessLp");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
+  initialiseForNewLp();
+  return return_status;
+}
+
 void HEkk::initialiseForNewLp() {
   setSimplexOptions();
   initialiseControl();
   initialiseSimplexLpRandomVectors();
+  scale_ = NULL;
+  factor_a_start_ = &lp_.a_start_[0];
+  factor_a_index_ = &lp_.a_index_[0];
+  factor_a_value_ = &lp_.a_value_[0];  
   status_.initialised = true;
 }
 
@@ -727,6 +746,9 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   }
 
   // Call computeFactor to perform INVERT
+  if (status_.has_invert) {
+    printf("In getNonsingularInverse: Ekk has INVERT\n");
+  }
   HighsInt rank_deficiency = computeFactor();
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
@@ -893,6 +915,7 @@ HighsInt HEkk::computeFactor() {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
     simplex_nla_.setup(&lp_, &basis_.basicIndex_[0],
+		       scale_, factor_a_start_, factor_a_index_, factor_a_value_,
                        info_.factor_pivot_threshold, &options_, &timer_,
                        &analysis_);
     status_.has_factor_arrays = true;

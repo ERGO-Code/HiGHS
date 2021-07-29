@@ -37,8 +37,14 @@ class HEkk {
   HighsTimer& timer_;
   HighsSimplexAnalysis analysis_;
 
-  HighsStatus moveLp(HighsLp lp);
-  HighsStatus passLp(const HighsLp& pass_lp);
+  HighsStatus moveNewLp(HighsLp lp);
+  HighsStatus passNewLp(const HighsLp& pass_lp);
+  void moveUnscaledLp(HighsLp lp,
+		      const SimplexScale* scale,
+		      const HighsInt* scaled_a_start,
+		      const HighsInt* scaled_a_index,
+		      const double* scaled_a_value);
+  void passScaledLp(const HighsLp& lp);
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
@@ -47,6 +53,7 @@ class HEkk {
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis();
+
   const SimplexBasis& getSimplexBasis() { return basis_; }
 
   HighsInt initialiseSimplexLpBasisAndFactor(
@@ -97,10 +104,16 @@ class HEkk {
   HMatrix matrix_;
   HSimplexNla simplex_nla_;
 
+  const SimplexScale* scale_;
+  const HighsInt* factor_a_start_;
+  const HighsInt* factor_a_index_;
+  const double* factor_a_value_;
+
   double build_synthetic_tick_;
   double total_synthetic_tick_;
 
  private:
+  HighsStatus setup();
   void initialiseForNewLp();
   bool isUnconstrainedLp();
   HighsStatus initialiseForSolve();

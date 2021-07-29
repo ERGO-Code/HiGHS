@@ -79,7 +79,7 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
       initialiseScale(lp, scale);
     }
     // Move the scaled LP to Ekk
-    ekk_instance.moveLp(std::move(lp));
+    ekk_instance.moveNewLp(std::move(lp));
   } else {
     if (scale_lp) {
       HighsLp scaled_lp = lp;
@@ -88,12 +88,12 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
       if (analyse_lp_data)
         analyseScaledLp(options.log_options, scale, scaled_lp);
       // Pass the scaled LP to Ekk
-      ekk_instance.passLp(scaled_lp);
+      ekk_instance.passNewLp(scaled_lp);
     } else {
       // Initialise unit scaling factors
       initialiseScale(lp, scale);
       // Pass the original LP to Ekk
-      ekk_instance.passLp(lp);
+      ekk_instance.passNewLp(lp);
     }
   }
 }
@@ -569,7 +569,7 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;
+  const bool force_scaling = true;//false;
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");
@@ -1099,9 +1099,9 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   return right_size;
 }
 
-void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale) {
+void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
   // If the LP isscaled, then return
-  if (scale.is_scaled) return;
+  if (scale.is_scaled && !force) return;
   // Scale the bounds and costs and matrix
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     lp.col_lower_[iCol] /= scale.col[iCol];
@@ -1119,9 +1119,9 @@ void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale) {
   //  scale.is_scaled = true;
 }
 
-void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale) {
+void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
   // If the LP isn't scaled, then return
-  if (!scale.is_scaled) return;
+  if (!scale.is_scaled && !force) return;
   // Unscale the bounds and costs and matrix
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     lp.col_lower_[iCol] *= scale.col[iCol];

@@ -125,8 +125,13 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       column.index[column.count++] = index;
     }
 
+    if (iRow==0) {
+      simplex_nla.reportArray("CkInv: RHS", &column, true);
+    }
     simplex_nla.ftran(column, expected_density);
-
+    if (iRow==0) {
+      simplex_nla.reportArray("CkInv: Solution", &column, true);
+    }
     double inverse_column_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
       double value = column.array[lc_iRow];
