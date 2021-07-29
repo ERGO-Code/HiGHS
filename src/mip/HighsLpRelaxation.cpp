@@ -908,6 +908,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
             col = mipsolver.mipdata_->symmetries.getBranchingColumn(
                 getLp().col_lower_, getLp().col_upper_, col);
+
             auto& pair = fracints[col];
             pair.first += val;
             pair.second += 1;

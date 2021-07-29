@@ -131,9 +131,29 @@ struct HighsSymmetries {
                               HighsInt col) const {
     if (columnToOrbitope.size() == 0) return col;
     const HighsInt* orbitope = columnToOrbitope.find(col);
-    if (!orbitope) return col;
+    if (!orbitope || orbitopes[*orbitope].numSetPackingRows == 0) return col;
 
     return orbitopes[*orbitope].getBranchingColumn(colLower, colUpper, col);
+  }
+
+  template <typename Func>
+  void forEachColInOrbitopeRow(HighsInt col, Func&& f) const {
+    if (columnToOrbitope.size() == 0) {
+      f(col);
+      return;
+    }
+
+    const HighsInt* orbitope = columnToOrbitope.find(col);
+    if (!orbitope) {
+      f(col);
+      return;
+    }
+
+    HighsInt rowLength = orbitopes[*orbitope].rowLength;
+    const HighsInt* i = orbitopes[*orbitope].columnToRow.find(col);
+    assert(i != nullptr);
+
+    for (HighsInt j = 0; j < rowLength; ++j) f(orbitopes[*orbitope](*i, j));
   }
 
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
