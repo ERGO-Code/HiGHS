@@ -355,7 +355,7 @@ void HighsMipSolverData::runSetup() {
                "\nSolving MIP model with:\n"
                "   %" HIGHSINT_FORMAT " rows\n"
                "   %" HIGHSINT_FORMAT " cols (%" HIGHSINT_FORMAT" binary, %" HIGHSINT_FORMAT " integer, %" HIGHSINT_FORMAT" implied int., %" HIGHSINT_FORMAT " continuous)\n"
-               "   %" HIGHSINT_FORMAT " nonzeros\n\n",
+               "   %" HIGHSINT_FORMAT " nonzeros\n",
                  // clang-format on
                  mipsolver.numRow(), mipsolver.numCol(), numBin,
                  numintegercols - numBin, (HighsInt)implint_cols.size(),
@@ -385,6 +385,10 @@ void HighsMipSolverData::runSetup() {
   symmetries.clear();
 
   if (detectSymmetries) {
+    if (numRestarts == 0)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "\n");
+
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "(%4.1fs) Starting symmetry detection\n",
                  mipsolver.timer_.read(mipsolver.timer_.solve_clock));
