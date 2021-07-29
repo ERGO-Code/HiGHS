@@ -75,7 +75,7 @@ struct HighsOrbitopeMatrix {
   HighsInt rowLength;
   HighsInt numRows;
   HighsInt numSetPackingRows;
-  bool upperTriangleFixed;
+  HighsHashTable<HighsInt, HighsInt> columnToRow;
   std::vector<int8_t> rowIsSetPacking;
   std::vector<HighsInt> matrix;
 
@@ -95,6 +95,10 @@ struct HighsOrbitopeMatrix {
 
   void determineOrbitopeType(HighsCliqueTable& cliquetable,
                              HighsDomain& domain);
+
+  HighsInt getBranchingColumn(const std::vector<double>& colLower,
+                              const std::vector<double>& colUpper,
+                              HighsInt col) const;
 
  private:
   HighsInt orbitalFixingForFullOrbitope(const std::vector<HighsInt>& rows,
@@ -121,6 +125,36 @@ struct HighsSymmetries {
   HighsInt getOrbit(HighsInt col);
 
   HighsInt propagateOrbitopes(HighsDomain& domain) const;
+
+  HighsInt getBranchingColumn(const std::vector<double>& colLower,
+                              const std::vector<double>& colUpper,
+                              HighsInt col) const {
+    if (columnToOrbitope.size() == 0) return col;
+    const HighsInt* orbitope = columnToOrbitope.find(col);
+    if (!orbitope || orbitopes[*orbitope].numSetPackingRows == 0) return col;
+
+    return orbitopes[*orbitope].getBranchingColumn(colLower, colUpper, col);
+  }
+
+  template <typename Func>
+  void forEachColInOrbitopeRow(HighsInt col, Func&& f) const {
+    if (columnToOrbitope.size() == 0) {
+      f(col);
+      return;
+    }
+
+    const HighsInt* orbitope = columnToOrbitope.find(col);
+    if (!orbitope) {
+      f(col);
+      return;
+    }
+
+    HighsInt rowLength = orbitopes[*orbitope].rowLength;
+    const HighsInt* i = orbitopes[*orbitope].columnToRow.find(col);
+    assert(i != nullptr);
+
+    for (HighsInt j = 0; j < rowLength; ++j) f(orbitopes[*orbitope](*i, j));
+  }
 
   std::shared_ptr<const StabilizerOrbits> computeStabilizerOrbits(
       const HighsDomain& localdom);
