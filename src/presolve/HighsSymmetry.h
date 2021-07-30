@@ -178,7 +178,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> vertexPosition;
   std::vector<HighsInt> vertexGroundSet;
   std::vector<u64> vertexHashes;
-  std::vector<bool> hashValid;
+  std::vector<uint8_t> hashValid;
   std::vector<HighsInt> orbitPartition;
   std::vector<HighsInt> orbitSize;
 
