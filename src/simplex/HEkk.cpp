@@ -918,6 +918,12 @@ HighsInt HEkk::computeFactor() {
                        factor_a_index_, factor_a_value_,
                        info_.factor_pivot_threshold, &options_, &timer_,
                        &analysis_);
+    if (simplex_nla_.scale_ == NULL) {
+      double value0 = lp_.a_value_[0];
+      double value1 = factor_a_value_[0];
+      double value2 = simplex_nla_.lp_->a_value_[0];
+      printf("HEkk::computeFactor a_value %g/%g/%g\n", value0, value1, value2);
+    }
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);

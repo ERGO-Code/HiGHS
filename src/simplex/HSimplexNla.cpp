@@ -16,6 +16,7 @@
  * scaling and shifting of NLA analysis below simplex level.
  */
 #include "simplex/HSimplexNla.h"
+#include "simplex/HSimplex.h"
 
 //#include <algorithm>
 #include <stdio.h>
@@ -48,6 +49,19 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
                 options_->factor_pivot_tolerance, options_->highs_debug_level,
                 options_->output_flag, options_->log_file_stream,
                 options_->log_to_console, options_->log_dev_level);
+  is_setup_ = true;
+  assert(debugCheckData() == HighsDebugStatus::kOk);
+}
+
+void HSimplexNla::clear() {
+  lp_ = NULL;
+  scale_ = NULL;
+  base_index_ = NULL;
+  options_ = NULL;
+  timer_ = NULL;
+  analysis_ = NULL;
+  report_ = false;
+  is_setup_ = false;
 }
 
 HighsInt HSimplexNla::invert() {
@@ -256,3 +270,82 @@ void HSimplexNla::reportPackValue(const std::string message,
   }
   printf("\n");
 }
+
+HighsDebugStatus HSimplexNla::debugCheckData(const bool require_setup) const {
+  std::string scale_status;
+  if (scale_ == NULL) {
+    scale_status = "NULL";
+  } else {
+    scale_status = "non-NULL";
+  }
+  printf("Calling debugCheckData: scale_ is %s\n", scale_status.c_str()); fflush(stdout);
+  const bool setup_ok = !require_setup || is_setup_;
+  if (!setup_ok) {
+    assert(setup_ok);
+    return HighsDebugStatus::kLogicalError;
+  }
+  //  if (options_->highs_debug_level < kHighsDebugLevelCheap) return HighsDebugStatus::kOk;
+  if (!is_setup_) return HighsDebugStatus::kOk;
+  HighsLp check_lp = *lp_;
+  bool error_found = false;
+  const HighsInt* factor_Astart = factor_.getAstart();
+  const HighsInt* factor_Aindex = factor_.getAindex();
+  const double* factor_Avalue = factor_.getAvalue();
+  if (scale_ == NULL) {
+    if (factor_Astart != &(lp_->a_start_[0]))
+      error_found = true;
+    if (factor_Aindex != &(lp_->a_index_[0]))
+      error_found = true;
+    if (factor_Avalue != &(lp_->a_value_[0]))
+      error_found = true;
+    if (error_found) {
+      highsLogUser(options_->log_options, HighsLogType::kError,
+                "CheckNlaData:  lp_ - factor_ matrix pointer errors\n");
+      assert(!error_found);
+      return HighsDebugStatus::kLogicalError;
+    } else {
+      highsLogUser(options_->log_options, HighsLogType::kInfo,
+                "CheckNlaData:  lp_ - factor_ matrix pointers OK\n");
+    }
+  } else {
+    scaleSimplexLp(check_lp, *scale_);
+  }
+  for (HighsInt iCol=0; iCol<lp_->num_col_+1; iCol++)
+    if (lp_->a_start_[iCol] != factor_Astart[iCol]) error_found = true;
+  if (error_found) {
+    highsLogUser(options_->log_options, HighsLogType::kError,
+                "CheckNlaData:  lp_->a_start_ != factor_Astart\n");
+      assert(!error_found);
+    return HighsDebugStatus::kLogicalError;
+  } else {
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+                "CheckNlaData:  lp_->a_start_ == factor_Astart\n"); fflush(stdout);
+  }
+  HighsInt nnz = lp_->a_start_[lp_->num_col_];
+  for (HighsInt iEl=0; iEl<nnz; iEl++)
+    if (lp_->a_index_[iEl] != factor_Aindex[iEl]) error_found = true;
+  
+  if (error_found) {
+    highsLogUser(options_->log_options, HighsLogType::kError,
+                "CheckNlaData:  lp_->a_index_ != factor_Aindex\n");
+      assert(!error_found);
+    return HighsDebugStatus::kLogicalError;
+  } else {
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+                "CheckNlaData:  lp_->a_index_ == factor_Aindex\n"); fflush(stdout);
+  }
+  for (HighsInt iEl=0; iEl<nnz; iEl++)
+    if (lp_->a_value_[iEl] != factor_Avalue[iEl]) error_found = true;
+  
+  if (error_found) {
+    highsLogUser(options_->log_options, HighsLogType::kError,
+                "CheckNlaData:  lp_->a_value_ != factor_Avalue\n");
+      assert(!error_found);
+    return HighsDebugStatus::kLogicalError;
+  } else {
+    highsLogUser(options_->log_options, HighsLogType::kInfo,
+		 "CheckNlaData:  lp_->a_value_ == factor_Avalue\n"); fflush(stdout);
+  }
+  return HighsDebugStatus::kOk;
+}
+

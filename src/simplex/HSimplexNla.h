@@ -39,6 +39,7 @@ class HSimplexNla {
              const double* factor_a_value, const double factor_pivot_threshold,
              const HighsOptions* options, HighsTimer* timer,
              HighsSimplexAnalysis* analysis);
+  void clear();
   HighsInt invert();
   void btran(HVector& rhs, const double expected_density,
              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
@@ -67,6 +68,7 @@ class HSimplexNla {
                          const bool force = false) const;
   void reportPackValue(const std::string message, const HVector* vector,
                        const bool force = false) const;
+  HighsDebugStatus debugCheckData(const bool require_setup = false) const;
   HighsInt build_synthetic_tick_;
 
   // private:
@@ -75,6 +77,7 @@ class HSimplexNla {
   // Pointers:
 
   // Class data members
+  bool is_setup_ = false;
   const HighsLp* lp_;
   const SimplexScale* scale_;
   HighsInt* base_index_;

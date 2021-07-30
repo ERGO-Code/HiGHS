@@ -162,3 +162,4 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
 
   return return_status;
 }
+

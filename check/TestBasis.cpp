@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
