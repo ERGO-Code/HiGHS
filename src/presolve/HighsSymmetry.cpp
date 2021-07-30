@@ -1594,32 +1594,48 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   //        p0);
 
   HighsInt numColsAdded = 2;
+  bool triedLeftExtension = false;
 
   while (numColsAdded < orbitopeMatrix.rowLength) {
     if (colSet.size() != numColsAdded * orbitopeMatrix.numRows) return false;
 
-    HighsInt* thisCol =
-        orbitopeMatrix.matrix.data() + numColsAdded * orbitopeMatrix.numRows;
-    HighsInt* prevCol = thisCol - orbitopeMatrix.numRows;
+    HighsInt* thisCol = &orbitopeMatrix(0, numColsAdded);
+    HighsInt* prevCol = &orbitopeMatrix(0, numColsAdded - 1);
 
-    HighsInt movePos = vertexPosition[prevCol[0]];
-    perm = nullptr;
-    for (HighsInt k = componentData.permComponentStarts[component] + 1;
-         k < componentData.permComponentStarts[component + 1]; ++k) {
-      HighsInt p = componentData.permComponents[k];
-      perm = symmetries.permutations.data() + p * numActiveCols;
+    bool foundCand = false;
 
-      if (perm[movePos] != vertexGroundSet[movePos] &&
-          !colSet.find(perm[movePos])) {
-        break;
+    while (true) {
+      HighsInt movePos = vertexPosition[prevCol[0]];
+      perm = nullptr;
+
+      for (HighsInt k = componentData.permComponentStarts[component] + 1;
+           k < componentData.permComponentStarts[component + 1]; ++k) {
+        HighsInt p = componentData.permComponents[k];
+        perm = symmetries.permutations.data() + p * numActiveCols;
+
+        if (perm[movePos] != vertexGroundSet[movePos] &&
+            !colSet.find(perm[movePos])) {
+          foundCand = true;
+          break;
+        }
       }
+
+      if (!foundCand && !triedLeftExtension) {
+        // if we fail to find a permutation extending the last column directly
+        // after we set up the first two columns we might try to extend column
+        // zero instead of the previous one
+        prevCol = &orbitopeMatrix(0, 0);
+        triedLeftExtension = true;
+        continue;
+      }
+
+      break;
     }
 
-    if (perm == nullptr) {
+    if (!foundCand) {
       // printf("did not find next permutation moving col %d\n", prevCol[0]);
       return false;
     }
-    // printf("next permutation moving col %d is %d\n", prevCol[0], p0);
 
     for (HighsInt j = 0; j < orbitopeMatrix.numRows; ++j) {
       HighsInt nextVertex = perm[vertexPosition[prevCol[j]]];
