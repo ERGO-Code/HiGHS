@@ -145,18 +145,18 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
 
 void HighsLpRelaxation::loadModel() {
   HighsLp lpmodel = *mipsolver.model_;
-  lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
-  lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
+  lpmodel.col_lower_ = mipsolver.mipdata_->domain.col_lower_;
+  lpmodel.col_upper_ = mipsolver.mipdata_->domain.col_upper_;
   lpmodel.offset_ = 0;
   lprows.clear();
-  lprows.reserve(lpmodel.numRow_);
-  for (HighsInt i = 0; i != lpmodel.numRow_; ++i)
+  lprows.reserve(lpmodel.num_row_);
+  for (HighsInt i = 0; i != lpmodel.num_row_; ++i)
     lprows.push_back(LpRow::model(i));
   lpmodel.integrality_.clear();
   lpsolver.clearSolver();
   lpsolver.clearModel();
   lpsolver.passModel(std::move(lpmodel));
-  mask.resize(lpmodel.numCol_);
+  mask.resize(lpmodel.num_col_);
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
@@ -199,7 +199,7 @@ double HighsLpRelaxation::computeLPDegneracy(
   HighsInt numBasicEqualities = 0;
 
   for (HighsInt i = 0; i < numRows(); ++i) {
-    if (lpsolver.getLp().rowLower_[i] != lpsolver.getLp().rowUpper_[i]) {
+    if (lpsolver.getLp().row_lower_[i] != lpsolver.getLp().row_upper_[i]) {
       ++numInequalities;
 
       if (basis.row_status[i] != HighsBasisStatus::kBasic) {
@@ -215,7 +215,7 @@ double HighsLpRelaxation::computeLPDegneracy(
     if (basis.col_status[i] != HighsBasisStatus::kBasic) {
       if (std::abs(sol.col_dual[i]) > dualFeasTol)
         ++numFixedCols;
-      else if (localdomain.colLower_[i] == localdomain.colUpper_[i])
+      else if (localdomain.col_lower_[i] == localdomain.col_upper_[i])
         ++numAlreadyFixedCols;
     }
   }
@@ -242,9 +242,9 @@ double HighsLpRelaxation::computeLPDegneracy(
 
 void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   HighsInt numcuts = cutset.numCuts();
-  assert(lpsolver.getLp().numRow_ ==
-         (HighsInt)lpsolver.getLp().rowLower_.size());
-  assert(lpsolver.getLp().numRow_ == (HighsInt)lprows.size());
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
+  assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
   if (numcuts > 0) {
     status = Status::kNotSet;
     currentbasisstored = false;
@@ -261,8 +261,8 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
                          cutset.ARvalue_.data()) == HighsStatus::kOk;
     assert(success);
     (void)success;
-    assert(lpsolver.getLp().numRow_ ==
-           (HighsInt)lpsolver.getLp().rowLower_.size());
+    assert(lpsolver.getLp().num_row_ ==
+           (HighsInt)lpsolver.getLp().row_lower_.size());
     cutset.clear();
   }
 }
@@ -288,8 +288,8 @@ void HighsLpRelaxation::removeObsoleteRows(bool notifyPool) {
 
 void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
                                    std::vector<HighsInt>& deletemask) {
-  assert(lpsolver.getLp().numRow_ ==
-         (HighsInt)lpsolver.getLp().rowLower_.size());
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
   if (ndelcuts > 0) {
     HighsBasis basis = lpsolver.getBasis();
     HighsInt nlprows = lpsolver.getNumRow();
@@ -301,21 +301,21 @@ void HighsLpRelaxation::removeCuts(HighsInt ndelcuts,
       }
     }
 
-    assert(lpsolver.getLp().numRow_ ==
-           (HighsInt)lpsolver.getLp().rowLower_.size());
+    assert(lpsolver.getLp().num_row_ ==
+           (HighsInt)lpsolver.getLp().row_lower_.size());
 
     basis.row_status.resize(basis.row_status.size() - ndelcuts);
     lprows.resize(lprows.size() - ndelcuts);
 
-    assert(lpsolver.getLp().numRow_ == (HighsInt)lprows.size());
+    assert(lpsolver.getLp().num_row_ == (HighsInt)lprows.size());
     lpsolver.setBasis(basis);
     lpsolver.run();
   }
 }
 
 void HighsLpRelaxation::removeCuts() {
-  assert(lpsolver.getLp().numRow_ ==
-         (HighsInt)lpsolver.getLp().rowLower_.size());
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
   HighsInt nlprows = lpsolver.getNumRow();
   HighsInt modelrows = mipsolver.numRow();
 
@@ -325,13 +325,13 @@ void HighsLpRelaxation::removeCuts() {
       mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
   }
   lprows.resize(modelrows);
-  assert(lpsolver.getLp().numRow_ ==
-         (HighsInt)lpsolver.getLp().rowLower_.size());
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
 }
 
 void HighsLpRelaxation::performAging(bool useBasis) {
-  assert(lpsolver.getLp().numRow_ ==
-         (HighsInt)lpsolver.getLp().rowLower_.size());
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
 
   size_t agelimit = mipsolver.options_mip_->mip_lp_age_limit;
 
@@ -374,8 +374,8 @@ void HighsLpRelaxation::performAging(bool useBasis) {
 }
 
 void HighsLpRelaxation::resetAges() {
-  assert(lpsolver.getLp().numRow_ ==
-         (HighsInt)lpsolver.getLp().rowLower_.size());
+  assert(lpsolver.getLp().num_row_ ==
+         (HighsInt)lpsolver.getLp().row_lower_.size());
 
   HighsInt nlprows = numRows();
   HighsInt nummodelrows = getNumModelRows();
@@ -400,8 +400,8 @@ void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
       mask[col] = 1;
     }
 
-    lpsolver.changeColsBounds(mask.data(), domain.colLower_.data(),
-                              domain.colUpper_.data());
+    lpsolver.changeColsBounds(mask.data(), domain.col_lower_.data(),
+                              domain.col_upper_.data());
 
     for (HighsInt col : domain.getChangedCols()) mask[col] = 0;
 
@@ -421,19 +421,19 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   assert(std::isfinite(upperbound));
   HighsCDouble upper = upperbound;
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     // @FlipRowDual row_dual[i] < 0 became row_dual[i] > 0
     if (row_dual[i] > 0) {
-      if (lp.rowLower_[i] != -kHighsInf)
+      if (lp.row_lower_[i] != -kHighsInf)
         // @FlipRowDual += became -=
-        upper -= row_dual[i] * lp.rowLower_[i];
+        upper -= row_dual[i] * lp.row_lower_[i];
       else
         row_dual[i] = 0;
       // @FlipRowDual row_dual[i] > 0 became row_dual[i] < 0
     } else if (row_dual[i] < 0) {
-      if (lp.rowUpper_[i] != kHighsInf)
+      if (lp.row_upper_[i] != kHighsInf)
         // @FlipRowDual += became -=
-        upper -= row_dual[i] * lp.rowUpper_[i];
+        upper -= row_dual[i] * lp.row_upper_[i];
       else
         row_dual[i] = 0;
     }
@@ -441,18 +441,18 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
   inds.clear();
   vals.clear();
-  inds.reserve(lp.numCol_);
-  vals.reserve(lp.numCol_);
-  for (HighsInt i = 0; i != lp.numCol_; ++i) {
-    HighsInt start = lp.Astart_[i];
-    HighsInt end = lp.Astart_[i + 1];
+  inds.reserve(lp.num_col_);
+  vals.reserve(lp.num_col_);
+  for (HighsInt i = 0; i != lp.num_col_; ++i) {
+    HighsInt start = lp.a_start_[i];
+    HighsInt end = lp.a_start_[i + 1];
 
-    HighsCDouble sum = lp.colCost_[i];
+    HighsCDouble sum = lp.col_cost_[i];
 
     for (HighsInt j = start; j != end; ++j) {
-      if (row_dual[lp.Aindex_[j]] == 0) continue;
+      if (row_dual[lp.a_index_[j]] == 0) continue;
       // @FlipRowDual += became -=
-      sum -= lp.Avalue_[j] * row_dual[lp.Aindex_[j]];
+      sum -= lp.a_value_[j] * row_dual[lp.a_index_[j]];
     }
 
     double val = double(sum);
@@ -460,28 +460,28 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
     if (std::abs(val) <= mipsolver.options_mip_->small_matrix_value) continue;
 
     bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol ||
-                       globaldomain.colLower_[i] == globaldomain.colUpper_[i];
+                       globaldomain.col_lower_[i] == globaldomain.col_upper_[i];
 
     if (!removeValue &&
         mipsolver.variableType(i) == HighsVarType::kContinuous) {
       if (val > 0)
         removeValue =
-            lpsolver.getSolution().col_value[i] - globaldomain.colLower_[i] <=
+            lpsolver.getSolution().col_value[i] - globaldomain.col_lower_[i] <=
             mipsolver.mipdata_->feastol;
       else
         removeValue =
-            globaldomain.colUpper_[i] - lpsolver.getSolution().col_value[i] <=
+            globaldomain.col_upper_[i] - lpsolver.getSolution().col_value[i] <=
             mipsolver.mipdata_->feastol;
     }
 
     if (removeValue) {
       if (val < 0) {
-        if (globaldomain.colUpper_[i] == kHighsInf) return false;
-        upper -= val * globaldomain.colUpper_[i];
+        if (globaldomain.col_upper_[i] == kHighsInf) return false;
+        upper -= val * globaldomain.col_upper_[i];
       } else {
-        if (globaldomain.colLower_[i] == -kHighsInf) return false;
+        if (globaldomain.col_lower_[i] == -kHighsInf) return false;
 
-        upper -= val * globaldomain.colLower_[i];
+        upper -= val * globaldomain.col_lower_[i];
       }
 
       continue;
@@ -529,45 +529,45 @@ void HighsLpRelaxation::storeDualInfProof() {
   HighsCDouble upper = 0.0;
 
   double maxval = 0;
-  for (HighsInt i = 0; i != lp.numRow_; ++i)
+  for (HighsInt i = 0; i != lp.num_row_; ++i)
     maxval = std::max(maxval, std::abs(dualray[i]));
 
   int expscal;
   std::frexp(maxval, &expscal);
   expscal = -expscal;
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     dualray[i] = std::ldexp(dualray[i], expscal);
     if (std::abs(dualray[i]) <= mipsolver.mipdata_->epsilon ||
         std::abs(dualray[i]) * getMaxAbsRowVal(i) <=
             mipsolver.mipdata_->feastol)
       dualray[i] = 0;
     else if (dualray[i] < 0) {
-      if (lp.rowUpper_[i] == kHighsInf) dualray[i] = 0.0;
+      if (lp.row_upper_[i] == kHighsInf) dualray[i] = 0.0;
     } else if (dualray[i] > 0) {
-      if (lp.rowLower_[i] == -kHighsInf) dualray[i] = 0.0;
+      if (lp.row_lower_[i] == -kHighsInf) dualray[i] = 0.0;
     }
   }
 
-  for (HighsInt i = 0; i != lp.numRow_; ++i) {
+  for (HighsInt i = 0; i != lp.num_row_; ++i) {
     if (dualray[i] < 0) {
-      assert(lp.rowUpper_[i] != kHighsInf);
-      upper -= dualray[i] * lp.rowUpper_[i];
+      assert(lp.row_upper_[i] != kHighsInf);
+      upper -= dualray[i] * lp.row_upper_[i];
     } else if (dualray[i] > 0) {
-      assert(lp.rowLower_[i] != -kHighsInf);
-      upper -= dualray[i] * lp.rowLower_[i];
+      assert(lp.row_lower_[i] != -kHighsInf);
+      upper -= dualray[i] * lp.row_lower_[i];
     }
   }
 
-  for (HighsInt i = 0; i != lp.numCol_; ++i) {
-    HighsInt start = lp.Astart_[i];
-    HighsInt end = lp.Astart_[i + 1];
+  for (HighsInt i = 0; i != lp.num_col_; ++i) {
+    HighsInt start = lp.a_start_[i];
+    HighsInt end = lp.a_start_[i + 1];
 
     HighsCDouble sum = 0.0;
 
     for (HighsInt j = start; j != end; ++j) {
-      if (dualray[lp.Aindex_[j]] == 0.0) continue;
-      sum -= lp.Avalue_[j] * dualray[lp.Aindex_[j]];
+      if (dualray[lp.a_index_[j]] == 0.0) continue;
+      sum -= lp.a_value_[j] * dualray[lp.a_index_[j]];
     }
 
     double val = double(sum);
@@ -576,14 +576,14 @@ void HighsLpRelaxation::storeDualInfProof() {
 
     if (mipsolver.variableType(i) == HighsVarType::kContinuous ||
         std::abs(val) <= mipsolver.mipdata_->feastol ||
-        mipsolver.mipdata_->domain.colLower_[i] ==
-            mipsolver.mipdata_->domain.colUpper_[i]) {
+        mipsolver.mipdata_->domain.col_lower_[i] ==
+            mipsolver.mipdata_->domain.col_upper_[i]) {
       if (val < 0) {
-        if (mipsolver.mipdata_->domain.colUpper_[i] == kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.colUpper_[i];
+        if (mipsolver.mipdata_->domain.col_upper_[i] == kHighsInf) return;
+        upper -= val * mipsolver.mipdata_->domain.col_upper_[i];
       } else {
-        if (mipsolver.mipdata_->domain.colLower_[i] == -kHighsInf) return;
-        upper -= val * mipsolver.mipdata_->domain.colLower_[i];
+        if (mipsolver.mipdata_->domain.col_lower_[i] == -kHighsInf) return;
+        upper -= val * mipsolver.mipdata_->domain.col_lower_[i];
       }
 
       continue;
@@ -632,12 +632,12 @@ bool HighsLpRelaxation::checkDualProof() const {
   for (HighsInt i = 0; i != len; ++i) {
     HighsInt col = dualproofinds[i];
     if (dualproofvals[i] > 0) {
-      if (lp.colLower_[col] == -kHighsInf) return false;
-      viol += dualproofvals[i] * lp.colLower_[col];
+      if (lp.col_lower_[col] == -kHighsInf) return false;
+      viol += dualproofvals[i] * lp.col_lower_[col];
     } else {
       assert(dualproofvals[i] < 0);
-      if (lp.colUpper_[col] == kHighsInf) return false;
-      viol += dualproofvals[i] * lp.colUpper_[col];
+      if (lp.col_upper_[col] == kHighsInf) return false;
+      viol += dualproofvals[i] * lp.col_upper_[col];
     }
   }
 
@@ -873,8 +873,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           // bounds that are violated by the unscaled LP are indicated by the
           // return status already
           double val = std::max(
-              std::min(sol.col_value[i], lpsolver.getLp().colUpper_[i]),
-              lpsolver.getLp().colLower_[i]);
+              std::min(sol.col_value[i], lpsolver.getLp().col_upper_[i]),
+              lpsolver.getLp().col_lower_[i]);
           double intval = std::floor(val + 0.5);
 
           if (std::abs(val - intval) > mipsolver.mipdata_->feastol) {
@@ -886,11 +886,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             const HighsCliqueTable::Substitution* subst =
                 mipsolver.mipdata_->cliquetable.getSubstitution(col);
             while (subst != nullptr) {
-              if (lpsolver.getLp().colLower_[subst->replace.col] ==
-                  lpsolver.getLp().colUpper_[subst->replace.col]) {
+              if (lpsolver.getLp().col_lower_[subst->replace.col] ==
+                  lpsolver.getLp().col_upper_[subst->replace.col]) {
                 if (domain) {
                   domain->fixCol(
-                      col, subst->replace.weight(lpsolver.getLp().colLower_));
+                      col, subst->replace.weight(lpsolver.getLp().col_lower_));
                   if (domain->infeasible()) {
                     objective = kHighsInf;
                     status = Status::kInfeasible;
@@ -905,6 +905,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
               subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
             }
+
+            col = mipsolver.mipdata_->symmetries.getBranchingColumn(
+                getLp().col_lower_, getLp().col_upper_, col);
+
             auto& pair = fracints[col];
             pair.first += val;
             pair.second += 1;

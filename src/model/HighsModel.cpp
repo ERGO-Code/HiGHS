@@ -32,8 +32,8 @@ void HighsModel::objectiveGradient(const std::vector<double>& solution,
   if (this->hessian_.dim_ > 0) {
     this->hessian_.product(solution, gradient);
   } else {
-    gradient.assign(this->lp_.numCol_, 0);
+    gradient.assign(this->lp_.num_col_, 0);
   }
   for (HighsInt iCol = 0; iCol < this->hessian_.dim_; iCol++)
-    gradient[iCol] += this->lp_.colCost_[iCol];
+    gradient[iCol] += this->lp_.col_cost_[iCol];
 }

@@ -34,12 +34,12 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // build variable index and gather variable information
     std::map<std::string, unsigned int> varindex;
 
-    lp.numCol_ = m.variables.size();
-    lp.numRow_ = m.constraints.size();
+    lp.num_col_ = m.variables.size();
+    lp.num_row_ = m.constraints.size();
     for (HighsUInt i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
-      lp.colLower_.push_back(m.variables[i]->lowerbound);
-      lp.colUpper_.push_back(m.variables[i]->upperbound);
+      lp.col_lower_.push_back(m.variables[i]->lowerbound);
+      lp.col_upper_.push_back(m.variables[i]->upperbound);
       lp.col_names_.push_back(m.variables[i]->name);
     }
 
@@ -49,10 +49,10 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                    "Ignoring m.objective->offset = %g\n", m.objective->offset);
       lp.offset_ = 0;  // m.objective->offset;
     }
-    lp.colCost_.resize(lp.numCol_, 0.0);
+    lp.col_cost_.resize(lp.num_col_, 0.0);
     for (HighsUInt i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
-      lp.colCost_[varindex[lt->var->name]] = lt->coef;
+      lp.col_cost_[varindex[lt->var->name]] = lt->coef;
     }
 
     std::map<std::shared_ptr<Variable>, std::vector<std::shared_ptr<Variable>>>
@@ -100,21 +100,21 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
         consofvarmap_value[lt->var].push_back(lt->coef);
       }
 
-      lp.rowLower_.push_back(con->lowerbound);
-      lp.rowUpper_.push_back(con->upperbound);
+      lp.row_lower_.push_back(con->lowerbound);
+      lp.row_upper_.push_back(con->upperbound);
     }
 
     HighsInt nz = 0;
-    for (HighsInt i = 0; i < lp.numCol_; i++) {
+    for (HighsInt i = 0; i < lp.num_col_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
-      lp.Astart_.push_back(nz);
+      lp.a_start_.push_back(nz);
       for (HighsUInt j = 0; j < consofvarmap_index[var].size(); j++) {
-        lp.Aindex_.push_back(consofvarmap_index[var][j]);
-        lp.Avalue_.push_back(consofvarmap_value[var][j]);
+        lp.a_index_.push_back(consofvarmap_index[var][j]);
+        lp.a_value_.push_back(consofvarmap_value[var][j]);
         nz++;
       }
     }
-    lp.Astart_.push_back(nz);
+    lp.a_start_.push_back(nz);
     lp.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
@@ -161,13 +161,13 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                     lp.sense_ == ObjSense::kMinimize ? "min" : "max");
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
-  for (HighsInt i = 0; i < lp.numCol_; i++) {
-    this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.colCost_[i],
+  for (HighsInt i = 0; i < lp.num_col_; i++) {
+    this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ", lp.col_cost_[i],
                       (i + 1));
   }
   if (model.isQp()) {
     this->writeToFile(file, "+ [ ");
-    for (HighsInt col = 0; col < lp.numCol_; col++) {
+    for (HighsInt col = 0; col < lp.num_col_; col++) {
       for (HighsInt i = model.hessian_.q_start_[col];
            i < model.hessian_.q_start_[col + 1]; i++) {
         if (col <= model.hessian_.q_index_[i]) {
@@ -185,48 +185,49 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   // each
   this->writeToFile(file, "st");
   this->writeToFileLineend(file);
-  for (HighsInt row = 0; row < lp.numRow_; row++) {
-    if (lp.rowLower_[row] == lp.rowUpper_[row]) {
+  for (HighsInt row = 0; row < lp.num_row_; row++) {
+    if (lp.row_lower_[row] == lp.row_upper_[row]) {
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
-      for (HighsInt var = 0; var < lp.numCol_; var++) {
-        for (HighsInt idx = lp.Astart_[var]; idx < lp.Astart_[var + 1]; idx++) {
-          if (lp.Aindex_[idx] == row) {
+      for (HighsInt var = 0; var < lp.num_col_; var++) {
+        for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
+             idx++) {
+          if (lp.a_index_[idx] == row) {
             this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                              lp.Avalue_[idx], var + 1);
+                              lp.a_value_[idx], var + 1);
           }
         }
       }
-      this->writeToFile(file, "= %+g", lp.rowLower_[row]);
+      this->writeToFile(file, "= %+g", lp.row_lower_[row]);
       this->writeToFileLineend(file);
     } else {
-      if (lp.rowLower_[row] > -kHighsInf) {
+      if (lp.row_lower_[row] > -kHighsInf) {
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
-        for (HighsInt var = 0; var < lp.numCol_; var++) {
-          for (HighsInt idx = lp.Astart_[var]; idx < lp.Astart_[var + 1];
+        for (HighsInt var = 0; var < lp.num_col_; var++) {
+          for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
                idx++) {
-            if (lp.Aindex_[idx] == row) {
+            if (lp.a_index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                                lp.Avalue_[idx], var + 1);
+                                lp.a_value_[idx], var + 1);
             }
           }
         }
-        this->writeToFile(file, ">= %+g", lp.rowLower_[row]);
+        this->writeToFile(file, ">= %+g", lp.row_lower_[row]);
         this->writeToFileLineend(file);
-      } else if (lp.rowUpper_[row] < kHighsInf) {
+      } else if (lp.row_upper_[row] < kHighsInf) {
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
-        for (HighsInt var = 0; var < lp.numCol_; var++) {
-          for (HighsInt idx = lp.Astart_[var]; idx < lp.Astart_[var + 1];
+        for (HighsInt var = 0; var < lp.num_col_; var++) {
+          for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
                idx++) {
-            if (lp.Aindex_[idx] == row) {
+            if (lp.a_index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                                lp.Avalue_[idx], var + 1);
+                                lp.a_value_[idx], var + 1);
             }
           }
         }
-        this->writeToFile(file, "<= %+g", lp.rowUpper_[row]);
+        this->writeToFile(file, "<= %+g", lp.row_upper_[row]);
         this->writeToFileLineend(file);
       } else {
         // constraint has infinite lower & upper bounds so not a proper
@@ -238,20 +239,20 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   // write bounds section
   this->writeToFile(file, "bounds");
   this->writeToFileLineend(file);
-  for (HighsInt i = 0; i < lp.numCol_; i++) {
+  for (HighsInt i = 0; i < lp.num_col_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (lp.colLower_[i] > -kHighsInf && lp.colUpper_[i] < kHighsInf) {
+    if (lp.col_lower_[i] > -kHighsInf && lp.col_upper_[i] < kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= %+g",
-                        lp.colLower_[i], i + 1, lp.colUpper_[i]);
+                        lp.col_lower_[i], i + 1, lp.col_upper_[i]);
       this->writeToFileLineend(file);
-    } else if (lp.colLower_[i] <= -kHighsInf && lp.colUpper_[i] < kHighsInf) {
+    } else if (lp.col_lower_[i] <= -kHighsInf && lp.col_upper_[i] < kHighsInf) {
       this->writeToFile(file, " -inf <= x%" HIGHSINT_FORMAT " <= %+g", i + 1,
-                        lp.colUpper_[i]);
+                        lp.col_upper_[i]);
       this->writeToFileLineend(file);
 
-    } else if (lp.colLower_[i] > -kHighsInf && lp.colUpper_[i] >= kHighsInf) {
+    } else if (lp.col_lower_[i] > -kHighsInf && lp.col_upper_[i] >= kHighsInf) {
       this->writeToFile(file, " %+g <= x%" HIGHSINT_FORMAT " <= +inf",
-                        lp.colLower_[i], i + 1);
+                        lp.col_lower_[i], i + 1);
       this->writeToFileLineend(file);
     } else {
       this->writeToFile(file, " x%" HIGHSINT_FORMAT " free", i + 1);

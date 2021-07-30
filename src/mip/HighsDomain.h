@@ -235,8 +235,8 @@ class HighsDomain {
   std::vector<HighsInt> branchPos_;
 
  public:
-  std::vector<double> colLower_;
-  std::vector<double> colUpper_;
+  std::vector<double> col_lower_;
+  std::vector<double> col_upper_;
 
   HighsDomain(HighsMipSolver& mipsolver);
 
@@ -261,8 +261,8 @@ class HighsDomain {
         colLowerPos_(other.colLowerPos_),
         colUpperPos_(other.colUpperPos_),
         branchPos_(other.branchPos_),
-        colLower_(other.colLower_),
-        colUpper_(other.colUpper_) {
+        col_lower_(other.col_lower_),
+        col_upper_(other.col_upper_) {
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -290,8 +290,8 @@ class HighsDomain {
     colLowerPos_ = other.colLowerPos_;
     colUpperPos_ = other.colUpperPos_;
     branchPos_ = other.branchPos_;
-    colLower_ = other.colLower_;
-    colUpper_ = other.colUpper_;
+    col_lower_ = other.col_lower_;
+    col_upper_ = other.col_upper_;
     for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
       cutpoolprop.domain = this;
     for (ConflictPoolPropagation& conflictprop : conflictPoolPropagation)
@@ -340,13 +340,19 @@ class HighsDomain {
 
   bool isActive(const HighsDomainChange& domchg) {
     return domchg.boundtype == HighsBoundType::kLower
-               ? domchg.boundval <= colLower_[domchg.column]
-               : domchg.boundval >= colUpper_[domchg.column];
+               ? domchg.boundval <= col_lower_[domchg.column]
+               : domchg.boundval >= col_upper_[domchg.column];
   }
 
   void markPropagateCut(Reason reason);
 
   void computeRowActivities();
+
+  void markInfeasible(Reason reason = Reason::unspecified()) {
+    infeasible_ = true;
+    infeasible_pos = domchgstack_.size();
+    infeasible_reason = reason;
+  }
 
   bool infeasible() const { return infeasible_; }
 
@@ -360,12 +366,12 @@ class HighsDomain {
 
   void fixCol(HighsInt col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
-    if (colLower_[col] < val) {
+    if (col_lower_[col] < val) {
       changeBound({val, col, HighsBoundType::kLower}, reason);
       if (infeasible_ == 0) propagate();
     }
 
-    if (infeasible_ == 0 && colUpper_[col] > val)
+    if (infeasible_ == 0 && col_upper_[col] > val)
       changeBound({val, col, HighsBoundType::kUpper}, reason);
   }
 
@@ -457,20 +463,22 @@ class HighsDomain {
 
   bool isBinary(HighsInt col) const {
     return mipsolver->variableType(col) != HighsVarType::kContinuous &&
-           colLower_[col] == 0.0 && colUpper_[col] == 1.0;
+           col_lower_[col] == 0.0 && col_upper_[col] == 1.0;
   }
 
   bool isGlobalBinary(HighsInt col) const {
     return mipsolver->variableType(col) != HighsVarType::kContinuous &&
-           mipsolver->model_->colLower_[col] == 0.0 &&
-           mipsolver->model_->colUpper_[col] == 1.0;
+           mipsolver->model_->col_lower_[col] == 0.0 &&
+           mipsolver->model_->col_upper_[col] == 1.0;
   }
 
   HighsVarType variableType(HighsInt col) const {
     return mipsolver->variableType(col);
   }
 
-  bool isFixed(HighsInt col) const { return colLower_[col] == colUpper_[col]; }
+  bool isFixed(HighsInt col) const {
+    return col_lower_[col] == col_upper_[col];
+  }
 
   bool isFixing(const HighsDomainChange& domchg) const;
 

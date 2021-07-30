@@ -49,27 +49,27 @@ using std::stringstream;
 
 void Presolve::load(const HighsLp& lp, bool mip) {
   timer.recordStart(kMatrixCopy);
-  numCol = lp.numCol_;
-  numRow = lp.numRow_;
+  numCol = lp.num_col_;
+  numRow = lp.num_row_;
   numTot = numTot;
-  Astart = lp.Astart_;
-  Aindex = lp.Aindex_;
-  Avalue = lp.Avalue_;
+  Astart = lp.a_start_;
+  Aindex = lp.a_index_;
+  Avalue = lp.a_value_;
   this->mip = mip;
 
-  colCost = lp.colCost_;
+  colCost = lp.col_cost_;
   objShift = lp.offset_;
   if (lp.sense_ == ObjSense::kMaximize) {
     objShift = -objShift;
-    for (HighsUInt col = 0; col < lp.colCost_.size(); col++)
+    for (HighsUInt col = 0; col < lp.col_cost_.size(); col++)
       colCost[col] = -colCost[col];
   }
 
   integrality = lp.integrality_;
-  colLower = lp.colLower_;
-  colUpper = lp.colUpper_;
-  rowLower = lp.rowLower_;
-  rowUpper = lp.rowUpper_;
+  colLower = lp.col_lower_;
+  colUpper = lp.col_upper_;
+  rowLower = lp.row_lower_;
+  rowUpper = lp.row_upper_;
 
   modelName = lp.model_name_;
   timer.recordFinish(kMatrixCopy);

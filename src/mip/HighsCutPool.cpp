@@ -255,12 +255,12 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
       HighsInt col = ARindex[j];
       double solval = sol[col];
       if (ARvalue[j] > 0) {
-        if (solval > domain.colLower_[col] + feastol) {
+        if (solval > domain.col_lower_[col] + feastol) {
           rownorm += ARvalue[j] * ARvalue[j];
           numActiveNzs += 1;
         }
       } else {
-        if (solval < domain.colUpper_[col] - feastol) {
+        if (solval < domain.col_upper_[col] - feastol) {
           rownorm += ARvalue[j] * ARvalue[j];
           numActiveNzs += 1;
         }

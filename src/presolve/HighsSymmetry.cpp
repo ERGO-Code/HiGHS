@@ -17,7 +17,9 @@
 #include <algorithm>
 #include <numeric>
 
+#include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
+#include "util/HighsDisjointSets.h"
 
 void HighsSymmetryDetection::removeFixPoints() {
   Gend.resize(numVertices);
@@ -111,6 +113,19 @@ void HighsSymmetryDetection::removeFixPoints() {
     numActiveCols = numCol;
 }
 
+void HighsSymmetries::clear() {
+  permutationColumns.clear();
+  permutations.clear();
+  orbitPartition.clear();
+  orbitSize.clear();
+  columnPosition.clear();
+  linkCompressionStack.clear();
+  columnToOrbitope.clear();
+  orbitopes.clear();
+  numPerms = 0;
+  numGenerators = 0;
+}
+
 void HighsSymmetries::mergeOrbits(HighsInt v1, HighsInt v2) {
   if (v1 == v2) return;
 
@@ -149,6 +164,28 @@ HighsInt HighsSymmetries::getOrbit(HighsInt col) {
   }
 
   return orbit;
+}
+
+HighsInt HighsSymmetries::propagateOrbitopes(HighsDomain& domain) const {
+  if (columnToOrbitope.size() == 0 || domain.getBranchDepth() == 0) return 0;
+
+  std::set<HighsInt> propagationOrbitopes;
+  const auto& domchgstack = domain.getDomainChangeStack();
+  for (HighsInt pos : domain.getBranchingPositions()) {
+    const HighsInt* orbitope = columnToOrbitope.find(domchgstack[pos].column);
+    if (orbitope) propagationOrbitopes.insert(*orbitope);
+  }
+
+  HighsInt numFixed = 0;
+  for (HighsInt i : propagationOrbitopes) {
+    numFixed += orbitopes[i].orbitalFixing(domain);
+    if (domain.infeasible()) break;
+  }
+
+  // if (numFixed)
+  //   printf("orbital fixing for full orbitope found %d fixings\n", numFixed);
+
+  return numFixed;
 }
 
 std::shared_ptr<const StabilizerOrbits>
@@ -211,7 +248,7 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     else
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
-  stabilizerOrbits.columnPosition = columnPosition.data();
+  stabilizerOrbits.symmetries = this;
   std::sort(stabilizerOrbits.stabilizedCols.begin(),
             stabilizerOrbits.stabilizedCols.end());
   if (!stabilizerOrbits.orbitCols.empty()) {
@@ -236,9 +273,9 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
 }
 
 HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
-  if (orbitCols.empty()) return 0;
+  HighsInt numFixed = symmetries->propagateOrbitopes(domain);
+  if (domain.infeasible() || orbitCols.empty()) return numFixed;
 
-  HighsInt numFixed = 0;
   HighsInt numOrbits = orbitStarts.size() - 1;
   for (HighsInt i = 0; i < numOrbits; ++i) {
     bool containsNonBin = false;
@@ -252,11 +289,11 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
 
     if (fixcol != -1) {
       HighsInt oldNumFixed = numFixed;
-      double fixVal = domain.colLower_[fixcol];
+      double fixVal = domain.col_lower_[fixcol];
       auto oldSize = domain.getDomainChangeStack().size();
-      if (domain.colLower_[fixcol] == 1.0) {
+      if (domain.col_lower_[fixcol] == 1.0) {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
-          if (domain.colLower_[orbitCols[j]] == 1.0) continue;
+          if (domain.col_lower_[orbitCols[j]] == 1.0) continue;
           ++numFixed;
           domain.changeBound(HighsBoundType::kLower, orbitCols[j], 1.0,
                              HighsDomain::Reason::unspecified());
@@ -264,7 +301,7 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
         }
       } else {
         for (HighsInt j = orbitStarts[i]; j < orbitStarts[i + 1]; ++j) {
-          if (domain.colUpper_[orbitCols[j]] == 0.0) continue;
+          if (domain.col_upper_[orbitCols[j]] == 0.0) continue;
           ++numFixed;
           domain.changeBound(HighsBoundType::kUpper, orbitCols[j], 0.0,
                              HighsDomain::Reason::unspecified());
@@ -283,6 +320,454 @@ HighsInt StabilizerOrbits::orbitalFixing(HighsDomain& domain) const {
   }
 
   return numFixed;
+}
+
+bool StabilizerOrbits::isStabilized(HighsInt col) const {
+  return symmetries->columnPosition[col] == -1 ||
+         std::binary_search(stabilizedCols.begin(), stabilizedCols.end(), col);
+}
+
+void HighsOrbitopeMatrix::determineOrbitopeType(HighsCliqueTable& cliquetable,
+                                                HighsDomain& domain) {
+  for (HighsInt j = 0; j < rowLength; ++j) {
+    for (HighsInt i = 0; i < numRows; ++i) {
+      columnToRow.insert(entry(i, j), i);
+    }
+  }
+
+  rowIsSetPacking.assign(numRows, -1);
+  numSetPackingRows = 0;
+
+  for (HighsInt j = 1; j < rowLength; ++j) {
+    HighsInt* colj1 = &entry(0, j);
+
+    for (HighsInt j0 = 0; j0 < j; ++j0) {
+      HighsInt* colj0 = &entry(0, j0);
+
+      for (HighsInt i = 0; i < numRows; ++i) {
+        if (rowIsSetPacking[i] != -1) continue;
+
+        HighsInt xj0 = colj0[i];
+        HighsInt xj1 = colj1[i];
+
+        auto commonClique = cliquetable.findCommonClique({xj0, 1}, {xj1, 1});
+
+        if (commonClique.first == nullptr) {
+          rowIsSetPacking[i] = false;
+          continue;
+        }
+
+        HighsInt overlap = 0;
+
+        for (HighsInt k = 0; k < commonClique.second; ++k) {
+          if (commonClique.first[k].val == 0) continue;
+
+          HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
+          if (cliqueColRow && *cliqueColRow == i) ++overlap;
+        }
+
+        if (overlap == rowLength) {
+          rowIsSetPacking[i] = true;
+          ++numSetPackingRows;
+          if (numSetPackingRows == numRows) break;
+        }
+      }
+
+      if (numSetPackingRows == numRows) break;
+    }
+
+    if (numSetPackingRows == numRows) break;
+  }
+
+  // now for the rows that do not have a set packing structure check
+  // if we have such structure when all columns in the row are negated
+
+  for (HighsInt i = 0; i < numRows; ++i) {
+    if (!rowIsSetPacking[i]) rowIsSetPacking[i] = -1;
+  }
+
+  for (HighsInt j = 1; j < rowLength; ++j) {
+    HighsInt* colj1 = &entry(0, j);
+
+    for (HighsInt j0 = 0; j0 < j; ++j0) {
+      HighsInt* colj0 = &entry(0, j0);
+
+      for (HighsInt i = 0; i < numRows; ++i) {
+        if (rowIsSetPacking[i] != -1) continue;
+
+        HighsInt xj0 = colj0[i];
+        HighsInt xj1 = colj1[i];
+
+        // now look for cliques with value 0
+        auto commonClique = cliquetable.findCommonClique({xj0, 0}, {xj1, 0});
+
+        if (commonClique.first == nullptr) {
+          rowIsSetPacking[i] = false;
+          continue;
+        }
+
+        HighsInt overlap = 0;
+
+        for (HighsInt k = 0; k < commonClique.second; ++k) {
+          // skip clique variables with values of 1
+          if (commonClique.first[k].val == 1) continue;
+
+          HighsInt* cliqueColRow = columnToRow.find(commonClique.first[k].col);
+          if (cliqueColRow && *cliqueColRow == i) ++overlap;
+        }
+
+        if (overlap == rowLength) {
+          // mark with value 2, for negated set packing row with at most one
+          // zero
+          rowIsSetPacking[i] = 2;
+          ++numSetPackingRows;
+          if (numSetPackingRows == numRows) break;
+        }
+      }
+
+      if (numSetPackingRows == numRows) break;
+    }
+
+    if (numSetPackingRows == numRows) break;
+  }
+}
+
+HighsInt HighsOrbitopeMatrix::getBranchingColumn(
+    const std::vector<double>& colLower, const std::vector<double>& colUpper,
+    HighsInt col) const {
+  const HighsInt* i = columnToRow.find(col);
+  if (i && rowIsSetPacking[*i]) {
+    for (HighsInt j = 0; j < rowLength; ++j) {
+      HighsInt branchCol = entry(*i, j);
+      if (branchCol == col) break;
+      if (colLower[branchCol] != colUpper[branchCol]) return branchCol;
+    }
+  }
+
+  return col;
+}
+
+HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
+    const std::vector<HighsInt>& rows, HighsDomain& domain) const {
+  HighsInt numDynamicRows = rows.size();
+
+  // printf("propagate packing orbitope\n");
+
+  std::vector<HighsInt> firstOneInRow(numDynamicRows, -1);
+
+  for (HighsInt j = 0; j < rowLength; ++j) {
+    for (HighsInt i = 0; i < numDynamicRows; ++i) {
+      if (firstOneInRow[i] != -1) continue;
+      HighsInt r = rows[i];
+      HighsInt colrj = entry(r, j);
+      if (rowIsSetPacking[r] == 1) {
+        if (domain.col_lower_[colrj] > 0.5) firstOneInRow[i] = j;
+      } else {
+        assert(rowIsSetPacking[r] == 2);
+        if (domain.col_upper_[colrj] < 0.5) firstOneInRow[i] = j;
+      }
+    }
+  }
+
+  // we start looping over the rows and keep the index j at the column that
+  // is the right most possible location for a 1 entry.
+  // For the first row this position is 0.
+
+  HighsInt j = 0;
+  HighsInt numFixed = 0;
+  for (HighsInt i = 0; i < numDynamicRows; ++i) {
+    // at this position we know that the last possible position
+    // of a 1-entry in this row is j. If we have a 1 behind j
+    // the face of the orbitope intersecting the set of initial fixings is empty
+    if (firstOneInRow[i] > j) {
+      domain.markInfeasible();
+      // printf("packing orbitope propagation found infeasibility\n");
+      return numFixed;
+    }
+    HighsInt col_ij = entry(rows[i], j);
+
+    bool negate_i = rowIsSetPacking[rows[i]] == 2;
+
+    bool notZeroFixed = negate_i ? domain.col_lower_[col_ij] < 0.5
+                                 : domain.col_upper_[col_ij] > 0.5;
+
+    // as long as the entry is fixed to zero
+    // the frontier stays at the same column
+    // if we ecounter an entry that is not fixed to zero
+    // we need to proceed with the next column and found a frontier step
+    if (notZeroFixed) {
+      // found a frontier step. Now we first check for the current column
+      // if it can be fixed to 1.
+      // For this we check if we find an infeasibility in the case where this
+      // column was fixed to zero in which case the frontier would have stayed
+      // at j for the following rows.
+      HighsInt j0 = j;
+      for (HighsInt k = i + 1; k < numDynamicRows; ++k) {
+        if (firstOneInRow[k] > j0) {
+          if (negate_i)
+            domain.changeBound(HighsBoundType::kUpper, col_ij, 0.0,
+                               HighsDomain::Reason::unspecified());
+          else
+            domain.changeBound(HighsBoundType::kLower, col_ij, 1.0,
+                               HighsDomain::Reason::unspecified());
+
+          ++numFixed;
+          if (domain.infeasible()) {
+            // printf("packing orbitope propagation found infeasibility\n");
+            return numFixed;
+          }
+          break;
+        }
+
+        bool negate_k = rowIsSetPacking[rows[k]] == 2;
+        bool notZeroFixed = negate_k
+                                ? domain.col_lower_[entry(rows[k], j0)] < 0.5
+                                : domain.col_upper_[entry(rows[k], j0)] > 0.5;
+
+        if (notZeroFixed) {
+          ++j0;
+          if (j0 == rowLength) break;
+        }
+      }
+
+      ++j;
+      if (j == rowLength) break;
+
+      for (HighsInt k = 0; k <= i; ++k) {
+        // we should have checked this row at the frontier position
+        assert(firstOneInRow[k] < j);
+
+        HighsInt col_kj = entry(rows[k], j);
+        bool negate_k = rowIsSetPacking[rows[k]] == 2;
+
+        if (negate_k) {
+          if (domain.col_lower_[col_kj] > 0.5) continue;
+
+          domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
+                             HighsDomain::Reason::unspecified());
+        } else {
+          if (domain.col_upper_[col_kj] < 0.5) continue;
+
+          domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
+                             HighsDomain::Reason::unspecified());
+        }
+
+        ++numFixed;
+        if (domain.infeasible()) {
+          // this can happen due to deductions from earlier fixings
+          // otherwise it would have been caughgt by the infeasibility
+          // check within the next loop that goes over i
+          // printf("packing orbitope propagation found infeasibility\n");
+          return numFixed;
+        }
+      }
+    }
+  }
+
+  // check if there are more columns that can be completely fixed to zero
+  while (++j < rowLength) {
+    for (HighsInt k = 0; k < numDynamicRows; ++k) {
+      // we should have checked this row at the frontier position
+      assert(firstOneInRow[k] < j);
+
+      HighsInt col_kj = entry(rows[k], j);
+      bool negate_k = rowIsSetPacking[rows[k]] == 2;
+
+      if (negate_k) {
+        if (domain.col_lower_[col_kj] > 0.5) continue;
+
+        domain.changeBound(HighsBoundType::kLower, col_kj, 1.0,
+                           HighsDomain::Reason::unspecified());
+      } else {
+        if (domain.col_upper_[col_kj] < 0.5) continue;
+
+        domain.changeBound(HighsBoundType::kUpper, col_kj, 0.0,
+                           HighsDomain::Reason::unspecified());
+      }
+      // printf("new fixed\n");
+      ++numFixed;
+      if (domain.infeasible()) {
+        // this can happen due to deductions from earlier fixings
+        // otherwise it would have been caughgt by the infeasibility
+        // check within the next loop that goes over i
+        // printf("packing orbitope propagation found infeasibility\n");
+        return numFixed;
+      }
+    }
+  }
+
+  if (!domain.infeasible() && numFixed) domain.propagate();
+
+  // if (numFixed)
+  //  printf("orbital fixing for packing case fixed %d columns\n", numFixed);
+
+  return numFixed;
+}
+
+HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
+    const std::vector<HighsInt>& rows, HighsDomain& domain) const {
+  std::vector<int8_t> Mminimal(matrix.size(), -1);
+  std::vector<int8_t> Mmaximal(matrix.size(), -1);
+
+  HighsInt numDynamicRows = rows.size();
+
+  for (HighsInt j = 0; j < rowLength; ++j) {
+    for (HighsInt i = 0; i < numDynamicRows; ++i) {
+      HighsInt r = rows[i];
+      HighsInt colij = matrix[r + j * numRows];
+      if (domain.col_lower_[colij] == 1.0)
+        Mminimal[i + j * numDynamicRows] = 1;
+      else if (domain.col_upper_[colij] == 0.0)
+        Mminimal[i + j * numDynamicRows] = 0;
+    }
+  }
+
+  Mmaximal = Mminimal;
+
+  int8_t* MminimaljLast = Mminimal.data() + numDynamicRows * (rowLength - 1);
+  int8_t* MmaximaljFirst = Mmaximal.data();
+  for (HighsInt k = 0; k < numDynamicRows; ++k) {
+    if (MminimaljLast[k] == -1) MminimaljLast[k] = 0;
+    if (MmaximaljFirst[k] == -1) MmaximaljFirst[k] = 1;
+  }
+
+  auto i_fixed = [&](const int8_t* colj0, const int8_t* colj1) {
+    for (HighsInt i = 0; i < numDynamicRows; ++i) {
+      if (colj0[i] != -1 && colj1[i] != -1 && colj0[i] != colj1[i]) return i;
+    }
+
+    return numDynamicRows;
+  };
+
+  auto i_discr = [&](const int8_t* colj0, const int8_t* colj1) {
+    for (HighsInt i = numDynamicRows - 1; i >= 0; --i) {
+      if (colj0[i] != 0 && colj1[i] != 1) return i;
+    }
+
+    return HighsInt{-1};
+  };
+
+  for (HighsInt j = rowLength - 2; j >= 0; --j) {
+    int8_t* colj0 = Mminimal.data() + j * numDynamicRows;
+    int8_t* colj1 = colj0 + numDynamicRows;
+    HighsInt i = i_fixed(colj0, colj1);
+
+    if (i == numDynamicRows) {
+      for (HighsInt k = 0; k < numDynamicRows; ++k) {
+        int8_t isFree = (colj0[k] == -1);
+        colj0[k] += (isFree & colj1[k]) + isFree;
+      }
+    } else {
+      i = i_discr(colj0, colj1);
+      if (i == -1) {
+        Mminimal.clear();
+        break;
+      } else {
+        for (HighsInt k = 0; k < i; ++k) {
+          int8_t isFree = (colj0[k] == -1);
+          colj0[k] += (isFree & colj1[k]) + isFree;
+        }
+        colj0[i] = 1;
+        for (HighsInt k = i + 1; k < numDynamicRows; ++k)
+          colj0[k] += (colj0[k] == -1);
+      }
+    }
+  }
+
+  if (Mminimal.empty()) {
+    domain.markInfeasible();
+    return 0;
+  }
+
+  for (HighsInt j = 1; j < rowLength; ++j) {
+    int8_t* colj0 = Mmaximal.data() + j * numDynamicRows;
+    int8_t* colj1 = colj0 - numDynamicRows;
+    HighsInt i = i_fixed(colj1, colj0);
+
+    if (i == numDynamicRows) {
+      for (HighsInt k = 0; k < numDynamicRows; ++k) {
+        int8_t isFree = (colj0[k] == -1);
+        colj0[k] += (isFree & colj1[k]) + isFree;
+      }
+    } else {
+      i = i_discr(colj1, colj0);
+      if (i == -1) {
+        Mmaximal.clear();
+        break;
+      } else {
+        for (HighsInt k = 0; k < i; ++k) {
+          int8_t isFree = (colj0[k] == -1);
+          colj0[k] += (isFree & colj1[k]) + isFree;
+        }
+        colj0[i] = 0;
+        for (HighsInt k = i + 1; k < numDynamicRows; ++k)
+          colj0[k] += 2 * (colj0[k] == -1);
+      }
+    }
+  }
+
+  if (Mmaximal.empty()) {
+    domain.markInfeasible();
+    return 0;
+  }
+
+  HighsInt numFixed = 0;
+
+  for (HighsInt j = 0; j < rowLength; ++j) {
+    const int8_t* colMaximal = Mmaximal.data() + j * numDynamicRows;
+    const int8_t* colMinimal = Mminimal.data() + j * numDynamicRows;
+
+    for (HighsInt i = 0; i < numDynamicRows; ++i) {
+      if (colMinimal[i] != colMaximal[i]) {
+        assert(colMinimal[i] < colMaximal[i]);
+        break;
+      }
+
+      HighsInt r = rows[i];
+      HighsInt colrj = matrix[r + j * numRows];
+      if (domain.isFixed(colrj)) continue;
+
+      ++numFixed;
+      if (colMinimal[i] == 1)
+        domain.changeBound(HighsBoundType::kLower, colrj, 1.0,
+                           HighsDomain::Reason::unspecified());
+      else
+        domain.changeBound(HighsBoundType::kUpper, colrj, 0.0,
+                           HighsDomain::Reason::unspecified());
+      if (domain.infeasible()) break;
+    }
+    if (domain.infeasible()) break;
+  }
+
+  if (!domain.infeasible()) domain.propagate();
+
+  return numFixed;
+}
+
+HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
+  std::vector<HighsInt> rows;
+  std::vector<uint8_t> rowUsed(numRows);
+
+  rows.reserve(numRows);
+
+  const auto& branchpos = domain.getBranchingPositions();
+  const auto& domchgstack = domain.getDomainChangeStack();
+
+  bool isPacking = true;
+  for (HighsInt pos : branchpos) {
+    const HighsInt* i = columnToRow.find(domchgstack[pos].column);
+    if (i && !rowUsed[*i]) {
+      rowUsed[*i] = true;
+      isPacking = isPacking && rowIsSetPacking[*i] != 0;
+      rows.push_back(*i);
+    }
+  }
+
+  if (rows.empty()) return 0;
+
+  if (isPacking) return orbitalFixingForPackingOrbitope(rows, domain);
+
+  return orbitalFixingForFullOrbitope(rows, domain);
 }
 
 void HighsSymmetryDetection::initializeGroundSet() {
@@ -686,8 +1171,8 @@ struct MatrixRow {
 void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
                                               double epsilon) {
   this->model = &model;
-  numCol = model.numCol_;
-  numRow = model.numRow_;
+  numCol = model.num_col_;
+  numRow = model.num_row_;
   numVertices = numRow + numCol;
 
   cellInRefinementQueue.resize(numVertices);
@@ -700,22 +1185,22 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   HighsMatrixColoring coloring(epsilon);
   edgeBuffer.resize(numVertices);
   // set up row and column based incidence matrix
-  HighsInt numNz = model.Aindex_.size();
+  HighsInt numNz = model.a_index_.size();
   Gedge.resize(2 * numNz);
-  std::transform(model.Aindex_.begin(), model.Aindex_.end(), Gedge.begin(),
+  std::transform(model.a_index_.begin(), model.a_index_.end(), Gedge.begin(),
                  [&](HighsInt rowIndex) {
                    return std::make_pair(rowIndex + numCol, HighsUInt{0});
                  });
 
   Gstart.resize(numVertices + 1);
-  std::copy(model.Astart_.begin(), model.Astart_.end(), Gstart.begin());
+  std::copy(model.a_start_.begin(), model.a_start_.end(), Gstart.begin());
 
   // set up the column colors and count row sizes
   std::vector<HighsInt> rowSizes(numRow);
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      Gedge[j].second = coloring.color(model.Avalue_[j]);
-      rowSizes[model.Aindex_[j]] += 1;
+      Gedge[j].second = coloring.color(model.a_value_[j]);
+      rowSizes[model.a_index_[j]] += 1;
     }
   }
 
@@ -732,7 +1217,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // finally add the nonzeros to the row major matrix
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      HighsInt row = model.Aindex_[j];
+      HighsInt row = model.a_index_[j];
       HighsInt ARpos = Gstart[numCol + row + 1] - rowSizes[row];
       rowSizes[row] -= 1;
       Gedge[ARpos].first = i;
@@ -750,9 +1235,9 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numCol; ++i) {
     MatrixColumn matrixCol;
 
-    matrixCol.cost = coloring.color(model.colCost_[i]);
-    matrixCol.lb = coloring.color(model.colLower_[i]);
-    matrixCol.ub = coloring.color(model.colUpper_[i]);
+    matrixCol.cost = coloring.color(model.col_cost_[i]);
+    matrixCol.lb = coloring.color(model.col_lower_[i]);
+    matrixCol.ub = coloring.color(model.col_upper_[i]);
     matrixCol.integral = (u32)model.integrality_[i];
     matrixCol.len = Gstart[i + 1] - Gstart[i];
 
@@ -760,7 +1245,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
 
     if (*columnCell == 0) {
       *columnCell = columnSet.size();
-      if (model.colLower_[i] != 0.0 || model.colUpper_[i] != 1.0 ||
+      if (model.col_lower_[i] != 0.0 || model.col_upper_[i] != 1.0 ||
           model.integrality_[i] == HighsVarType::kContinuous)
         *columnCell += indexOffset;
     }
@@ -772,8 +1257,8 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numRow; ++i) {
     MatrixRow matrixRow;
 
-    matrixRow.lb = coloring.color(model.rowLower_[i]);
-    matrixRow.ub = coloring.color(model.rowUpper_[i]);
+    matrixRow.lb = coloring.color(model.row_lower_[i]);
+    matrixRow.ub = coloring.color(model.row_upper_[i]);
     matrixRow.len = Gstart[numCol + i + 1] - Gstart[numCol + i];
 
     HighsInt* rowCell = &rowSet[matrixRow];
@@ -903,10 +1388,268 @@ bool HighsSymmetryDetection::isFromBinaryColumn(HighsInt pos) const {
 
   HighsInt col = currentPartition[pos];
 
-  if (model->colLower_[col] != 0.0 || model->colUpper_[col] != 1.0 ||
+  if (model->col_lower_[col] != 0.0 || model->col_upper_[col] != 1.0 ||
       model->integrality_[col] == HighsVarType::kContinuous)
     return false;
 
+  return true;
+}
+
+HighsSymmetryDetection::ComponentData
+HighsSymmetryDetection::computeComponentData(
+    const HighsSymmetries& symmetries) {
+  ComponentData componentData;
+
+  componentData.components.reset(numActiveCols);
+  componentData.firstUnfixed.assign(symmetries.numPerms, -1);
+  componentData.numUnfixed.assign(symmetries.numPerms, 0);
+  for (HighsInt i = 0; i < symmetries.numPerms; ++i) {
+    const HighsInt* perm = symmetries.permutations.data() + i * numActiveCols;
+
+    for (HighsInt j = 0; j < numActiveCols; ++j) {
+      if (perm[j] != vertexGroundSet[j]) {
+        HighsInt pos = vertexPosition[perm[j]];
+        componentData.numUnfixed[i] += 1;
+        if (componentData.firstUnfixed[i] != -1)
+          componentData.components.merge(componentData.firstUnfixed[i], pos);
+        else
+          componentData.firstUnfixed[i] = pos;
+      }
+    }
+  }
+
+  componentData.componentSets.assign(vertexGroundSet.begin(),
+                                     vertexGroundSet.begin() + numActiveCols);
+  std::sort(
+      componentData.componentSets.begin(), componentData.componentSets.end(),
+      [&](HighsInt u, HighsInt v) {
+        HighsInt uComp = componentData.components.getSet(vertexPosition[u]);
+        HighsInt vComp = componentData.components.getSet(vertexPosition[v]);
+        return std::make_pair(componentData.components.getSetSize(uComp) == 1,
+                              uComp) <
+               std::make_pair(componentData.components.getSetSize(vComp) == 1,
+                              vComp);
+      });
+
+  HighsInt currentComponentStart = -1;
+  HighsInt currentComponent = -1;
+  HighsHashTable<HighsInt> currComponentOrbits;
+  for (HighsInt i = 0; i < numActiveCols; ++i) {
+    HighsInt comp = componentData.components.getSet(
+        vertexPosition[componentData.componentSets[i]]);
+    if (componentData.components.getSetSize(comp) == 1) break;
+    if (comp != currentComponent) {
+      currentComponent = comp;
+      currentComponentStart = i;
+      componentData.componentStarts.push_back(currentComponentStart);
+      componentData.componentNumber.push_back(currentComponent);
+      componentData.componentNumOrbits.emplace_back();
+      currComponentOrbits.clear();
+    }
+
+    if (currComponentOrbits.insert(getOrbit(componentData.componentSets[i]))) {
+      ++componentData.componentNumOrbits.back();
+    }
+  }
+
+  componentData.permComponents.reserve(symmetries.numPerms);
+
+  for (HighsInt i = 0; i < symmetries.numPerms; ++i) {
+    if (componentData.firstUnfixed[i] == -1) continue;
+    componentData.permComponents.push_back(i);
+  }
+
+  std::sort(
+      componentData.permComponents.begin(), componentData.permComponents.end(),
+      [&](HighsInt i, HighsInt j) {
+        HighsInt seti =
+            componentData.components.getSet(componentData.firstUnfixed[i]);
+        HighsInt setj =
+            componentData.components.getSet(componentData.firstUnfixed[j]);
+        return std::make_pair(seti, componentData.numUnfixed[i]) <
+               std::make_pair(setj, componentData.numUnfixed[j]);
+      });
+
+  currentComponentStart = -1;
+  currentComponent = -1;
+
+  HighsInt numUsedPerms = componentData.permComponents.size();
+
+  for (HighsInt i = 0; i < numUsedPerms; ++i) {
+    HighsInt p = componentData.permComponents[i];
+    HighsInt comp =
+        componentData.components.getSet(componentData.firstUnfixed[p]);
+    if (comp != currentComponent) {
+      currentComponent = comp;
+      currentComponentStart = i;
+      componentData.permComponentStarts.push_back(currentComponentStart);
+    }
+  }
+
+  assert(componentData.permComponentStarts.size() ==
+         componentData.componentStarts.size());
+  componentData.permComponentStarts.push_back(numUsedPerms);
+
+  HighsInt numComponents = componentData.componentStarts.size();
+  // printf("found %d components\n", numComponents);
+  componentData.componentStarts.push_back(numActiveCols);
+
+  return componentData;
+}
+
+bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
+                                            HighsInt component,
+                                            HighsSymmetries& symmetries) {
+  HighsInt componentSize = componentData.componentStarts[component + 1] -
+                           componentData.componentStarts[component];
+  if (componentSize == 1) return false;
+
+  // check that component acts only on binary variables
+  for (HighsInt i = componentData.componentStarts[component];
+       i < componentData.componentStarts[component + 1]; ++i) {
+    HighsInt col = componentData.componentSets[i];
+    if (model->integrality_[col] == HighsVarType::kContinuous ||
+        model->col_lower_[col] != 0.0 || model->col_upper_[col] != 1.0)
+      return false;
+  }
+
+  // check that the number of unfixed variables in the first permutation is even
+  HighsInt p0 =
+      componentData
+          .permComponents[componentData.permComponentStarts[component]];
+  if (componentData.numUnfixed[p0] & 1) return false;
+
+  // check that the other permutations in the component have the same number of
+  // unfixed variables as the first one
+  for (HighsInt k = componentData.permComponentStarts[component] + 1;
+       k < componentData.permComponentStarts[component + 1]; ++k) {
+    HighsInt p = componentData.permComponents[k];
+    if (componentData.numUnfixed[p] != componentData.numUnfixed[p0]) {
+      // printf("number of unfixed cols in perm %d: %d\n", p,
+      //       componentData.numUnfixed[p]);
+      // printf("wrong number of unfixed columns in permutation\n");
+      return false;
+    }
+  }
+
+  // all unfixed variables in the permutation must be part of a two cycle
+  // and each two cycle defines one row of the orbitope. Hence the number
+  // of unfixed variables in each permutation must be even and the number of
+  // rows is the number of unfixed variables divided by two
+  HighsInt orbitopeNumRows = componentData.numUnfixed[p0] >> 1;
+
+  // if this component is a full orbitope the component size must be
+  // divisible by the number of orbits and the result is the size of each
+  // orbit
+  HighsInt orbitopeOrbitSize = componentSize / orbitopeNumRows;
+  if (orbitopeOrbitSize * orbitopeNumRows != componentSize) {
+    // printf("wrong number of orbits (%d orbits for component of size %d)\n",
+    //        orbitopeNumRows, componentSize);
+    return false;
+  }
+
+  // the number of permutations must be n-1 where n is the size of the
+  // orbits in the orbitope
+  HighsInt componentNumPerms =
+      componentData.permComponentStarts[component + 1] -
+      componentData.permComponentStarts[component];
+  if (componentNumPerms != (orbitopeOrbitSize - 1)) {
+    // printf("wrong number of perms\n");
+    return false;
+  }
+
+  // set up the first two columns of the orbitope matrix based on the first
+  // permutation.
+  HighsOrbitopeMatrix orbitopeMatrix;
+  orbitopeMatrix.matrix.resize(componentSize, -1);
+  orbitopeMatrix.numRows = orbitopeNumRows;
+  orbitopeMatrix.rowLength = orbitopeOrbitSize;
+  assert(componentSize == orbitopeMatrix.numRows * orbitopeMatrix.rowLength);
+  HighsInt orbitopeIndex = symmetries.orbitopes.size();
+
+  const HighsInt* perm = symmetries.permutations.data() + p0 * numActiveCols;
+  HighsHashTable<HighsInt> colSet;
+  HighsInt m = 0;
+  for (HighsInt j = 0; j < numActiveCols; ++j) {
+    HighsInt jImagePos = vertexPosition[perm[j]];
+    if (jImagePos <= j) continue;
+    if (m == orbitopeNumRows) return false;
+
+    // permutation should consist of two cycles
+    if (perm[jImagePos] != vertexGroundSet[j]) return false;
+
+    orbitopeMatrix.matrix[m] = vertexGroundSet[j];
+    orbitopeMatrix.matrix[orbitopeMatrix.numRows + m] = perm[j];
+
+    // Remember set of variables of the orbtiope matrix. Each variable should
+    // occur only once, otherwise the permutation do not work out. Since we
+
+    if (!colSet.insert(vertexGroundSet[j])) return false;
+    if (!colSet.insert(perm[j])) return false;
+    ++m;
+  }
+
+  // printf("set up first two columns of possible orbitope with permutation
+  // %d\n",
+  //        p0);
+
+  HighsInt numColsAdded = 2;
+
+  while (numColsAdded < orbitopeMatrix.rowLength) {
+    if (colSet.size() != numColsAdded * orbitopeMatrix.numRows) return false;
+
+    HighsInt* thisCol =
+        orbitopeMatrix.matrix.data() + numColsAdded * orbitopeMatrix.numRows;
+    HighsInt* prevCol = thisCol - orbitopeMatrix.numRows;
+
+    HighsInt movePos = vertexPosition[prevCol[0]];
+    perm = nullptr;
+    for (HighsInt k = componentData.permComponentStarts[component] + 1;
+         k < componentData.permComponentStarts[component + 1]; ++k) {
+      HighsInt p = componentData.permComponents[k];
+      perm = symmetries.permutations.data() + p * numActiveCols;
+
+      if (perm[movePos] != vertexGroundSet[movePos] &&
+          !colSet.find(perm[movePos])) {
+        break;
+      }
+    }
+
+    if (perm == nullptr) {
+      // printf("did not find next permutation moving col %d\n", prevCol[0]);
+      return false;
+    }
+    // printf("next permutation moving col %d is %d\n", prevCol[0], p0);
+
+    for (HighsInt j = 0; j < orbitopeMatrix.numRows; ++j) {
+      HighsInt nextVertex = perm[vertexPosition[prevCol[j]]];
+
+      thisCol[j] = nextVertex;
+
+      // check if this is a two cycle
+      if (perm[vertexPosition[nextVertex]] != prevCol[j]) return false;
+
+      if (!colSet.insert(thisCol[j])) {
+        // printf("col already exists\n");
+        return false;
+      }
+    }
+
+    ++numColsAdded;
+  }
+
+  if (colSet.size() != componentSize) {
+    // printf("not all columns of component are mapped\n");
+    return false;
+  }
+
+  for (HighsInt col : orbitopeMatrix.matrix)
+    symmetries.columnToOrbitope.insert(col, symmetries.orbitopes.size());
+
+  symmetries.orbitopes.emplace_back(std::move(orbitopeMatrix));
+
+  // printf("component %d is full orbitope: size %d and %d orbits\n", component,
+  //        componentSize, componentData.componentNumOrbits[component]);
   return true;
 }
 
@@ -1047,35 +1790,63 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
     }
   }
 
+  symmetries.numGenerators = symmetries.numPerms;
   if (symmetries.numPerms > 0) {
+    vertexPosition.resize(numCol);
+
+    ComponentData componentData = computeComponentData(symmetries);
+    HighsInt numComponents = componentData.numComponents();
+
+    for (HighsInt i = 0; i < numComponents; ++i) {
+      if (componentData.componentSize(i) == 1) continue;
+
+      isFullOrbitope(componentData, i, symmetries);
+    }
+
+    HighsHashTable<HighsInt> deletedPerms;
+    for (HighsInt p = 0; p < symmetries.numPerms; ++p) {
+      HighsInt* perm = symmetries.permutations.data() + p * numActiveCols;
+      for (HighsInt i = 0; i < numActiveCols; ++i) {
+        if (perm[i] != vertexGroundSet[i] &&
+            symmetries.columnToOrbitope.find(perm[i])) {
+          deletedPerms.insert(p);
+          break;
+        }
+      }
+    }
+
     // check which columns have non-trivial orbits
     HighsInt numFixed = 0;
     for (HighsInt i = 0; i < numActiveCols; ++i) {
-      if (orbitSize[getOrbit(vertexGroundSet[i])] == 1) {
+      if (orbitSize[getOrbit(vertexGroundSet[i])] == 1 ||
+          symmetries.columnToOrbitope.find(vertexGroundSet[i])) {
         vertexPosition[vertexGroundSet[i]] = -1;
         vertexGroundSet[i] = -1;
         numFixed += 1;
       }
     }
 
-    vertexPosition.resize(numCol);
-
     if (numFixed != 0) {
       // now compress symmetries and the groundset to only contain the unfixed
-      // columns
+      // columns and columns not handled by full orbitopes
+      HighsInt p = 0;
       HighsInt* perms = symmetries.permutations.data();
       HighsInt* permEnd =
           symmetries.permutations.data() + symmetries.numPerms * numActiveCols;
       HighsInt* permOutput = symmetries.permutations.data();
       while (perms != permEnd) {
-        for (HighsInt i = 0; i < numActiveCols; ++i) {
-          if (vertexGroundSet[i] == -1) continue;
+        if (!deletedPerms.find(p)) {
+          for (HighsInt i = 0; i < numActiveCols; ++i) {
+            if (vertexGroundSet[i] == -1) continue;
 
-          *permOutput = perms[i];
-          ++permOutput;
+            *permOutput = perms[i];
+            ++permOutput;
+          }
+        } else {
+          --symmetries.numPerms;
         }
-
         perms += numActiveCols;
+        ++p;
       }
 
       HighsInt outPos = 0;
@@ -1088,6 +1859,8 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
       }
 
       numActiveCols -= numFixed;
+      assert(permOutput == symmetries.permutations.data() +
+                               symmetries.numPerms * numActiveCols);
     }
 
     vertexGroundSet.resize(numActiveCols);

@@ -176,9 +176,9 @@ HighsInt Highs_lpDimMpsRead(
   const char* filename = "ml.mps";
   HighsStatus status = highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
-  *numcol = lp.numCol_;
-  *numrow = lp.numRow_;
-  *numnz = lp.Astart_[lp.numCol_];
+  *numcol = lp.num_col_;
+  *numrow = lp.num_row_;
+  *numnz = lp.a_start_[lp.num_col_];
   return (HighsInt)status;
 }
 
@@ -193,19 +193,19 @@ HighsInt Highs_lpDataMpsRead(
   const char* filename = "ml.mps";
   HighsStatus status = highs.readModel(filename);
   const HighsLp& lp = highs.getLp();
-  const HighsInt num_nz = lp.Astart_[lp.numCol_];
-  assert(lp.numCol_ == numcol);
-  assert(lp.numRow_ == numrow);
+  const HighsInt num_nz = lp.a_start_[lp.num_col_];
+  assert(lp.num_col_ == numcol);
+  assert(lp.num_row_ == numrow);
   *sense = (HighsInt)lp.sense_;
   *offset = lp.offset_;
-  memcpy(colcost, &lp.colCost_[0], (numcol) * sizeof(double));
-  memcpy(collower, &lp.colLower_[0], (numcol) * sizeof(double));
-  memcpy(colupper, &lp.colUpper_[0], (numcol) * sizeof(double));
-  memcpy(rowlower, &lp.rowLower_[0], (numrow) * sizeof(double));
-  memcpy(rowupper, &lp.rowUpper_[0], (numrow) * sizeof(double));
-  memcpy(astart, &lp.Astart_[0], (numcol + 1) * sizeof(HighsInt));
-  memcpy(aindex, &lp.Aindex_[0], (num_nz) * sizeof(HighsInt));
-  memcpy(avalue, &lp.Avalue_[0], (num_nz) * sizeof(double));
+  memcpy(colcost, &lp.col_cost_[0], (numcol) * sizeof(double));
+  memcpy(collower, &lp.col_lower_[0], (numcol) * sizeof(double));
+  memcpy(colupper, &lp.col_upper_[0], (numcol) * sizeof(double));
+  memcpy(rowlower, &lp.row_lower_[0], (numrow) * sizeof(double));
+  memcpy(rowupper, &lp.row_upper_[0], (numrow) * sizeof(double));
+  memcpy(astart, &lp.a_start_[0], (numcol + 1) * sizeof(HighsInt));
+  memcpy(aindex, &lp.a_index_[0], (num_nz) * sizeof(HighsInt));
+  memcpy(avalue, &lp.a_value_[0], (num_nz) * sizeof(double));
 
   return (HighsInt)status;
 }
@@ -869,16 +869,16 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   ObjSense obj_sense = ObjSense::kMinimize;
   *sense = (HighsInt)obj_sense;
   *offset = lp.offset_;
-  *numcol = lp.numCol_;
-  *numrow = lp.numRow_;
+  *numcol = lp.num_col_;
+  *numrow = lp.num_row_;
   if (*numcol > 0) {
-    memcpy(colcost, &lp.colCost_[0], *numcol * sizeof(double));
-    memcpy(collower, &lp.colLower_[0], *numcol * sizeof(double));
-    memcpy(colupper, &lp.colUpper_[0], *numcol * sizeof(double));
+    memcpy(colcost, &lp.col_cost_[0], *numcol * sizeof(double));
+    memcpy(collower, &lp.col_lower_[0], *numcol * sizeof(double));
+    memcpy(colupper, &lp.col_upper_[0], *numcol * sizeof(double));
   }
   if (*numrow > 0) {
-    memcpy(rowlower, &lp.rowLower_[0], *numrow * sizeof(double));
-    memcpy(rowupper, &lp.rowUpper_[0], *numrow * sizeof(double));
+    memcpy(rowlower, &lp.row_lower_[0], *numrow * sizeof(double));
+    memcpy(rowupper, &lp.row_upper_[0], *numrow * sizeof(double));
   }
 
   // Save the original orientation so that it is recovered
@@ -897,10 +897,10 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
-    memcpy(astart, &lp.Astart_[0], num_start_entries * sizeof(HighsInt));
-    *numnz = lp.Astart_[*numcol];
-    memcpy(aindex, &lp.Aindex_[0], *numnz * sizeof(HighsInt));
-    memcpy(avalue, &lp.Avalue_[0], *numnz * sizeof(double));
+    memcpy(astart, &lp.a_start_[0], num_start_entries * sizeof(HighsInt));
+    *numnz = lp.a_start_[*numcol];
+    memcpy(aindex, &lp.a_index_[0], *numnz * sizeof(HighsInt));
+    memcpy(avalue, &lp.a_value_[0], *numnz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
     memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));

@@ -218,9 +218,9 @@ class HighsCliqueTable {
     return findCommonCliqueId(v1, v2) != -1;
   }
 
-  std::pair<const CliqueVar*, int> findCommonClique(CliqueVar v1,
-                                                    CliqueVar v2) {
-    std::pair<const CliqueVar*, int> c{nullptr, 0};
+  std::pair<const CliqueVar*, HighsInt> findCommonClique(CliqueVar v1,
+                                                         CliqueVar v2) {
+    std::pair<const CliqueVar*, HighsInt> c{nullptr, 0};
     if (v1 == v2) return c;
     HighsInt clq = findCommonCliqueId(v1, v2);
     if (clq == -1) return c;

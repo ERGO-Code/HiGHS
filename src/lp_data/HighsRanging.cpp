@@ -75,8 +75,8 @@ HighsStatus getRangingData(HighsRanging& ranging,
 
   // Local copies of scalars
 
-  const HighsInt numRow = ekk_instance.lp_.numRow_;
-  const HighsInt numCol = ekk_instance.lp_.numCol_;
+  const HighsInt numRow = ekk_instance.lp_.num_row_;
+  const HighsInt numCol = ekk_instance.lp_.num_col_;
   const HighsInt numTotal = numCol + numRow;
   const double H_TT = 1e-13;
   const double H_INF = kHighsInf;
@@ -596,21 +596,21 @@ void writeRanging(const HighsRanging& ranging,
               "    ) Up         UpObj     "
               " | DownObj    Down       Value      Up         UpObj\n",
               highs_model_object.solution_params_.objective_function_value);
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
                 iCol,
                 statusToString(highs_model_object.basis_.col_status[iCol],
-                               lp.colLower_[iCol], lp.colUpper_[iCol])
+                               lp.col_lower_[iCol], lp.col_upper_[iCol])
                     .c_str(),
                 ranging.col_bound_dn.objective_[iCol],
-                ranging.col_bound_dn.value_[iCol], lp.colLower_[iCol],
+                ranging.col_bound_dn.value_[iCol], lp.col_lower_[iCol],
                 highs_model_object.solution_.col_value[iCol],
-                lp.colUpper_[iCol], ranging.col_bound_up.value_[iCol],
+                lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
                 ranging.col_bound_up.objective_[iCol],
                 ranging.col_cost_dn.objective_[iCol],
-                ranging.col_cost_dn.value_[iCol], lp.colCost_[iCol],
+                ranging.col_cost_dn.value_[iCol], lp.col_cost_[iCol],
                 ranging.col_cost_up.value_[iCol],
                 ranging.col_cost_up.objective_[iCol]);
   }
@@ -619,18 +619,18 @@ void writeRanging(const HighsRanging& ranging,
               "                             \n"
               "Col Status | DownObj    Down       (Lower      Value      Upper "
               "    ) Up         UpObj   \n");
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g |\n",
                 iRow,
                 statusToString(highs_model_object.basis_.row_status[iRow],
-                               lp.rowLower_[iRow], lp.rowUpper_[iRow])
+                               lp.row_lower_[iRow], lp.row_upper_[iRow])
                     .c_str(),
                 ranging.row_bound_dn.objective_[iRow],
-                ranging.row_bound_dn.value_[iRow], lp.rowLower_[iRow],
+                ranging.row_bound_dn.value_[iRow], lp.row_lower_[iRow],
                 highs_model_object.solution_.row_value[iRow],
-                lp.rowUpper_[iRow], ranging.row_bound_up.value_[iRow],
+                lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
                 ranging.row_bound_up.objective_[iRow]);
   }
 }

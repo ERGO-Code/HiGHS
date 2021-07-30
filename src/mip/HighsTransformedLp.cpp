@@ -41,7 +41,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
 
     if (mipsolver.mipdata_->domain.isFixed(col)) continue;
 
-    double bestub = mipsolver.mipdata_->domain.colUpper_[col];
+    double bestub = mipsolver.mipdata_->domain.col_upper_[col];
     simpleUbDist[col] = bestub - lpSolution.col_value[col];
     if (simpleUbDist[col] <= mipsolver.mipdata_->feastol)
       simpleUbDist[col] = 0.0;
@@ -49,7 +49,7 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
     double minbestub = bestub;
     size_t bestvubnodes = 0;
 
-    double bestlb = mipsolver.mipdata_->domain.colLower_[col];
+    double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
     simpleLbDist[col] = lpSolution.col_value[col] - bestlb;
     if (simpleLbDist[col] <= mipsolver.mipdata_->feastol)
       simpleLbDist[col] = 0.0;
@@ -115,8 +115,8 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   }
 
   for (HighsInt col : mipsolver.mipdata_->integral_cols) {
-    double bestub = mipsolver.mipdata_->domain.colUpper_[col];
-    double bestlb = mipsolver.mipdata_->domain.colLower_[col];
+    double bestub = mipsolver.mipdata_->domain.col_upper_[col];
+    double bestlb = mipsolver.mipdata_->domain.col_lower_[col];
     // todo: use binary variable bounds on integers?
     if (true || bestub - bestlb < 100.5) {
       if (bestlb == bestub) continue;
@@ -246,8 +246,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     double ub;
 
     if (col < slackOffset) {
-      lb = mip.mipdata_->domain.colLower_[col];
-      ub = mip.mipdata_->domain.colUpper_[col];
+      lb = mip.mipdata_->domain.col_lower_[col];
+      ub = mip.mipdata_->domain.col_upper_[col];
     } else {
       HighsInt row = col - slackOffset;
       lb = lprelaxation.slackLower(row);
@@ -413,8 +413,8 @@ bool HighsTransformedLp::transform(std::vector<double>& vals,
     double ub;
 
     if (col < slackOffset) {
-      lb = mip.mipdata_->domain.colLower_[col];
-      ub = mip.mipdata_->domain.colUpper_[col];
+      lb = mip.mipdata_->domain.col_lower_[col];
+      ub = mip.mipdata_->domain.col_upper_[col];
     } else {
       HighsInt row = col - slackOffset;
       lb = lprelaxation.slackLower(row);
@@ -484,7 +484,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       }
       case BoundType::kSimpleLb: {
         if (col < slackOffset) {
-          tmpRhs += vals[i] * mip.mipdata_->domain.colLower_[col];
+          tmpRhs += vals[i] * mip.mipdata_->domain.col_lower_[col];
           vectorsum.add(col, vals[i]);
         } else {
           HighsInt row = col - slackOffset;
@@ -502,7 +502,7 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
       }
       case BoundType::kSimpleUb: {
         if (col < slackOffset) {
-          tmpRhs -= vals[i] * mip.mipdata_->domain.colUpper_[col];
+          tmpRhs -= vals[i] * mip.mipdata_->domain.col_upper_[col];
           vectorsum.add(col, -vals[i]);
         } else {
           HighsInt row = col - slackOffset;
@@ -542,15 +542,15 @@ bool HighsTransformedLp::untransform(std::vector<double>& vals,
 
       if (absval <= mip.mipdata_->feastol) {
         if (val > 0) {
-          if (mip.mipdata_->domain.colLower_[col] == -kHighsInf)
+          if (mip.mipdata_->domain.col_lower_[col] == -kHighsInf)
             abort = true;
           else
-            tmpRhs -= val * mip.mipdata_->domain.colLower_[col];
+            tmpRhs -= val * mip.mipdata_->domain.col_lower_[col];
         } else {
-          if (mip.mipdata_->domain.colUpper_[col] == kHighsInf)
+          if (mip.mipdata_->domain.col_upper_[col] == kHighsInf)
             abort = true;
           else
-            tmpRhs -= val * mip.mipdata_->domain.colUpper_[col];
+            tmpRhs -= val * mip.mipdata_->domain.col_upper_[col];
         }
         return true;
       }
