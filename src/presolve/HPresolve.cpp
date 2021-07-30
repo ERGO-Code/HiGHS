@@ -26,6 +26,7 @@
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "test/DevKkt.h"
 #include "util/HighsCDouble.h"
@@ -1324,7 +1325,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   }
   if (!binaries.empty()) {
     // sort variables with many implications on other binaries first
-    std::sort(binaries.begin(), binaries.end());
+    pdqsort(binaries.begin(), binaries.end());
 
     size_t numChangedCols = 0;
     while (domain.getChangedCols().size() != numChangedCols) {
@@ -4121,7 +4122,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
                      }),
       substitutionOpportunities.end());
 
-  std::sort(
+  pdqsort(
       substitutionOpportunities.begin(), substitutionOpportunities.end(),
       [&](const std::pair<HighsInt, HighsInt>& nz1,
           const std::pair<HighsInt, HighsInt>& nz2) {
@@ -4681,7 +4682,7 @@ HighsInt HPresolve::strengthenInequalities() {
       if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
 
-      std::sort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
+      pdqsort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
         return std::make_pair(reducedcost[i1], i1) >
                std::make_pair(reducedcost[i2], i2);
       });

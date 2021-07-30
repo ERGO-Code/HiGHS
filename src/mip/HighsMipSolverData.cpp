@@ -17,6 +17,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
+#include "pdqsort/pdqsort.h"
 #include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
@@ -696,13 +697,12 @@ void HighsMipSolverData::basisTransfer() {
         if (firstrootbasis.col_status[i] != HighsBasisStatus::kBasic)
           nonbasiccols.push_back(i);
       }
-      std::sort(
-          nonbasiccols.begin(), nonbasiccols.end(),
-          [&](HighsInt col1, HighsInt col2) {
-            HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
-            HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
-            return std::make_pair(len1, col1) < std::make_pair(len2, col2);
-          });
+      pdqsort(nonbasiccols.begin(), nonbasiccols.end(),
+              [&](HighsInt col1, HighsInt col2) {
+                HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
+                HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
+                return std::make_pair(len1, col1) < std::make_pair(len2, col2);
+              });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
       for (HighsInt i : nonbasiccols) {
         const HighsInt start = model.a_start_[i];
@@ -751,7 +751,7 @@ void HighsMipSolverData::basisTransfer() {
           }
         }
 
-        std::sort(nonbasicrows.begin(), nonbasicrows.end());
+        pdqsort(nonbasicrows.begin(), nonbasicrows.end());
         nonbasicrows.resize(missingbasic);
 
         for (std::pair<HighsInt, int> nonbasicrow : nonbasicrows)

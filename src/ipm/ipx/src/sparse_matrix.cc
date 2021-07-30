@@ -6,6 +6,7 @@
 #include <cmath>
 #include <utility>
 #include "utils.h"
+#include "pdqsort/pdqsort.h"
 
 namespace ipx {
 
@@ -79,7 +80,7 @@ void SparseMatrix::SortIndices() {
             work[nz].second = value(p);
             nz++;
         }
-        std::sort(work.begin(), work.begin() + nz);
+        pdqsort(work.begin(), work.begin() + nz);
         for (Int k = 0, p = begin(j); p < end(j); k++, p++) {
             index(p) = work[k].first;
             value(p) = work[k].second;

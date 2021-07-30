@@ -19,6 +19,7 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsDisjointSets.h"
 
 void HighsSymmetryDetection::removeFixPoints() {
@@ -54,7 +55,7 @@ void HighsSymmetryDetection::removeFixPoints() {
     for (HighsInt j = Gend[i]; j < Gstart[i + 1]; ++j)
       Gedge[j].first = vertexToCell[Gedge[j].first];
 
-    std::sort(Gedge.data() + Gend[i], Gedge.data() + Gstart[i + 1]);
+    pdqsort(Gedge.data() + Gend[i], Gedge.data() + Gstart[i + 1]);
 
     u64 vecHash = HighsHashHelpers::vector_hash(Gedge.data() + Gend[i],
                                                 Gstart[i + 1] - Gend[i]);
@@ -249,14 +250,14 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
   stabilizerOrbits.symmetries = this;
-  std::sort(stabilizerOrbits.stabilizedCols.begin(),
-            stabilizerOrbits.stabilizedCols.end());
+  pdqsort(stabilizerOrbits.stabilizedCols.begin(),
+          stabilizerOrbits.stabilizedCols.end());
   if (!stabilizerOrbits.orbitCols.empty()) {
-    std::sort(stabilizerOrbits.orbitCols.begin(),
-              stabilizerOrbits.orbitCols.end(),
-              [&](HighsInt col1, HighsInt col2) {
-                return getOrbit(col1) < getOrbit(col2);
-              });
+    pdqsort(stabilizerOrbits.orbitCols.begin(),
+            stabilizerOrbits.orbitCols.end(),
+            [&](HighsInt col1, HighsInt col2) {
+              return getOrbit(col1) < getOrbit(col2);
+            });
     HighsInt numOrbitCols = stabilizerOrbits.orbitCols.size();
     stabilizerOrbits.orbitStarts.reserve(numOrbitCols + 1);
     stabilizerOrbits.orbitStarts.push_back(0);
@@ -772,7 +773,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
 
 void HighsSymmetryDetection::initializeGroundSet() {
   vertexGroundSet = currentPartition;
-  std::sort(vertexGroundSet.begin(), vertexGroundSet.end());
+  pdqsort(vertexGroundSet.begin(), vertexGroundSet.end());
   vertexPosition.resize(vertexToCell.size(), -1);
   for (HighsInt i = 0; i < numVertices; ++i)
     vertexPosition[vertexGroundSet[i]] = i;
@@ -914,7 +915,7 @@ HighsSymmetryDetection::u64 HighsSymmetryDetection::getVertexHash(HighsInt v) {
             return std::make_pair(vertexToCell[edge.first], edge.second);
           });
 
-      std::sort(edgeBuffer.begin(), edgeBuffer.begin() + dynamicLen);
+      pdqsort(edgeBuffer.begin(), edgeBuffer.begin() + dynamicLen);
 
       u64 vecHash =
           HighsHashHelpers::vector_hash(edgeBuffer.data(), dynamicLen);
@@ -949,13 +950,12 @@ bool HighsSymmetryDetection::partitionRefinement() {
       getVertexHash(v);
     }
 
-    std::sort(currentPartition.begin() + cellStart,
-              currentPartition.begin() + cellEnd,
-              [&](HighsInt v1, HighsInt v2) {
-                assert(hashValid[v1]);
-                assert(hashValid[v2]);
-                return vertexHashes[v1] < vertexHashes[v2];
-              });
+    pdqsort(currentPartition.begin() + cellStart,
+            currentPartition.begin() + cellEnd, [&](HighsInt v1, HighsInt v2) {
+              assert(hashValid[v1]);
+              assert(hashValid[v2]);
+              return vertexHashes[v1] < vertexHashes[v2];
+            });
 
     bool prune = false;
     HighsInt i;
@@ -1272,10 +1272,10 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // assigned above
   currentPartition.resize(numVertices);
   std::iota(currentPartition.begin(), currentPartition.end(), 0);
-  std::sort(currentPartition.begin(), currentPartition.end(),
-            [&](HighsInt v1, HighsInt v2) {
-              return vertexToCell[v1] < vertexToCell[v2];
-            });
+  pdqsort(currentPartition.begin(), currentPartition.end(),
+          [&](HighsInt v1, HighsInt v2) {
+            return vertexToCell[v1] < vertexToCell[v2];
+          });
 
   // now set up partition links and correct the colToCell array to the
   // correct cell index
@@ -1420,16 +1420,15 @@ HighsSymmetryDetection::computeComponentData(
 
   componentData.componentSets.assign(vertexGroundSet.begin(),
                                      vertexGroundSet.begin() + numActiveCols);
-  std::sort(
-      componentData.componentSets.begin(), componentData.componentSets.end(),
-      [&](HighsInt u, HighsInt v) {
-        HighsInt uComp = componentData.components.getSet(vertexPosition[u]);
-        HighsInt vComp = componentData.components.getSet(vertexPosition[v]);
-        return std::make_pair(componentData.components.getSetSize(uComp) == 1,
-                              uComp) <
-               std::make_pair(componentData.components.getSetSize(vComp) == 1,
-                              vComp);
-      });
+  pdqsort(componentData.componentSets.begin(),
+          componentData.componentSets.end(), [&](HighsInt u, HighsInt v) {
+            HighsInt uComp = componentData.components.getSet(vertexPosition[u]);
+            HighsInt vComp = componentData.components.getSet(vertexPosition[v]);
+            return std::make_pair(
+                       componentData.components.getSetSize(uComp) == 1, uComp) <
+                   std::make_pair(
+                       componentData.components.getSetSize(vComp) == 1, vComp);
+          });
 
   HighsInt currentComponentStart = -1;
   HighsInt currentComponent = -1;
@@ -1459,16 +1458,15 @@ HighsSymmetryDetection::computeComponentData(
     componentData.permComponents.push_back(i);
   }
 
-  std::sort(
-      componentData.permComponents.begin(), componentData.permComponents.end(),
-      [&](HighsInt i, HighsInt j) {
-        HighsInt seti =
-            componentData.components.getSet(componentData.firstUnfixed[i]);
-        HighsInt setj =
-            componentData.components.getSet(componentData.firstUnfixed[j]);
-        return std::make_pair(seti, componentData.numUnfixed[i]) <
-               std::make_pair(setj, componentData.numUnfixed[j]);
-      });
+  pdqsort(componentData.permComponents.begin(),
+          componentData.permComponents.end(), [&](HighsInt i, HighsInt j) {
+            HighsInt seti =
+                componentData.components.getSet(componentData.firstUnfixed[i]);
+            HighsInt setj =
+                componentData.components.getSet(componentData.firstUnfixed[j]);
+            return std::make_pair(seti, componentData.numUnfixed[i]) <
+                   std::make_pair(setj, componentData.numUnfixed[j]);
+          });
 
   currentComponentStart = -1;
   currentComponent = -1;

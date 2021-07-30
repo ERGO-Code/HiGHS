@@ -22,6 +22,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
+#include "pdqsort/pdqsort.h"
 
 void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                                HighsLpAggregator& lpAggregator,
@@ -104,20 +105,20 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     fractionalBasisvars.emplace_back(fractionality, i);
   }
 
-  std::sort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
-            [&fractionalBasisvars](const std::pair<double, HighsInt>& a,
-                                   const std::pair<double, HighsInt>& b) {
-              return std::make_tuple(
-                         a.first,
-                         HighsHashHelpers::hash((uint64_t(a.second) << 32) +
-                                                fractionalBasisvars.size()),
-                         a.second) >
-                     std::make_tuple(
-                         b.first,
-                         HighsHashHelpers::hash((uint64_t(b.second) << 32) +
-                                                fractionalBasisvars.size()),
-                         b.second);
-            });
+  pdqsort(fractionalBasisvars.begin(), fractionalBasisvars.end(),
+          [&fractionalBasisvars](const std::pair<double, HighsInt>& a,
+                                 const std::pair<double, HighsInt>& b) {
+            return std::make_tuple(
+                       a.first,
+                       HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                              fractionalBasisvars.size()),
+                       a.second) >
+                   std::make_tuple(
+                       b.first,
+                       HighsHashHelpers::hash((uint64_t(b.second) << 32) +
+                                              fractionalBasisvars.size()),
+                       b.second);
+          });
   HighsInt numCuts = cutpool.getNumCuts();
   for (const auto& fracvar : fractionalBasisvars) {
     HighsInt i = fracvar.second;

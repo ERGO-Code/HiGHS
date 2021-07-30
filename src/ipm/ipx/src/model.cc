@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cmath>
 #include "utils.h"
+#include "pdqsort/pdqsort.h"
 
 namespace ipx {
 
@@ -813,7 +814,7 @@ void Model::FindDenseColumns() {
     std::vector<Int> colcount(num_cols_);
     for (Int j = 0; j < num_cols_; j++)
         colcount[j] = AI_.end(j)-AI_.begin(j);
-    std::sort(colcount.begin(), colcount.end());
+    pdqsort(colcount.begin(), colcount.end());
 
     for (Int j = 1; j < num_cols_; j++) {
         if (colcount[j] > 

@@ -79,8 +79,6 @@ class HighsSparseVectorSum {
     nonzeroinds.clear();
   }
 
-  void sort() { std::sort(nonzeroinds.begin(), nonzeroinds.end()); }
-
   template <typename Pred>
   HighsInt partition(Pred&& pred) {
     return std::partition(nonzeroinds.begin(), nonzeroinds.end(), pred) -
