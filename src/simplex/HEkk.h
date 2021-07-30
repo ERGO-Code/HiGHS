@@ -39,11 +39,10 @@ class HEkk {
 
   HighsStatus moveNewLp(HighsLp lp);
   HighsStatus passNewLp(const HighsLp& pass_lp);
-  void moveUnscaledLp(HighsLp lp,
-		      const SimplexScale* scale,
-		      const HighsInt* scaled_a_start,
-		      const HighsInt* scaled_a_index,
-		      const double* scaled_a_value);
+  void moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
+                      const HighsInt* scaled_a_start,
+                      const HighsInt* scaled_a_index,
+                      const double* scaled_a_value);
   void passScaledLp(const HighsLp& lp);
   HighsStatus solve();
   HighsStatus cleanup();

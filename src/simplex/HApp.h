@@ -45,9 +45,10 @@
 //
 // If possible, it sets the HiGHS basis and solution
 
-void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved, bool& incumbent_lp_scaled,  
-				  HighsLp& incumbent_lp, HighsLp& ekk_lp,
-				  const SimplexScale& scale) {
+void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved,
+                                  bool& incumbent_lp_scaled,
+                                  HighsLp& incumbent_lp, HighsLp& ekk_lp,
+                                  const SimplexScale& scale) {
   if (incumbent_lp_moved) incumbent_lp = std::move(ekk_lp);
   incumbent_lp_moved = false;
   ekk_lp = incumbent_lp;
@@ -56,7 +57,7 @@ void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved, bool& incumbent_lp_s
     incumbent_lp_scaled = false;
   } else {
     scaleSimplexLp(ekk_lp, scale);
-  }     
+  }
 }
 
 HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
@@ -181,8 +182,8 @@ HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
       // simplex NLA
       simplex_nla.passScalePointer(&highs_model_object.scale_);
       simplex_nla.passFactorMatrixPointers(&scaled_lp.a_start_[0],
-					   &scaled_lp.a_index_[0],
-					   &scaled_lp.a_value_[0]);
+                                           &scaled_lp.a_index_[0],
+                                           &scaled_lp.a_value_[0]);
       // Force reinitialisation of the matrix for the simplex solver
       // now that the LP is unscaled
       ekk_instance.initialiseMatrix(true);
@@ -368,7 +369,8 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
   if (!status.has_basis && basis.valid) {
     return_status = ekk_instance.setBasis(basis);
     if (return_status == HighsStatus::kError) {
-      recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp, ekk_lp, scale);
+      recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
+                                   ekk_lp, scale);
       assert(!incumbent_lp_moved && !incumbent_lp_scaled);
       return return_status;
     }
@@ -382,7 +384,8 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
     // Solve the scaled LP!
     return_status = ekk_instance.solve();
     if (return_status == HighsStatus::kError) {
-      recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp, ekk_lp, scale);
+      recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
+                                   ekk_lp, scale);
       assert(!incumbent_lp_moved && !incumbent_lp_scaled);
       return return_status;
     }
@@ -397,9 +400,8 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
     basis = ekk_instance.getHighsBasis();
 
     // Determine whether the unscaled LP has been solved
-    getUnscaledInfeasibilities(options, ekk_lp,
-                               ekk_instance.basis_, ekk_instance.info_, scale,
-                               solution_params);
+    getUnscaledInfeasibilities(options, ekk_lp, ekk_instance.basis_,
+                               ekk_instance.info_, scale, solution_params);
 
     num_unscaled_primal_infeasibility =
         solution_params.num_primal_infeasibility;
@@ -448,7 +450,8 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
     if (!refine_solution) {
       unscaled_model_status = scaled_model_status;
       return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
-      recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp, ekk_lp, scale);
+      recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
+                                   ekk_lp, scale);
       assert(!incumbent_lp_moved && !incumbent_lp_scaled);
       return return_status;
     }
@@ -485,15 +488,13 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
   //
   // Move the incumbent LP and pass pointers to the scaling factors
   // and scaled matrix for the HFactor instance
-  ekk_instance.moveUnscaledLp(std::move(lp), &scale,
-			      &scaled_lp.a_start_[0],
-			      &scaled_lp.a_index_[0],
-			      &scaled_lp.a_value_[0]);
+  ekk_instance.moveUnscaledLp(std::move(lp), &scale, &scaled_lp.a_start_[0],
+                              &scaled_lp.a_index_[0], &scaled_lp.a_value_[0]);
   incumbent_lp_moved = true;
   // Save options/strategies that may be changed
   HighsInt simplex_strategy = options.simplex_strategy;
   double dual_simplex_cost_perturbation_multiplier =
-    options.dual_simplex_cost_perturbation_multiplier;
+      options.dual_simplex_cost_perturbation_multiplier;
   HighsInt simplex_dual_edge_weight_strategy =
       ekk_instance.info_.dual_edge_weight_strategy;
   if (num_unscaled_primal_infeasibility == 0) {
@@ -526,7 +527,7 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
 
   // Copy solution data into the HMO
-  // 
+  //
   scaled_model_status = ekk_instance.model_status_;
   solution_params.objective_function_value =
       ekk_instance.info_.primal_objective_value;
@@ -535,15 +536,20 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
   basis = ekk_instance.getHighsBasis();
   // Copy values into the HighsSolutionParams that are set (above) by
   // the call to getUnscaledInfeasibilities
-  solution_params.num_primal_infeasibility = ekk_instance.info_.num_primal_infeasibility;
-  solution_params.max_primal_infeasibility = ekk_instance.info_.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibility = ekk_instance.info_.sum_primal_infeasibility;
-  solution_params.num_dual_infeasibility = ekk_instance.info_.num_dual_infeasibility;
-  solution_params.max_dual_infeasibility = ekk_instance.info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibility = ekk_instance.info_.sum_dual_infeasibility;
+  solution_params.num_primal_infeasibility =
+      ekk_instance.info_.num_primal_infeasibility;
+  solution_params.max_primal_infeasibility =
+      ekk_instance.info_.max_primal_infeasibility;
+  solution_params.sum_primal_infeasibility =
+      ekk_instance.info_.sum_primal_infeasibility;
+  solution_params.num_dual_infeasibility =
+      ekk_instance.info_.num_dual_infeasibility;
+  solution_params.max_dual_infeasibility =
+      ekk_instance.info_.max_dual_infeasibility;
+  solution_params.sum_dual_infeasibility =
+      ekk_instance.info_.sum_dual_infeasibility;
 
-  num_unscaled_primal_infeasibility =
-    solution_params.num_primal_infeasibility;
+  num_unscaled_primal_infeasibility = solution_params.num_primal_infeasibility;
   num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
 
   assert(solution_params.num_primal_infeasibility >= 0);

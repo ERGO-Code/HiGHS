@@ -49,11 +49,10 @@ HighsStatus HEkk::passNewLp(const HighsLp& pass_lp) {
   return setup();
 }
 
-void HEkk::moveUnscaledLp(HighsLp lp,
-			  const SimplexScale* scale,
-			  const HighsInt* scaled_a_start,
-			  const HighsInt* scaled_a_index,
-			  const double* scaled_a_value) {
+void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
+                          const HighsInt* scaled_a_start,
+                          const HighsInt* scaled_a_index,
+                          const double* scaled_a_value) {
   lp_ = std::move(lp);
   if (status_.has_matrix) initialiseMatrix(true);
   scale_ = scale;
@@ -69,7 +68,11 @@ void HEkk::passScaledLp(const HighsLp& lp) {
   factor_a_start_ = &lp_.a_start_[0];
   factor_a_index_ = &lp_.a_index_[0];
   factor_a_value_ = &lp_.a_value_[0];
-  simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_, factor_a_value_);
+  // Consider the consequences for simplex NLA and its HFactor instance
+  simplex_nla_.lp_ = &lp_;
+  simplex_nla_.scale_ = scale_;
+  simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
+                                   factor_a_value_);
 }
 
 HighsStatus HEkk::solve() {
@@ -519,7 +522,7 @@ void HEkk::initialiseForNewLp() {
   scale_ = NULL;
   factor_a_start_ = &lp_.a_start_[0];
   factor_a_index_ = &lp_.a_index_[0];
-  factor_a_value_ = &lp_.a_value_[0];  
+  factor_a_value_ = &lp_.a_value_[0];
   status_.initialised = true;
 }
 
@@ -746,9 +749,6 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
   }
 
   // Call computeFactor to perform INVERT
-  if (status_.has_invert) {
-    printf("In getNonsingularInverse: Ekk has INVERT\n");
-  }
   HighsInt rank_deficiency = computeFactor();
   const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
@@ -914,8 +914,8 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
-    simplex_nla_.setup(&lp_, &basis_.basicIndex_[0],
-		       scale_, factor_a_start_, factor_a_index_, factor_a_value_,
+    simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_start_,
+                       factor_a_index_, factor_a_value_,
                        info_.factor_pivot_threshold, &options_, &timer_,
                        &analysis_);
     status_.has_factor_arrays = true;

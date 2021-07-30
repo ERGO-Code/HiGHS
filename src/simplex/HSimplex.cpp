@@ -569,7 +569,7 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = true;//false;
+  const bool force_scaling = false;
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");
@@ -1119,7 +1119,8 @@ void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
   //  scale.is_scaled = true;
 }
 
-void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
+void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale,
+                      const bool force) {
   // If the LP isn't scaled, then return
   if (!scale.is_scaled && !force) return;
   // Unscale the bounds and costs and matrix

@@ -29,10 +29,10 @@
 // using std::vector;
 
 void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
-			const SimplexScale* scale,
-			const HighsInt* factor_a_start,
-			const HighsInt* factor_a_index,
-			const double* factor_a_value,
+                        const SimplexScale* scale,
+                        const HighsInt* factor_a_start,
+                        const HighsInt* factor_a_index,
+                        const double* factor_a_value,
                         const double factor_pivot_threshold,
                         const HighsOptions* options, HighsTimer* timer,
                         HighsSimplexAnalysis* analysis) {
@@ -43,12 +43,11 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   timer_ = timer;
   analysis_ = analysis;
   report_ = false;
-  factor_.setup(lp_->num_col_, lp_->num_row_,
-		factor_a_start, factor_a_index, factor_a_value, base_index_,
-                factor_pivot_threshold, options_->factor_pivot_tolerance,
-                options_->highs_debug_level, options_->output_flag,
-                options_->log_file_stream, options_->log_to_console,
-                options_->log_dev_level);
+  factor_.setup(lp_->num_col_, lp_->num_row_, factor_a_start, factor_a_index,
+                factor_a_value, base_index_, factor_pivot_threshold,
+                options_->factor_pivot_tolerance, options_->highs_debug_level,
+                options_->output_flag, options_->log_file_stream,
+                options_->log_to_console, options_->log_dev_level);
 }
 
 HighsInt HSimplexNla::invert() {
@@ -136,18 +135,15 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
   factor_.setPivotThreshold(new_pivot_threshold);
 }
 
-void HSimplexNla::passLpPointer(const HighsLp* lp) {
-  lp_ = lp;
-}
+void HSimplexNla::passLpPointer(const HighsLp* lp) { lp_ = lp; }
 
 void HSimplexNla::passScalePointer(const SimplexScale* scale) {
   scale_ = scale;
 }
 
-void HSimplexNla::passFactorMatrixPointers(
-    const HighsInt* factor_a_start,
-    const HighsInt* factor_a_index,
-    const double* factor_a_value) {
+void HSimplexNla::passFactorMatrixPointers(const HighsInt* factor_a_start,
+                                           const HighsInt* factor_a_index,
+                                           const double* factor_a_value) {
   factor_.setupMatrix(factor_a_start, factor_a_index, factor_a_value);
 }
 
@@ -206,8 +202,8 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
   return use_indices;
 }
 
-void HSimplexNla::reportArray(const std::string message,
-                              const HVector* vector, const bool force) const {
+void HSimplexNla::reportArray(const std::string message, const HVector* vector,
+                              const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
   if (num_row > 25) {
@@ -223,7 +219,8 @@ void HSimplexNla::reportArray(const std::string message,
 }
 
 void HSimplexNla::reportArraySparse(const std::string message,
-                                    const HVector* vector, const bool force) const {
+                                    const HVector* vector,
+                                    const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
   if (vector->count > 25) return;
@@ -246,7 +243,8 @@ void HSimplexNla::reportArraySparse(const std::string message,
 }
 
 void HSimplexNla::reportPackValue(const std::string message,
-                                  const HVector* vector, const bool force) const {
+                                  const HVector* vector,
+                                  const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
   if (vector->packCount > 25) return;
