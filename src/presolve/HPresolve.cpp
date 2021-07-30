@@ -3107,7 +3107,8 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         }
       }
     } else {
-      // inequality or ranged row
+      // inequality or ranged row, first store row posititions
+      storeRow(row);
 
       if (rowsize[row] == rowsizeInteger[row] + rowsizeImplInt[row]) {
         std::vector<double> rowCoefs;
@@ -3122,7 +3123,6 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                              ? options->mip_feasibility_tolerance
                              : options->mip_epsilon;
 
-        storeRow(row);
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
           rowCoefs.push_back(nonz.value());
           rowIndex.push_back(nonz.index());
@@ -3358,7 +3358,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         HighsInt numTightened = 0;
         double maxCoefValue = impliedRowUpper - model->row_upper_[row];
         HighsCDouble rhs = model->row_upper_[row];
-        for (const HighsSliceNonzero& nonz : getRowVector(row)) {
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
           if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
@@ -3387,7 +3387,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
         HighsInt numTightened = 0;
         double maxCoefValue = model->row_lower_[row] - impliedRowLower;
         HighsCDouble rhs = model->row_lower_[row];
-        for (const HighsSliceNonzero& nonz : getRowVector(row)) {
+        for (const HighsSliceNonzero& nonz : getStoredRow()) {
           if (model->integrality_[nonz.index()] == HighsVarType::kContinuous)
             continue;
 
