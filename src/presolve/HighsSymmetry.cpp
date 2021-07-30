@@ -992,7 +992,7 @@ bool HighsSymmetryDetection::partitionRefinement() {
 
 HighsInt HighsSymmetryDetection::selectTargetCell() {
   HighsInt i = 0;
-  if (nodeStack.size() > 1) i = nodeStack[nodeStack.size() - 2].targetCell + 1;
+  if (nodeStack.size() > 1) i = nodeStack[nodeStack.size() - 2].targetCell;
 
   while (i < numVertices) {
     if (cellSize(i) > 1) return i;
