@@ -131,7 +131,7 @@ struct HighsSymmetries {
                               HighsInt col) const {
     if (columnToOrbitope.size() == 0) return col;
     const HighsInt* orbitope = columnToOrbitope.find(col);
-    if (!orbitope) return col;
+    if (!orbitope || orbitopes[*orbitope].numSetPackingRows == 0) return col;
 
     return orbitopes[*orbitope].getBranchingColumn(colLower, colUpper, col);
   }
