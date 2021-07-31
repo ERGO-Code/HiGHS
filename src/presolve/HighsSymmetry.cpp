@@ -591,10 +591,8 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
 
 HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     const std::vector<HighsInt>& rows, HighsDomain& domain) const {
-  std::vector<int8_t> Mminimal(matrix.size(), -1);
-  std::vector<int8_t> Mmaximal(matrix.size(), -1);
-
   HighsInt numDynamicRows = rows.size();
+  std::vector<int8_t> Mminimal(numDynamicRows * rowLength, -1);
 
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numDynamicRows; ++i) {
@@ -607,7 +605,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     }
   }
 
-  Mmaximal = Mminimal;
+  std::vector<int8_t> Mmaximal = Mminimal;
 
   int8_t* MminimaljLast = Mminimal.data() + numDynamicRows * (rowLength - 1);
   int8_t* MmaximaljFirst = Mmaximal.data();
@@ -624,8 +622,8 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     return numDynamicRows;
   };
 
-  auto i_discr = [&](const int8_t* colj0, const int8_t* colj1) {
-    for (HighsInt i = numDynamicRows - 1; i >= 0; --i) {
+  auto i_discr = [&](const int8_t* colj0, const int8_t* colj1, HighsInt i_f) {
+    for (HighsInt i = i_f; i >= 0; --i) {
       if (colj0[i] != 0 && colj1[i] != 1) return i;
     }
 
@@ -635,65 +633,54 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
   for (HighsInt j = rowLength - 2; j >= 0; --j) {
     int8_t* colj0 = Mminimal.data() + j * numDynamicRows;
     int8_t* colj1 = colj0 + numDynamicRows;
-    HighsInt i = i_fixed(colj0, colj1);
+    HighsInt i_f = i_fixed(colj0, colj1);
 
-    if (i == numDynamicRows) {
+    if (i_f == numDynamicRows) {
       for (HighsInt k = 0; k < numDynamicRows; ++k) {
         int8_t isFree = (colj0[k] == -1);
         colj0[k] += (isFree & colj1[k]) + isFree;
       }
     } else {
-      i = i_discr(colj0, colj1);
-      if (i == -1) {
-        Mminimal.clear();
-        break;
-      } else {
-        for (HighsInt k = 0; k < i; ++k) {
-          int8_t isFree = (colj0[k] == -1);
-          colj0[k] += (isFree & colj1[k]) + isFree;
-        }
-        colj0[i] = 1;
-        for (HighsInt k = i + 1; k < numDynamicRows; ++k)
-          colj0[k] += (colj0[k] == -1);
+      HighsInt i_d = i_discr(colj0, colj1, i_f);
+      if (i_d == -1) {
+        domain.markInfeasible();
+        return 0;
       }
-    }
-  }
 
-  if (Mminimal.empty()) {
-    domain.markInfeasible();
-    return 0;
+      for (HighsInt k = 0; k < i_d; ++k) {
+        int8_t isFree = (colj0[k] == -1);
+        colj0[k] += (isFree & colj1[k]) + isFree;
+      }
+      colj0[i_d] = 1;
+      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
+        colj0[k] += (colj0[k] == -1);
+    }
   }
 
   for (HighsInt j = 1; j < rowLength; ++j) {
     int8_t* colj0 = Mmaximal.data() + j * numDynamicRows;
     int8_t* colj1 = colj0 - numDynamicRows;
-    HighsInt i = i_fixed(colj1, colj0);
+    HighsInt i_f = i_fixed(colj1, colj0);
 
-    if (i == numDynamicRows) {
+    if (i_f == numDynamicRows) {
       for (HighsInt k = 0; k < numDynamicRows; ++k) {
         int8_t isFree = (colj0[k] == -1);
         colj0[k] += (isFree & colj1[k]) + isFree;
       }
     } else {
-      i = i_discr(colj1, colj0);
-      if (i == -1) {
-        Mmaximal.clear();
-        break;
-      } else {
-        for (HighsInt k = 0; k < i; ++k) {
-          int8_t isFree = (colj0[k] == -1);
-          colj0[k] += (isFree & colj1[k]) + isFree;
-        }
-        colj0[i] = 0;
-        for (HighsInt k = i + 1; k < numDynamicRows; ++k)
-          colj0[k] += 2 * (colj0[k] == -1);
+      HighsInt i_d = i_discr(colj1, colj0, i_f);
+      if (i_d == -1) {
+        domain.markInfeasible();
+        return 0;
       }
+      for (HighsInt k = 0; k < i_d; ++k) {
+        int8_t isFree = (colj0[k] == -1);
+        colj0[k] += (isFree & colj1[k]) + isFree;
+      }
+      colj0[i_d] = 0;
+      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
+        colj0[k] += 2 * (colj0[k] == -1);
     }
-  }
-
-  if (Mmaximal.empty()) {
-    domain.markInfeasible();
-    return 0;
   }
 
   HighsInt numFixed = 0;
