@@ -421,7 +421,7 @@ HighsInt HighsOrbitopeMatrix::getBranchingColumn(
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
     HighsInt col) const {
   const HighsInt* i = columnToRow.find(col);
-  if (i && rowIsSetPacking[*i]) {
+  if (i) {
     for (HighsInt j = 0; j < rowLength; ++j) {
       HighsInt branchCol = entry(*i, j);
       if (branchCol == col) break;
@@ -1678,6 +1678,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   currNodeCertificate.clear();
   cellCreationStack.clear();
   createNode();
+  HighsInt maxPerms = 64000000 / numActiveCols;
   while (!nodeStack.empty()) {
     HighsInt targetCell = selectTargetCell();
     if (targetCell == -1) {
@@ -1724,6 +1725,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
                                              permutation,
                                              permutation + numActiveCols);
               ++symmetries.numPerms;
+              if (symmetries.numPerms == maxPerms) break;
             }
             backtrackDepth = std::min(backtrackDepth, firstPathDepth);
           } else if (!bestLeavePartition.empty() &&
@@ -1750,6 +1752,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
                                              permutation,
                                              permutation + numActiveCols);
               ++symmetries.numPerms;
+              if (symmetries.numPerms == maxPerms) break;
             }
 
             backtrackDepth = std::min(backtrackDepth, bestPathDepth);
