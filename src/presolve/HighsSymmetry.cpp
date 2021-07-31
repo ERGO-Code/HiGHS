@@ -48,18 +48,11 @@ void HighsSymmetryDetection::removeFixPoints() {
                      }),
       currentPartition.end());
 
-  hashValid.assign(numVertices, false);
   for (HighsInt i = 0; i < numVertices; ++i) {
     if (Gend[i] == Gstart[i + 1]) continue;
 
     for (HighsInt j = Gend[i]; j < Gstart[i + 1]; ++j)
       Gedge[j].first = vertexToCell[Gedge[j].first];
-
-    pdqsort(Gedge.data() + Gend[i], Gedge.data() + Gstart[i + 1]);
-
-    u64 vecHash = HighsHashHelpers::vector_hash(Gedge.data() + Gend[i],
-                                                Gstart[i + 1] - Gend[i]);
-    vertexHashes[i] = HighsHashHelpers::hash(vecHash);
   }
 
   if ((HighsInt)currentPartition.size() < numVertices) {
@@ -87,14 +80,7 @@ void HighsSymmetryDetection::removeFixPoints() {
         cellStart = i;
       }
 
-      if (!cellInRefinementQueue[cellStart]) {
-        cellInRefinementQueue[cellStart] = true;
-        refinementQueue.push_back(cellStart);
-        std::push_heap(refinementQueue.begin(), refinementQueue.end(),
-                       std::greater<HighsInt>());
-      }
-
-      // correct the vertexToCell array to not store the start index of the
+      // correct the vertexToCell array to store the start index of the
       // cell, not its number
       updateCellMembership(i, cellStart, false);
     }
@@ -108,8 +94,6 @@ void HighsSymmetryDetection::removeFixPoints() {
         std::partition_point(currentPartition.begin(), currentPartition.end(),
                              [&](HighsInt v) { return v < numCol; }) -
         currentPartition.begin();
-
-    partitionRefinement();
   } else
     numActiveCols = numCol;
 }
@@ -827,11 +811,12 @@ HighsInt HighsSymmetryDetection::getOrbit(HighsInt vertex) {
 }
 
 void HighsSymmetryDetection::initializeHashValues() {
-  vertexHashes.resize(numVertices);
-  hashValid.resize(numVertices);
-
   for (HighsInt i = 0; i != numVertices; ++i) {
     HighsInt cell = vertexToCell[i];
+    for (HighsInt j = Gstart[i]; j != Gend[i]; ++j) {
+      HighsHashHelpers::sparse_combine32(vertexHash[Gedge[j].first], cell,
+                                         Gedge[j].second);
+    }
     markCellForRefinement(cell);
   }
 }
@@ -846,10 +831,14 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
     if (i != cell) currentPartitionLinks[i] = cell;
 
     // update hashes of affected rows
-    for (HighsInt j = Gstart[vertex]; j != Gend[vertex]; ++j) {
-      hashValid[Gedge[j].first] = false;
-      if (markForRefinement)
-        markCellForRefinement(vertexToCell[Gedge[j].first]);
+    if (markForRefinement) {
+      for (HighsInt j = Gstart[vertex]; j != Gend[vertex]; ++j) {
+        HighsInt edgeDestinationCell = vertexToCell[Gedge[j].first];
+        if (cellSize(edgeDestinationCell) == 1) continue;
+        HighsHashHelpers::sparse_combine32(vertexHash[Gedge[j].first], cell,
+                                           Gedge[j].second);
+        markCellForRefinement(edgeDestinationCell);
+      }
     }
 
     return true;
@@ -859,15 +848,14 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
 }
 
 bool HighsSymmetryDetection::splitCell(HighsInt cell, HighsInt splitPoint) {
-  u64 hSplit = getVertexHash(currentPartition[splitPoint]);
-  u64 hCell = getVertexHash(currentPartition[cell]);
+  u32 hSplit = getVertexHash(currentPartition[splitPoint]);
+  u32 hCell = getVertexHash(currentPartition[cell]);
 
   u32 certificateVal =
-      (HighsHashHelpers::pair_hash<0>(hSplit, hSplit >> 32) +
-       HighsHashHelpers::pair_hash<1>(hCell, hCell >> 32) +
-       HighsHashHelpers::pair_hash<2>(
+      (HighsHashHelpers::pair_hash<0>(hSplit, hCell) +
+       HighsHashHelpers::pair_hash<1>(
            cell, currentPartitionLinks[cell] - splitPoint) +
-       HighsHashHelpers::pair_hash<3>(splitPoint, splitPoint - cell)) >>
+       HighsHashHelpers::pair_hash<2>(splitPoint, splitPoint - cell)) >>
       32;
 
   // employ prefix pruning scheme as in bliss
@@ -883,9 +871,12 @@ bool HighsSymmetryDetection::splitCell(HighsInt cell, HighsInt splitPoint) {
     // and it comes lexicographically after the certificate value of the
     // lexicographically smallest leave certificate we prune the node
     if (firstLeavePrefixLen <= currNodeCertificate.size() &&
-        bestLeavePrefixLen == currNodeCertificate.size() &&
-        certificateVal > bestLeaveCertificate[currNodeCertificate.size()])
-      return false;
+        bestLeavePrefixLen <= currNodeCertificate.size()) {
+      u32 diffVal = bestLeavePrefixLen == currNodeCertificate.size()
+                        ? certificateVal
+                        : currNodeCertificate[bestLeavePrefixLen];
+      if (diffVal > bestLeaveCertificate[bestLeavePrefixLen]) return false;
+    }
   }
 
   currentPartitionLinks[splitPoint] = currentPartitionLinks[cell];
@@ -905,30 +896,10 @@ void HighsSymmetryDetection::markCellForRefinement(HighsInt cell) {
                  std::greater<HighsInt>());
 }
 
-HighsSymmetryDetection::u64 HighsSymmetryDetection::getVertexHash(HighsInt v) {
-  if (!hashValid[v]) {
-    HighsInt dynamicLen = Gend[v] - Gstart[v];
-    if (dynamicLen != 0) {
-      std::transform(
-          Gedge.begin() + Gstart[v], Gedge.begin() + Gend[v],
-          edgeBuffer.begin(), [&](const std::pair<HighsInt, HighsUInt>& edge) {
-            return std::make_pair(vertexToCell[edge.first], edge.second);
-          });
-
-      pdqsort(edgeBuffer.begin(), edgeBuffer.begin() + dynamicLen);
-
-      u64 vecHash =
-          HighsHashHelpers::vector_hash(edgeBuffer.data(), dynamicLen);
-
-      // the vertex hash already contains the hash of the stable part in the
-      // lower bits so make sure to keep it and only overwrite the upper part
-      vertexHashes[v] =
-          HighsHashHelpers::hash(vecHash) << 32 | u32(vertexHashes[v]);
-    }
-    hashValid[v] = true;
-  }
-
-  return vertexHashes[v];
+HighsSymmetryDetection::u32 HighsSymmetryDetection::getVertexHash(HighsInt v) {
+  const u32* h = vertexHash.find(v);
+  if (h) return *h;
+  return 0;
 }
 
 bool HighsSymmetryDetection::partitionRefinement() {
@@ -945,47 +916,88 @@ bool HighsSymmetryDetection::partitionRefinement() {
     HighsInt cellEnd = currentPartitionLinks[cellStart];
     assert(cellEnd >= cellStart);
 
-    for (HighsInt i = cellStart; i < cellEnd; ++i) {
-      HighsInt v = currentPartition[i];
-      getVertexHash(v);
-    }
+    // first check which vertices do have updated hash values and put them to
+    // the end of the partition
+    HighsInt refineStart =
+        std::partition(
+            currentPartition.begin() + cellStart,
+            currentPartition.begin() + cellEnd,
+            [&](HighsInt v) { return vertexHash.find(v) == nullptr; }) -
+        currentPartition.begin();
 
-    pdqsort(currentPartition.begin() + cellStart,
+    // if there are none there is nothing to refine
+    if (refineStart == cellEnd) continue;
+
+    // sort the vertices that have updated hash values by their hash values
+    pdqsort(currentPartition.begin() + refineStart,
             currentPartition.begin() + cellEnd, [&](HighsInt v1, HighsInt v2) {
-              assert(hashValid[v1]);
-              assert(hashValid[v2]);
-              return vertexHashes[v1] < vertexHashes[v2];
+              return vertexHash[v1] < vertexHash[v2];
             });
 
+    // if not all vertices have updated hash values directly create the first
+    // new cell at the start of the range that we want to refine
+    if (refineStart != cellStart) {
+      assert(refineStart != cellStart);
+      assert(refineStart != cellEnd);
+      if (!splitCell(cellStart, refineStart)) {
+        // node can be pruned, make sure hash values are cleared and queue is
+        // empty
+        for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
+        refinementQueue.clear();
+        vertexHash.clear();
+        return false;
+      }
+      cellStart = refineStart;
+      updateCellMembership(cellStart, cellStart);
+    }
+
+    // now update the remaining vertices
     bool prune = false;
     HighsInt i;
+    assert(vertexHash.find(currentPartition[cellStart]) != nullptr);
+    // store value of first hash
+    u64 lastHash = vertexHash[currentPartition[cellStart]];
     for (i = cellStart + 1; i < cellEnd; ++i) {
       HighsInt vertex = currentPartition[i];
-      if (vertexHashes[vertex] != vertexHashes[currentPartition[i - 1]]) {
+      // get this vertex hash value
+      u64 hash = vertexHash[vertex];
+
+      if (hash != lastHash) {
+        // hash values do not match -> start of new cell
         if (!splitCell(cellStart, i)) {
+          // refinement process yielded bad prefix of certificate
+          // -> node can be pruned
           prune = true;
           break;
         }
         cellStart = i;
+        // remember hash value of this new cell under lastHash
+        lastHash = hash;
       }
 
+      // update membership of vertex to new cell
       updateCellMembership(i, cellStart);
     }
 
     if (prune) {
+      // node can be pruned, make sure hash values are cleared and queue is
+      // empty
       for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
       refinementQueue.clear();
+      vertexHash.clear();
+      currentPartitionLinks[firstCellStart] = cellEnd;
 
-      for (--i; i > firstCellStart; --i) {
-        HighsInt vertex = currentPartition[i];
-        if (!updateCellMembership(i, firstCellStart, false)) break;
-      }
+      // undo possibly incomplete changes done to the cells
+      for (--i; i >= refineStart; --i)
+        updateCellMembership(i, firstCellStart, false);
+
       return false;
     }
 
-    // set the link of the last started cell to point to the cell end
     assert(currentPartitionLinks[cellStart] == cellEnd);
   }
+
+  vertexHash.clear();
 
   return true;
 }
@@ -1357,7 +1369,10 @@ void HighsSymmetryDetection::switchToNextNode(HighsInt backtrackDepth) {
       continue;
     }
 
-    if (!partitionRefinement()) continue;
+    if (!partitionRefinement()) {
+      stackEnd = cellCreationStack.size();
+      continue;
+    }
 
     createNode();
     break;

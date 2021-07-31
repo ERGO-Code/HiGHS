@@ -177,8 +177,6 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> vertexToCell;
   std::vector<HighsInt> vertexPosition;
   std::vector<HighsInt> vertexGroundSet;
-  std::vector<u64> vertexHashes;
-  std::vector<uint8_t> hashValid;
   std::vector<HighsInt> orbitPartition;
   std::vector<HighsInt> orbitSize;
 
@@ -196,6 +194,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> firstLeavePartition;
   std::vector<HighsInt> bestLeavePartition;
 
+  HighsHashTable<HighsInt, u32> vertexHash;
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>> firstLeaveGraph;
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>> bestLeaveGraph;
 
@@ -241,7 +240,7 @@ class HighsSymmetryDetection {
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
   bool checkStoredAutomorphism(HighsInt vertex);
-  u64 getVertexHash(HighsInt vertex);
+  u32 getVertexHash(HighsInt vertex);
   HighsInt selectTargetCell();
 
   bool updateCellMembership(HighsInt vertex, HighsInt cell,
