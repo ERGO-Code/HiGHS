@@ -675,7 +675,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "use_solveLpSimplex0", "Use the original code for use_solveLpSimplex",
-        advanced, &use_solveLpSimplex0, true);
+        advanced, &use_solveLpSimplex0, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("run_crossover",

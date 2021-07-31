@@ -59,20 +59,25 @@ void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
   factor_a_start_ = scaled_a_start;
   factor_a_index_ = scaled_a_index;
   factor_a_value_ = scaled_a_value;
+  if (simplex_nla_.is_setup_) {
+    // Simplex NLA has been set up in previous call to
+    // computeFactor(), so update its scale pointer and the matrix
+    // pointers in the HFactor instance
+    simplex_nla_.lp_ = &lp_;
+    simplex_nla_.scale_ = scale_;
+    simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
+				     factor_a_value_);
+  }
 }
 
 void HEkk::passScaledLp(const HighsLp& lp) {
   lp_ = lp;
   initialiseMatrix(true);
   scale_ = NULL;
-  factor_a_start_ = &lp_.a_start_[0];
-  factor_a_index_ = &lp_.a_index_[0];
-  factor_a_value_ = &lp_.a_value_[0];
   // Consider the consequences for simplex NLA and its HFactor instance
   simplex_nla_.lp_ = &lp_;
   simplex_nla_.scale_ = scale_;
-  simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
-                                   factor_a_value_);
+  updateFactorMatrixPointers();
 }
 
 HighsStatus HEkk::solve() {
@@ -87,6 +92,15 @@ HighsStatus HEkk::solve() {
   iteration_count_ = 0;
   dual_simplex_cleanup_level_ = 0;
   if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
+
+  const HighsDebugStatus simplex_nla_status = simplex_nla_.debugCheckData("Before HEkk::solve()");
+  const bool simplex_nla_ok = simplex_nla_status == HighsDebugStatus::kOk;
+  if (!simplex_nla_ok) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "Error in simplex NLA data\n");
+    assert(simplex_nla_ok);
+    return HighsStatus::kError;
+  }
 
   assert(status_.has_basis);
   assert(status_.has_invert);
@@ -498,6 +512,14 @@ void HEkk::handleRankDeficiency() {
   status_.has_matrix = false;
 }
 
+void HEkk::updateFactorMatrixPointers() {
+  factor_a_start_ = &lp_.a_start_[0];
+  factor_a_index_ = &lp_.a_index_[0];
+  factor_a_value_ = &lp_.a_value_[0];
+  simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
+                                   factor_a_value_);
+}
+
 // Private methods
 
 HighsStatus HEkk::setup() {
@@ -512,6 +534,7 @@ HighsStatus HEkk::setup() {
     if (return_status == HighsStatus::kError) return return_status;
   }
   initialiseForNewLp();
+  simplex_nla_.clear();
   return return_status;
 }
 

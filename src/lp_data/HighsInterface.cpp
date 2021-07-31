@@ -237,7 +237,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   HighsLp& simplex_lp = ekk_instance.lp_;
   SimplexBasis& simplex_basis = ekk_instance.basis_;
 
-  ekk_instance.simplex_nla_.debugCheckData();
   // Query: should simplex_status.valid be simplex_status.valid_?
   bool& valid_basis = basis.valid;
   bool& valid_simplex_lp = simplex_status.valid;
@@ -282,7 +281,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
       return_status, "appendRowsToLpVectors");
   if (return_status == HighsStatus::kError) return return_status;
 
-  ekk_instance.simplex_nla_.debugCheckData();
   if (valid_simplex_lp) {
     // Append the rows to the Simplex LP vectors
     return_status = interpretCallStatus(
@@ -292,7 +290,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     if (return_status == HighsStatus::kError) return return_status;
   }
 
-  ekk_instance.simplex_nla_.debugCheckData();
   // Now consider scaling. First resize the scaling factors and
   // initialise the new components
   scale.row.resize(newNumRow);
@@ -324,7 +321,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
                              &local_ARvalue[0]),
         return_status, "appendRowsToLpMatrix");
     if (return_status == HighsStatus::kError) return return_status;
-    ekk_instance.simplex_nla_.debugCheckData();
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
         // Apply the column scaling to the new rows
@@ -370,7 +366,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
       // Should be extendSimplexLpRandomVectors here
     }
   }
-  ekk_instance.simplex_nla_.debugCheckData();
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasis(lp, basis, XnumNewRow);
   if (valid_simplex_basis)
@@ -388,7 +383,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     simplex_lp.num_row_ += XnumNewRow;
     ekk_instance.initialiseSimplexLpRandomVectors();
   }
-  ekk_instance.simplex_nla_.debugCheckData();
   return return_status;
 }
 

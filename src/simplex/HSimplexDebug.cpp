@@ -82,16 +82,6 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     }
   }
 
-  const HighsDebugStatus simplex_nla_status = simplex_nla.debugCheckData();
-  const bool simplex_nla_ok = debugDebugToHighsStatus(simplex_nla_status) !=
-        HighsStatus::kError;
-  if (!simplex_nla_ok) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-		 "Error in simplex NLA data\n");
-    assert(simplex_nla_ok);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
-
   if (status.has_invert) {
     const bool invert_ok =
         debugDebugToHighsStatus(debugCheckInvert(simplex_nla)) !=

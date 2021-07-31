@@ -786,7 +786,9 @@ void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
   // Determine the new number of vectors in the matrix and resize the
   // starts accordingly.
   HighsInt new_num_vec = num_vec + num_new_vec;
+  printf("Before resize a_start is %p\n", (void*)&lp.a_start_[0]);
   lp.a_start_.resize(new_num_vec + 1);
+  printf("After  resize a_start is %p\n", (void*)&lp.a_start_[0]);
   // If adding vectors to an empty matrix then introduce the start for the
   // fictitious vector 0
   if (num_vec == 0) lp.a_start_[0] = 0;

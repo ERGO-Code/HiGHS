@@ -281,12 +281,12 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(return_status == HighsStatus::kOk);
 
   const HighsInfo& info = highs.getInfo();
-  REQUIRE(info.num_dual_infeasibilities == 1);
+  REQUIRE(info.num_dual_infeasibilities == 0);// Now etamacro is solved properly it's not 1);
 
-  REQUIRE(info.simplex_iteration_count == 529);
+  REQUIRE(info.simplex_iteration_count == 531); // Now etamacro is solved properly it's not 529);
 
   HighsModelStatus model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kNotset);
+  REQUIRE(model_status == HighsModelStatus::kOptimal);// Now etamacro is solved properly it's not HighsModelStatus::kNotset);
 
   model_status = highs.getModelStatus(true);
   REQUIRE(model_status == HighsModelStatus::kOptimal);

@@ -56,7 +56,8 @@ void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved,
     unscaleSimplexLp(incumbent_lp, scale);
     incumbent_lp_scaled = false;
   } else {
-    scaleSimplexLp(ekk_lp, scale);
+    const bool force_scale = true;
+    scaleSimplexLp(ekk_lp, scale, force_scale);
   }
 }
 
@@ -86,7 +87,13 @@ HighsStatus solveLpSimplex0(HighsModelObject& highs_model_object) {
   }
 
   // If the simplex LP isn't initialised, scale and pass the current LP
-  if (!status.initialised) scaleAndPassLpToEkk(highs_model_object);
+  if (!status.initialised) {
+    scaleAndPassLpToEkk(highs_model_object);
+  } else {
+    // Update the pointers to the HFactor matrix since they may have
+    // moved if the LP has been modified
+    ekk_instance.updateFactorMatrixPointers();
+  }
 
   // If there is no simplex basis, use the HiGHS basis
   if (!status.has_basis && highs_model_object.basis_.valid) {
@@ -364,6 +371,10 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
     // of finding the scaling factors, so move the LP to Ekk
     ekk_instance.moveNewLp(std::move(lp));
     incumbent_lp_moved = true;
+  } else {
+    // Update the pointers to the HFactor matrix since they may have
+    // moved if the LP has been modified
+    ekk_instance.updateFactorMatrixPointers();
   }
   // If there is no simplex basis, use the HiGHS basis
   if (!status.has_basis && basis.valid) {

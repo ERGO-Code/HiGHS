@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-8;
 
 void checkRayDirection(const HighsInt dim, const vector<double>& ray_value,

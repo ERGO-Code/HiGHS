@@ -58,6 +58,7 @@ class HEkk {
   HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
+  void updateFactorMatrixPointers();
   void initialiseMatrix(const bool forced = false);
 
   // Interface methods
