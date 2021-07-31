@@ -90,7 +90,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
   // beginning.
   if (mipsolver.submip) {
     return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
-  } else if (pruned_treeweight < 1e-3 && num_leaves < 10) {
+  } else if (pruned_treeweight < 1e-3 &&
+             num_leaves - num_leaves_before_run < 10) {
     // in the main MIP solver allow an initial offset of 10000 heuristic LP
     // iterations
     if (heuristic_lp_iterations <
@@ -100,11 +101,23 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
              100000 + ((total_lp_iterations - heuristic_lp_iterations -
                         sb_lp_iterations) >>
                        1)) {
+    // compute the node LP iterations in the current run as only those should be
+    // used when estimating the total required LP iterations to complete the
+    // search
+    int64_t heur_iters_curr_run =
+        heuristic_lp_iterations - heuristic_lp_iterations_before_run;
+    int64_t sb_iters_curr_run = sb_lp_iterations - sb_lp_iterations_before_run;
+    int64_t node_iters_curr_run = total_lp_iterations -
+                                  total_lp_iterations_before_run -
+                                  heur_iters_curr_run - sb_iters_curr_run;
+    // now estimate the total fraction of LP iterations that we have spent on
+    // heuristics by assuming the node iterations of the current run will
+    // grow proportional to the pruned weight of the current tree and the
+    // iterations spent for anything else are just added as an offset
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
-        (heuristic_lp_iterations + sb_lp_iterations +
-         (total_lp_iterations - heuristic_lp_iterations - sb_lp_iterations) /
-             std::max(1e-3, double(pruned_treeweight)));
+        ((total_lp_iterations - node_iters_curr_run) +
+         node_iters_curr_run / std::max(1e-3, double(pruned_treeweight)));
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
     // exploration. Additionally we want to spent the proportional effort
@@ -175,6 +188,10 @@ void HighsMipSolverData::init() {
   heuristic_lp_iterations = 0;
   sepa_lp_iterations = 0;
   sb_lp_iterations = 0;
+  total_lp_iterations_before_run = 0;
+  heuristic_lp_iterations_before_run = 0;
+  sepa_lp_iterations_before_run = 0;
+  sb_lp_iterations_before_run = 0;
   num_disp_lines = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
@@ -592,6 +609,11 @@ void HighsMipSolverData::performRestart() {
   ++numRestarts;
   num_leaves_before_run = num_leaves;
   num_nodes_before_run = num_nodes;
+  num_nodes_before_run = num_nodes;
+  total_lp_iterations_before_run = total_lp_iterations;
+  heuristic_lp_iterations_before_run = heuristic_lp_iterations;
+  sepa_lp_iterations_before_run = sepa_lp_iterations;
+  sb_lp_iterations_before_run = sb_lp_iterations;
   HighsInt numLpRows = lp.getLp().num_row_;
   HighsInt numModelRows = mipsolver.numRow();
   HighsInt numCuts = numLpRows - numModelRows;

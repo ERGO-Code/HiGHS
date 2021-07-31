@@ -93,6 +93,10 @@ struct HighsMipSolverData {
   int64_t heuristic_lp_iterations;
   int64_t sepa_lp_iterations;
   int64_t sb_lp_iterations;
+  int64_t total_lp_iterations_before_run;
+  int64_t heuristic_lp_iterations_before_run;
+  int64_t sepa_lp_iterations_before_run;
+  int64_t sb_lp_iterations_before_run;
   int64_t num_disp_lines;
 
   HighsInt numImprovingSols;
