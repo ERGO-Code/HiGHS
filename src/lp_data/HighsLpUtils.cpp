@@ -124,7 +124,8 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     bool legal_col_cost_size = col_cost_size >= lp.num_col_;
     bool legal_col_lower_size = col_lower_size >= lp.num_col_;
     bool legal_col_upper_size = col_lower_size >= lp.num_col_;
-    bool legal_matrix_start_size = matrix_start_size >= lp.num_col_+1;
+    bool legal_matrix_start_size = lp.format_ == MatrixFormat::kNone ||
+                                   matrix_start_size >= lp.num_col_ + 1;
     if (!legal_col_cost_size) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "LP has illegal col_cost size = %" HIGHSINT_FORMAT
@@ -150,7 +151,7 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
       highsLogUser(options.log_options, HighsLogType::kError,
                    "LP has illegal matrix_start size = %" HIGHSINT_FORMAT
                    " < %" HIGHSINT_FORMAT "\n",
-                   matrix_start_size, lp.num_col_+1);
+                   matrix_start_size, lp.num_col_ + 1);
       error_found = true;
     }
   }
@@ -793,9 +794,7 @@ void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
   // Determine the new number of vectors in the matrix and resize the
   // starts accordingly.
   HighsInt new_num_vec = num_vec + num_new_vec;
-  printf("Before resize a_start is %p\n", (void*)&lp.a_start_[0]);
   lp.a_start_.resize(new_num_vec + 1);
-  printf("After  resize a_start is %p\n", (void*)&lp.a_start_[0]);
   // If adding vectors to an empty matrix then introduce the start for the
   // fictitious vector 0
   if (num_vec == 0) lp.a_start_[0] = 0;

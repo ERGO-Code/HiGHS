@@ -20,8 +20,8 @@
 #include <vector>
 
 //#include "lp_data/HConst.h"
-#include "lp_data/HStruct.h" // for HighsSparseMatrix
-#include "simplex/SimplexStruct.h" // for SimplexScale (temporary)
+#include "lp_data/HStruct.h"        // for HighsSparseMatrix
+#include "simplex/SimplexStruct.h"  // for SimplexScale (temporary)
 
 class HighsLp;
 
@@ -60,9 +60,10 @@ class HighsLp {
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
   double objectiveValue(const std::vector<double>& solution) const;
+  bool dimensionsAndaMatrixOk(std::string message) const;
   bool dimensionsOk(std::string message) const;
-  bool aMatrixOk() const;
-  bool equalScale(const SimplexScale& scale) const;
+  bool aMatrixOk(std::string message) const;
+  bool equalScale(std::string message, const SimplexScale& scale) const;
   void clear();
 };
 

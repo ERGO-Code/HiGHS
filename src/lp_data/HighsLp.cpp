@@ -76,6 +76,10 @@ double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   return objective_function_value;
 }
 
+bool HighsLp::dimensionsAndaMatrixOk(std::string message) const {
+  return dimensionsOk(message) && aMatrixOk(message);
+}
+
 bool HighsLp::dimensionsOk(std::string message) const {
   bool ok = true;
   const HighsInt num_col = this->num_col_;
@@ -83,7 +87,8 @@ bool HighsLp::dimensionsOk(std::string message) const {
   ok = num_col >= 0 && ok;
   ok = num_row >= 0 && ok;
   if (!ok) {
-    printf("HighsLp::dimensionsOk (%s) illegal numbers of rows or columns\n", message.c_str());
+    printf("HighsLp::dimensionsOk (%s) illegal numbers of rows or columns\n",
+           message.c_str());
     return ok;
   }
 
@@ -94,7 +99,7 @@ bool HighsLp::dimensionsOk(std::string message) const {
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
-  bool legal_matrix_start_size = matrix_start_size >= num_col+1;
+  bool legal_matrix_start_size = matrix_start_size >= num_col + 1;
   ok = legal_col_cost_size && ok;
   ok = legal_col_lower_size && ok;
   ok = legal_col_upper_size && ok;
@@ -106,8 +111,7 @@ bool HighsLp::dimensionsOk(std::string message) const {
   bool legal_row_upper_size = row_lower_size >= num_row;
   ok = legal_row_lower_size && ok;
   ok = legal_row_upper_size && ok;
-  
-  
+
   bool legal_a_matrix_num_col = this->a_matrix_.num_col == num_col;
   bool legal_a_matrix_num_row = this->a_matrix_.num_row == num_row;
   ok = legal_a_matrix_num_col && ok;
@@ -118,13 +122,13 @@ bool HighsLp::dimensionsOk(std::string message) const {
   // Don't expect the matrix_start_size or format to be legal if there
   // are no columns
   if (num_col > 0) {
-    legal_a_matrix_start_size = a_matrix_start_size >= num_col+1;
+    legal_a_matrix_start_size = a_matrix_start_size >= num_col + 1;
     ok = legal_a_matrix_start_size && ok;
     HighsInt a_matrix_format = (HighsInt)this->a_matrix_.format;
-    bool legal_a_matrix_format = a_matrix_format>0;
+    bool legal_a_matrix_format = a_matrix_format > 0;
     ok = legal_a_matrix_format && ok;
   }
-  if (a_matrix_start_size>0) {
+  if (a_matrix_start_size > 0) {
     // Check whether the first start is zero
     ok = !this->a_matrix_.start[0] && ok;
   }
@@ -138,27 +142,55 @@ bool HighsLp::dimensionsOk(std::string message) const {
     HighsInt a_matrix_value_size = this->a_matrix_.value.size();
     bool legal_a_matrix_index_size = a_matrix_index_size >= num_nz;
     bool legal_a_matrix_value_size = a_matrix_value_size >= num_nz;
-    
+
     ok = legal_a_matrix_index_size && ok;
     ok = legal_a_matrix_value_size && ok;
   }
+
+  HighsInt scale_strategy = (HighsInt)this->scale_.strategy;
+  bool legal_scale_strategy = scale_strategy >= 0;
+  ok = legal_scale_strategy && ok;
+  if (scale_strategy) {
+    bool legal_scale_num_col = this->scale_.num_col == num_col;
+    ok = legal_scale_num_col && ok;
+    bool legal_scale_num_row = this->scale_.num_row == num_row;
+    ok = legal_scale_num_row && ok;
+    HighsInt scale_row_size = (HighsInt)this->scale_.row.size();
+    HighsInt scale_col_size = (HighsInt)this->scale_.col.size();
+    bool legal_scale_row_size = scale_row_size >= num_row;
+    bool legal_scale_col_size = scale_col_size >= num_col;
+    ok = legal_scale_row_size && ok;
+    ok = legal_scale_col_size && ok;
+  }
+
   if (!ok) {
     printf("HighsLp::dimensionsOk (%s) not OK\n", message.c_str());
-  }    
+  }
   return ok;
 }
 
-bool HighsLp::aMatrixOk() const {
+bool HighsLp::aMatrixOk(std::string message) const {
   bool ok = true;
+  ok = this->a_matrix_.format == this->format_ && ok;
   ok = this->a_matrix_.num_col == this->num_col_ && ok;
   ok = this->a_matrix_.num_row == this->num_row_ && ok;
   ok = this->a_matrix_.start == this->a_start_ && ok;
   ok = this->a_matrix_.index == this->a_index_ && ok;
   ok = this->a_matrix_.value == this->a_value_ && ok;
+  if (!ok) {
+    printf("HighsLp::aMatrixOk (%s) not OK\n", message.c_str());
+  }
   return ok;
 }
 
-bool HighsLp::equalScale(const SimplexScale& scale) const {
+bool HighsLp::equalScale(std::string message, const SimplexScale& scale) const {
+  bool equal = true;
+  equal = this->scale_.col == scale.col && equal;
+  equal = this->scale_.row == scale.row && equal;
+  if (!equal) {
+    printf("HighsLp::equalScale (%s) not equal\n", message.c_str());
+  }
+  return equal;
 }
 
 void HighsLp::clear() {

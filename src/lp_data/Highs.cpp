@@ -250,12 +250,12 @@ HighsStatus Highs::passModel(HighsModel model) {
     if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
   lp.a_matrix_.num_col = lp.num_col_;
-  lp.a_matrix_.num_col = lp.num_col_;
+  lp.a_matrix_.num_row = lp.num_row_;
   lp.a_matrix_.format = lp.format_;
   lp.a_matrix_.start = lp.a_start_;
   lp.a_matrix_.index = lp.a_index_;
   lp.a_matrix_.value = lp.a_value_;
-  assert(lp.dimensionsOk("Highs::passModel"));
+  assert(lp.dimensionsAndaMatrixOk("Highs::passModel"));
 
   // Check that the value of q_format is valid - once we have multiple formats
   //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
