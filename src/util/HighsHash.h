@@ -347,47 +347,108 @@ struct HighsHashHelpers {
       size_t lastPairBytes = numBytes - (numPairs - 1) * 8;
       u64 chunkhash = 0;
 
-#define HIGHS_VECHASH_CASE_N(N, B)                    \
-  case N:                                             \
-    std::memcpy(&pair[0], dataptr, B);                \
-    chunkhash += pair_hash<32 - N>(pair[0], pair[1]); \
-    dataptr += B;
+#define HIGHS_VECHASH_CASE_N(N, B)                  \
+  std::memcpy(&pair[0], dataptr, B);                \
+  chunkhash += pair_hash<32 - N>(pair[0], pair[1]); \
+  dataptr += B;
 
       switch (numPairs) {
-        HIGHS_VECHASH_CASE_N(32, 8)
-        if (hash != 0) hash = multiply_modM61(hash, c[(k++) & 63] & M61());
-        // fall through
-        HIGHS_VECHASH_CASE_N(31, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(30, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(29, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(28, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(27, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(26, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(25, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(24, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(23, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(22, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(21, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(20, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(19, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(18, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(17, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(16, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(15, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(14, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(13, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(12, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(11, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(10, 8)  // fall through
-        HIGHS_VECHASH_CASE_N(9, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(8, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(7, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(6, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(5, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(4, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(3, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(2, 8)   // fall through
-        HIGHS_VECHASH_CASE_N(1, lastPairBytes)
+        case 32:
+          HIGHS_VECHASH_CASE_N(32, 8)
+          if (hash != 0) hash = multiply_modM61(hash, c[(k++) & 63] & M61());
+          // fall through
+        case 31:
+          HIGHS_VECHASH_CASE_N(31, 8)
+          // fall through
+        case 30:
+          HIGHS_VECHASH_CASE_N(30, 8)
+          // fall through
+        case 29:
+          HIGHS_VECHASH_CASE_N(29, 8)
+          // fall through
+        case 28:
+          HIGHS_VECHASH_CASE_N(28, 8)
+          // fall through
+        case 27:
+          HIGHS_VECHASH_CASE_N(27, 8)
+          // fall through
+        case 26:
+          HIGHS_VECHASH_CASE_N(26, 8)
+          // fall through
+        case 25:
+          HIGHS_VECHASH_CASE_N(25, 8)
+          // fall through
+        case 24:
+          HIGHS_VECHASH_CASE_N(24, 8)
+          // fall through
+        case 23:
+          HIGHS_VECHASH_CASE_N(23, 8)
+          // fall through
+        case 22:
+          HIGHS_VECHASH_CASE_N(22, 8)
+          // fall through
+        case 21:
+          HIGHS_VECHASH_CASE_N(21, 8)
+          // fall through
+        case 20:
+          HIGHS_VECHASH_CASE_N(20, 8)
+          // fall through
+        case 19:
+          HIGHS_VECHASH_CASE_N(19, 8)
+          // fall through
+        case 18:
+          HIGHS_VECHASH_CASE_N(18, 8)
+          // fall through
+        case 17:
+          HIGHS_VECHASH_CASE_N(17, 8)
+          // fall through
+        case 16:
+          HIGHS_VECHASH_CASE_N(16, 8)
+          // fall through
+        case 15:
+          HIGHS_VECHASH_CASE_N(15, 8)
+          // fall through
+        case 14:
+          HIGHS_VECHASH_CASE_N(14, 8)
+          // fall through
+        case 13:
+          HIGHS_VECHASH_CASE_N(13, 8)
+          // fall through
+        case 12:
+          HIGHS_VECHASH_CASE_N(12, 8)
+          // fall through
+        case 11:
+          HIGHS_VECHASH_CASE_N(11, 8)
+          // fall through
+        case 10:
+          HIGHS_VECHASH_CASE_N(10, 8)
+          // fall through
+        case 9:
+          HIGHS_VECHASH_CASE_N(9, 8)
+          // fall through
+        case 8:
+          HIGHS_VECHASH_CASE_N(8, 8)
+          // fall through
+        case 7:
+          HIGHS_VECHASH_CASE_N(7, 8)
+          // fall through
+        case 6:
+          HIGHS_VECHASH_CASE_N(6, 8)
+          // fall through
+        case 5:
+          HIGHS_VECHASH_CASE_N(5, 8)
+          // fall through
+        case 4:
+          HIGHS_VECHASH_CASE_N(4, 8)
+          // fall through
+        case 3:
+          HIGHS_VECHASH_CASE_N(3, 8)
+          // fall through
+        case 2:
+          HIGHS_VECHASH_CASE_N(2, 8)
+          // fall through
+        case 1:
+          HIGHS_VECHASH_CASE_N(1, lastPairBytes)
       }
 
       hash += chunkhash >> 32;
