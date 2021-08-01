@@ -21,6 +21,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "util/HighsInt.h"
+
 #if __GNUG__ && __GNUC__ < 5
 #define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
 #else
