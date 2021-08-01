@@ -3003,9 +3003,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                 changeColLower(continuousCol, ceilLower);
               if (floorUpper < model->col_upper_[continuousCol])
                 changeColUpper(continuousCol, floorUpper);
-            }
 
-            if (intScale != 1.0) scaleStoredRow(row, intScale, true);
+              if (intScale != 1.0) scaleStoredRow(row, intScale, true);
+            }
           }
         } else {
           double intScale = HighsIntegers::integralScale(
@@ -3125,6 +3125,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                              : options->mip_epsilon;
 
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          assert(nonz.value() != 0.0);
           rowCoefs.push_back(nonz.value());
           rowIndex.push_back(nonz.index());
         }
