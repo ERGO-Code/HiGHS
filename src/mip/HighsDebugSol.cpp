@@ -81,6 +81,8 @@ void HighsDebugSol::activate() {
 }
 
 void HighsDebugSol::shrink(const std::vector<HighsInt>& newColIndex) {
+  if (!debugSolActive) return;
+
   HighsInt oldNumCol = debugSolution.size();
   for (HighsInt i = 0; i != oldNumCol; ++i)
     if (newColIndex[i] != -1) debugSolution[newColIndex[i]] = debugSolution[i];
