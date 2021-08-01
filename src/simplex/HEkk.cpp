@@ -66,7 +66,7 @@ void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
     simplex_nla_.lp_ = &lp_;
     simplex_nla_.scale_ = scale_;
     simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
-				     factor_a_value_);
+                                     factor_a_value_);
   }
 }
 
@@ -93,11 +93,12 @@ HighsStatus HEkk::solve() {
   dual_simplex_cleanup_level_ = 0;
   if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
 
-  const HighsDebugStatus simplex_nla_status = simplex_nla_.debugCheckData("Before HEkk::solve()");
+  const HighsDebugStatus simplex_nla_status =
+      simplex_nla_.debugCheckData("Before HEkk::solve()");
   const bool simplex_nla_ok = simplex_nla_status == HighsDebugStatus::kOk;
   if (!simplex_nla_ok) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "Error in simplex NLA data\n");
+                 "Error in simplex NLA data\n");
     assert(simplex_nla_ok);
     return HighsStatus::kError;
   }
@@ -473,9 +474,6 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
       return -(HighsInt)HighsStatus::kError;
     }
     setBasis();
-  }
-  if (status_.has_invert) {
-    printf("In initialiseSimplexLpBasisAndFactor: Ekk has INVERT\n");
   }
   const HighsInt rank_deficiency = computeFactor();
   if (rank_deficiency) {
@@ -941,12 +939,6 @@ HighsInt HEkk::computeFactor() {
                        factor_a_index_, factor_a_value_,
                        info_.factor_pivot_threshold, &options_, &timer_,
                        &analysis_);
-    if (simplex_nla_.scale_ == NULL) {
-      double value0 = lp_.a_value_[0];
-      double value1 = factor_a_value_[0];
-      double value2 = simplex_nla_.lp_->a_value_[0];
-      printf("HEkk::computeFactor a_value %g/%g/%g\n", value0, value1, value2);
-    }
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);

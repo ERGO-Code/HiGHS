@@ -68,7 +68,8 @@ class HSimplexNla {
                          const bool force = false) const;
   void reportPackValue(const std::string message, const HVector* vector,
                        const bool force = false) const;
-  HighsDebugStatus debugCheckData(const std::string message = "", const bool require_setup = false) const;
+  HighsDebugStatus debugCheckData(const std::string message = "",
+                                  const bool require_setup = false) const;
   HighsInt build_synthetic_tick_;
 
   // private:

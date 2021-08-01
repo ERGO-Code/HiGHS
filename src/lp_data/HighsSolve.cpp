@@ -117,11 +117,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       // Reset the return status since it will now be determined by
       // the outcome of the simplex solve
       return_status = HighsStatus::kOk;
-      if (options.use_solveLpSimplex0) {
-        call_status = solveLpSimplex0(model);
-      } else {
-        call_status = solveLpSimplex1(model);
-      }
+      call_status = solveLpSimplex(model);
       return_status =
           interpretCallStatus(call_status, return_status, "solveLpSimplex");
       if (return_status == HighsStatus::kError) return return_status;
@@ -138,11 +134,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 #endif
   } else {
     // Use Simplex
-    if (options.use_solveLpSimplex0) {
-      call_status = solveLpSimplex0(model);
-    } else {
-      call_status = solveLpSimplex1(model);
-    }
+    call_status = solveLpSimplex(model);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;

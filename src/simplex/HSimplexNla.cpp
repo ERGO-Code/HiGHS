@@ -16,6 +16,7 @@
  * scaling and shifting of NLA analysis below simplex level.
  */
 #include "simplex/HSimplexNla.h"
+
 #include "simplex/HSimplex.h"
 
 //#include <algorithm>
@@ -271,7 +272,8 @@ void HSimplexNla::reportPackValue(const std::string message,
   printf("\n");
 }
 
-HighsDebugStatus HSimplexNla::debugCheckData(const std::string message, const bool require_setup) const {
+HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
+                                             const bool require_setup) const {
   std::string scale_status;
   if (scale_ == NULL) {
     scale_status = "NULL";
@@ -283,9 +285,9 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message, const bo
     assert(setup_ok);
     return HighsDebugStatus::kLogicalError;
   }
-  //  if (options_->highs_debug_level < kHighsDebugLevelCheap) return HighsDebugStatus::kOk;
+  //  if (options_->highs_debug_level < kHighsDebugLevelCheap) return
+  //  HighsDebugStatus::kOk;
   if (!is_setup_) return HighsDebugStatus::kOk;
-  printf("Calling debugCheckData: (%s) scale_ is %s\n", message.c_str(), scale_status.c_str()); fflush(stdout);
   HighsLp check_lp = *lp_;
   bool error0_found = false;
   bool error1_found = false;
@@ -295,20 +297,20 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message, const bo
   const HighsInt* factor_Aindex = factor_.getAindex();
   const double* factor_Avalue = factor_.getAvalue();
   if (scale_ == NULL) {
-    if (factor_Astart != &(lp_->a_start_[0]))
-      error0_found = true;
-    if (factor_Aindex != &(lp_->a_index_[0]))
-      error1_found = true;
-    if (factor_Avalue != &(lp_->a_value_[0]))
-      error2_found = true;
+    if (factor_Astart != &(lp_->a_start_[0])) error0_found = true;
+    if (factor_Aindex != &(lp_->a_index_[0])) error1_found = true;
+    if (factor_Avalue != &(lp_->a_value_[0])) error2_found = true;
     error_found = error0_found || error1_found || error2_found;
     if (error_found) {
+      highsLogUser(options_->log_options, HighsLogType::kError,
+                   "CheckNlaData: (%s) scale_ is %s lp_ - factor_ matrix "
+                   "pointer errors\n",
+                   message.c_str(), scale_status.c_str());
       if (error0_found)
-	printf("a_start pointer error: %p vs %p\n", (void*)factor_Astart, (void*)&(lp_->a_start_[0]));
+        printf("a_start pointer error: %p vs %p\n", (void*)factor_Astart,
+               (void*)&(lp_->a_start_[0]));
       if (error1_found) printf("a_index pointer error\n");
       if (error2_found) printf("a_value pointer error\n");
-      highsLogUser(options_->log_options, HighsLogType::kError,
-                "CheckNlaData: (%s) scale_ is %s lp_ - factor_ matrix pointer errors\n", message.c_str(), scale_status.c_str());
       assert(!error_found);
       return HighsDebugStatus::kLogicalError;
     }
@@ -316,37 +318,58 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message, const bo
     const bool force_scale = true;
     scaleSimplexLp(check_lp, *scale_, force_scale);
   }
-  for (HighsInt iCol=0; iCol<check_lp.num_col_+1; iCol++)
-    if (check_lp.a_start_[iCol] != factor_Astart[iCol]) error_found = true;
+  HighsInt error_col = -1;
+  for (HighsInt iCol = 0; iCol < check_lp.num_col_ + 1; iCol++) {
+    if (check_lp.a_start_[iCol] != factor_Astart[iCol]) {
+      error_col = iCol;
+      break;
+    }
+  }
+  error_found = error_col >= 0;
   if (error_found) {
     highsLogUser(options_->log_options, HighsLogType::kError,
-                "CheckNlaData: (%s) scale_ is %s check_lp.a_start_ != factor_Astart\n", message.c_str(), scale_status.c_str());
-      assert(!error_found);
+                 "CheckNlaData: (%s) scale_ is %s check_lp.a_start_ != "
+                 "factor_Astart for col %d (%d != %d)\n",
+                 message.c_str(), scale_status.c_str(), (int)error_col,
+                 (int)check_lp.a_start_[error_col],
+                 (int)factor_Astart[error_col]);
+    assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }
   HighsInt nnz = check_lp.a_start_[check_lp.num_col_];
-  for (HighsInt iEl=0; iEl<nnz; iEl++)
-    if (check_lp.a_index_[iEl] != factor_Aindex[iEl]) error_found = true;
-  
+  HighsInt error_el = -1;
+  for (HighsInt iEl = 0; iEl < nnz; iEl++) {
+    if (check_lp.a_index_[iEl] != factor_Aindex[iEl]) {
+      error_el = iEl;
+      break;
+    }
+  }
+  error_found = error_el >= 0;
   if (error_found) {
     highsLogUser(options_->log_options, HighsLogType::kError,
-                "CheckNlaData: (%s) scale_ is %s check_lp.a_index_ != factor_Aindex\n", message.c_str(), scale_status.c_str());
-      assert(!error_found);
+                 "CheckNlaData: (%s) scale_ is %s check_lp.a_index_ != "
+                 "factor_Aindex for el %d (%d != %d)\n",
+                 message.c_str(), scale_status.c_str(), (int)error_el,
+                 (int)check_lp.a_index_[error_el],
+                 (int)factor_Aindex[error_el]);
+    assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }
-  for (HighsInt iEl=0; iEl<nnz; iEl++) {
+  for (HighsInt iEl = 0; iEl < nnz; iEl++) {
     if (check_lp.a_value_[iEl] != factor_Avalue[iEl]) {
-error_found = true;
-printf("Matrix value error (%g != %g) for entry %d\n", check_lp.a_value_[iEl], factor_Avalue[iEl], (int)iEl);
-break;
-}
+      error_el = iEl;
+      break;
+    }
   }
+  error_found = error_el >= 0;
   if (error_found) {
     highsLogUser(options_->log_options, HighsLogType::kError,
-                "CheckNlaData: (%s) scale_ is %s check_lp.a_value_ != factor_Avalue\n", message.c_str(), scale_status.c_str());
-      assert(!error_found);
+                 "CheckNlaData: (%s) scale_ is %s check_lp.a_value_ != "
+                 "factor_Avalue for el %d (%g != %g)\n",
+                 message.c_str(), scale_status.c_str(), (int)error_el,
+                 check_lp.a_value_[error_el], factor_Avalue[error_el]);
+    assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }
   return HighsDebugStatus::kOk;
 }
-
