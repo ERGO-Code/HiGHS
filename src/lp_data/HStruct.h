@@ -42,6 +42,25 @@ struct HighsBasis {
   std::vector<HighsBasisStatus> row_status;
 };
 
+struct HighsScale {
+  HighsInt strategy = kSimplexScaleStrategyOff;
+  bool has_scaling = false;
+  HighsInt num_col = 0;
+  HighsInt num_row = 0;
+  double cost = 1.0;
+  std::vector<double> col;
+  std::vector<double> row;
+};
+
+struct HighsSparseMatrix {
+  MatrixFormat format = MatrixFormat::kNone;
+  HighsInt num_col = 0;
+  HighsInt num_row = 0;
+  std::vector<HighsInt> start;
+  std::vector<HighsInt> index;
+  std::vector<double> value;
+};
+
 struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;

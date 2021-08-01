@@ -32,6 +32,17 @@ const HighsInt kHighsThreadLimit = 8;  // 32;
 const double kRunningAverageMultiplier = 0.05;
 const HighsInt kHighsPrereleaseRowDualSign = -1;
 
+enum SimplexScaleStrategy {
+  kSimplexScaleStrategyMin = 0,
+  kSimplexScaleStrategyOff = kSimplexScaleStrategyMin,  // 0
+  kSimplexScaleStrategyChoose,                          // 1
+  kSimplexScaleStrategyEquilibration,                   // 2
+  kSimplexScaleStrategyForcedEquilibration,             // 3
+  kSimplexScaleStrategyMaxValue015,                     // 4
+  kSimplexScaleStrategyMaxValue0157,                    // 5
+  kSimplexScaleStrategyMax = kSimplexScaleStrategyMaxValue0157
+};
+
 enum HighsDebugLevel {
   kHighsDebugLevelNone = 0,
   kHighsDebugLevelCheap,

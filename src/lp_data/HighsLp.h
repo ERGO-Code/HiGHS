@@ -19,7 +19,9 @@
 #include <string>
 #include <vector>
 
-#include "lp_data/HConst.h"
+//#include "lp_data/HConst.h"
+#include "lp_data/HStruct.h" // for HighsSparseMatrix
+#include "simplex/SimplexStruct.h" // for SimplexScale (temporary)
 
 class HighsLp;
 
@@ -38,6 +40,8 @@ class HighsLp {
   std::vector<double> row_lower_;
   std::vector<double> row_upper_;
 
+  HighsSparseMatrix a_matrix_;
+
   MatrixFormat format_ = MatrixFormat::kNone;
   ObjSense sense_ = ObjSense::kMinimize;
   double offset_ = 0;
@@ -49,10 +53,16 @@ class HighsLp {
 
   std::vector<HighsVarType> integrality_;
 
+  HighsScale scale_;
+  bool is_scaled_ = false;
+
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
   double objectiveValue(const std::vector<double>& solution) const;
+  bool dimensionsOk(std::string message) const;
+  bool aMatrixOk() const;
+  bool equalScale(const SimplexScale& scale) const;
   void clear();
 };
 

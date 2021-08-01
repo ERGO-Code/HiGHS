@@ -124,26 +124,33 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     bool legal_col_cost_size = col_cost_size >= lp.num_col_;
     bool legal_col_lower_size = col_lower_size >= lp.num_col_;
     bool legal_col_upper_size = col_lower_size >= lp.num_col_;
-
+    bool legal_matrix_start_size = matrix_start_size >= lp.num_col_+1;
     if (!legal_col_cost_size) {
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal colCost size = %" HIGHSINT_FORMAT
+                   "LP has illegal col_cost size = %" HIGHSINT_FORMAT
                    " < %" HIGHSINT_FORMAT "\n",
                    col_cost_size, lp.num_col_);
       error_found = true;
     }
     if (!legal_col_lower_size) {
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal colLower size = %" HIGHSINT_FORMAT
+                   "LP has illegal col_lower size = %" HIGHSINT_FORMAT
                    " < %" HIGHSINT_FORMAT "\n",
                    col_lower_size, lp.num_col_);
       error_found = true;
     }
     if (!legal_col_upper_size) {
       highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal colUpper size = %" HIGHSINT_FORMAT
+                   "LP has illegal col_upper size = %" HIGHSINT_FORMAT
                    " < %" HIGHSINT_FORMAT "\n",
                    col_upper_size, lp.num_col_);
+      error_found = true;
+    }
+    if (!legal_matrix_start_size) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "LP has illegal matrix_start size = %" HIGHSINT_FORMAT
+                   " < %" HIGHSINT_FORMAT "\n",
+                   matrix_start_size, lp.num_col_+1);
       error_found = true;
     }
   }
