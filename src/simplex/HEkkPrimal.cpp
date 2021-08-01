@@ -15,6 +15,7 @@
  */
 #include "simplex/HEkkPrimal.h"
 
+#include "pdqsort/pdqsort.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
@@ -1022,7 +1023,7 @@ void HEkkPrimal::phase1ChooseRow() {
   // [kO(log(n))].
 
   analysis->simplexTimerStart(Chuzr2Clock);
-  std::sort(ph1SorterR.begin(), ph1SorterR.end());
+  pdqsort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
   double dGradient = fabs(theta_dual);
   for (HighsUInt i = 0; i < ph1SorterR.size(); i++) {
@@ -1038,7 +1039,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   // Find out the biggest possible alpha for pivot
-  std::sort(ph1SorterT.begin(), ph1SorterT.end());
+  pdqsort(ph1SorterT.begin(), ph1SorterT.end());
   double dMaxAlpha = 0.0;
   HighsUInt iLast = ph1SorterT.size();
   for (HighsUInt i = 0; i < ph1SorterT.size(); i++) {

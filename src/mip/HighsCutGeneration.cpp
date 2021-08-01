@@ -14,6 +14,7 @@
 
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsIntegers.h"
 
 HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
@@ -62,51 +63,51 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
     const auto& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
     // sort the remaining variables by the contribution to the rows activity in
     // the current solution
-    std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
-              [&](HighsInt i, HighsInt j) {
-                if (upper[i] < 1.5 && upper[j] > 1.5) return true;
-                if (upper[i] > 1.5 && upper[j] < 1.5) return false;
+    pdqsort(cover.begin() + coversize, cover.begin() + maxCoverSize,
+            [&](HighsInt i, HighsInt j) {
+              if (upper[i] < 1.5 && upper[j] > 1.5) return true;
+              if (upper[i] > 1.5 && upper[j] < 1.5) return false;
 
-                double contributionA = solval[i] * vals[i];
-                double contributionB = solval[j] * vals[j];
+              double contributionA = solval[i] * vals[i];
+              double contributionB = solval[j] * vals[j];
 
-                if (contributionA > contributionB + feastol) return true;
-                if (contributionA < contributionB - feastol) return false;
-                // for equal contributions take the larger coefficients first
-                // because this makes some of the lifting functions more likely
-                // to generate a facet
-                // if the value is equal too, choose a random tiebreaker based
-                // on hashing the column index and the current number of pool
-                // cuts
-                if (std::abs(vals[i] - vals[j]) <= feastol)
-                  return HighsHashHelpers::hash(std::make_pair(inds[i], r)) >
-                         HighsHashHelpers::hash(std::make_pair(inds[j], r));
-                return vals[i] > vals[j];
-              });
+              if (contributionA > contributionB + feastol) return true;
+              if (contributionA < contributionB - feastol) return false;
+              // for equal contributions take the larger coefficients first
+              // because this makes some of the lifting functions more likely
+              // to generate a facet
+              // if the value is equal too, choose a random tiebreaker based
+              // on hashing the column index and the current number of pool
+              // cuts
+              if (std::abs(vals[i] - vals[j]) <= feastol)
+                return HighsHashHelpers::hash(std::make_pair(inds[i], r)) >
+                       HighsHashHelpers::hash(std::make_pair(inds[j], r));
+              return vals[i] > vals[j];
+            });
   } else {
     // the current solution
     const auto& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
 
-    std::sort(cover.begin() + coversize, cover.begin() + maxCoverSize,
-              [&](HighsInt i, HighsInt j) {
-                if (solval[i] > feastol && solval[j] <= feastol) return true;
-                if (solval[i] <= feastol && solval[j] > feastol) return false;
+    pdqsort(cover.begin() + coversize, cover.begin() + maxCoverSize,
+            [&](HighsInt i, HighsInt j) {
+              if (solval[i] > feastol && solval[j] <= feastol) return true;
+              if (solval[i] <= feastol && solval[j] > feastol) return false;
 
-                int64_t numNodesA;
-                int64_t numNodesB;
+              int64_t numNodesA;
+              int64_t numNodesB;
 
-                numNodesA = complementation[i] ? nodequeue.numNodesDown(inds[i])
-                                               : nodequeue.numNodesUp(inds[i]);
+              numNodesA = complementation[i] ? nodequeue.numNodesDown(inds[i])
+                                             : nodequeue.numNodesUp(inds[i]);
 
-                numNodesB = complementation[j] ? nodequeue.numNodesDown(inds[j])
-                                               : nodequeue.numNodesUp(inds[j]);
+              numNodesB = complementation[j] ? nodequeue.numNodesDown(inds[j])
+                                             : nodequeue.numNodesUp(inds[j]);
 
-                if (numNodesA > numNodesB) return true;
-                if (numNodesA < numNodesB) return false;
+              if (numNodesA > numNodesB) return true;
+              if (numNodesA < numNodesB) return false;
 
-                return HighsHashHelpers::hash(std::make_pair(inds[i], r)) >
-                       HighsHashHelpers::hash(std::make_pair(inds[j], r));
-              });
+              return HighsHashHelpers::hash(std::make_pair(inds[i], r)) >
+                     HighsHashHelpers::hash(std::make_pair(inds[j], r));
+            });
   }
 
   const double minlambda =
@@ -141,8 +142,8 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
   S.resize(coversize);
   std::vector<int8_t> coverflag;
   coverflag.resize(rowlen);
-  std::sort(cover.begin(), cover.end(),
-            [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
+  pdqsort_branchless(cover.begin(), cover.end(),
+                     [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
 
   HighsCDouble abartmp = vals[cover[0]];
   HighsCDouble sigma = lambda;
@@ -230,8 +231,8 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
 
   for (HighsInt i = 0; i != coversize; ++i) coverflag[cover[i]] = 1;
 
-  std::sort(cover.begin(), cover.end(),
-            [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
+  pdqsort_branchless(cover.begin(), cover.end(),
+                     [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
   HighsCDouble sum = 0;
 
   HighsInt p = coversize;
@@ -289,7 +290,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   for (HighsInt i : cover) coverflag[i] = 1;
 
   auto comp = [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; };
-  std::sort(cover.begin(), cover.end(), comp);
+  pdqsort_branchless(cover.begin(), cover.end(), comp);
 
   std::vector<HighsCDouble> a;
   std::vector<HighsCDouble> u;
@@ -552,7 +553,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
   if (deltas.empty()) return false;
 
-  std::sort(deltas.begin(), deltas.end());
+  pdqsort(deltas.begin(), deltas.end());
   double curdelta = deltas[0];
   for (size_t i = 1; i < deltas.size(); ++i) {
     if (deltas[i] - curdelta <= 10 * feastol)

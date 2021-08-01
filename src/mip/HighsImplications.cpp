@@ -14,6 +14,7 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 
 bool HighsImplications::computeImplications(HighsInt col, bool val) {
   HighsDomain& globaldomain = mipsolver.mipdata_->domain;
@@ -78,7 +79,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
                        return !globaldomain.isBinary(a.column);
                      });
 
-  std::sort(implications.begin() + implstart, binstart);
+  pdqsort(implications.begin() + implstart, binstart);
 
   HighsCliqueTable::CliqueVar clique[2];
   clique[0] = HighsCliqueTable::CliqueVar(col, val);

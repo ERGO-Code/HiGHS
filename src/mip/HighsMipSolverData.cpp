@@ -17,6 +17,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsRedcostFixing.h"
+#include "pdqsort/pdqsort.h"
 #include "presolve/HAggregator.h"
 #include "presolve/HPresolve.h"
 #include "util/HighsIntegers.h"
@@ -89,7 +90,8 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
   // beginning.
   if (mipsolver.submip) {
     return heuristic_lp_iterations < total_lp_iterations * heuristic_effort;
-  } else if (pruned_treeweight < 1e-3 && num_leaves < 10) {
+  } else if (pruned_treeweight < 1e-3 &&
+             num_leaves - num_leaves_before_run < 10) {
     // in the main MIP solver allow an initial offset of 10000 heuristic LP
     // iterations
     if (heuristic_lp_iterations <
@@ -99,11 +101,23 @@ bool HighsMipSolverData::moreHeuristicsAllowed() {
              100000 + ((total_lp_iterations - heuristic_lp_iterations -
                         sb_lp_iterations) >>
                        1)) {
+    // compute the node LP iterations in the current run as only those should be
+    // used when estimating the total required LP iterations to complete the
+    // search
+    int64_t heur_iters_curr_run =
+        heuristic_lp_iterations - heuristic_lp_iterations_before_run;
+    int64_t sb_iters_curr_run = sb_lp_iterations - sb_lp_iterations_before_run;
+    int64_t node_iters_curr_run = total_lp_iterations -
+                                  total_lp_iterations_before_run -
+                                  heur_iters_curr_run - sb_iters_curr_run;
+    // now estimate the total fraction of LP iterations that we have spent on
+    // heuristics by assuming the node iterations of the current run will
+    // grow proportional to the pruned weight of the current tree and the
+    // iterations spent for anything else are just added as an offset
     double total_heuristic_effort_estim =
         heuristic_lp_iterations /
-        (heuristic_lp_iterations + sb_lp_iterations +
-         (total_lp_iterations - heuristic_lp_iterations - sb_lp_iterations) /
-             std::max(1e-3, double(pruned_treeweight)));
+        ((total_lp_iterations - node_iters_curr_run) +
+         node_iters_curr_run / std::max(1e-3, double(pruned_treeweight)));
     // since heuristics help most in the beginning of the search, we want to
     // spent the time we have for heuristics in the first 80% of the tree
     // exploration. Additionally we want to spent the proportional effort
@@ -174,6 +188,10 @@ void HighsMipSolverData::init() {
   heuristic_lp_iterations = 0;
   sepa_lp_iterations = 0;
   sb_lp_iterations = 0;
+  total_lp_iterations_before_run = 0;
+  heuristic_lp_iterations_before_run = 0;
+  sepa_lp_iterations_before_run = 0;
+  sb_lp_iterations_before_run = 0;
   num_disp_lines = 0;
   cliquesExtracted = false;
   rowMatrixSet = false;
@@ -408,14 +426,24 @@ void HighsMipSolverData::runSetup() {
                    symmetries.numGenerators);
 
     } else {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "(%4.1fs) Found %" HIGHSINT_FORMAT
-                   " generators and %" HIGHSINT_FORMAT
-                   " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n",
-                   mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                   symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-                   (HighsInt)symmetries.columnToOrbitope.size());
-
+      if (symmetries.numPerms != 0) {
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "(%4.1fs) Found %" HIGHSINT_FORMAT
+                     " generators and %" HIGHSINT_FORMAT
+                     " full orbitope(s) acting on %" HIGHSINT_FORMAT
+                     " columns\n",
+                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                     symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
+                     (HighsInt)symmetries.columnToOrbitope.size());
+      } else {
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "(%4.1fs) Found %" HIGHSINT_FORMAT
+                     " full orbitope(s) acting on %" HIGHSINT_FORMAT
+                     " columns\n",
+                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+                     (HighsInt)symmetries.orbitopes.size(),
+                     (HighsInt)symmetries.columnToOrbitope.size());
+      }
       for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
         orbitope.determineOrbitopeType(cliquetable, domain);
 
@@ -581,6 +609,11 @@ void HighsMipSolverData::performRestart() {
   ++numRestarts;
   num_leaves_before_run = num_leaves;
   num_nodes_before_run = num_nodes;
+  num_nodes_before_run = num_nodes;
+  total_lp_iterations_before_run = total_lp_iterations;
+  heuristic_lp_iterations_before_run = heuristic_lp_iterations;
+  sepa_lp_iterations_before_run = sepa_lp_iterations;
+  sb_lp_iterations_before_run = sb_lp_iterations;
   HighsInt numLpRows = lp.getLp().num_row_;
   HighsInt numModelRows = mipsolver.numRow();
   HighsInt numCuts = numLpRows - numModelRows;
@@ -696,13 +729,12 @@ void HighsMipSolverData::basisTransfer() {
         if (firstrootbasis.col_status[i] != HighsBasisStatus::kBasic)
           nonbasiccols.push_back(i);
       }
-      std::sort(
-          nonbasiccols.begin(), nonbasiccols.end(),
-          [&](HighsInt col1, HighsInt col2) {
-            HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
-            HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
-            return std::make_pair(len1, col1) < std::make_pair(len2, col2);
-          });
+      pdqsort(nonbasiccols.begin(), nonbasiccols.end(),
+              [&](HighsInt col1, HighsInt col2) {
+                HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
+                HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
+                return std::make_pair(len1, col1) < std::make_pair(len2, col2);
+              });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
       for (HighsInt i : nonbasiccols) {
         const HighsInt start = model.a_start_[i];
@@ -751,7 +783,7 @@ void HighsMipSolverData::basisTransfer() {
           }
         }
 
-        std::sort(nonbasicrows.begin(), nonbasicrows.end());
+        pdqsort(nonbasicrows.begin(), nonbasicrows.end());
         nonbasicrows.resize(missingbasic);
 
         for (std::pair<HighsInt, int> nonbasicrow : nonbasicrows)
@@ -831,31 +863,31 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
   return printString;
 }
 
-static std::array<char, 16> convertToPrintString(double val) {
+static std::array<char, 32> convertToPrintString(double val) {
   double l = std::log10(std::max(1e-6, std::abs(double(val))));
-  std::array<char, 16> printString;
+  std::array<char, 32> printString;
   switch (int(l)) {
     case 0:
     case 1:
     case 2:
     case 3:
-      std::snprintf(printString.data(), 16, "%.10g", val);
+      std::snprintf(printString.data(), 32, "%.10g", val);
       break;
     case 4:
-      std::snprintf(printString.data(), 16, "%.11g", val);
+      std::snprintf(printString.data(), 32, "%.11g", val);
       break;
     case 5:
-      std::snprintf(printString.data(), 16, "%.12g", val);
+      std::snprintf(printString.data(), 32, "%.12g", val);
       break;
     case 6:
     case 7:
     case 8:
     case 9:
     case 10:
-      std::snprintf(printString.data(), 16, "%.13g", val);
+      std::snprintf(printString.data(), 32, "%.13g", val);
       break;
     default:
-      std::snprintf(printString.data(), 16, "%.9g", val);
+      std::snprintf(printString.data(), 32, "%.9g", val);
   }
 
   return printString;
@@ -905,8 +937,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = std::min(9999., 100 * (ub - lb) / std::max(1.0, std::abs(ub)));
 
-    std::array<char, 16> lb_string = convertToPrintString(lb);
-    std::array<char, 16> ub_string = convertToPrintString(ub);
+    std::array<char, 32> lb_string = convertToPrintString(lb);
+    std::array<char, 32> ub_string = convertToPrintString(ub);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
@@ -918,8 +950,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
         lp.numRows() - lp.getNumModelRows(), conflictPool.getNumConflicts(),
         print_lp_iters.data(), time);
   } else {
-    std::array<char, 16> lb_string = convertToPrintString(lb);
-    std::array<char, 16> ub_string = convertToPrintString(ub);
+    std::array<char, 32> lb_string = convertToPrintString(lb);
+    std::array<char, 32> ub_string = convertToPrintString(ub);
 
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,

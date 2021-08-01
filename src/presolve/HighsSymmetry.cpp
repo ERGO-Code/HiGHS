@@ -19,6 +19,7 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsDomain.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsDisjointSets.h"
 
 void HighsSymmetryDetection::removeFixPoints() {
@@ -47,18 +48,11 @@ void HighsSymmetryDetection::removeFixPoints() {
                      }),
       currentPartition.end());
 
-  hashValid.assign(numVertices, false);
   for (HighsInt i = 0; i < numVertices; ++i) {
     if (Gend[i] == Gstart[i + 1]) continue;
 
     for (HighsInt j = Gend[i]; j < Gstart[i + 1]; ++j)
       Gedge[j].first = vertexToCell[Gedge[j].first];
-
-    std::sort(Gedge.data() + Gend[i], Gedge.data() + Gstart[i + 1]);
-
-    u64 vecHash = HighsHashHelpers::vector_hash(Gedge.data() + Gend[i],
-                                                Gstart[i + 1] - Gend[i]);
-    vertexHashes[i] = HighsHashHelpers::hash(vecHash);
   }
 
   if ((HighsInt)currentPartition.size() < numVertices) {
@@ -86,14 +80,7 @@ void HighsSymmetryDetection::removeFixPoints() {
         cellStart = i;
       }
 
-      if (!cellInRefinementQueue[cellStart]) {
-        cellInRefinementQueue[cellStart] = true;
-        refinementQueue.push_back(cellStart);
-        std::push_heap(refinementQueue.begin(), refinementQueue.end(),
-                       std::greater<HighsInt>());
-      }
-
-      // correct the vertexToCell array to not store the start index of the
+      // correct the vertexToCell array to store the start index of the
       // cell, not its number
       updateCellMembership(i, cellStart, false);
     }
@@ -107,8 +94,6 @@ void HighsSymmetryDetection::removeFixPoints() {
         std::partition_point(currentPartition.begin(), currentPartition.end(),
                              [&](HighsInt v) { return v < numCol; }) -
         currentPartition.begin();
-
-    partitionRefinement();
   } else
     numActiveCols = numCol;
 }
@@ -249,14 +234,14 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
   stabilizerOrbits.symmetries = this;
-  std::sort(stabilizerOrbits.stabilizedCols.begin(),
-            stabilizerOrbits.stabilizedCols.end());
+  pdqsort(stabilizerOrbits.stabilizedCols.begin(),
+          stabilizerOrbits.stabilizedCols.end());
   if (!stabilizerOrbits.orbitCols.empty()) {
-    std::sort(stabilizerOrbits.orbitCols.begin(),
-              stabilizerOrbits.orbitCols.end(),
-              [&](HighsInt col1, HighsInt col2) {
-                return getOrbit(col1) < getOrbit(col2);
-              });
+    pdqsort(stabilizerOrbits.orbitCols.begin(),
+            stabilizerOrbits.orbitCols.end(),
+            [&](HighsInt col1, HighsInt col2) {
+              return getOrbit(col1) < getOrbit(col2);
+            });
     HighsInt numOrbitCols = stabilizerOrbits.orbitCols.size();
     stabilizerOrbits.orbitStarts.reserve(numOrbitCols + 1);
     stabilizerOrbits.orbitStarts.push_back(0);
@@ -606,10 +591,8 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForPackingOrbitope(
 
 HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     const std::vector<HighsInt>& rows, HighsDomain& domain) const {
-  std::vector<int8_t> Mminimal(matrix.size(), -1);
-  std::vector<int8_t> Mmaximal(matrix.size(), -1);
-
   HighsInt numDynamicRows = rows.size();
+  std::vector<int8_t> Mminimal(numDynamicRows * rowLength, -1);
 
   for (HighsInt j = 0; j < rowLength; ++j) {
     for (HighsInt i = 0; i < numDynamicRows; ++i) {
@@ -622,7 +605,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     }
   }
 
-  Mmaximal = Mminimal;
+  std::vector<int8_t> Mmaximal = Mminimal;
 
   int8_t* MminimaljLast = Mminimal.data() + numDynamicRows * (rowLength - 1);
   int8_t* MmaximaljFirst = Mmaximal.data();
@@ -639,8 +622,8 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
     return numDynamicRows;
   };
 
-  auto i_discr = [&](const int8_t* colj0, const int8_t* colj1) {
-    for (HighsInt i = numDynamicRows - 1; i >= 0; --i) {
+  auto i_discr = [&](const int8_t* colj0, const int8_t* colj1, HighsInt i_f) {
+    for (HighsInt i = i_f; i >= 0; --i) {
       if (colj0[i] != 0 && colj1[i] != 1) return i;
     }
 
@@ -650,65 +633,54 @@ HighsInt HighsOrbitopeMatrix::orbitalFixingForFullOrbitope(
   for (HighsInt j = rowLength - 2; j >= 0; --j) {
     int8_t* colj0 = Mminimal.data() + j * numDynamicRows;
     int8_t* colj1 = colj0 + numDynamicRows;
-    HighsInt i = i_fixed(colj0, colj1);
+    HighsInt i_f = i_fixed(colj0, colj1);
 
-    if (i == numDynamicRows) {
+    if (i_f == numDynamicRows) {
       for (HighsInt k = 0; k < numDynamicRows; ++k) {
         int8_t isFree = (colj0[k] == -1);
         colj0[k] += (isFree & colj1[k]) + isFree;
       }
     } else {
-      i = i_discr(colj0, colj1);
-      if (i == -1) {
-        Mminimal.clear();
-        break;
-      } else {
-        for (HighsInt k = 0; k < i; ++k) {
-          int8_t isFree = (colj0[k] == -1);
-          colj0[k] += (isFree & colj1[k]) + isFree;
-        }
-        colj0[i] = 1;
-        for (HighsInt k = i + 1; k < numDynamicRows; ++k)
-          colj0[k] += (colj0[k] == -1);
+      HighsInt i_d = i_discr(colj0, colj1, i_f);
+      if (i_d == -1) {
+        domain.markInfeasible();
+        return 0;
       }
-    }
-  }
 
-  if (Mminimal.empty()) {
-    domain.markInfeasible();
-    return 0;
+      for (HighsInt k = 0; k < i_d; ++k) {
+        int8_t isFree = (colj0[k] == -1);
+        colj0[k] += (isFree & colj1[k]) + isFree;
+      }
+      colj0[i_d] = 1;
+      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
+        colj0[k] += (colj0[k] == -1);
+    }
   }
 
   for (HighsInt j = 1; j < rowLength; ++j) {
     int8_t* colj0 = Mmaximal.data() + j * numDynamicRows;
     int8_t* colj1 = colj0 - numDynamicRows;
-    HighsInt i = i_fixed(colj1, colj0);
+    HighsInt i_f = i_fixed(colj1, colj0);
 
-    if (i == numDynamicRows) {
+    if (i_f == numDynamicRows) {
       for (HighsInt k = 0; k < numDynamicRows; ++k) {
         int8_t isFree = (colj0[k] == -1);
         colj0[k] += (isFree & colj1[k]) + isFree;
       }
     } else {
-      i = i_discr(colj1, colj0);
-      if (i == -1) {
-        Mmaximal.clear();
-        break;
-      } else {
-        for (HighsInt k = 0; k < i; ++k) {
-          int8_t isFree = (colj0[k] == -1);
-          colj0[k] += (isFree & colj1[k]) + isFree;
-        }
-        colj0[i] = 0;
-        for (HighsInt k = i + 1; k < numDynamicRows; ++k)
-          colj0[k] += 2 * (colj0[k] == -1);
+      HighsInt i_d = i_discr(colj1, colj0, i_f);
+      if (i_d == -1) {
+        domain.markInfeasible();
+        return 0;
       }
+      for (HighsInt k = 0; k < i_d; ++k) {
+        int8_t isFree = (colj0[k] == -1);
+        colj0[k] += (isFree & colj1[k]) + isFree;
+      }
+      colj0[i_d] = 0;
+      for (HighsInt k = i_d + 1; k < numDynamicRows; ++k)
+        colj0[k] += 2 * (colj0[k] == -1);
     }
-  }
-
-  if (Mmaximal.empty()) {
-    domain.markInfeasible();
-    return 0;
   }
 
   HighsInt numFixed = 0;
@@ -772,7 +744,7 @@ HighsInt HighsOrbitopeMatrix::orbitalFixing(HighsDomain& domain) const {
 
 void HighsSymmetryDetection::initializeGroundSet() {
   vertexGroundSet = currentPartition;
-  std::sort(vertexGroundSet.begin(), vertexGroundSet.end());
+  pdqsort(vertexGroundSet.begin(), vertexGroundSet.end());
   vertexPosition.resize(vertexToCell.size(), -1);
   for (HighsInt i = 0; i < numVertices; ++i)
     vertexPosition[vertexGroundSet[i]] = i;
@@ -826,11 +798,12 @@ HighsInt HighsSymmetryDetection::getOrbit(HighsInt vertex) {
 }
 
 void HighsSymmetryDetection::initializeHashValues() {
-  vertexHashes.resize(numVertices);
-  hashValid.resize(numVertices);
-
   for (HighsInt i = 0; i != numVertices; ++i) {
     HighsInt cell = vertexToCell[i];
+    for (HighsInt j = Gstart[i]; j != Gend[i]; ++j) {
+      HighsHashHelpers::sparse_combine32(vertexHash[Gedge[j].first], cell,
+                                         Gedge[j].second);
+    }
     markCellForRefinement(cell);
   }
 }
@@ -845,10 +818,14 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
     if (i != cell) currentPartitionLinks[i] = cell;
 
     // update hashes of affected rows
-    for (HighsInt j = Gstart[vertex]; j != Gend[vertex]; ++j) {
-      hashValid[Gedge[j].first] = false;
-      if (markForRefinement)
-        markCellForRefinement(vertexToCell[Gedge[j].first]);
+    if (markForRefinement) {
+      for (HighsInt j = Gstart[vertex]; j != Gend[vertex]; ++j) {
+        HighsInt edgeDestinationCell = vertexToCell[Gedge[j].first];
+        if (cellSize(edgeDestinationCell) == 1) continue;
+        HighsHashHelpers::sparse_combine32(vertexHash[Gedge[j].first], cell,
+                                           Gedge[j].second);
+        markCellForRefinement(edgeDestinationCell);
+      }
     }
 
     return true;
@@ -858,15 +835,14 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
 }
 
 bool HighsSymmetryDetection::splitCell(HighsInt cell, HighsInt splitPoint) {
-  u64 hSplit = getVertexHash(currentPartition[splitPoint]);
-  u64 hCell = getVertexHash(currentPartition[cell]);
+  u32 hSplit = getVertexHash(currentPartition[splitPoint]);
+  u32 hCell = getVertexHash(currentPartition[cell]);
 
   u32 certificateVal =
-      (HighsHashHelpers::pair_hash<0>(hSplit, hSplit >> 32) +
-       HighsHashHelpers::pair_hash<1>(hCell, hCell >> 32) +
-       HighsHashHelpers::pair_hash<2>(
+      (HighsHashHelpers::pair_hash<0>(hSplit, hCell) +
+       HighsHashHelpers::pair_hash<1>(
            cell, currentPartitionLinks[cell] - splitPoint) +
-       HighsHashHelpers::pair_hash<3>(splitPoint, splitPoint - cell)) >>
+       HighsHashHelpers::pair_hash<2>(splitPoint, splitPoint - cell)) >>
       32;
 
   // employ prefix pruning scheme as in bliss
@@ -882,9 +858,12 @@ bool HighsSymmetryDetection::splitCell(HighsInt cell, HighsInt splitPoint) {
     // and it comes lexicographically after the certificate value of the
     // lexicographically smallest leave certificate we prune the node
     if (firstLeavePrefixLen <= currNodeCertificate.size() &&
-        bestLeavePrefixLen == currNodeCertificate.size() &&
-        certificateVal > bestLeaveCertificate[currNodeCertificate.size()])
-      return false;
+        bestLeavePrefixLen <= currNodeCertificate.size()) {
+      u32 diffVal = bestLeavePrefixLen == currNodeCertificate.size()
+                        ? certificateVal
+                        : currNodeCertificate[bestLeavePrefixLen];
+      if (diffVal > bestLeaveCertificate[bestLeavePrefixLen]) return false;
+    }
   }
 
   currentPartitionLinks[splitPoint] = currentPartitionLinks[cell];
@@ -904,30 +883,10 @@ void HighsSymmetryDetection::markCellForRefinement(HighsInt cell) {
                  std::greater<HighsInt>());
 }
 
-HighsSymmetryDetection::u64 HighsSymmetryDetection::getVertexHash(HighsInt v) {
-  if (!hashValid[v]) {
-    HighsInt dynamicLen = Gend[v] - Gstart[v];
-    if (dynamicLen != 0) {
-      std::transform(
-          Gedge.begin() + Gstart[v], Gedge.begin() + Gend[v],
-          edgeBuffer.begin(), [&](const std::pair<HighsInt, HighsUInt>& edge) {
-            return std::make_pair(vertexToCell[edge.first], edge.second);
-          });
-
-      std::sort(edgeBuffer.begin(), edgeBuffer.begin() + dynamicLen);
-
-      u64 vecHash =
-          HighsHashHelpers::vector_hash(edgeBuffer.data(), dynamicLen);
-
-      // the vertex hash already contains the hash of the stable part in the
-      // lower bits so make sure to keep it and only overwrite the upper part
-      vertexHashes[v] =
-          HighsHashHelpers::hash(vecHash) << 32 | u32(vertexHashes[v]);
-    }
-    hashValid[v] = true;
-  }
-
-  return vertexHashes[v];
+HighsSymmetryDetection::u32 HighsSymmetryDetection::getVertexHash(HighsInt v) {
+  const u32* h = vertexHash.find(v);
+  if (h) return *h;
+  return 0;
 }
 
 bool HighsSymmetryDetection::partitionRefinement() {
@@ -944,55 +903,95 @@ bool HighsSymmetryDetection::partitionRefinement() {
     HighsInt cellEnd = currentPartitionLinks[cellStart];
     assert(cellEnd >= cellStart);
 
-    for (HighsInt i = cellStart; i < cellEnd; ++i) {
-      HighsInt v = currentPartition[i];
-      getVertexHash(v);
+    // first check which vertices do have updated hash values and put them to
+    // the end of the partition
+    HighsInt refineStart =
+        std::partition(
+            currentPartition.begin() + cellStart,
+            currentPartition.begin() + cellEnd,
+            [&](HighsInt v) { return vertexHash.find(v) == nullptr; }) -
+        currentPartition.begin();
+
+    // if there are none there is nothing to refine
+    if (refineStart == cellEnd) continue;
+
+    // sort the vertices that have updated hash values by their hash values
+    pdqsort(currentPartition.begin() + refineStart,
+            currentPartition.begin() + cellEnd, [&](HighsInt v1, HighsInt v2) {
+              return vertexHash[v1] < vertexHash[v2];
+            });
+
+    // if not all vertices have updated hash values directly create the first
+    // new cell at the start of the range that we want to refine
+    if (refineStart != cellStart) {
+      assert(refineStart != cellStart);
+      assert(refineStart != cellEnd);
+      if (!splitCell(cellStart, refineStart)) {
+        // node can be pruned, make sure hash values are cleared and queue is
+        // empty
+        for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
+        refinementQueue.clear();
+        vertexHash.clear();
+        return false;
+      }
+      cellStart = refineStart;
+      updateCellMembership(cellStart, cellStart);
     }
 
-    std::sort(currentPartition.begin() + cellStart,
-              currentPartition.begin() + cellEnd,
-              [&](HighsInt v1, HighsInt v2) {
-                assert(hashValid[v1]);
-                assert(hashValid[v2]);
-                return vertexHashes[v1] < vertexHashes[v2];
-              });
-
+    // now update the remaining vertices
     bool prune = false;
     HighsInt i;
+    assert(vertexHash.find(currentPartition[cellStart]) != nullptr);
+    // store value of first hash
+    u64 lastHash = vertexHash[currentPartition[cellStart]];
     for (i = cellStart + 1; i < cellEnd; ++i) {
       HighsInt vertex = currentPartition[i];
-      if (vertexHashes[vertex] != vertexHashes[currentPartition[i - 1]]) {
+      // get this vertex hash value
+      u64 hash = vertexHash[vertex];
+
+      if (hash != lastHash) {
+        // hash values do not match -> start of new cell
         if (!splitCell(cellStart, i)) {
+          // refinement process yielded bad prefix of certificate
+          // -> node can be pruned
           prune = true;
           break;
         }
         cellStart = i;
+        // remember hash value of this new cell under lastHash
+        lastHash = hash;
       }
 
+      // update membership of vertex to new cell
       updateCellMembership(i, cellStart);
     }
 
     if (prune) {
+      // node can be pruned, make sure hash values are cleared and queue is
+      // empty
       for (HighsInt c : refinementQueue) cellInRefinementQueue[c] = false;
       refinementQueue.clear();
+      vertexHash.clear();
+      currentPartitionLinks[firstCellStart] = cellEnd;
 
-      for (--i; i > firstCellStart; --i) {
-        HighsInt vertex = currentPartition[i];
-        if (!updateCellMembership(i, firstCellStart, false)) break;
-      }
+      // undo possibly incomplete changes done to the cells
+      for (--i; i >= refineStart; --i)
+        updateCellMembership(i, firstCellStart, false);
+
       return false;
     }
 
-    // set the link of the last started cell to point to the cell end
     assert(currentPartitionLinks[cellStart] == cellEnd);
   }
+
+  vertexHash.clear();
 
   return true;
 }
 
 HighsInt HighsSymmetryDetection::selectTargetCell() {
   HighsInt i = 0;
-  if (nodeStack.size() > 1) i = nodeStack[nodeStack.size() - 2].targetCell + 1;
+  if (nodeStack.size() > 1) i = nodeStack[nodeStack.size() - 2].targetCell;
 
   while (i < numVertices) {
     if (cellSize(i) > 1) return i;
@@ -1272,10 +1271,10 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // assigned above
   currentPartition.resize(numVertices);
   std::iota(currentPartition.begin(), currentPartition.end(), 0);
-  std::sort(currentPartition.begin(), currentPartition.end(),
-            [&](HighsInt v1, HighsInt v2) {
-              return vertexToCell[v1] < vertexToCell[v2];
-            });
+  pdqsort(currentPartition.begin(), currentPartition.end(),
+          [&](HighsInt v1, HighsInt v2) {
+            return vertexToCell[v1] < vertexToCell[v2];
+          });
 
   // now set up partition links and correct the colToCell array to the
   // correct cell index
@@ -1357,7 +1356,10 @@ void HighsSymmetryDetection::switchToNextNode(HighsInt backtrackDepth) {
       continue;
     }
 
-    if (!partitionRefinement()) continue;
+    if (!partitionRefinement()) {
+      stackEnd = cellCreationStack.size();
+      continue;
+    }
 
     createNode();
     break;
@@ -1420,16 +1422,15 @@ HighsSymmetryDetection::computeComponentData(
 
   componentData.componentSets.assign(vertexGroundSet.begin(),
                                      vertexGroundSet.begin() + numActiveCols);
-  std::sort(
-      componentData.componentSets.begin(), componentData.componentSets.end(),
-      [&](HighsInt u, HighsInt v) {
-        HighsInt uComp = componentData.components.getSet(vertexPosition[u]);
-        HighsInt vComp = componentData.components.getSet(vertexPosition[v]);
-        return std::make_pair(componentData.components.getSetSize(uComp) == 1,
-                              uComp) <
-               std::make_pair(componentData.components.getSetSize(vComp) == 1,
-                              vComp);
-      });
+  pdqsort(componentData.componentSets.begin(),
+          componentData.componentSets.end(), [&](HighsInt u, HighsInt v) {
+            HighsInt uComp = componentData.components.getSet(vertexPosition[u]);
+            HighsInt vComp = componentData.components.getSet(vertexPosition[v]);
+            return std::make_pair(
+                       componentData.components.getSetSize(uComp) == 1, uComp) <
+                   std::make_pair(
+                       componentData.components.getSetSize(vComp) == 1, vComp);
+          });
 
   HighsInt currentComponentStart = -1;
   HighsInt currentComponent = -1;
@@ -1459,16 +1460,15 @@ HighsSymmetryDetection::computeComponentData(
     componentData.permComponents.push_back(i);
   }
 
-  std::sort(
-      componentData.permComponents.begin(), componentData.permComponents.end(),
-      [&](HighsInt i, HighsInt j) {
-        HighsInt seti =
-            componentData.components.getSet(componentData.firstUnfixed[i]);
-        HighsInt setj =
-            componentData.components.getSet(componentData.firstUnfixed[j]);
-        return std::make_pair(seti, componentData.numUnfixed[i]) <
-               std::make_pair(setj, componentData.numUnfixed[j]);
-      });
+  pdqsort(componentData.permComponents.begin(),
+          componentData.permComponents.end(), [&](HighsInt i, HighsInt j) {
+            HighsInt seti =
+                componentData.components.getSet(componentData.firstUnfixed[i]);
+            HighsInt setj =
+                componentData.components.getSet(componentData.firstUnfixed[j]);
+            return std::make_pair(seti, componentData.numUnfixed[i]) <
+                   std::make_pair(setj, componentData.numUnfixed[j]);
+          });
 
   currentComponentStart = -1;
   currentComponent = -1;
@@ -1594,32 +1594,48 @@ bool HighsSymmetryDetection::isFullOrbitope(const ComponentData& componentData,
   //        p0);
 
   HighsInt numColsAdded = 2;
+  bool triedLeftExtension = false;
 
   while (numColsAdded < orbitopeMatrix.rowLength) {
     if (colSet.size() != numColsAdded * orbitopeMatrix.numRows) return false;
 
-    HighsInt* thisCol =
-        orbitopeMatrix.matrix.data() + numColsAdded * orbitopeMatrix.numRows;
-    HighsInt* prevCol = thisCol - orbitopeMatrix.numRows;
+    HighsInt* thisCol = &orbitopeMatrix(0, numColsAdded);
+    HighsInt* prevCol = &orbitopeMatrix(0, numColsAdded - 1);
 
-    HighsInt movePos = vertexPosition[prevCol[0]];
-    perm = nullptr;
-    for (HighsInt k = componentData.permComponentStarts[component] + 1;
-         k < componentData.permComponentStarts[component + 1]; ++k) {
-      HighsInt p = componentData.permComponents[k];
-      perm = symmetries.permutations.data() + p * numActiveCols;
+    bool foundCand = false;
 
-      if (perm[movePos] != vertexGroundSet[movePos] &&
-          !colSet.find(perm[movePos])) {
-        break;
+    while (true) {
+      HighsInt movePos = vertexPosition[prevCol[0]];
+      perm = nullptr;
+
+      for (HighsInt k = componentData.permComponentStarts[component] + 1;
+           k < componentData.permComponentStarts[component + 1]; ++k) {
+        HighsInt p = componentData.permComponents[k];
+        perm = symmetries.permutations.data() + p * numActiveCols;
+
+        if (perm[movePos] != vertexGroundSet[movePos] &&
+            !colSet.find(perm[movePos])) {
+          foundCand = true;
+          break;
+        }
       }
+
+      if (!foundCand && !triedLeftExtension) {
+        // if we fail to find a permutation extending the last column directly
+        // after we set up the first two columns we might try to extend column
+        // zero instead of the previous one
+        prevCol = &orbitopeMatrix(0, 0);
+        triedLeftExtension = true;
+        continue;
+      }
+
+      break;
     }
 
-    if (perm == nullptr) {
+    if (!foundCand) {
       // printf("did not find next permutation moving col %d\n", prevCol[0]);
       return false;
     }
-    // printf("next permutation moving col %d is %d\n", prevCol[0], p0);
 
     for (HighsInt j = 0; j < orbitopeMatrix.numRows; ++j) {
       HighsInt nextVertex = perm[vertexPosition[prevCol[j]]];
@@ -1662,6 +1678,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   currNodeCertificate.clear();
   cellCreationStack.clear();
   createNode();
+  HighsInt maxPerms = 64000000 / numActiveCols;
   while (!nodeStack.empty()) {
     HighsInt targetCell = selectTargetCell();
     if (targetCell == -1) {
@@ -1708,6 +1725,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
                                              permutation,
                                              permutation + numActiveCols);
               ++symmetries.numPerms;
+              if (symmetries.numPerms == maxPerms) break;
             }
             backtrackDepth = std::min(backtrackDepth, firstPathDepth);
           } else if (!bestLeavePartition.empty() &&
@@ -1734,6 +1752,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
                                              permutation,
                                              permutation + numActiveCols);
               ++symmetries.numPerms;
+              if (symmetries.numPerms == maxPerms) break;
             }
 
             backtrackDepth = std::min(backtrackDepth, bestPathDepth);

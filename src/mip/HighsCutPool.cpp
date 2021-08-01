@@ -19,6 +19,7 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
@@ -277,20 +278,20 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   assert(propRows.size() == numPropRows);
   if (efficacious_cuts.empty()) return;
 
-  std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
-            [&efficacious_cuts](const std::pair<double, int>& a,
-                                const std::pair<double, int>& b) {
-              if (a.first > b.first) return true;
-              if (a.first < b.first) return false;
-              return std::make_pair(
-                         HighsHashHelpers::hash((uint64_t(a.second) << 32) +
-                                                efficacious_cuts.size()),
-                         a.second) >
-                     std::make_pair(
-                         HighsHashHelpers::hash((uint64_t(b.second) << 32) +
-                                                efficacious_cuts.size()),
-                         b.second);
-            });
+  pdqsort(efficacious_cuts.begin(), efficacious_cuts.end(),
+          [&efficacious_cuts](const std::pair<double, int>& a,
+                              const std::pair<double, int>& b) {
+            if (a.first > b.first) return true;
+            if (a.first < b.first) return false;
+            return std::make_pair(
+                       HighsHashHelpers::hash((uint64_t(a.second) << 32) +
+                                              efficacious_cuts.size()),
+                       a.second) >
+                   std::make_pair(
+                       HighsHashHelpers::hash((uint64_t(b.second) << 32) +
+                                              efficacious_cuts.size()),
+                       b.second);
+          });
 
   bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
   double minScore = minScoreFactor * bestObservedScore;
@@ -425,7 +426,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     sortBuffer[i].first = Rindex[i];
     sortBuffer[i].second = Rvalue[i];
   }
-  std::sort(
+  pdqsort_branchless(
       sortBuffer.begin(), sortBuffer.end(),
       [](const std::pair<HighsInt, double>& a,
          const std::pair<HighsInt, double>& b) { return a.first < b.first; });

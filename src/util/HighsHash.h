@@ -71,7 +71,23 @@ struct HighsHashHelpers {
       u64{0x07294165cb671455}, u64{0x89b0f6212b0a4292}, u64{0x31900011b96bf554},
       u64{0xa44540f8eee2094f}, u64{0xce7ffd372e4c64fc}, u64{0x51c9d471bfe6a10f},
       u64{0x758c2a674483826f}, u64{0xf91a20abe63f8b02}, u64{0xc2a069024a1fcc6f},
-      u64{0xd5bb18b70c5dbd59}};
+      u64{0xd5bb18b70c5dbd59}, u64{0xd510adac6d1ae289}, u64{0x571d069b23050a79},
+      u64{0x60873b8872933e06}, u64{0x780481cc19670350}, u64{0x7a48551760216885},
+      u64{0xb5d68b918231e6ca}, u64{0xa7e5571699aa5274}, u64{0x7b6d309b2cfdcf01},
+      u64{0x04e77c3d474daeff}, u64{0x4dbf099fd7247031}, u64{0x5d70dca901130beb},
+      u64{0x9f8b5f0df4182499}, u64{0x293a74c9686092da}, u64{0xd09bdab6840f52b3},
+      u64{0xc05d47f3ab302263}, u64{0x6b79e62b884b65d6}, u64{0xa581106fc980c34d},
+      u64{0xf081b7145ea2293e}, u64{0xfb27243dd7c3f5ad}, u64{0x5211bf8860ea667f},
+      u64{0x9455e65cb2385e7f}, u64{0x0dfaf6731b449b33}, u64{0x4ec98b3c6f5e68c7},
+      u64{0x007bfd4a42ae936b}, u64{0x65c93061f8674518}, u64{0x640816f17127c5d1},
+      u64{0x6dd4bab17b7c3a74}, u64{0x34d9268c256fa1ba}, u64{0x0b4d0c6b5b50d7f4},
+      u64{0x30aa965bc9fadaff}, u64{0xc0ac1d0c2771404d}, u64{0xc5e64509abb76ef2},
+      u64{0xd606b11990624a36}, u64{0x0d3f05d242ce2fb7}, u64{0x469a803cb276fe32},
+      u64{0xa4a44d177a3e23f4}, u64{0xb9d9a120dcc1ca03}, u64{0x2e15af8165234a2e},
+      u64{0x10609ba2720573d4}, u64{0xaa4191b60368d1d5}, u64{0x333dd2300bc57762},
+      u64{0xdf6ec48f79fb402f}, u64{0x5ed20fcef1b734fa}, u64{0x4c94924ec8be21ee},
+      u64{0x5abe6ad9d131e631}, u64{0xbe10136a522e602d}, u64{0x53671115c340e779},
+      u64{0x9f392fe43e2144da}};
 
   /// mersenne prime 2^61 - 1
   static constexpr u64 M61() { return u64{0x1fffffffffffffff}; };
@@ -176,15 +192,18 @@ struct HighsHashHelpers {
     // arbitrary order. This comes at the expense of more expensive hash
     // calculations as it would be more efficient to evaluate the polynomial
     // with horners scheme, but allows for parallelization and arbitrary order.
-    // Since we have 16 random constants available, we slightly improve
-    // the scheme by using a lower degree polynomial with 16 variables
-    // which we evaluate at the random vector of 16.
+    // Since we have 64 random constants available, we slightly improve
+    // the scheme by using a lower degree polynomial with 64 variables
+    // which we evaluate at the random vector of 64.
+
+    // make sure input value is never zero and at most 61bits are used
+    value = ((value << 1) & M61()) | 1;
 
     // make sure that the constant has at most 61 bits, as otherwise the modulo
     // algorithm for multiplication mod M61 might not work properly due to
     // overflow
-    u64 a = c[index & 15] & M61();
-    HighsInt degree = (index / 16) + 1;
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
 
     hash += multiply_modM61(value, modexp_M61(a, degree));
     hash = (hash >> 61) + (hash & M61());
@@ -201,8 +220,11 @@ struct HighsHashHelpers {
     // the hashes do not need to be recomputed but can be updated with this
     // procedure.
 
-    u64 a = c[index & 15] & M61();
-    HighsInt degree = (index / 16) + 1;
+    // make sure input value is never zero and at most 61bits are used
+    value = ((value << 1) & M61()) | 1;
+
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M61() - multiply_modM61(value, modexp_M61(a, degree));
@@ -211,7 +233,40 @@ struct HighsHashHelpers {
     assert(hash < M61());
   }
 
-  static void sparse_combine32(u32& hash, HighsInt index, u32 value) {
+  /// overload that is not taking a value and saves one multiplication call
+  /// useful for sparse hashing of bit vectors
+  static void sparse_combine(u64& hash, HighsInt index) {
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
+
+    hash += modexp_M61(a, degree);
+    hash = (hash >> 61) + (hash & M61());
+    if (hash >= M61()) hash -= M61();
+    assert(hash < M61());
+  }
+
+  /// overload that is not taking a value and saves one multiplication call
+  /// useful for sparse hashing of bit vectors
+  static void sparse_inverse_combine(u64& hash, HighsInt index) {
+    // same hash algorithm as sparse_combine(), but for updating a hash value to
+    // the state before it was changed with a call to sparse_combine(). This is
+    // easily possible as the hash value just uses finite field arithmetic. We
+    // can simply add the additive inverse of the previous hash value. This is a
+    // very useful routine for symmetry detection. During partition refinement
+    // the hashes do not need to be recomputed but can be updated with this
+    // procedure.
+
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
+    // add the additive inverse (M61() - hashvalue) instead of the hash value
+    // itself
+    hash += M61() - modexp_M61(a, degree);
+    hash = (hash >> 61) + (hash & M61());
+    if (hash >= M61()) hash -= M61();
+    assert(hash < M61());
+  }
+
+  static void sparse_combine32(u32& hash, HighsInt index, u64 value) {
     // we take each value of the sparse hash as coefficient for a polynomial
     // of the finite field modulo the mersenne prime 2^61-1 where the monomial
     // for a sparse entry has the degree of its index. We evaluate the
@@ -227,11 +282,14 @@ struct HighsHashHelpers {
     // the scheme by using a lower degree polynomial with 16 variables
     // which we evaluate at the random vector of 16.
 
+    // make sure input value is never zero and at most 31bits are used
+    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+
     // make sure that the constant has at most 61 bits, as otherwise the modulo
     // algorithm for multiplication mod M61 might not work properly due to
     // overflow
-    u32 a = c[index & 15] & M31();
-    HighsInt degree = (index / 16) + 1;
+    u32 a = c[index & 63] & M31();
+    HighsInt degree = (index >> 6) + 1;
 
     hash += multiply_modM31(value, modexp_M31(a, degree));
     hash = (hash >> 31) + (hash & M31());
@@ -239,7 +297,7 @@ struct HighsHashHelpers {
     assert(hash < M31());
   }
 
-  static void sparse_inverse_combine32(u32& hash, HighsInt index, u32 value) {
+  static void sparse_inverse_combine32(u32& hash, HighsInt index, u64 value) {
     // same hash algorithm as sparse_combine(), but for updating a hash value to
     // the state before it was changed with a call to sparse_combine(). This is
     // easily possible as the hash value just uses finite field arithmetic. We
@@ -248,8 +306,11 @@ struct HighsHashHelpers {
     // the hashes do not need to be recomputed but can be updated with this
     // procedure.
 
-    u32 a = c[index & 15] & M31();
-    HighsInt degree = (index / 16) + 1;
+    // make sure input value is never zero and at most 31bits are used
+    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+
+    u32 a = c[index & 63] & M31();
+    HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M31() - multiply_modM31(value, modexp_M31(a, degree));
@@ -281,55 +342,119 @@ struct HighsHashHelpers {
 
     while (dataptr != dataend) {
       using std::size_t;
-      size_t numBytes = std::min(size_t(dataend - dataptr), size_t{64});
+      size_t numBytes = std::min(size_t(dataend - dataptr), size_t{256});
       size_t numPairs = (numBytes + 7) / 8;
       size_t lastPairBytes = numBytes - (numPairs - 1) * 8;
       u64 chunkhash = 0;
+
+#define HIGHS_VECHASH_CASE_N(N, B)                  \
+  std::memcpy(&pair[0], dataptr, B);                \
+  chunkhash += pair_hash<32 - N>(pair[0], pair[1]); \
+  dataptr += B;
+
       switch (numPairs) {
+        case 32:
+          HIGHS_VECHASH_CASE_N(32, 8)
+          if (hash != 0) hash = multiply_modM61(hash, c[(k++) & 63] & M61());
+          // fall through
+        case 31:
+          HIGHS_VECHASH_CASE_N(31, 8)
+          // fall through
+        case 30:
+          HIGHS_VECHASH_CASE_N(30, 8)
+          // fall through
+        case 29:
+          HIGHS_VECHASH_CASE_N(29, 8)
+          // fall through
+        case 28:
+          HIGHS_VECHASH_CASE_N(28, 8)
+          // fall through
+        case 27:
+          HIGHS_VECHASH_CASE_N(27, 8)
+          // fall through
+        case 26:
+          HIGHS_VECHASH_CASE_N(26, 8)
+          // fall through
+        case 25:
+          HIGHS_VECHASH_CASE_N(25, 8)
+          // fall through
+        case 24:
+          HIGHS_VECHASH_CASE_N(24, 8)
+          // fall through
+        case 23:
+          HIGHS_VECHASH_CASE_N(23, 8)
+          // fall through
+        case 22:
+          HIGHS_VECHASH_CASE_N(22, 8)
+          // fall through
+        case 21:
+          HIGHS_VECHASH_CASE_N(21, 8)
+          // fall through
+        case 20:
+          HIGHS_VECHASH_CASE_N(20, 8)
+          // fall through
+        case 19:
+          HIGHS_VECHASH_CASE_N(19, 8)
+          // fall through
+        case 18:
+          HIGHS_VECHASH_CASE_N(18, 8)
+          // fall through
+        case 17:
+          HIGHS_VECHASH_CASE_N(17, 8)
+          // fall through
+        case 16:
+          HIGHS_VECHASH_CASE_N(16, 8)
+          // fall through
+        case 15:
+          HIGHS_VECHASH_CASE_N(15, 8)
+          // fall through
+        case 14:
+          HIGHS_VECHASH_CASE_N(14, 8)
+          // fall through
+        case 13:
+          HIGHS_VECHASH_CASE_N(13, 8)
+          // fall through
+        case 12:
+          HIGHS_VECHASH_CASE_N(12, 8)
+          // fall through
+        case 11:
+          HIGHS_VECHASH_CASE_N(11, 8)
+          // fall through
+        case 10:
+          HIGHS_VECHASH_CASE_N(10, 8)
+          // fall through
+        case 9:
+          HIGHS_VECHASH_CASE_N(9, 8)
+          // fall through
         case 8:
-          if (hash != 0) hash = multiply_modM61(hash, c[k++ & 15] & M61());
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<0>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(8, 8)
           // fall through
         case 7:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<1>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(7, 8)
           // fall through
         case 6:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<2>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(6, 8)
           // fall through
         case 5:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<3>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(5, 8)
           // fall through
         case 4:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<4>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(4, 8)
           // fall through
         case 3:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<5>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(3, 8)
           // fall through
         case 2:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<6>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(2, 8)
           // fall through
         case 1:
-          std::memcpy(&pair[0], dataptr, lastPairBytes);
-          chunkhash += pair_hash<7>(pair[0], pair[1]);
-          dataptr += lastPairBytes;
+          HIGHS_VECHASH_CASE_N(1, lastPairBytes)
       }
 
       hash += chunkhash >> 32;
     }
+
+#undef HIGHS_VECHASH_CASE_N
 
     return hash;
   }

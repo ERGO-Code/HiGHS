@@ -79,29 +79,45 @@ class HighsRandom {
       uint32_t lo = state;
       uint32_t hi = state >> 32;
 
-      uint64_t val = HighsHashHelpers::pair_hash<0>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
+      uint64_t val;
 
-      val = HighsHashHelpers::pair_hash<1>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
+#define HIGHS_RAND_TRY_OUTPUT(n)                                \
+  val = HighsHashHelpers::pair_hash<n>(lo, hi) >> (64 - nbits); \
+  if (val < sup) return val;
 
-      val = HighsHashHelpers::pair_hash<2>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
+      HIGHS_RAND_TRY_OUTPUT(0);
+      HIGHS_RAND_TRY_OUTPUT(1);
+      HIGHS_RAND_TRY_OUTPUT(2);
+      HIGHS_RAND_TRY_OUTPUT(3);
+      HIGHS_RAND_TRY_OUTPUT(4);
+      HIGHS_RAND_TRY_OUTPUT(5);
+      HIGHS_RAND_TRY_OUTPUT(6);
+      HIGHS_RAND_TRY_OUTPUT(7);
+      HIGHS_RAND_TRY_OUTPUT(9);
+      HIGHS_RAND_TRY_OUTPUT(10);
+      HIGHS_RAND_TRY_OUTPUT(11);
+      HIGHS_RAND_TRY_OUTPUT(12);
+      HIGHS_RAND_TRY_OUTPUT(13);
+      HIGHS_RAND_TRY_OUTPUT(14);
+      HIGHS_RAND_TRY_OUTPUT(15);
+      HIGHS_RAND_TRY_OUTPUT(16);
+      HIGHS_RAND_TRY_OUTPUT(17);
+      HIGHS_RAND_TRY_OUTPUT(18);
+      HIGHS_RAND_TRY_OUTPUT(19);
+      HIGHS_RAND_TRY_OUTPUT(20);
+      HIGHS_RAND_TRY_OUTPUT(21);
+      HIGHS_RAND_TRY_OUTPUT(22);
+      HIGHS_RAND_TRY_OUTPUT(23);
+      HIGHS_RAND_TRY_OUTPUT(24);
+      HIGHS_RAND_TRY_OUTPUT(25);
+      HIGHS_RAND_TRY_OUTPUT(26);
+      HIGHS_RAND_TRY_OUTPUT(27);
+      HIGHS_RAND_TRY_OUTPUT(28);
+      HIGHS_RAND_TRY_OUTPUT(29);
+      HIGHS_RAND_TRY_OUTPUT(30);
+      HIGHS_RAND_TRY_OUTPUT(31);
 
-      val = HighsHashHelpers::pair_hash<3>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<4>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<5>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<6>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<7>(lo, hi) >> (64 - nbits);
-      if (val < sup) return val;
+#undef HIGHS_RAND_TRY_OUTPUT
     }
   }
 
@@ -117,37 +133,30 @@ class HighsRandom {
       uint32_t lo = state;
       uint32_t hi = state >> 32;
 
-      uint64_t val = HighsHashHelpers::pair_hash<0>(lo, hi) >> (64 - nbits) ^
-                     HighsHashHelpers::pair_hash<1>(lo, hi) >> 32;
-      if (val < sup) return val;
+      uint64_t val;
 
-      val = HighsHashHelpers::pair_hash<1>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<2>(lo, hi) >> 32;
-      if (val < sup) return val;
+#define HIGHS_RAND_TRY_OUTPUT(n)                                       \
+  val = (HighsHashHelpers::pair_hash<2 * n>(lo, hi) >> (64 - nbits)) ^ \
+        (HighsHashHelpers::pair_hash<2 * n + 1>(lo, hi) >> 32);        \
+  if (val < sup) return val;
 
-      val = HighsHashHelpers::pair_hash<2>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<3>(lo, hi) >> 32;
-      if (val < sup) return val;
+      HIGHS_RAND_TRY_OUTPUT(0);
+      HIGHS_RAND_TRY_OUTPUT(1);
+      HIGHS_RAND_TRY_OUTPUT(2);
+      HIGHS_RAND_TRY_OUTPUT(3);
+      HIGHS_RAND_TRY_OUTPUT(4);
+      HIGHS_RAND_TRY_OUTPUT(5);
+      HIGHS_RAND_TRY_OUTPUT(6);
+      HIGHS_RAND_TRY_OUTPUT(7);
+      HIGHS_RAND_TRY_OUTPUT(9);
+      HIGHS_RAND_TRY_OUTPUT(10);
+      HIGHS_RAND_TRY_OUTPUT(11);
+      HIGHS_RAND_TRY_OUTPUT(12);
+      HIGHS_RAND_TRY_OUTPUT(13);
+      HIGHS_RAND_TRY_OUTPUT(14);
+      HIGHS_RAND_TRY_OUTPUT(15);
 
-      val = HighsHashHelpers::pair_hash<3>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<4>(lo, hi) >> 32;
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<4>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<5>(lo, hi) >> 32;
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<5>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<6>(lo, hi) >> 32;
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<6>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<7>(lo, hi) >> 32;
-      if (val < sup) return val;
-
-      val = HighsHashHelpers::pair_hash<7>(lo, hi) >> (64 - nbits) ^
-            HighsHashHelpers::pair_hash<0>(lo, hi) >> 32;
-      if (val < sup) return val;
+#undef HIGHS_RAND_TRY_OUTPUT
     }
   }
 

@@ -62,6 +62,9 @@ class HighsIntegers {
   }
 
   static int64_t gcd(int64_t a, int64_t b) {
+    assert(a != std::numeric_limits<int64_t>::min());
+    assert(b != std::numeric_limits<int64_t>::min());
+
     int64_t h;
     if (a < 0) a = -a;
     if (b < 0) b = -b;
@@ -126,14 +129,15 @@ class HighsIntegers {
         vals, vals + numVals,
         [](double a, double b) { return std::abs(a) < std::abs(b); });
 
-    int expshift;
+    int expshift = 0;
 
     // to cover many small denominators at once use a denominator of 75 * 2^n
-    // with n-3 being large enough so that the smallest value is not below 0.5.
-    std::frexp(minval, &expshift);
+    // with n-3 being large enough so that the smallest value is not below 0.5
+    // but ignore tiny values bew deltadown/deltaup.
+    if (minval < -deltadown || minval > deltaup) std::frexp(minval, &expshift);
     expshift = std::max(-expshift, 0) + 3;
 
-    uint64_t denom = 75 << expshift;
+    uint64_t denom = uint64_t{75} << expshift;
     HighsCDouble startdenom = denom;
     // now check if the values are integral and if not compute a common
     // denominator for their remaining fraction
