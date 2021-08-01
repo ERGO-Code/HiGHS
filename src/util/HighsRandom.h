@@ -135,9 +135,9 @@ class HighsRandom {
 
       uint64_t val;
 
-#define HIGHS_RAND_TRY_OUTPUT(n)                                   \
-  val = (HighsHashHelpers::pair_hash<n>(lo, hi) >> (64 - nbits)) ^ \
-        (HighsHashHelpers::pair_hash<(n + 1) & 31>(lo, hi) >> 32); \
+#define HIGHS_RAND_TRY_OUTPUT(n)                                       \
+  val = (HighsHashHelpers::pair_hash<2 * n>(lo, hi) >> (64 - nbits)) ^ \
+        (HighsHashHelpers::pair_hash<2 * n + 1>(lo, hi) >> 32);        \
   if (val < sup) return val;
 
       HIGHS_RAND_TRY_OUTPUT(0);
@@ -155,22 +155,6 @@ class HighsRandom {
       HIGHS_RAND_TRY_OUTPUT(13);
       HIGHS_RAND_TRY_OUTPUT(14);
       HIGHS_RAND_TRY_OUTPUT(15);
-      HIGHS_RAND_TRY_OUTPUT(16);
-      HIGHS_RAND_TRY_OUTPUT(17);
-      HIGHS_RAND_TRY_OUTPUT(18);
-      HIGHS_RAND_TRY_OUTPUT(19);
-      HIGHS_RAND_TRY_OUTPUT(20);
-      HIGHS_RAND_TRY_OUTPUT(21);
-      HIGHS_RAND_TRY_OUTPUT(22);
-      HIGHS_RAND_TRY_OUTPUT(23);
-      HIGHS_RAND_TRY_OUTPUT(24);
-      HIGHS_RAND_TRY_OUTPUT(25);
-      HIGHS_RAND_TRY_OUTPUT(26);
-      HIGHS_RAND_TRY_OUTPUT(27);
-      HIGHS_RAND_TRY_OUTPUT(28);
-      HIGHS_RAND_TRY_OUTPUT(29);
-      HIGHS_RAND_TRY_OUTPUT(30);
-      HIGHS_RAND_TRY_OUTPUT(31);
 
 #undef HIGHS_RAND_TRY_OUTPUT
     }
