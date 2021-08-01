@@ -57,7 +57,8 @@ class HighsDataStack {
     HighsInt numData = r.size();
     // store the data
     data.resize(offset + numData * sizeof(T) + sizeof(HighsInt));
-    std::memcpy(data.data() + offset, r.data(), numData * sizeof(T));
+    if (!r.empty())
+      std::memcpy(data.data() + offset, r.data(), numData * sizeof(T));
     // store the vector size
     offset += numData * sizeof(T);
     std::memcpy(data.data() + offset, &numData, sizeof(HighsInt));
