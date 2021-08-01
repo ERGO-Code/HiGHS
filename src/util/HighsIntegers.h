@@ -137,7 +137,7 @@ class HighsIntegers {
     if (minval < -deltadown || minval > deltaup) std::frexp(minval, &expshift);
     expshift = std::max(-expshift, 0) + 3;
 
-    uint64_t denom = 75 << expshift;
+    uint64_t denom = uint64_t{75} << expshift;
     HighsCDouble startdenom = denom;
     // now check if the values are integral and if not compute a common
     // denominator for their remaining fraction
