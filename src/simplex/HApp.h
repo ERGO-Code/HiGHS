@@ -53,7 +53,8 @@ void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved,
   incumbent_lp_moved = false;
   ekk_lp = incumbent_lp;
   if (incumbent_lp_scaled) {
-    unscaleSimplexLp(incumbent_lp, scale);
+    const bool force_unscale = true;
+    unscaleSimplexLp(incumbent_lp, scale, force_unscale);
     incumbent_lp_scaled = false;
   } else {
     const bool force_scale = true;
@@ -487,12 +488,14 @@ HighsStatus solveLpSimplex1(HighsModelObject& highs_model_object) {
   if (incumbent_lp_scaled) {
     // The incumbent LP is scaled, so scaled_lp is scaled. Unscale the
     // incumbent LP
-    unscaleSimplexLp(lp, scale);
+    const bool force_unscale = true;
+    unscaleSimplexLp(lp, scale, force_unscale);
     incumbent_lp_scaled = false;
   } else {
     // The incumbent LP is unscaled, so scaled_lp is unscaled: scale
     // it
-    scaleSimplexLp(scaled_lp, scale);
+    const bool force_scale = true;
+    scaleSimplexLp(scaled_lp, scale, force_scale);
   }
   // Now the incumbent LP is unscaled, and the LP for the HFactor
   // instance is scaled
