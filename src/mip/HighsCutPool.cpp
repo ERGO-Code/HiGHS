@@ -426,7 +426,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     sortBuffer[i].first = Rindex[i];
     sortBuffer[i].second = Rvalue[i];
   }
-  pdqsort(
+  pdqsort_branchless(
       sortBuffer.begin(), sortBuffer.end(),
       [](const std::pair<HighsInt, double>& a,
          const std::pair<HighsInt, double>& b) { return a.first < b.first; });

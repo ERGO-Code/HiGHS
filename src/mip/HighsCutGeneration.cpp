@@ -142,8 +142,8 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
   S.resize(coversize);
   std::vector<int8_t> coverflag;
   coverflag.resize(rowlen);
-  pdqsort(cover.begin(), cover.end(),
-          [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
+  pdqsort_branchless(cover.begin(), cover.end(),
+                     [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
 
   HighsCDouble abartmp = vals[cover[0]];
   HighsCDouble sigma = lambda;
@@ -231,8 +231,8 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
 
   for (HighsInt i = 0; i != coversize; ++i) coverflag[cover[i]] = 1;
 
-  pdqsort(cover.begin(), cover.end(),
-          [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
+  pdqsort_branchless(cover.begin(), cover.end(),
+                     [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; });
   HighsCDouble sum = 0;
 
   HighsInt p = coversize;
@@ -290,7 +290,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   for (HighsInt i : cover) coverflag[i] = 1;
 
   auto comp = [&](HighsInt a, HighsInt b) { return vals[a] > vals[b]; };
-  pdqsort(cover.begin(), cover.end(), comp);
+  pdqsort_branchless(cover.begin(), cover.end(), comp);
 
   std::vector<HighsCDouble> a;
   std::vector<HighsCDouble> u;
