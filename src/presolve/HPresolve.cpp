@@ -3691,15 +3691,19 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         impliedDualRowBounds.getNumInfSumUpperOrig(col) == 1 &&
         model->col_cost_[col] >= 0) {
       HighsInt row = colLowerSource[col];
-      HighsInt nzPos = findNonzero(row, col);
 
-      if (model->integrality_[col] != HighsVarType::kInteger ||
-          (rowsizeInteger[row] == rowsize[row] &&
-           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
-        if (Avalue[nzPos] > 0)
-          changeImplRowDualLower(row, 0.0, col);
-        else
-          changeImplRowDualUpper(row, 0.0, col);
+      if (model->row_lower_[row] == -kHighsInf ||
+          model->row_upper_[row] == kHighsInf) {
+        HighsInt nzPos = findNonzero(row, col);
+
+        if (model->integrality_[col] != HighsVarType::kInteger ||
+            (rowsizeInteger[row] == rowsize[row] &&
+             rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+          if (Avalue[nzPos] > 0)
+            changeImplRowDualLower(row, 0.0, col);
+          else
+            changeImplRowDualUpper(row, 0.0, col);
+        }
       }
     }
 
@@ -3707,15 +3711,19 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         impliedDualRowBounds.getNumInfSumLowerOrig(col) == 1 &&
         model->col_cost_[col] <= 0) {
       HighsInt row = colUpperSource[col];
-      HighsInt nzPos = findNonzero(row, col);
 
-      if (model->integrality_[col] != HighsVarType::kInteger ||
-          (rowsizeInteger[row] == rowsize[row] &&
-           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
-        if (Avalue[nzPos] > 0)
-          changeImplRowDualUpper(row, 0.0, col);
-        else
-          changeImplRowDualLower(row, 0.0, col);
+      if (model->row_lower_[row] == -kHighsInf ||
+          model->row_upper_[row] == kHighsInf) {
+        HighsInt nzPos = findNonzero(row, col);
+
+        if (model->integrality_[col] != HighsVarType::kInteger ||
+            (rowsizeInteger[row] == rowsize[row] &&
+             rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+          if (Avalue[nzPos] > 0)
+            changeImplRowDualUpper(row, 0.0, col);
+          else
+            changeImplRowDualLower(row, 0.0, col);
+        }
       }
     }
 
