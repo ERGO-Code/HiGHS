@@ -2355,7 +2355,7 @@ HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
     }
   }
   assert(lp.format_ == desired_format);
-  return HighsStatus::kOk;
+  return lp.a_matrix_.setFormat(desired_format);
 }
 
 void ensureColWise(HighsLp& lp) {

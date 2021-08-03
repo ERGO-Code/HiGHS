@@ -601,8 +601,6 @@ HighsStatus Highs::run() {
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   return_status =
       interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
-  HighsStatus alt_return_status = model_.lp_.a_matrix_.setFormat();
-  assert(alt_return_status == return_status);
   if (return_status == HighsStatus::kError) return return_status;
   if (hmos_[0].ekk_instance_.status_.valid) {
     return_status = interpretCallStatus(setFormat(hmos_[0].ekk_instance_.lp_),
