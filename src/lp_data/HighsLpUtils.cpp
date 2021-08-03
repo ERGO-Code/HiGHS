@@ -978,6 +978,8 @@ HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
       deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
   if (call_status != HighsStatus::kOk) return call_status;
   call_status = deleteColsFromLpMatrix(log_options, lp, index_collection);
+  HighsStatus alt_call_status = lp.a_matrix_.deleteCols(log_options, index_collection);
+  assert(alt_call_status==call_status);
   if (call_status != HighsStatus::kOk) return call_status;
   lp.num_col_ = new_num_col;
   return HighsStatus::kOk;
@@ -1123,6 +1125,8 @@ HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                                       "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::kError) return return_status;
   call_status = deleteRowsFromLpMatrix(log_options, lp, index_collection);
+  HighsStatus alt_call_status = lp.a_matrix_.deleteRows(log_options, index_collection);
+  assert(alt_call_status==call_status);
   return_status =
       interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
   if (return_status == HighsStatus::kError) return return_status;
