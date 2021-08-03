@@ -1160,6 +1160,10 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   }
   assert(&model_.lp_ == &lp);
 
+  if (col < 0) return HighsStatus::kError;
+  if (col >= lp.num_col_) return HighsStatus::kError;
+  if (!scaleval) return HighsStatus::kError;
+
   return_status = interpretCallStatus(
       applyScalingToLpCol(options.log_options, lp, col, scaleval),
       return_status, "applyScalingToLpCol");
@@ -1217,6 +1221,10 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   }
   assert(&model_.lp_ == &lp);
 
+  if (row < 0) return HighsStatus::kError;
+  if (row >= lp.num_row_) return HighsStatus::kError;
+  if (!scaleval) return HighsStatus::kError;
+ 
   return_status = interpretCallStatus(
       applyScalingToLpRow(options.log_options, lp, row, scaleval),
       return_status, "applyScalingToLpRow");

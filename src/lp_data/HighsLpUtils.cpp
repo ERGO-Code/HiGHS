@@ -714,6 +714,7 @@ HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
 
   for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++)
     lp.a_value_[el] *= colScale;
+  lp.a_matrix_.scaleCol(col, colScale);
   lp.col_cost_[col] *= colScale;
   if (colScale > 0) {
     lp.col_lower_[col] /= colScale;
@@ -737,6 +738,7 @@ HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
       if (lp.a_index_[el] == row) lp.a_value_[el] *= rowScale;
     }
   }
+  lp.a_matrix_.scaleRow(row, rowScale);
   if (rowScale > 0) {
     lp.row_lower_[row] /= rowScale;
     lp.row_upper_[row] /= rowScale;
