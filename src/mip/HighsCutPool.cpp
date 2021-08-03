@@ -31,8 +31,8 @@ static uint64_t support_hash(const HighsInt* Rindex, const double* Rvalue,
   for (HighsInt i = 0; i < Rlen; ++i)
     valueHashCodes[i] = HighsHashHelpers::double_hash_code(scale * Rvalue[i]);
 
-  return (uint64_t{HighsHashHelpers::vector_hash(Rindex, Rlen)} << 32) |
-         HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen);
+  return HighsHashHelpers::vector_hash(Rindex, Rlen) ^
+         (HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen) >> 32);
 }
 
 #if 0
