@@ -694,6 +694,7 @@ set(headers_fast_build_
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
+    util/HighsDisjointSets.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h
