@@ -208,8 +208,8 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     simplex_lp.num_col_ += XnumNewCol;
     ekk_instance.initialiseSimplexLpRandomVectors();
   }
-    assert(lp.dimensionsAndMatrixOk("addCols"));
 
+  assert(lp.dimensionsAndMatrixOk("addCols"));
   return return_status;
 }
 
@@ -326,6 +326,10 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
                              &local_ARstart[0], &local_ARindex[0],
                              &local_ARvalue[0]),
         return_status, "appendRowsToLpMatrix");
+    HighsStatus alt_return_status = lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz,
+							 &local_ARstart[0], &local_ARindex[0],
+							 &local_ARvalue[0]);
+    assert(alt_return_status==return_status);
     if (return_status == HighsStatus::kError) return return_status;
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
@@ -389,6 +393,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     simplex_lp.num_row_ += XnumNewRow;
     ekk_instance.initialiseSimplexLpRandomVectors();
   }
+  assert(lp.dimensionsAndMatrixOk("addRows"));
   return return_status;
 }
 
