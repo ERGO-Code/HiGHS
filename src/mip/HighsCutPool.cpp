@@ -23,7 +23,7 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-static uint32_t support_hash(const HighsInt* Rindex, const double* Rvalue,
+static uint64_t support_hash(const HighsInt* Rindex, const double* Rvalue,
                              double maxabscoef, const HighsInt Rlen) {
   std::vector<uint32_t> valueHashCodes(Rlen);
 
@@ -31,9 +31,8 @@ static uint32_t support_hash(const HighsInt* Rindex, const double* Rvalue,
   for (HighsInt i = 0; i < Rlen; ++i)
     valueHashCodes[i] = HighsHashHelpers::double_hash_code(scale * Rvalue[i]);
 
-  return HighsHashHelpers::hash(std::make_pair(
-      HighsHashHelpers::vector_hash(Rindex, Rlen),
-      HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen)));
+  return (uint64_t{HighsHashHelpers::vector_hash(Rindex, Rlen)} << 32) |
+         HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen);
 }
 
 #if 0
@@ -213,7 +212,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
-        uint32_t sh = support_hash(&ARindex[start], &ARvalue[start],
+        uint64_t sh = support_hash(&ARindex[start], &ARvalue[start],
                                    maxabscoef_[i], end - start);
 
         for (HighsDomain::CutpoolPropagation* propagationdomain :

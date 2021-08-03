@@ -319,20 +319,9 @@ struct HighsHashHelpers {
     assert(hash < M31());
   }
 
-  static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
-
-  static constexpr size_t rotate_left(size_t x, HighsInt n) {
-    return (x << n) | (x >> (sizeof(size_t) * 8 - n));
-  }
-
-  static void combine(size_t& hash, size_t val) {
-    // very fast but decent order dependent hash combine function
-    hash = (rotate_left(hash, 5) ^ val) * fibonacci_muliplier();
-  }
-
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value, int>::type = 0>
-  static u64 vector_hash(const T* vals, size_t numvals) {
+  static u32 vector_hash(const T* vals, size_t numvals) {
     std::array<u32, 2> pair{};
     u64 hash = 0;
     HighsInt k = 0;
@@ -354,8 +343,17 @@ struct HighsHashHelpers {
 
       switch (numPairs) {
         case 32:
+          if (hash != 0) {
+            // make sure hash is reduced mod M61() before multiplying with the
+            // next random constant. For vectors at most 240 bytes we never
+            // get here and only use the fast pair hashing scheme
+            // for vectors with 240 bytes to 256 bytes we do have the one
+            // additional check for hash != 0 above which will return false
+            // and only for longer vectors we ever reduce modulo M61
+            if (hash >= M61()) hash -= M61();
+            hash = multiply_modM61(hash, c[(k++) & 63] & M61());
+          }
           HIGHS_VECHASH_CASE_N(32, 8)
-          if (hash != 0) hash = multiply_modM61(hash, c[(k++) & 63] & M61());
           // fall through
         case 31:
           HIGHS_VECHASH_CASE_N(31, 8)
@@ -463,7 +461,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) <= 8) && (sizeof(T) >= 1),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 2> bytes;
     if (sizeof(T) < 4) bytes[0] = 0;
     if (sizeof(T) < 8) bytes[1] = 0;
@@ -475,7 +473,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 9) && (sizeof(T) <= 16),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 4> bytes;
     if (sizeof(T) < 12) bytes[2] = 0;
     if (sizeof(T) < 16) bytes[3] = 0;
@@ -489,7 +487,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 17) && (sizeof(T) <= 24),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 6> bytes;
     if (sizeof(T) < 20) bytes[4] = 0;
     if (sizeof(T) < 24) bytes[5] = 0;
@@ -504,7 +502,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 25) && (sizeof(T) <= 32),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 8> bytes;
     if (sizeof(T) < 28) bytes[6] = 0;
     if (sizeof(T) < 32) bytes[7] = 0;
@@ -520,7 +518,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 33) && (sizeof(T) <= 40),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 10> bytes;
     if (sizeof(T) < 36) bytes[8] = 0;
     if (sizeof(T) < 40) bytes[9] = 0;
@@ -537,7 +535,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 41) && (sizeof(T) <= 48),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 12> bytes;
     if (sizeof(T) < 44) bytes[10] = 0;
     if (sizeof(T) < 48) bytes[11] = 0;
@@ -555,7 +553,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 49) && (sizeof(T) <= 56),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 14> bytes;
     if (sizeof(T) < 52) bytes[12] = 0;
     if (sizeof(T) < 56) bytes[13] = 0;
@@ -574,7 +572,7 @@ struct HighsHashHelpers {
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 57) && (sizeof(T) <= 64),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u32 hash(const T& val) {
     std::array<u32, 16> bytes;
     if (sizeof(T) < 60) bytes[14] = 0;
     if (sizeof(T) < 64) bytes[15] = 0;
