@@ -865,8 +865,7 @@ static std::array<char, 16> convertToPrintString(int64_t val) {
 
 static std::array<char, 32> convertToPrintString(double val) {
   std::array<char, 32> printString;
-  val = std::abs(val);
-  double l = val == kHighsInf ? 0.0 : std::log10(std::max(1e-6, val));
+  double l = std::abs(val) == kHighsInf ? 0.0 : std::log10(std::max(1e-6, val));
   switch (int(l)) {
     case 0:
     case 1:
