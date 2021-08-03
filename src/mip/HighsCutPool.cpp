@@ -435,7 +435,6 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
   }
   uint64_t h = compute_cut_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
-  // try to replace another cut with equal support that has an age > 0
 
   if (isDuplicate(h, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
 
