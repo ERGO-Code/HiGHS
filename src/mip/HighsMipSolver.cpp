@@ -96,7 +96,6 @@ restart:
   int64_t numQueueLeaves = 0;
   HighsInt numHugeTreeEstim = 0;
   int64_t numNodesLastCheck = mipdata_->num_nodes;
-  int64_t nextCheck = mipdata_->num_nodes;
   double treeweightLastCheck = 0.0;
   double upperLimLastCheck = mipdata_->upper_limit;
   while (search.hasNode()) {
@@ -205,7 +204,7 @@ restart:
       mipdata_->removeFixedIndices();
     }
 
-    if (!submip && mipdata_->num_nodes >= nextCheck) {
+    if (!submip) {
       auto nTreeRestarts = mipdata_->numRestarts - mipdata_->numRestartsRoot;
       double currNodeEstim =
           numNodesLastCheck - mipdata_->num_nodes_before_run +
@@ -241,7 +240,6 @@ restart:
       if (upperLimLastCheck == mipdata_->upper_limit &&
           currNodeEstim >=
               50 * (mipdata_->num_nodes - mipdata_->num_nodes_before_run)) {
-        nextCheck = mipdata_->num_nodes + 100;
         ++numHugeTreeEstim;
       } else {
         numHugeTreeEstim = 0;
