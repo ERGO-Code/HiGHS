@@ -715,7 +715,7 @@ void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
                           nodestack.back().lower_bound,
                           nodestack.back().estimate, getCurrentDepth());
   } else
-    treeweight += std::pow(0.5, getCurrentDepth() - 1);
+    treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
   nodestack.back().opensubtrees = 0;
 
   backtrack();
@@ -753,7 +753,7 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
                             nodestack.back().estimate, getCurrentDepth());
     } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-      treeweight += std::pow(0.5, getCurrentDepth() - 1);
+      treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     }
     nodestack.back().opensubtrees = 0;
     if (nodestack.back().nodeBasis)
@@ -1002,7 +1002,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
 
   if (result != NodeResult::kOpen) {
     mipsolver.mipdata_->debugSolution.nodePruned(localdom);
-    treeweight += std::pow(0.5, getCurrentDepth() - 1);
+    treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     currnode.opensubtrees = 0;
   }
 
@@ -1362,6 +1362,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
+          treeweight += std::ldexp(1.0, -getCurrentDepth());
           nodestack.back().opensubtrees = 0;
         }
       }
@@ -1418,7 +1419,7 @@ bool HighsSearch::backtrack(bool recoverBasis) {
     if (prune) {
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      treeweight += std::pow(0.5, getCurrentDepth());
+      treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
     nodestack.emplace_back(
@@ -1476,6 +1477,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
         }
         if (localdom.infeasible()) {
           localdom.clearChangedCols(oldNumChangedCols);
+          treeweight += std::ldexp(1.0, -getCurrentDepth());
           nodestack.back().opensubtrees = 0;
         }
       }
@@ -1539,7 +1541,7 @@ bool HighsSearch::backtrackPlunge(HighsNodeQueue& nodequeue) {
     if (prune) {
       localdom.backtrack();
       localdom.clearChangedCols(numChangedCols);
-      treeweight += std::pow(0.5, getCurrentDepth());
+      treeweight += std::ldexp(1.0, -getCurrentDepth());
       continue;
     }
     bool nodeToQueue = false;
