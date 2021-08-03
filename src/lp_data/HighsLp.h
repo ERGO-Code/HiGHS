@@ -19,8 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "lp_data/HStruct.h"
 #include "lp_data/HighsSparseMatrix.h"
-#include "lp_data/HStruct.h" 
 #include "simplex/SimplexStruct.h"  // for SimplexScale (temporary)
 
 class HighsLp;

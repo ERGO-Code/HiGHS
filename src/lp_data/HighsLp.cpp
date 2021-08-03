@@ -51,7 +51,7 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   equal = this->a_value_ == lp.a_value_ && equal;
   equal = this->format_ == lp.format_ && equal;
 
-  equal = this->a_matrix_== lp.a_matrix_;
+  equal = this->a_matrix_ == lp.a_matrix_;
 
   equal = this->scale_.strategy == lp.scale_.strategy && equal;
   equal = this->scale_.has_scaling == lp.scale_.has_scaling && equal;
@@ -132,7 +132,6 @@ bool HighsLp::dimensionsOk(std::string message) const {
     ok = legal_matrix_value_size && ok;
   }
 
-
   HighsInt row_lower_size = this->row_lower_.size();
   HighsInt row_upper_size = this->row_upper_.size();
   bool legal_row_lower_size = row_lower_size >= num_row;
@@ -166,7 +165,8 @@ bool HighsLp::dimensionsOk(std::string message) const {
     ok = !this->a_matrix_.start_[0] && ok;
   }
   HighsInt a_matrix_num_nz = 0;
-  if (legal_matrix_start_size) a_matrix_num_nz = this->a_matrix_.start_[num_col];
+  if (legal_matrix_start_size)
+    a_matrix_num_nz = this->a_matrix_.start_[num_col];
   bool legal_a_matrix_num_nz = a_matrix_num_nz >= 0;
   if (!legal_a_matrix_num_nz) {
     ok = false;

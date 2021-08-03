@@ -14,14 +14,15 @@
  * @brief
  */
 #include "lp_data/HighsSparseMatrix.h"
+
+#include <cassert>
+#include <cmath>
+
 #include "util/HighsSort.h"
 
-#include <cmath>
-#include <cassert>
-
+using std::fabs;
 using std::max;
 using std::min;
-using std::fabs;
 using std::vector;
 
 bool HighsSparseMatrix::operator==(const HighsSparseMatrix& matrix) const {
@@ -195,10 +196,10 @@ void HighsSparseMatrix::ensureRowWise() {
 }
 
 HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
-				       const HighsInt num_new_nz,
-				       const HighsInt* new_matrix_start,
-				       const HighsInt* new_matrix_index,
-				       const double* new_matrix_value) {
+                                       const HighsInt num_new_nz,
+                                       const HighsInt* new_matrix_start,
+                                       const HighsInt* new_matrix_index,
+                                       const double* new_matrix_value) {
   if (num_new_col < 0) return HighsStatus::kError;
   if (num_new_col == 0) return HighsStatus::kOk;
   HighsInt num_col = this->num_col_;
@@ -259,10 +260,10 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
 }
 
 HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
-				       const HighsInt num_new_nz,
-				       const HighsInt* new_matrix_start,
-				       const HighsInt* new_matrix_index,
-				       const double* new_matrix_value) {
+                                       const HighsInt num_new_nz,
+                                       const HighsInt* new_matrix_start,
+                                       const HighsInt* new_matrix_index,
+                                       const double* new_matrix_value) {
   if (num_new_row < 0) return HighsStatus::kError;
   if (num_new_row == 0) return HighsStatus::kOk;
   HighsInt num_col = this->num_col_;
@@ -301,7 +302,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
     // If adding rows to an empty matrix then introduce the start for the
     // fictitious row 0
     if (num_row == 0) this->start_[0] = 0;
-    
+
     // Determine the current number of nonzeros and the new number of nonzeros
     HighsInt current_num_nz = this->start_[num_row];
     HighsInt new_num_nz = current_num_nz + num_new_nz;
@@ -311,12 +312,12 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
       // Nontrivial number of nonzeros being added, so use new_matrix_start
       assert(new_matrix_start != NULL);
       for (HighsInt iRow = 0; iRow < num_new_row; iRow++)
-	this->start_[num_row + iRow] = current_num_nz + new_matrix_start[iRow];
+        this->start_[num_row + iRow] = current_num_nz + new_matrix_start[iRow];
     } else {
-      // No nonzeros being added, so new_matrix_start may be null, but entries of
-      // zero are implied.
+      // No nonzeros being added, so new_matrix_start may be null, but entries
+      // of zero are implied.
       for (HighsInt iRow = 0; iRow < num_new_row; iRow++)
-	this->start_[num_row + iRow] = current_num_nz;
+        this->start_[num_row + iRow] = current_num_nz;
     }
     this->start_[num_row + num_new_row] = new_num_nz;
 
@@ -326,8 +327,8 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
       this->value_.resize(new_num_nz);
       // Copy in the new indices and values
       for (HighsInt el = 0; el < num_new_nz; el++) {
-	this->index_[current_num_nz + el] = new_matrix_index[el];
-	this->value_[current_num_nz + el] = new_matrix_value[el];
+        this->index_[current_num_nz + el] = new_matrix_index[el];
+        this->value_[current_num_nz + el] = new_matrix_value[el];
       }
     }
   } else {
@@ -335,7 +336,8 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
     assert(this->format_ == MatrixFormat::kColwise);
     vector<HighsInt> Alength;
     Alength.assign(num_col, 0);
-    for (HighsInt el = 0; el < num_new_nz; el++) Alength[new_matrix_index[el]]++;
+    for (HighsInt el = 0; el < num_new_nz; el++)
+      Alength[new_matrix_index[el]]++;
     // Determine the new number of nonzeros and resize the column-wise matrix
     // arrays
     HighsInt new_num_nz = current_num_nz + num_new_nz;
@@ -373,11 +375,12 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   // Update the number of rows
   this->num_row_ += num_new_row;
 
- return HighsStatus::kOk;
+  return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options, 
-					  const HighsIndexCollection& index_collection) {
+HighsStatus HighsSparseMatrix::deleteCols(
+    const HighsLogOptions& log_options,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::kError, return_status,
@@ -390,8 +393,8 @@ HighsStatus HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options,
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, this->num_col_ - 1,
-                         true))
+                         index_collection.set_num_entries_, 0,
+                         this->num_col_ - 1, true))
       return HighsStatus::kError;
   }
   if (from_k > to_k) return HighsStatus::kOk;
@@ -451,8 +454,9 @@ HighsStatus HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options,
   return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::deleteRows(const HighsLogOptions& log_options, 
-					  const HighsIndexCollection& index_collection) {
+HighsStatus HighsSparseMatrix::deleteRows(
+    const HighsLogOptions& log_options,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::kError, return_status,
@@ -465,8 +469,8 @@ HighsStatus HighsSparseMatrix::deleteRows(const HighsLogOptions& log_options,
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, this->num_row_ - 1,
-                         true))
+                         index_collection.set_num_entries_, 0,
+                         this->num_row_ - 1, true))
       return HighsStatus::kError;
   }
   if (from_k > to_k) return HighsStatus::kOk;
@@ -542,13 +546,14 @@ HighsStatus HighsSparseMatrix::deleteRows(const HighsLogOptions& log_options,
   return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::assessDimensions(const HighsLogOptions& log_options,
-						const std::string matrix_name) {
+HighsStatus HighsSparseMatrix::assessDimensions(
+    const HighsLogOptions& log_options, const std::string matrix_name) {
   HighsStatus return_status = HighsStatus::kOk;
   // Use error_found to track whether an error has been found in multiple tests
   bool error_found = false;
   // Identify main dimensions
-  assert(this->format_ == MatrixFormat::kColwise || this->format_ == MatrixFormat::kRowwise);
+  assert(this->format_ == MatrixFormat::kColwise ||
+         this->format_ == MatrixFormat::kRowwise);
   HighsInt num_vec;
   if (this->format_ == MatrixFormat::kColwise) {
     num_vec = this->num_col_;
@@ -632,12 +637,12 @@ HighsStatus HighsSparseMatrix::assessDimensions(const HighsLogOptions& log_optio
 }
 
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
-				      const std::string matrix_name, 
-				      const double small_matrix_value,
-				      const double large_matrix_value) {
-
+                                      const std::string matrix_name,
+                                      const double small_matrix_value,
+                                      const double large_matrix_value) {
   // Identify main dimensions
-  assert(this->format_ == MatrixFormat::kColwise || this->format_ == MatrixFormat::kRowwise);
+  assert(this->format_ == MatrixFormat::kColwise ||
+         this->format_ == MatrixFormat::kRowwise);
   if (this->assessDimensions(log_options, matrix_name) == HighsStatus::kError)
     return HighsStatus::kError;
   // Identify main dimensions
@@ -820,42 +825,86 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
   return return_status;
 }
 
-void HighsSparseMatrix::scaleCol(const HighsInt col,
-				 const double colScale) {
-  assert(col >=0);
+void HighsSparseMatrix::scaleCol(const HighsInt col, const double colScale) {
+  assert(col >= 0);
   assert(col < this->num_col_);
   assert(colScale);
-  assert(this->format_==MatrixFormat::kColwise ||
-	 this->format_==MatrixFormat::kRowwise);
+  assert(this->format_ == MatrixFormat::kColwise ||
+         this->format_ == MatrixFormat::kRowwise);
 
-  if (this->format_==MatrixFormat::kColwise) {
+  if (this->format_ == MatrixFormat::kColwise) {
     for (HighsInt iEl = this->start_[col]; iEl < this->start_[col + 1]; iEl++)
       this->value_[iEl] *= colScale;
   } else {
-    for (HighsInt row = 0; row < this->num_row_; row++) {
-      for (HighsInt iEl = this->start_[row]; iEl < this->start_[row + 1]; iEl++) {
-	if (this->index_[iEl] == col) this->value_[iEl] *= colScale;
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++) {
+        if (this->index_[iEl] == col) this->value_[iEl] *= colScale;
       }
     }
   }
 }
 
-void HighsSparseMatrix::scaleRow(const HighsInt row,
-				 const double rowScale) {
-  assert(row >=0);
+void HighsSparseMatrix::scaleRow(const HighsInt row, const double rowScale) {
+  assert(row >= 0);
   assert(row < this->num_row_);
   assert(rowScale);
-  assert(this->format_==MatrixFormat::kColwise ||
-	 this->format_==MatrixFormat::kRowwise);
+  assert(this->format_ == MatrixFormat::kColwise ||
+         this->format_ == MatrixFormat::kRowwise);
 
-  if (this->format_==MatrixFormat::kColwise) {
-    for (HighsInt col = 0; col < this->num_col_; col++) {
-      for (HighsInt iEl = this->start_[col]; iEl < this->start_[col + 1]; iEl++) {
-	if (this->index_[iEl] == row) this->value_[iEl] *= rowScale;
+  if (this->format_ == MatrixFormat::kColwise) {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++) {
+        if (this->index_[iEl] == row) this->value_[iEl] *= rowScale;
       }
     }
   } else {
     for (HighsInt iEl = this->start_[row]; iEl < this->start_[row + 1]; iEl++)
       this->value_[iEl] *= rowScale;
+  }
+}
+
+void HighsSparseMatrix::applyScale(const SimplexScale& scale) {
+  assert(this->format_ == MatrixFormat::kColwise ||
+         this->format_ == MatrixFormat::kRowwise);
+  if (this->format_ == MatrixFormat::kColwise) {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++) {
+        HighsInt iRow = this->index_[iEl];
+        this->value_[iEl] *= (scale.col[iCol] * scale.row[iRow]);
+      }
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++) {
+        HighsInt iCol = this->index_[iEl];
+        this->value_[iEl] *= (scale.col[iCol] * scale.row[iRow]);
+      }
+    }
+  }
+}
+
+void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
+  assert(this->format_ == MatrixFormat::kColwise ||
+         this->format_ == MatrixFormat::kRowwise);
+  if (this->format_ == MatrixFormat::kColwise) {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++) {
+        HighsInt iRow = this->index_[iEl];
+        this->value_[iEl] /= (scale.col[iCol] * scale.row[iRow]);
+      }
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++) {
+        HighsInt iCol = this->index_[iEl];
+        this->value_[iEl] /= (scale.col[iCol] * scale.row[iRow]);
+      }
+    }
   }
 }

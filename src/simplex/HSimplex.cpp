@@ -568,7 +568,8 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   }
   double alt_original_matrix_min_value = kHighsInf;
   double alt_original_matrix_max_value = 0;
-  lp.a_matrix_.range(alt_original_matrix_min_value, alt_original_matrix_max_value);
+  lp.a_matrix_.range(alt_original_matrix_min_value,
+                     alt_original_matrix_max_value);
   assert(alt_original_matrix_min_value == original_matrix_min_value);
   assert(alt_original_matrix_max_value == original_matrix_max_value);
   bool no_scaling =
@@ -610,6 +611,8 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
         rowLower[iRow] *= rowScale[iRow];
         rowUpper[iRow] *= rowScale[iRow];
       }
+      // Scale the a_matrix here for now
+      lp.a_matrix_.applyScale(scale);
     }
   }
   // Possibly scale the costs
@@ -1121,6 +1124,7 @@ void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
     lp.row_lower_[iRow] *= scale.row[iRow];
     lp.row_upper_[iRow] *= scale.row[iRow];
   }
+  lp.a_matrix_.applyScale(scale);
   //  scale.is_scaled = true;
 }
 
@@ -1142,5 +1146,6 @@ void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale,
     lp.row_lower_[iRow] /= scale.row[iRow];
     lp.row_upper_[iRow] /= scale.row[iRow];
   }
+  lp.a_matrix_.unapplyScale(scale);
   //  scale.is_scaled = false;
 }

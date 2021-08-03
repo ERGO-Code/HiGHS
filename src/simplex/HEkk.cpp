@@ -81,6 +81,7 @@ void HEkk::passScaledLp(const HighsLp& lp) {
 }
 
 HighsStatus HEkk::solve() {
+  assert(lp_.dimensionsAndMatrixOk("HEkk::solve"));
   initialiseAnalysis();
   // Set iteration_count_ = 0 and call initialiseControl(), just to
   // check that info-based density methods are identical
@@ -521,6 +522,7 @@ void HEkk::updateFactorMatrixPointers() {
 // Private methods
 
 HighsStatus HEkk::setup() {
+  assert(lp_.dimensionsAndMatrixOk("HEkk::setup"));
   HighsStatus return_status = HighsStatus::kOk;
   // Shouldn't have to check the incoming LP since this is an internal
   // call, but it may be an LP that's set up internally with errors

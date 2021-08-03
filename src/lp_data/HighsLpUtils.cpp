@@ -80,19 +80,21 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                    lp.a_start_, lp.a_index_, lp.a_value_,
                    options.small_matrix_value, options.large_matrix_value);
   HighsStatus alt_call_status =
-    lp.a_matrix_.assess(options.log_options, "LP", 
-			options.small_matrix_value, options.large_matrix_value);
+      lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
+                          options.large_matrix_value);
   assert(alt_call_status == call_status);
   return_status =
-    interpretCallStatus(call_status, return_status, "assessMatrix");
+      interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   HighsInt lp_num_nz = lp.a_start_[lp.num_col_];
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
   if ((HighsInt)lp.a_index_.size() > lp_num_nz) lp.a_index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_value_.size() > lp_num_nz) lp.a_value_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz) lp.a_matrix_.index_.resize(lp_num_nz);
-  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz) lp.a_matrix_.value_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz)
+    lp.a_matrix_.index_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz)
+    lp.a_matrix_.value_.resize(lp_num_nz);
 
   if (return_status == HighsStatus::kError)
     return_status = HighsStatus::kError;
@@ -986,8 +988,9 @@ HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
       deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
   if (call_status != HighsStatus::kOk) return call_status;
   call_status = deleteColsFromLpMatrix(log_options, lp, index_collection);
-  HighsStatus alt_call_status = lp.a_matrix_.deleteCols(log_options, index_collection);
-  assert(alt_call_status==call_status);
+  HighsStatus alt_call_status =
+      lp.a_matrix_.deleteCols(log_options, index_collection);
+  assert(alt_call_status == call_status);
   if (call_status != HighsStatus::kOk) return call_status;
   lp.num_col_ = new_num_col;
   return HighsStatus::kOk;
@@ -1133,8 +1136,9 @@ HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                                       "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::kError) return return_status;
   call_status = deleteRowsFromLpMatrix(log_options, lp, index_collection);
-  HighsStatus alt_call_status = lp.a_matrix_.deleteRows(log_options, index_collection);
-  assert(alt_call_status==call_status);
+  HighsStatus alt_call_status =
+      lp.a_matrix_.deleteRows(log_options, index_collection);
+  assert(alt_call_status == call_status);
   return_status =
       interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
   if (return_status == HighsStatus::kError) return return_status;

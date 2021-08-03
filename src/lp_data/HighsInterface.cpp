@@ -140,10 +140,11 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
         appendColsToLpMatrix(lp, XnumNewCol, local_num_new_nz, &local_Astart[0],
                              &local_Aindex[0], &local_Avalue[0]),
         return_status, "appendColsToLpMatrix");
-    alt_return_status = interpretCallStatus(lp.a_matrix_.addCols(XnumNewCol, local_num_new_nz, &local_Astart[0],
-								 &local_Aindex[0], &local_Avalue[0]),
-					    alt_return_status, "lp.a_matrix_.addCols");
-    assert(alt_return_status==return_status);
+    alt_return_status = interpretCallStatus(
+        lp.a_matrix_.addCols(XnumNewCol, local_num_new_nz, &local_Astart[0],
+                             &local_Aindex[0], &local_Avalue[0]),
+        alt_return_status, "lp.a_matrix_.addCols");
+    assert(alt_return_status == return_status);
     if (return_status == HighsStatus::kError) return return_status;
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
@@ -162,10 +163,12 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
                                &local_Astart[0], &local_Aindex[0],
                                &local_Avalue[0]),
           return_status, "appendColsToLpMatrix");
-      alt_return_status = interpretCallStatus(simplex_lp.a_matrix_.addCols(XnumNewCol, local_num_new_nz, &local_Astart[0],
-									   &local_Aindex[0], &local_Avalue[0]),
-					      alt_return_status, "simplex_lp.a_matrix_.addCols");
-      assert(alt_return_status==return_status);
+      alt_return_status = interpretCallStatus(
+          simplex_lp.a_matrix_.addCols(XnumNewCol, local_num_new_nz,
+                                       &local_Astart[0], &local_Aindex[0],
+                                       &local_Avalue[0]),
+          alt_return_status, "simplex_lp.a_matrix_.addCols");
+      assert(alt_return_status == return_status);
       if (return_status == HighsStatus::kError) return return_status;
       if (scaled_simplex_lp) {
         // Apply the column scaling to the costs and bounds
@@ -187,27 +190,28 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
       }
     }
   } else {
-    assert(lp.format_ == MatrixFormat::kNone || lp.format_ == MatrixFormat::kColwise);
+    assert(lp.format_ == MatrixFormat::kNone ||
+           lp.format_ == MatrixFormat::kColwise);
     // There are no nonzeros, so XAstart/XAindex/XAvalue may be null. Have to
     // set up starts for empty columns
     assert(XnumNewCol > 0);
     HighsStatus alt_return_status = return_status;
     return_status = interpretCallStatus(
-          appendColsToLpMatrix(lp, XnumNewCol, 0, NULL, NULL, NULL),
-					      alt_return_status, "appendColsToLpMatrix");
+        appendColsToLpMatrix(lp, XnumNewCol, 0, NULL, NULL, NULL),
+        alt_return_status, "appendColsToLpMatrix");
     alt_return_status = interpretCallStatus(
-          lp.a_matrix_.addCols(XnumNewCol,  0, NULL, NULL, NULL),
-					      alt_return_status, "lp.a_matrix_.addCols");
-    assert(alt_return_status==return_status);
+        lp.a_matrix_.addCols(XnumNewCol, 0, NULL, NULL, NULL),
+        alt_return_status, "lp.a_matrix_.addCols");
+    assert(alt_return_status == return_status);
     if (valid_simplex_lp) {
-    HighsStatus alt_return_status = return_status;
+      HighsStatus alt_return_status = return_status;
       return_status = interpretCallStatus(
           appendColsToLpMatrix(simplex_lp, XnumNewCol, 0, NULL, NULL, NULL),
-					      alt_return_status, "appendColsToLpMatrix");
-       alt_return_status = interpretCallStatus(
+          alt_return_status, "appendColsToLpMatrix");
+      alt_return_status = interpretCallStatus(
           simplex_lp.a_matrix_.addCols(XnumNewCol, 0, NULL, NULL, NULL),
-					      alt_return_status, "simplex_lp.a_matrix_.addCols");
-      assert(alt_return_status==return_status);
+          alt_return_status, "simplex_lp.a_matrix_.addCols");
+      assert(alt_return_status == return_status);
       // Should be extendSimplexLpRandomVectors here
     }
   }
@@ -230,7 +234,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   }
 
   assert(lp.dimensionsAndMatrixOk("addCols"));
-  if (valid_simplex_lp) 
+  if (valid_simplex_lp)
     assert(ekk_instance.lp_.dimensionsAndMatrixOk("addCols - simplex"));
   return return_status;
 }
@@ -349,11 +353,11 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
                              &local_ARstart[0], &local_ARindex[0],
                              &local_ARvalue[0]),
         return_status, "appendRowsToLpMatrix");
-    alt_return_status = interpretCallStatus(lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz,
-								 &local_ARstart[0], &local_ARindex[0],
-								 &local_ARvalue[0]),
-					    alt_return_status, "lp.a_matrix_.addRows");
-    assert(alt_return_status==return_status);
+    alt_return_status = interpretCallStatus(
+        lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz, &local_ARstart[0],
+                             &local_ARindex[0], &local_ARvalue[0]),
+        alt_return_status, "lp.a_matrix_.addRows");
+    assert(alt_return_status == return_status);
     if (return_status == HighsStatus::kError) return return_status;
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
@@ -374,11 +378,12 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
                                &local_ARstart[0], &local_ARindex[0],
                                &local_ARvalue[0]),
           return_status, "appendRowsToLpMatrix");
-       alt_return_status = interpretCallStatus(simplex_lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz,
-								   &local_ARstart[0], &local_ARindex[0],
-								   &local_ARvalue[0]),
-					       alt_return_status, "simplex_lp.a_matrix_.addRows");
-      assert(alt_return_status==return_status);
+      alt_return_status = interpretCallStatus(
+          simplex_lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz,
+                                       &local_ARstart[0], &local_ARindex[0],
+                                       &local_ARvalue[0]),
+          alt_return_status, "simplex_lp.a_matrix_.addRows");
+      assert(alt_return_status == return_status);
       if (return_status == HighsStatus::kError) return return_status;
       // Should be extendSimplexLpRandomVectors
       if (scaled_simplex_lp) {
@@ -397,35 +402,34 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     }
   } else if (lp.format_ == MatrixFormat::kNone ||
              lp.format_ == MatrixFormat::kRowwise) {
-    assert(1==0);
+    assert(1 == 0);
     // There are no nonzeros, so XARstart/XARindex/XARvalue may be null. Have to
     // set up starts for empty rows
     assert(XnumNewRow > 0);
     HighsStatus alt_return_status = return_status;
     return_status = interpretCallStatus(
-          appendRowsToLpMatrix(lp, XnumNewRow, 0, NULL, NULL, NULL),
-					      alt_return_status, "appendRowsToLpMatrix");
-     alt_return_status = interpretCallStatus(
-          lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL),
-					      alt_return_status, "lp.a_matrix_.addRows");
-    assert(alt_return_status==return_status);
+        appendRowsToLpMatrix(lp, XnumNewRow, 0, NULL, NULL, NULL),
+        alt_return_status, "appendRowsToLpMatrix");
+    alt_return_status = interpretCallStatus(
+        lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL),
+        alt_return_status, "lp.a_matrix_.addRows");
+    assert(alt_return_status == return_status);
     if (valid_simplex_lp) {
-    HighsStatus alt_return_status = return_status;
+      HighsStatus alt_return_status = return_status;
       return_status = interpretCallStatus(
           appendRowsToLpMatrix(simplex_lp, XnumNewRow, 0, NULL, NULL, NULL),
-					      alt_return_status, "appendRowsToLpMatrix");
-       alt_return_status = interpretCallStatus(
+          alt_return_status, "appendRowsToLpMatrix");
+      alt_return_status = interpretCallStatus(
           simplex_lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL),
-					      alt_return_status, "simplex_lp.a_matrix_.addRows");
-      assert(alt_return_status==return_status);
+          alt_return_status, "simplex_lp.a_matrix_.addRows");
+      assert(alt_return_status == return_status);
       // Should be extendSimplexLpRandomVectors here
     }
   } else {
     assert(lp.format_ == MatrixFormat::kColwise);
     // Need to increase the number of rows in the a_matrix
     lp.a_matrix_.num_row_ += XnumNewRow;
-    if (valid_simplex_lp)
-      simplex_lp.a_matrix_.num_row_ += XnumNewRow;
+    if (valid_simplex_lp) simplex_lp.a_matrix_.num_row_ += XnumNewRow;
   }
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasis(lp, basis, XnumNewRow);
@@ -445,7 +449,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     ekk_instance.initialiseSimplexLpRandomVectors();
   }
   assert(lp.dimensionsAndMatrixOk("addRows"));
-  if (valid_simplex_lp) 
+  if (valid_simplex_lp)
     assert(ekk_instance.lp_.dimensionsAndMatrixOk("addRows - simplex"));
   return return_status;
 }
@@ -517,7 +521,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     assert(new_col == lp.num_col_);
   }
   assert(lp.dimensionsAndMatrixOk("deleteCols"));
-  if (valid_simplex_lp) 
+  if (valid_simplex_lp)
     assert(ekk_instance.lp_.dimensionsAndMatrixOk("deleteCols - simplex"));
   return HighsStatus::kOk;
 }
@@ -1224,7 +1228,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   if (row < 0) return HighsStatus::kError;
   if (row >= lp.num_row_) return HighsStatus::kError;
   if (!scaleval) return HighsStatus::kError;
- 
+
   return_status = interpretCallStatus(
       applyScalingToLpRow(options.log_options, lp, row, scaleval),
       return_status, "applyScalingToLpRow");
