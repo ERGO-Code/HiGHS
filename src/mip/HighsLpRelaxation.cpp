@@ -915,7 +915,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           }
         }
 
-        maxNumFractional = std::max(fracints.size(), maxNumFractional);
+        maxNumFractional =
+            std::max((HighsInt)fracints.size(), maxNumFractional);
 
         if (domain && !domain->getChangedCols().empty()) {
           // printf("resolving due to fixings of substituted columns\n");

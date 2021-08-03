@@ -782,7 +782,7 @@ class HighsHashTable {
   using i32 = std::int32_t;
 
   using u64 = std::uint64_t;
-  using i64 = std::uint64_t;
+  using i64 = std::int64_t;
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
@@ -791,9 +791,9 @@ class HighsHashTable {
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
-  HighsUInt tableSizeMask;
-  HighsUInt numHashShift;
-  HighsUInt numElements = 0;
+  u64 tableSizeMask;
+  u64 numHashShift;
+  u64 numElements = 0;
 
   template <typename IterType>
   class HashTableIterator {
@@ -846,27 +846,27 @@ class HighsHashTable {
   using iterator = HashTableIterator<Entry>;
 
   HighsHashTable() { makeEmptyTable(128); }
-  HighsHashTable(HighsUInt minCapacity) {
-    HighsUInt initCapacity = HighsUInt{1} << (HighsUInt)std::ceil(std::log2(
-                                 std::max(128.0, 8 * minCapacity / 7.0)));
+  HighsHashTable(u64 minCapacity) {
+    u64 initCapacity = u64{1} << (u64)std::ceil(
+                           std::log2(std::max(128.0, 8 * minCapacity / 7.0)));
     makeEmptyTable(initCapacity);
   }
 
   iterator end() {
-    HighsUInt capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     return iterator{metadata.get() + capacity, metadata.get() + capacity,
                     entries.get() + capacity};
   };
 
   const_iterator end() const {
-    HighsUInt capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     return const_iterator{metadata.get() + capacity, metadata.get() + capacity,
                           entries.get() + capacity};
   };
 
   const_iterator begin() const {
     if (numElements == 0) return end();
-    HighsUInt capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     const_iterator iter{metadata.get(), metadata.get() + capacity,
                         entries.get() + capacity};
     if (!occupied(metadata[0])) ++iter;
@@ -876,7 +876,7 @@ class HighsHashTable {
 
   iterator begin() {
     if (numElements == 0) return end();
-    HighsUInt capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     iterator iter{metadata.get(), metadata.get() + capacity,
                   entries.get() + capacity};
     if (!occupied(metadata[0])) ++iter;
@@ -887,12 +887,12 @@ class HighsHashTable {
  private:
   u8 toMetadata(u64 hash) const { return (hash >> numHashShift) | 0x80u; }
 
-  static constexpr HighsUInt maxDistance() { return 127; }
+  static constexpr u64 maxDistance() { return 127; }
 
-  void makeEmptyTable(HighsUInt capacity) {
+  void makeEmptyTable(u64 capacity) {
     tableSizeMask = capacity - 1;
     numHashShift = 64 - HighsHashHelpers::log2i(capacity);
-    assert(capacity == (HighsUInt{1} << (64 - numHashShift)));
+    assert(capacity == (u64{1} << (64 - numHashShift)));
     numElements = 0;
 
     metadata = decltype(metadata)(new u8[capacity]{});
@@ -902,7 +902,7 @@ class HighsHashTable {
 
   bool occupied(u8 meta) const { return meta & 0x80; }
 
-  HighsUInt distanceFromIdealSlot(HighsUInt pos) const {
+  u64 distanceFromIdealSlot(u64 pos) const {
     // we store 7 bits of the hash in the metadata. Assuming a decent
     // hashfunction it is practically never happening that an item travels more
     // then 127 slots from its ideal position, therefore, we can compute the
@@ -924,27 +924,27 @@ class HighsHashTable {
   void growTable() {
     decltype(entries) oldEntries = std::move(entries);
     decltype(metadata) oldMetadata = std::move(metadata);
-    HighsUInt oldCapactiy = tableSizeMask + 1;
+    u64 oldCapactiy = tableSizeMask + 1;
 
     makeEmptyTable(2 * oldCapactiy);
 
-    for (HighsUInt i = 0; i != oldCapactiy; ++i)
+    for (u64 i = 0; i != oldCapactiy; ++i)
       if (occupied(oldMetadata[i])) insert(std::move(oldEntries.get()[i]));
   }
 
   void shrinkTable() {
     decltype(entries) oldEntries = std::move(entries);
     decltype(metadata) oldMetadata = std::move(metadata);
-    HighsUInt oldCapactiy = tableSizeMask + 1;
+    u64 oldCapactiy = tableSizeMask + 1;
 
     makeEmptyTable(oldCapactiy / 2);
 
-    for (HighsUInt i = 0; i != oldCapactiy; ++i)
+    for (u64 i = 0; i != oldCapactiy; ++i)
       if (occupied(oldMetadata[i])) insert(std::move(oldEntries.get()[i]));
   }
 
-  bool findPosition(const KeyType& key, u8& meta, HighsUInt& startPos,
-                    HighsUInt& maxPos, HighsUInt& pos) const {
+  bool findPosition(const KeyType& key, u8& meta, u64& startPos, u64& maxPos,
+                    u64& pos) const {
     u64 hash = HighsHashHelpers::hash(key);
     startPos = hash >> numHashShift;
     maxPos = (startPos + maxDistance()) & tableSizeMask;
@@ -958,7 +958,7 @@ class HighsHashTable {
           HighsHashHelpers::equal(key, entryArray[pos].key()))
         return true;
 
-      HighsUInt currentDistance = (pos - startPos) & tableSizeMask;
+      u64 currentDistance = (pos - startPos) & tableSizeMask;
       if (currentDistance > distanceFromIdealSlot(pos)) return false;
 
       pos = (pos + 1) & tableSizeMask;
@@ -971,7 +971,7 @@ class HighsHashTable {
   void clear() { makeEmptyTable(128); }
 
   const ValueType* find(const KeyType& key) const {
-    HighsUInt pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(key, meta, startPos, maxPos, pos))
       return &(entries.get()[pos].value());
@@ -980,7 +980,7 @@ class HighsHashTable {
   }
 
   ValueType* find(const KeyType& key) {
-    HighsUInt pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(key, meta, startPos, maxPos, pos))
       return &(entries.get()[pos].value());
@@ -990,7 +990,7 @@ class HighsHashTable {
 
   ValueType& operator[](const KeyType& key) {
     Entry* entryArray = entries.get();
-    HighsUInt pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(key, meta, startPos, maxPos, pos))
       return entryArray[pos].value();
@@ -1012,8 +1012,8 @@ class HighsHashTable {
         return insertLocation;
       }
 
-      HighsUInt currentDistance = (pos - startPos) & tableSizeMask;
-      HighsUInt distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
+      u64 currentDistance = (pos - startPos) & tableSizeMask;
+      u64 distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
       if (currentDistance > distanceOfCurrentOccupant) {
         // steal the position
         swap(entry, entryArray[pos]);
@@ -1034,7 +1034,7 @@ class HighsHashTable {
   bool insert(Args&&... args) {
     Entry entry(std::forward<Args>(args)...);
 
-    HighsUInt pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(entry.key(), meta, startPos, maxPos, pos)) return false;
 
@@ -1054,8 +1054,8 @@ class HighsHashTable {
         return true;
       }
 
-      HighsUInt currentDistance = (pos - startPos) & tableSizeMask;
-      HighsUInt distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
+      u64 currentDistance = (pos - startPos) & tableSizeMask;
+      u64 distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
       if (currentDistance > distanceOfCurrentOccupant) {
         // steal the position
         swap(entry, entryArray[pos]);
@@ -1073,7 +1073,7 @@ class HighsHashTable {
   }
 
   bool erase(const KeyType& key) {
-    HighsUInt pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (!findPosition(key, meta, startPos, maxPos, pos)) return false;
     // delete element at position pos
@@ -1084,7 +1084,7 @@ class HighsHashTable {
     // retain at least a quarter of slots occupied, otherwise shrink the table
     // if its not at its minimum size already
     --numElements;
-    HighsUInt capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     if (capacity != 128 && numElements < capacity / 4) {
       shrinkTable();
       return true;
@@ -1092,10 +1092,10 @@ class HighsHashTable {
 
     // shift elements after pos backwards
     while (true) {
-      HighsUInt shift = (pos + 1) & tableSizeMask;
+      u64 shift = (pos + 1) & tableSizeMask;
       if (!occupied(metadata[shift])) return true;
 
-      HighsUInt dist = distanceFromIdealSlot(shift);
+      u64 dist = distanceFromIdealSlot(shift);
       if (dist == 0) return true;
 
       entryArray[pos] = std::move(entryArray[shift]);
@@ -1105,15 +1105,15 @@ class HighsHashTable {
     }
   }
 
-  HighsInt size() const { return numElements; }
+  i64 size() const { return numElements; }
 
   HighsHashTable(HighsHashTable<K, V>&&) = default;
   HighsHashTable<K, V>& operator=(HighsHashTable<K, V>&&) = default;
 
   ~HighsHashTable() {
     if (metadata) {
-      HighsUInt capacity = tableSizeMask + 1;
-      for (HighsUInt i = 0; i < capacity; ++i) {
+      u64 capacity = tableSizeMask + 1;
+      for (u64 i = 0; i < capacity; ++i) {
         if (occupied(metadata[i])) entries.get()[i].~Entry();
       }
     }
