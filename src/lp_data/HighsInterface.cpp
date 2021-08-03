@@ -183,6 +183,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
       }
     }
   } else {
+    assert(lp.format_ == MatrixFormat::kNone || lp.format_ == MatrixFormat::kColwise);
     // There are no nonzeros, so XAstart/XAindex/XAvalue may be null. Have to
     // set up starts for empty columns
     assert(XnumNewCol > 0);
@@ -378,15 +379,25 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     }
   } else if (lp.format_ == MatrixFormat::kNone ||
              lp.format_ == MatrixFormat::kRowwise) {
+    assert(1==0);
     // There are no nonzeros, so XARstart/XARindex/XARvalue may be null. Have to
     // set up starts for empty rows
     assert(XnumNewRow > 0);
-    appendRowsToLpMatrix(lp, XnumNewRow, 0, NULL, NULL, NULL);
+    return_status = appendRowsToLpMatrix(lp, XnumNewRow, 0, NULL, NULL, NULL);
+    HighsStatus alt_return_status = lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL);
+    assert(alt_return_status==return_status);
     if (valid_simplex_lp) {
       return_status = appendRowsToLpMatrix(simplex_lp, XnumNewRow, 0, NULL, NULL, NULL);
       HighsStatus alt_return_status = simplex_lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL);
+      assert(alt_return_status==return_status);
       // Should be extendSimplexLpRandomVectors here
     }
+  } else {
+    assert(lp.format_ == MatrixFormat::kColwise);
+    // Need to increase the number of rows in the a_matrix
+    lp.a_matrix_.num_row_ += XnumNewRow;
+    if (valid_simplex_lp)
+      simplex_lp.a_matrix_.num_row_ += XnumNewRow;
   }
   // Update the basis correponding to new basic rows
   if (valid_basis) appendBasicRowsToBasis(lp, basis, XnumNewRow);

@@ -94,11 +94,44 @@ bool HighsLp::dimensionsOk(std::string message) const {
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
-  bool legal_matrix_start_size = matrix_start_size >= num_col + 1;
   ok = legal_col_cost_size && ok;
   ok = legal_col_lower_size && ok;
   ok = legal_col_upper_size && ok;
-  ok = legal_matrix_start_size && ok;
+
+  bool legal_matrix_start_size = false;
+  // Don't expect the matrix_start_size or format to be legal if there
+  // are no columns or rows
+  if (num_col > 0 || num_row > 0) {
+    HighsInt matrix_format = (HighsInt)this->format_;
+    bool legal_matrix_format = matrix_format > 0;
+    ok = legal_matrix_format && ok;
+    if (this->format_ == MatrixFormat::kColwise) {
+      legal_matrix_start_size = matrix_start_size >= num_col + 1;
+    } else {
+      assert(this->format_ == MatrixFormat::kRowwise);
+      legal_matrix_start_size = matrix_start_size >= num_row + 1;
+    }
+    ok = legal_matrix_start_size && ok;
+  }
+  if (matrix_start_size > 0) {
+    // Check whether the first start is zero
+    ok = !this->a_start_[0] && ok;
+  }
+  HighsInt num_nz = 0;
+  if (legal_matrix_start_size) num_nz = this->a_start_[num_col];
+  bool legal_num_nz = num_nz >= 0;
+  if (!legal_num_nz) {
+    ok = false;
+  } else {
+    HighsInt matrix_index_size = this->a_index_.size();
+    HighsInt matrix_value_size = this->a_value_.size();
+    bool legal_matrix_index_size = matrix_index_size >= num_nz;
+    bool legal_matrix_value_size = matrix_value_size >= num_nz;
+
+    ok = legal_matrix_index_size && ok;
+    ok = legal_matrix_value_size && ok;
+  }
+
 
   HighsInt row_lower_size = this->row_lower_.size();
   HighsInt row_upper_size = this->row_upper_.size();
@@ -115,22 +148,27 @@ bool HighsLp::dimensionsOk(std::string message) const {
   HighsInt a_matrix_start_size = this->a_matrix_.start_.size();
   bool legal_a_matrix_start_size = false;
   // Don't expect the matrix_start_size or format to be legal if there
-  // are no columns
-  if (num_col > 0) {
-    legal_a_matrix_start_size = a_matrix_start_size >= num_col + 1;
-    ok = legal_a_matrix_start_size && ok;
+  // are no columns or rows
+  if (num_col > 0 || num_row > 0) {
     HighsInt a_matrix_format = (HighsInt)this->a_matrix_.format_;
     bool legal_a_matrix_format = a_matrix_format > 0;
     ok = legal_a_matrix_format && ok;
+    if (this->a_matrix_.format_ == MatrixFormat::kColwise) {
+      legal_a_matrix_start_size = a_matrix_start_size >= num_col + 1;
+    } else {
+      assert(this->a_matrix_.format_ == MatrixFormat::kRowwise);
+      legal_a_matrix_start_size = a_matrix_start_size >= num_row + 1;
+    }
+    ok = legal_a_matrix_start_size && ok;
   }
   if (a_matrix_start_size > 0) {
     // Check whether the first start is zero
     ok = !this->a_matrix_.start_[0] && ok;
   }
-  HighsInt num_nz = 0;
-  if (legal_matrix_start_size) num_nz = this->a_matrix_.start_[num_col];
-  bool legal_num_nz = num_nz >= 0;
-  if (!legal_num_nz) {
+  HighsInt a_matrix_num_nz = 0;
+  if (legal_matrix_start_size) a_matrix_num_nz = this->a_matrix_.start_[num_col];
+  bool legal_a_matrix_num_nz = a_matrix_num_nz >= 0;
+  if (!legal_a_matrix_num_nz) {
     ok = false;
   } else {
     HighsInt a_matrix_index_size = this->a_matrix_.index_.size();
