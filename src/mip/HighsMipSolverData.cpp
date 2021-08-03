@@ -433,16 +433,15 @@ void HighsMipSolverData::runSetup() {
                      " full orbitope(s) acting on %" HIGHSINT_FORMAT
                      " columns\n",
                      mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                     symmetries.numPerms, (HighsInt)symmetries.orbitopes.size(),
-                     (HighsInt)symmetries.columnToOrbitope.size());
+                     symmetries.numPerms, symmetries.orbitopes.size(),
+                     symmetries.columnToOrbitope.size());
       } else {
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                     "(%4.1fs) Found %" HIGHSINT_FORMAT
-                     " full orbitope(s) acting on %" HIGHSINT_FORMAT
-                     " columns\n",
-                     mipsolver.timer_.read(mipsolver.timer_.solve_clock),
-                     (HighsInt)symmetries.orbitopes.size(),
-                     (HighsInt)symmetries.columnToOrbitope.size());
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+            "(%4.1fs) Found %" HIGHSINT_FORMAT
+            " full orbitope(s) acting on %" HIGHSINT_FORMAT " columns\n",
+            mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+            symmetries.orbitopes.size(), symmetries.columnToOrbitope.size());
       }
       for (HighsOrbitopeMatrix& orbitope : symmetries.orbitopes)
         orbitope.determineOrbitopeType(cliquetable, domain);

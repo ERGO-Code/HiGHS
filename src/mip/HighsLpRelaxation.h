@@ -78,7 +78,7 @@ class HighsLpRelaxation {
   double avgSolveIters;
   int64_t numSolved;
   size_t epochs;
-  size_t maxNumFractional;
+  HighsInt maxNumFractional;
   Status status;
 
   void storeDualInfProof();
