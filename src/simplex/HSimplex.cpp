@@ -566,6 +566,11 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
     original_matrix_min_value = min(original_matrix_min_value, value);
     original_matrix_max_value = max(original_matrix_max_value, value);
   }
+  double alt_original_matrix_min_value = kHighsInf;
+  double alt_original_matrix_max_value = 0;
+  lp.a_matrix_.range(alt_original_matrix_min_value, alt_original_matrix_max_value);
+  assert(alt_original_matrix_min_value == original_matrix_min_value);
+  assert(alt_original_matrix_max_value == original_matrix_max_value);
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);

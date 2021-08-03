@@ -99,6 +99,7 @@ set(sources
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
+    lp_data/HighsSparseMatrix.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
@@ -203,6 +204,7 @@ set(headers
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
+    lp_data/HighsSparseMatrix.h
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h
@@ -521,6 +523,7 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
+    lp_data/HighsSparseMatrix.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
@@ -638,6 +641,7 @@ set(headers_fast_build_
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
+    lp_data/HighsSparseMatrix.h
     lp_data/HighsStatus.h
     mip/HighsCliqueTable.h
     mip/HighsCutGeneration.h

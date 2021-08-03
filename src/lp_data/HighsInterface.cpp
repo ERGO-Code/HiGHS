@@ -139,6 +139,9 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
         appendColsToLpMatrix(lp, XnumNewCol, local_num_new_nz, &local_Astart[0],
                              &local_Aindex[0], &local_Avalue[0]),
         return_status, "appendColsToLpMatrix");
+    HighsStatus alt_return_status = lp.a_matrix_.addCols(XnumNewCol, local_num_new_nz, &local_Astart[0],
+							 &local_Aindex[0], &local_Avalue[0]);
+    assert(alt_return_status==return_status);
     if (return_status == HighsStatus::kError) return return_status;
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
@@ -181,6 +184,8 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     // set up starts for empty columns
     assert(XnumNewCol > 0);
     appendColsToLpMatrix(lp, XnumNewCol, 0, NULL, NULL, NULL);
+    HighsStatus alt_return_status = lp.a_matrix_.addCols(XnumNewCol,  0, NULL, NULL, NULL);
+    assert(alt_return_status==return_status);
     if (valid_simplex_lp) {
       appendColsToLpMatrix(simplex_lp, XnumNewCol, 0, NULL, NULL, NULL);
       // Should be extendSimplexLpRandomVectors here
@@ -203,6 +208,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     simplex_lp.num_col_ += XnumNewCol;
     ekk_instance.initialiseSimplexLpRandomVectors();
   }
+    assert(lp.dimensionsAndMatrixOk("addCols"));
 
   return return_status;
 }

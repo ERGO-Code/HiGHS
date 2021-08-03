@@ -24,7 +24,6 @@ void computestartingpoint(Runtime& runtime, CrashSolution*& result) {
   lp.num_col_ = runtime.instance.num_var;
   lp.num_row_ = runtime.instance.num_con;
   lp.format_ = MatrixFormat::kColwise;
-
   highs.passModel(lp);
   highs.run();
 

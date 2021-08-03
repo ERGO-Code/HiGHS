@@ -51,12 +51,7 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   equal = this->a_value_ == lp.a_value_ && equal;
   equal = this->format_ == lp.format_ && equal;
 
-  equal = this->a_matrix_.format == lp.a_matrix_.format && equal;
-  equal = this->a_matrix_.num_col == lp.a_matrix_.num_col && equal;
-  equal = this->a_matrix_.num_row == lp.a_matrix_.num_row && equal;
-  equal = this->a_matrix_.start == lp.a_matrix_.start && equal;
-  equal = this->a_matrix_.index == lp.a_matrix_.index && equal;
-  equal = this->a_matrix_.value == lp.a_matrix_.value && equal;
+  equal = this->a_matrix_== lp.a_matrix_;
 
   equal = this->scale_.strategy == lp.scale_.strategy && equal;
   equal = this->scale_.has_scaling == lp.scale_.has_scaling && equal;
@@ -76,8 +71,8 @@ double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   return objective_function_value;
 }
 
-bool HighsLp::dimensionsAndaMatrixOk(std::string message) const {
-  return dimensionsOk(message) && aMatrixOk(message);
+bool HighsLp::dimensionsAndMatrixOk(std::string message) const {
+  return dimensionsOk(message) && MatrixOk(message);
 }
 
 bool HighsLp::dimensionsOk(std::string message) const {
@@ -112,34 +107,34 @@ bool HighsLp::dimensionsOk(std::string message) const {
   ok = legal_row_lower_size && ok;
   ok = legal_row_upper_size && ok;
 
-  bool legal_a_matrix_num_col = this->a_matrix_.num_col == num_col;
-  bool legal_a_matrix_num_row = this->a_matrix_.num_row == num_row;
+  bool legal_a_matrix_num_col = this->a_matrix_.num_col_ == num_col;
+  bool legal_a_matrix_num_row = this->a_matrix_.num_row_ == num_row;
   ok = legal_a_matrix_num_col && ok;
   ok = legal_a_matrix_num_row && ok;
 
-  HighsInt a_matrix_start_size = this->a_matrix_.start.size();
+  HighsInt a_matrix_start_size = this->a_matrix_.start_.size();
   bool legal_a_matrix_start_size = false;
   // Don't expect the matrix_start_size or format to be legal if there
   // are no columns
   if (num_col > 0) {
     legal_a_matrix_start_size = a_matrix_start_size >= num_col + 1;
     ok = legal_a_matrix_start_size && ok;
-    HighsInt a_matrix_format = (HighsInt)this->a_matrix_.format;
+    HighsInt a_matrix_format = (HighsInt)this->a_matrix_.format_;
     bool legal_a_matrix_format = a_matrix_format > 0;
     ok = legal_a_matrix_format && ok;
   }
   if (a_matrix_start_size > 0) {
     // Check whether the first start is zero
-    ok = !this->a_matrix_.start[0] && ok;
+    ok = !this->a_matrix_.start_[0] && ok;
   }
   HighsInt num_nz = 0;
-  if (legal_matrix_start_size) num_nz = this->a_matrix_.start[num_col];
+  if (legal_matrix_start_size) num_nz = this->a_matrix_.start_[num_col];
   bool legal_num_nz = num_nz >= 0;
   if (!legal_num_nz) {
     ok = false;
   } else {
-    HighsInt a_matrix_index_size = this->a_matrix_.index.size();
-    HighsInt a_matrix_value_size = this->a_matrix_.value.size();
+    HighsInt a_matrix_index_size = this->a_matrix_.index_.size();
+    HighsInt a_matrix_value_size = this->a_matrix_.value_.size();
     bool legal_a_matrix_index_size = a_matrix_index_size >= num_nz;
     bool legal_a_matrix_value_size = a_matrix_value_size >= num_nz;
 
@@ -169,18 +164,27 @@ bool HighsLp::dimensionsOk(std::string message) const {
   return ok;
 }
 
-bool HighsLp::aMatrixOk(std::string message) const {
+bool HighsLp::MatrixOk(std::string message) const {
   bool ok = true;
-  ok = this->a_matrix_.format == this->format_ && ok;
-  ok = this->a_matrix_.num_col == this->num_col_ && ok;
-  ok = this->a_matrix_.num_row == this->num_row_ && ok;
-  ok = this->a_matrix_.start == this->a_start_ && ok;
-  ok = this->a_matrix_.index == this->a_index_ && ok;
-  ok = this->a_matrix_.value == this->a_value_ && ok;
+  ok = this->a_matrix_.format_ == this->format_ && ok;
+  ok = this->a_matrix_.num_col_ == this->num_col_ && ok;
+  ok = this->a_matrix_.num_row_ == this->num_row_ && ok;
+  ok = this->a_matrix_.start_ == this->a_start_ && ok;
+  ok = this->a_matrix_.index_ == this->a_index_ && ok;
+  ok = this->a_matrix_.value_ == this->a_value_ && ok;
   if (!ok) {
-    printf("HighsLp::aMatrixOk (%s) not OK\n", message.c_str());
+    printf("HighsLp::MatrixOk (%s) not OK\n", message.c_str());
   }
   return ok;
+}
+
+void HighsLp::MatrixCopy() {
+  this->a_matrix_.num_col_ = this->num_col_;
+  this->a_matrix_.num_row_ = this->num_row_;
+  this->a_matrix_.format_ = this->format_;
+  this->a_matrix_.start_ = this->a_start_;
+  this->a_matrix_.index_ = this->a_index_;
+  this->a_matrix_.value_ = this->a_value_;
 }
 
 bool HighsLp::equalScale(std::string message, const SimplexScale& scale) const {
@@ -206,9 +210,7 @@ void HighsLp::clear() {
   this->row_lower_.clear();
   this->row_upper_.clear();
 
-  this->a_matrix_.start.clear();
-  this->a_matrix_.index.clear();
-  this->a_matrix_.value.clear();
+  this->a_matrix_.clear();
 
   this->sense_ = ObjSense::kMinimize;
   this->offset_ = 0;
