@@ -79,14 +79,20 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
       assessMatrix(options.log_options, "LP", lp.num_row_, lp.num_col_,
                    lp.a_start_, lp.a_index_, lp.a_value_,
                    options.small_matrix_value, options.large_matrix_value);
+  HighsStatus alt_call_status =
+    lp.a_matrix_.assess(options.log_options, "LP", 
+			options.small_matrix_value, options.large_matrix_value);
+  assert(alt_call_status == call_status);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrix");
+    interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   HighsInt lp_num_nz = lp.a_start_[lp.num_col_];
   // If entries have been removed from the matrix, resize the index
   // and value vectors to prevent bug in presolve
   if ((HighsInt)lp.a_index_.size() > lp_num_nz) lp.a_index_.resize(lp_num_nz);
   if ((HighsInt)lp.a_value_.size() > lp_num_nz) lp.a_value_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.index_.size() > lp_num_nz) lp.a_matrix_.index_.resize(lp_num_nz);
+  if ((HighsInt)lp.a_matrix_.value_.size() > lp_num_nz) lp.a_matrix_.value_.resize(lp_num_nz);
 
   if (return_status == HighsStatus::kError)
     return_status = HighsStatus::kError;

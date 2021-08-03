@@ -262,6 +262,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
+  assert(lp.dimensionsAndMatrixOk("Highs::passModel - after assessLp"));
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
@@ -2245,6 +2246,7 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
   if (!model_index_ok) return HighsStatus::kError;
 
   HighsModelObject& model = hmos_[model_index];
+  assert(model_.lp_.dimensionsAndMatrixOk("Highs::callSolveLp"));
   // Check that the model isn't row-wise
   assert(model_.lp_.format_ != MatrixFormat::kRowwise);
 
