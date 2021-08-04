@@ -15,6 +15,7 @@
  */
 #include "lp_data/HighsSparseMatrix.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 
