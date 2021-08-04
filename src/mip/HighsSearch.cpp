@@ -367,6 +367,121 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
     double upval = std::ceil(fracval);
     double downval = std::floor(fracval);
 
+    auto analyzeSolution = [&](double objdelta,
+                               const std::vector<double>& sol) {
+      HighsInt numChangedCols = localdom.getChangedCols().size();
+      HighsInt domchgStackSize = localdom.getDomainChangeStack().size();
+      const auto& domchgstack = localdom.getDomainChangeStack();
+
+      for (HighsInt k = 0; k != numfrac; ++k) {
+        if (fracints[k].first == col) continue;
+        double otherfracval = fracints[k].second;
+        double otherdownval = std::floor(fracints[k].second);
+        double otherupval = std::ceil(fracints[k].second);
+        if (sol[fracints[k].first] <=
+            otherdownval + mipsolver.mipdata_->feastol) {
+          if (localdom.col_upper_[fracints[k].first] >
+              otherdownval + mipsolver.mipdata_->feastol) {
+            localdom.changeBound(HighsBoundType::kUpper, fracints[k].first,
+                                 otherdownval);
+            if (localdom.infeasible()) {
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              localdom.backtrack();
+              localdom.clearChangedCols(numChangedCols);
+              continue;
+            }
+            localdom.propagate();
+            if (localdom.infeasible()) {
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              localdom.backtrack();
+              localdom.clearChangedCols(numChangedCols);
+              continue;
+            }
+
+            HighsInt newStackSize = localdom.getDomainChangeStack().size();
+
+            bool solutionValid = true;
+            for (HighsInt j = domchgStackSize + 1; j < newStackSize; ++j) {
+              if (domchgstack[j].boundtype == HighsBoundType::kLower) {
+                if (domchgstack[j].boundval >
+                    sol[domchgstack[j].column] + mipsolver.mipdata_->feastol) {
+                  solutionValid = false;
+                  break;
+                }
+              } else {
+                if (domchgstack[j].boundval <
+                    sol[domchgstack[j].column] - mipsolver.mipdata_->feastol) {
+                  solutionValid = false;
+                  break;
+                }
+              }
+            }
+
+            localdom.backtrack();
+            localdom.clearChangedCols(numChangedCols);
+            if (!solutionValid) continue;
+          }
+
+          if (objdelta <= mipsolver.mipdata_->feastol)
+            pseudocost.addObservation(fracints[k].first,
+                                      otherdownval - otherfracval, objdelta);
+
+          downscore[k] = std::min(downscore[k], objdelta);
+        } else if (sol[fracints[k].first] >=
+                   otherupval - mipsolver.mipdata_->feastol) {
+          if (localdom.col_lower_[fracints[k].first] <
+              otherupval - mipsolver.mipdata_->feastol) {
+            localdom.changeBound(HighsBoundType::kLower, fracints[k].first,
+                                 otherupval);
+
+            if (localdom.infeasible()) {
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              localdom.backtrack();
+              localdom.clearChangedCols(numChangedCols);
+              continue;
+            }
+            localdom.propagate();
+            if (localdom.infeasible()) {
+              localdom.conflictAnalysis(mipsolver.mipdata_->conflictPool);
+              localdom.backtrack();
+              localdom.clearChangedCols(numChangedCols);
+              continue;
+            }
+
+            HighsInt newStackSize = localdom.getDomainChangeStack().size();
+
+            bool solutionValid = true;
+            for (HighsInt j = domchgStackSize + 1; j < newStackSize; ++j) {
+              if (domchgstack[j].boundtype == HighsBoundType::kLower) {
+                if (domchgstack[j].boundval >
+                    sol[domchgstack[j].column] + mipsolver.mipdata_->feastol) {
+                  solutionValid = false;
+                  break;
+                }
+              } else {
+                if (domchgstack[j].boundval <
+                    sol[domchgstack[j].column] - mipsolver.mipdata_->feastol) {
+                  solutionValid = false;
+                  break;
+                }
+              }
+            }
+
+            localdom.backtrack();
+            localdom.clearChangedCols(numChangedCols);
+
+            if (!solutionValid) continue;
+          }
+
+          if (objdelta <= mipsolver.mipdata_->feastol)
+            pseudocost.addObservation(fracints[k].first,
+                                      otherupval - otherfracval, objdelta);
+
+          upscore[k] = std::min(upscore[k], objdelta);
+        }
+      }
+    };
+
     if (!downscorereliable[candidate]) {
       // evaluate down branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
@@ -427,32 +542,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         markBranchingVarDownReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
-
-        for (HighsInt k = 0; k != numfrac; ++k) {
-          if (fracints[k].first == col) continue;
-          double otherfracval = fracints[k].second;
-          double otherdownval = std::floor(fracints[k].second);
-          double otherupval = std::ceil(fracints[k].second);
-          if (sol[fracints[k].first] <=
-              otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta <= mipsolver.mipdata_->feastol &&
-                localdom.col_upper_[fracints[k].first] <=
-                    otherdownval + mipsolver.mipdata_->feastol)
-              pseudocost.addObservation(fracints[k].first,
-                                        otherdownval - otherfracval, objdelta);
-
-            downscore[k] = std::min(downscore[k], objdelta);
-          } else if (sol[fracints[k].first] >=
-                     otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta <= mipsolver.mipdata_->feastol &&
-                localdom.col_lower_[fracints[k].first] >=
-                    otherupval - mipsolver.mipdata_->feastol)
-              pseudocost.addObservation(fracints[k].first,
-                                        otherupval - otherfracval, objdelta);
-
-            upscore[k] = std::min(upscore[k], objdelta);
-          }
-        }
+        analyzeSolution(objdelta, sol);
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
           double cutoffbnd = getCutoffBound();
@@ -588,33 +678,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         markBranchingVarUpReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
-
-        for (HighsInt k = 0; k != numfrac; ++k) {
-          if (fracints[k].first == col) continue;
-          double otherfracval = fracints[k].second;
-          double otherdownval = std::floor(fracints[k].second);
-          double otherupval = std::ceil(fracints[k].second);
-          if (sol[fracints[k].first] <=
-              otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta <= mipsolver.mipdata_->feastol &&
-                localdom.col_upper_[fracints[k].first] <=
-                    otherdownval + mipsolver.mipdata_->feastol)
-              pseudocost.addObservation(fracints[k].first,
-                                        otherdownval - otherfracval, objdelta);
-
-            downscore[k] = std::min(downscore[k], objdelta);
-
-          } else if (sol[fracints[k].first] >=
-                     otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta <= mipsolver.mipdata_->feastol &&
-                localdom.col_lower_[fracints[k].first] >=
-                    otherupval - mipsolver.mipdata_->feastol)
-              pseudocost.addObservation(fracints[k].first,
-                                        otherupval - otherfracval, objdelta);
-
-            upscore[k] = std::min(upscore[k], objdelta);
-          }
-        }
+        analyzeSolution(objdelta, sol);
 
         if (lp->unscaledPrimalFeasible(status) && integerfeasible) {
           double cutoffbnd = getCutoffBound();
