@@ -299,9 +299,6 @@ if (IPX_ON)
     set(sources ${sources} ipm/IpxWrapper.cpp)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
-    if(HIGHSINT64)
-    target_compile_definitions(libbasiclu PRIVATE -DHIGHSINT64)
-    endif()
     target_link_libraries(libipx libbasiclu)
 else ()
     set(headers ${headers} ipm/IpxWrapperEmpty.h)
@@ -697,6 +694,7 @@ set(headers_fast_build_
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
+    util/HighsDisjointSets.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h

@@ -25,48 +25,6 @@
  */
 class HighsRandom {
  private:
-  // integer log2 algorithm without floating point arithmetic. It uses an
-  // unrolled loop and requires few instructions that can be well optimized.
-
-  int log2i(uint64_t n) {
-    int x = 0;
-
-    auto log2Iteration = [&](int p) {
-      if (n >= uint64_t{1} << p) {
-        x += p;
-        n >>= p;
-      }
-    };
-
-    log2Iteration(32);
-    log2Iteration(16);
-    log2Iteration(8);
-    log2Iteration(4);
-    log2Iteration(2);
-    log2Iteration(1);
-
-    return x;
-  }
-
-  int log2i(uint32_t n) {
-    int x = 0;
-
-    auto log2Iteration = [&](int p) {
-      if (n >= 1u << p) {
-        x += p;
-        n >>= p;
-      }
-    };
-
-    log2Iteration(16);
-    log2Iteration(8);
-    log2Iteration(4);
-    log2Iteration(2);
-    log2Iteration(1);
-
-    return x;
-  }
-
   uint32_t drawUniform(uint32_t sup, int nbits) {
     // draw uniformly in interval [0,sup) where nbits is the maximal number of
     // bits the results can have we draw random numbers with nbits many bits
@@ -208,7 +166,7 @@ class HighsRandom {
   HighsInt integer(HighsInt sup) {  // let overload resolution select the 32bit
                                     // or the 64bit version
     if (sup <= 1) return 0;
-    int nbits = log2i(HighsUInt(sup - 1)) + 1;
+    int nbits = HighsHashHelpers::log2i(HighsUInt(sup - 1)) + 1;
     return drawUniform(HighsUInt(sup), nbits);
   }
 

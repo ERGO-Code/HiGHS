@@ -1711,7 +1711,7 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "correctDual: Missed %d cost shifts\n", num_shift_skipped);
     // todo@Julian assert fails quickly on miplib2017 models momentum1, arki001,
-    // glass4
+    // glass4, and milo-v12-6-r2-40-1
     assert(!num_shift_skipped);
     return false;
   }

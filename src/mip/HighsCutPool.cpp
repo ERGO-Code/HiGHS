@@ -23,17 +23,16 @@
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
-static uint32_t support_hash(const HighsInt* Rindex, const double* Rvalue,
-                             double maxabscoef, const HighsInt Rlen) {
+static uint64_t compute_cut_hash(const HighsInt* Rindex, const double* Rvalue,
+                                 double maxabscoef, const HighsInt Rlen) {
   std::vector<uint32_t> valueHashCodes(Rlen);
 
   double scale = 1.0 / maxabscoef;
   for (HighsInt i = 0; i < Rlen; ++i)
     valueHashCodes[i] = HighsHashHelpers::double_hash_code(scale * Rvalue[i]);
 
-  return HighsHashHelpers::hash(std::make_pair(
-      HighsHashHelpers::vector_hash(Rindex, Rlen),
-      HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen)));
+  return HighsHashHelpers::vector_hash(Rindex, Rlen) ^
+         (HighsHashHelpers::vector_hash(valueHashCodes.data(), Rlen) >> 32);
 }
 
 #if 0
@@ -53,7 +52,7 @@ static void printCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen
 bool HighsCutPool::isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
                                const double* Rvalue, HighsInt Rlen,
                                double rhs) {
-  auto range = supportmap.equal_range(hash);
+  auto range = hashToCutMap.equal_range(hash);
   const double* ARvalue = matrix_.getARvalue();
   const HighsInt* ARindex = matrix_.getARindex();
 
@@ -213,8 +212,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
-        uint32_t sh = support_hash(&ARindex[start], &ARvalue[start],
-                                   maxabscoef_[i], end - start);
+        uint64_t h = compute_cut_hash(&ARindex[start], &ARvalue[start],
+                                      maxabscoef_[i], end - start);
 
         for (HighsDomain::CutpoolPropagation* propagationdomain :
              propagationDomains)
@@ -228,11 +227,11 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
         matrix_.removeRow(i);
         ages_[i] = -1;
         rhs_[i] = 0;
-        auto range = supportmap.equal_range(sh);
+        auto range = hashToCutMap.equal_range(h);
 
         for (auto it = range.first; it != range.second; ++it) {
           if (it->second == i) {
-            supportmap.erase(it);
+            hashToCutMap.erase(it);
             break;
           }
         }
@@ -434,11 +433,10 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
     Rindex[i] = sortBuffer[i].first;
     Rvalue[i] = sortBuffer[i].second;
   }
-  uint32_t sh = support_hash(Rindex, Rvalue, maxabscoef, Rlen);
+  uint64_t h = compute_cut_hash(Rindex, Rvalue, maxabscoef, Rlen);
   double normalization = 1.0 / double(sqrt(norm));
-  // try to replace another cut with equal support that has an age > 0
 
-  if (isDuplicate(sh, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
+  if (isDuplicate(h, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
 
   // if (Rlen > 0.15 * matrix_.numCols())
   //   printf("cut with len %d not propagated\n", Rlen);
@@ -497,7 +495,7 @@ HighsInt HighsCutPool::addCut(const HighsMipSolver& mipsolver, HighsInt* Rindex,
 
   // if no such cut exists we append the new cut
   HighsInt rowindex = matrix_.addRow(Rindex, Rvalue, Rlen, propagate);
-  supportmap.emplace(sh, rowindex);
+  hashToCutMap.emplace(h, rowindex);
 
   if (rowindex == int(rhs_.size())) {
     rhs_.resize(rowindex + 1);
