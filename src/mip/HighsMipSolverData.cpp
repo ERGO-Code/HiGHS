@@ -1100,7 +1100,7 @@ restart:
     // solve the first root lp
     highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                 "Solving root node LP relaxation\n");
-  } else {
+  } else if (numRestarts == 0) {
     // solve the first root lp
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "\nSolving root node LP relaxation\n");
