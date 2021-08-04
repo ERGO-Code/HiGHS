@@ -482,7 +482,9 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
       }
     };
 
-    if (!downscorereliable[candidate]) {
+    if (!downscorereliable[candidate] &&
+        (upscorereliable[candidate] ||
+         downscore[candidate] >= upscore[candidate])) {
       // evaluate down branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
 
