@@ -416,8 +416,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
         double delta = downval - fracval;
         bool integerfeasible;
-        const std::vector<double>& sol =
-            lp->getLpSolver().getSolution().col_value;
+        const std::vector<double>& sol = lp->getSolution().col_value;
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
@@ -430,6 +429,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addObservation(col, delta, objdelta);
 
         for (HighsInt k = 0; k != numfrac; ++k) {
+          if (fracints[k].first == col) continue;
           double otherfracval = fracints[k].second;
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
@@ -590,6 +590,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
         pseudocost.addObservation(col, delta, objdelta);
 
         for (HighsInt k = 0; k != numfrac; ++k) {
+          if (fracints[k].first == col) continue;
           double otherfracval = fracints[k].second;
           double otherdownval = std::floor(fracints[k].second);
           double otherupval = std::ceil(fracints[k].second);
