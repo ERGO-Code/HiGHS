@@ -435,7 +435,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
               otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore &&
+            if (objdelta <= mipsolver.mipdata_->feastol &&
                 localdom.col_upper_[fracints[k].first] <=
                     otherdownval + mipsolver.mipdata_->feastol)
               pseudocost.addObservation(fracints[k].first,
@@ -444,7 +444,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             downscore[k] = std::min(downscore[k], objdelta);
           } else if (sol[fracints[k].first] >=
                      otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore &&
+            if (objdelta <= mipsolver.mipdata_->feastol &&
                 localdom.col_lower_[fracints[k].first] >=
                     otherupval - mipsolver.mipdata_->feastol)
               pseudocost.addObservation(fracints[k].first,
@@ -596,7 +596,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
           double otherupval = std::ceil(fracints[k].second);
           if (sol[fracints[k].first] <=
               otherdownval + mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore &&
+            if (objdelta <= mipsolver.mipdata_->feastol &&
                 localdom.col_upper_[fracints[k].first] <=
                     otherdownval + mipsolver.mipdata_->feastol)
               pseudocost.addObservation(fracints[k].first,
@@ -606,7 +606,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
           } else if (sol[fracints[k].first] >=
                      otherupval - mipsolver.mipdata_->feastol) {
-            if (objdelta <= minScore &&
+            if (objdelta <= mipsolver.mipdata_->feastol &&
                 localdom.col_lower_[fracints[k].first] >=
                     otherupval - mipsolver.mipdata_->feastol)
               pseudocost.addObservation(fracints[k].first,

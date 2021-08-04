@@ -338,7 +338,7 @@ class HighsDomain {
 
   void markPropagate(HighsInt row);
 
-  bool isActive(const HighsDomainChange& domchg) {
+  bool isActive(const HighsDomainChange& domchg) const {
     return domchg.boundtype == HighsBoundType::kLower
                ? domchg.boundval <= col_lower_[domchg.column]
                : domchg.boundval >= col_upper_[domchg.column];
