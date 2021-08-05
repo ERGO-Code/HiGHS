@@ -20,7 +20,7 @@
 
 HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
                                     bool mip) {
-  data_.postSolveStack.initializeIndexMaps(lp.numRow_, lp.numCol_);
+  data_.postSolveStack.initializeIndexMaps(lp.num_row_, lp.num_col_);
   data_.reduced_lp_ = lp;
   this->timer = &timer;
   return HighsStatus::kOk;
@@ -60,7 +60,7 @@ std::string PresolveComponent::presolveStatusToString(
 }
 
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
-  for (HighsInt col = 0; col < data_.reduced_lp_.numCol_; col++)
+  for (HighsInt col = 0; col < data_.reduced_lp_.num_col_; col++)
     data_.recovered_solution_.col_dual[col] =
         -data_.recovered_solution_.col_dual[col];
   return;

@@ -156,7 +156,7 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
     delnodes.insert(it->second);
 
   for (HighsInt delnode : delnodes) {
-    treeweight += std::pow(0.5, nodes[delnode].depth - 1);
+    treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
     unlink(delnode);
   }
 }
@@ -172,11 +172,11 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 
     numchgs = globaldomain.getDomainChangeStack().size();
 
-    assert(colLowerNodes.size() == globaldomain.colLower_.size());
+    assert(colLowerNodes.size() == globaldomain.col_lower_.size());
     HighsInt numcol = colLowerNodes.size();
     for (HighsInt i = 0; i != numcol; ++i) {
-      checkGlobalBounds(i, globaldomain.colLower_[i], globaldomain.colUpper_[i],
-                        feastol, treeweight);
+      checkGlobalBounds(i, globaldomain.col_lower_[i],
+                        globaldomain.col_upper_[i], feastol, treeweight);
     }
 
     size_t numopennodes = numNodes();
@@ -185,7 +185,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
     for (HighsInt i = 0; i != numcol; ++i) {
       if (colLowerNodes[i].size() == numopennodes) {
         double globallb = colLowerNodes[i].begin()->first;
-        if (globallb > globaldomain.colLower_[i]) {
+        if (globallb > globaldomain.col_lower_[i]) {
           globaldomain.changeBound(HighsBoundType::kLower, i, globallb,
                                    HighsDomain::Reason::unspecified());
           if (globaldomain.infeasible()) break;
@@ -194,7 +194,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 
       if (colUpperNodes[i].size() == numopennodes) {
         double globalub = colUpperNodes[i].rbegin()->first;
-        if (globalub < globaldomain.colUpper_[i]) {
+        if (globalub < globaldomain.col_upper_[i]) {
           globaldomain.changeBound(HighsBoundType::kUpper, i, globalub,
                                    HighsDomain::Reason::unspecified());
           if (globaldomain.infeasible()) break;
@@ -209,7 +209,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 }
 
 double HighsNodeQueue::pruneNode(HighsInt nodeId) {
-  double treeweight = std::pow(0.5, nodes[nodeId].depth - 1);
+  double treeweight = std::ldexp(1.0, 1 - nodes[nodeId].depth);
   unlink(nodeId);
   return treeweight;
 }
@@ -255,7 +255,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
       // and add up the tree weight
       unlink_estim(delroot);
       unlink_domchgs(delroot);
-      treeweight += std::pow(0.5, nodes[delroot].depth - 1);
+      treeweight += std::ldexp(1.0, 1 - nodes[delroot].depth);
 
       // put the nodes children on the stack for subsequent processing
       if (get_left(delroot) != -1) stack.push_back(get_left(delroot));

@@ -71,10 +71,67 @@ struct HighsHashHelpers {
       u64{0x07294165cb671455}, u64{0x89b0f6212b0a4292}, u64{0x31900011b96bf554},
       u64{0xa44540f8eee2094f}, u64{0xce7ffd372e4c64fc}, u64{0x51c9d471bfe6a10f},
       u64{0x758c2a674483826f}, u64{0xf91a20abe63f8b02}, u64{0xc2a069024a1fcc6f},
-      u64{0xd5bb18b70c5dbd59}};
+      u64{0xd5bb18b70c5dbd59}, u64{0xd510adac6d1ae289}, u64{0x571d069b23050a79},
+      u64{0x60873b8872933e06}, u64{0x780481cc19670350}, u64{0x7a48551760216885},
+      u64{0xb5d68b918231e6ca}, u64{0xa7e5571699aa5274}, u64{0x7b6d309b2cfdcf01},
+      u64{0x04e77c3d474daeff}, u64{0x4dbf099fd7247031}, u64{0x5d70dca901130beb},
+      u64{0x9f8b5f0df4182499}, u64{0x293a74c9686092da}, u64{0xd09bdab6840f52b3},
+      u64{0xc05d47f3ab302263}, u64{0x6b79e62b884b65d6}, u64{0xa581106fc980c34d},
+      u64{0xf081b7145ea2293e}, u64{0xfb27243dd7c3f5ad}, u64{0x5211bf8860ea667f},
+      u64{0x9455e65cb2385e7f}, u64{0x0dfaf6731b449b33}, u64{0x4ec98b3c6f5e68c7},
+      u64{0x007bfd4a42ae936b}, u64{0x65c93061f8674518}, u64{0x640816f17127c5d1},
+      u64{0x6dd4bab17b7c3a74}, u64{0x34d9268c256fa1ba}, u64{0x0b4d0c6b5b50d7f4},
+      u64{0x30aa965bc9fadaff}, u64{0xc0ac1d0c2771404d}, u64{0xc5e64509abb76ef2},
+      u64{0xd606b11990624a36}, u64{0x0d3f05d242ce2fb7}, u64{0x469a803cb276fe32},
+      u64{0xa4a44d177a3e23f4}, u64{0xb9d9a120dcc1ca03}, u64{0x2e15af8165234a2e},
+      u64{0x10609ba2720573d4}, u64{0xaa4191b60368d1d5}, u64{0x333dd2300bc57762},
+      u64{0xdf6ec48f79fb402f}, u64{0x5ed20fcef1b734fa}, u64{0x4c94924ec8be21ee},
+      u64{0x5abe6ad9d131e631}, u64{0xbe10136a522e602d}, u64{0x53671115c340e779},
+      u64{0x9f392fe43e2144da}};
 
   /// mersenne prime 2^61 - 1
   static constexpr u64 M61() { return u64{0x1fffffffffffffff}; };
+
+  // integer log2 algorithm without floating point arithmetic. It uses an
+  // unrolled loop and requires few instructions that can be well optimized.
+  static int log2i(uint64_t n) {
+    int x = 0;
+
+    auto log2Iteration = [&](int p) {
+      if (n >= uint64_t{1} << p) {
+        x += p;
+        n >>= p;
+      }
+    };
+
+    log2Iteration(32);
+    log2Iteration(16);
+    log2Iteration(8);
+    log2Iteration(4);
+    log2Iteration(2);
+    log2Iteration(1);
+
+    return x;
+  }
+
+  static int log2i(uint32_t n) {
+    int x = 0;
+
+    auto log2Iteration = [&](int p) {
+      if (n >= 1u << p) {
+        x += p;
+        n >>= p;
+      }
+    };
+
+    log2Iteration(16);
+    log2Iteration(8);
+    log2Iteration(4);
+    log2Iteration(2);
+    log2Iteration(1);
+
+    return x;
+  }
 
   /// compute a * b mod 2^61-1
   static u64 multiply_modM61(u64 a, u64 b) {
@@ -86,21 +143,33 @@ struct HighsHashHelpers {
     // compute the different order terms with adicities 2^64, 2^32, 2^0
     u64 term_64 = ahi * bhi;
     u64 term_32 = ahi * blo + bhi * alo;
-    u64 term_0 = blo * blo;
+    u64 term_0 = alo * blo;
 
-    // now extract the upper 61 and the lower 61 bits of the result a * b
-    u64 ab61 = term_64 << 3 | (term_32 + (term_0 >> 32)) >> 61;
-    u64 ab0 = (term_0 + term_32) & M61();
+    // Partially reduce term_0 and term_32 modulo M61() individually to not deal
+    // with a possible carry bit (thanks @https://github.com/WTFHCN for catching
+    // the bug with this). We do not need to completely reduce by an additional
+    // check for the range of the resulting term as this is done in the end in
+    // any case and the reduced sizes do not cause troubles with the available
+    // 64 bits.
+    term_0 = (term_0 & M61()) + (term_0 >> 61);
+    term_0 += ((term_32 >> 29) + (term_32 << 32)) & M61();
+
+    // The lower 61 bits of term_0 are now the lower 61 bits of the result that
+    // we need. Now extract the upper 61 of the result so that we can compute
+    // the result of the multiplication modulo M61()
+    u64 ab61 = (term_64 << 3) | (term_0 >> 61);
 
     // finally take the result modulo M61 which is computed by exploiting
     // that M61 is a mersenne prime, particularly, if a * b = q * 2^61 + r
     // then a * b = (q + r) (mod 2^61 - 1)
-    u64 result = ab0 + ab61;
+    u64 result = (term_0 & M61()) + ab61;
     if (result >= M61()) result -= M61();
     return result;
   }
 
   static u64 modexp_M61(u64 a, u64 e) {
+    // the exponent need to be greater than zero
+    assert(e > 0);
     u64 result = a;
 
     while (e != 1) {
@@ -117,10 +186,10 @@ struct HighsHashHelpers {
     return result;
   }
 
-  /// mersenne prime 2^61 - 1
+  /// mersenne prime 2^31 - 1
   static constexpr u64 M31() { return u32{0x7fffffff}; };
 
-  /// compute a * b mod 2^61-1
+  /// compute a * b mod 2^31-1
   static u32 multiply_modM31(u32 a, u32 b) {
     u64 result = u64(a) * u64(b);
     result = (result >> 31) + (result & M31());
@@ -129,6 +198,8 @@ struct HighsHashHelpers {
   }
 
   static u32 modexp_M31(u32 a, u64 e) {
+    // the exponent need to be greater than zero
+    assert(e > 0);
     u32 result = a;
 
     while (e != 1) {
@@ -162,15 +233,18 @@ struct HighsHashHelpers {
     // arbitrary order. This comes at the expense of more expensive hash
     // calculations as it would be more efficient to evaluate the polynomial
     // with horners scheme, but allows for parallelization and arbitrary order.
-    // Since we have 16 random constants available, we slightly improve
-    // the scheme by using a lower degree polynomial with 16 variables
-    // which we evaluate at the random vector of 16.
+    // Since we have 64 random constants available, we slightly improve
+    // the scheme by using a lower degree polynomial with 64 variables
+    // which we evaluate at the random vector of 64.
+
+    // make sure input value is never zero and at most 61bits are used
+    value = ((value << 1) & M61()) | 1;
 
     // make sure that the constant has at most 61 bits, as otherwise the modulo
     // algorithm for multiplication mod M61 might not work properly due to
     // overflow
-    u64 a = c[index & 15] & M61();
-    HighsInt degree = (index / 16) + 1;
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
 
     hash += multiply_modM61(value, modexp_M61(a, degree));
     hash = (hash >> 61) + (hash & M61());
@@ -187,8 +261,11 @@ struct HighsHashHelpers {
     // the hashes do not need to be recomputed but can be updated with this
     // procedure.
 
-    u64 a = c[index & 15] & M61();
-    HighsInt degree = (index / 16) + 1;
+    // make sure input value is never zero and at most 61bits are used
+    value = ((value << 1) & M61()) | 1;
+
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M61() - multiply_modM61(value, modexp_M61(a, degree));
@@ -197,7 +274,40 @@ struct HighsHashHelpers {
     assert(hash < M61());
   }
 
-  static void sparse_combine32(u32& hash, HighsInt index, u32 value) {
+  /// overload that is not taking a value and saves one multiplication call
+  /// useful for sparse hashing of bit vectors
+  static void sparse_combine(u64& hash, HighsInt index) {
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
+
+    hash += modexp_M61(a, degree);
+    hash = (hash >> 61) + (hash & M61());
+    if (hash >= M61()) hash -= M61();
+    assert(hash < M61());
+  }
+
+  /// overload that is not taking a value and saves one multiplication call
+  /// useful for sparse hashing of bit vectors
+  static void sparse_inverse_combine(u64& hash, HighsInt index) {
+    // same hash algorithm as sparse_combine(), but for updating a hash value to
+    // the state before it was changed with a call to sparse_combine(). This is
+    // easily possible as the hash value just uses finite field arithmetic. We
+    // can simply add the additive inverse of the previous hash value. This is a
+    // very useful routine for symmetry detection. During partition refinement
+    // the hashes do not need to be recomputed but can be updated with this
+    // procedure.
+
+    u64 a = c[index & 63] & M61();
+    HighsInt degree = (index >> 6) + 1;
+    // add the additive inverse (M61() - hashvalue) instead of the hash value
+    // itself
+    hash += M61() - modexp_M61(a, degree);
+    hash = (hash >> 61) + (hash & M61());
+    if (hash >= M61()) hash -= M61();
+    assert(hash < M61());
+  }
+
+  static void sparse_combine32(u32& hash, HighsInt index, u64 value) {
     // we take each value of the sparse hash as coefficient for a polynomial
     // of the finite field modulo the mersenne prime 2^61-1 where the monomial
     // for a sparse entry has the degree of its index. We evaluate the
@@ -213,11 +323,14 @@ struct HighsHashHelpers {
     // the scheme by using a lower degree polynomial with 16 variables
     // which we evaluate at the random vector of 16.
 
+    // make sure input value is never zero and at most 31bits are used
+    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+
     // make sure that the constant has at most 61 bits, as otherwise the modulo
     // algorithm for multiplication mod M61 might not work properly due to
     // overflow
-    u32 a = c[index & 15] & M31();
-    HighsInt degree = (index / 16) + 1;
+    u32 a = c[index & 63] & M31();
+    HighsInt degree = (index >> 6) + 1;
 
     hash += multiply_modM31(value, modexp_M31(a, degree));
     hash = (hash >> 31) + (hash & M31());
@@ -225,7 +338,7 @@ struct HighsHashHelpers {
     assert(hash < M31());
   }
 
-  static void sparse_inverse_combine32(u32& hash, HighsInt index, u32 value) {
+  static void sparse_inverse_combine32(u32& hash, HighsInt index, u64 value) {
     // same hash algorithm as sparse_combine(), but for updating a hash value to
     // the state before it was changed with a call to sparse_combine(). This is
     // easily possible as the hash value just uses finite field arithmetic. We
@@ -234,8 +347,11 @@ struct HighsHashHelpers {
     // the hashes do not need to be recomputed but can be updated with this
     // procedure.
 
-    u32 a = c[index & 15] & M31();
-    HighsInt degree = (index / 16) + 1;
+    // make sure input value is never zero and at most 31bits are used
+    value = (pair_hash<0>(value, value >> 32) >> 33) | 1;
+
+    u32 a = c[index & 63] & M31();
+    HighsInt degree = (index >> 6) + 1;
     // add the additive inverse (M61() - hashvalue) instead of the hash value
     // itself
     hash += M31() - multiply_modM31(value, modexp_M31(a, degree));
@@ -245,15 +361,6 @@ struct HighsHashHelpers {
   }
 
   static constexpr u64 fibonacci_muliplier() { return u64{0x9e3779b97f4a7c15}; }
-
-  static constexpr size_t rotate_left(size_t x, HighsInt n) {
-    return (x << n) | (x >> (sizeof(size_t) * 8 - n));
-  }
-
-  static void combine(size_t& hash, size_t val) {
-    // very fast but decent order dependent hash combine function
-    hash = (rotate_left(hash, 5) ^ val) * fibonacci_muliplier();
-  }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value, int>::type = 0>
@@ -267,200 +374,280 @@ struct HighsHashHelpers {
 
     while (dataptr != dataend) {
       using std::size_t;
-      size_t numBytes = std::min(size_t(dataend - dataptr), size_t{64});
+      size_t numBytes = std::min(size_t(dataend - dataptr), size_t{256});
       size_t numPairs = (numBytes + 7) / 8;
       size_t lastPairBytes = numBytes - (numPairs - 1) * 8;
-      u64 chunkhash = 0;
+      u64 chunkhash[] = {u64{0}, u64{0}};
+
+#define HIGHS_VECHASH_CASE_N(N, B)                         \
+  std::memcpy(&pair[0], dataptr, B);                       \
+  chunkhash[N & 1] += pair_hash<32 - N>(pair[0], pair[1]); \
+  dataptr += B;
+
       switch (numPairs) {
+        case 32:
+          if (hash != 0) {
+            // make sure hash is reduced mod M61() before multiplying with the
+            // next random constant. For vectors at most 240 bytes we never
+            // get here and only use the fast pair hashing scheme
+            // for vectors with 240 bytes to 256 bytes we do have the one
+            // additional check for hash != 0 above which will return false
+            // and only for longer vectors we ever reduce modulo M61
+            if (hash >= M61()) hash -= M61();
+            hash = multiply_modM61(hash, c[(k++) & 63] & M61());
+          }
+          HIGHS_VECHASH_CASE_N(32, 8)
+          // fall through
+        case 31:
+          HIGHS_VECHASH_CASE_N(31, 8)
+          // fall through
+        case 30:
+          HIGHS_VECHASH_CASE_N(30, 8)
+          // fall through
+        case 29:
+          HIGHS_VECHASH_CASE_N(29, 8)
+          // fall through
+        case 28:
+          HIGHS_VECHASH_CASE_N(28, 8)
+          // fall through
+        case 27:
+          HIGHS_VECHASH_CASE_N(27, 8)
+          // fall through
+        case 26:
+          HIGHS_VECHASH_CASE_N(26, 8)
+          // fall through
+        case 25:
+          HIGHS_VECHASH_CASE_N(25, 8)
+          // fall through
+        case 24:
+          HIGHS_VECHASH_CASE_N(24, 8)
+          // fall through
+        case 23:
+          HIGHS_VECHASH_CASE_N(23, 8)
+          // fall through
+        case 22:
+          HIGHS_VECHASH_CASE_N(22, 8)
+          // fall through
+        case 21:
+          HIGHS_VECHASH_CASE_N(21, 8)
+          // fall through
+        case 20:
+          HIGHS_VECHASH_CASE_N(20, 8)
+          // fall through
+        case 19:
+          HIGHS_VECHASH_CASE_N(19, 8)
+          // fall through
+        case 18:
+          HIGHS_VECHASH_CASE_N(18, 8)
+          // fall through
+        case 17:
+          HIGHS_VECHASH_CASE_N(17, 8)
+          // fall through
+        case 16:
+          HIGHS_VECHASH_CASE_N(16, 8)
+          // fall through
+        case 15:
+          HIGHS_VECHASH_CASE_N(15, 8)
+          // fall through
+        case 14:
+          HIGHS_VECHASH_CASE_N(14, 8)
+          // fall through
+        case 13:
+          HIGHS_VECHASH_CASE_N(13, 8)
+          // fall through
+        case 12:
+          HIGHS_VECHASH_CASE_N(12, 8)
+          // fall through
+        case 11:
+          HIGHS_VECHASH_CASE_N(11, 8)
+          // fall through
+        case 10:
+          HIGHS_VECHASH_CASE_N(10, 8)
+          // fall through
+        case 9:
+          HIGHS_VECHASH_CASE_N(9, 8)
+          // fall through
         case 8:
-          if (hash != 0) hash = multiply_modM61(hash, c[k++ & 15] & M61());
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<0>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(8, 8)
           // fall through
         case 7:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<1>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(7, 8)
           // fall through
         case 6:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<2>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(6, 8)
           // fall through
         case 5:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<3>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(5, 8)
           // fall through
         case 4:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<4>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(4, 8)
           // fall through
         case 3:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<5>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(3, 8)
           // fall through
         case 2:
-          std::memcpy(&pair[0], dataptr, 8);
-          chunkhash += pair_hash<6>(pair[0], pair[1]);
-          dataptr += 8;
+          HIGHS_VECHASH_CASE_N(2, 8)
           // fall through
         case 1:
-          std::memcpy(&pair[0], dataptr, lastPairBytes);
-          chunkhash += pair_hash<7>(pair[0], pair[1]);
-          dataptr += lastPairBytes;
+          HIGHS_VECHASH_CASE_N(1, lastPairBytes)
       }
 
-      hash += chunkhash >> 32;
+      hash += (chunkhash[0] >> 3) ^ (chunkhash[1] >> 32);
     }
 
-    return hash;
+#undef HIGHS_VECHASH_CASE_N
+
+    return hash * fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) <= 8) && (sizeof(T) >= 1),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 2> bytes;
     if (sizeof(T) < 4) bytes[0] = 0;
     if (sizeof(T) < 8) bytes[1] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return pair_hash<0>(bytes[0], bytes[1]) >> 32;
+    return pair_hash<1>(bytes[0], bytes[1]) ^
+           pair_hash<0>(bytes[0], bytes[1]) >> 32;
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 9) && (sizeof(T) <= 16),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 4> bytes;
     if (sizeof(T) < 12) bytes[2] = 0;
     if (sizeof(T) < 16) bytes[3] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3])) >>
-           32;
+    return (pair_hash<0>(bytes[0], bytes[1]) ^
+            (pair_hash<1>(bytes[2], bytes[3]) >> 32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 17) && (sizeof(T) <= 24),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 6> bytes;
     if (sizeof(T) < 20) bytes[4] = 0;
     if (sizeof(T) < 24) bytes[5] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3]) +
-            pair_hash<2>(bytes[4], bytes[5])) >>
-           32;
+    return (pair_hash<0>(bytes[0], bytes[1]) ^
+            ((pair_hash<1>(bytes[2], bytes[3]) +
+              pair_hash<2>(bytes[4], bytes[5])) >>
+             32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 25) && (sizeof(T) <= 32),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 8> bytes;
     if (sizeof(T) < 28) bytes[6] = 0;
     if (sizeof(T) < 32) bytes[7] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3]) +
-            pair_hash<2>(bytes[4], bytes[5]) +
-            pair_hash<3>(bytes[6], bytes[7])) >>
-           32;
+    return ((pair_hash<0>(bytes[0], bytes[1]) +
+             pair_hash<1>(bytes[2], bytes[3])) ^
+            ((pair_hash<2>(bytes[4], bytes[5]) +
+              pair_hash<3>(bytes[6], bytes[7])) >>
+             32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 33) && (sizeof(T) <= 40),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 10> bytes;
     if (sizeof(T) < 36) bytes[8] = 0;
     if (sizeof(T) < 40) bytes[9] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3]) +
-            pair_hash<2>(bytes[4], bytes[5]) +
-            pair_hash<3>(bytes[6], bytes[7]) +
-            pair_hash<4>(bytes[8], bytes[9])) >>
-           32;
+    return ((pair_hash<0>(bytes[0], bytes[1]) +
+             pair_hash<1>(bytes[2], bytes[3])) ^
+            ((pair_hash<2>(bytes[4], bytes[5]) +
+              pair_hash<3>(bytes[6], bytes[7]) +
+              pair_hash<4>(bytes[8], bytes[9])) >>
+             32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 41) && (sizeof(T) <= 48),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 12> bytes;
     if (sizeof(T) < 44) bytes[10] = 0;
     if (sizeof(T) < 48) bytes[11] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3]) +
-            pair_hash<2>(bytes[4], bytes[5]) +
-            pair_hash<3>(bytes[6], bytes[7]) +
-            pair_hash<4>(bytes[8], bytes[9]) +
-            pair_hash<5>(bytes[10], bytes[11])) >>
-           32;
+    return ((pair_hash<0>(bytes[0], bytes[1]) +
+             pair_hash<1>(bytes[2], bytes[3]) +
+             pair_hash<2>(bytes[4], bytes[5])) ^
+            ((pair_hash<3>(bytes[6], bytes[7]) +
+              pair_hash<4>(bytes[8], bytes[9]) +
+              pair_hash<5>(bytes[10], bytes[11])) >>
+             32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 49) && (sizeof(T) <= 56),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 14> bytes;
     if (sizeof(T) < 52) bytes[12] = 0;
     if (sizeof(T) < 56) bytes[13] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3]) +
-            pair_hash<2>(bytes[4], bytes[5]) +
-            pair_hash<3>(bytes[6], bytes[7]) +
-            pair_hash<4>(bytes[8], bytes[9]) +
-            pair_hash<5>(bytes[10], bytes[11]) +
-            pair_hash<6>(bytes[12], bytes[13])) >>
-           32;
+    return ((pair_hash<0>(bytes[0], bytes[1]) +
+             pair_hash<1>(bytes[2], bytes[3]) +
+             pair_hash<2>(bytes[4], bytes[5])) ^
+            ((pair_hash<3>(bytes[6], bytes[7]) +
+              pair_hash<4>(bytes[8], bytes[9]) +
+              pair_hash<5>(bytes[10], bytes[11]) +
+              pair_hash<6>(bytes[12], bytes[13])) >>
+             32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value &&
                                         (sizeof(T) >= 57) && (sizeof(T) <= 64),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     std::array<u32, 16> bytes;
     if (sizeof(T) < 60) bytes[14] = 0;
     if (sizeof(T) < 64) bytes[15] = 0;
     std::memcpy(&bytes[0], &val, sizeof(T));
-    return (pair_hash<0>(bytes[0], bytes[1]) +
-            pair_hash<1>(bytes[2], bytes[3]) +
-            pair_hash<2>(bytes[4], bytes[5]) +
-            pair_hash<3>(bytes[6], bytes[7]) +
-            pair_hash<4>(bytes[8], bytes[9]) +
-            pair_hash<5>(bytes[10], bytes[11]) +
-            pair_hash<6>(bytes[12], bytes[13]) +
-            pair_hash<7>(bytes[14], bytes[15])) >>
-           32;
+    return ((pair_hash<0>(bytes[0], bytes[1]) +
+             pair_hash<1>(bytes[2], bytes[3]) +
+             pair_hash<2>(bytes[4], bytes[5]) +
+             pair_hash<3>(bytes[6], bytes[7])) ^
+            ((pair_hash<4>(bytes[8], bytes[9]) +
+              pair_hash<5>(bytes[10], bytes[11]) +
+              pair_hash<6>(bytes[12], bytes[13]) +
+              pair_hash<7>(bytes[14], bytes[15])) >>
+             32)) *
+           fibonacci_muliplier();
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value && (sizeof(T) > 64),
                                     int>::type = 0>
-  static size_t hash(const T& val) {
+  static u64 hash(const T& val) {
     return vector_hash(&val, 1);
   }
 
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value, int>::type = 0>
-  static size_t hash(const std::vector<T>& val) {
+  static u64 hash(const std::vector<T>& val) {
     return vector_hash(val.data(), val.size());
   }
 
@@ -595,7 +782,7 @@ class HighsHashTable {
   using i32 = std::int32_t;
 
   using u64 = std::uint64_t;
-  using i64 = std::uint64_t;
+  using i64 = std::int64_t;
 
   using Entry = HighsHashTableEntry<K, V>;
   using KeyType = K;
@@ -604,8 +791,9 @@ class HighsHashTable {
 
   std::unique_ptr<Entry, OpNewDeleter> entries;
   std::unique_ptr<u8[]> metadata;
-  u32 tableSizeMask;
-  u32 numElements = 0;
+  u64 tableSizeMask;
+  u64 numHashShift;
+  u64 numElements = 0;
 
   template <typename IterType>
   class HashTableIterator {
@@ -658,27 +846,27 @@ class HighsHashTable {
   using iterator = HashTableIterator<Entry>;
 
   HighsHashTable() { makeEmptyTable(128); }
-  HighsHashTable(u32 minCapacity) {
-    u32 initCapacity =
-        1u << (u32)std::ceil(std::log2(std::max(128.0, 8 * minCapacity / 7.0)));
+  HighsHashTable(u64 minCapacity) {
+    u64 initCapacity = u64{1} << (u64)std::ceil(
+                           std::log2(std::max(128.0, 8 * minCapacity / 7.0)));
     makeEmptyTable(initCapacity);
   }
 
   iterator end() {
-    u32 capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     return iterator{metadata.get() + capacity, metadata.get() + capacity,
                     entries.get() + capacity};
   };
 
   const_iterator end() const {
-    u32 capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     return const_iterator{metadata.get() + capacity, metadata.get() + capacity,
                           entries.get() + capacity};
   };
 
   const_iterator begin() const {
     if (numElements == 0) return end();
-    u32 capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     const_iterator iter{metadata.get(), metadata.get() + capacity,
                         entries.get() + capacity};
     if (!occupied(metadata[0])) ++iter;
@@ -688,7 +876,7 @@ class HighsHashTable {
 
   iterator begin() {
     if (numElements == 0) return end();
-    u32 capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     iterator iter{metadata.get(), metadata.get() + capacity,
                   entries.get() + capacity};
     if (!occupied(metadata[0])) ++iter;
@@ -697,12 +885,14 @@ class HighsHashTable {
   };
 
  private:
-  static constexpr u8 toMetadata(u32 hash) { return (hash & 0x7Fu) | 0x80u; }
+  u8 toMetadata(u64 hash) const { return (hash >> numHashShift) | 0x80u; }
 
-  static constexpr u32 maxDistance() { return 127; }
+  static constexpr u64 maxDistance() { return 127; }
 
-  void makeEmptyTable(u32 capacity) {
+  void makeEmptyTable(u64 capacity) {
     tableSizeMask = capacity - 1;
+    numHashShift = 64 - HighsHashHelpers::log2i(capacity);
+    assert(capacity == (u64{1} << (64 - numHashShift)));
     numElements = 0;
 
     metadata = decltype(metadata)(new u8[capacity]{});
@@ -712,7 +902,7 @@ class HighsHashTable {
 
   bool occupied(u8 meta) const { return meta & 0x80; }
 
-  u32 distanceFromIdealSlot(u32 pos) const {
+  u64 distanceFromIdealSlot(u64 pos) const {
     // we store 7 bits of the hash in the metadata. Assuming a decent
     // hashfunction it is practically never happening that an item travels more
     // then 127 slots from its ideal position, therefore, we can compute the
@@ -734,29 +924,29 @@ class HighsHashTable {
   void growTable() {
     decltype(entries) oldEntries = std::move(entries);
     decltype(metadata) oldMetadata = std::move(metadata);
-    u32 oldCapactiy = tableSizeMask + 1;
+    u64 oldCapactiy = tableSizeMask + 1;
 
     makeEmptyTable(2 * oldCapactiy);
 
-    for (u32 i = 0; i != oldCapactiy; ++i)
+    for (u64 i = 0; i != oldCapactiy; ++i)
       if (occupied(oldMetadata[i])) insert(std::move(oldEntries.get()[i]));
   }
 
   void shrinkTable() {
     decltype(entries) oldEntries = std::move(entries);
     decltype(metadata) oldMetadata = std::move(metadata);
-    u32 oldCapactiy = tableSizeMask + 1;
+    u64 oldCapactiy = tableSizeMask + 1;
 
     makeEmptyTable(oldCapactiy / 2);
 
-    for (u32 i = 0; i != oldCapactiy; ++i)
+    for (u64 i = 0; i != oldCapactiy; ++i)
       if (occupied(oldMetadata[i])) insert(std::move(oldEntries.get()[i]));
   }
 
-  bool findPosition(const KeyType& key, u8& meta, u32& startPos, u32& maxPos,
-                    u32& pos) const {
-    u32 hash = HighsHashHelpers::hash(key);
-    startPos = hash & tableSizeMask;
+  bool findPosition(const KeyType& key, u8& meta, u64& startPos, u64& maxPos,
+                    u64& pos) const {
+    u64 hash = HighsHashHelpers::hash(key);
+    startPos = hash >> numHashShift;
     maxPos = (startPos + maxDistance()) & tableSizeMask;
     meta = toMetadata(hash);
 
@@ -768,7 +958,7 @@ class HighsHashTable {
           HighsHashHelpers::equal(key, entryArray[pos].key()))
         return true;
 
-      u32 currentDistance = (pos - startPos) & tableSizeMask;
+      u64 currentDistance = (pos - startPos) & tableSizeMask;
       if (currentDistance > distanceFromIdealSlot(pos)) return false;
 
       pos = (pos + 1) & tableSizeMask;
@@ -781,7 +971,7 @@ class HighsHashTable {
   void clear() { makeEmptyTable(128); }
 
   const ValueType* find(const KeyType& key) const {
-    u32 pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(key, meta, startPos, maxPos, pos))
       return &(entries.get()[pos].value());
@@ -790,7 +980,7 @@ class HighsHashTable {
   }
 
   ValueType* find(const KeyType& key) {
-    u32 pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(key, meta, startPos, maxPos, pos))
       return &(entries.get()[pos].value());
@@ -800,7 +990,7 @@ class HighsHashTable {
 
   ValueType& operator[](const KeyType& key) {
     Entry* entryArray = entries.get();
-    u32 pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(key, meta, startPos, maxPos, pos))
       return entryArray[pos].value();
@@ -822,8 +1012,8 @@ class HighsHashTable {
         return insertLocation;
       }
 
-      u32 currentDistance = (pos - startPos) & tableSizeMask;
-      u32 distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
+      u64 currentDistance = (pos - startPos) & tableSizeMask;
+      u64 distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
       if (currentDistance > distanceOfCurrentOccupant) {
         // steal the position
         swap(entry, entryArray[pos]);
@@ -844,7 +1034,7 @@ class HighsHashTable {
   bool insert(Args&&... args) {
     Entry entry(std::forward<Args>(args)...);
 
-    u32 pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (findPosition(entry.key(), meta, startPos, maxPos, pos)) return false;
 
@@ -864,8 +1054,8 @@ class HighsHashTable {
         return true;
       }
 
-      u32 currentDistance = (pos - startPos) & tableSizeMask;
-      u32 distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
+      u64 currentDistance = (pos - startPos) & tableSizeMask;
+      u64 distanceOfCurrentOccupant = distanceFromIdealSlot(pos);
       if (currentDistance > distanceOfCurrentOccupant) {
         // steal the position
         swap(entry, entryArray[pos]);
@@ -883,7 +1073,7 @@ class HighsHashTable {
   }
 
   bool erase(const KeyType& key) {
-    u32 pos, startPos, maxPos;
+    u64 pos, startPos, maxPos;
     u8 meta;
     if (!findPosition(key, meta, startPos, maxPos, pos)) return false;
     // delete element at position pos
@@ -894,7 +1084,7 @@ class HighsHashTable {
     // retain at least a quarter of slots occupied, otherwise shrink the table
     // if its not at its minimum size already
     --numElements;
-    u32 capacity = tableSizeMask + 1;
+    u64 capacity = tableSizeMask + 1;
     if (capacity != 128 && numElements < capacity / 4) {
       shrinkTable();
       return true;
@@ -902,10 +1092,10 @@ class HighsHashTable {
 
     // shift elements after pos backwards
     while (true) {
-      u32 shift = (pos + 1) & tableSizeMask;
+      u64 shift = (pos + 1) & tableSizeMask;
       if (!occupied(metadata[shift])) return true;
 
-      u32 dist = distanceFromIdealSlot(shift);
+      u64 dist = distanceFromIdealSlot(shift);
       if (dist == 0) return true;
 
       entryArray[pos] = std::move(entryArray[shift]);
@@ -915,15 +1105,15 @@ class HighsHashTable {
     }
   }
 
-  size_t size() const { return numElements; }
+  i64 size() const { return numElements; }
 
   HighsHashTable(HighsHashTable<K, V>&&) = default;
   HighsHashTable<K, V>& operator=(HighsHashTable<K, V>&&) = default;
 
   ~HighsHashTable() {
     if (metadata) {
-      u32 capacity = tableSizeMask + 1;
-      for (u32 i = 0; i < capacity; ++i) {
+      u64 capacity = tableSizeMask + 1;
+      for (u64 i = 0; i < capacity; ++i) {
         if (occupied(metadata[i])) entries.get()[i].~Entry();
       }
     }

@@ -34,10 +34,10 @@ using std::vector;
 void HCrash::crash(const HighsInt pass_crash_strategy) {
   crash_strategy = pass_crash_strategy;
   HighsLp& lp = ekk_instance.lp_;
-  if (lp.numRow_ == 0) return;
-  numRow = lp.numRow_;
-  numCol = lp.numCol_;
-  numTot = lp.numCol_ + lp.numRow_;
+  if (lp.num_row_ == 0) return;
+  numRow = lp.num_row_;
+  numCol = lp.num_col_;
+  numTot = lp.num_col_ + lp.num_row_;
   if (crash_strategy == kSimplexCrashStrategyBasic
 #ifdef HiGHSDEV
       || crash_strategy == kSimplexCrashStrategyTestSing
@@ -82,9 +82,9 @@ void HCrash::crash(const HighsInt pass_crash_strategy) {
 void HCrash::bixby() {
   HighsLp& lp = ekk_instance.lp_;
 
-  const HighsInt* Astart = &lp.Astart_[0];
-  const HighsInt* Aindex = &lp.Aindex_[0];
-  const double* Avalue = &lp.Avalue_[0];
+  const HighsInt* Astart = &lp.a_start_[0];
+  const HighsInt* Aindex = &lp.a_index_[0];
+  const double* Avalue = &lp.a_value_[0];
 
   bixby_no_nz_c_co =
       crash_strategy == kSimplexCrashStrategyBixbyNoNonzeroColCosts;
@@ -259,26 +259,26 @@ void HCrash::initialise_basic_index() {
   SimplexBasis& basis = ekk_instance.basis_;
 
   HighsInt num_basic_variables = 0;
-  const HighsInt numTot = lp.numCol_ + lp.numRow_;
+  const HighsInt numTot = lp.num_col_ + lp.num_row_;
   for (HighsInt iVar = 0; iVar < numTot; iVar++) {
     if (!basis.nonbasicFlag_[iVar]) {
-      assert(num_basic_variables < lp.numRow_);
+      assert(num_basic_variables < lp.num_row_);
       basis.basicIndex_[num_basic_variables] = iVar;
       num_basic_variables++;
     }
   }
-  assert(num_basic_variables == lp.numRow_);
+  assert(num_basic_variables == lp.num_row_);
 }
 #endif
 
 bool HCrash::bixby_iz_da() {
   HighsLp& lp = ekk_instance.lp_;
-  const HighsInt* Astart = &lp.Astart_[0];
-  const double* Avalue = &lp.Avalue_[0];
+  const HighsInt* Astart = &lp.a_start_[0];
+  const double* Avalue = &lp.a_value_[0];
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
+  const double* colCost = &lp.col_cost_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
 
   // const double *primalColLowerImplied = lp.primalColLowerImplied_;
   // const double *primalColUpperImplied = lp.primalColUpperImplied_;
@@ -460,9 +460,9 @@ bool HCrash::bixby_iz_da() {
 void HCrash::bixby_rp_mrt() {
   HighsLp& lp = ekk_instance.lp_;
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
+  const double* colCost = &lp.col_cost_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
   double mx_co_v = -kHighsInf;
   for (HighsInt c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
@@ -551,9 +551,9 @@ void HCrash::ltssf() {
   }
 
   mn_co_tie_bk = false;
-  numRow = lp.numRow_;
-  numCol = lp.numCol_;
-  numTot = lp.numCol_ + lp.numRow_;
+  numRow = lp.num_row_;
+  numCol = lp.num_col_;
+  numTot = lp.num_col_ + lp.num_row_;
 
   // Initialise the LTSSF data structures
   ltssf_iz_da();
@@ -727,8 +727,8 @@ void HCrash::ltssf_u_da() {
 
 void HCrash::ltssf_u_da_af_bs_cg() {
   HighsLp& lp = ekk_instance.lp_;
-  const HighsInt* Astart = &lp.Astart_[0];
-  const HighsInt* Aindex = &lp.Aindex_[0];
+  const HighsInt* Astart = &lp.a_start_[0];
+  const HighsInt* Aindex = &lp.a_index_[0];
   // ltssf_rp_r_k();
   for (HighsInt r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1];
        r_el_n++) {
@@ -873,9 +873,9 @@ void HCrash::ltssf_iz_da() {
   SimplexBasis& basis = ekk_instance.basis_;
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
-  const HighsInt* Astart = &lp.Astart_[0];
-  const HighsInt* Aindex = &lp.Aindex_[0];
-  const double* Avalue = &lp.Avalue_[0];
+  const HighsInt* Astart = &lp.a_start_[0];
+  const HighsInt* Aindex = &lp.a_index_[0];
+  const double* Avalue = &lp.a_value_[0];
   HighsInt numEl = Astart[numCol];
   // const double *primalColLowerImplied = lp.primalColLowerImplied_;
   // const double *primalColUpperImplied = lp.primalColUpperImplied_;
@@ -1172,7 +1172,7 @@ void HCrash::ltssf_cz_r() {
 void HCrash::ltssf_cz_c() {
   HighsLp& lp = ekk_instance.lp_;
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
+  const double* colCost = &lp.col_cost_[0];
 
   cz_c_n = no_ix;
   HighsInt su_r_c_pri_v_lm = crsh_mx_pri_v;
@@ -1365,10 +1365,10 @@ void HCrash::ltssf_rp_pri_k_da() {
 
 void HCrash::crsh_iz_vr_ty() {
   HighsLp& lp = ekk_instance.lp_;
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
-  const double* rowLower = &lp.rowLower_[0];
-  const double* rowUpper = &lp.rowUpper_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
+  const double* rowLower = &lp.row_lower_[0];
+  const double* rowUpper = &lp.row_upper_[0];
   const int8_t* nonbasicFlag = &ekk_instance.basis_.nonbasicFlag_[0];
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
@@ -1458,9 +1458,9 @@ void HCrash::crsh_iz_vr_ty() {
 void HCrash::crsh_an_c_co() {
   HighsLp& lp = ekk_instance.lp_;
   const HighsInt objSense = (HighsInt)lp.sense_;
-  const double* colCost = &lp.colCost_[0];
-  const double* colLower = &lp.colLower_[0];
-  const double* colUpper = &lp.colUpper_[0];
+  const double* colCost = &lp.col_cost_[0];
+  const double* colLower = &lp.col_lower_[0];
+  const double* colUpper = &lp.col_upper_[0];
 
   HighsInt n_ze_c_co = 0;
   HighsInt n_fs_c_co = 0;
@@ -1617,7 +1617,7 @@ void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
   }
 }
 void HCrash::crsh_an_r_c_st_af() {
-  const HighsInt* Astart = &ekk_instance.lp_.Astart_[0];
+  const HighsInt* Astart = &ekk_instance.lp_.a_start_[0];
   for (HighsInt k = 0; k < numRow; k++) {
     HighsInt vr_n = ekk_instance.basis_.basicIndex_[k];
     if (vr_n < numCol) {

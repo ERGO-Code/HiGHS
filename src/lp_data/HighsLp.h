@@ -26,17 +26,17 @@ class HighsLp;
 class HighsLp {
  public:
   // Model data
-  HighsInt numCol_ = 0;
-  HighsInt numRow_ = 0;
+  HighsInt num_col_ = 0;
+  HighsInt num_row_ = 0;
 
-  std::vector<HighsInt> Astart_;
-  std::vector<HighsInt> Aindex_;
-  std::vector<double> Avalue_;
-  std::vector<double> colCost_;
-  std::vector<double> colLower_;
-  std::vector<double> colUpper_;
-  std::vector<double> rowLower_;
-  std::vector<double> rowUpper_;
+  std::vector<HighsInt> a_start_;
+  std::vector<HighsInt> a_index_;
+  std::vector<double> a_value_;
+  std::vector<double> col_cost_;
+  std::vector<double> col_lower_;
+  std::vector<double> col_upper_;
+  std::vector<double> row_lower_;
+  std::vector<double> row_upper_;
 
   MatrixFormat format_ = MatrixFormat::kNone;
   ObjSense sense_ = ObjSense::kMinimize;

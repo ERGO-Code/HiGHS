@@ -68,13 +68,13 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   const HighsInfo& info = highs.getInfo();
   // Find the first basic variable
   HighsInt iCol;
-  for (iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (iCol = 0; iCol < lp.num_col_; iCol++) {
     if (basis.col_status[iCol] == HighsBasisStatus::kBasic) break;
   }
-  assert(iCol < lp.numCol_);
+  assert(iCol < lp.num_col_);
   const HighsInt changeCol = iCol;
-  const double old_lower_bound = lp.colLower_[changeCol];
-  const double old_upper_bound = lp.colUpper_[changeCol];
+  const double old_lower_bound = lp.col_lower_[changeCol];
+  const double old_upper_bound = lp.col_upper_[changeCol];
   const double new_lower_bound = solution.col_value[changeCol] + 0.1;
   highs.changeColBounds(changeCol, new_lower_bound, old_upper_bound);
 

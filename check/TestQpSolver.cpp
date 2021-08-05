@@ -111,14 +111,14 @@ TEST_CASE("test-qod", "[qpsolver]") {
   // min x^2 + x = x(x + 1)
 
   lp.model_name_ = "qod";
-  lp.numCol_ = 1;
-  lp.numRow_ = 0;
-  lp.colCost_ = {1.0};
-  lp.colLower_ = {-inf};
-  lp.colUpper_ = {inf};
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1.0};
+  lp.col_lower_ = {-inf};
+  lp.col_upper_ = {inf};
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0.25;
-  hessian.dim_ = lp.numCol_;
+  hessian.dim_ = lp.num_col_;
   hessian.q_start_ = {0, 1};
   hessian.q_index_ = {0};
   hessian.q_value_ = {2.0};
@@ -212,9 +212,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
           double_equal_tolerance);
 
   // Add the constraint 0.5 <= x0 + x1
-  lp.Aindex_ = {0, 1};
-  lp.Avalue_ = {1, 1};
-  highs.addRow(0.5, inf, 2, &lp.Aindex_[0], &lp.Avalue_[0]);
+  lp.a_index_ = {0, 1};
+  lp.a_value_ = {1, 1};
+  highs.addRow(0.5, inf, 2, &lp.a_index_[0], &lp.a_value_[0]);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
@@ -254,14 +254,14 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   const double inf = kHighsInf;
   // Start with an unconstrained QP
   lp.model_name_ = "qjh";
-  lp.numCol_ = 3;
-  lp.numRow_ = 0;
-  lp.colCost_ = {0.0, -1.0, -3.0};
-  lp.colLower_ = {-inf, -inf, -inf};
-  lp.colUpper_ = {inf, inf, inf};
+  lp.num_col_ = 3;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {0.0, -1.0, -3.0};
+  lp.col_lower_ = {-inf, -inf, -inf};
+  lp.col_upper_ = {inf, inf, inf};
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
-  hessian.dim_ = lp.numCol_;
+  hessian.dim_ = lp.num_col_;
 
   //  hessian.format_ = HessianFormat::kSquare;
   //  hessian.q_start_ = {0, 2, 3, 5};
@@ -290,13 +290,13 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   if (dev_run) highs.writeSolution("", true);
 
   // Now with a constraint
-  lp.numRow_ = 1;
-  lp.colLower_ = {0.0, 0.0, 0.0};
-  lp.rowLower_ = {-inf};
-  lp.rowUpper_ = {2};
-  lp.Astart_ = {0, 1, 1, 2};
-  lp.Aindex_ = {0, 0};
-  lp.Avalue_ = {1.0, 1.0};
+  lp.num_row_ = 1;
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {2};
+  lp.a_start_ = {0, 1, 1, 2};
+  lp.a_index_ = {0, 0};
+  lp.a_value_ = {1.0, 1.0};
   lp.format_ = MatrixFormat::kColwise;
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);

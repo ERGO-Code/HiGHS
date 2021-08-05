@@ -24,8 +24,8 @@
 HighsStatus writeLpMatrixPicToFile(const HighsOptions& options,
                                    const std::string fileprefix,
                                    const HighsLp& lp) {
-  return writeMatrixPicToFile(options, fileprefix, lp.numRow_, lp.numCol_,
-                              lp.Astart_, lp.Aindex_);
+  return writeMatrixPicToFile(options, fileprefix, lp.num_row_, lp.num_col_,
+                              lp.a_start_, lp.a_index_);
 }
 
 HighsStatus writeMatrixPicToFile(const HighsOptions& options,
