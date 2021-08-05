@@ -27,15 +27,20 @@ class HighsSparseMatrix;
 
 class HighsSparseMatrix {
  public:
-  MatrixFormat format_ = MatrixFormat::kNone;
-  HighsInt num_col_ = 0;
-  HighsInt num_row_ = 0;
+  HighsSparseMatrix() {
+    initialise();
+  }
+  MatrixFormat format_;
+  HighsInt num_col_;
+  HighsInt num_row_;
   std::vector<HighsInt> start_;
+  std::vector<HighsInt> p_end_;
   std::vector<HighsInt> index_;
   std::vector<double> value_;
 
   bool operator==(const HighsSparseMatrix& matrix) const;
   void clear();
+  void initialise();
   void range(double& min_value, double& max_value) const;
   HighsStatus setFormat(
       const MatrixFormat desired_format = MatrixFormat::kColwise);
@@ -64,6 +69,30 @@ class HighsSparseMatrix {
   void scaleRow(const HighsInt row, const double rowScale);
   void applyScale(const SimplexScale& scale);
   void unapplyScale(const SimplexScale& scale);
+  // Methods for PRICE, including the creation and updating of the
+  // partitioned row-wise matrix
+  void createPartition(const HighsSparseMatrix& matrix,
+		       const int8_t* in_partition=NULL);
+  void priceByColumn(HVector& result,
+		     const HVector& vector) const;
+  void priceByRow(HVector& result,
+		  const HVector& vector) const;
+  void priceByRowWithSwitch(HVector& result,
+			    const HVector& vector,
+			    const double expected_density,
+			    const HighsInt from_row,
+			    const double switch_density) const;
+  void update(const HighsInt var_in,
+              const HighsInt var_out);
+  double computeDot(const HVector& vector,
+		    const HighsInt use_col) const;
+  void collectAj(HVector& vector,
+		 const HighsInt use_col,
+		 const double multiplier) const;
+private:
+  void priceByRowDenseResult(HVector& result, const HVector& vector,
+			     const HighsInt from_row);
+
 };
 
 #endif

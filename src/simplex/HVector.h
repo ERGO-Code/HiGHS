@@ -53,10 +53,8 @@ class HVector {
   vector<HighsInt> iwork;  //!< integer working buffer for UPDATE
   HVector* next;           //!< Allows vectors to be linked for PAMI
 
-  /**
-   * @brief Packing: Zero values in Vector.array which exceed kHighsTiny
-   * in magnitude
-   *
+  /*
+   * Zero values in Vector.array that exceed kHighsTiny in magnitude
    */
   void tight();
 

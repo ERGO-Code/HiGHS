@@ -72,8 +72,7 @@ void HVector::clear() {
 
 void HVector::tight() {
   /*
-   * Packing: Zero values in Vector.array which exceed kHighsTiny in
-   * magnitude
+   * Zero values in Vector.array that exceed kHighsTiny in magnitude
    */
   HighsInt totalCount = 0;
   for (HighsInt i = 0; i < count; i++) {

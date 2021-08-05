@@ -37,11 +37,18 @@ bool HighsSparseMatrix::operator==(const HighsSparseMatrix& matrix) const {
   return equal;
 }
 
+void HighsSparseMatrix::initialise() {
+  this->clear();
+  //  this->format_ = MatrixFormat::kColwise;
+  //  this->start_.assign(1, 0);
+}
+
 void HighsSparseMatrix::clear() {
   this->format_ = MatrixFormat::kNone;
   this->num_col_ = 0;
   this->num_row_ = 0;
   this->start_.clear();
+  this->p_end_.clear();
   this->index_.clear();
   this->value_.clear();
 }
@@ -909,3 +916,42 @@ void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
     }
   }
 }
+
+void HighsSparseMatrix::createPartition(const HighsSparseMatrix& matrix,
+					const int8_t* in_partition) {
+}
+
+void HighsSparseMatrix::priceByColumn(HVector& result,
+				      const HVector& vector) const {
+}
+
+void HighsSparseMatrix::priceByRow(HVector& result,
+				   const HVector& vector) const {
+}
+
+void HighsSparseMatrix::priceByRowWithSwitch(HVector& result,
+					     const HVector& vector,
+					     const double expected_density,
+					     const HighsInt from_row,
+					     const double switch_density) const {
+}
+
+void HighsSparseMatrix::update(const HighsInt var_in,
+			       const HighsInt var_out) {
+}
+
+double HighsSparseMatrix::computeDot(const HVector& vector,
+				     const HighsInt use_col) const {
+  return 0.0;
+}
+
+void HighsSparseMatrix::collectAj(HVector& vector,
+				  const HighsInt use_col,
+				  const double multiplier) const {
+}
+
+void HighsSparseMatrix::priceByRowDenseResult(HVector& result, const HVector& vector,
+					      const HighsInt from_row) {
+}
+
+
