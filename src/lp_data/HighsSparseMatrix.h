@@ -21,10 +21,8 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
+#include "simplex/HVector.h"
 #include "util/HighsUtils.h"
-
-//class HighsSparseMatrix;
-//class HVector;
 
 class HighsSparseMatrix {
  public:

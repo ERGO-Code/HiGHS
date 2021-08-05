@@ -19,6 +19,13 @@
 #include "simplex/HVector.h"
 #include "util/HighsRandom.h"
 
+#include <algorithm>
+#include <cmath>
+
+using std::fabs;
+using std::max;
+using std::min;
+
 void debugReportRankDeficiency(
     const HighsInt call_id, const HighsInt highs_debug_level,
     const HighsLogOptions& log_options, const HighsInt numRow,

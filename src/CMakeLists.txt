@@ -247,6 +247,7 @@ set(headers
     simplex/HEkkDualRow.h
     simplex/HEkkDualRHS.h
     simplex/HFactor.h
+    simplex/HFactorConst.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HMatrix.h
@@ -681,6 +682,7 @@ set(headers_fast_build_
     simplex/HEkkDualRow.h
     simplex/HEkkPrimal.h
     simplex/HFactor.h
+    simplex/HFactorConst.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HMatrix.h

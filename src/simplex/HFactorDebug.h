@@ -18,6 +18,10 @@
 
 #include "lp_data/HighsOptions.h"
 
+#include <vector>
+
+using std::vector;
+
 void debugReportRankDeficiency(
     const HighsInt call_id, const HighsInt highs_debug_level,
     const HighsLogOptions& log_options, const HighsInt numRow,

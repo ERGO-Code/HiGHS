@@ -26,62 +26,13 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
+#include "simplex/HFactorConst.h"
 
 using std::max;
 using std::min;
 using std::vector;
 
-//class HVector;
-#include "simplex/HVector.h"
-
-enum UPDATE_METHOD {
-  kUpdateMethodFt = 1,
-  kUpdateMethodPf = 2,
-  kUpdateMethodMpf = 3,
-  kUpdateMethodApf = 4
-};
-/**
- * Limits and default value of pivoting threshold
- */
-const double kMinPivotThreshold = 8e-4;
-const double kDefaultPivotThreshold = 0.1;
-const double kPivotThresholdChangeFactor = 5.0;
-const double kMaxPivotThreshold = 0.5;
-/**
- * Limits and default value of minimum absolute pivot
- */
-const double kMinPivotTolerance = 0;
-const double kDefaultPivotTolerance = 1e-10;
-const double kMaxPivotTolerance = 1.0;
-/**
- * Necessary thresholds for expected density to trigger
- * hyper-sparse TRANs,
- */
-const double kHyperFtranL = 0.15;
-const double kHyperFtranU = 0.10;
-const double kHyperBtranL = 0.10;
-const double kHyperBtranU = 0.15;
-/**
- * Necessary threshold for RHS density to trigger hyper-sparse TRANs,
- */
-const double kHyperCancel = 0.05;
-/**
- * Threshold for result density for it to be considered as
- * hyper-sparse - only for reporting
- */
-const double kHyperResult = 0.10;
-
-/**
- * Parameters for reinversion on synthetic clock
- */
-const double kMultiBuildSyntheticTickMu = 1.0;
-const double kNumericalTroubleTolerance = 1e-7;
-const double kMultiNumericalTroubleTolerance = 1e-7;
-
-const HighsInt kSyntheticTickReinversionMinUpdateCount = 50;
-const HighsInt kMultiSyntheticTickReinversionMinUpdateCount =
-    kSyntheticTickReinversionMinUpdateCount;
-
+class HVector;
 /**
  * @brief Basis matrix factorization, update and solves for HiGHS
  *

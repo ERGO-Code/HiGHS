@@ -22,7 +22,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
-#include "simplex/HFactor.h"
+#include "simplex/HFactorConst.h"
 #include "simplex/SimplexConst.h"
 
 using std::string;
