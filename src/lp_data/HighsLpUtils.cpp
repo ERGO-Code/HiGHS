@@ -1808,16 +1808,16 @@ void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
     fprintf(file, " Basis\n");
     fprintf(file, "Columns\n");
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      if (have_value) fprintf(file, "%g", use_col_value[iCol]);
-      if (have_dual) fprintf(file, "%g", use_col_dual[iCol]);
+      if (have_value) fprintf(file, "%.15g", use_col_value[iCol]);
+      if (have_dual) fprintf(file, "%.15g", use_col_dual[iCol]);
       if (have_basis)
         fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_col_status[iCol]);
       fprintf(file, " \n");
     }
     fprintf(file, "Rows\n");
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-      if (have_value) fprintf(file, "%g", use_row_value[iRow]);
-      if (have_dual) fprintf(file, "%g", use_row_dual[iRow]);
+      if (have_value) fprintf(file, "%.15g", use_row_value[iRow]);
+      if (have_dual) fprintf(file, "%.15g", use_row_dual[iRow]);
       if (have_basis)
         fprintf(file, " %" HIGHSINT_FORMAT "", (HighsInt)use_row_status[iRow]);
       fprintf(file, " \n");

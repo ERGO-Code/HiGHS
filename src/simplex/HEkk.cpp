@@ -534,7 +534,7 @@ void HEkk::setSimplexOptions() {
       options_.primal_simplex_bound_perturbation_multiplier;
   info_.factor_pivot_threshold = options_.factor_pivot_threshold;
   info_.update_limit = options_.simplex_update_limit;
-  random_.initialise(options_.highs_random_seed);
+  random_.initialise(options_.random_seed);
 
   // Set values of internal options
   info_.store_squared_primal_infeasibility = true;

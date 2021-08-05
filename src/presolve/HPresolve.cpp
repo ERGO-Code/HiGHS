@@ -1311,7 +1311,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   // other binaries
   std::vector<std::tuple<int64_t, HighsInt, HighsInt, HighsInt>> binaries;
   binaries.reserve(model->num_col_);
-  HighsRandom random(options->highs_random_seed);
+  HighsRandom random(options->random_seed);
   for (HighsInt i = 0; i != model->num_col_; ++i) {
     if (domain.isBinary(i)) {
       HighsInt implicsUp = cliquetable.getNumImplications(i, 1);

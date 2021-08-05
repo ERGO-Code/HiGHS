@@ -250,6 +250,8 @@ const string kSolverString = "solver";
 const string kParallelString = "parallel";
 const string kTimeLimitString = "time_limit";
 const string kOptionsFileString = "options_file";
+const string kRandomSeedString = "random_seed";
+const string kSolutionFileString = "solution_file";
 
 // String for HiGHS log file option
 const string kLogFileString = "log_file";
@@ -271,7 +273,7 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   double objective_bound;
   double objective_target;
-  HighsInt highs_random_seed;
+  HighsInt random_seed;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
   HighsInt simplex_strategy;
@@ -472,8 +474,8 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int =
-        new OptionRecordInt("highs_random_seed", "random seed used in HiGHS",
-                            advanced, &highs_random_seed, 0, 0, kHighsIInf);
+        new OptionRecordInt(kRandomSeedString, "random seed used in HiGHS",
+                            advanced, &random_seed, 0, 0, kHighsIInf);
     records.push_back(record_int);
 
     record_int =
@@ -565,7 +567,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_string =
-        new OptionRecordString("solution_file", "Solution file", advanced,
+        new OptionRecordString(kSolutionFileString, "Solution file", advanced,
                                &solution_file, kHighsFilenameDefault);
     records.push_back(record_string);
 

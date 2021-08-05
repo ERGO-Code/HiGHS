@@ -21,7 +21,7 @@ HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
                                        HighsCutPool& cutpool)
     : lpRelaxation(lpRelaxation),
       cutpool(cutpool),
-      randgen(lpRelaxation.getMipSolver().options_mip_->highs_random_seed +
+      randgen(lpRelaxation.getMipSolver().options_mip_->random_seed +
               lpRelaxation.getNumLpIterations() + cutpool.getNumCuts()),
       feastol(lpRelaxation.getMipSolver().mipdata_->feastol),
       epsilon(lpRelaxation.getMipSolver().mipdata_->epsilon) {}
