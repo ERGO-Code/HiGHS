@@ -354,6 +354,10 @@ option(JULIA "Build library and executable for Julia" OFF)
 # No changes in app/ apart from a relative path
 add_subdirectory(app)
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+    target_link_libraries (libhighs "pthread")
+endif()
+
 target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
 
 # check/ not added here, instead define fewer tests:
