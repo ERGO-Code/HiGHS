@@ -27,9 +27,7 @@ class HighsSparseMatrix;
 
 class HighsSparseMatrix {
  public:
-  HighsSparseMatrix() {
-    initialise();
-  }
+  HighsSparseMatrix() { clear(); }
   MatrixFormat format_;
   HighsInt num_col_;
   HighsInt num_row_;
@@ -40,7 +38,9 @@ class HighsSparseMatrix {
 
   bool operator==(const HighsSparseMatrix& matrix) const;
   void clear();
-  void initialise();
+  bool isRowwise() const;
+  bool isColwise() const;
+  HighsInt num_nz() const;
   void range(double& min_value, double& max_value) const;
   HighsStatus setFormat(
       const MatrixFormat desired_format = MatrixFormat::kColwise);
@@ -50,11 +50,13 @@ class HighsSparseMatrix {
   HighsStatus addCols(const HighsInt num_new_col, const HighsInt num_new_nz,
                       const HighsInt* new_matrix_start,
                       const HighsInt* new_matrix_index,
-                      const double* new_matrix_value);
+                      const double* new_matrix_value,
+                      const int8_t* in_partition = NULL);
   HighsStatus addRows(const HighsInt num_new_row, const HighsInt num_new_nz,
                       const HighsInt* new_matrix_start,
                       const HighsInt* new_matrix_index,
-                      const double* new_matrix_value);
+                      const double* new_matrix_value,
+                      const int8_t* in_partition = NULL);
   HighsStatus deleteCols(const HighsLogOptions& log_options,
                          const HighsIndexCollection& index_collection);
   HighsStatus deleteRows(const HighsLogOptions& log_options,
@@ -72,27 +74,21 @@ class HighsSparseMatrix {
   // Methods for PRICE, including the creation and updating of the
   // partitioned row-wise matrix
   void createPartition(const HighsSparseMatrix& matrix,
-		       const int8_t* in_partition=NULL);
-  void priceByColumn(HVector& result,
-		     const HVector& vector) const;
-  void priceByRow(HVector& result,
-		  const HVector& vector) const;
-  void priceByRowWithSwitch(HVector& result,
-			    const HVector& vector,
-			    const double expected_density,
-			    const HighsInt from_row,
-			    const double switch_density) const;
-  void update(const HighsInt var_in,
-              const HighsInt var_out);
-  double computeDot(const HVector& vector,
-		    const HighsInt use_col) const;
-  void collectAj(HVector& vector,
-		 const HighsInt use_col,
-		 const double multiplier) const;
-private:
-  void priceByRowDenseResult(HVector& result, const HVector& vector,
-			     const HighsInt from_row);
+                       const int8_t* in_partition = NULL);
+  void priceByColumn(HVector& result, const HVector& vector) const;
+  void priceByRow(HVector& result, const HVector& vector) const;
+  void priceByRowWithSwitch(HVector& result, const HVector& vector,
+                            const double expected_density,
+                            const HighsInt from_row,
+                            const double switch_density) const;
+  void update(const HighsInt var_in, const HighsInt var_out);
+  double computeDot(const HVector& vector, const HighsInt use_col) const;
+  void collectAj(HVector& vector, const HighsInt use_col,
+                 const double multiplier) const;
 
+ private:
+  void priceByRowDenseResult(HVector& result, const HVector& vector,
+                             const HighsInt from_row);
 };
 
 #endif

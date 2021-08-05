@@ -127,8 +127,11 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
   // Assess the starts
   // Set up previous_start for a fictitious previous empty packed vector
   HighsInt previous_start = matrix_start[0];
+  // Set up this_start to be the first start in case num_vec = 0
+  HighsInt this_start = matrix_start[0];
   for (HighsInt ix = 0; ix < num_vec; ix++) {
-    HighsInt this_start = matrix_start[ix];
+    this_start = matrix_start[ix];
+    HighsInt next_start = matrix_start[ix + 1];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -140,17 +143,18 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                    matrix_name.c_str(), ix, this_start, previous_start);
       return HighsStatus::kError;
     }
-    bool this_start_too_big = this_start > num_nz;
-    if (this_start_too_big) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix packed vector %" HIGHSINT_FORMAT
-                   " has illegal start of %" HIGHSINT_FORMAT
-                   " > %" HIGHSINT_FORMAT
-                   " = "
-                   "number of nonzeros\n",
-                   matrix_name.c_str(), ix, this_start, num_nz);
-      return HighsStatus::kError;
-    }
+    previous_start = this_start;
+  }
+  bool this_start_too_big = this_start > num_nz;
+  if (this_start_too_big) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "%s matrix packed vector %" HIGHSINT_FORMAT
+                 " has illegal start of %" HIGHSINT_FORMAT
+                 " > %" HIGHSINT_FORMAT
+                 " = "
+                 "number of nonzeros\n",
+                 matrix_name.c_str(), num_vec, this_start, num_nz);
+    return HighsStatus::kError;
   }
 
   // Assess the indices and values

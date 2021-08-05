@@ -217,12 +217,14 @@ bool HighsLp::MatrixOk(std::string message) const {
 }
 
 void HighsLp::MatrixCopy() {
-  this->a_matrix_.num_col_ = this->num_col_;
-  this->a_matrix_.num_row_ = this->num_row_;
-  this->a_matrix_.format_ = this->format_;
-  this->a_matrix_.start_ = this->a_start_;
-  this->a_matrix_.index_ = this->a_index_;
-  this->a_matrix_.value_ = this->a_value_;
+  if (this->format_ != MatrixFormat::kNone) {
+    this->a_matrix_.num_col_ = this->num_col_;
+    this->a_matrix_.num_row_ = this->num_row_;
+    this->a_matrix_.format_ = this->format_;
+    this->a_matrix_.start_ = this->a_start_;
+    this->a_matrix_.index_ = this->a_index_;
+    this->a_matrix_.value_ = this->a_value_;
+  }
 }
 
 bool HighsLp::equalScale(std::string message, const SimplexScale& scale) const {
