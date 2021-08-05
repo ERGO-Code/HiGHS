@@ -74,6 +74,7 @@ class HighsSparseMatrix {
   // partitioned row-wise matrix
   void createPartition(const HighsSparseMatrix& matrix,
                        const int8_t* in_partition = NULL);
+  bool debugPartitionOk(const int8_t* in_partition) const;
   void priceByColumn(HVector& result, const HVector& column) const;
   void priceByRow(HVector& result, const HVector& column) const;
   void priceByRowWithSwitch(HVector& result, const HVector& column,

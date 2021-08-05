@@ -922,6 +922,8 @@ void HEkkDual::rebuild() {
     ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
                                 &lp.a_index_[0], &lp.a_value_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
+    ekk_instance_.ar_matrix_.createPartition(ekk_instance_.lp_.a_matrix_, &ekk_instance_.basis_.nonbasicFlag_[0]);
+    assert(ekk_instance_.ar_matrix_.debugPartitionOk(&ekk_instance_.basis_.nonbasicFlag_[0]));
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
   }

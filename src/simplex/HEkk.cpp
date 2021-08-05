@@ -976,6 +976,8 @@ void HEkk::initialiseMatrix(const bool forced) {
   analysis_.simplexTimerStart(matrixSetupClock);
   matrix_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0], &lp_.a_index_[0],
                 &lp_.a_value_[0], &basis_.nonbasicFlag_[0]);
+  ar_matrix_.createPartition(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
+  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   status_.has_matrix = true;
   analysis_.simplexTimerStop(matrixSetupClock);
 }
@@ -1393,7 +1395,10 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   analysis_.simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
+  HVector alt_col_aq = col_aq;
   matrix_.collect_aj(col_aq, iCol, 1);
+  ar_matrix_.collectAj(alt_col_aq, iCol, 1);
+  assert(alt_col_aq.isEqual(col_aq));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq,
                                     info_.col_aq_density);
@@ -1486,19 +1491,28 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     }
   }
   row_ap.clear();
+  HVector alt_row_ep = row_ep;
+  HVector alt_row_ap = row_ap;
   if (use_col_price) {
     // Perform column-wise PRICE
     matrix_.priceByColumn(row_ap, row_ep);
+    ar_matrix_.priceByColumn(alt_row_ap, alt_row_ep);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
     const double switch_density = matrix_.hyperPRICE;
     matrix_.priceByRowSparseResultWithSwitch(
         row_ap, row_ep, info_.row_ap_density, 0, switch_density);
+    ar_matrix_.priceByRowWithSwitch(alt_row_ap, alt_row_ep, info_.row_ap_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
     matrix_.priceByRowSparseResult(row_ap, row_ep);
+    ar_matrix_.priceByRow(alt_row_ap, alt_row_ep);
   }
+  if (!alt_row_ap.isEqual(row_ap)) {
+    printf("alt_row_ap error\n");
+  }
+  assert(alt_row_ap.isEqual(row_ap));
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
@@ -1902,6 +1916,8 @@ void HEkk::updateMatrix(const HighsInt variable_in,
                         const HighsInt variable_out) {
   analysis_.simplexTimerStart(UpdateMatrixClock);
   matrix_.update(variable_in, variable_out);
+  ar_matrix_.update(variable_in, variable_out, lp_.a_matrix_);
+  assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(UpdateMatrixClock);
 }
 
