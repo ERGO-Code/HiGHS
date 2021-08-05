@@ -102,6 +102,7 @@ class HEkk {
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
   HMatrix matrix_;
+  HighsSparseMatrix ar_matrix_;
   HSimplexNla simplex_nla_;
 
   const SimplexScale* scale_;

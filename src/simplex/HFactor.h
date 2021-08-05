@@ -31,7 +31,8 @@ using std::max;
 using std::min;
 using std::vector;
 
-class HVector;
+//class HVector;
+#include "simplex/HVector.h"
 
 enum UPDATE_METHOD {
   kUpdateMethodFt = 1,

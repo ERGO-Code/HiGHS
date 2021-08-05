@@ -23,7 +23,8 @@
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "util/HighsUtils.h"
 
-class HighsSparseMatrix;
+//class HighsSparseMatrix;
+//class HVector;
 
 class HighsSparseMatrix {
  public:
