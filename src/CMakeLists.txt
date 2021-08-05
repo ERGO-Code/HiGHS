@@ -129,7 +129,6 @@ set(sources
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
     presolve/ICrashX.cpp
-    #presolve/HPreData.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
@@ -269,6 +268,7 @@ set(headers
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
+    util/HighsDisjointSets.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h
