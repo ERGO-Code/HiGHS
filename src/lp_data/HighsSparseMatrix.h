@@ -74,20 +74,20 @@ class HighsSparseMatrix {
   // partitioned row-wise matrix
   void createPartition(const HighsSparseMatrix& matrix,
                        const int8_t* in_partition = NULL);
-  void priceByColumn(HVector& result, const HVector& vector) const;
-  void priceByRow(HVector& result, const HVector& vector) const;
-  void priceByRowWithSwitch(HVector& result, const HVector& vector,
+  void priceByColumn(HVector& result, const HVector& column) const;
+  void priceByRow(HVector& result, const HVector& column) const;
+  void priceByRowWithSwitch(HVector& result, const HVector& column,
                             const double expected_density,
-                            const HighsInt from_row,
+                            const HighsInt from_index,
                             const double switch_density) const;
-  void update(const HighsInt var_in, const HighsInt var_out);
-  double computeDot(const HVector& vector, const HighsInt use_col) const;
-  void collectAj(HVector& vector, const HighsInt use_col,
+  void update(const HighsInt var_in, const HighsInt var_out, const HighsSparseMatrix& matrix);
+  double computeDot(const HVector& column, const HighsInt use_col) const;
+  void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
 
  private:
-  void priceByRowDenseResult(HVector& result, const HVector& vector,
-                             const HighsInt from_row);
+  void priceByRowDenseResult(HVector& result, const HVector& column,
+                             const HighsInt from_index) const;
 };
 
 #endif
