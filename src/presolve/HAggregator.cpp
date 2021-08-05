@@ -14,6 +14,7 @@
 
 #include <algorithm>
 
+#include "pdqsort/pdqsort.h"
 #include "util/HighsSplay.h"
 
 namespace presolve {
@@ -906,7 +907,7 @@ HAggregator::PostsolveStack HAggregator::run() {
     // now sort the candidates to prioritize sparse columns, tiebreak by
     // preferring columns with a larger coefficient in this row which is better
     // for numerics
-    std::sort(
+    pdqsort(
         aggr_cands.begin(), aggr_cands.end(),
         [&](const std::pair<HighsInt, double>& cand1,
             const std::pair<HighsInt, double>& cand2) {
@@ -1250,7 +1251,7 @@ HighsInt HAggregator::strengthenInequalities() {
           indices.empty())
         break;
 
-      std::sort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
+      pdqsort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
         return reducedcost[i1] > reducedcost[i2];
       });
 

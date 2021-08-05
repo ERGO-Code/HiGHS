@@ -55,16 +55,16 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
 
   // Set up the LP externally
   HighsLp lp;
-  lp.numCol_ = num_col;
-  lp.numRow_ = num_row;
-  lp.colCost_ = colCost;
-  lp.colLower_ = colLower;
-  lp.colUpper_ = colUpper;
-  lp.rowLower_ = rowLower;
-  lp.rowUpper_ = rowUpper;
-  lp.Astart_ = Astart;
-  lp.Aindex_ = Aindex;
-  lp.Avalue_ = Avalue;
+  lp.num_col_ = num_col;
+  lp.num_row_ = num_row;
+  lp.col_cost_ = colCost;
+  lp.col_lower_ = colLower;
+  lp.col_upper_ = colUpper;
+  lp.row_lower_ = rowLower;
+  lp.row_upper_ = rowUpper;
+  lp.a_start_ = Astart;
+  lp.a_index_ = Aindex;
+  lp.a_value_ = Avalue;
   lp.format_ = MatrixFormat::kColwise;
   highs.passModel(lp);
   highs.run();

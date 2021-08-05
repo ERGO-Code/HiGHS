@@ -137,10 +137,10 @@ HighsDebugStatus debugHighsSolution(
   if (hessian.dim_ > 0) {
     hessian.product(solution.col_value, gradient);
   } else {
-    gradient.assign(lp.numCol_, 0);
+    gradient.assign(lp.num_col_, 0);
   }
-  for (HighsInt iCol = 0; iCol < hessian.dim_; iCol++)
-    gradient[iCol] += lp.colCost_[iCol];
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    gradient[iCol] += lp.col_cost_[iCol];
   getKktFailures(lp, gradient, solution, basis, local_solution_params,
                  primal_dual_errors, get_residuals);
   HighsInt& num_primal_infeasibility =

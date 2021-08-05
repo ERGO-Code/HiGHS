@@ -15,6 +15,7 @@
  */
 #include "simplex/HEkkPrimal.h"
 
+#include "pdqsort/pdqsort.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/SimplexTimer.h"
@@ -264,8 +265,8 @@ HighsStatus HEkkPrimal::solve() {
 void HEkkPrimal::initialiseInstance() {
   analysis = &ekk_instance_.analysis_;
 
-  num_col = ekk_instance_.lp_.numCol_;
-  num_row = ekk_instance_.lp_.numRow_;
+  num_col = ekk_instance_.lp_.num_col_;
+  num_row = ekk_instance_.lp_.num_row_;
   num_tot = num_col + num_row;
 
   // Setup local vectors
@@ -594,8 +595,8 @@ void HEkkPrimal::rebuild() {
     assert(info.backtracking_);
     HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.matrix_.setup(lp.numCol_, lp.numRow_, &lp.Astart_[0],
-                                &lp.Aindex_[0], &lp.Avalue_[0],
+    ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
+                                &lp.a_index_[0], &lp.a_value_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
@@ -1022,7 +1023,7 @@ void HEkkPrimal::phase1ChooseRow() {
   // [kO(log(n))].
 
   analysis->simplexTimerStart(Chuzr2Clock);
-  std::sort(ph1SorterR.begin(), ph1SorterR.end());
+  pdqsort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
   double dGradient = fabs(theta_dual);
   for (HighsUInt i = 0; i < ph1SorterR.size(); i++) {
@@ -1038,7 +1039,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   // Find out the biggest possible alpha for pivot
-  std::sort(ph1SorterT.begin(), ph1SorterT.end());
+  pdqsort(ph1SorterT.begin(), ph1SorterT.end());
   double dMaxAlpha = 0.0;
   HighsUInt iLast = ph1SorterT.size();
   for (HighsUInt i = 0; i < ph1SorterT.size(); i++) {
@@ -1961,11 +1962,11 @@ void HEkkPrimal::basicFeasibilityChangeUpdateDual() {
 
 void HEkkPrimal::basicFeasibilityChangeBtran() {
   // Performs BTRAN on col_basic_feasibility_change. Make sure that
-  // col_basic_feasibility_change.count is large (>lp_.numRow_ to be
+  // col_basic_feasibility_change.count is large (>lp_.num_row_ to be
   // sure) rather than 0 if the indices of the RHS (and true value of
   // col_basic_feasibility_change.count) isn't known.
   analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
-  const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
+  const HighsInt solver_num_row = ekk_instance_.lp_.num_row_;
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(
         ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
@@ -2299,11 +2300,11 @@ void HEkkPrimal::adjustPerturbedEquationOut() {
   double lp_lower;
   double lp_upper;
   if (variable_out < num_col) {
-    lp_lower = lp.colLower_[variable_out];
-    lp_upper = lp.colUpper_[variable_out];
+    lp_lower = lp.col_lower_[variable_out];
+    lp_upper = lp.col_upper_[variable_out];
   } else {
-    lp_lower = -lp.rowUpper_[variable_out - num_col];
-    lp_upper = -lp.rowLower_[variable_out - num_col];
+    lp_lower = -lp.row_upper_[variable_out - num_col];
+    lp_upper = -lp.row_lower_[variable_out - num_col];
   }
   if (lp_lower < lp_upper) return;
   // Leaving variable is fixed

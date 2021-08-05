@@ -17,8 +17,8 @@
 
 HighsLpAggregator::HighsLpAggregator(const HighsLpRelaxation& lprelaxation)
     : lprelaxation(lprelaxation) {
-  vectorsum.setDimension(lprelaxation.getLp().numRow_ +
-                         lprelaxation.getLp().numCol_);
+  vectorsum.setDimension(lprelaxation.getLp().num_row_ +
+                         lprelaxation.getLp().num_col_);
 }
 
 void HighsLpAggregator::addRow(HighsInt row, double weight) {
@@ -29,7 +29,7 @@ void HighsLpAggregator::addRow(HighsInt row, double weight) {
 
   for (HighsInt i = 0; i != len; ++i) vectorsum.add(inds[i], weight * vals[i]);
 
-  vectorsum.add(lprelaxation.getLp().numCol_ + row, -weight);
+  vectorsum.add(lprelaxation.getLp().num_col_ + row, -weight);
 }
 
 void HighsLpAggregator::getCurrentAggregation(std::vector<HighsInt>& inds,

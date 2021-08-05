@@ -32,7 +32,8 @@ public:
 
     // Move is OK.
     Basis(Basis&&) = default;
-    Basis& operator=(Basis&&) = default;
+    // But assignment is implicitly deleted due to reference members
+    Basis& operator=(Basis&&) = delete;
 
     ~Basis() = default;
 

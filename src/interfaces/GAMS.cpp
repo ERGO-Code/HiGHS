@@ -150,19 +150,19 @@ static HighsInt setupProblem(gamshighs_t* gh) {
 
   gh->lp = new HighsLp();
 
-  gh->lp->numRow_ = numRow;
-  gh->lp->numCol_ = numCol;
+  gh->lp->num_row_ = numRow;
+  gh->lp->num_col_ = numCol;
   //  gh->lp->nnz_ = numNz;
 
   /* columns */
-  gh->lp->colUpper_.resize(numCol);
-  gh->lp->colLower_.resize(numCol);
-  gmoGetVarLower(gh->gmo, &gh->lp->colLower_[0]);
-  gmoGetVarUpper(gh->gmo, &gh->lp->colUpper_[0]);
+  gh->lp->col_upper_.resize(numCol);
+  gh->lp->col_lower_.resize(numCol);
+  gmoGetVarLower(gh->gmo, &gh->lp->col_lower_[0]);
+  gmoGetVarUpper(gh->gmo, &gh->lp->col_upper_[0]);
 
   /* objective */
-  gh->lp->colCost_.resize(numCol);
-  gmoGetObjVector(gh->gmo, &gh->lp->colCost_[0], NULL);
+  gh->lp->col_cost_.resize(numCol);
+  gmoGetObjVector(gh->gmo, &gh->lp->col_cost_[0], NULL);
   if (gmoSense(gh->gmo) == gmoObj_Min)
     gh->lp->sense_ = ObjSense::kMinimize;
   else
@@ -170,22 +170,23 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   gh->lp->offset_ = gmoObjConst(gh->gmo);
 
   /* row left- and right-hand-side */
-  gh->lp->rowLower_.resize(numRow);
-  gh->lp->rowUpper_.resize(numRow);
+  gh->lp->row_lower_.resize(numRow);
+  gh->lp->row_upper_.resize(numRow);
   for (i = 0; i < numRow; ++i) {
     switch (gmoGetEquTypeOne(gh->gmo, i)) {
       case gmoequ_E:
-        gh->lp->rowLower_[i] = gh->lp->rowUpper_[i] = gmoGetRhsOne(gh->gmo, i);
+        gh->lp->row_lower_[i] = gh->lp->row_upper_[i] =
+            gmoGetRhsOne(gh->gmo, i);
         break;
 
       case gmoequ_G:
-        gh->lp->rowLower_[i] = gmoGetRhsOne(gh->gmo, i);
-        gh->lp->rowUpper_[i] = kHighsInf;
+        gh->lp->row_lower_[i] = gmoGetRhsOne(gh->gmo, i);
+        gh->lp->row_upper_[i] = kHighsInf;
         break;
 
       case gmoequ_L:
-        gh->lp->rowLower_[i] = -kHighsInf;
-        gh->lp->rowUpper_[i] = gmoGetRhsOne(gh->gmo, i);
+        gh->lp->row_lower_[i] = -kHighsInf;
+        gh->lp->row_upper_[i] = gmoGetRhsOne(gh->gmo, i);
         break;
 
       case gmoequ_N:
@@ -198,11 +199,11 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   }
 
   /* coefficients matrix */
-  gh->lp->Astart_.resize(numCol + 1);
-  gh->lp->Aindex_.resize(numNz);
-  gh->lp->Avalue_.resize(numNz);
-  gmoGetMatrixCol(gh->gmo, &gh->lp->Astart_[0], &gh->lp->Aindex_[0],
-                  &gh->lp->Avalue_[0], NULL);
+  gh->lp->a_start_.resize(numCol + 1);
+  gh->lp->a_index_.resize(numNz);
+  gh->lp->a_value_.resize(numNz);
+  gmoGetMatrixCol(gh->gmo, &gh->lp->a_start_[0], &gh->lp->a_index_[0],
+                  &gh->lp->a_value_[0], NULL);
 
   gh->highs->passModel(*gh->lp);
 

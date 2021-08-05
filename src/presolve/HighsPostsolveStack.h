@@ -63,6 +63,16 @@ class HighsPostsolveStack {
   };
 
  private:
+  /// transform a column x by a linear mapping with a new column x'.
+  /// I.e. substitute x = a * x' + b
+  struct LinearTransform {
+    double scale;
+    double constant;
+    HighsInt col;
+
+    void undo(const HighsOptions& options, HighsSolution& solution);
+  };
+
   struct FreeColSubstitution {
     double rhs;
     double colCost;
@@ -199,6 +209,7 @@ class HighsPostsolveStack {
 
   /// tags for reduction
   enum class ReductionType : uint8_t {
+    kLinearTransform,
     kFreeColSubstitution,
     kDoubletonEquation,
     kEqualityRowAddition,
@@ -262,6 +273,13 @@ class HighsPostsolveStack {
 
   void compressIndexMaps(const std::vector<HighsInt>& newRowIndex,
                          const std::vector<HighsInt>& newColIndex);
+
+  /// transform a column x by a linear mapping with a new column x'.
+  /// I.e. substitute x = scale * x' + constant
+  void linearTransform(HighsInt col, double scale, double constant) {
+    reductionValues.push(LinearTransform{scale, constant, origColIndex[col]});
+    reductions.push_back(ReductionType::kLinearTransform);
+  }
 
   template <typename RowStorageFormat, typename ColStorageFormat>
   void freeColSubstitution(HighsInt row, HighsInt col, double rhs,
@@ -499,6 +517,12 @@ class HighsPostsolveStack {
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
       switch (reductions[i]) {
+        case ReductionType::kLinearTransform: {
+          LinearTransform reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution);
+          break;
+        }
         case ReductionType::kFreeColSubstitution: {
           FreeColSubstitution reduction;
           reductionValues.pop(colValues);
@@ -610,6 +634,12 @@ class HighsPostsolveStack {
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= 0; --i) {
       switch (reductions[i]) {
+        case ReductionType::kLinearTransform: {
+          LinearTransform reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution);
+          break;
+        }
         case ReductionType::kFreeColSubstitution: {
           FreeColSubstitution reduction;
           reductionValues.pop(colValues);
@@ -740,6 +770,12 @@ class HighsPostsolveStack {
     // now undo the changes
     for (HighsInt i = reductions.size() - 1; i >= numReductions; --i) {
       switch (reductions[i]) {
+        case ReductionType::kLinearTransform: {
+          LinearTransform reduction;
+          reductionValues.pop(reduction);
+          reduction.undo(options, solution);
+          break;
+        }
         case ReductionType::kFreeColSubstitution: {
           FreeColSubstitution reduction;
           reductionValues.pop(colValues);

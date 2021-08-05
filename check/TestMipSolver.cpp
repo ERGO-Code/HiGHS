@@ -43,16 +43,16 @@ void distillationMIP(Highs& highs) {
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
-  lp.numCol_ = 2;
-  lp.numRow_ = 3;
-  lp.colCost_ = {8, 10};
-  lp.colLower_ = {0, 0};
-  lp.colUpper_ = {inf, inf};
-  lp.rowLower_ = {7, 12, 6};
-  lp.rowUpper_ = {inf, inf, inf};
-  lp.Astart_ = {0, 3, 6};
-  lp.Aindex_ = {0, 1, 2, 0, 1, 2};
-  lp.Avalue_ = {2, 3, 2, 2, 4, 1};
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {8, 10};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {7, 12, 6};
+  lp.row_upper_ = {inf, inf, inf};
+  lp.a_start_ = {0, 3, 6};
+  lp.a_index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_value_ = {2, 3, 2, 2, 4, 1};
   lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
@@ -68,12 +68,12 @@ void rowlessMIP(Highs& highs) {
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
-  lp.numCol_ = 2;
-  lp.numRow_ = 0;
-  lp.colCost_ = {1, -1};
-  lp.colLower_ = {0, 0};
-  lp.colUpper_ = {1, 1};
-  lp.Astart_ = {0, 0, 0};
+  lp.num_col_ = 2;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1, -1};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {1, 1};
+  lp.a_start_ = {0, 0, 0};
   lp.format_ = MatrixFormat::kColwise;
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0;
@@ -110,7 +110,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   const HighsLp& lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
   vector<HighsVarType> integrality;
-  integrality.resize(lp.numCol_);
+  integrality.resize(lp.num_col_);
   HighsInt from_col0 = 0;
   HighsInt to_col0 = 2;
   HighsInt from_col1 = 5;
@@ -124,7 +124,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   set.push_back(2);
   set.push_back(6);
   vector<HighsInt> mask;
-  mask.assign(lp.numCol_, 0);
+  mask.assign(lp.num_col_, 0);
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
     mask[iCol] = 1;
@@ -155,7 +155,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   if (dev_run) highs.writeSolution("", true);
   REQUIRE(info.objective_function_value == optimal_objective);
 
-  integrality.assign(lp.numCol_, HighsVarType::kContinuous);
+  integrality.assign(lp.num_col_, HighsVarType::kContinuous);
   for (HighsInt ix = 0; ix < num_set_entries; ix++) {
     HighsInt iCol = set[ix];
     integrality[iCol] = HighsVarType::kInteger;
@@ -180,11 +180,11 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsLp lp;
-  lp.numCol_ = 1;
-  lp.numRow_ = 0;
-  lp.colCost_ = {-2};
-  lp.colLower_ = {-inf};
-  lp.colUpper_ = {1.5};
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {-2};
+  lp.col_lower_ = {-inf};
+  lp.col_upper_ = {1.5};
   lp.integrality_ = {HighsVarType::kInteger};
   double required_objective_value = -2;
   double required_x0_value = 1;

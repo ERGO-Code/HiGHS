@@ -365,8 +365,8 @@ HighsStatus HEkkDual::solve() {
 void HEkkDual::initialiseInstance() {
   // Copy size, matrix and factor
 
-  solver_num_col = ekk_instance_.lp_.numCol_;
-  solver_num_row = ekk_instance_.lp_.numRow_;
+  solver_num_col = ekk_instance_.lp_.num_col_;
+  solver_num_row = ekk_instance_.lp_.num_row_;
   solver_num_tot = solver_num_col + solver_num_row;
 
   matrix = &ekk_instance_.matrix_;
@@ -698,6 +698,13 @@ void HEkkDual::solvePhase1() {
     }
   }
 
+  // todo @ Julian: this assert fails on miplib2017 models arki001, momentum1,
+  // and glass4 if the one about num_shift_skipped in HEkk.cpp with the other
+  // todo is commented out.
+  // A hotfix suggestion of mine was to put returns above
+  // at the cases where you set model_status = HighsModelStatus::kSolveError. I
+  // think this error can lead to infinite looping, or at least plays a part in
+  // some of the cases where the simplex gets stuck infinitely.
   assert(solve_phase == kSolvePhase1 || solve_phase == kSolvePhase2 ||
          solve_phase == kSolvePhaseExit);
   if (solve_phase == kSolvePhase2 || solve_phase == kSolvePhaseExit) {
@@ -913,8 +920,8 @@ void HEkkDual::rebuild() {
     assert(info.backtracking_);
     HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.matrix_.setup(lp.numCol_, lp.numRow_, &lp.Astart_[0],
-                                &lp.Aindex_[0], &lp.Avalue_[0],
+    ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
+                                &lp.a_index_[0], &lp.a_value_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
@@ -1443,7 +1450,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   dualRow.createFreemove(row_ep);
   analysis->simplexTimerStop(Chuzc0Clock);
 
-  //  const HighsInt solver_num_row = ekk_instance_.lp_.numRow_;
+  //  const HighsInt solver_num_row = ekk_instance_.lp_.num_row_;
   const double local_density = 1.0 * row_ep->count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
@@ -2089,20 +2096,20 @@ void HEkkDual::exitPhase1ResetDuals() {
     ekk_instance_.computeDual();
   }
 
-  const HighsInt numTot = lp.numCol_ + lp.numRow_;
+  const HighsInt numTot = lp.num_col_ + lp.num_row_;
   HighsInt num_shift = 0;
   double sum_shift = 0;
   for (HighsInt iVar = 0; iVar < numTot; iVar++) {
     if (basis.nonbasicFlag_[iVar]) {
       double lp_lower;
       double lp_upper;
-      if (iVar < lp.numCol_) {
-        lp_lower = lp.colLower_[iVar];
-        lp_upper = lp.colUpper_[iVar];
+      if (iVar < lp.num_col_) {
+        lp_lower = lp.col_lower_[iVar];
+        lp_upper = lp.col_upper_[iVar];
       } else {
-        HighsInt iRow = iVar - lp.numCol_;
-        lp_lower = lp.rowLower_[iRow];
-        lp_upper = lp.rowUpper_[iRow];
+        HighsInt iRow = iVar - lp.num_col_;
+        lp_lower = lp.row_lower_[iRow];
+        lp_upper = lp.row_upper_[iRow];
       }
       if (lp_lower <= -kHighsInf && lp_upper >= kHighsInf) {
         const double shift = -info.workDual_[iVar];
@@ -2149,8 +2156,8 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
 }
 
 bool HEkkDual::dualInfoOk(const HighsLp& lp) {
-  HighsInt lp_numCol = lp.numCol_;
-  HighsInt lp_numRow = lp.numRow_;
+  HighsInt lp_numCol = lp.num_col_;
+  HighsInt lp_numRow = lp.num_row_;
   bool dimensions_ok;
   dimensions_ok = lp_numCol == solver_num_col && lp_numRow == solver_num_row;
   assert(dimensions_ok);
@@ -2247,12 +2254,12 @@ double HEkkDual::computeExactDualObjectiveValue() {
   HFactor& factor = ekk_instance_.factor_;
   // Create a local buffer for the pi vector
   HVector dual_col;
-  dual_col.setup(lp.numRow_);
+  dual_col.setup(lp.num_row_);
   dual_col.clear();
-  for (HighsInt iRow = 0; iRow < lp.numRow_; iRow++) {
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     HighsInt iVar = basis.basicIndex_[iRow];
-    if (iVar < lp.numCol_) {
-      const double value = lp.colCost_[iVar];
+    if (iVar < lp.num_col_) {
+      const double value = lp.col_cost_[iVar];
       if (value) {
         dual_col.array[iRow] = value;
         dual_col.index[dual_col.count++] = iRow;
@@ -2260,9 +2267,9 @@ double HEkkDual::computeExactDualObjectiveValue() {
     }
   }
   // Create a local buffer for the dual vector
-  const HighsInt numTot = lp.numCol_ + lp.numRow_;
+  const HighsInt numTot = lp.num_col_ + lp.num_row_;
   HVector dual_row;
-  dual_row.setup(lp.numCol_);
+  dual_row.setup(lp.num_col_);
   dual_row.clear();
   if (dual_col.count) {
     const double historical_density_for_non_hypersparse_operation = 1;
@@ -2272,9 +2279,9 @@ double HEkkDual::computeExactDualObjectiveValue() {
   double dual_objective = lp.offset_;
   double norm_dual = 0;
   double norm_delta_dual = 0;
-  for (HighsInt iCol = 0; iCol < lp.numCol_; iCol++) {
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     if (!basis.nonbasicFlag_[iCol]) continue;
-    double exact_dual = lp.colCost_[iCol] - dual_row.array[iCol];
+    double exact_dual = lp.col_cost_[iCol] - dual_row.array[iCol];
     double residual = fabs(exact_dual - info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
@@ -2286,9 +2293,9 @@ double HEkkDual::computeExactDualObjectiveValue() {
           iCol, exact_dual, info.workDual_[iCol], residual);
     dual_objective += info.workValue_[iCol] * exact_dual;
   }
-  for (HighsInt iVar = lp.numCol_; iVar < numTot; iVar++) {
+  for (HighsInt iVar = lp.num_col_; iVar < numTot; iVar++) {
     if (!basis.nonbasicFlag_[iVar]) continue;
-    HighsInt iRow = iVar - lp.numCol_;
+    HighsInt iRow = iVar - lp.num_col_;
     double exact_dual = -dual_col.array[iRow];
     double residual = fabs(exact_dual - info.workDual_[iVar]);
     norm_dual += fabs(exact_dual);
