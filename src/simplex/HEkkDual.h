@@ -384,7 +384,6 @@ class HEkkDual {
   HighsInt solver_num_col;
   HighsInt solver_num_tot;
 
-  // JH RmHMatrix const HMatrix* matrix;
   const HighsSparseMatrix* a_matrix;
   const HSimplexNla* simplex_nla;
   HighsSimplexAnalysis* analysis;
@@ -452,7 +451,6 @@ class HEkkDual {
   HighsInt slice_num;
   HighsInt slice_PRICE;
   HighsInt slice_start[kHighsSlicedLimit + 1];
-  HMatrix slice_matrix[kHighsSlicedLimit];
   HighsSparseMatrix slice_a_matrix[kHighsSlicedLimit];
   HighsSparseMatrix slice_ar_matrix[kHighsSlicedLimit];
   HVector slice_row_ap[kHighsSlicedLimit];

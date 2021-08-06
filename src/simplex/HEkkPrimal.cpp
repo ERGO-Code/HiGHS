@@ -596,12 +596,9 @@ void HEkkPrimal::rebuild() {
     HighsSparseMatrix& ar_matrix = ekk_instance_.ar_matrix_;
     const int8_t* nonbasicFlag = &ekk_instance_.basis_.nonbasicFlag_[0];
     analysis->simplexTimerStart(matrixSetupClock);
-    // JH RmHMatrix ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
-    // JH RmHMatrix &lp.a_index_[0], &lp.a_value_[0],
-    // JH RmHMatrix nonbasicFlag);
     ar_matrix.createRowwisePartitioned(lp.a_matrix_, nonbasicFlag);
     assert(ar_matrix.debugPartitionOk(nonbasicFlag));
-    
+
     status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
   }
@@ -2001,7 +1998,8 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   ekk_instance_.choosePriceTechnique(info.price_strategy, local_density,
                                      use_col_price, use_row_price_w_switch);
   if (analysis->analyse_simplex_data) {
-  printf("price_strategy = %d; use_col_price = %d\n", (int)info.price_strategy, use_col_price);
+    printf("price_strategy = %d; use_col_price = %d\n",
+           (int)info.price_strategy, use_col_price);
     if (use_col_price) {
       const double expected_density = 1;
       analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange,
@@ -2021,36 +2019,25 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     }
   }
   row_basic_feasibility_change.clear();
-  // JH RmHMatrix HVector alt_row_basic_feasibility_change = row_basic_feasibility_change;
-  // JH RmHMatrix HVector alt_col_basic_feasibility_change = col_basic_feasibility_change;
   if (use_col_price) {
     // Perform column-wise PRICE
-    assert(1==0);
-    // JH RmHMatrix ekk_instance_.matrix_.priceByColumn(alt_row_basic_feasibility_change,
-    // JH RmHMatrix alt_col_basic_feasibility_change);
+    assert(1 == 0);
     ekk_instance_.lp_.a_matrix_.priceByColumn(row_basic_feasibility_change,
-                                        col_basic_feasibility_change);
+                                              col_basic_feasibility_change);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of
     // row_basic_feasibility_change becomes extreme
     //
-    // JH RmHMatrix const double switch_density = ekk_instance_.matrix_.hyperPRICE;
     const double switch_density = kHyperPriceDensity;
-    // JH RmHMatrix ekk_instance_.matrix_.priceByRowSparseResultWithSwitch(
-    // JH RmHMatrix alt_row_basic_feasibility_change, alt_col_basic_feasibility_change,
-    // JH RmHMatrix info.row_basic_feasibility_change_density, 0, switch_density);
     ekk_instance_.ar_matrix_.priceByRowWithSwitch(
         row_basic_feasibility_change, col_basic_feasibility_change,
         info.row_basic_feasibility_change_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    assert(1==0);
-    // JH RmHMatrix ekk_instance_.matrix_.priceByRowSparseResult(alt_row_basic_feasibility_change,
-    // JH RmHMatrix alt_col_basic_feasibility_change);
+    assert(1 == 0);
     ekk_instance_.ar_matrix_.priceByRow(row_basic_feasibility_change,
-					col_basic_feasibility_change);
+                                        col_basic_feasibility_change);
   }
-  // JH RmHMatrix assert(alt_row_basic_feasibility_change.array==row_basic_feasibility_change.array);
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic

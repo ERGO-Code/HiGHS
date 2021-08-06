@@ -367,7 +367,6 @@ void HEkkDual::initialiseInstance() {
   solver_num_row = ekk_instance_.lp_.num_row_;
   solver_num_tot = solver_num_col + solver_num_row;
 
-  // JH RmHMatrix matrix = &ekk_instance_.matrix_;
   a_matrix = &ekk_instance_.lp_.a_matrix_;
   simplex_nla = &ekk_instance_.simplex_nla_;
   analysis = &ekk_instance_.analysis_;
@@ -459,9 +458,6 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   }
 
   // Alias to the matrix
-  // JH RmHMatrix const HighsInt* Astart = matrix->getAstart();
-  // JH RmHMatrix const HighsInt* Aindex = matrix->getAindex();
-  // JH RmHMatrix const double* Avalue = matrix->getAvalue();
   const HighsInt* Astart = &a_matrix->start_[0];
   const HighsInt* Aindex = &a_matrix->index_[0];
   const double* Avalue = &a_matrix->value_[0];
@@ -490,16 +486,14 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   for (HighsInt i = 0; i < slice_num; i++) {
     // The matrix
     HighsInt from_col = slice_start[i];
-    HighsInt to_col = slice_start[i+1]-1;
+    HighsInt to_col = slice_start[i + 1] - 1;
     HighsInt slice_num_col = slice_start[i + 1] - from_col;
     HighsInt from_el = Astart[from_col];
     sliced_Astart.resize(slice_num_col + 1);
     for (HighsInt k = 0; k <= slice_num_col; k++)
       sliced_Astart[k] = Astart[k + from_col] - from_el;
-    slice_matrix[i].setup_lgBs(slice_num_col, solver_num_row, &sliced_Astart[0],
-                               Aindex + from_el, Avalue + from_el);
-    
-    slice_a_matrix[i].createSlice(ekk_instance_.lp_.a_matrix_, from_col, to_col);
+    slice_a_matrix[i].createSlice(ekk_instance_.lp_.a_matrix_, from_col,
+                                  to_col);
     slice_ar_matrix[i].createRowwise(slice_a_matrix[i]);
 
     // The row_ap and its packages
@@ -927,9 +921,6 @@ void HEkkDual::rebuild() {
     assert(info.backtracking_);
     HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    // JH RmHMatrix ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
-    // JH RmHMatrix &lp.a_index_[0], &lp.a_value_[0],
-    // JH RmHMatrix &ekk_instance_.basis_.nonbasicFlag_[0]);
     ekk_instance_.ar_matrix_.createRowwisePartitioned(
         ekk_instance_.lp_.a_matrix_, &ekk_instance_.basis_.nonbasicFlag_[0]);
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
@@ -1478,8 +1469,8 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   bool use_col_price;
   bool use_row_price_w_switch;
   HighsSimplexInfo& info = ekk_instance_.info_;
-  ekk_instance_.choosePriceTechnique(info.price_strategy, local_density, use_col_price,
-                       use_row_price_w_switch);
+  ekk_instance_.choosePriceTechnique(info.price_strategy, local_density,
+                                     use_col_price, use_row_price_w_switch);
 
   if (analysis->analyse_simplex_data) {
     const HighsInt row_ep_count = row_ep->count;
@@ -1528,33 +1519,18 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
 #endif
       slice_row_ap[i].clear();
 
-      const bool use_hsm = true;
       if (use_col_price) {
         // Perform column-wise PRICE
-	if (use_hsm) {
-	  slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
-	} else {
-	  slice_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
-	}
+        slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
       } else if (use_row_price_w_switch) {
         // Perform hyper-sparse row-wise PRICE, but switch if the density of
         // row_ap becomes extreme
-	if (use_hsm) {
-	  slice_ar_matrix[i].priceByRowWithSwitch(
-	       slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
-	       slice_matrix[i].hyperPRICE);
-	} else {
-	  slice_matrix[i].priceByRowSparseResultWithSwitch(
-	       slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
-	       slice_matrix[i].hyperPRICE);
-	}
+        slice_ar_matrix[i].priceByRowWithSwitch(
+            slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
+            kHyperPriceDensity);
       } else {
         // Perform hyper-sparse row-wise PRICE
-	if (use_hsm) {
-	  slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
-	} else {
-	  slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
-	}
+        slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
       }
 
       slice_dualRow[i].clear();
@@ -1644,7 +1620,6 @@ void HEkkDual::updateFtran() {
   col_aq.packFlag = true;
   // Get the constraint matrix column by combining just one column
   // with unit multiplier
-  // JH RmHMatrix matrix->collect_aj(col_aq, variable_in, 1);
   a_matrix->collectAj(col_aq, variable_in, 1);
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(kSimplexNlaFtran, col_aq,
@@ -2281,7 +2256,6 @@ double HEkkDual::computeExactDualObjectiveValue() {
   const HighsLp& lp = ekk_instance_.lp_;
   const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
-  // JH RmHMatrix HMatrix& matrix = ekk_instance_.matrix_;
   // Create a local buffer for the pi vector
   HVector dual_col;
   dual_col.setup(lp.num_row_);
@@ -2304,7 +2278,6 @@ double HEkkDual::computeExactDualObjectiveValue() {
   if (dual_col.count) {
     const double expected_density = 1;
     simplex_nla->btran(dual_col, expected_density);
-    // JH RmHMatrix matrix.priceByColumn(dual_row, dual_col);
     lp.a_matrix_.priceByColumn(dual_row, dual_col);
   }
   double dual_objective = lp.offset_;

@@ -768,7 +768,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
   HighsInt previous_start = matrix_start[0];
   // Set up this_start to be the first start in case num_vec = 0
   HighsInt this_start = matrix_start[0];
-  HighsInt this_p_end;
+  HighsInt this_p_end = 0;
   if (partitioned) this_p_end = matrix_p_end[0];
   for (HighsInt ix = 0; ix < num_vec; ix++) {
     this_start = matrix_start[ix];
@@ -1045,7 +1045,8 @@ void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
 }
 
 void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
-				    const HighsInt from_col, const HighsInt to_col) {
+                                    const HighsInt from_col,
+                                    const HighsInt to_col) {
   assert(matrix.format_ != MatrixFormat::kNone);
   assert(!matrix.isRowwise());
   assert(this->format_ != MatrixFormat::kNone);
@@ -1058,22 +1059,22 @@ void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
   vector<HighsInt>& slice_start = this->start_;
   vector<HighsInt>& slice_index = this->index_;
   vector<double>& slice_value = this->value_;
-  HighsInt slice_num_col = to_col+1 - from_col;
-  HighsInt slice_num_nz = a_start[to_col+1] - a_start[from_col];
+  HighsInt slice_num_col = to_col + 1 - from_col;
+  HighsInt slice_num_nz = a_start[to_col + 1] - a_start[from_col];
   slice_start.resize(slice_num_col + 1);
   slice_index.resize(slice_num_nz);
   slice_value.resize(slice_num_nz);
   HighsInt from_col_start = a_start[from_col];
-  for (HighsInt iCol = from_col; iCol < to_col+1; iCol++)
+  for (HighsInt iCol = from_col; iCol < to_col + 1; iCol++)
     slice_start[iCol - from_col] = a_start[iCol] - from_col_start;
   slice_start[slice_num_col] = slice_num_nz;
-  for (HighsInt iEl = a_start[from_col]; iEl < a_start[to_col+1]; iEl++) {
-    slice_index[iEl-from_col_start] = a_index[iEl];
-    slice_value[iEl-from_col_start] = a_value[iEl];
+  for (HighsInt iEl = a_start[from_col]; iEl < a_start[to_col + 1]; iEl++) {
+    slice_index[iEl - from_col_start] = a_index[iEl];
+    slice_value[iEl - from_col_start] = a_value[iEl];
   }
   this->num_col_ = slice_num_col;
   this->num_row_ = num_row;
-  this->format_ = MatrixFormat::kColwise;  
+  this->format_ = MatrixFormat::kColwise;
 }
 
 void HighsSparseMatrix::createRowwise(const HighsSparseMatrix& matrix) {
@@ -1174,8 +1175,8 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
   this->num_row_ = num_row;
 }
 
-void HighsSparseMatrix::createRowwisePartitioned(const HighsSparseMatrix& matrix,
-						 const int8_t* in_partition) {
+void HighsSparseMatrix::createRowwisePartitioned(
+    const HighsSparseMatrix& matrix, const int8_t* in_partition) {
   assert(matrix.format_ != MatrixFormat::kNone);
   assert(!matrix.isRowwise());
   assert(this->format_ != MatrixFormat::kNone);
@@ -1315,9 +1316,9 @@ void HighsSparseMatrix::priceByRowWithSwitch(
       // Determine whether p_end_ or the next start_ ends the loop
       HighsInt to_iEl;
       if (this->format_ == MatrixFormat::kRowwisePartitioned) {
-	to_iEl = this->p_end_[iRow];
+        to_iEl = this->p_end_[iRow];
       } else {
-	to_iEl = this->start_[iRow+1];
+        to_iEl = this->start_[iRow + 1];
       }
       // Possibly switch to standard row-wise price
       HighsInt row_num_nz = to_iEl - this->start_[iRow];
@@ -1420,12 +1421,13 @@ void HighsSparseMatrix::priceByRowDenseResult(HVector& result,
   for (HighsInt ix = from_index; ix < column.count; ix++) {
     HighsInt iRow = column.index[ix];
     double multiplier = column.array[iRow];
-    // Determine whether p_end_ or the next start_ should be used to end the loop
+    // Determine whether p_end_ or the next start_ should be used to end the
+    // loop
     HighsInt to_iEl;
     if (this->format_ == MatrixFormat::kRowwisePartitioned) {
       to_iEl = this->p_end_[iRow];
     } else {
-      to_iEl = this->start_[iRow+1];
+      to_iEl = this->start_[iRow + 1];
     }
     for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
       HighsInt iCol = this->index_[iEl];

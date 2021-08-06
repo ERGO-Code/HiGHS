@@ -17,7 +17,6 @@
 #define SIMPLEX_HEKK_H_
 
 #include "lp_data/HStruct.h"
-//#include "simplex/HMatrix.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
@@ -101,7 +100,6 @@ class HEkk {
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
-  // JH RmHMatrix HMatrix matrix_;
   HighsSparseMatrix ar_matrix_;
   HSimplexNla simplex_nla_;
 

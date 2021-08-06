@@ -157,7 +157,6 @@ set(sources
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
-    simplex/HMatrix.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexNla.cpp
@@ -250,7 +249,6 @@ set(headers
     simplex/HFactorConst.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HMatrix.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
@@ -581,7 +579,6 @@ target_sources(libhighs PRIVATE
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
-    simplex/HMatrix.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexNla.cpp
@@ -685,7 +682,6 @@ set(headers_fast_build_
     simplex/HFactorConst.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HMatrix.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h

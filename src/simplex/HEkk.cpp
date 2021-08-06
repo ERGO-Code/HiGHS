@@ -974,8 +974,6 @@ HighsInt HEkk::computeFactor() {
 void HEkk::initialiseMatrix(const bool forced) {
   if (status_.has_matrix && !forced) return;
   analysis_.simplexTimerStart(matrixSetupClock);
-  // JH RmHMatrix matrix_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0], &lp_.a_index_[0],
-  // JH RmHMatrix                 &lp_.a_value_[0], &basis_.nonbasicFlag_[0]);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
   assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   status_.has_matrix = true;
@@ -1395,10 +1393,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   analysis_.simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
-  // JH RmHMatrix HVector alt_col_aq = col_aq;
-  // JH RmHMatrix matrix_.collect_aj(alt_col_aq, iCol, 1);
   lp_.a_matrix_.collectAj(col_aq, iCol, 1);
-  // JH RmHMatrix assert(alt_col_aq.isEqual(col_aq));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq,
                                     info_.col_aq_density);
@@ -1491,27 +1486,19 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     }
   }
   row_ap.clear();
-  // JH RmHMatrix HVector alt_row_ep = row_ep;
-  // JH RmHMatrix HVector alt_row_ap = row_ap;
   if (use_col_price) {
     // Perform column-wise PRICE
-    // JH RmHMatrix matrix_.priceByColumn(alt_row_ap, alt_row_ep);
     lp_.a_matrix_.priceByColumn(row_ap, row_ep);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
-    // JH RmHMatrix const double switch_density = matrix_.hyperPRICE;
     const double switch_density = kHyperPriceDensity;
-    // JH RmHMatrix matrix_.priceByRowSparseResultWithSwitch(
-    // JH RmHMatrix alt_row_ap, alt_row_ep, info_.row_ap_density, 0, switch_density);
-    ar_matrix_.priceByRowWithSwitch(row_ap, row_ep,
-                                    info_.row_ap_density, 0, switch_density);
+    ar_matrix_.priceByRowWithSwitch(row_ap, row_ep, info_.row_ap_density, 0,
+                                    switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    // JH RmHMatrix matrix_.priceByRowSparseResult(alt_row_ap, alt_row_ep);
     ar_matrix_.priceByRow(row_ap, row_ep);
   }
-  // JH RmHMatrix assert(alt_row_ap.array == row_ap.array);
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
@@ -1536,7 +1523,6 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
     analysis_.operationRecordBefore(kSimplexNlaPriceFull, full_col,
                                     expected_density);
   }
-  // JH RmHMatrix matrix_.priceByColumn(full_row, full_col);
   lp_.a_matrix_.priceByColumn(full_row, full_col);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(kSimplexNlaPriceFull, full_row);
@@ -1551,14 +1537,11 @@ void HEkk::computePrimal() {
   HVector primal_col;
   primal_col.setup(num_row);
   primal_col.clear();
-  // JH RmHMatrix HVector alt_primal_col = primal_col;
   for (HighsInt i = 0; i < num_col + num_row; i++) {
     if (basis_.nonbasicFlag_[i] && info_.workValue_[i] != 0) {
-      // JH RmHMatrix matrix_.collect_aj(alt_primal_col, i, info_.workValue_[i]);
       lp_.a_matrix_.collectAj(primal_col, i, info_.workValue_[i]);
     }
   }
-  // JH RmHMatrix assert(alt_primal_col.isEqual(primal_col));
   // It's possible that the buffer has no nonzeros, so performing
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
@@ -1918,7 +1901,6 @@ void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,
 void HEkk::updateMatrix(const HighsInt variable_in,
                         const HighsInt variable_out) {
   analysis_.simplexTimerStart(UpdateMatrixClock);
-  // JH RmHMatrix matrix_.update(variable_in, variable_out);
   ar_matrix_.update(variable_in, variable_out, lp_.a_matrix_);
   assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(UpdateMatrixClock);

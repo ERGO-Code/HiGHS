@@ -18,9 +18,7 @@
 #ifndef HSIMPLEXNLA_H_
 #define HSIMPLEXNLA_H_
 
-//#include "lp_data/HStruct.h"
 #include "simplex/HFactor.h"
-#include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 
@@ -86,7 +84,6 @@ class HSimplexNla {
   HighsTimer* timer_;
   HighsSimplexAnalysis* analysis_;
 
-  //  HMatrix matrix_;
   HFactor factor_;
   bool report_;
 };
