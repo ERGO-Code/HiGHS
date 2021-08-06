@@ -26,6 +26,7 @@
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 #include "presolve/HighsPostsolveStack.h"
 #include "test/DevKkt.h"
 #include "util/HighsCDouble.h"
@@ -860,7 +861,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   auto addSignature = [&](HighsInt row, HighsInt col, uint32_t rowLowerFinite,
                           uint32_t rowUpperFinite) {
-    HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 26);
+    HighsInt rowHashedPos = (HighsHashHelpers::hash(row) >> 27);
     signatures[col].first |= rowLowerFinite << rowHashedPos;
     signatures[col].second |= rowUpperFinite << rowHashedPos;
   };
@@ -1324,7 +1325,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   }
   if (!binaries.empty()) {
     // sort variables with many implications on other binaries first
-    std::sort(binaries.begin(), binaries.end());
+    pdqsort(binaries.begin(), binaries.end());
 
     size_t numChangedCols = 0;
     while (domain.getChangedCols().size() != numChangedCols) {
@@ -3002,9 +3003,9 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                 changeColLower(continuousCol, ceilLower);
               if (floorUpper < model->col_upper_[continuousCol])
                 changeColUpper(continuousCol, floorUpper);
-            }
 
-            if (intScale != 1.0) scaleStoredRow(row, intScale, true);
+              if (intScale != 1.0) scaleStoredRow(row, intScale, true);
+            }
           }
         } else {
           double intScale = HighsIntegers::integralScale(
@@ -3124,6 +3125,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postSolveStack,
                              : options->mip_epsilon;
 
         for (const HighsSliceNonzero& nonz : getStoredRow()) {
+          assert(nonz.value() != 0.0);
           rowCoefs.push_back(nonz.value());
           rowIndex.push_back(nonz.index());
         }
@@ -3689,15 +3691,19 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         impliedDualRowBounds.getNumInfSumUpperOrig(col) == 1 &&
         model->col_cost_[col] >= 0) {
       HighsInt row = colLowerSource[col];
-      HighsInt nzPos = findNonzero(row, col);
 
-      if (model->integrality_[col] != HighsVarType::kInteger ||
-          (rowsizeInteger[row] == rowsize[row] &&
-           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
-        if (Avalue[nzPos] > 0)
-          changeImplRowDualLower(row, 0.0, col);
-        else
-          changeImplRowDualUpper(row, 0.0, col);
+      if (model->row_lower_[row] == -kHighsInf ||
+          model->row_upper_[row] == kHighsInf) {
+        HighsInt nzPos = findNonzero(row, col);
+
+        if (model->integrality_[col] != HighsVarType::kInteger ||
+            (rowsizeInteger[row] == rowsize[row] &&
+             rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+          if (Avalue[nzPos] > 0)
+            changeImplRowDualLower(row, 0.0, col);
+          else
+            changeImplRowDualUpper(row, 0.0, col);
+        }
       }
     }
 
@@ -3705,15 +3711,19 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postSolveStack,
         impliedDualRowBounds.getNumInfSumLowerOrig(col) == 1 &&
         model->col_cost_[col] <= 0) {
       HighsInt row = colUpperSource[col];
-      HighsInt nzPos = findNonzero(row, col);
 
-      if (model->integrality_[col] != HighsVarType::kInteger ||
-          (rowsizeInteger[row] == rowsize[row] &&
-           rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
-        if (Avalue[nzPos] > 0)
-          changeImplRowDualUpper(row, 0.0, col);
-        else
-          changeImplRowDualLower(row, 0.0, col);
+      if (model->row_lower_[row] == -kHighsInf ||
+          model->row_upper_[row] == kHighsInf) {
+        HighsInt nzPos = findNonzero(row, col);
+
+        if (model->integrality_[col] != HighsVarType::kInteger ||
+            (rowsizeInteger[row] == rowsize[row] &&
+             rowCoefficientsIntegral(row, 1.0 / Avalue[nzPos]))) {
+          if (Avalue[nzPos] > 0)
+            changeImplRowDualUpper(row, 0.0, col);
+          else
+            changeImplRowDualLower(row, 0.0, col);
+        }
       }
     }
 
@@ -4121,7 +4131,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
                      }),
       substitutionOpportunities.end());
 
-  std::sort(
+  pdqsort(
       substitutionOpportunities.begin(), substitutionOpportunities.end(),
       [&](const std::pair<HighsInt, HighsInt>& nz1,
           const std::pair<HighsInt, HighsInt>& nz2) {
@@ -4681,7 +4691,7 @@ HighsInt HPresolve::strengthenInequalities() {
       if (maxviolation - continuouscontribution <= smallVal || indices.empty())
         break;
 
-      std::sort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
+      pdqsort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
         return std::make_pair(reducedcost[i1], i1) >
                std::make_pair(reducedcost[i2], i2);
       });

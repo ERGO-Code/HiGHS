@@ -22,6 +22,7 @@
 #include "mip/HighsDomainChange.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
 
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
@@ -37,7 +38,7 @@ HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
 void HighsPrimalHeuristics::setupIntCols() {
   intcols = mipsolver.mipdata_->integer_cols;
 
-  std::sort(intcols.begin(), intcols.end(), [&](HighsInt c1, HighsInt c2) {
+  pdqsort(intcols.begin(), intcols.end(), [&](HighsInt c1, HighsInt c2) {
     double lockScore1 =
         (mipsolver.mipdata_->feastol + mipsolver.mipdata_->uplocks[c1]) *
         (mipsolver.mipdata_->feastol + mipsolver.mipdata_->downlocks[c1]);
@@ -91,7 +92,7 @@ bool HighsPrimalHeuristics::solveSubMip(
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   submipoptions.objective_bound = mipsolver.mipdata_->upper_limit;
   submipoptions.presolve = "on";
-  submipoptions.mip_detect_symmetry = mipsolver.mipdata_->detectSymmetries;
+  submipoptions.mip_detect_symmetry = false;
   // setup solver and run it
 
   HighsSolution solution;
@@ -202,11 +203,11 @@ void HighsPrimalHeuristics::rootReducedCost() {
       mipsolver.mipdata_->redcostfixing.getLurkingBounds(mipsolver);
   if (lurkingBounds.size() < 0.1 * mipsolver.mipdata_->integral_cols.size())
     return;
-  std::sort(lurkingBounds.begin(), lurkingBounds.end(),
-            [](const std::pair<double, HighsDomainChange>& a,
-               const std::pair<double, HighsDomainChange>& b) {
-              return a.first > b.first;
-            });
+  pdqsort(lurkingBounds.begin(), lurkingBounds.end(),
+          [](const std::pair<double, HighsDomainChange>& a,
+             const std::pair<double, HighsDomainChange>& b) {
+            return a.first > b.first;
+          });
 
   auto localdom = mipsolver.mipdata_->domain;
 
@@ -393,21 +394,21 @@ retry:
         return fixval;
       };
 
-      std::sort(heurlp.getFractionalIntegers().begin(),
-                heurlp.getFractionalIntegers().end(),
-                [&](const std::pair<HighsInt, double>& a,
-                    const std::pair<HighsInt, double>& b) {
-                  return std::make_pair(
-                             std::abs(getFixVal(a.first, a.second) - a.second),
-                             HighsHashHelpers::hash(
-                                 (uint64_t(a.first) << 32) +
-                                 heurlp.getFractionalIntegers().size())) <
-                         std::make_pair(
-                             std::abs(getFixVal(b.first, b.second) - b.second),
-                             HighsHashHelpers::hash(
-                                 (uint64_t(b.first) << 32) +
-                                 heurlp.getFractionalIntegers().size()));
-                });
+      pdqsort(heurlp.getFractionalIntegers().begin(),
+              heurlp.getFractionalIntegers().end(),
+              [&](const std::pair<HighsInt, double>& a,
+                  const std::pair<HighsInt, double>& b) {
+                return std::make_pair(
+                           std::abs(getFixVal(a.first, a.second) - a.second),
+                           HighsHashHelpers::hash(
+                               (uint64_t(a.first) << 32) +
+                               heurlp.getFractionalIntegers().size())) <
+                       std::make_pair(
+                           std::abs(getFixVal(b.first, b.second) - b.second),
+                           HighsHashHelpers::hash(
+                               (uint64_t(b.first) << 32) +
+                               heurlp.getFractionalIntegers().size()));
+              });
 
       double change = 0.0;
       // select a set of fractional variables to fix
@@ -669,20 +670,20 @@ retry:
 
     // now sort the variables by their distance towards the value they will be
     // fixed to
-    std::sort(heurlp.getFractionalIntegers().begin(), fixcandend,
-              [&](const std::pair<HighsInt, double>& a,
-                  const std::pair<HighsInt, double>& b) {
-                return std::make_pair(
-                           std::abs(getFixVal(a.first, a.second) - a.second),
-                           HighsHashHelpers::hash(
-                               (uint64_t(a.first) << 32) +
-                               heurlp.getFractionalIntegers().size())) <
-                       std::make_pair(
-                           std::abs(getFixVal(b.first, b.second) - b.second),
-                           HighsHashHelpers::hash(
-                               (uint64_t(b.first) << 32) +
-                               heurlp.getFractionalIntegers().size()));
-              });
+    pdqsort(heurlp.getFractionalIntegers().begin(), fixcandend,
+            [&](const std::pair<HighsInt, double>& a,
+                const std::pair<HighsInt, double>& b) {
+              return std::make_pair(
+                         std::abs(getFixVal(a.first, a.second) - a.second),
+                         HighsHashHelpers::hash(
+                             (uint64_t(a.first) << 32) +
+                             heurlp.getFractionalIntegers().size())) <
+                     std::make_pair(
+                         std::abs(getFixVal(b.first, b.second) - b.second),
+                         HighsHashHelpers::hash(
+                             (uint64_t(b.first) << 32) +
+                             heurlp.getFractionalIntegers().size()));
+            });
 
     double change = 0.0;
     // select a set of fractional variables to fix

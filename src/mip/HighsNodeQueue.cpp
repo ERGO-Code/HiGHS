@@ -156,7 +156,7 @@ void HighsNodeQueue::checkGlobalBounds(HighsInt col, double lb, double ub,
     delnodes.insert(it->second);
 
   for (HighsInt delnode : delnodes) {
-    treeweight += std::pow(0.5, nodes[delnode].depth - 1);
+    treeweight += std::ldexp(1.0, 1 - nodes[delnode].depth);
     unlink(delnode);
   }
 }
@@ -209,7 +209,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
 }
 
 double HighsNodeQueue::pruneNode(HighsInt nodeId) {
-  double treeweight = std::pow(0.5, nodes[nodeId].depth - 1);
+  double treeweight = std::ldexp(1.0, 1 - nodes[nodeId].depth);
   unlink(nodeId);
   return treeweight;
 }
@@ -255,7 +255,7 @@ double HighsNodeQueue::performBounding(double upper_limit) {
       // and add up the tree weight
       unlink_estim(delroot);
       unlink_domchgs(delroot);
-      treeweight += std::pow(0.5, nodes[delroot].depth - 1);
+      treeweight += std::ldexp(1.0, 1 - nodes[delroot].depth);
 
       // put the nodes children on the stack for subsequent processing
       if (get_left(delroot) != -1) stack.push_back(get_left(delroot));

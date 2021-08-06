@@ -20,6 +20,7 @@
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {
@@ -2093,13 +2094,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
 
   if (domchgVal == 0) return false;
 
-  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
-            [&](const std::tuple<double, HighsInt, HighsInt>& a,
-                const std::tuple<double, HighsInt, HighsInt>& b) {
-              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
-              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
-              return prioA > prioB;
-            });
+  pdqsort(resolveBuffer.begin(), resolveBuffer.end(),
+          [&](const std::tuple<double, HighsInt, HighsInt>& a,
+              const std::tuple<double, HighsInt, HighsInt>& b) {
+            double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+            double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+            return prioA > prioB;
+          });
 
   // to explain the bound change we start from the bound constraint,
   // multiply it by the columns coefficient in the constraint. Then the
@@ -2331,13 +2332,13 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
 
-  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
-            [&](const std::tuple<double, HighsInt, HighsInt>& a,
-                const std::tuple<double, HighsInt, HighsInt>& b) {
-              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
-              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
-              return prioA > prioB;
-            });
+  pdqsort(resolveBuffer.begin(), resolveBuffer.end(),
+          [&](const std::tuple<double, HighsInt, HighsInt>& a,
+              const std::tuple<double, HighsInt, HighsInt>& b) {
+            double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+            double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+            return prioA > prioB;
+          });
 
   // compute the lower bound of M that is necessary
   double Mlower = rhs + std::max(10.0, std::abs(rhs)) *
@@ -2399,13 +2400,13 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
     resolveBuffer.emplace_back(delta, numNodes, boundpos);
   }
 
-  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
-            [&](const std::tuple<double, HighsInt, HighsInt>& a,
-                const std::tuple<double, HighsInt, HighsInt>& b) {
-              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
-              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
-              return prioA > prioB;
-            });
+  pdqsort(resolveBuffer.begin(), resolveBuffer.end(),
+          [&](const std::tuple<double, HighsInt, HighsInt>& a,
+              const std::tuple<double, HighsInt, HighsInt>& b) {
+            double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+            double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+            return prioA > prioB;
+          });
 
   // compute the lower bound of M that is necessary
   double Mupper = rhs - std::max(10.0, std::abs(rhs)) *
@@ -2609,13 +2610,13 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
 
   if (domchgVal == 0) return false;
 
-  std::sort(resolveBuffer.begin(), resolveBuffer.end(),
-            [&](const std::tuple<double, HighsInt, HighsInt>& a,
-                const std::tuple<double, HighsInt, HighsInt>& b) {
-              double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
-              double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
-              return prioA > prioB;
-            });
+  pdqsort(resolveBuffer.begin(), resolveBuffer.end(),
+          [&](const std::tuple<double, HighsInt, HighsInt>& a,
+              const std::tuple<double, HighsInt, HighsInt>& b) {
+            double prioA = std::get<0>(a) * (std::get<1>(a) + 1);
+            double prioB = std::get<0>(b) * (std::get<1>(b) + 1);
+            return prioA > prioB;
+          });
 
   assert(domchgVal != 0);
 

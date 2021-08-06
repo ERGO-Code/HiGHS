@@ -21,6 +21,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "util/HighsInt.h"
+
 #if __GNUG__ && __GNUC__ < 5
 #define IS_TRIVIALLY_COPYABLE(T) __has_trivial_copy(T)
 #else
@@ -55,7 +57,8 @@ class HighsDataStack {
     HighsInt numData = r.size();
     // store the data
     data.resize(offset + numData * sizeof(T) + sizeof(HighsInt));
-    std::memcpy(data.data() + offset, r.data(), numData * sizeof(T));
+    if (!r.empty())
+      std::memcpy(data.data() + offset, r.data(), numData * sizeof(T));
     // store the vector size
     offset += numData * sizeof(T);
     std::memcpy(data.data() + offset, &numData, sizeof(HighsInt));

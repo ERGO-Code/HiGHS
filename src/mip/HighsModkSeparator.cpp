@@ -23,6 +23,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
@@ -182,7 +183,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     // aggregation heuristic
     if (weights.size() <= 1) return;
 
-    std::sort(weights.begin(), weights.end());
+    pdqsort(weights.begin(), weights.end());
     if (!usedWeights.insert(weights)) return;
 
     for (const auto& w : weights) {

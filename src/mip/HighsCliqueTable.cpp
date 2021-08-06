@@ -21,6 +21,7 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsSplay.h"
 
 #define ADD_ZERO_WEIGHT_VARS
@@ -334,7 +335,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data,
     PminusNu.push_back(data.P[i]);
   }
 
-  std::sort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
+  pdqsort(PminusNu.begin(), PminusNu.end(), [&](CliqueVar a, CliqueVar b) {
     return std::make_pair(a.weight(data.sol), a.index()) >
            std::make_pair(b.weight(data.sol), b.index());
   });
@@ -938,7 +939,7 @@ void HighsCliqueTable::extractCliques(
   // only one binary means we do have no cliques
   if (nbin <= 1) return;
 
-  std::sort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
+  pdqsort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
     return std::make_pair(vals[p1], p1) > std::make_pair(vals[p2], p2);
   });
   // check if any cliques exists
@@ -1141,7 +1142,7 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   std::vector<CliqueVar> clique;
   clique.reserve(nbin);
 
-  std::sort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
+  pdqsort(perm.begin(), binaryend, [&](HighsInt p1, HighsInt p2) {
     return std::make_pair(std::abs(vals[p1]), p1) >
            std::make_pair(std::abs(vals[p2]), p2);
   });
