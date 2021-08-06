@@ -1524,20 +1524,33 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
 #endif
       slice_row_ap[i].clear();
 
-      //      slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
-
+      const bool use_hsm = true;
       if (use_col_price) {
         // Perform column-wise PRICE
-        slice_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+	if (use_hsm) {
+	  slice_a_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+	} else {
+	  slice_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+	}
       } else if (use_row_price_w_switch) {
         // Perform hyper-sparse row-wise PRICE, but switch if the density of
         // row_ap becomes extreme
-        slice_matrix[i].priceByRowSparseResultWithSwitch(
-            slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
-            slice_matrix[i].hyperPRICE);
+	if (use_hsm) {
+	  slice_ar_matrix[i].priceByRowWithSwitch(
+	       slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
+	       slice_matrix[i].hyperPRICE);
+	} else {
+	  slice_matrix[i].priceByRowSparseResultWithSwitch(
+	       slice_row_ap[i], *row_ep, ekk_instance_.info_.row_ap_density, 0,
+	       slice_matrix[i].hyperPRICE);
+	}
       } else {
         // Perform hyper-sparse row-wise PRICE
-        slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+	if (use_hsm) {
+	  slice_ar_matrix[i].priceByRow(slice_row_ap[i], *row_ep);
+	} else {
+	  slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+	}
       }
 
       slice_dualRow[i].clear();

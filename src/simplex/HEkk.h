@@ -17,7 +17,7 @@
 #define SIMPLEX_HEKK_H_
 
 #include "lp_data/HStruct.h"
-#include "simplex/HMatrix.h"
+//#include "simplex/HMatrix.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"

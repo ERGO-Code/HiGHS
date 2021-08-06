@@ -1250,12 +1250,10 @@ void HighsSparseMatrix::createRowwisePartitioned(const HighsSparseMatrix& matrix
 bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
   assert(this->format_ == MatrixFormat::kRowwisePartitioned);
   bool ok = true;
-  HighsInt row_with_error = -1;
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++) {
       if (!in_partition[this->index_[iEl]]) {
         ok = false;
-        row_with_error = iRow;
         break;
       }
     }
@@ -1264,27 +1262,10 @@ bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
          iEl++) {
       if (in_partition[this->index_[iEl]]) {
         ok = false;
-        row_with_error = iRow;
         break;
       }
     }
     if (!ok) break;
-  }
-  if (!ok) {
-    HighsInt iRow = row_with_error;
-    printf("Partition error in row %d\n", (int)iRow);
-    for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++)
-      printf(" %3d", (int)this->index_[iEl]);
-    printf(" |");
-    for (HighsInt iEl = this->p_end_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
-      printf(" %3d", (int)this->index_[iEl]);
-    printf("\n");
-    for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++)
-      printf(" %3d", (int)in_partition[this->index_[iEl]]);
-    printf(" |");
-    for (HighsInt iEl = this->p_end_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
-      printf(" %3d", (int)in_partition[this->index_[iEl]]);
-    printf("\n");
   }
   return ok;
 }
@@ -1308,7 +1289,7 @@ void HighsSparseMatrix::priceByColumn(HVector& result,
 
 void HighsSparseMatrix::priceByRow(HVector& result,
                                    const HVector& column) const {
-  assert(this->format_ == MatrixFormat::kRowwisePartitioned);
+  assert(this->isRowwise());
   // Vanilla hyper-sparse row-wise PRICE. Set up parameters so that
   // priceByRowWithSwitch runs as vanilla hyper-sparse PRICE
   // Expected density always forces hyper-sparse PRICE
@@ -1324,7 +1305,7 @@ void HighsSparseMatrix::priceByRow(HVector& result,
 void HighsSparseMatrix::priceByRowWithSwitch(
     HVector& result, const HVector& column, const double expected_density,
     const HighsInt from_index, const double switch_density) const {
-  assert(this->format_ == MatrixFormat::kRowwisePartitioned);
+  assert(this->isRowwise());
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
   // standard row-wise PRICE either immediately based on historical
   // density or during hyper-sparse PRICE if there is too much fill-in
@@ -1333,14 +1314,21 @@ void HighsSparseMatrix::priceByRowWithSwitch(
   if (expected_density <= kHyperPriceDensity) {
     for (HighsInt ix = next_index; ix < column.count; ix++) {
       HighsInt iRow = column.index[ix];
+      // Determine whether p_end_ or the next start_ ends the loop
+      HighsInt to_iEl;
+      if (this->format_ == MatrixFormat::kRowwisePartitioned) {
+	to_iEl = this->p_end_[iRow];
+      } else {
+	to_iEl = this->start_[iRow+1];
+      }
       // Possibly switch to standard row-wise price
-      HighsInt row_num_nz = this->p_end_[iRow] - this->start_[iRow];
+      HighsInt row_num_nz = to_iEl - this->start_[iRow];
       double local_density = (1.0 * result.count) / this->num_col_;
       bool switch_to_dense = result.count + row_num_nz >= this->num_col_ ||
                              local_density > switch_density;
       if (switch_to_dense) break;
       double multiplier = column.array[iRow];
-      for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
         HighsInt iCol = this->index_[iEl];
         double value0 = result.array[iCol];
         double value1 = value0 + multiplier * this->value_[iEl];
@@ -1431,11 +1419,18 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
 void HighsSparseMatrix::priceByRowDenseResult(HVector& result,
                                               const HVector& column,
                                               const HighsInt from_index) const {
-  assert(this->format_ == MatrixFormat::kRowwisePartitioned);
+  assert(this->isRowwise());
   for (HighsInt ix = from_index; ix < column.count; ix++) {
     HighsInt iRow = column.index[ix];
     double multiplier = column.array[iRow];
-    for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++) {
+    // Determine whether p_end_ or the next start_ should be used to end the loop
+    HighsInt to_iEl;
+    if (this->format_ == MatrixFormat::kRowwisePartitioned) {
+      to_iEl = this->p_end_[iRow];
+    } else {
+      to_iEl = this->start_[iRow+1];
+    }
+    for (HighsInt iEl = this->start_[iRow]; iEl < to_iEl; iEl++) {
       HighsInt iCol = this->index_[iEl];
       double value0 = result.array[iCol];
       double value1 = value0 + multiplier * this->value_[iEl];
