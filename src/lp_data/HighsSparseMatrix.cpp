@@ -1176,7 +1176,6 @@ void HighsSparseMatrix::priceByColumn(HVector& result,
 
 void HighsSparseMatrix::priceByRow(HVector& result,
                                    const HVector& column) const {
-  assert(1 == 0);
   assert(this->format_ == MatrixFormat::kRowwisePartitioned);
   // Vanilla hyper-sparse row-wise PRICE. Set up parameters so that
   // priceByRowWithSwitch runs as vanilla hyper-sparse PRICE

@@ -37,10 +37,6 @@ void getSimplexScaling(HighsOptions& options, HighsLp& lp, SimplexScale& scale);
 
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
 
-void choosePriceTechnique(const HighsInt price_strategy,
-                          const double row_ep_density, bool& use_col_price,
-                          bool& use_row_price_w_switch);
-
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol);
 void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,

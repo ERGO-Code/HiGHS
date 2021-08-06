@@ -1996,6 +1996,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   ekk_instance_.choosePriceTechnique(info.price_strategy, local_density,
                                      use_col_price, use_row_price_w_switch);
   if (analysis->analyse_simplex_data) {
+  printf("price_strategy = %d; use_col_price = %d\n", (int)info.price_strategy, use_col_price);
     if (use_col_price) {
       const double expected_density = 1;
       analysis->operationRecordBefore(kSimplexNlaPriceBasicFeasibilityChange,
@@ -2015,22 +2016,35 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
     }
   }
   row_basic_feasibility_change.clear();
+  HVector alt_row_basic_feasibility_change = row_basic_feasibility_change;
+  HVector alt_col_basic_feasibility_change = col_basic_feasibility_change;
   if (use_col_price) {
     // Perform column-wise PRICE
+    assert(1==0);
     ekk_instance_.matrix_.priceByColumn(row_basic_feasibility_change,
                                         col_basic_feasibility_change);
+    ekk_instance_.lp_.a_matrix_.priceByColumn(alt_row_basic_feasibility_change,
+                                        alt_col_basic_feasibility_change);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of
     // row_basic_feasibility_change becomes extreme
+    assert(1==0);
     const double switch_density = ekk_instance_.matrix_.hyperPRICE;
     ekk_instance_.matrix_.priceByRowSparseResultWithSwitch(
         row_basic_feasibility_change, col_basic_feasibility_change,
         info.row_basic_feasibility_change_density, 0, switch_density);
+    ekk_instance_.ar_matrix_.priceByRowWithSwitch(
+        alt_row_basic_feasibility_change, alt_col_basic_feasibility_change,
+        info.row_basic_feasibility_change_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    ekk_instance_.matrix_.priceByRowSparseResult(row_basic_feasibility_change,
+    assert(1==0);
+   ekk_instance_.matrix_.priceByRowSparseResult(row_basic_feasibility_change,
                                                  col_basic_feasibility_change);
+   ekk_instance_.ar_matrix_.priceByRow(alt_row_basic_feasibility_change,
+				       alt_col_basic_feasibility_change);
   }
+  assert(alt_row_basic_feasibility_change.array==row_basic_feasibility_change.array);
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic

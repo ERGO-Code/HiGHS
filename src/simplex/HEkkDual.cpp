@@ -1470,7 +1470,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   bool use_col_price;
   bool use_row_price_w_switch;
   HighsSimplexInfo& info = ekk_instance_.info_;
-  choosePriceTechnique(info.price_strategy, local_density, use_col_price,
+  ekk_instance_.choosePriceTechnique(info.price_strategy, local_density, use_col_price,
                        use_row_price_w_switch);
 
   if (analysis->analyse_simplex_data) {
