@@ -1046,8 +1046,138 @@ void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
   }
 }
 
-void HighsSparseMatrix::createPartition(const HighsSparseMatrix& matrix,
-                                        const int8_t* in_partition) {
+void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
+				    const HighsInt from_col, const HighsInt to_col) {
+  assert(matrix.format_ != MatrixFormat::kNone);
+  assert(!matrix.isRowwise());
+  assert(this->format_ != MatrixFormat::kNone);
+  HighsInt num_col = matrix.num_col_;
+  HighsInt num_row = matrix.num_row_;
+  HighsInt num_nz = matrix.num_nz();
+  const vector<HighsInt>& a_start = matrix.start_;
+  const vector<HighsInt>& a_index = matrix.index_;
+  const vector<double>& a_value = matrix.value_;
+  vector<HighsInt>& slice_start = this->start_;
+  vector<HighsInt>& slice_index = this->index_;
+  vector<double>& slice_value = this->value_;
+  HighsInt slice_num_col = to_col+1 - from_col;
+  HighsInt slice_num_nz = a_start[to_col+1] - a_start[from_col];
+  slice_start.resize(slice_num_col + 1);
+  slice_index.resize(slice_num_nz);
+  slice_value.resize(slice_num_nz);
+  HighsInt from_col_start = a_start[from_col];
+  for (HighsInt iCol = from_col; iCol < to_col+1; iCol++)
+    slice_start[iCol - from_col] = a_start[iCol] - from_col_start;
+  slice_start[slice_num_col] = slice_num_nz;
+  for (HighsInt iEl = a_start[from_col]; iEl < a_start[to_col+1]; iEl++) {
+    slice_index[iEl-from_col_start] = a_index[iEl];
+    slice_value[iEl-from_col_start] = a_value[iEl];
+  }
+  this->num_col_ = slice_num_col;
+  this->num_row_ = num_row;
+  this->format_ = MatrixFormat::kColwise;  
+}
+
+void HighsSparseMatrix::createRowwise(const HighsSparseMatrix& matrix) {
+  assert(matrix.format_ != MatrixFormat::kNone);
+  assert(matrix.isColwise());
+  assert(this->format_ != MatrixFormat::kNone);
+
+  HighsInt num_col = matrix.num_col_;
+  HighsInt num_row = matrix.num_row_;
+  HighsInt num_nz = matrix.num_nz();
+  const vector<HighsInt>& a_start = matrix.start_;
+  const vector<HighsInt>& a_index = matrix.index_;
+  const vector<double>& a_value = matrix.value_;
+  vector<HighsInt>& ar_start = this->start_;
+  vector<HighsInt>& ar_index = this->index_;
+  vector<double>& ar_value = this->value_;
+
+  // Use ar_end to compute lengths, which are then transformed into
+  // the ends of the inserted entries
+  std::vector<HighsInt> ar_end;
+  ar_start.resize(num_row + 1);
+  ar_end.assign(num_row, 0);
+  // Count the nonzeros in each row
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
+      HighsInt iRow = a_index[iEl];
+      ar_end[iRow]++;
+    }
+  }
+  // Compute the starts and turn the lengths into ends
+  ar_start[0] = 0;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    ar_start[iRow + 1] = ar_start[iRow] + ar_end[iRow];
+    ar_end[iRow] = ar_start[iRow];
+  }
+  ar_index.resize(num_nz);
+  ar_value.resize(num_nz);
+  // Insert the entries
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
+      HighsInt iRow = a_index[iEl];
+      HighsInt iToEl = ar_end[iRow]++;
+      ar_index[iToEl] = iCol;
+      ar_value[iToEl] = a_value[iEl];
+    }
+  }
+  this->format_ = MatrixFormat::kRowwise;
+  this->num_col_ = num_col;
+  this->num_row_ = num_row;
+}
+
+void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
+  assert(matrix.format_ != MatrixFormat::kNone);
+  assert(matrix.isRowwise());
+  assert(this->format_ != MatrixFormat::kNone);
+
+  HighsInt num_col = matrix.num_col_;
+  HighsInt num_row = matrix.num_row_;
+  HighsInt num_nz = matrix.num_nz();
+  const vector<HighsInt>& ar_start = matrix.start_;
+  const vector<HighsInt>& ar_index = matrix.index_;
+  const vector<double>& ar_value = matrix.value_;
+  vector<HighsInt>& a_start = this->start_;
+  vector<HighsInt>& a_index = this->index_;
+  vector<double>& a_value = this->value_;
+
+  // Use a_end to compute lengths, which are then transformed into
+  // the ends of the inserted entries
+  std::vector<HighsInt> a_end;
+  a_start.resize(num_col + 1);
+  a_end.assign(num_col, 0);
+  // Count the nonzeros in each col
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      HighsInt iCol = ar_index[iEl];
+      a_end[iCol]++;
+    }
+  }
+  // Compute the starts and turn the lengths into ends
+  a_start[0] = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    a_start[iCol + 1] = a_start[iCol] + a_end[iCol];
+    a_end[iCol] = a_start[iCol];
+  }
+  a_index.resize(num_nz);
+  a_value.resize(num_nz);
+  // Insert the entries
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    for (HighsInt iEl = ar_start[iRow]; iEl < ar_start[iRow + 1]; iEl++) {
+      HighsInt iCol = ar_index[iEl];
+      HighsInt iToEl = a_end[iCol]++;
+      a_index[iToEl] = iRow;
+      a_value[iToEl] = ar_value[iEl];
+    }
+  }
+  this->format_ = MatrixFormat::kColwise;
+  this->num_col_ = num_col;
+  this->num_row_ = num_row;
+}
+
+void HighsSparseMatrix::createRowwisePartitioned(const HighsSparseMatrix& matrix,
+						 const int8_t* in_partition) {
   assert(matrix.format_ != MatrixFormat::kNone);
   assert(!matrix.isRowwise());
   assert(this->format_ != MatrixFormat::kNone);
@@ -1064,7 +1194,8 @@ void HighsSparseMatrix::createPartition(const HighsSparseMatrix& matrix,
   vector<HighsInt>& ar_index = this->index_;
   vector<double>& ar_value = this->value_;
 
-  // Build row copy - pointers
+  // Use ar_p_end and ar_end to compute lengths, which are then transformed into
+  // the p_ends and ends of the inserted entries
   std::vector<HighsInt> ar_end;
   ar_start.resize(num_row + 1);
   ar_p_end.assign(num_row, 0);
@@ -1083,30 +1214,31 @@ void HighsSparseMatrix::createPartition(const HighsSparseMatrix& matrix,
       }
     }
   }
+  // Compute the starts and turn the lengths into ends
   ar_start[0] = 0;
-  for (HighsInt i = 0; i < num_row; i++)
-    ar_start[i + 1] = ar_start[i] + ar_p_end[i] + ar_end[i];
-  for (HighsInt i = 0; i < num_row; i++) {
-    ar_end[i] = ar_start[i] + ar_p_end[i];
-    ar_p_end[i] = ar_start[i];
+  for (HighsInt iRow = 0; iRow < num_row; iRow++)
+    ar_start[iRow + 1] = ar_start[iRow] + ar_p_end[iRow] + ar_end[iRow];
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    ar_end[iRow] = ar_start[iRow] + ar_p_end[iRow];
+    ar_p_end[iRow] = ar_start[iRow];
   }
-  // Build row copy - elements
+  // Insert the entries
   ar_index.resize(num_nz);
   ar_value.resize(num_nz);
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     if (all_in_partition || in_partition[iCol]) {
       for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
         HighsInt iRow = a_index[iEl];
-        HighsInt iPut = ar_p_end[iRow]++;
-        ar_index[iPut] = iCol;
-        ar_value[iPut] = a_value[iEl];
+        HighsInt iToEl = ar_p_end[iRow]++;
+        ar_index[iToEl] = iCol;
+        ar_value[iToEl] = a_value[iEl];
       }
     } else {
       for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
         HighsInt iRow = a_index[iEl];
-        HighsInt iPut = ar_end[iRow]++;
-        ar_index[iPut] = iCol;
-        ar_value[iPut] = a_value[iEl];
+        HighsInt iToEl = ar_end[iRow]++;
+        ar_index[iToEl] = iCol;
+        ar_value[iToEl] = a_value[iEl];
       }
     }
   }

@@ -485,18 +485,22 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   vector<HighsInt> sliced_Astart;
   for (HighsInt i = 0; i < slice_num; i++) {
     // The matrix
-    HighsInt mystart = slice_start[i];
-    HighsInt mycount = slice_start[i + 1] - mystart;
-    HighsInt mystartX = Astart[mystart];
-    sliced_Astart.resize(mycount + 1);
-    for (HighsInt k = 0; k <= mycount; k++)
-      sliced_Astart[k] = Astart[k + mystart] - mystartX;
-    slice_matrix[i].setup_lgBs(mycount, solver_num_row, &sliced_Astart[0],
-                               Aindex + mystartX, Avalue + mystartX);
+    HighsInt from_col = slice_start[i];
+    HighsInt to_col = slice_start[i+1]-1;
+    HighsInt slice_num_col = slice_start[i + 1] - from_col;
+    HighsInt from_el = Astart[from_col];
+    sliced_Astart.resize(slice_num_col + 1);
+    for (HighsInt k = 0; k <= slice_num_col; k++)
+      sliced_Astart[k] = Astart[k + from_col] - from_el;
+    slice_matrix[i].setup_lgBs(slice_num_col, solver_num_row, &sliced_Astart[0],
+                               Aindex + from_el, Avalue + from_el);
+    
+    slice_a_matrix[i].createSlice(ekk_instance_.lp_.a_matrix_, from_col, to_col);
+    slice_ar_matrix[i].createRowwise(slice_a_matrix[i]);
 
     // The row_ap and its packages
-    slice_row_ap[i].setup(mycount);
-    slice_dualRow[i].setupSlice(mycount);
+    slice_row_ap[i].setup(slice_num_col);
+    slice_dualRow[i].setupSlice(slice_num_col);
   }
 }
 
@@ -922,7 +926,7 @@ void HEkkDual::rebuild() {
     ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
                                 &lp.a_index_[0], &lp.a_value_[0],
                                 &ekk_instance_.basis_.nonbasicFlag_[0]);
-    ekk_instance_.ar_matrix_.createPartition(
+    ekk_instance_.ar_matrix_.createRowwisePartitioned(
         ekk_instance_.lp_.a_matrix_, &ekk_instance_.basis_.nonbasicFlag_[0]);
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
         &ekk_instance_.basis_.nonbasicFlag_[0]));

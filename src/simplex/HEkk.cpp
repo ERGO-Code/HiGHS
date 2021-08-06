@@ -976,7 +976,7 @@ void HEkk::initialiseMatrix(const bool forced) {
   analysis_.simplexTimerStart(matrixSetupClock);
   matrix_.setup(lp_.num_col_, lp_.num_row_, &lp_.a_start_[0], &lp_.a_index_[0],
                 &lp_.a_value_[0], &basis_.nonbasicFlag_[0]);
-  ar_matrix_.createPartition(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
+  ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
   assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   status_.has_matrix = true;
   analysis_.simplexTimerStop(matrixSetupClock);

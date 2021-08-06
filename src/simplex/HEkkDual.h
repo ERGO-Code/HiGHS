@@ -452,6 +452,8 @@ class HEkkDual {
   HighsInt slice_PRICE;
   HighsInt slice_start[kHighsSlicedLimit + 1];
   HMatrix slice_matrix[kHighsSlicedLimit];
+  HighsSparseMatrix slice_a_matrix[kHighsSlicedLimit];
+  HighsSparseMatrix slice_ar_matrix[kHighsSlicedLimit];
   HVector slice_row_ap[kHighsSlicedLimit];
   std::vector<HEkkDualRow> slice_dualRow;
 

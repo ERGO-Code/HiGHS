@@ -70,10 +70,14 @@ class HighsSparseMatrix {
   void scaleRow(const HighsInt row, const double rowScale);
   void applyScale(const SimplexScale& scale);
   void unapplyScale(const SimplexScale& scale);
+  void createSlice(const HighsSparseMatrix& matrix,
+		   const HighsInt from_col, const HighsInt to_col);
+  void createColwise(const HighsSparseMatrix& matrix);
+  void createRowwise(const HighsSparseMatrix& matrix);
   // Methods for PRICE, including the creation and updating of the
   // partitioned row-wise matrix
-  void createPartition(const HighsSparseMatrix& matrix,
-                       const int8_t* in_partition = NULL);
+  void createRowwisePartitioned(const HighsSparseMatrix& matrix,
+				const int8_t* in_partition = NULL);
   bool debugPartitionOk(const int8_t* in_partition) const;
   void priceByColumn(HVector& result, const HVector& column) const;
   void priceByRow(HVector& result, const HVector& column) const;
