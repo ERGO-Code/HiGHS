@@ -16,9 +16,9 @@
 #ifndef SIMPLEX_HFACTORDEBUG_H_
 #define SIMPLEX_HFACTORDEBUG_H_
 
-#include "lp_data/HighsOptions.h"
-
 #include <vector>
+
+#include "lp_data/HighsOptions.h"
 
 using std::vector;
 

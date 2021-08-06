@@ -108,14 +108,12 @@ void HighsSparseMatrix::ensureColWise() {
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
   if (num_nz == 0) {
-  assert(1==0);
     // Empty matrix, so just ensure that there are enough zero starts
     // for the new orientation
     this->start_.assign(num_col + 1, 0);
     this->index_.clear();
     this->value_.clear();
   } else {
-  assert(1==0);
     // Matrix is non-empty, so transpose it
     //
     // Take a copy of the current matrix - that is rowwise - so that
@@ -167,14 +165,13 @@ void HighsSparseMatrix::ensureRowWise() {
   assert((HighsInt)this->value_.size() >= num_nz);
   bool empty_matrix = num_col == 0 || num_row == 0;
   if (num_nz == 0) {
-  assert(1==0);
     // Empty matrix, so just ensure that there are enough zero starts
     // for the new orientation
     this->start_.assign(num_row + 1, 0);
     this->index_.clear();
     this->value_.clear();
   } else {
-  assert(1==0);
+    assert(1 == 0);
     // Matrix is non-empty, so transpose it
     //
     // Take a copy of the current matrix - that is colwise - so that
@@ -237,7 +234,7 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
   if (num_new_col == 0) {
     // No columns are being added, so check that no nonzeros are being
     // added
-  assert(1==0);
+    assert(1 == 0);
     assert(num_new_nz == 0);
     if (num_new_nz != 0) return HighsStatus::kError;
     return HighsStatus::kOk;
@@ -246,7 +243,6 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
   if (num_new_nz) {
     // Nonzeros are being added, so ensure that non-null data are
     // being passed
-  assert(1==0);
     assert(new_matrix_start != NULL);
     assert(new_matrix_index != NULL);
     assert(new_matrix_value != NULL);
@@ -262,7 +258,7 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
     // column-wise if there are more new nonzeros than current
     // nonzeros
     if (num_new_nz > num_nz && num_nz == 0) {
-  assert(1==0);
+      assert(1 == 0);
       // ToDo remove num_nz == 0 when only using a_matrix
       this->setFormat(MatrixFormat::kColwise);
     }
@@ -272,19 +268,16 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
   HighsInt new_num_nz = num_nz + num_new_nz;
 
   if (this->isColwise()) {
-  assert(1==0);
     // Matrix is column-wise
     this->start_.resize(new_num_col + 1);
     // Append the starts of the new columns
     if (num_new_nz) {
-  assert(1==0);
       // Nontrivial number of nonzeros being added, so use new_matrix_start
       for (HighsInt iNewCol = 0; iNewCol < num_new_col; iNewCol++)
         this->start_[num_col + iNewCol] = num_nz + new_matrix_start[iNewCol];
     } else {
       // No nonzeros being added, so new_matrix_start may be null, but entries
       // of zero are implied.
-  assert(1==0);
       for (HighsInt iNewCol = 0; iNewCol < num_new_col; iNewCol++)
         this->start_[num_col + iNewCol] = num_nz;
     }
@@ -315,7 +308,6 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
                                        const HighsInt* new_matrix_index,
                                        const double* new_matrix_value,
                                        const int8_t* in_partition) {
-  assert(1==0);
   assert(this->format_ != MatrixFormat::kNone);
   // Adding rows to a row-wise partitioned matrix needs the
   // partition information
@@ -351,7 +343,6 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
     // Matrix is currently a standard col-wise matrix, so flip
     // row-wise if there are more new nonzeros than current nonzeros
     if (num_new_nz > num_nz && num_nz == 0) {
-  assert(1==0);
       // ToDo remove num_nz == 0 when only using a_matrix
       this->setFormat(MatrixFormat::kRowwise);
     }
@@ -361,7 +352,6 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   HighsInt new_num_row = num_row + num_new_row;
 
   if (this->isRowwise()) {
-  assert(1==0);
     // Matrix is row-wise
     this->start_.resize(new_num_row + 1);
     // Append the starts of the new rows
@@ -384,7 +374,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
       // Copy in the new indices and values
       if (partitioned) {
         // Insert the entries in the partition
-  assert(1==0);
+        assert(1 == 0);
         for (HighsInt iNewRow = 0; iNewRow < num_new_row; iNewRow++) {
           HighsInt iRow = num_row + iNewRow;
           for (HighsInt iNewEl = new_matrix_start[iNewRow];
@@ -426,7 +416,6 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
         for (HighsInt iNewRow = 0; iNewRow < num_new_row; iNewRow++)
           this->p_end_[num_row + iNewRow] = save_p_end[iNewRow];
       } else {
-  assert(1==0);
         for (HighsInt iNewEl = 0; iNewEl < num_new_nz; iNewEl++) {
           this->index_[num_nz + iNewEl] = new_matrix_index[iNewEl];
           this->value_[num_nz + iNewEl] = new_matrix_value[iNewEl];
@@ -434,7 +423,6 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
       }
     }
   } else {
-  assert(1==0);
     // Storing the matrix column-wise, so have to insert the new rows
     assert(this->format_ == MatrixFormat::kColwise);
     if (num_new_nz) {
@@ -486,7 +474,6 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
 HighsStatus HighsSparseMatrix::deleteCols(
     const HighsLogOptions& log_options,
     const HighsIndexCollection& index_collection) {
-  assert(1==0);
   assert(this->format_ != MatrixFormat::kNone);
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
@@ -566,7 +553,6 @@ HighsStatus HighsSparseMatrix::deleteCols(
 HighsStatus HighsSparseMatrix::deleteRows(
     const HighsLogOptions& log_options,
     const HighsIndexCollection& index_collection) {
-  assert(1==0);
   assert(this->format_ != MatrixFormat::kNone);
   HighsStatus return_status = HighsStatus::kOk;
   if (!assessIndexCollection(log_options, index_collection))
@@ -981,7 +967,6 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
 }
 
 void HighsSparseMatrix::scaleCol(const HighsInt col, const double colScale) {
-  assert(1==0);
   assert(this->format_ != MatrixFormat::kNone);
   assert(col >= 0);
   assert(col < this->num_col_);
@@ -1001,7 +986,6 @@ void HighsSparseMatrix::scaleCol(const HighsInt col, const double colScale) {
 }
 
 void HighsSparseMatrix::scaleRow(const HighsInt row, const double rowScale) {
-  assert(1==0);
   assert(this->format_ != MatrixFormat::kNone);
   assert(row >= 0);
   assert(row < this->num_row_);
@@ -1138,17 +1122,18 @@ bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++) {
       if (!in_partition[this->index_[iEl]]) {
-	ok = false;
-	row_with_error = iRow;
-	break;
+        ok = false;
+        row_with_error = iRow;
+        break;
       }
     }
     if (!ok) break;
-    for (HighsInt iEl = this->p_end_[iRow]; iEl < this->start_[iRow + 1]; iEl++) {
+    for (HighsInt iEl = this->p_end_[iRow]; iEl < this->start_[iRow + 1];
+         iEl++) {
       if (in_partition[this->index_[iEl]]) {
-	ok = false;
-	row_with_error = iRow;
-	break;
+        ok = false;
+        row_with_error = iRow;
+        break;
       }
     }
     if (!ok) break;
@@ -1169,17 +1154,17 @@ bool HighsSparseMatrix::debugPartitionOk(const int8_t* in_partition) const {
       printf(" %3d", (int)in_partition[this->index_[iEl]]);
     printf("\n");
   }
-  return ok;  
+  return ok;
 }
 
 void HighsSparseMatrix::priceByColumn(HVector& result,
                                       const HVector& column) const {
-  assert(1==0);
   assert(this->isColwise());
   result.count = 0;
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     double value = 0;
-    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++) {
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+         iEl++) {
       value += column.array[this->index_[iEl]] * this->value_[iEl];
     }
     if (fabs(value) > kHighsTiny) {
@@ -1191,24 +1176,23 @@ void HighsSparseMatrix::priceByColumn(HVector& result,
 
 void HighsSparseMatrix::priceByRow(HVector& result,
                                    const HVector& column) const {
-  assert(1==0);
+  assert(1 == 0);
   assert(this->format_ == MatrixFormat::kRowwisePartitioned);
   // Vanilla hyper-sparse row-wise PRICE. Set up parameters so that
   // priceByRowWithSwitch runs as vanilla hyper-sparse PRICE
   // Expected density always forces hyper-sparse PRICE
   const double expected_density = -kHighsInf;
   // Always start from first index of column
-  HighsInt from_index = 0;  
+  HighsInt from_index = 0;
   // Never switch to standard row-wise PRICE
   const double switch_density = kHighsInf;
-  this->priceByRowWithSwitch(result, column, expected_density, from_index, switch_density);
+  this->priceByRowWithSwitch(result, column, expected_density, from_index,
+                             switch_density);
 }
 
-void HighsSparseMatrix::priceByRowWithSwitch(HVector& result,
-					     const HVector& column,
-					     const double expected_density,
-					     const HighsInt from_index,
-					     const double switch_density) const {
+void HighsSparseMatrix::priceByRowWithSwitch(
+    HVector& result, const HVector& column, const double expected_density,
+    const HighsInt from_index, const double switch_density) const {
   assert(this->format_ == MatrixFormat::kRowwisePartitioned);
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
   // standard row-wise PRICE either immediately based on historical
@@ -1222,7 +1206,7 @@ void HighsSparseMatrix::priceByRowWithSwitch(HVector& result,
       HighsInt row_num_nz = this->p_end_[iRow] - this->start_[iRow];
       double local_density = (1.0 * result.count) / this->num_col_;
       bool switch_to_dense = result.count + row_num_nz >= this->num_col_ ||
-			     local_density > switch_density;
+                             local_density > switch_density;
       if (switch_to_dense) break;
       double multiplier = column.array[iRow];
       for (HighsInt iEl = this->start_[iRow]; iEl < this->p_end_[iRow]; iEl++) {
@@ -1240,17 +1224,18 @@ void HighsSparseMatrix::priceByRowWithSwitch(HVector& result,
     this->priceByRowDenseResult(result, column, next_index);
   } else {
     // PRICE is complete maintaining nonzeros of result
-    // Remove small values 
+    // Remove small values
     result.tight();
   }
 }
 
-void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out, const HighsSparseMatrix& matrix) {
+void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out,
+                               const HighsSparseMatrix& matrix) {
   assert(matrix.format_ == MatrixFormat::kColwise);
   assert(this->format_ == MatrixFormat::kRowwisePartitioned);
   if (var_in < this->num_col_) {
-    for (HighsInt iEl = matrix.start_[var_in];
-	 iEl < matrix.start_[var_in + 1]; iEl++) {
+    for (HighsInt iEl = matrix.start_[var_in]; iEl < matrix.start_[var_in + 1];
+         iEl++) {
       HighsInt iRow = matrix.index_[iEl];
       HighsInt iFind = this->start_[iRow];
       HighsInt iSwap = --this->p_end_[iRow];
@@ -1258,14 +1243,14 @@ void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out, co
       // todo @ Julian : this assert can fail
       assert(iFind >= 0 && iFind < int(this->index_.size()));
       assert(iSwap >= 0 && iSwap < int(this->value_.size()));
-      swap( this->index_[iFind], this->index_[iSwap]);
-      swap( this->value_[iFind], this->value_[iSwap]);
+      swap(this->index_[iFind], this->index_[iSwap]);
+      swap(this->value_[iFind], this->value_[iSwap]);
     }
   }
 
   if (var_out < this->num_col_) {
     for (HighsInt iEl = matrix.start_[var_out];
-	 iEl < matrix.start_[var_out + 1]; iEl++) {
+         iEl < matrix.start_[var_out + 1]; iEl++) {
       HighsInt iRow = matrix.index_[iEl];
       HighsInt iFind = this->p_end_[iRow];
       HighsInt iSwap = this->p_end_[iRow]++;
@@ -1278,11 +1263,12 @@ void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out, co
 
 double HighsSparseMatrix::computeDot(const HVector& column,
                                      const HighsInt use_col) const {
-  assert(1==0);
+  assert(1 == 0);
   assert(this->format_ == MatrixFormat::kColwise);
   double result = 0;
   if (use_col < this->num_col_) {
-    for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1]; iEl++)
+    for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
+         iEl++)
       result += column.array[this->index_[iEl]] * this->value_[iEl];
   } else {
     result = column.array[use_col - this->num_col_];
@@ -1294,7 +1280,8 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
                                   const double multiplier) const {
   assert(this->format_ == MatrixFormat::kColwise);
   if (use_col < this->num_col_) {
-    for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1]; iEl++) {
+    for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
+         iEl++) {
       HighsInt iRow = this->index_[iEl];
       double value0 = column.array[iRow];
       double value1 = value0 + multiplier * this->value_[iEl];
@@ -1308,7 +1295,6 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
     if (value0 == 0) column.index[column.count++] = iRow;
     column.array[iRow] = (fabs(value1) < kHighsTiny) ? kHighsZero : value1;
   }
-  
 }
 
 void HighsSparseMatrix::priceByRowDenseResult(HVector& result,

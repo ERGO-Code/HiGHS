@@ -1397,7 +1397,7 @@ void HEkk::pivotColumnFtran(const HighsInt iCol, HVector& col_aq) {
   col_aq.packFlag = true;
   HVector alt_col_aq = col_aq;
   matrix_.collect_aj(col_aq, iCol, 1);
-  ar_matrix_.collectAj(alt_col_aq, iCol, 1);
+  lp_.a_matrix_.collectAj(alt_col_aq, iCol, 1);
   assert(alt_col_aq.isEqual(col_aq));
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(kSimplexNlaFtran, col_aq,
@@ -1496,23 +1496,21 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   if (use_col_price) {
     // Perform column-wise PRICE
     matrix_.priceByColumn(row_ap, row_ep);
-    ar_matrix_.priceByColumn(alt_row_ap, alt_row_ep);
+    lp_.a_matrix_.priceByColumn(alt_row_ap, alt_row_ep);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
     const double switch_density = matrix_.hyperPRICE;
     matrix_.priceByRowSparseResultWithSwitch(
         row_ap, row_ep, info_.row_ap_density, 0, switch_density);
-    ar_matrix_.priceByRowWithSwitch(alt_row_ap, alt_row_ep, info_.row_ap_density, 0, switch_density);
+    ar_matrix_.priceByRowWithSwitch(alt_row_ap, alt_row_ep,
+                                    info_.row_ap_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
     matrix_.priceByRowSparseResult(row_ap, row_ep);
     ar_matrix_.priceByRow(alt_row_ap, alt_row_ep);
   }
-  if (!alt_row_ap.isEqual(row_ap)) {
-    printf("alt_row_ap error\n");
-  }
-  assert(alt_row_ap.isEqual(row_ap));
+  assert(alt_row_ap.array == row_ap.array);
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
     // variables, so zero these by exploiting the fact that, for basic
@@ -1551,11 +1549,14 @@ void HEkk::computePrimal() {
   HVector primal_col;
   primal_col.setup(num_row);
   primal_col.clear();
+  HVector alt_primal_col = primal_col;
   for (HighsInt i = 0; i < num_col + num_row; i++) {
     if (basis_.nonbasicFlag_[i] && info_.workValue_[i] != 0) {
       matrix_.collect_aj(primal_col, i, info_.workValue_[i]);
+      lp_.a_matrix_.collectAj(alt_primal_col, i, info_.workValue_[i]);
     }
   }
+  assert(alt_primal_col.isEqual(primal_col));
   // It's possible that the buffer has no nonzeros, so performing
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!

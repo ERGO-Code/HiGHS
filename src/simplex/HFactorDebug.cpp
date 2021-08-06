@@ -16,11 +16,11 @@
 
 #include "simplex/HFactorDebug.h"
 
-#include "simplex/HVector.h"
-#include "util/HighsRandom.h"
-
 #include <algorithm>
 #include <cmath>
+
+#include "simplex/HVector.h"
+#include "util/HighsRandom.h"
 
 using std::fabs;
 using std::max;

@@ -20,8 +20,8 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
-#include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "simplex/HVector.h"
+#include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "util/HighsUtils.h"
 
 class HighsSparseMatrix {
@@ -81,7 +81,8 @@ class HighsSparseMatrix {
                             const double expected_density,
                             const HighsInt from_index,
                             const double switch_density) const;
-  void update(const HighsInt var_in, const HighsInt var_out, const HighsSparseMatrix& matrix);
+  void update(const HighsInt var_in, const HighsInt var_out,
+              const HighsSparseMatrix& matrix);
   double computeDot(const HVector& column, const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
