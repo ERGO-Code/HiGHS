@@ -101,7 +101,7 @@ class HEkk {
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
-  HMatrix matrix_;
+  // JH RmHMatrix HMatrix matrix_;
   HighsSparseMatrix ar_matrix_;
   HSimplexNla simplex_nla_;
 

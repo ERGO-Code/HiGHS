@@ -353,7 +353,8 @@ void HEkkDual::minorUpdateDual() {
     if (ich == multi_iChoice || multi_choice[ich].row_out >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
       for (HighsInt i = 0; i < dualRow.workCount; i++) {
-        double dot = matrix->compute_dot(*this_ep, dualRow.workData[i].first);
+        // JH RmHMatrix double dot = matrix->compute_dot(*this_ep, dualRow.workData[i].first);
+        double dot = a_matrix->computeDot(*this_ep, dualRow.workData[i].first);
         multi_choice[ich].baseValue -= dualRow.workData[i].second * dot;
       }
     }
@@ -403,7 +404,8 @@ void HEkkDual::minorUpdatePrimal() {
   for (HighsInt ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].row_out >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
-      double dot = matrix->compute_dot(*this_ep, variable_in);
+      // JH RmHMatrix double dot = matrix->compute_dot(*this_ep, variable_in);
+      double dot = a_matrix->computeDot(*this_ep, variable_in);
       multi_choice[ich].baseValue -= theta_primal * dot;
       double value = multi_choice[ich].baseValue;
       double lower = multi_choice[ich].baseLower;
@@ -465,7 +467,8 @@ void HEkkDual::minorUpdateRows() {
     for (HighsInt ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
-        double pivotX = matrix->compute_dot(*next_ep, variable_in);
+        // JH RmHMatrix double pivotX = matrix->compute_dot(*next_ep, variable_in);
+        double pivotX = a_matrix->computeDot(*next_ep, variable_in);
         if (fabs(pivotX) < kHighsTiny) continue;
         multi_vector[multi_nTasks] = next_ep;
         multi_xpivot[multi_nTasks] = -pivotX / alpha_row;
@@ -496,7 +499,8 @@ void HEkkDual::minorUpdateRows() {
     for (HighsInt ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
-        double pivotX = matrix->compute_dot(*next_ep, variable_in);
+        // JH RmHMatrix double pivotX = matrix->compute_dot(*next_ep, variable_in);
+        double pivotX = a_matrix->computeDot(*next_ep, variable_in);
         if (fabs(pivotX) < kHighsTiny) continue;
         next_ep->saxpy(-pivotX / alpha_row, Row);
         next_ep->tight();
@@ -567,7 +571,8 @@ void HEkkDual::majorUpdateFtranPrepare() {
   for (HighsInt iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Vec = finish->col_BFRT;
-    matrix->collect_aj(*Vec, finish->variable_in, finish->theta_primal);
+    // JH RmHMatrix matrix->collect_aj(*Vec, finish->variable_in, finish->theta_primal);
+    a_matrix->collectAj(*Vec, finish->variable_in, finish->theta_primal);
 
     // Update this buffer by previous Row_ep
     for (HighsInt jFn = iFn - 1; jFn >= 0; jFn--) {
@@ -580,8 +585,10 @@ void HEkkDual::majorUpdateFtranPrepare() {
       }
       if (fabs(pivotX) > kHighsTiny) {
         pivotX /= jFinish->alpha_row;
-        matrix->collect_aj(*Vec, jFinish->variable_in, -pivotX);
-        matrix->collect_aj(*Vec, jFinish->variable_out, pivotX);
+        // JH RmHMatrix matrix->collect_aj(*Vec, jFinish->variable_in, -pivotX);
+        a_matrix->collectAj(*Vec, jFinish->variable_in, -pivotX);
+        // JH RmHMatrix matrix->collect_aj(*Vec, jFinish->variable_out, pivotX);
+        a_matrix->collectAj(*Vec, jFinish->variable_out, pivotX);
       }
     }
     col_BFRT.saxpy(1, Vec);
@@ -593,7 +600,8 @@ void HEkkDual::majorUpdateFtranPrepare() {
     HVector* iColumn = iFinish->col_aq;
     iColumn->clear();
     iColumn->packFlag = true;
-    matrix->collect_aj(*iColumn, iFinish->variable_in, 1);
+    // JH RmHMatrix matrix->collect_aj(*iColumn, iFinish->variable_in, 1);
+    a_matrix->collectAj(*iColumn, iFinish->variable_in, 1);
   }
 }
 

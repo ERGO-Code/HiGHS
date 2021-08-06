@@ -70,7 +70,8 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const vector<int8_t>& Nflag_ = simplex_basis.nonbasicFlag_;
   const vector<int8_t>& Nmove_ = simplex_basis.nonbasicMove_;
   const vector<HighsInt>& Bindex_ = simplex_basis.basicIndex_;
-  const HMatrix& matrix = ekk_instance.matrix_;
+  // JH RmHMatrix const HMatrix& matrix = ekk_instance.matrix_;
+  const HighsSparseMatrix& matrix = ekk_instance.lp_.a_matrix_;
 
   // Local copies of scalars
 
@@ -163,7 +164,9 @@ HighsStatus getRangingData(HighsRanging& ranging,
 
     // Form updated column
     column.clear();
-    matrix.collect_aj(column, j, 1);
+    // JH RmHMatrix matrix.collect_aj(column, j, 1);
+    matrix.collectAj(column, j, 1);
+    
     const double expected_density = ekk_instance.info_.col_aq_density;
     ekk_instance.simplex_nla_.ftran(column, expected_density);
     HighsInt nWork = 0;

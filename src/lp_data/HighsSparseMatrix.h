@@ -24,6 +24,8 @@
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "util/HighsUtils.h"
 
+const double kHyperPriceDensity = 0.1;
+
 class HighsSparseMatrix {
  public:
   HighsSparseMatrix() { clear(); }

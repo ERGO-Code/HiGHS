@@ -443,7 +443,8 @@ void HEkkDualRow::updateFlip(HVector* bfrtColumn) {
     local_dual_objective_change *= ekk_instance_.cost_scale_;
     dual_objective_value_change += local_dual_objective_change;
     ekk_instance_.flipBound(iCol);
-    ekk_instance_.matrix_.collect_aj(*bfrtColumn, iCol, change);
+    // JH RmHMatrix ekk_instance_.matrix_.collect_aj(*bfrtColumn, iCol, change);
+    ekk_instance_.lp_.a_matrix_.collectAj(*bfrtColumn, iCol, change);
   }
   ekk_instance_.info_.updated_dual_objective_value +=
       dual_objective_value_change;
@@ -492,7 +493,8 @@ void HEkkDualRow::createFreemove(HVector* row_ep) {
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       HighsInt iCol = *sit;
       assert(iCol < ekk_instance_.lp_.num_col_);
-      double alpha = ekk_instance_.matrix_.compute_dot(*row_ep, iCol);
+      // JH RmHMatrix double alpha = ekk_instance_.matrix_.compute_dot(*row_ep, iCol);
+      double alpha = ekk_instance_.lp_.a_matrix_.computeDot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * move_out > 0)
           ekk_instance_.basis_.nonbasicMove_[iCol] = 1;

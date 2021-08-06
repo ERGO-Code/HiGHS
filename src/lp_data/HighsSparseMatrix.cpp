@@ -27,8 +27,6 @@ using std::min;
 using std::swap;
 using std::vector;
 
-const double kHyperPriceDensity = 0.1;
-
 bool HighsSparseMatrix::operator==(const HighsSparseMatrix& matrix) const {
   bool equal = true;
   equal = this->format_ == matrix.format_ && equal;
@@ -1382,7 +1380,6 @@ void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out,
 
 double HighsSparseMatrix::computeDot(const HVector& column,
                                      const HighsInt use_col) const {
-  assert(1 == 0);
   assert(this->format_ == MatrixFormat::kColwise);
   double result = 0;
   if (use_col < this->num_col_) {

@@ -367,7 +367,8 @@ void HEkkDual::initialiseInstance() {
   solver_num_row = ekk_instance_.lp_.num_row_;
   solver_num_tot = solver_num_col + solver_num_row;
 
-  matrix = &ekk_instance_.matrix_;
+  // JH RmHMatrix matrix = &ekk_instance_.matrix_;
+  a_matrix = &ekk_instance_.lp_.a_matrix_;
   simplex_nla = &ekk_instance_.simplex_nla_;
   analysis = &ekk_instance_.analysis_;
 
@@ -458,9 +459,12 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   }
 
   // Alias to the matrix
-  const HighsInt* Astart = matrix->getAstart();
-  const HighsInt* Aindex = matrix->getAindex();
-  const double* Avalue = matrix->getAvalue();
+  // JH RmHMatrix const HighsInt* Astart = matrix->getAstart();
+  // JH RmHMatrix const HighsInt* Aindex = matrix->getAindex();
+  // JH RmHMatrix const double* Avalue = matrix->getAvalue();
+  const HighsInt* Astart = &a_matrix->start_[0];
+  const HighsInt* Aindex = &a_matrix->index_[0];
+  const double* Avalue = &a_matrix->value_[0];
   const HighsInt AcountX = Astart[solver_num_col];
 
   // Figure out partition weight
@@ -923,9 +927,9 @@ void HEkkDual::rebuild() {
     assert(info.backtracking_);
     HighsLp& lp = ekk_instance_.lp_;
     analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
-                                &lp.a_index_[0], &lp.a_value_[0],
-                                &ekk_instance_.basis_.nonbasicFlag_[0]);
+    // JH RmHMatrix ekk_instance_.matrix_.setup(lp.num_col_, lp.num_row_, &lp.a_start_[0],
+    // JH RmHMatrix &lp.a_index_[0], &lp.a_value_[0],
+    // JH RmHMatrix &ekk_instance_.basis_.nonbasicFlag_[0]);
     ekk_instance_.ar_matrix_.createRowwisePartitioned(
         ekk_instance_.lp_.a_matrix_, &ekk_instance_.basis_.nonbasicFlag_[0]);
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
@@ -1640,7 +1644,8 @@ void HEkkDual::updateFtran() {
   col_aq.packFlag = true;
   // Get the constraint matrix column by combining just one column
   // with unit multiplier
-  matrix->collect_aj(col_aq, variable_in, 1);
+  // JH RmHMatrix matrix->collect_aj(col_aq, variable_in, 1);
+  a_matrix->collectAj(col_aq, variable_in, 1);
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(kSimplexNlaFtran, col_aq,
                                     ekk_instance_.info_.col_aq_density);
@@ -2276,7 +2281,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   const HighsLp& lp = ekk_instance_.lp_;
   const SimplexBasis& basis = ekk_instance_.basis_;
   const HighsSimplexInfo& info = ekk_instance_.info_;
-  HMatrix& matrix = ekk_instance_.matrix_;
+  // JH RmHMatrix HMatrix& matrix = ekk_instance_.matrix_;
   // Create a local buffer for the pi vector
   HVector dual_col;
   dual_col.setup(lp.num_row_);
@@ -2299,7 +2304,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
   if (dual_col.count) {
     const double expected_density = 1;
     simplex_nla->btran(dual_col, expected_density);
-    matrix.priceByColumn(dual_row, dual_col);
+    // JH RmHMatrix matrix.priceByColumn(dual_row, dual_col);
+    lp.a_matrix_.priceByColumn(dual_row, dual_col);
   }
   double dual_objective = lp.offset_;
   double norm_dual = 0;
