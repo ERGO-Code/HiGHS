@@ -4068,7 +4068,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
             model->row_upper_[i],
             rowsizeInteger[i] + rowsizeImplInt[i] == rowsize[i] &&
                 rowCoefficientsIntegral(i, 1.0),
-            false);
+            true, false, false);
 
         markRowDeleted(i);
         for (HighsInt j : rowpositions) unlink(j);
