@@ -2315,17 +2315,17 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   bool LiDSE_candidate = true;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     // Check limit on number of entries in the column has not been breached
-    HighsInt col_num_en = lp.a_start_[col + 1] - lp.a_start_[col];
+    HighsInt col_num_en = lp.a_matrix_.start_[col + 1] - lp.a_matrix_.start_[col];
     max_col_num_en = std::max(col_num_en, max_col_num_en);
     if (col_num_en > max_assess_col_num_en) return false;
     col_length_k[col_num_en]++;
-    for (HighsInt en = lp.a_start_[col]; en < lp.a_start_[col + 1]; en++) {
-      double value = lp.a_value_[en];
+    for (HighsInt en = lp.a_matrix_.start_[col]; en < lp.a_matrix_.start_[col + 1]; en++) {
+      double value = lp.a_matrix_.value_[en];
       // All nonzeros must be +1 or -1
       if (fabs(value) != 1) return false;
     }
   }
-  double average_col_num_en = lp.a_start_[lp.num_col_];
+  double average_col_num_en = lp.a_matrix_.start_[lp.num_col_];
   average_col_num_en = average_col_num_en / lp.num_col_;
   LiDSE_candidate =
       LiDSE_candidate && average_col_num_en <= max_average_col_num_en;

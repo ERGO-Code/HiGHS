@@ -27,7 +27,7 @@
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus solveLp(HighsModelObject& model, const string message) {
-  const bool kill_a_ = false;
+  //  const bool kill_a_ = true;
   if (kill_a_) {
     model.lp_.a_start_.clear();
     model.lp_.a_index_.clear();
@@ -156,6 +156,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   if (kill_a_) {
     const bool to_a_matrix = false;
     model.lp_.matrixCopy(to_a_matrix);
+    model.ekk_instance_.lp_.matrixCopy(to_a_matrix);
     assert(model.lp_.dimensionsAndMatrixOk("HighsSolve - solveLp"));
   }
   return return_status;

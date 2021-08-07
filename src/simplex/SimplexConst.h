@@ -18,6 +18,7 @@
 
 #include "util/HighsInt.h"
 const bool kRefineSimplex = false;
+const bool kill_a_ = true;
 
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
 
