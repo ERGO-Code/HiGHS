@@ -301,10 +301,10 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
                    "pointer errors\n",
                    message.c_str(), scale_status.c_str());
       if (error0_found)
-        printf("a_start pointer error: %p vs %p\n", (void*)factor_Astart,
-               (void*)&(lp_->a_start_[0]));
-      if (error1_found) printf("a_index pointer error\n");
-      if (error2_found) printf("a_value pointer error\n");
+        printf("a_matrix_.start_ pointer error: %p vs %p\n", (void*)factor_Astart,
+               (void*)&(lp_->a_matrix_.start_[0]));
+      if (error1_found) printf("a_matrix_.index pointer error\n");
+      if (error2_found) printf("a_matrix_.value pointer error\n");
       assert(!error_found);
       return HighsDebugStatus::kLogicalError;
     }
@@ -314,7 +314,7 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
   }
   HighsInt error_col = -1;
   for (HighsInt iCol = 0; iCol < check_lp.num_col_ + 1; iCol++) {
-    if (check_lp.a_start_[iCol] != factor_Astart[iCol]) {
+    if (check_lp.a_matrix_.start_[iCol] != factor_Astart[iCol]) {
       error_col = iCol;
       break;
     }
@@ -322,18 +322,18 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
   error_found = error_col >= 0;
   if (error_found) {
     highsLogUser(options_->log_options, HighsLogType::kError,
-                 "CheckNlaData: (%s) scale_ is %s check_lp.a_start_ != "
+                 "CheckNlaData: (%s) scale_ is %s check_lp.a_matrix_.start_ != "
                  "factor_Astart for col %d (%d != %d)\n",
                  message.c_str(), scale_status.c_str(), (int)error_col,
-                 (int)check_lp.a_start_[error_col],
+                 (int)check_lp.a_matrix_.start_[error_col],
                  (int)factor_Astart[error_col]);
     assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }
-  HighsInt nnz = check_lp.a_start_[check_lp.num_col_];
+  HighsInt nnz = check_lp.a_matrix_.numNz();
   HighsInt error_el = -1;
   for (HighsInt iEl = 0; iEl < nnz; iEl++) {
-    if (check_lp.a_index_[iEl] != factor_Aindex[iEl]) {
+    if (check_lp.a_matrix_.index_[iEl] != factor_Aindex[iEl]) {
       error_el = iEl;
       break;
     }
@@ -341,16 +341,16 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
   error_found = error_el >= 0;
   if (error_found) {
     highsLogUser(options_->log_options, HighsLogType::kError,
-                 "CheckNlaData: (%s) scale_ is %s check_lp.a_index_ != "
+                 "CheckNlaData: (%s) scale_ is %s check_lp.a_matrix_.index_ != "
                  "factor_Aindex for el %d (%d != %d)\n",
                  message.c_str(), scale_status.c_str(), (int)error_el,
-                 (int)check_lp.a_index_[error_el],
+                 (int)check_lp.a_matrix_.index_[error_el],
                  (int)factor_Aindex[error_el]);
     assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }
   for (HighsInt iEl = 0; iEl < nnz; iEl++) {
-    if (check_lp.a_value_[iEl] != factor_Avalue[iEl]) {
+    if (check_lp.a_matrix_.value_[iEl] != factor_Avalue[iEl]) {
       error_el = iEl;
       break;
     }
@@ -358,10 +358,10 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
   error_found = error_el >= 0;
   if (error_found) {
     highsLogUser(options_->log_options, HighsLogType::kError,
-                 "CheckNlaData: (%s) scale_ is %s check_lp.a_value_ != "
+                 "CheckNlaData: (%s) scale_ is %s check_lp.a_matrix_.value_ != "
                  "factor_Avalue for el %d (%g != %g)\n",
                  message.c_str(), scale_status.c_str(), (int)error_el,
-                 check_lp.a_value_[error_el], factor_Avalue[error_el]);
+                 check_lp.a_matrix_.value_[error_el], factor_Avalue[error_el]);
     assert(!error_found);
     return HighsDebugStatus::kLogicalError;
   }

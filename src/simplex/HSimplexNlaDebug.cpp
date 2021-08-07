@@ -40,9 +40,9 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
 
   const HighsInt num_row = simplex_nla.lp_->num_row_;
   const HighsInt num_col = simplex_nla.lp_->num_col_;
-  const vector<HighsInt>& a_start = simplex_nla.lp_->a_matrix_.start_;
-  const vector<HighsInt>& a_index = simplex_nla.lp_->a_matrix_.index_;
-  const vector<double>& a_value = simplex_nla.lp_->a_matrix_.value_;
+  const vector<HighsInt>& a_matrix_start = simplex_nla.lp_->a_matrix_.start_;
+  const vector<HighsInt>& a_matrix_index = simplex_nla.lp_->a_matrix_.index_;
+  const vector<double>& a_matrix_value = simplex_nla.lp_->a_matrix_.value_;
   const HighsInt* base_index = simplex_nla.base_index_;
   const HighsOptions* options = simplex_nla.options_;
   HVector column;
@@ -62,9 +62,9 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     column.array[iRow] = value;
     HighsInt iCol = base_index[iRow];
     if (iCol < num_col) {
-      for (HighsInt iEl = a_start[iCol]; iEl < a_start[iCol + 1]; iEl++) {
-        HighsInt index = a_index[iEl];
-        rhs.array[index] += value * a_value[iEl];
+      for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1]; iEl++) {
+        HighsInt index = a_matrix_index[iEl];
+        rhs.array[index] += value * a_matrix_value[iEl];
       }
     } else {
       HighsInt index = iCol - num_col;
@@ -114,9 +114,9 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     column.clear();
     column.packFlag = true;
     if (iCol < num_col) {
-      for (HighsInt k = a_start[iCol]; k < a_start[iCol + 1]; k++) {
-        HighsInt index = a_index[k];
-        column.array[index] = a_value[k];
+      for (HighsInt k = a_matrix_start[iCol]; k < a_matrix_start[iCol + 1]; k++) {
+        HighsInt index = a_matrix_index[k];
+        column.array[index] = a_matrix_value[k];
         column.index[column.count++] = index;
       }
     } else {

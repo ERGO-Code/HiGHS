@@ -58,7 +58,7 @@ bool HighsSparseMatrix::isColwise() const {
   return this->format_ == MatrixFormat::kColwise;
 }
 
-HighsInt HighsSparseMatrix::num_nz() const {
+HighsInt HighsSparseMatrix::numNz() const {
   assert(this->format_ != MatrixFormat::kNone);
   if (this->isColwise()) {
     if ((HighsInt)this->start_.size() < this->num_col_ + 1) {
@@ -101,7 +101,7 @@ void HighsSparseMatrix::ensureColWise() {
   assert(this->isRowwise());
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
-  HighsInt num_nz = this->num_nz();
+  HighsInt num_nz = this->numNz();
   assert(num_nz >= 0);
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
@@ -145,7 +145,7 @@ void HighsSparseMatrix::ensureColWise() {
   }
   this->format_ = MatrixFormat::kColwise;
   assert((HighsInt)this->start_.size() >= num_col + 1);
-  num_nz = this->num_nz();
+  num_nz = this->numNz();
   assert(num_nz >= 0);
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
@@ -157,7 +157,7 @@ void HighsSparseMatrix::ensureRowWise() {
   assert(this->isColwise());
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
-  HighsInt num_nz = this->num_nz();
+  HighsInt num_nz = this->numNz();
   assert(num_nz >= 0);
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
@@ -202,7 +202,7 @@ void HighsSparseMatrix::ensureRowWise() {
   }
   this->format_ = MatrixFormat::kRowwise;
   assert((HighsInt)this->start_.size() >= num_row + 1);
-  num_nz = this->num_nz();
+  num_nz = this->numNz();
   assert(num_nz >= 0);
   assert((HighsInt)this->index_.size() >= num_nz);
   assert((HighsInt)this->value_.size() >= num_nz);
@@ -247,7 +247,7 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
   }
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
-  HighsInt num_nz = this->num_nz();
+  HighsInt num_nz = this->numNz();
   // Check that nonzeros aren't being appended to a matrix with no rows
   if (num_new_nz > 0 && num_row <= 0) return HighsStatus::kError;
 
@@ -333,7 +333,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   }
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
-  HighsInt num_nz = this->num_nz();
+  HighsInt num_nz = this->numNz();
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && num_col <= 0) return HighsStatus::kError;
 
@@ -1052,7 +1052,7 @@ void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
   assert(this->format_ != MatrixFormat::kNone);
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
-  HighsInt num_nz = matrix.num_nz();
+  HighsInt num_nz = matrix.numNz();
   const vector<HighsInt>& a_start = matrix.start_;
   const vector<HighsInt>& a_index = matrix.index_;
   const vector<double>& a_value = matrix.value_;
@@ -1084,7 +1084,7 @@ void HighsSparseMatrix::createRowwise(const HighsSparseMatrix& matrix) {
 
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
-  HighsInt num_nz = matrix.num_nz();
+  HighsInt num_nz = matrix.numNz();
   const vector<HighsInt>& a_start = matrix.start_;
   const vector<HighsInt>& a_index = matrix.index_;
   const vector<double>& a_value = matrix.value_;
@@ -1133,7 +1133,7 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
 
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
-  HighsInt num_nz = matrix.num_nz();
+  HighsInt num_nz = matrix.numNz();
   const vector<HighsInt>& ar_start = matrix.start_;
   const vector<HighsInt>& ar_index = matrix.index_;
   const vector<double>& ar_value = matrix.value_;
@@ -1201,7 +1201,7 @@ void HighsSparseMatrix::createRowwisePartitioned(
 
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
-  HighsInt num_nz = matrix.num_nz();
+  HighsInt num_nz = matrix.numNz();
   const vector<HighsInt>& a_start = matrix.start_;
   const vector<HighsInt>& a_index = matrix.index_;
   const vector<double>& a_value = matrix.value_;
