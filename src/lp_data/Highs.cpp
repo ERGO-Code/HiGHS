@@ -242,6 +242,9 @@ HighsStatus Highs::passModel(HighsModel model) {
     lp.a_start_.assign(lp.num_col_ + 1, 0);
     lp.a_index_.clear();
     lp.a_value_.clear();
+    lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
+    lp.a_matrix_.index_.clear();
+    lp.a_matrix_.value_.clear();
   } else {
     // Matrix has rows and columns, so a_format must be valid, even if
     // there are no nonzeros. However, the number of nonzeros can only
@@ -249,7 +252,10 @@ HighsStatus Highs::passModel(HighsModel model) {
     // number of nonzeros to force the check of a_format
     if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
-  const bool to_a_matrix = true;
+  // Dimensions in a_matrix_ may not be set, but take them from lp.
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  const bool to_a_matrix = false;
   lp.matrixCopy(to_a_matrix);
   assert(lp.dimensionsAndMatrixOk("Highs::passModel"));
 
@@ -333,21 +339,23 @@ HighsStatus Highs::passModel(
     assert(aindex != NULL);
     assert(avalue != NULL);
     if (a_rowwise) {
-      lp.a_start_.assign(astart, astart + num_row);
+      lp.a_matrix_.start_.assign(astart, astart + num_row);
     } else {
-      lp.a_start_.assign(astart, astart + num_col);
+      lp.a_matrix_.start_.assign(astart, astart + num_col);
     }
-    lp.a_index_.assign(aindex, aindex + num_nz);
-    lp.a_value_.assign(avalue, avalue + num_nz);
+    lp.a_matrix_.index_.assign(aindex, aindex + num_nz);
+    lp.a_matrix_.value_.assign(avalue, avalue + num_nz);
   }
   if (a_rowwise) {
-    lp.a_start_.resize(num_row + 1);
-    lp.a_start_[num_row] = num_nz;
+    lp.a_matrix_.start_.resize(num_row + 1);
+    lp.a_matrix_.start_[num_row] = num_nz;
     lp.format_ = MatrixFormat::kRowwise;
+    lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   } else {
-    lp.a_start_.resize(num_col + 1);
-    lp.a_start_[num_col] = num_nz;
+    lp.a_matrix_.start_.resize(num_col + 1);
+    lp.a_matrix_.start_[num_col] = num_nz;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
     lp.sense_ = ObjSense::kMaximize;
@@ -462,10 +470,6 @@ HighsStatus Highs::readModel(const std::string filename) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
-
-  const bool to_a_matrix = false;
-  model.lp_.matrixCopy(to_a_matrix);
-  assert(model.lp_.dimensionsAndMatrixOk("Highs::readModel"));
 
   return_status = interpretCallStatus(passModel(std::move(model)),
                                       return_status, "passModel");

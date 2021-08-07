@@ -32,12 +32,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {-inf, -inf};
     lp.row_upper_ = {23, 10};
-    lp.a_start_ = {0, 2, 4};
-    lp.a_index_ = {0, 1, 0, 1};
-    lp.a_value_ = {3, 5, 6, 2};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {3, 5, 6, 2};
     lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 8.83333333333333;
   }
@@ -52,12 +53,13 @@ class SpecialLps {
     lp.col_upper_ = {1, 2};
     lp.row_lower_ = {-inf, 2};
     lp.row_upper_ = {1, 2};
-    lp.a_start_ = {0, 1, 2};
-    lp.a_index_ = {0, 1};
-    lp.a_value_ = {1, 1};
+    lp.a_matrix_.start_ = {0, 1, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 1;
   }
@@ -72,12 +74,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {-inf, -inf, -inf};
     lp.row_upper_ = {10, 8, 4};
-    lp.a_start_ = {0, 3, 5};
-    lp.a_index_ = {0, 1, 2, 0, 1};
-    lp.a_value_ = {2, 1, 1, 1, 1};
+    lp.a_matrix_.start_ = {0, 3, 5};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1};
+    lp.a_matrix_.value_ = {2, 1, 1, 1, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -18;
   }
@@ -91,12 +94,13 @@ class SpecialLps {
     lp.col_upper_ = {2, inf};
     lp.row_lower_ = {-inf, -inf, -inf};
     lp.row_upper_ = {14, 0, 3};
-    lp.a_start_ = {0, 2, 5};
-    lp.a_index_ = {0, 2, 0, 1, 2};
-    lp.a_value_ = {7, 2, -2, 1, -2};
+    lp.a_matrix_.start_ = {0, 2, 5};
+    lp.a_matrix_.index_ = {0, 2, 0, 1, 2};
+    lp.a_matrix_.value_ = {7, 2, -2, 1, -2};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
@@ -110,12 +114,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf, inf, 1, 1};
     lp.row_lower_ = {-inf, -inf};
     lp.row_upper_ = {2, -2};
-    lp.a_start_ = {0, 1, 2, 2, 2, 2};
-    lp.a_index_ = {0, 1};
-    lp.a_value_ = {1, 1};
+    lp.a_matrix_.start_ = {0, 1, 2, 2, 2, 2};
+    lp.a_matrix_.index_ = {0, 1};
+    lp.a_matrix_.value_ = {1, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -2;
   }
@@ -133,13 +138,14 @@ class SpecialLps {
                      0.5,  1.76, 0.17, 0.32, -0.15};
     lp.row_lower_ = {0.9626, -1e+200, -1e+200, -1e+200, -1e+200, -1e+200};
     lp.row_upper_ = {0.9626, 0.615, 0, 0.172, -0.869, -0.022};
-    lp.a_start_ = {0, 0, 1, 2, 5, 5, 6, 7, 9, 10, 12};
-    lp.a_index_ = {4, 4, 0, 1, 3, 0, 4, 1, 5, 0, 1, 4};
-    lp.a_value_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
+    lp.a_matrix_.start_ = {0, 0, 1, 2, 5, 5, 6, 7, 9, 10, 12};
+    lp.a_matrix_.index_ = {4, 4, 0, 1, 3, 0, 4, 1, 5, 0, 1, 4};
+    lp.a_matrix_.value_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
                    -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -1.191;
   }
@@ -153,12 +159,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf, inf, inf};
     lp.row_lower_ = {1, 2, 2, 4};
     lp.row_upper_ = {1, 2, 2, 4};
-    lp.a_start_ = {0, 3, 5, 6, 7};
-    lp.a_index_ = {0, 2, 3, 1, 3, 3, 3};
-    lp.a_value_ = {1, 1, 1, 2, 1, 1, 1};
+    lp.a_matrix_.start_ = {0, 3, 5, 6, 7};
+    lp.a_matrix_.index_ = {0, 2, 3, 1, 3, 3, 3};
+    lp.a_matrix_.value_ = {1, 1, 1, 2, 1, 1, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
@@ -172,12 +179,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {-inf, -inf};
     lp.row_upper_ = {1, -2};
-    lp.a_start_ = {0, 2, 4};
-    lp.a_index_ = {0, 1, 0, 1};
-    lp.a_value_ = {1, -1, -1, 1};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {1, -1, -1, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
@@ -191,12 +199,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {-inf, -inf};
     lp.row_upper_ = {0, -1};
-    lp.a_start_ = {0, 2, 4};
-    lp.a_index_ = {0, 1, 0, 1};
-    lp.a_value_ = {1, -1, -1, 1};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {1, -1, -1, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
@@ -209,12 +218,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {-inf, -inf};
     lp.row_upper_ = {10, 15};
-    lp.a_start_ = {0, 2, 4};
-    lp.a_index_ = {0, 1, 0, 1};
-    lp.a_value_ = {2, 1, 1, 3};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {2, 1, 1, 3};
     lp.sense_ = ObjSense::kMaximize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kUnbounded;
   }
 
@@ -227,12 +237,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {3, 1};
     lp.row_upper_ = {3, 1};
-    lp.a_start_ = {0, 2, 4};
-    lp.a_index_ = {0, 1, 0, 1};
-    lp.a_value_ = {2, 1, 1, 3};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {2, 1, 1, 3};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kInfeasible;
   }
 
@@ -246,12 +257,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {7, 12, 6};
     lp.row_upper_ = {inf, inf, inf};
-    lp.a_start_ = {0, 3, 6};
-    lp.a_index_ = {0, 1, 2, 0, 1, 2};
-    lp.a_value_ = {2, 3, 2, 2, 4, 1};
+    lp.a_matrix_.start_ = {0, 3, 6};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+    lp.a_matrix_.value_ = {2, 3, 2, 2, 4, 1};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = 31.2;
   }
@@ -266,12 +278,13 @@ class SpecialLps {
     lp.col_upper_ = {inf, inf};
     lp.row_lower_ = {-inf, -inf};
     lp.row_upper_ = {120, 210};
-    lp.a_start_ = {0, 2, 4};
-    lp.a_index_ = {0, 1, 0, 1};
-    lp.a_value_ = {0.3, 0.7, 0.5, 0.5};
+    lp.a_matrix_.start_ = {0, 2, 4};
+    lp.a_matrix_.index_ = {0, 1, 0, 1};
+    lp.a_matrix_.value_ = {0.3, 0.7, 0.5, 0.5};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     require_model_status = HighsModelStatus::kOptimal;
     optimal_objective = -2850;
   }

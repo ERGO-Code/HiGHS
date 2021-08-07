@@ -4,7 +4,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 // No commas in test case name.
 TEST_CASE("LP-orientation", "[lp_orientation]") {
@@ -52,6 +52,7 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   const HighsInfo& info = highs.getInfo();
 
   REQUIRE(highs_lp.format_ == MatrixFormat::kNone);
+  REQUIRE(highs_lp.a_matrix_.format_ == MatrixFormat::kColwise);
 
   // Set up the LP externally
   HighsLp lp;
@@ -62,10 +63,15 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   lp.col_upper_ = colUpper;
   lp.row_lower_ = rowLower;
   lp.row_upper_ = rowUpper;
-  lp.a_start_ = Astart;
-  lp.a_index_ = Aindex;
-  lp.a_value_ = Avalue;
+  lp.a_matrix_.start_ = Astart;
+  lp.a_matrix_.index_ = Aindex;
+  lp.a_matrix_.value_ = Avalue;
   lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  // Have to set the matrix dimension so that setFormat can be used
+  lp.a_matrix_.num_col_ = num_col;
+  lp.a_matrix_.num_row_ = num_row;
+  // Pass the LP
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);

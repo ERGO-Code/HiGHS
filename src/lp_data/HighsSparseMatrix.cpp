@@ -169,7 +169,6 @@ void HighsSparseMatrix::ensureRowWise() {
     this->index_.clear();
     this->value_.clear();
   } else {
-    assert(1 == 0);
     // Matrix is non-empty, so transpose it
     //
     // Take a copy of the current matrix - that is colwise - so that

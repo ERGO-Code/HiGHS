@@ -2367,6 +2367,11 @@ HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
 void ensureColWise(HighsLp& lp) {
   // Should only call this is orientation is ROWWISE
   assert(lp.format_ == MatrixFormat::kRowwise);
+  lp.a_matrix_.ensureColWise();
+  if ((HighsInt)lp.a_index_.size() <=0) {
+    lp.format_ = MatrixFormat::kColwise;
+    return;
+  }
   HighsInt num_nz;
   bool empty_matrix = lp.num_col_ == 0 || lp.num_row_ == 0;
   if (!empty_matrix) {
@@ -2431,6 +2436,11 @@ void ensureColWise(HighsLp& lp) {
 void ensureRowWise(HighsLp& lp) {
   // Should only call this is orientation is COLWISE
   assert(lp.format_ == MatrixFormat::kColwise);
+  lp.a_matrix_.ensureRowWise();
+  if ((HighsInt)lp.a_index_.size() <=0) {
+    lp.format_ = MatrixFormat::kRowwise;
+    return;
+  }
   HighsInt num_nz;
   bool empty_matrix = lp.num_col_ == 0 || lp.num_row_ == 0;
   if (!empty_matrix) {

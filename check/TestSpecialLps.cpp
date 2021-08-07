@@ -344,10 +344,11 @@ void almostNotUnbounded(Highs& highs) {
   lp.col_upper_ = {inf, inf};
   lp.row_lower_ = {-1 + epsilon, -1, 3};
   lp.row_upper_ = {inf, inf, inf};
-  lp.a_start_ = {0, 3, 6};
-  lp.a_index_ = {0, 1, 2, 0, 1, 2};
-  lp.a_value_ = {1 + epsilon, -1, 1, -1, 1, 1};
+  lp.a_matrix_.start_ = {0, 3, 6};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+  lp.a_matrix_.value_ = {1 + epsilon, -1, 1, -1, 1, 1};
   lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
 
@@ -375,7 +376,7 @@ void almostNotUnbounded(Highs& highs) {
   // value -3
   lp.col_cost_[1] = 1 - epsilon;
   lp.row_lower_[0] = -1 - epsilon;
-  lp.a_value_[0] = 1 - epsilon;
+  lp.a_matrix_.value_[0] = 1 - epsilon;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
   solve(highs, "off", "simplex", require_model_status2, optimal_objective2);
@@ -401,10 +402,11 @@ void singularStartingBasis(Highs& highs) {
   lp.col_upper_ = {inf, inf, inf};
   lp.row_lower_ = {-inf, -inf};
   lp.row_upper_ = {3, 2};
-  lp.a_start_ = {0, 2, 4, 6};
-  lp.a_index_ = {0, 1, 0, 1, 0, 1};
-  lp.a_value_ = {1, 2, 2, 4, 1, 3};
+  lp.a_matrix_.start_ = {0, 2, 4, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 2, 2, 4, 1, 3};
   lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
 
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
@@ -449,8 +451,9 @@ void unconstrained(Highs& highs) {
   lp.col_cost_ = {1, -1};
   lp.col_lower_ = {4, 2};
   lp.col_upper_ = {inf, 3};
-  lp.a_start_ = {0, 0, 0};
+  lp.a_matrix_.start_ = {0, 0, 0};
   lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);

@@ -212,9 +212,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
           double_equal_tolerance);
 
   // Add the constraint 0.5 <= x0 + x1
-  lp.a_index_ = {0, 1};
-  lp.a_value_ = {1, 1};
-  highs.addRow(0.5, inf, 2, &lp.a_index_[0], &lp.a_value_[0]);
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 1};
+  highs.addRow(0.5, inf, 2, &lp.a_matrix_.index_[0], &lp.a_matrix_.value_[0]);
   if (dev_run) highs.writeModel("");
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::kOk);
@@ -294,10 +294,11 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   lp.col_lower_ = {0.0, 0.0, 0.0};
   lp.row_lower_ = {-inf};
   lp.row_upper_ = {2};
-  lp.a_start_ = {0, 1, 1, 2};
-  lp.a_index_ = {0, 0};
-  lp.a_value_ = {1.0, 1.0};
+  lp.a_matrix_.start_ = {0, 1, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0};
   lp.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);
   if (dev_run) highs.writeModel("");
