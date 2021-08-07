@@ -40,9 +40,9 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
 
   const HighsInt num_row = simplex_nla.lp_->num_row_;
   const HighsInt num_col = simplex_nla.lp_->num_col_;
-  const vector<HighsInt>& a_start = simplex_nla.lp_->a_start_;
-  const vector<HighsInt>& a_index = simplex_nla.lp_->a_index_;
-  const vector<double>& a_value = simplex_nla.lp_->a_value_;
+  const vector<HighsInt>& a_start = simplex_nla.lp_->a_matrix_.start_;
+  const vector<HighsInt>& a_index = simplex_nla.lp_->a_matrix_.index_;
+  const vector<double>& a_value = simplex_nla.lp_->a_matrix_.value_;
   const HighsInt* base_index = simplex_nla.base_index_;
   const HighsOptions* options = simplex_nla.options_;
   HVector column;
