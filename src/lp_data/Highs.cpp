@@ -249,7 +249,8 @@ HighsStatus Highs::passModel(HighsModel model) {
     // number of nonzeros to force the check of a_format
     if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
-  lp.MatrixCopy();
+  const bool to_a_matrix = true;
+  lp.matrixCopy(to_a_matrix);
   assert(lp.dimensionsAndMatrixOk("Highs::passModel"));
 
   // Check that the value of q_format is valid - once we have multiple formats
@@ -461,6 +462,11 @@ HighsStatus Highs::readModel(const std::string filename) {
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
+
+  const bool to_a_matrix = false;
+  model.lp_.matrixCopy(to_a_matrix);
+  assert(model.lp_.dimensionsAndMatrixOk("Highs::readModel"));
+
   return_status = interpretCallStatus(passModel(std::move(model)),
                                       return_status, "passModel");
   return returnFromHighs(return_status);
@@ -747,7 +753,8 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
-        reduced_lp.MatrixCopy();
+	const bool to_a_matrix = true;
+        reduced_lp.matrixCopy(to_a_matrix);
         // Validate the reduced LP
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
@@ -950,7 +957,7 @@ HighsStatus Highs::run() {
                       hmos_[original_hmo].basis_);
 
           hmos_[solved_hmo].ekk_instance_.lp_name_ = "Postsolve LP";
-          hmos_[solved_hmo].lp_.MatrixOk("Postsolve LP");
+          hmos_[solved_hmo].lp_.matrixOk("Postsolve LP");
           // Set up the iteration count and timing records so that
           // adding the corresponding values after callSolveLp gives
           // difference

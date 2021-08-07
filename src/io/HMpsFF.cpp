@@ -37,9 +37,9 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.offset_ = objOffset;
 
   lp.format_ = MatrixFormat::kColwise;
-  lp.a_start_ = std::move(Astart);
-  lp.a_index_ = std::move(Aindex);
-  lp.a_value_ = std::move(Avalue);
+  lp.a_matrix_.start_ = std::move(Astart);
+  lp.a_matrix_.index_ = std::move(Aindex);
+  lp.a_matrix_.value_ = std::move(Avalue);
   lp.col_cost_ = std::move(colCost);
   lp.col_lower_ = std::move(colLower);
   lp.col_upper_ = std::move(colUpper);

@@ -62,8 +62,8 @@ class HighsLp {
   double objectiveValue(const std::vector<double>& solution) const;
   bool dimensionsAndMatrixOk(std::string message) const;
   bool dimensionsOk(std::string message) const;
-  bool MatrixOk(std::string message) const;
-  void MatrixCopy();
+  bool matrixOk(std::string message) const;
+  void matrixCopy(const bool to_a_matrix);
   bool equalScale(std::string message, const SimplexScale& scale) const;
   void clear();
 };

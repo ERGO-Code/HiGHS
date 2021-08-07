@@ -72,7 +72,7 @@ double HighsLp::objectiveValue(const std::vector<double>& solution) const {
 }
 
 bool HighsLp::dimensionsAndMatrixOk(std::string message) const {
-  return dimensionsOk(message) && MatrixOk(message);
+  return dimensionsOk(message) && matrixOk(message);
 }
 
 bool HighsLp::dimensionsOk(std::string message) const {
@@ -202,7 +202,7 @@ bool HighsLp::dimensionsOk(std::string message) const {
   return ok;
 }
 
-bool HighsLp::MatrixOk(std::string message) const {
+bool HighsLp::matrixOk(std::string message) const {
   bool ok = true;
   ok = this->a_matrix_.format_ == this->format_ && ok;
   ok = this->a_matrix_.num_col_ == this->num_col_ && ok;
@@ -211,19 +211,25 @@ bool HighsLp::MatrixOk(std::string message) const {
   ok = this->a_matrix_.index_ == this->a_index_ && ok;
   ok = this->a_matrix_.value_ == this->a_value_ && ok;
   if (!ok) {
-    printf("HighsLp::MatrixOk (%s) not OK\n", message.c_str());
+    printf("HighsLp::matrixOk (%s) not OK\n", message.c_str());
   }
   return ok;
 }
 
-void HighsLp::MatrixCopy() {
+void HighsLp::matrixCopy(const bool to_a_matrix) {
   if (this->format_ != MatrixFormat::kNone) {
     this->a_matrix_.num_col_ = this->num_col_;
     this->a_matrix_.num_row_ = this->num_row_;
     this->a_matrix_.format_ = this->format_;
-    this->a_matrix_.start_ = this->a_start_;
-    this->a_matrix_.index_ = this->a_index_;
-    this->a_matrix_.value_ = this->a_value_;
+    if (to_a_matrix) {
+      this->a_matrix_.start_ = this->a_start_;
+      this->a_matrix_.index_ = this->a_index_;
+      this->a_matrix_.value_ = this->a_value_;
+    } else {
+      this->a_start_ = this->a_matrix_.start_;
+      this->a_index_ = this->a_matrix_.index_;
+      this->a_value_ = this->a_matrix_.value_;
+    }
   }
 }
 

@@ -105,16 +105,18 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     HighsInt nz = 0;
+    lp.a_matrix_.start_.clear();
+    assert((int)lp.a_matrix_.start_.size()==0);
     for (HighsInt i = 0; i < lp.num_col_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
-      lp.a_start_.push_back(nz);
+      lp.a_matrix_.start_.push_back(nz);
       for (HighsUInt j = 0; j < consofvarmap_index[var].size(); j++) {
-        lp.a_index_.push_back(consofvarmap_index[var][j]);
-        lp.a_value_.push_back(consofvarmap_value[var][j]);
+        lp.a_matrix_.index_.push_back(consofvarmap_index[var][j]);
+        lp.a_matrix_.value_.push_back(consofvarmap_value[var][j]);
         nz++;
       }
     }
-    lp.a_start_.push_back(nz);
+    lp.a_matrix_.start_.push_back(nz);
     lp.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
@@ -190,11 +192,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
       for (HighsInt var = 0; var < lp.num_col_; var++) {
-        for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
+        for (HighsInt idx = lp.a_matrix_.start_[var]; idx < lp.a_matrix_.start_[var + 1];
              idx++) {
-          if (lp.a_index_[idx] == row) {
+          if (lp.a_matrix_.index_[idx] == row) {
             this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                              lp.a_value_[idx], var + 1);
+                              lp.a_matrix_.value_[idx], var + 1);
           }
         }
       }
@@ -205,11 +207,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
-          for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
+          for (HighsInt idx = lp.a_matrix_.start_[var]; idx < lp.a_matrix_.start_[var + 1];
                idx++) {
-            if (lp.a_index_[idx] == row) {
+            if (lp.a_matrix_.index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                                lp.a_value_[idx], var + 1);
+                                lp.a_matrix_.value_[idx], var + 1);
             }
           }
         }
@@ -219,11 +221,11 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
-          for (HighsInt idx = lp.a_start_[var]; idx < lp.a_start_[var + 1];
+          for (HighsInt idx = lp.a_matrix_.start_[var]; idx < lp.a_matrix_.start_[var + 1];
                idx++) {
-            if (lp.a_index_[idx] == row) {
+            if (lp.a_matrix_.index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
-                                lp.a_value_[idx], var + 1);
+                                lp.a_matrix_.value_[idx], var + 1);
             }
           }
         }

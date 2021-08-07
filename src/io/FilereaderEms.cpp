@@ -79,21 +79,21 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       return FilereaderRetcode::kParserError;
     }
     lp.format_ = MatrixFormat::kColwise;
-    lp.a_start_.resize(numCol + 1);
-    lp.a_index_.resize(AcountX);
-    lp.a_value_.resize(AcountX);
+    lp.a_matrix_.start_.resize(numCol + 1);
+    lp.a_matrix_.index_.resize(AcountX);
+    lp.a_matrix_.value_.resize(AcountX);
 
     for (i = 0; i < numCol + 1; i++) {
-      f >> lp.a_start_[i];
-      if (indices_from_one) lp.a_start_[i]--;
+      f >> lp.a_matrix_.start_[i];
+      if (indices_from_one) lp.a_matrix_.start_[i]--;
     }
 
     for (i = 0; i < AcountX; i++) {
-      f >> lp.a_index_[i];
-      if (indices_from_one) lp.a_index_[i]--;
+      f >> lp.a_matrix_.index_[i];
+      if (indices_from_one) lp.a_matrix_.index_[i]--;
     }
 
-    for (i = 0; i < AcountX; i++) f >> lp.a_value_[i];
+    for (i = 0; i < AcountX; i++) f >> lp.a_matrix_.value_[i];
 
     // cost and bounds
     std::getline(f, line);
@@ -230,7 +230,7 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   std::ofstream f;
   f.open(filename, std::ios::out);
   const HighsLp& lp = model.lp_;
-  HighsInt num_nz = lp.a_start_[lp.num_col_];
+  HighsInt num_nz = lp.a_matrix_.start_[lp.num_col_];
 
   // counts
   f << "n_rows" << std::endl;
@@ -242,14 +242,14 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
 
   // matrix
   f << "matrix" << std::endl;
-  for (HighsInt i = 0; i < lp.num_col_ + 1; i++) f << lp.a_start_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_col_ + 1; i++) f << lp.a_matrix_.start_[i] << " ";
   f << std::endl;
 
-  for (HighsInt i = 0; i < num_nz; i++) f << lp.a_index_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << lp.a_matrix_.index_[i] << " ";
   f << std::endl;
 
   f << std::setprecision(9);
-  for (HighsInt i = 0; i < num_nz; i++) f << lp.a_value_[i] << " ";
+  for (HighsInt i = 0; i < num_nz; i++) f << lp.a_matrix_.value_[i] << " ";
   f << std::endl;
 
   // cost and bounds
