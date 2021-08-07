@@ -81,15 +81,13 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setup(const HighsSparseMatrix* a_matrix,
-             HighsInt* baseIndex,
-             const double pivot_threshold =kDefaultPivotThreshold,
+  void setup(const HighsSparseMatrix* a_matrix, HighsInt* baseIndex,
+             const double pivot_threshold = kDefaultPivotThreshold,
              const double pivot_tolerance = kDefaultPivotTolerance,
              const HighsInt highs_debug_level = kHighsDebugLevelMin,
-             const bool output_flag = false,
-	     FILE* log_file_stream_ = NULL,
+             const bool output_flag = false, FILE* log_file_stream_ = NULL,
              const bool log_to_console = true,
-	     const HighsInt log_dev_level = 0);
+             const HighsInt log_dev_level = 0);
 
   void setup(const HighsInt numCol,   //!< Number of columns
              const HighsInt numRow,   //!< Number of rows

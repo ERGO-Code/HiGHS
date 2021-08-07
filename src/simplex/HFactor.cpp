@@ -155,30 +155,16 @@ void solveHyper(const HighsInt Hsize, const HighsInt* Hlookup,
   }
 }
 
-void HFactor::setup(const HighsSparseMatrix* a_matrix,
-		    HighsInt* baseIndex,
-		    const double pivot_threshold,
-		    const double pivot_tolerance,
-		    const HighsInt highs_debug_level,
-		    const bool output_flag,
-		    FILE* log_file_stream, 
-		    const bool log_to_console,
-		    const HighsInt log_dev_level) {
-  this->setup(a_matrix->num_col_,
-	      a_matrix->num_row_,
-	      &a_matrix->start_[0],
-	      &a_matrix->index_[0],
-	      &a_matrix->value_[0],
-	      baseIndex,
-	      pivot_threshold,
-	      pivot_tolerance,
-	      highs_debug_level,
-	      output_flag,
-	      log_file_stream,
-	      log_to_console,
-	      log_dev_level,
-	      true,
-	      kUpdateMethodFt);  
+void HFactor::setup(const HighsSparseMatrix* a_matrix, HighsInt* baseIndex,
+                    const double pivot_threshold, const double pivot_tolerance,
+                    const HighsInt highs_debug_level, const bool output_flag,
+                    FILE* log_file_stream, const bool log_to_console,
+                    const HighsInt log_dev_level) {
+  this->setup(a_matrix->num_col_, a_matrix->num_row_, &a_matrix->start_[0],
+              &a_matrix->index_[0], &a_matrix->value_[0], baseIndex,
+              pivot_threshold, pivot_tolerance, highs_debug_level, output_flag,
+              log_file_stream, log_to_console, log_dev_level, true,
+              kUpdateMethodFt);
 }
 
 void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,

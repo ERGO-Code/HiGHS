@@ -45,10 +45,8 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   timer_ = timer;
   analysis_ = analysis;
   report_ = false;
-  factor_.setup(lp_->num_col_, lp_->num_row_,
-		&factor_a_matrix->start_[0],
-		&factor_a_matrix->index_[0],
-		&factor_a_matrix->value_[0],
+  factor_.setup(lp_->num_col_, lp_->num_row_, &factor_a_matrix->start_[0],
+                &factor_a_matrix->index_[0], &factor_a_matrix->value_[0],
                 base_index_, factor_pivot_threshold,
                 options_->factor_pivot_tolerance, options_->highs_debug_level,
                 options_->output_flag, options_->log_file_stream,

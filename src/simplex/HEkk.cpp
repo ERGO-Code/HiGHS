@@ -69,12 +69,11 @@ void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
     // pointers in the HFactor instance
     simplex_nla_.lp_ = &lp_;
     simplex_nla_.scale_ = scale_;
-    const bool new_setup_matrix = false;
     if (new_setup_matrix) {
       simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
     } else {
       simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
-				       factor_a_value_);
+                                       factor_a_value_);
     }
   }
 }
@@ -529,7 +528,7 @@ void HEkk::updateFactorMatrixPointers() {
     simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
   } else {
     simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
-				     factor_a_value_);
+                                     factor_a_value_);
   }
 }
 
@@ -954,15 +953,14 @@ HighsInt HEkk::computeFactor() {
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
     const bool new_setup = true;
     if (new_setup) {
-      simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_,
-			 factor_a_matrix_,
-			 info_.factor_pivot_threshold, &options_, &timer_,
-			 &analysis_);
+      simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_matrix_,
+                         info_.factor_pivot_threshold, &options_, &timer_,
+                         &analysis_);
     } else {
       simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_start_,
-			 factor_a_index_, factor_a_value_,
-			 info_.factor_pivot_threshold, &options_, &timer_,
-			 &analysis_);
+                         factor_a_index_, factor_a_value_,
+                         info_.factor_pivot_threshold, &options_, &timer_,
+                         &analysis_);
     }
     status_.has_factor_arrays = true;
   }

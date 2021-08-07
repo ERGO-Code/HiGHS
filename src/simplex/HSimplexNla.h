@@ -32,14 +32,10 @@
 
 class HSimplexNla {
  public:
-  void setup(const HighsLp* lp,
-	     HighsInt* base_index,
-	     const SimplexScale* scale,
-	     const HighsSparseMatrix* factor_a_matrix,
-	     const double factor_pivot_threshold,
-	     const HighsOptions* options,
-	     HighsTimer* timer,
-	     HighsSimplexAnalysis* analysis);
+  void setup(const HighsLp* lp, HighsInt* base_index, const SimplexScale* scale,
+             const HighsSparseMatrix* factor_a_matrix,
+             const double factor_pivot_threshold, const HighsOptions* options,
+             HighsTimer* timer, HighsSimplexAnalysis* analysis);
   void setup(const HighsLp* lp, HighsInt* base_index, const SimplexScale* scale,
              const HighsInt* factor_a_start, const HighsInt* factor_a_index,
              const double* factor_a_value, const double factor_pivot_threshold,
