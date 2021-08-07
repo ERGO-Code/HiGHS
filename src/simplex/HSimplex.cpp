@@ -519,8 +519,6 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   assert(numCol > 0);
   double* colScale = &scale.col[0];
   double* rowScale = &scale.row[0];
-  HighsInt* Astart = &lp.a_start_[0];
-  double* Avalue = &lp.a_value_[0];
   double* colCost = &lp.col_cost_[0];
   double* colLower = &lp.col_lower_[0];
   double* colUpper = &lp.col_upper_[0];
@@ -547,17 +545,8 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   const double no_scaling_original_matrix_max_value = 5.0;
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
-  for (HighsInt k = 0, AnX = Astart[numCol]; k < AnX; k++) {
-    double value = fabs(Avalue[k]);
-    original_matrix_min_value = min(original_matrix_min_value, value);
-    original_matrix_max_value = max(original_matrix_max_value, value);
-  }
-  double alt_original_matrix_min_value = kHighsInf;
-  double alt_original_matrix_max_value = 0;
-  lp.a_matrix_.range(alt_original_matrix_min_value,
-                     alt_original_matrix_max_value);
-  assert(alt_original_matrix_min_value == original_matrix_min_value);
-  assert(alt_original_matrix_max_value == original_matrix_max_value);
+  lp.a_matrix_.range(original_matrix_min_value,
+                     original_matrix_max_value);
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
@@ -598,7 +587,11 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
         rowUpper[iRow] *= rowScale[iRow];
       }
       // Scale the a_matrix here for now
-      lp.a_matrix_.applyScale(scale);
+      //      lp.a_matrix_.applyScale(scale);
+      const bool scale_error = applyScalingToLpMatrix(options.log_options, lp, &scale.col[0],
+						      &scale.row[0], 0, lp.num_col_ - 1, 0,
+						      lp.num_row_ - 1) != HighsStatus::kOk;
+      assert(!scale_error);
     }
   }
   // Possibly scale the costs
@@ -665,9 +658,9 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   HighsInt numRow = lp.num_row_;
   double* colScale = &scale.col[0];
   double* rowScale = &scale.row[0];
-  HighsInt* Astart = &lp.a_start_[0];
-  HighsInt* Aindex = &lp.a_index_[0];
-  double* Avalue = &lp.a_value_[0];
+  HighsInt* Astart = &lp.a_matrix_.start_[0];
+  HighsInt* Aindex = &lp.a_matrix_.index_[0];
+  double* Avalue = &lp.a_matrix_.value_[0];
   double* colCost = &lp.col_cost_[0];
 
   HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
@@ -982,9 +975,9 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   HighsInt numRow = lp.num_row_;
   vector<double>& colScale = scale.col;
   vector<double>& rowScale = scale.row;
-  vector<HighsInt>& Astart = lp.a_start_;
-  vector<HighsInt>& Aindex = lp.a_index_;
-  vector<double>& Avalue = lp.a_value_;
+  vector<HighsInt>& Astart = lp.a_matrix_.start_;
+  vector<HighsInt>& Aindex = lp.a_matrix_.index_;
+  vector<double>& Avalue = lp.a_matrix_.value_;
 
   assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
          options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);

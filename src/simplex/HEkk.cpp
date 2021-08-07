@@ -2286,8 +2286,8 @@ double HEkk::computeBasisCondition() {
   HVector row_ep;
   row_ep.setup(solver_num_row);
 
-  const HighsInt* Astart = &lp_.a_start_[0];
-  const double* Avalue = &lp_.a_value_[0];
+  const HighsInt* Astart = &lp_.a_matrix_.start_[0];
+  const double* Avalue = &lp_.a_matrix_.value_[0];
   // Compute the Hager condition number estimate for the basis matrix
   const double expected_density = 1;
   bs_cond_x.resize(solver_num_row);

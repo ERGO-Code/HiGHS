@@ -82,9 +82,9 @@ void HCrash::crash(const HighsInt pass_crash_strategy) {
 void HCrash::bixby() {
   HighsLp& lp = ekk_instance.lp_;
 
-  const HighsInt* Astart = &lp.a_start_[0];
-  const HighsInt* Aindex = &lp.a_index_[0];
-  const double* Avalue = &lp.a_value_[0];
+  const HighsInt* Astart = &lp.a_matrix_.start_[0];
+  const HighsInt* Aindex = &lp.a_matrix_.index_[0];
+  const double* Avalue = &lp.a_matrix_.value_[0];
 
   bixby_no_nz_c_co =
       crash_strategy == kSimplexCrashStrategyBixbyNoNonzeroColCosts;
@@ -273,8 +273,8 @@ void HCrash::initialise_basic_index() {
 
 bool HCrash::bixby_iz_da() {
   HighsLp& lp = ekk_instance.lp_;
-  const HighsInt* Astart = &lp.a_start_[0];
-  const double* Avalue = &lp.a_value_[0];
+  const HighsInt* Astart = &lp.a_matrix_.start_[0];
+  const double* Avalue = &lp.a_matrix_.value_[0];
   const HighsInt objSense = (HighsInt)lp.sense_;
   const double* colCost = &lp.col_cost_[0];
   const double* colLower = &lp.col_lower_[0];
@@ -727,8 +727,8 @@ void HCrash::ltssf_u_da() {
 
 void HCrash::ltssf_u_da_af_bs_cg() {
   HighsLp& lp = ekk_instance.lp_;
-  const HighsInt* Astart = &lp.a_start_[0];
-  const HighsInt* Aindex = &lp.a_index_[0];
+  const HighsInt* Astart = &lp.a_matrix_.start_[0];
+  const HighsInt* Aindex = &lp.a_matrix_.index_[0];
   // ltssf_rp_r_k();
   for (HighsInt r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1];
        r_el_n++) {
@@ -873,9 +873,9 @@ void HCrash::ltssf_iz_da() {
   SimplexBasis& basis = ekk_instance.basis_;
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
-  const HighsInt* Astart = &lp.a_start_[0];
-  const HighsInt* Aindex = &lp.a_index_[0];
-  const double* Avalue = &lp.a_value_[0];
+  const HighsInt* Astart = &lp.a_matrix_.start_[0];
+  const HighsInt* Aindex = &lp.a_matrix_.index_[0];
+  const double* Avalue = &lp.a_matrix_.value_[0];
   HighsInt numEl = Astart[numCol];
   // const double *primalColLowerImplied = lp.primalColLowerImplied_;
   // const double *primalColUpperImplied = lp.primalColUpperImplied_;
@@ -1617,7 +1617,7 @@ void HCrash::crsh_rp_r_c_st(const HighsInt mode) {
   }
 }
 void HCrash::crsh_an_r_c_st_af() {
-  const HighsInt* Astart = &ekk_instance.lp_.a_start_[0];
+  const HighsInt* Astart = &ekk_instance.lp_.a_matrix_.start_[0];
   for (HighsInt k = 0; k < numRow; k++) {
     HighsInt vr_n = ekk_instance.basis_.basicIndex_[k];
     if (vr_n < numCol) {

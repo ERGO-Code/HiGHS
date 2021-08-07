@@ -62,6 +62,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
                 "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::kLogicalError;
   }
+  check_lp.a_matrix_.applyScale(scale);
   const bool lp_data_ok = check_lp == simplex_lp;
   if (!lp_data_ok) {
     highsLogDev(options.log_options, HighsLogType::kError,

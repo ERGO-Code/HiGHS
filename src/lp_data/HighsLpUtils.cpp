@@ -623,6 +623,8 @@ HighsStatus applyScalingToLpMatrix(
     const HighsLogOptions& log_options, HighsLp& lp, const double* colScale,
     const double* rowScale, const HighsInt from_col, const HighsInt to_col,
     const HighsInt from_row, const HighsInt to_row) {
+  assert(from_col == 0 && to_col == lp.num_col_-1);
+  assert(from_row == 0 && to_row == lp.num_row_-1);
   if (from_col < 0) return HighsStatus::kError;
   if (to_col >= lp.num_col_) return HighsStatus::kError;
   if (from_row < 0) return HighsStatus::kError;
