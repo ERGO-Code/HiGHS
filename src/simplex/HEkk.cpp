@@ -50,10 +50,7 @@ HighsStatus HEkk::passNewLp(const HighsLp& pass_lp) {
 }
 
 void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
-                          const HighsSparseMatrix* scaled_a_matrix,
-                          const HighsInt* scaled_a_start,
-                          const HighsInt* scaled_a_index,
-                          const double* scaled_a_value) {
+                          const HighsSparseMatrix* scaled_a_matrix) {
   lp_ = std::move(lp);
   if (status_.has_matrix) initialiseMatrix(true);
   scale_ = scale;

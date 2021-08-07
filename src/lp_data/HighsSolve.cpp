@@ -27,6 +27,12 @@
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus solveLp(HighsModelObject& model, const string message) {
+  const bool kill_a_ = false;
+  if (kill_a_) {
+    model.lp_.a_start_.clear();
+    model.lp_.a_index_.clear();
+    model.lp_.a_value_.clear();
+  }
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = model.options_;
@@ -147,6 +153,11 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   // Analyse the HiGHS (basic) solution
   if (debugHighsLpSolution(message, model) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
+  if (kill_a_) {
+    const bool to_a_matrix = false;
+    model.lp_.matrixCopy(to_a_matrix);
+    assert(model.lp_.dimensionsAndMatrixOk("HighsSolve - solveLp"));
+  }
   return return_status;
 }
 
