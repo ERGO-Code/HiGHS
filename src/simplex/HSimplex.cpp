@@ -70,31 +70,19 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
   if (analyse_lp_data) analyseLp(options.log_options, lp, "Unscaled");
   // Possibly scale the LP. At least set the scaling factors to 1
   SimplexScale& scale = highs_model_object.scale_;
-  if (kRefineSimplex) {
-    if (scale_lp) {
-      scaleSimplexLp(options, lp, scale);
-      if (analyse_lp_data) analyseScaledLp(options.log_options, scale, lp);
-    } else {
-      // Initialise unit scaling factors
-      initialiseScale(lp, scale);
-    }
-    // Move the scaled LP to Ekk
-    ekk_instance.moveNewLp(std::move(lp));
+  if (scale_lp) {
+    HighsLp scaled_lp = lp;
+    // Perform scaling - if it's worth it.
+    scaleSimplexLp(options, scaled_lp, scale);
+    if (analyse_lp_data)
+      analyseScaledLp(options.log_options, scale, scaled_lp);
+    // Pass the scaled LP to Ekk
+    ekk_instance.passNewLp(scaled_lp);
   } else {
-    if (scale_lp) {
-      HighsLp scaled_lp = lp;
-      // Perform scaling - if it's worth it.
-      scaleSimplexLp(options, scaled_lp, scale);
-      if (analyse_lp_data)
-        analyseScaledLp(options.log_options, scale, scaled_lp);
-      // Pass the scaled LP to Ekk
-      ekk_instance.passNewLp(scaled_lp);
-    } else {
-      // Initialise unit scaling factors
-      initialiseScale(lp, scale);
-      // Pass the original LP to Ekk
-      ekk_instance.passNewLp(lp);
-    }
+    // Initialise unit scaling factors
+    initialiseScale(lp, scale);
+    // Pass the original LP to Ekk
+    ekk_instance.passNewLp(lp);
   }
 }
 
