@@ -1175,6 +1175,23 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
   this->num_row_ = num_row;
 }
 
+void HighsSparseMatrix::product(vector<double>& result, const vector<double>& row) const {
+  assert(this->format_ != MatrixFormat::kNone);
+  assert((int)row.size() >= this->num_col_);
+  result.assign(this->num_row_, 0.0);
+  if (this->isColwise()) {
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+	result[this->index_[iEl]] += row[iCol] * this->value_[iEl];
+    }
+  } else {
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
+	result[iRow] += row[this->index_[iEl]] * this->value_[iEl];
+    }
+  }
+}
+
 void HighsSparseMatrix::createRowwisePartitioned(
     const HighsSparseMatrix& matrix, const int8_t* in_partition) {
   assert(matrix.format_ != MatrixFormat::kNone);

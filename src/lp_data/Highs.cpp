@@ -2289,9 +2289,9 @@ HighsStatus Highs::callSolveQp() {
 
   instance.A.mat.num_col = lp.num_col_;
   instance.A.mat.num_row = lp.num_row_;
-  instance.A.mat.start = lp.a_start_;
-  instance.A.mat.index = lp.a_index_;
-  instance.A.mat.value = lp.a_value_;
+  instance.A.mat.start = lp.a_matrix_.start_;
+  instance.A.mat.index = lp.a_matrix_.index_;
+  instance.A.mat.value = lp.a_matrix_.value_;
   instance.c.value = lp.col_cost_;
   instance.con_lo = lp.row_lower_;
   instance.con_up = lp.row_upper_;
@@ -2444,16 +2444,8 @@ HighsStatus Highs::callSolveMip() {
     HighsInt solver_solution_size = solver.solution_.size();
     assert(solver_solution_size >= model_.lp_.num_col_);
     solution_.col_value.resize(model_.lp_.num_col_);
-    solution_.row_value.assign(model_.lp_.num_row_, 0);
-    for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++) {
-      double value = solver.solution_[iCol];
-      for (HighsInt iEl = model_.lp_.a_start_[iCol];
-           iEl < model_.lp_.a_start_[iCol + 1]; iEl++) {
-        HighsInt iRow = model_.lp_.a_index_[iEl];
-        solution_.row_value[iRow] += value * model_.lp_.a_value_[iEl];
-      }
-      solution_.col_value[iCol] = value;
-    }
+    solution_.col_value = solver.solution_;
+    model_.lp_.a_matrix_.product(solution_.row_value, solution_.col_value);
     solution_.value_valid = true;
   } else {
     // There is no primal solution: should be so by default
