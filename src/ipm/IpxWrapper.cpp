@@ -95,13 +95,13 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   std::vector<HighsInt> sizes(num_col, 0);
 
   for (HighsInt col = 0; col < lp.num_col_; col++)
-    for (HighsInt k = lp.a_start_[col]; k < lp.a_start_[col + 1]; k++) {
-      HighsInt row = lp.a_index_[k];
+    for (HighsInt k = lp.a_matrix_.start_[col]; k < lp.a_matrix_.start_[col + 1]; k++) {
+      HighsInt row = lp.a_matrix_.index_[k];
       if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf)
         sizes[col]++;
     }
   // Copy Astart and Aindex to ipx::Int array.
-  HighsInt nnz = lp.a_index_.size();
+  HighsInt nnz = lp.a_matrix_.index_.size();
   Ap.resize(num_col + 1);
   Ai.reserve(nnz + num_slack);
   Ax.reserve(nnz + num_slack);
@@ -122,10 +122,10 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   //  printf("Fictn Ap[%2" HIGHSINT_FORMAT "] = %2" HIGHSINT_FORMAT "\n",
   //  (int)num_col, (int)Ap[num_col]);
   for (HighsInt k = 0; k < nnz; k++) {
-    HighsInt row = lp.a_index_[k];
+    HighsInt row = lp.a_matrix_.index_[k];
     if (lp.row_lower_[row] > -kHighsInf || lp.row_upper_[row] < kHighsInf) {
-      Ai.push_back(reduced_rowmap[lp.a_index_[k]]);
-      Ax.push_back(lp.a_value_[k]);
+      Ai.push_back(reduced_rowmap[lp.a_matrix_.index_[k]]);
+      Ax.push_back(lp.a_matrix_.value_[k]);
     }
   }
 
