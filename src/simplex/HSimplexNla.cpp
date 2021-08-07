@@ -30,6 +30,33 @@
 // using std::min;
 // using std::vector;
 
+const bool new_setup_matrix = true;
+
+void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
+                        const SimplexScale* scale,
+                        const HighsSparseMatrix* factor_a_matrix,
+                        const double factor_pivot_threshold,
+                        const HighsOptions* options, HighsTimer* timer,
+                        HighsSimplexAnalysis* analysis) {
+  lp_ = lp;
+  scale_ = scale;
+  base_index_ = base_index;
+  options_ = options;
+  timer_ = timer;
+  analysis_ = analysis;
+  report_ = false;
+  factor_.setup(lp_->num_col_, lp_->num_row_,
+		&factor_a_matrix->start_[0],
+		&factor_a_matrix->index_[0],
+		&factor_a_matrix->value_[0],
+                base_index_, factor_pivot_threshold,
+                options_->factor_pivot_tolerance, options_->highs_debug_level,
+                options_->output_flag, options_->log_file_stream,
+                options_->log_to_console, options_->log_dev_level);
+  is_setup_ = true;
+  assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
+}
+
 void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
                         const SimplexScale* scale,
                         const HighsInt* factor_a_start,
@@ -154,12 +181,6 @@ void HSimplexNla::passLpPointer(const HighsLp* lp) { lp_ = lp; }
 
 void HSimplexNla::passScalePointer(const SimplexScale* scale) {
   scale_ = scale;
-}
-
-void HSimplexNla::passFactorMatrixPointers(const HighsInt* factor_a_start,
-                                           const HighsInt* factor_a_index,
-                                           const double* factor_a_value) {
-  factor_.setupMatrix(factor_a_start, factor_a_index, factor_a_value);
 }
 
 void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
@@ -296,10 +317,17 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
   const HighsInt* factor_Astart = factor_.getAstart();
   const HighsInt* factor_Aindex = factor_.getAindex();
   const double* factor_Avalue = factor_.getAvalue();
+
   if (scale_ == NULL) {
-    if (factor_Astart != &(lp_->a_start_[0])) error0_found = true;
-    if (factor_Aindex != &(lp_->a_index_[0])) error1_found = true;
-    if (factor_Avalue != &(lp_->a_value_[0])) error2_found = true;
+    if (new_setup_matrix) {
+      if (factor_Astart != &(lp_->a_matrix_.start_[0])) error0_found = true;
+      if (factor_Aindex != &(lp_->a_matrix_.index_[0])) error1_found = true;
+      if (factor_Avalue != &(lp_->a_matrix_.value_[0])) error2_found = true;
+    } else {
+      if (factor_Astart != &(lp_->a_start_[0])) error0_found = true;
+      if (factor_Aindex != &(lp_->a_index_[0])) error1_found = true;
+      if (factor_Avalue != &(lp_->a_value_[0])) error2_found = true;
+    }
     error_found = error0_found || error1_found || error2_found;
     if (error_found) {
       highsLogUser(options_->log_options, HighsLogType::kError,

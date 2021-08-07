@@ -252,7 +252,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //
   // Move the incumbent LP and pass pointers to the scaling factors
   // and scaled matrix for the HFactor instance
-  ekk_instance.moveUnscaledLp(std::move(lp), &scale, &scaled_lp.a_start_[0],
+  ekk_instance.moveUnscaledLp(std::move(lp), &scale, &scaled_lp.a_matrix_,
+			      &scaled_lp.a_start_[0],
                               &scaled_lp.a_index_[0], &scaled_lp.a_value_[0]);
   incumbent_lp_moved = true;
   // Save options/strategies that may be changed

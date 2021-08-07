@@ -39,6 +39,8 @@
 // using std::cout;
 // using std::endl;
 
+const bool new_setup_matrix = true;
+
 HighsStatus HEkk::moveNewLp(HighsLp lp) {
   lp_ = std::move(lp);
   return setup();
@@ -50,12 +52,14 @@ HighsStatus HEkk::passNewLp(const HighsLp& pass_lp) {
 }
 
 void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
+                          const HighsSparseMatrix* scaled_a_matrix,
                           const HighsInt* scaled_a_start,
                           const HighsInt* scaled_a_index,
                           const double* scaled_a_value) {
   lp_ = std::move(lp);
   if (status_.has_matrix) initialiseMatrix(true);
   scale_ = scale;
+  factor_a_matrix_ = scaled_a_matrix;
   factor_a_start_ = scaled_a_start;
   factor_a_index_ = scaled_a_index;
   factor_a_value_ = scaled_a_value;
@@ -65,8 +69,13 @@ void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
     // pointers in the HFactor instance
     simplex_nla_.lp_ = &lp_;
     simplex_nla_.scale_ = scale_;
-    simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
-                                     factor_a_value_);
+    const bool new_setup_matrix = false;
+    if (new_setup_matrix) {
+      simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
+    } else {
+      simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
+				       factor_a_value_);
+    }
   }
 }
 
@@ -512,11 +521,16 @@ void HEkk::handleRankDeficiency() {
 }
 
 void HEkk::updateFactorMatrixPointers() {
+  factor_a_matrix_ = &lp_.a_matrix_;
   factor_a_start_ = &lp_.a_start_[0];
   factor_a_index_ = &lp_.a_index_[0];
   factor_a_value_ = &lp_.a_value_[0];
-  simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
-                                   factor_a_value_);
+  if (new_setup_matrix) {
+    simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
+  } else {
+    simplex_nla_.factor_.setupMatrix(factor_a_start_, factor_a_index_,
+				     factor_a_value_);
+  }
 }
 
 // Private methods
@@ -543,6 +557,7 @@ void HEkk::initialiseForNewLp() {
   initialiseControl();
   initialiseSimplexLpRandomVectors();
   scale_ = NULL;
+  factor_a_matrix_ = &lp_.a_matrix_;
   factor_a_start_ = &lp_.a_start_[0];
   factor_a_index_ = &lp_.a_index_[0];
   factor_a_value_ = &lp_.a_value_[0];
@@ -937,10 +952,18 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
-    simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_start_,
-                       factor_a_index_, factor_a_value_,
-                       info_.factor_pivot_threshold, &options_, &timer_,
-                       &analysis_);
+    const bool new_setup = true;
+    if (new_setup) {
+      simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_,
+			 factor_a_matrix_,
+			 info_.factor_pivot_threshold, &options_, &timer_,
+			 &analysis_);
+    } else {
+      simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_start_,
+			 factor_a_index_, factor_a_value_,
+			 info_.factor_pivot_threshold, &options_, &timer_,
+			 &analysis_);
+    }
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);

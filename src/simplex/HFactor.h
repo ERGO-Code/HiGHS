@@ -26,6 +26,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
+#include "lp_data/HighsSparseMatrix.h"
 #include "simplex/HFactorConst.h"
 
 using std::max;
@@ -80,6 +81,16 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
+  void setup(const HighsSparseMatrix* a_matrix,
+             HighsInt* baseIndex,
+             const double pivot_threshold =kDefaultPivotThreshold,
+             const double pivot_tolerance = kDefaultPivotTolerance,
+             const HighsInt highs_debug_level = kHighsDebugLevelMin,
+             const bool output_flag = false,
+	     FILE* log_file_stream_ = NULL,
+             const bool log_to_console = true,
+	     const HighsInt log_dev_level = 0);
+
   void setup(const HighsInt numCol,   //!< Number of columns
              const HighsInt numRow,   //!< Number of rows
              const HighsInt* Astart,  //!< Column starts of constraint matrix
@@ -100,6 +111,7 @@ class HFactor {
       const HighsInt* Astart,  //!< Column starts of constraint matrix
       const HighsInt* Aindex,  //!< Row indices of constraint matrix
       const double* Avalue);   //!< Row values of constraint matrix
+  void setupMatrix(const HighsSparseMatrix* a_matrix);
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
    * deficiency.
