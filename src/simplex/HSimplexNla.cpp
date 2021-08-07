@@ -30,8 +30,6 @@
 // using std::min;
 // using std::vector;
 
-const bool new_setup_matrix = true;
-
 void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
                         const SimplexScale* scale,
                         const HighsSparseMatrix* factor_a_matrix,
@@ -317,15 +315,9 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
   const double* factor_Avalue = factor_.getAvalue();
 
   if (scale_ == NULL) {
-    if (new_setup_matrix) {
-      if (factor_Astart != &(lp_->a_matrix_.start_[0])) error0_found = true;
-      if (factor_Aindex != &(lp_->a_matrix_.index_[0])) error1_found = true;
-      if (factor_Avalue != &(lp_->a_matrix_.value_[0])) error2_found = true;
-    } else {
-      if (factor_Astart != &(lp_->a_start_[0])) error0_found = true;
-      if (factor_Aindex != &(lp_->a_index_[0])) error1_found = true;
-      if (factor_Avalue != &(lp_->a_value_[0])) error2_found = true;
-    }
+    if (factor_Astart != &(lp_->a_matrix_.start_[0])) error0_found = true;
+    if (factor_Aindex != &(lp_->a_matrix_.index_[0])) error1_found = true;
+    if (factor_Avalue != &(lp_->a_matrix_.value_[0])) error2_found = true;
     error_found = error0_found || error1_found || error2_found;
     if (error_found) {
       highsLogUser(options_->log_options, HighsLogType::kError,
