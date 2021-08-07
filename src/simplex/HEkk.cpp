@@ -58,9 +58,6 @@ void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
   if (status_.has_matrix) initialiseMatrix(true);
   scale_ = scale;
   factor_a_matrix_ = scaled_a_matrix;
-  factor_a_start_ = scaled_a_start;
-  factor_a_index_ = scaled_a_index;
-  factor_a_value_ = scaled_a_value;
   if (simplex_nla_.is_setup_) {
     // Simplex NLA has been set up in previous call to
     // computeFactor(), so update its scale pointer and the matrix
@@ -514,9 +511,6 @@ void HEkk::handleRankDeficiency() {
 
 void HEkk::updateFactorMatrixPointers() {
   factor_a_matrix_ = &lp_.a_matrix_;
-  factor_a_start_ = &lp_.a_start_[0];
-  factor_a_index_ = &lp_.a_index_[0];
-  factor_a_value_ = &lp_.a_value_[0];
   simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
 }
 
@@ -545,9 +539,6 @@ void HEkk::initialiseForNewLp() {
   initialiseSimplexLpRandomVectors();
   scale_ = NULL;
   factor_a_matrix_ = &lp_.a_matrix_;
-  factor_a_start_ = &lp_.a_start_[0];
-  factor_a_index_ = &lp_.a_index_[0];
-  factor_a_value_ = &lp_.a_value_[0];
   status_.initialised = true;
 }
 

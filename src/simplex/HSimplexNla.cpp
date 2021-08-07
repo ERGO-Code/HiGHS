@@ -53,30 +53,6 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
-void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
-                        const SimplexScale* scale,
-                        const HighsInt* factor_a_start,
-                        const HighsInt* factor_a_index,
-                        const double* factor_a_value,
-                        const double factor_pivot_threshold,
-                        const HighsOptions* options, HighsTimer* timer,
-                        HighsSimplexAnalysis* analysis) {
-  lp_ = lp;
-  scale_ = scale;
-  base_index_ = base_index;
-  options_ = options;
-  timer_ = timer;
-  analysis_ = analysis;
-  report_ = false;
-  factor_.setup(lp_->num_col_, lp_->num_row_, factor_a_start, factor_a_index,
-                factor_a_value, base_index_, factor_pivot_threshold,
-                options_->factor_pivot_tolerance, options_->highs_debug_level,
-                options_->output_flag, options_->log_file_stream,
-                options_->log_to_console, options_->log_dev_level);
-  is_setup_ = true;
-  assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
-}
-
 void HSimplexNla::clear() {
   lp_ = NULL;
   scale_ = NULL;

@@ -106,9 +106,6 @@ class HEkk {
 
   const SimplexScale* scale_;
   const HighsSparseMatrix* factor_a_matrix_;
-  const HighsInt* factor_a_start_;
-  const HighsInt* factor_a_index_;
-  const double* factor_a_value_;
 
   double build_synthetic_tick_;
   double total_synthetic_tick_;
