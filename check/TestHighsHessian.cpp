@@ -14,16 +14,16 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   HighsHessian square_hessian;
   square_hessian.dim_ = 5;
   square_hessian.format_ = HessianFormat::kSquare;
-  square_hessian.q_start_ = {0, 4, 7, 9, 12, 15};
-  square_hessian.q_index_ = {0, 1, 3, 4, 0, 1, 4, 2, 3, 0, 2, 3, 0, 1, 4};
-  square_hessian.q_value_ = {5, 1, -1, 2, 1, 4, 1, 3, -1, -1, -1, 4, 2, 1, 5};
+  square_hessian.start_ = {0, 4, 7, 9, 12, 15};
+  square_hessian.index_ = {0, 1, 3, 4, 0, 1, 4, 2, 3, 0, 2, 3, 0, 1, 4};
+  square_hessian.value_ = {5, 1, -1, 2, 1, 4, 1, 3, -1, -1, -1, 4, 2, 1, 5};
 
   HighsHessian triangular_hessian;
   triangular_hessian.dim_ = 5;
   triangular_hessian.format_ = HessianFormat::kTriangular;
-  triangular_hessian.q_start_ = {0, 4, 6, 8, 9, 10};
-  triangular_hessian.q_index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4};
-  triangular_hessian.q_value_ = {5, 1, -1, 2, 4, 1, 3, -1, 4, 5};
+  triangular_hessian.start_ = {0, 4, 6, 8, 9, 10};
+  triangular_hessian.index_ = {0, 1, 3, 4, 1, 4, 2, 3, 3, 4};
+  triangular_hessian.value_ = {5, 1, -1, 2, 4, 1, 3, -1, 4, 5};
 
   const bool square_internal_hessian = false;
   HighsHessian use_hessian;
@@ -68,16 +68,16 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   }
 
   HighsHessian negative_diagonal_hessian = triangular_hessian;
-  negative_diagonal_hessian.q_value_[0] =
-      -negative_diagonal_hessian.q_value_[0];
-  negative_diagonal_hessian.q_value_[4] =
-      -negative_diagonal_hessian.q_value_[4];
-  negative_diagonal_hessian.q_value_[6] =
-      -negative_diagonal_hessian.q_value_[6];
-  negative_diagonal_hessian.q_value_[8] =
-      -negative_diagonal_hessian.q_value_[8];
-  negative_diagonal_hessian.q_value_[9] =
-      -negative_diagonal_hessian.q_value_[9];
+  negative_diagonal_hessian.value_[0] =
+      -negative_diagonal_hessian.value_[0];
+  negative_diagonal_hessian.value_[4] =
+      -negative_diagonal_hessian.value_[4];
+  negative_diagonal_hessian.value_[6] =
+      -negative_diagonal_hessian.value_[6];
+  negative_diagonal_hessian.value_[8] =
+      -negative_diagonal_hessian.value_[8];
+  negative_diagonal_hessian.value_[9] =
+      -negative_diagonal_hessian.value_[9];
   REQUIRE(assessHessian(negative_diagonal_hessian, options,
                         ObjSense::kMaximize) == HighsStatus::kOk);
 
@@ -86,9 +86,9 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   HighsHessian hessian0;
   hessian0.dim_ = 5;
   hessian0.format_ = HessianFormat::kSquare;
-  hessian0.q_start_ = {0, 1, 3, 4, 7, 10};
-  hessian0.q_index_ = {0, 0, 1, 2, 0, 2, 3, 0, 1, 4};
-  hessian0.q_value_ = {5, 2, 4, 3, -2, -2, 4, 4, 2, 5};
+  hessian0.start_ = {0, 1, 3, 4, 7, 10};
+  hessian0.index_ = {0, 0, 1, 2, 0, 2, 3, 0, 1, 4};
+  hessian0.value_ = {5, 2, 4, 3, -2, -2, 4, 4, 2, 5};
 
   REQUIRE(assessHessian(hessian0, options) == HighsStatus::kOk);
   if (dev_run) {
@@ -101,9 +101,9 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   HighsHessian hessian1;
   hessian1.format_ = HessianFormat::kSquare;
   hessian1.dim_ = 5;
-  hessian1.q_start_ = {0, 3, 5, 7, 10, 14};
-  hessian1.q_index_ = {0, 3, 4, 0, 1, 2, 4, 0, 2, 3, 0, 1, 2, 4};
-  hessian1.q_value_ = {5, -5, 1, 2, 4, 3, 1, 3, -2, 4, 3, 2, -1, 5};
+  hessian1.start_ = {0, 3, 5, 7, 10, 14};
+  hessian1.index_ = {0, 3, 4, 0, 1, 2, 4, 0, 2, 3, 0, 1, 2, 4};
+  hessian1.value_ = {5, -5, 1, 2, 4, 3, 1, 3, -2, 4, 3, 2, -1, 5};
 
   REQUIRE(assessHessian(hessian1, options) == HighsStatus::kOk);
   if (dev_run) {

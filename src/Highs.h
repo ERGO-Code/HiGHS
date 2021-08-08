@@ -388,11 +388,7 @@ class Highs {
   /**
    * @brief Get the number of Hessian matrix nonzeros in the incumbent model
    */
-  HighsInt getHessianNumNz() {
-    if (model_.hessian_.dim_)
-      return model_.hessian_.q_start_[model_.hessian_.dim_];
-    return 0;
-  }
+  HighsInt getHessianNumNz() { return model_.hessian_.numNz(); }
 
   /**
    * @brief Get the objective sense of the model
@@ -1206,6 +1202,7 @@ class Highs {
                                     double* primal_ray_value);
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
+  void clearZeroHessian();
 };
 
 #endif

@@ -904,10 +904,10 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
     memcpy(avalue, &lp.a_matrix_.value_[0], *numnz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
-    *q_num_nz = hessian.q_start_[*numcol];
-    memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));
-    memcpy(qindex, &hessian.q_index_[0], *q_num_nz * sizeof(HighsInt));
-    memcpy(qvalue, &hessian.q_value_[0], *q_num_nz * sizeof(double));
+    *q_num_nz = hessian.start_[*numcol];
+    memcpy(qstart, &hessian.start_[0], *numcol * sizeof(HighsInt));
+    memcpy(qindex, &hessian.index_[0], *q_num_nz * sizeof(HighsInt));
+    memcpy(qvalue, &hessian.value_[0], *q_num_nz * sizeof(double));
   }
   if ((HighsInt)lp.integrality_.size()) {
     for (int iCol = 0; iCol < *numcol; iCol++)

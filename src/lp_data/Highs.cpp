@@ -265,16 +265,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  if (hessian.dim_) {
-    // Clear any zero Hessian
-    if (hessian.numNz() == 0) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Hessian has dimension %" HIGHSINT_FORMAT
-                   " but no nonzeros, so is ignored\n",
-                   hessian.dim_);
-      hessian.clear();
-    }
-  }
+  clearZeroHessian();
 
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
@@ -369,11 +360,11 @@ HighsStatus Highs::passModel(
     HighsHessian& hessian = model.hessian_;
     hessian.dim_ = num_col;
     hessian.format_ = HessianFormat::kTriangular;
-    hessian.q_start_.assign(q_start, q_start + num_col);
-    hessian.q_start_.resize(num_col + 1);
-    hessian.q_start_[num_col] = q_num_nz;
-    hessian.q_index_.assign(q_index, q_index + q_num_nz);
-    hessian.q_value_.assign(q_value, q_value + q_num_nz);
+    hessian.start_.assign(q_start, q_start + num_col);
+    hessian.start_.resize(num_col + 1);
+    hessian.start_[num_col] = q_num_nz;
+    hessian.index_.assign(q_index, q_index + q_num_nz);
+    hessian.value_.assign(q_value, q_value + q_num_nz);
   }
   return passModel(std::move(model));
 }
@@ -399,16 +390,7 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
-  if (hessian.dim_) {
-    // Clear any zero Hessian
-    if (hessian.q_start_[hessian.dim_] == 0) {
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Hessian has dimension %" HIGHSINT_FORMAT
-                   " but no nonzeros, so is ignored\n",
-                   hessian.dim_);
-      hessian.clear();
-    }
-  }
+  clearZeroHessian();
   return_status =
       interpretCallStatus(clearSolver(), return_status, "clearSolver");
   return returnFromHighs(return_status);
@@ -425,15 +407,15 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
   hessian.format_ = HessianFormat::kTriangular;
   if (dim > 0) {
     assert(start != NULL);
-    hessian.q_start_.assign(start, start + num_col);
-    hessian.q_start_.resize(num_col + 1);
-    hessian.q_start_[num_col] = num_nz;
+    hessian.start_.assign(start, start + num_col);
+    hessian.start_.resize(num_col + 1);
+    hessian.start_[num_col] = num_nz;
   }
   if (num_nz > 0) {
     assert(index != NULL);
     assert(value != NULL);
-    hessian.q_index_.assign(index, index + num_nz);
-    hessian.q_value_.assign(value, value + num_nz);
+    hessian.index_.assign(index, index + num_nz);
+    hessian.value_.assign(value, value + num_nz);
   }
   return passHessian(hessian);
 }
@@ -2301,9 +2283,9 @@ HighsStatus Highs::callSolveQp() {
   instance.Q.mat.num_col = lp.num_col_;
   instance.Q.mat.num_row = lp.num_col_;
   if (kHessianFormatInternal == HessianFormat::kSquare) {
-    instance.Q.mat.start = hessian.q_start_;
-    instance.Q.mat.index = hessian.q_index_;
-    instance.Q.mat.value = hessian.q_value_;
+    instance.Q.mat.start = hessian.start_;
+    instance.Q.mat.index = hessian.index_;
+    instance.Q.mat.value = hessian.value_;
   } else {
     triangularToSquareHessian(hessian, instance.Q.mat.start,
                               instance.Q.mat.index, instance.Q.mat.value);
@@ -2502,9 +2484,9 @@ void Highs::reportModel() {
   reportLp(options_.log_options, model_.lp_, HighsLogType::kVerbose);
   if (model_.hessian_.dim_) {
     const HighsInt dim = model_.hessian_.dim_;
-    reportHessian(options_.log_options, dim, model_.hessian_.q_start_[dim],
-                  &model_.hessian_.q_start_[0], &model_.hessian_.q_index_[0],
-                  &model_.hessian_.q_value_[0]);
+    reportHessian(options_.log_options, dim, model_.hessian_.start_[dim],
+                  &model_.hessian_.start_[0], &model_.hessian_.index_[0],
+                  &model_.hessian_.value_[0]);
   }
 }
 

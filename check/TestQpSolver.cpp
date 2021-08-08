@@ -119,9 +119,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
   lp.sense_ = ObjSense::kMinimize;
   lp.offset_ = 0.25;
   hessian.dim_ = lp.num_col_;
-  hessian.q_start_ = {0, 1};
-  hessian.q_index_ = {0};
-  hessian.q_value_ = {2.0};
+  hessian.start_ = {0, 1};
+  hessian.index_ = {0};
+  hessian.value_ = {2.0};
 
   Highs highs;
   const HighsModel& model = highs.getModel();
@@ -170,9 +170,9 @@ TEST_CASE("test-qod", "[qpsolver]") {
 
   // Pass the new Hessian
   hessian.dim_ = 2;
-  hessian.q_start_ = {0, 1, 2};
-  hessian.q_index_ = {0, 1};
-  hessian.q_value_ = {2.0, 2.0};
+  hessian.start_ = {0, 1, 2};
+  hessian.index_ = {0, 1};
+  hessian.value_ = {2.0, 2.0};
   return_status = highs.passHessian(hessian);
   REQUIRE(return_status == HighsStatus::kOk);
 
@@ -264,14 +264,14 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   hessian.dim_ = lp.num_col_;
 
   //  hessian.format_ = HessianFormat::kSquare;
-  //  hessian.q_start_ = {0, 2, 3, 5};
-  //  hessian.q_index_ = {0, 2, 1, 0, 2};
-  //  hessian.q_value_ = {2.0, -1.0, 0.2, -1.0, 2.0};
+  //  hessian.start_ = {0, 2, 3, 5};
+  //  hessian.index_ = {0, 2, 1, 0, 2};
+  //  hessian.value_ = {2.0, -1.0, 0.2, -1.0, 2.0};
 
   hessian.format_ = HessianFormat::kTriangular;
-  hessian.q_start_ = {0, 2, 3, 4};
-  hessian.q_index_ = {0, 2, 1, 2};
-  hessian.q_value_ = {2.0, -1.0, 0.2, 2.0};
+  hessian.start_ = {0, 2, 3, 4};
+  hessian.index_ = {0, 2, 1, 2};
+  hessian.value_ = {2.0, -1.0, 0.2, 2.0};
 
   Highs highs;
   const HighsInfo& info = highs.getInfo();

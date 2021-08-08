@@ -1642,3 +1642,17 @@ bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
         format);
   return ok_format;
 }
+
+void Highs::clearZeroHessian() {
+  HighsHessian& hessian = model_.hessian_;
+  if (hessian.dim_) {
+    // Clear any zero Hessian
+    if (hessian.numNz() == 0) {
+      highsLogUser(options_.log_options, HighsLogType::kInfo,
+                   "Hessian has dimension %" HIGHSINT_FORMAT
+                   " but no nonzeros, so is ignored\n",
+                   hessian.dim_);
+      hessian.clear();
+    }
+  }
+}

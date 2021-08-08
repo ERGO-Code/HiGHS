@@ -40,6 +40,10 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.a_matrix_.start_ = std::move(Astart);
   lp.a_matrix_.index_ = std::move(Aindex);
   lp.a_matrix_.value_ = std::move(Avalue);
+  // a_matrix must have at least start_[0]=0 for the fictitious column
+  // 0
+  if ((int)lp.a_matrix_.start_.size() == 0)
+    lp.a_matrix_.clear();
   lp.col_cost_ = std::move(colCost);
   lp.col_lower_ = std::move(colLower);
   lp.col_upper_ = std::move(colUpper);
@@ -53,9 +57,12 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
 
   hessian.dim_ = q_dim;
   hessian.format_ = HessianFormat::kTriangular;
-  hessian.q_start_ = std::move(q_start);
-  hessian.q_index_ = std::move(q_index);
-  hessian.q_value_ = std::move(q_value);
+  hessian.start_ = std::move(q_start);
+  hessian.index_ = std::move(q_index);
+  hessian.value_ = std::move(q_value);
+  // hessian must have at least start_[0]=0 for the fictitious column
+  // 0
+  if (hessian.start_.size() == 0) hessian.clear();
 
   return FreeFormatParserReturnCode::kSuccess;
 }
