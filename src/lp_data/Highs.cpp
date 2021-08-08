@@ -301,7 +301,7 @@ HighsStatus Highs::passModel(
   HighsModel model;
   HighsLp& lp = model.lp_;
   // Check that the formats of the constraint matrix and Hessian are valid
-  if (lp.a_matrix_.formatOk()) return HighsStatus::kError;
+  if (!lp.a_matrix_.formatOk()) return HighsStatus::kError;
   if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
 
   bool a_rowwise = false;
@@ -529,8 +529,8 @@ HighsStatus Highs::run() {
   if (!haveHmo("run")) return HighsStatus::kError;
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
-  HighsInt min_highs_debug_level =// kHighsDebugLevelMin;
-   kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+    //   kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
