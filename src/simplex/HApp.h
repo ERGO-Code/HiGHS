@@ -116,9 +116,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     // The simplex instance isn't initialised or the scaling factors
     // for the incumbent LP correspond to a different strategy, so
     // consider finding scaling factors
-  printf("Bf: value[0] = %g\n", lp.a_matrix_.value_[0]);
     getSimplexScaling(options, lp, scale);
-    printf("Af: value[0] = %g\n", lp.a_matrix_.value_[0]);fflush(stdout);
     incumbent_lp_scaled = true;
     // Any scaling has been applied to the incumbent LP in the course
     // of finding the scaling factors, so move the LP to Ekk

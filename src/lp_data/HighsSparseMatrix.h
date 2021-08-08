@@ -39,7 +39,7 @@ class HighsSparseMatrix {
 
   bool operator==(const HighsSparseMatrix& matrix) const;
   void clear();
-  bool formatOk() const { return this->isColwise() || this->isRowwise(); };
+  bool formatOk() const { return (this->isColwise() || this->isRowwise()); };
   bool isRowwise() const;
   bool isColwise() const;
   HighsInt numNz() const;

@@ -847,7 +847,11 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postSolveStack) {
 
     mipsolver->mipdata_->debugSolution.shrink(newColIndex);
     numProbes.resize(model->num_col_);
+    // Need to set the constraint matrix dimensions
+    model->setMatrixDimensions();
   }
+  // Need to set the constraint matrix dimensions
+  model->setMatrixDimensions();
 }
 
 HPresolve::Result HPresolve::dominatedColumns(

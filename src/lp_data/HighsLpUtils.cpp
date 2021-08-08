@@ -76,13 +76,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   }
   // Assess the LP matrix - even if there are no rows!
   call_status =
-      assessMatrix(options.log_options, "LP", lp.num_row_, lp.num_col_,
-                   lp.a_matrix_.start_, lp.a_matrix_.index_, lp.a_matrix_.value_,
-                   options.small_matrix_value, options.large_matrix_value);
-  HighsStatus alt_call_status =
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
                           options.large_matrix_value);
-  assert(alt_call_status == call_status);
   return_status =
       interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;

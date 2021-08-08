@@ -151,7 +151,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-  assert(lp.a_matrix_.isRowwise());
+  assert(lp.a_matrix_.isColwise());
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file

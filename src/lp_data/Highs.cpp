@@ -243,8 +243,8 @@ HighsStatus Highs::passModel(HighsModel model) {
     lp.a_matrix_.index_.clear();
     lp.a_matrix_.value_.clear();
   } else {
-    // Matrix has rows and columns, so a_format must be valid
-    if (lp.a_matrix_.formatOk()) return HighsStatus::kError;
+    // Matrix has rows and columns, so a_matrix format must be valid
+    if (!lp.a_matrix_.formatOk()) return HighsStatus::kError;
   }
   // Dimensions in a_matrix_ may not be set, so take them from lp.
   lp.setMatrixDimensions();
