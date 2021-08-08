@@ -51,9 +51,9 @@ void Presolve::load(const HighsLp& lp, bool mip) {
   numCol = lp.num_col_;
   numRow = lp.num_row_;
   numTot = numTot;
-  Astart = lp.a_start_;
-  Aindex = lp.a_index_;
-  Avalue = lp.a_value_;
+  Astart = lp.a_matrix_.start_;
+  Aindex = lp.a_matrix_.index_;
+  Avalue = lp.a_matrix_.value_;
   this->mip = mip;
 
   colCost = lp.col_cost_;

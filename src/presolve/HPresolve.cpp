@@ -95,9 +95,9 @@ void HPresolve::setInput(HighsLp& model_, const HighsOptions& options_,
     model->integrality_.assign(model->num_col_, HighsVarType::kContinuous);
 
   if (model_.format_ == MatrixFormat::kRowwise)
-    fromCSR(model->a_value_, model->a_index_, model->a_start_);
+    fromCSR(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
   else
-    fromCSC(model->a_value_, model->a_index_, model->a_start_);
+    fromCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
 
   // initialize everything as changed, but do not add all indices
   // since the first thing presolve will do is a scan for easy reductions
@@ -1246,8 +1246,8 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postSolveStack) {
   probingEarlyAbort = false;
   if (numDeletedCols + numDeletedRows != 0) shrinkProblem(postSolveStack);
 
-  toCSC(model->a_value_, model->a_index_, model->a_start_);
-  fromCSC(model->a_value_, model->a_index_, model->a_start_);
+  toCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
+  fromCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
 
   // first tighten all bounds if they have an implied bound that is tighter
   // thatn their column bound before probing this is not done for continuous
@@ -3927,8 +3927,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postSolveStack) {
                                      numDeletedRows >= 0.5 * model->num_row_)) {
           shrinkProblem(postSolveStack);
 
-          toCSC(model->a_value_, model->a_index_, model->a_start_);
-          fromCSC(model->a_value_, model->a_index_, model->a_start_);
+          toCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
+          fromCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
         HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postSolveStack));
@@ -4081,7 +4081,7 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postSolveStack) {
     }
   }
 
-  toCSC(model->a_value_, model->a_index_, model->a_start_);
+  toCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
 
   if (model->num_col_ == 0) {
     if (mipsolver) {
@@ -4109,7 +4109,7 @@ void HPresolve::computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
   presolve(stack);
   numreductions = stack.numReductions();
 
-  toCSC(model->a_value_, model->a_index_, model->a_start_);
+  toCSC(model->a_matrix_.value_, model->a_matrix_.index_, model->a_matrix_.start_);
 
   for (HighsInt i = 0; i != model->num_row_; ++i)
     flagRow[i] = 1 - rowDeleted[i];
@@ -5729,13 +5729,13 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
   std::vector<HighsInt> ARindex;
   std::vector<double> ARvalue;
   dev_kkt_check::KktInfo kktinfo = dev_kkt_check::initInfo();
-  Aend.assign(model.a_start_.begin() + 1, model.a_start_.end());
-  highsSparseTranspose(model.num_row_, model.num_col_, model.a_start_,
-                       model.a_index_, model.a_value_, ARstart, ARindex,
+  Aend.assign(model.a_matrix_.start_.begin() + 1, model.a_matrix_.start_.end());
+  highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
+                       model.a_matrix_.index_, model.a_matrix_.value_, ARstart, ARindex,
                        ARvalue);
   dev_kkt_check::State state(
-      model.num_col_, model.num_row_, model.a_start_, Aend, model.a_index_,
-      model.a_value_, ARstart, ARindex, ARvalue, model.col_cost_,
+      model.num_col_, model.num_row_, model.a_matrix_.start_, Aend, model.a_matrix_.index_,
+      model.a_matrix_.value_, ARstart, ARindex, ARvalue, model.col_cost_,
       model.col_lower_, model.col_upper_, model.row_lower_, model.row_upper_,
       flagCol, flagRow, sol.col_value, sol.col_dual, sol.row_value,
       sol.row_dual, basis.col_status, basis.row_status);
@@ -5811,9 +5811,9 @@ void HPresolve::debug(const HighsLp& lp, const HighsOptions& options) {
 
     if (reductionLim == good) break;
 
-    Aend.assign(model.a_start_.begin() + 1, model.a_start_.end());
-    highsSparseTranspose(model.num_row_, model.num_col_, model.a_start_,
-                         model.a_index_, model.a_value_, ARstart, ARindex,
+    Aend.assign(model.a_matrix_.start_.begin() + 1, model.a_matrix_.start_.end());
+    highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
+                         model.a_matrix_.index_, model.a_matrix_.value_, ARstart, ARindex,
                          ARvalue);
     sol = reducedsol;
     basis = reducedbasis;
