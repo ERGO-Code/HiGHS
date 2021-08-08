@@ -444,15 +444,15 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   inds.reserve(lp.num_col_);
   vals.reserve(lp.num_col_);
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
-    HighsInt start = lp.a_start_[i];
-    HighsInt end = lp.a_start_[i + 1];
+    HighsInt start = lp.a_matrix_.start_[i];
+    HighsInt end = lp.a_matrix_.start_[i + 1];
 
     HighsCDouble sum = lp.col_cost_[i];
 
     for (HighsInt j = start; j != end; ++j) {
-      if (row_dual[lp.a_index_[j]] == 0) continue;
+      if (row_dual[lp.a_matrix_.index_[j]] == 0) continue;
       // @FlipRowDual += became -=
-      sum -= lp.a_value_[j] * row_dual[lp.a_index_[j]];
+      sum -= lp.a_matrix_.value_[j] * row_dual[lp.a_matrix_.index_[j]];
     }
 
     double val = double(sum);
@@ -560,14 +560,14 @@ void HighsLpRelaxation::storeDualInfProof() {
   }
 
   for (HighsInt i = 0; i != lp.num_col_; ++i) {
-    HighsInt start = lp.a_start_[i];
-    HighsInt end = lp.a_start_[i + 1];
+    HighsInt start = lp.a_matrix_.start_[i];
+    HighsInt end = lp.a_matrix_.start_[i + 1];
 
     HighsCDouble sum = 0.0;
 
     for (HighsInt j = start; j != end; ++j) {
-      if (dualray[lp.a_index_[j]] == 0.0) continue;
-      sum -= lp.a_value_[j] * dualray[lp.a_index_[j]];
+      if (dualray[lp.a_matrix_.index_[j]] == 0.0) continue;
+      sum -= lp.a_matrix_.value_[j] * dualray[lp.a_matrix_.index_[j]];
     }
 
     double val = double(sum);

@@ -251,25 +251,25 @@ void HighsMipSolverData::runSetup() {
   rowMatrixSet = false;
   if (!rowMatrixSet) {
     rowMatrixSet = true;
-    highsSparseTranspose(model.num_row_, model.num_col_, model.a_start_,
-                         model.a_index_, model.a_value_, ARstart_, ARindex_,
+    highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
+                         model.a_matrix_.index_, model.a_matrix_.value_, ARstart_, ARindex_,
                          ARvalue_);
     uplocks.resize(model.num_col_);
     downlocks.resize(model.num_col_);
     for (HighsInt i = 0; i != model.num_col_; ++i) {
-      HighsInt start = model.a_start_[i];
-      HighsInt end = model.a_start_[i + 1];
+      HighsInt start = model.a_matrix_.start_[i];
+      HighsInt end = model.a_matrix_.start_[i + 1];
       for (HighsInt j = start; j != end; ++j) {
-        HighsInt row = model.a_index_[j];
+        HighsInt row = model.a_matrix_.index_[j];
 
         if (model.row_lower_[row] != -kHighsInf) {
-          if (model.a_value_[j] < 0)
+          if (model.a_matrix_.value_[j] < 0)
             ++uplocks[i];
           else
             ++downlocks[i];
         }
         if (model.row_upper_[row] != kHighsInf) {
-          if (model.a_value_[j] < 0)
+          if (model.a_matrix_.value_[j] < 0)
             ++downlocks[i];
           else
             ++uplocks[i];
@@ -731,18 +731,18 @@ void HighsMipSolverData::basisTransfer() {
       }
       pdqsort(nonbasiccols.begin(), nonbasiccols.end(),
               [&](HighsInt col1, HighsInt col2) {
-                HighsInt len1 = model.a_start_[col1 + 1] - model.a_start_[col1];
-                HighsInt len2 = model.a_start_[col2 + 1] - model.a_start_[col2];
+                HighsInt len1 = model.a_matrix_.start_[col1 + 1] - model.a_matrix_.start_[col1];
+                HighsInt len2 = model.a_matrix_.start_[col2 + 1] - model.a_matrix_.start_[col2];
                 return std::make_pair(len1, col1) < std::make_pair(len2, col2);
               });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
       for (HighsInt i : nonbasiccols) {
-        const HighsInt start = model.a_start_[i];
-        const HighsInt end = model.a_start_[i + 1];
+        const HighsInt start = model.a_matrix_.start_[i];
+        const HighsInt end = model.a_matrix_.start_[i + 1];
 
         bool hasbasic = false;
         for (HighsInt j = start; j != end; ++j) {
-          if (firstrootbasis.row_status[model.a_index_[j]] ==
+          if (firstrootbasis.row_status[model.a_matrix_.index_[j]] ==
               HighsBasisStatus::kBasic) {
             hasbasic = true;
             break;
@@ -1442,8 +1442,8 @@ void HighsMipSolverData::checkObjIntegrality() {
 
 void HighsMipSolverData::setupDomainPropagation() {
   const HighsLp& model = *mipsolver.model_;
-  highsSparseTranspose(model.num_row_, model.num_col_, model.a_start_,
-                       model.a_index_, model.a_value_, ARstart_, ARindex_,
+  highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
+                       model.a_matrix_.index_, model.a_matrix_.value_, ARstart_, ARindex_,
                        ARvalue_);
 
   pseudocost = HighsPseudocost(mipsolver);

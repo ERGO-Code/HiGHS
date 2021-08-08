@@ -71,6 +71,11 @@ double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   return objective_function_value;
 }
 
+void HighsLp::setMatrixDimensions() {
+  this->a_matrix_.num_col_ = this->num_col_;
+  this->a_matrix_.num_row_ = this->num_row_;
+}
+
 bool HighsLp::dimensionsAndMatrixOk(std::string message) const {
   return dimensionsOk(message) && matrixOk(message);
 }

@@ -60,6 +60,7 @@ class HighsLp {
   bool equalButForNames(const HighsLp& lp) const;
   bool isMip() const;
   double objectiveValue(const std::vector<double>& solution) const;
+  void setMatrixDimensions();
   bool dimensionsAndMatrixOk(std::string message) const;
   bool dimensionsOk(std::string message) const;
   bool matrixOk(std::string message) const;

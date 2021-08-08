@@ -1199,7 +1199,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
       Gedge[j].second = coloring.color(model.a_matrix_.value_[j]);
-      rowSizes[model.a_index_[j]] += 1;
+      rowSizes[model.a_matrix_.index_[j]] += 1;
     }
   }
 
@@ -1216,7 +1216,7 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // finally add the nonzeros to the row major matrix
   for (HighsInt i = 0; i < numCol; ++i) {
     for (HighsInt j = Gstart[i]; j < Gstart[i + 1]; ++j) {
-      HighsInt row = model.a_index_[j];
+      HighsInt row = model.a_matrix_.index_[j];
       HighsInt ARpos = Gstart[numCol + row + 1] - rowSizes[row];
       rowSizes[row] -= 1;
       Gedge[ARpos].first = i;

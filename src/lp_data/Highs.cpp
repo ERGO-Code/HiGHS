@@ -253,8 +253,7 @@ HighsStatus Highs::passModel(HighsModel model) {
     if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
   }
   // Dimensions in a_matrix_ may not be set, but take them from lp.
-  lp.a_matrix_.num_col_ = lp.num_col_;
-  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.setMatrixDimensions();
   const bool to_a_matrix = false;
   lp.matrixCopy(to_a_matrix);
   assert(lp.dimensionsAndMatrixOk("Highs::passModel"));
@@ -757,7 +756,8 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
-	const bool to_a_matrix = true;
+	reduced_lp.setMatrixDimensions();
+	const bool to_a_matrix = false;
         reduced_lp.matrixCopy(to_a_matrix);
         // Validate the reduced LP
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
@@ -1288,9 +1288,9 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   if (return_indices) *row_num_nz = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     double value = 0;
-    for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-      HighsInt row = lp.a_index_[el];
-      value += lp.a_value_[el] * basis_inverse_row_vector[row];
+    for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+      HighsInt row = lp.a_matrix_.index_[el];
+      value += lp.a_matrix_.value_[el] * basis_inverse_row_vector[row];
     }
     row_vector[col] = 0;
     if (fabs(value) > kHighsTiny) {
@@ -1335,8 +1335,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   HighsInt numRow = lp.num_row_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
-  for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++)
-    rhs[lp.a_index_[el]] = lp.a_value_[el];
+  for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++)
+    rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
   basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
   return HighsStatus::kOk;
 }
@@ -2181,14 +2181,14 @@ HighsPresolveStatus Highs::runPresolve() {
           model_.lp_.num_col_ - reduced_lp.num_col_;
       presolve_.info_.n_rows_removed =
           model_.lp_.num_row_ - reduced_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_value_.size() -
-                                      (HighsInt)reduced_lp.a_value_.size();
+      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_matrix_.numNz() -
+                                      (HighsInt)reduced_lp.a_matrix_.numNz();
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
       presolve_.info_.n_cols_removed = model_.lp_.num_col_;
       presolve_.info_.n_rows_removed = model_.lp_.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_value_.size();
+      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_matrix_.numNz();
       break;
     }
     default:

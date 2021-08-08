@@ -574,12 +574,6 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
         rowLower[iRow] *= rowScale[iRow];
         rowUpper[iRow] *= rowScale[iRow];
       }
-      // Scale the a_matrix here for now
-      //      lp.a_matrix_.applyScale(scale);
-      const bool scale_error = applyScalingToLpMatrix(options.log_options, lp, &scale.col[0],
-						      &scale.row[0], 0, lp.num_col_ - 1, 0,
-						      lp.num_row_ - 1) != HighsStatus::kOk;
-      assert(!scale_error);
     }
   }
   // Possibly scale the costs

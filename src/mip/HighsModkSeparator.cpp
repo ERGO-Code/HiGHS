@@ -54,10 +54,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   for (HighsInt col : mipsolver.mipdata_->continuous_cols) {
     if (transLp.boundDistance(col) == 0) continue;
 
-    const HighsInt start = lp.a_start_[col];
-    const HighsInt end = lp.a_start_[col + 1];
+    const HighsInt start = lp.a_matrix_.start_[col];
+    const HighsInt end = lp.a_matrix_.start_[col + 1];
 
-    for (HighsInt i = start; i != end; ++i) skipRow[lp.a_index_[i]] = true;
+    for (HighsInt i = start; i != end; ++i) skipRow[lp.a_matrix_.index_[i]] = true;
   }
 
   HighsCutGeneration cutGen(lpRelaxation, cutpool);
@@ -67,7 +67,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<HighsInt> intSystemIndex;
   std::vector<HighsInt> intSystemStart;
 
-  intSystemValue.reserve(lp.a_value_.size() + lp.num_row_);
+  intSystemValue.reserve(lp.a_matrix_.value_.size() + lp.num_row_);
   intSystemIndex.reserve(intSystemValue.size());
   intSystemStart.reserve(lp.num_row_ + 1);
   intSystemStart.push_back(0);
