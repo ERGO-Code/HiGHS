@@ -71,7 +71,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     if (transLp.boundDistance(col) == 0.0) continue;
 
     maxAggrRowSize += lp.a_matrix_.start_[col + 1] - lp.a_matrix_.start_[col];
-    for (HighsInt i = lp.a_matrix_.start_[col]; i != lp.a_matrix_.start_[col + 1]; ++i)
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i != lp.a_matrix_.start_[col + 1]; ++i)
       ++numContinuous[lp.a_matrix_.index_[i]];
   }
 
@@ -137,22 +138,27 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     colInArcs[col].first = inArcRows.size();
     colOutArcs[col].first = outArcRows.size();
-    for (HighsInt i = lp.a_matrix_.start_[col]; i != lp.a_matrix_.start_[col + 1]; ++i) {
+    for (HighsInt i = lp.a_matrix_.start_[col];
+         i != lp.a_matrix_.start_[col + 1]; ++i) {
       switch (rowtype[lp.a_matrix_.index_[i]]) {
         case RowType::kUnusuable:
           continue;
         case RowType::kLeq:
           if (lp.a_matrix_.value_[i] < 0)
-            inArcRows.emplace_back(lp.a_matrix_.index_[i], lp.a_matrix_.value_[i]);
+            inArcRows.emplace_back(lp.a_matrix_.index_[i],
+                                   lp.a_matrix_.value_[i]);
           else
-            outArcRows.emplace_back(lp.a_matrix_.index_[i], lp.a_matrix_.value_[i]);
+            outArcRows.emplace_back(lp.a_matrix_.index_[i],
+                                    lp.a_matrix_.value_[i]);
           break;
         case RowType::kGeq:
         case RowType::kEq:
           if (lp.a_matrix_.value_[i] > 0)
-            inArcRows.emplace_back(lp.a_matrix_.index_[i], lp.a_matrix_.value_[i]);
+            inArcRows.emplace_back(lp.a_matrix_.index_[i],
+                                   lp.a_matrix_.value_[i]);
           else
-            outArcRows.emplace_back(lp.a_matrix_.index_[i], lp.a_matrix_.value_[i]);
+            outArcRows.emplace_back(lp.a_matrix_.index_[i],
+                                    lp.a_matrix_.value_[i]);
           break;
       }
     }

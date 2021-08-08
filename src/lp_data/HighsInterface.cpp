@@ -182,8 +182,8 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     // set up starts for empty columns
     assert(XnumNewCol > 0);
     return_status = interpretCallStatus(
-        lp.a_matrix_.addCols(XnumNewCol, 0, NULL, NULL, NULL),
-        return_status, "lp.a_matrix_.addCols");
+        lp.a_matrix_.addCols(XnumNewCol, 0, NULL, NULL, NULL), return_status,
+        "lp.a_matrix_.addCols");
     if (valid_simplex_lp) {
       return_status = interpretCallStatus(
           simplex_lp.a_matrix_.addCols(XnumNewCol, 0, NULL, NULL, NULL),
@@ -368,8 +368,8 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     // set up starts for empty rows
     assert(XnumNewRow > 0);
     return_status = interpretCallStatus(
-        lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL),
-        return_status, "lp.a_matrix_.addRows");
+        lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL), return_status,
+        "lp.a_matrix_.addRows");
     if (valid_simplex_lp) {
       return_status = interpretCallStatus(
           simplex_lp.a_matrix_.addRows(XnumNewRow, 0, NULL, NULL, NULL),
@@ -603,14 +603,16 @@ HighsStatus Highs::getColsInterface(
       if (col_lower != NULL) col_lower[num_col] = lp.col_lower_[col];
       if (col_upper != NULL) col_upper[num_col] = lp.col_upper_[col];
       if (col_matrix_start != NULL)
-        col_matrix_start[num_col] =
-            num_nz + lp.a_matrix_.start_[col] - lp.a_matrix_.start_[out_from_col];
+        col_matrix_start[num_col] = num_nz + lp.a_matrix_.start_[col] -
+                                    lp.a_matrix_.start_[out_from_col];
       num_col++;
     }
     for (HighsInt el = lp.a_matrix_.start_[out_from_col];
          el < lp.a_matrix_.start_[out_to_col + 1]; el++) {
-      if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.a_matrix_.index_[el];
-      if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.a_matrix_.value_[el];
+      if (col_matrix_index != NULL)
+        col_matrix_index[num_nz] = lp.a_matrix_.index_[el];
+      if (col_matrix_value != NULL)
+        col_matrix_value[num_nz] = lp.a_matrix_.value_[el];
       num_nz++;
     }
     if (out_to_col == col_dim - 1 || in_to_col == col_dim - 1) break;
@@ -719,7 +721,8 @@ HighsStatus Highs::getRowsInterface(
   }
   // Identify the lengths of the rows in the row-wise matrix to be extracted
   for (HighsInt col = 0; col < lp.num_col_; col++) {
-    for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+    for (HighsInt el = lp.a_matrix_.start_[col];
+         el < lp.a_matrix_.start_[col + 1]; el++) {
       HighsInt row = lp.a_matrix_.index_[el];
       HighsInt new_row = new_index[row];
       if (new_row >= 0) row_matrix_length[new_row]++;
@@ -745,7 +748,8 @@ HighsStatus Highs::getRowsInterface(
 
     // Fill the row-wise matrix with indices and values
     for (HighsInt col = 0; col < lp.num_col_; col++) {
-      for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+      for (HighsInt el = lp.a_matrix_.start_[col];
+           el < lp.a_matrix_.start_[col + 1]; el++) {
         HighsInt row = lp.a_matrix_.index_[el];
         HighsInt new_row = new_index[row];
         if (new_row >= 0) {
@@ -1606,8 +1610,10 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     if (setFormat(model_.lp_) != HighsStatus::kOk) return HighsStatus::kError;
     HighsInt primal_ray_sign = ekk_instance.info_.primal_ray_sign_;
     if (col < numCol) {
-      for (HighsInt iEl = lp.a_matrix_.start_[col]; iEl < lp.a_matrix_.start_[col + 1]; iEl++)
-        rhs[lp.a_matrix_.index_[iEl]] = primal_ray_sign * lp.a_matrix_.value_[iEl];
+      for (HighsInt iEl = lp.a_matrix_.start_[col];
+           iEl < lp.a_matrix_.start_[col + 1]; iEl++)
+        rhs[lp.a_matrix_.index_[iEl]] =
+            primal_ray_sign * lp.a_matrix_.value_[iEl];
     } else {
       rhs[col - numCol] = primal_ray_sign;
     }

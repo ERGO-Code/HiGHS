@@ -252,8 +252,8 @@ void HighsMipSolverData::runSetup() {
   if (!rowMatrixSet) {
     rowMatrixSet = true;
     highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
-                         model.a_matrix_.index_, model.a_matrix_.value_, ARstart_, ARindex_,
-                         ARvalue_);
+                         model.a_matrix_.index_, model.a_matrix_.value_,
+                         ARstart_, ARindex_, ARvalue_);
     uplocks.resize(model.num_col_);
     downlocks.resize(model.num_col_);
     for (HighsInt i = 0; i != model.num_col_; ++i) {
@@ -731,8 +731,10 @@ void HighsMipSolverData::basisTransfer() {
       }
       pdqsort(nonbasiccols.begin(), nonbasiccols.end(),
               [&](HighsInt col1, HighsInt col2) {
-                HighsInt len1 = model.a_matrix_.start_[col1 + 1] - model.a_matrix_.start_[col1];
-                HighsInt len2 = model.a_matrix_.start_[col2 + 1] - model.a_matrix_.start_[col2];
+                HighsInt len1 = model.a_matrix_.start_[col1 + 1] -
+                                model.a_matrix_.start_[col1];
+                HighsInt len2 = model.a_matrix_.start_[col2 + 1] -
+                                model.a_matrix_.start_[col2];
                 return std::make_pair(len1, col1) < std::make_pair(len2, col2);
               });
       nonbasiccols.resize(std::min(nonbasiccols.size(), size_t(missingbasic)));
@@ -1443,8 +1445,8 @@ void HighsMipSolverData::checkObjIntegrality() {
 void HighsMipSolverData::setupDomainPropagation() {
   const HighsLp& model = *mipsolver.model_;
   highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
-                       model.a_matrix_.index_, model.a_matrix_.value_, ARstart_, ARindex_,
-                       ARvalue_);
+                       model.a_matrix_.index_, model.a_matrix_.value_, ARstart_,
+                       ARindex_, ARvalue_);
 
   pseudocost = HighsPseudocost(mipsolver);
 

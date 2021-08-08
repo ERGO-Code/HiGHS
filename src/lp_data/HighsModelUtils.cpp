@@ -31,8 +31,10 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
                          const double large_matrix_value) {
-  //  if (assessMatrixDimensions(log_options, matrix_name, num_vec, matrix_start,
-  //                             matrix_index, matrix_value) == HighsStatus::kError)
+  //  if (assessMatrixDimensions(log_options, matrix_name, num_vec,
+  //  matrix_start,
+  //                             matrix_index, matrix_value) ==
+  //                             HighsStatus::kError)
   //    return HighsStatus::kError;
   const HighsInt num_nz = matrix_start[num_vec];
   if (num_vec <= 0) return HighsStatus::kOk;

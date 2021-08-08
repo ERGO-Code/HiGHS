@@ -500,8 +500,10 @@ const CoinPackedMatrix* OsiHiGHSSolverInterface::getMatrixByCol() const {
   // copy data
   memcpy(start, &(this->highs->lp_.a_matrix_.start_[0]),
          (ncols + 1) * sizeof(HighsInt));
-  memcpy(index, &(this->highs->lp_.a_matrix_.index_[0]), nelements * sizeof(HighsInt));
-  memcpy(value, &(this->highs->lp_.a_matrix_.value_[0]), nelements * sizeof(double));
+  memcpy(index, &(this->highs->lp_.a_matrix_.index_[0]),
+         nelements * sizeof(HighsInt));
+  memcpy(value, &(this->highs->lp_.a_matrix_.value_[0]),
+         nelements * sizeof(double));
 
   for (HighsInt i = 0; i < ncols; i++) {
     len[i] = start[i + 1] - start[i];
@@ -989,7 +991,8 @@ const double* OsiHiGHSSolverInterface::getReducedCost() const {
       this->dummy_solution->col_dual.resize(num_cols);
       for (HighsInt col = 0; col < num_cols; col++) {
         dummy_solution->col_dual[col] = lp.col_cost_[col];
-        for (HighsInt i = lp.a_matrix_.start_[col]; i < lp.a_matrix_.start_[col + 1]; i++) {
+        for (HighsInt i = lp.a_matrix_.start_[col];
+             i < lp.a_matrix_.start_[col + 1]; i++) {
           const HighsInt row = lp.a_matrix_.index_[i];
           assert(row >= 0);
           assert(row < lp.num_row_);

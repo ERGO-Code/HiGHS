@@ -242,7 +242,8 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
 
   // matrix
   f << "matrix" << std::endl;
-  for (HighsInt i = 0; i < lp.num_col_ + 1; i++) f << lp.a_matrix_.start_[i] << " ";
+  for (HighsInt i = 0; i < lp.num_col_ + 1; i++)
+    f << lp.a_matrix_.start_[i] << " ";
   f << std::endl;
 
   for (HighsInt i = 0; i < num_nz; i++) f << lp.a_matrix_.index_[i] << " ";

@@ -928,8 +928,8 @@ HighsInt HEkk::computeFactor() {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_.factor_pivot_threshold);
     simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_matrix_,
-		       info_.factor_pivot_threshold, &options_, &timer_,
-		       &analysis_);
+                       info_.factor_pivot_threshold, &options_, &timer_,
+                       &analysis_);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);

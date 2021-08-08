@@ -106,7 +106,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     HighsInt nz = 0;
     lp.a_matrix_.start_.clear();
-    assert((int)lp.a_matrix_.start_.size()==0);
+    assert((int)lp.a_matrix_.start_.size() == 0);
     for (HighsInt i = 0; i < lp.num_col_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
       lp.a_matrix_.start_.push_back(nz);
@@ -192,8 +192,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       // equality constraint
       this->writeToFile(file, " con%" HIGHSINT_FORMAT ": ", row + 1);
       for (HighsInt var = 0; var < lp.num_col_; var++) {
-        for (HighsInt idx = lp.a_matrix_.start_[var]; idx < lp.a_matrix_.start_[var + 1];
-             idx++) {
+        for (HighsInt idx = lp.a_matrix_.start_[var];
+             idx < lp.a_matrix_.start_[var + 1]; idx++) {
           if (lp.a_matrix_.index_[idx] == row) {
             this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
                               lp.a_matrix_.value_[idx], var + 1);
@@ -207,8 +207,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         // has a lower bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "lo: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
-          for (HighsInt idx = lp.a_matrix_.start_[var]; idx < lp.a_matrix_.start_[var + 1];
-               idx++) {
+          for (HighsInt idx = lp.a_matrix_.start_[var];
+               idx < lp.a_matrix_.start_[var + 1]; idx++) {
             if (lp.a_matrix_.index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
                                 lp.a_matrix_.value_[idx], var + 1);
@@ -221,8 +221,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         // has an upper bounds
         this->writeToFile(file, " con%" HIGHSINT_FORMAT "up: ", row + 1);
         for (HighsInt var = 0; var < lp.num_col_; var++) {
-          for (HighsInt idx = lp.a_matrix_.start_[var]; idx < lp.a_matrix_.start_[var + 1];
-               idx++) {
+          for (HighsInt idx = lp.a_matrix_.start_[var];
+               idx < lp.a_matrix_.start_[var + 1]; idx++) {
             if (lp.a_matrix_.index_[idx] == row) {
               this->writeToFile(file, "%+g x%" HIGHSINT_FORMAT " ",
                                 lp.a_matrix_.value_[idx], var + 1);

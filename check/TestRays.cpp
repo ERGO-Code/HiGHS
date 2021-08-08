@@ -54,8 +54,10 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     if (col_status[iCol] == HighsBasisStatus::kBasic) continue;
     // Get the tableau row entry for this nonbasic column
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
-      tableau_row[iCol] += dual_ray_value[lp.a_matrix_.index_[iEl]] * lp.a_matrix_.value_[iEl];
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+      tableau_row[iCol] +=
+          dual_ray_value[lp.a_matrix_.index_[iEl]] * lp.a_matrix_.value_[iEl];
   }
 
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -151,7 +153,8 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   vector<double> row_ray_value;
   row_ray_value.assign(numRow, 0.0);
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++)
       row_ray_value[lp.a_matrix_.index_[iEl]] +=
           primal_ray_value[iCol] * lp.a_matrix_.value_[iEl];
   }

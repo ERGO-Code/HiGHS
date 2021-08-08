@@ -974,13 +974,13 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       {
         HighsInt tmpinf;
         HighsCDouble tmpminact;
-        computeMinActivity(mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] - tmpminact)) <=
-               mipsolver->mipdata_->feastol);
+        computeMinActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
+        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                               tmpminact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -993,7 +993,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
           activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymin_[mip->a_matrix_.index_[i]] - mip->row_upper_[mip->a_matrix_.index_[i]] >
+          activitymin_[mip->a_matrix_.index_[i]] -
+                  mip->row_upper_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
@@ -1024,13 +1025,13 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
       {
         HighsInt tmpinf;
         HighsCDouble tmpmaxact;
-        computeMaxActivity(mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] - tmpmaxact)) <=
-               mipsolver->mipdata_->feastol);
+        computeMaxActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
+        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1039,7 +1040,8 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-          mip->row_lower_[mip->a_matrix_.index_[i]] - activitymax_[mip->a_matrix_.index_[i]] >
+          mip->row_lower_[mip->a_matrix_.index_[i]] -
+                  activitymax_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
@@ -1128,13 +1130,13 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       {
         HighsInt tmpinf;
         HighsCDouble tmpmaxact;
-        computeMaxActivity(mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpmaxact);
-        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] - tmpmaxact)) <=
-               mipsolver->mipdata_->feastol);
+        computeMaxActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpmaxact);
+        assert(std::abs(double(activitymax_[mip->a_matrix_.index_[i]] -
+                               tmpmaxact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymaxinf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1147,7 +1149,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
       if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
           activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-          mip->row_lower_[mip->a_matrix_.index_[i]] - activitymax_[mip->a_matrix_.index_[i]] >
+          mip->row_lower_[mip->a_matrix_.index_[i]] -
+                  activitymax_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
@@ -1182,13 +1185,13 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
       {
         HighsInt tmpinf;
         HighsCDouble tmpminact;
-        computeMinActivity(mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
-                           mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
-                           mipsolver->mipdata_->ARindex_.data(),
-                           mipsolver->mipdata_->ARvalue_.data(), tmpinf,
-                           tmpminact);
-        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] - tmpminact)) <=
-               mipsolver->mipdata_->feastol);
+        computeMinActivity(
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i]],
+            mipsolver->mipdata_->ARstart_[mip->a_matrix_.index_[i] + 1],
+            mipsolver->mipdata_->ARindex_.data(),
+            mipsolver->mipdata_->ARvalue_.data(), tmpinf, tmpminact);
+        assert(std::abs(double(activitymin_[mip->a_matrix_.index_[i]] -
+                               tmpminact)) <= mipsolver->mipdata_->feastol);
         assert(tmpinf == activitymininf_[mip->a_matrix_.index_[i]]);
       }
 #endif
@@ -1197,7 +1200,8 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
 
       if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
           activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymin_[mip->a_matrix_.index_[i]] - mip->row_upper_[mip->a_matrix_.index_[i]] >
+          activitymin_[mip->a_matrix_.index_[i]] -
+                  mip->row_upper_[mip->a_matrix_.index_[i]] >
               mipsolver->mipdata_->feastol) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;

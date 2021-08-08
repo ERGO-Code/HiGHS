@@ -530,7 +530,7 @@ HighsStatus Highs::run() {
   // Ensure that there is exactly one Highs model object
   assert((HighsInt)hmos_.size() == 1);
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
-    //   kHighsDebugLevelCostly;
+  //   kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
 #ifdef HiGHSDEV
   min_highs_debug_level =  // kHighsDebugLevelMin;
@@ -746,8 +746,8 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
-	reduced_lp.setMatrixDimensions();
-	assert(reduced_lp.dimensionsOk("Reduced LP"));
+        reduced_lp.setMatrixDimensions();
+        assert(reduced_lp.dimensionsOk("Reduced LP"));
         // Validate the reduced LP
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
@@ -1276,7 +1276,8 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   if (return_indices) *row_num_nz = 0;
   for (HighsInt col = 0; col < lp.num_col_; col++) {
     double value = 0;
-    for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+    for (HighsInt el = lp.a_matrix_.start_[col];
+         el < lp.a_matrix_.start_[col + 1]; el++) {
       HighsInt row = lp.a_matrix_.index_[el];
       value += lp.a_matrix_.value_[el] * basis_inverse_row_vector[row];
     }
@@ -1323,7 +1324,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   HighsInt numRow = lp.num_row_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
-  for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++)
+  for (HighsInt el = lp.a_matrix_.start_[col];
+       el < lp.a_matrix_.start_[col + 1]; el++)
     rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
   basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
   return HighsStatus::kOk;

@@ -202,8 +202,9 @@ static HighsInt setupProblem(gamshighs_t* gh) {
   gh->lp->a_matrix_.start_.resize(numCol + 1);
   gh->lp->a_matrix_.index_.resize(numNz);
   gh->lp->a_matrix_.value_.resize(numNz);
-  gmoGetMatrixCol(gh->gmo, &gh->lp->a_matrix_.start_[0], &gh->lp->a_matrix_.index_[0],
-                  &gh->lp->a_matrix_.value_[0], NULL);
+  gmoGetMatrixCol(gh->gmo, &gh->lp->a_matrix_.start_[0],
+                  &gh->lp->a_matrix_.index_[0], &gh->lp->a_matrix_.value_[0],
+                  NULL);
 
   gh->highs->passModel(*gh->lp);
 

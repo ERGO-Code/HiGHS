@@ -193,10 +193,11 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
     HighsInt lp1_num_nz = lp1.a_matrix_.start_[lp1.num_col_];
     return_bool = areLpColEqual(
         lp0.num_col_, &lp0.col_cost_[0], &lp0.col_lower_[0], &lp0.col_upper_[0],
-        lp0_num_nz, &lp0.a_matrix_.start_[0], &lp0.a_matrix_.index_[0], &lp0.a_matrix_.value_[0],
-        lp1.num_col_, &lp1.col_cost_[0], &lp1.col_lower_[0], &lp1.col_upper_[0],
-        lp1_num_nz, &lp1.a_matrix_.start_[0], &lp1.a_matrix_.index_[0], &lp1.a_matrix_.value_[0],
-        infinite_bound);
+        lp0_num_nz, &lp0.a_matrix_.start_[0], &lp0.a_matrix_.index_[0],
+        &lp0.a_matrix_.value_[0], lp1.num_col_, &lp1.col_cost_[0],
+        &lp1.col_lower_[0], &lp1.col_upper_[0], lp1_num_nz,
+        &lp1.a_matrix_.start_[0], &lp1.a_matrix_.index_[0],
+        &lp1.a_matrix_.value_[0], infinite_bound);
     if (!return_bool) return return_bool;
   }
   if (lp0.num_row_ > 0 && lp1.num_row_ > 0) {

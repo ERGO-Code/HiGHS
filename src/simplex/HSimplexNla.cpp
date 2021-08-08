@@ -301,8 +301,8 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
                    "pointer errors\n",
                    message.c_str(), scale_status.c_str());
       if (error0_found)
-        printf("a_matrix_.start_ pointer error: %p vs %p\n", (void*)factor_Astart,
-               (void*)&(lp_->a_matrix_.start_[0]));
+        printf("a_matrix_.start_ pointer error: %p vs %p\n",
+               (void*)factor_Astart, (void*)&(lp_->a_matrix_.start_[0]));
       if (error1_found) printf("a_matrix_.index pointer error\n");
       if (error2_found) printf("a_matrix_.value pointer error\n");
       assert(!error_found);

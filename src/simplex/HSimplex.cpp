@@ -74,8 +74,7 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
     HighsLp scaled_lp = lp;
     // Perform scaling - if it's worth it.
     scaleSimplexLp(options, scaled_lp, scale);
-    if (analyse_lp_data)
-      analyseScaledLp(options.log_options, scale, scaled_lp);
+    if (analyse_lp_data) analyseScaledLp(options.log_options, scale, scaled_lp);
     // Pass the scaled LP to Ekk
     ekk_instance.passNewLp(scaled_lp);
   } else {
@@ -533,8 +532,7 @@ void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale) {
   const double no_scaling_original_matrix_max_value = 5.0;
   double original_matrix_min_value = kHighsInf;
   double original_matrix_max_value = 0;
-  lp.a_matrix_.range(original_matrix_min_value,
-                     original_matrix_max_value);
+  lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);

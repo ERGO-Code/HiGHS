@@ -62,7 +62,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     column.array[iRow] = value;
     HighsInt iCol = base_index[iRow];
     if (iCol < num_col) {
-      for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1]; iEl++) {
+      for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
+           iEl++) {
         HighsInt index = a_matrix_index[iEl];
         rhs.array[index] += value * a_matrix_value[iEl];
       }
@@ -114,7 +115,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     column.clear();
     column.packFlag = true;
     if (iCol < num_col) {
-      for (HighsInt k = a_matrix_start[iCol]; k < a_matrix_start[iCol + 1]; k++) {
+      for (HighsInt k = a_matrix_start[iCol]; k < a_matrix_start[iCol + 1];
+           k++) {
         HighsInt index = a_matrix_index[k];
         column.array[index] = a_matrix_value[k];
         column.index[column.count++] = index;

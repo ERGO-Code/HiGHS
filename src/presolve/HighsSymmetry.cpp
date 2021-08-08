@@ -1186,13 +1186,14 @@ void HighsSymmetryDetection::loadModelAsGraph(const HighsLp& model,
   // set up row and column based incidence matrix
   HighsInt numNz = model.a_matrix_.index_.size();
   Gedge.resize(2 * numNz);
-  std::transform(model.a_matrix_.index_.begin(), model.a_matrix_.index_.end(), Gedge.begin(),
-                 [&](HighsInt rowIndex) {
+  std::transform(model.a_matrix_.index_.begin(), model.a_matrix_.index_.end(),
+                 Gedge.begin(), [&](HighsInt rowIndex) {
                    return std::make_pair(rowIndex + numCol, HighsUInt{0});
                  });
 
   Gstart.resize(numVertices + 1);
-  std::copy(model.a_matrix_.start_.begin(), model.a_matrix_.start_.end(), Gstart.begin());
+  std::copy(model.a_matrix_.start_.begin(), model.a_matrix_.start_.end(),
+            Gstart.begin());
 
   // set up the column colors and count row sizes
   std::vector<HighsInt> rowSizes(numRow);

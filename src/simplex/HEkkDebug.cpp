@@ -447,7 +447,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   for (HighsInt iCol = 0; iCol < num_col; iCol++) {
     double dual = info.workCost_[iCol];
     double value = primal_value[iCol];
-    for (HighsInt iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+    for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+         iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
       HighsInt iRow = lp.a_matrix_.index_[iEl];
       HighsInt iVar = num_col + iRow;
       double Avalue = lp.a_matrix_.value_[iEl];

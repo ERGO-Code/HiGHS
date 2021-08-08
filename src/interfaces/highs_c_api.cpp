@@ -898,7 +898,8 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
 
   if (*numcol > 0 && *numrow > 0) {
     *numnz = lp.a_matrix_.numNz();
-    memcpy(astart, &lp.a_matrix_.start_[0], num_start_entries * sizeof(HighsInt));
+    memcpy(astart, &lp.a_matrix_.start_[0],
+           num_start_entries * sizeof(HighsInt));
     memcpy(aindex, &lp.a_matrix_.index_[0], *numnz * sizeof(HighsInt));
     memcpy(avalue, &lp.a_matrix_.value_[0], *numnz * sizeof(double));
   }

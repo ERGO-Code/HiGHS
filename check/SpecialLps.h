@@ -136,7 +136,7 @@ class SpecialLps {
     lp.a_matrix_.start_ = {0, 0, 1, 2, 5, 5, 6, 7, 9, 10, 12};
     lp.a_matrix_.index_ = {4, 4, 0, 1, 3, 0, 4, 1, 5, 0, 1, 4};
     lp.a_matrix_.value_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
-                   -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
+                           -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
     lp.sense_ = ObjSense::kMinimize;
     lp.offset_ = 0;
     lp.a_matrix_.format_ = MatrixFormat::kColwise;

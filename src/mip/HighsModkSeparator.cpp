@@ -57,7 +57,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     const HighsInt start = lp.a_matrix_.start_[col];
     const HighsInt end = lp.a_matrix_.start_[col + 1];
 
-    for (HighsInt i = start; i != end; ++i) skipRow[lp.a_matrix_.index_[i]] = true;
+    for (HighsInt i = start; i != end; ++i)
+      skipRow[lp.a_matrix_.index_[i]] = true;
   }
 
   HighsCutGeneration cutGen(lpRelaxation, cutpool);

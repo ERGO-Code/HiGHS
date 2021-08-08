@@ -65,7 +65,8 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         }
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
           HighsInt row = lp.a_matrix_.index_[el];
           residual += lp.a_matrix_.value_[el] * solution[row];
         }
@@ -88,9 +89,11 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
         basis_matrix_times_solution[row] += solution[k];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
           HighsInt row = lp.a_matrix_.index_[el];
-          basis_matrix_times_solution[row] += lp.a_matrix_.value_[el] * solution[k];
+          basis_matrix_times_solution[row] +=
+              lp.a_matrix_.value_[el] * solution[k];
         }
       }
     }
@@ -118,7 +121,8 @@ void GetBasisSolvesFormRHS(HighsLp& lp, vector<HighsInt>& basic_variables,
         rhs[k] = solution[row];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
           HighsInt row = lp.a_matrix_.index_[el];
           rhs[k] += lp.a_matrix_.value_[el] * solution[row];
         }
@@ -133,7 +137,8 @@ void GetBasisSolvesFormRHS(HighsLp& lp, vector<HighsInt>& basic_variables,
         rhs[row] += solution[k];
       } else {
         HighsInt col = var;
-        for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+        for (HighsInt el = lp.a_matrix_.start_[col];
+             el < lp.a_matrix_.start_[col + 1]; el++) {
           HighsInt row = lp.a_matrix_.index_[el];
           rhs[row] += lp.a_matrix_.value_[el] * solution[k];
         }
@@ -409,8 +414,8 @@ void testBasisSolve(Highs& highs) {
     REQUIRE(highs_status == HighsStatus::kOk);
     // Check solution
     for (HighsInt row = 0; row < numRow; row++) rhs[row] = 0;
-    for (HighsInt el = lp.a_matrix_.start_[check_col]; el < lp.a_matrix_.start_[check_col + 1];
-         el++)
+    for (HighsInt el = lp.a_matrix_.start_[check_col];
+         el < lp.a_matrix_.start_[check_col + 1]; el++)
       rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs,
                                                 solution_col, false);
