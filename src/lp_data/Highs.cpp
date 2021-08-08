@@ -250,8 +250,8 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp.setMatrixDimensions();
   assert(lp.dimensionsOk("Highs::passModel"));
 
-  // Check that the value of q_format is valid - once we have multiple formats
-  //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
+  // Check that the Hessian format is valid
+  if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
   return_status =
       interpretCallStatus(setFormat(lp), return_status, "setFormat");
@@ -267,7 +267,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   if (return_status == HighsStatus::kError) return return_status;
   if (hessian.dim_) {
     // Clear any zero Hessian
-    if (hessian.q_start_[hessian.dim_] == 0) {
+    if (hessian.numNz() == 0) {
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Hessian has dimension %" HIGHSINT_FORMAT
                    " but no nonzeros, so is ignored\n",

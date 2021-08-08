@@ -61,10 +61,6 @@ bool HighsSparseMatrix::isColwise() const {
 HighsInt HighsSparseMatrix::numNz() const {
   assert(this->format_ != MatrixFormat::kNone);
   if (this->isColwise()) {
-    if ((HighsInt)this->start_.size() < this->num_col_ + 1) {
-      printf("%d = this->start_.size() < this->num_col_ + 1 = %d\n",
-             (int)this->start_.size(), (int)this->num_col_ + 1);
-    }
     assert((HighsInt)this->start_.size() >= this->num_col_ + 1);
     return this->start_[this->num_col_];
   } else {

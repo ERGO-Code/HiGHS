@@ -72,6 +72,10 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     unsigned int qnnz = 0;
+    // hessian is initialised with q_start[0] for fictitious column 0,
+    // so have to clear this before pushing back q_start
+    hessian.q_start_.clear();
+    assert((int)hessian.q_start_.size() == 0);
     for (std::shared_ptr<Variable> var : m.variables) {
       hessian.q_start_.push_back(qnnz);
 
@@ -105,6 +109,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     HighsInt nz = 0;
+    // lp.a_matrix_ is initialised with start[0] for fictitious column
+    // 0, so have to clear this before pushing back start
     lp.a_matrix_.start_.clear();
     assert((int)lp.a_matrix_.start_.size() == 0);
     for (HighsInt i = 0; i < lp.num_col_; i++) {

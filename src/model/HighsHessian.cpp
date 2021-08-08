@@ -23,7 +23,17 @@ void HighsHessian::clear() {
   this->q_start_.clear();
   this->q_index_.clear();
   this->q_value_.clear();
+  this->format_ = HessianFormat::kTriangular;
+  this->q_start_.assign(1, 0);
 }
+
+HighsInt HighsHessian::numNz() const {
+  assert(this->formatOk());
+  assert((HighsInt)this->q_start_.size() >= this->dim_ + 1);
+  return this->q_start_[this->dim_];
+}
+
+
 void HighsHessian::print() {
   HighsInt num_nz = 0;
   if (dim_ > 0) num_nz = this->q_start_[dim_];
