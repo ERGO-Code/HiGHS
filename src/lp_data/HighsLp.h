@@ -31,9 +31,6 @@ class HighsLp {
   HighsInt num_col_ = 0;
   HighsInt num_row_ = 0;
 
-  std::vector<HighsInt> a_start_;
-  std::vector<HighsInt> a_index_;
-  std::vector<double> a_value_;
   std::vector<double> col_cost_;
   std::vector<double> col_lower_;
   std::vector<double> col_upper_;
@@ -42,7 +39,6 @@ class HighsLp {
 
   HighsSparseMatrix a_matrix_;
 
-  MatrixFormat format_ = MatrixFormat::kNone;
   ObjSense sense_ = ObjSense::kMinimize;
   double offset_ = 0;
 
@@ -61,10 +57,7 @@ class HighsLp {
   bool isMip() const;
   double objectiveValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
-  bool dimensionsAndMatrixOk(std::string message) const;
   bool dimensionsOk(std::string message) const;
-  bool matrixOk(std::string message) const;
-  void matrixCopy(const bool to_a_matrix);
   bool equalScale(std::string message, const SimplexScale& scale) const;
   void clear();
 };

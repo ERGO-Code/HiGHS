@@ -46,10 +46,6 @@ bool HighsLp::equalButForNames(const HighsLp& lp) const {
   equal = this->col_lower_ == lp.col_lower_ && equal;
   equal = this->row_upper_ == lp.row_upper_ && equal;
   equal = this->row_lower_ == lp.row_lower_ && equal;
-  equal = this->a_start_ == lp.a_start_ && equal;
-  equal = this->a_index_ == lp.a_index_ && equal;
-  equal = this->a_value_ == lp.a_value_ && equal;
-  equal = this->format_ == lp.format_ && equal;
 
   equal = this->a_matrix_ == lp.a_matrix_;
 
@@ -76,10 +72,6 @@ void HighsLp::setMatrixDimensions() {
   this->a_matrix_.num_row_ = this->num_row_;
 }
 
-bool HighsLp::dimensionsAndMatrixOk(std::string message) const {
-  return dimensionsOk(message) && matrixOk(message);
-}
-
 bool HighsLp::dimensionsOk(std::string message) const {
   bool ok = true;
   const HighsInt num_col = this->num_col_;
@@ -95,7 +87,7 @@ bool HighsLp::dimensionsOk(std::string message) const {
   HighsInt col_cost_size = this->col_cost_.size();
   HighsInt col_lower_size = this->col_lower_.size();
   HighsInt col_upper_size = this->col_upper_.size();
-  HighsInt matrix_start_size = this->a_start_.size();
+  HighsInt matrix_start_size = this->a_matrix_.start_.size();
   bool legal_col_cost_size = col_cost_size >= num_col;
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
@@ -103,39 +95,30 @@ bool HighsLp::dimensionsOk(std::string message) const {
   ok = legal_col_lower_size && ok;
   ok = legal_col_upper_size && ok;
 
-  bool legal_matrix_start_size = false;
-  // Don't expect the matrix_start_size or format to be legal if there
-  // are no columns or rows
-  if (num_col > 0 || num_row > 0) {
-    HighsInt matrix_format = (HighsInt)this->format_;
-    bool legal_matrix_format = matrix_format > 0;
-    ok = legal_matrix_format && ok;
-    if (this->format_ == MatrixFormat::kColwise) {
-      legal_matrix_start_size = matrix_start_size >= num_col + 1;
-    } else {
-      assert(this->format_ == MatrixFormat::kRowwise);
-      legal_matrix_start_size = matrix_start_size >= num_row + 1;
-    }
-    ok = legal_matrix_start_size && ok;
-  }
-  if (matrix_start_size > 0) {
-    // Check whether the first start is zero
-    ok = !this->a_start_[0] && ok;
-  }
-  HighsInt num_nz = 0;
-  if (legal_matrix_start_size) num_nz = this->a_start_[num_col];
-  bool legal_num_nz = num_nz >= 0;
-  if (!legal_num_nz) {
-    ok = false;
+  bool legal_matrix_format = this->a_matrix_.format_ != MatrixFormat::kNone;
+  ok = legal_matrix_format && ok;
+  bool legal_matrix_start_size;
+  if (this->a_matrix_.isColwise()) {
+    legal_matrix_start_size = matrix_start_size >= num_col + 1;
   } else {
-    HighsInt matrix_index_size = this->a_index_.size();
-    HighsInt matrix_value_size = this->a_value_.size();
-    bool legal_matrix_index_size = matrix_index_size >= num_nz;
-    bool legal_matrix_value_size = matrix_value_size >= num_nz;
-
-    ok = legal_matrix_index_size && ok;
-    ok = legal_matrix_value_size && ok;
+    assert(this->a_matrix_.isRowwise());
+    legal_matrix_start_size = matrix_start_size >= num_row + 1;
   }
+  ok = legal_matrix_start_size && ok;
+
+  // Check whether the first start is zero
+  ok = !this->a_matrix_.start_[0] && ok;
+
+  HighsInt num_nz = this->a_matrix_.numNz();
+  bool legal_num_nz = num_nz >= 0;
+  ok = legal_num_nz && ok;
+
+  HighsInt matrix_index_size = this->a_matrix_.index_.size();
+  HighsInt matrix_value_size = this->a_matrix_.value_.size();
+  bool legal_matrix_index_size = matrix_index_size >= num_nz;
+  bool legal_matrix_value_size = matrix_value_size >= num_nz;
+  ok = legal_matrix_index_size && ok;
+  ok = legal_matrix_value_size && ok;
 
   HighsInt row_lower_size = this->row_lower_.size();
   HighsInt row_upper_size = this->row_upper_.size();
@@ -148,42 +131,6 @@ bool HighsLp::dimensionsOk(std::string message) const {
   bool legal_a_matrix_num_row = this->a_matrix_.num_row_ == num_row;
   ok = legal_a_matrix_num_col && ok;
   ok = legal_a_matrix_num_row && ok;
-
-  HighsInt a_matrix_start_size = this->a_matrix_.start_.size();
-  bool legal_a_matrix_start_size = false;
-  // Don't expect the matrix_start_size or format to be legal if there
-  // are no columns or rows
-  if (num_col > 0 || num_row > 0) {
-    HighsInt a_matrix_format = (HighsInt)this->a_matrix_.format_;
-    bool legal_a_matrix_format = a_matrix_format > 0;
-    ok = legal_a_matrix_format && ok;
-    if (this->a_matrix_.format_ == MatrixFormat::kColwise) {
-      legal_a_matrix_start_size = a_matrix_start_size >= num_col + 1;
-    } else {
-      assert(this->a_matrix_.format_ == MatrixFormat::kRowwise);
-      legal_a_matrix_start_size = a_matrix_start_size >= num_row + 1;
-    }
-    ok = legal_a_matrix_start_size && ok;
-  }
-  if (a_matrix_start_size > 0) {
-    // Check whether the first start is zero
-    ok = !this->a_matrix_.start_[0] && ok;
-  }
-  HighsInt a_matrix_num_nz = 0;
-  if (legal_matrix_start_size)
-    a_matrix_num_nz = this->a_matrix_.start_[num_col];
-  bool legal_a_matrix_num_nz = a_matrix_num_nz >= 0;
-  if (!legal_a_matrix_num_nz) {
-    ok = false;
-  } else {
-    HighsInt a_matrix_index_size = this->a_matrix_.index_.size();
-    HighsInt a_matrix_value_size = this->a_matrix_.value_.size();
-    bool legal_a_matrix_index_size = a_matrix_index_size >= num_nz;
-    bool legal_a_matrix_value_size = a_matrix_value_size >= num_nz;
-
-    ok = legal_a_matrix_index_size && ok;
-    ok = legal_a_matrix_value_size && ok;
-  }
 
   HighsInt scale_strategy = (HighsInt)this->scale_.strategy;
   bool legal_scale_strategy = scale_strategy >= 0;
@@ -207,37 +154,6 @@ bool HighsLp::dimensionsOk(std::string message) const {
   return ok;
 }
 
-bool HighsLp::matrixOk(std::string message) const {
-  bool ok = true;
-  ok = this->a_matrix_.format_ == this->format_ && ok;
-  ok = this->a_matrix_.num_col_ == this->num_col_ && ok;
-  ok = this->a_matrix_.num_row_ == this->num_row_ && ok;
-  ok = this->a_matrix_.start_ == this->a_start_ && ok;
-  ok = this->a_matrix_.index_ == this->a_index_ && ok;
-  ok = this->a_matrix_.value_ == this->a_value_ && ok;
-  if (!ok) {
-    printf("HighsLp::matrixOk (%s) not OK\n", message.c_str());
-  }
-  return ok;
-}
-
-void HighsLp::matrixCopy(const bool to_a_matrix) {
-  if (this->format_ != MatrixFormat::kNone) {
-    this->a_matrix_.num_col_ = this->num_col_;
-    this->a_matrix_.num_row_ = this->num_row_;
-    this->a_matrix_.format_ = this->format_;
-    if (to_a_matrix) {
-      this->a_matrix_.start_ = this->a_start_;
-      this->a_matrix_.index_ = this->a_index_;
-      this->a_matrix_.value_ = this->a_value_;
-    } else {
-      this->a_start_ = this->a_matrix_.start_;
-      this->a_index_ = this->a_matrix_.index_;
-      this->a_value_ = this->a_matrix_.value_;
-    }
-  }
-}
-
 bool HighsLp::equalScale(std::string message, const SimplexScale& scale) const {
   bool equal = true;
   equal = this->scale_.col == scale.col && equal;
@@ -252,9 +168,6 @@ void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;
 
-  this->a_start_.clear();
-  this->a_index_.clear();
-  this->a_value_.clear();
   this->col_cost_.clear();
   this->col_lower_.clear();
   this->col_upper_.clear();
@@ -265,7 +178,6 @@ void HighsLp::clear() {
 
   this->sense_ = ObjSense::kMinimize;
   this->offset_ = 0;
-  this->format_ = MatrixFormat::kNone;
 
   this->model_name_ = "";
 

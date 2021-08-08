@@ -27,12 +27,12 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Assess the Hessian dimensions and vector sizes, returning on error
-  call_status = assessMatrixDimensions(options.log_options, "Hessian",
-                                       hessian.dim_, hessian.q_start_,
-                                       hessian.q_index_, hessian.q_value_);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrixDimensions");
-  if (return_status == HighsStatus::kError) return return_status;
+  //  call_status = assessMatrixDimensions(options.log_options, "Hessian",
+  //                                       hessian.dim_, hessian.q_start_,
+  //                                       hessian.q_index_, hessian.q_value_);
+  //  return_status =
+  //      interpretCallStatus(call_status, return_status, "assessMatrixDimensions");
+  //  if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
   if (hessian.dim_ == 0) return HighsStatus::kOk;

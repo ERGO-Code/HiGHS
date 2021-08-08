@@ -117,7 +117,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
       }
     }
     lp.a_matrix_.start_.push_back(nz);
-    lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::kMinimize
                                                : ObjSense::kMaximize;
   } catch (std::invalid_argument& ex) {
@@ -151,7 +151,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
                                            const HighsModel& model) {
   const HighsLp& lp = model.lp_;
-  assert(lp.format_ != MatrixFormat::kRowwise);
+  assert(lp.a_matrix_.isRowwise());
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file

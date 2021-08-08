@@ -20,13 +20,6 @@
 #include "Highs.h"
 #include "lp_data/HighsStatus.h"
 
-HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
-                                   const std::string matrix_name,
-                                   const HighsInt num_vec,
-                                   const vector<HighsInt>& matrix_start,
-                                   const vector<HighsInt>& matrix_index,
-                                   const vector<double>& matrix_value);
-
 HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          const std::string matrix_name, const HighsInt vec_dim,
                          const HighsInt num_vec, vector<HighsInt>& matrix_start,

@@ -266,9 +266,9 @@ void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
       HighsInt iCol = iVar;
       if (have_dual_solution)
         dual_activities[iCol] = gradient[iCol];  // lp.col_cost_[iCol];
-      for (HighsInt el = lp.a_start_[iCol]; el < lp.a_start_[iCol + 1]; el++) {
-        HighsInt iRow = lp.a_index_[el];
-        double Avalue = lp.a_value_[el];
+      for (HighsInt el = lp.a_matrix_.start_[iCol]; el < lp.a_matrix_.start_[iCol + 1]; el++) {
+        HighsInt iRow = lp.a_matrix_.index_[el];
+        double Avalue = lp.a_matrix_.value_[el];
         primal_activities[iRow] += value * Avalue;
         // @FlipRowDual += became -=
         if (have_dual_solution)
@@ -484,9 +484,9 @@ HighsStatus ipxSolutionToHighsSolution(
     highs_solution.col_value[col] = ipx_col_value[col];
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
-      for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-        HighsInt row = lp.a_index_[el];
-        row_activity[row] += highs_solution.col_value[col] * lp.a_value_[el];
+      for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+        HighsInt row = lp.a_matrix_.index_[el];
+        row_activity[row] += highs_solution.col_value[col] * lp.a_matrix_.value_[el];
       }
     }
   }
@@ -604,9 +604,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     }
     if (get_row_activities) {
       // Accumulate row activities to assign value to free rows
-      for (HighsInt el = lp.a_start_[col]; el < lp.a_start_[col + 1]; el++) {
-        HighsInt row = lp.a_index_[el];
-        row_activity[row] += highs_solution.col_value[col] * lp.a_value_[el];
+      for (HighsInt el = lp.a_matrix_.start_[col]; el < lp.a_matrix_.start_[col + 1]; el++) {
+        HighsInt row = lp.a_matrix_.index_[el];
+        row_activity[row] += highs_solution.col_value[col] * lp.a_matrix_.value_[el];
       }
     }
     if (highs_basis.col_status[col] == HighsBasisStatus::kBasic)

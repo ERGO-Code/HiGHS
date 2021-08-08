@@ -85,7 +85,7 @@ void reportModelStatsOrError(const HighsLogOptions& log_options,
         problem_type = "LP  ";
       }
     }
-    const HighsInt a_num_nz = lp.a_start_[lp.num_col_];
+    const HighsInt a_num_nz = lp.a_matrix_.numNz();
     HighsInt q_num_nz = 0;
     if (hessian.dim_) q_num_nz = hessian.q_start_[lp.num_col_];
     if (*log_options.log_dev_level) {

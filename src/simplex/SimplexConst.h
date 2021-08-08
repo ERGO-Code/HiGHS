@@ -17,7 +17,6 @@
 #define SIMPLEX_SIMPLEXCONST_H_
 
 #include "util/HighsInt.h"
-const bool kill_a_ = true;
 
 enum class SimplexAlgorithm { kPrimal = 0, kDual };
 

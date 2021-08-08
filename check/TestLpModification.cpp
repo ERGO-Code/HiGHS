@@ -187,7 +187,7 @@ bool areLpRowEqual(const HighsInt num_row0, const double* rowLower0,
 bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
                 const double infinite_bound) {
   bool return_bool;
-  if (lp0.format_ != lp1.format_) return false;
+  if (lp0.a_matrix_.format_ != lp1.a_matrix_.format_) return false;
   if (lp0.num_col_ > 0 && lp1.num_col_ > 0) {
     HighsInt lp0_num_nz = lp0.a_matrix_.start_[lp0.num_col_];
     HighsInt lp1_num_nz = lp1.a_matrix_.start_[lp1.num_col_];

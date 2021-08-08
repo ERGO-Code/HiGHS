@@ -238,25 +238,17 @@ HighsStatus Highs::passModel(HighsModel model) {
     // rows. Clearly the matrix is empty, so may have no orientation
     // or starts assigned. HiGHS assumes that such a model will have
     // null starts, so make it column-wise
-    lp.format_ = MatrixFormat::kColwise;
-    lp.a_start_.assign(lp.num_col_ + 1, 0);
-    lp.a_index_.clear();
-    lp.a_value_.clear();
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
     lp.a_matrix_.index_.clear();
     lp.a_matrix_.value_.clear();
   } else {
-    // Matrix has rows and columns, so a_format must be valid, even if
-    // there are no nonzeros. However, the number of nonzeros can only
-    // be found from a valid setting of a_format! So, pass 1 as the
-    // number of nonzeros to force the check of a_format
-    if (!aFormatOk(1, (HighsInt)lp.format_)) return HighsStatus::kError;
+    // Matrix has rows and columns, so a_format must be valid
+    if (lp.a_matrix_.formatOk()) return HighsStatus::kError;
   }
-  // Dimensions in a_matrix_ may not be set, but take them from lp.
+  // Dimensions in a_matrix_ may not be set, so take them from lp.
   lp.setMatrixDimensions();
-  const bool to_a_matrix = false;
-  lp.matrixCopy(to_a_matrix);
-  assert(lp.dimensionsAndMatrixOk("Highs::passModel"));
+  assert(lp.dimensionsOk("Highs::passModel"));
 
   // Check that the value of q_format is valid - once we have multiple formats
   //  if (!qFormatOk(q_num_nz, hessian.format_) return HighsStatus::kError;
@@ -268,7 +260,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
-  assert(lp.dimensionsAndMatrixOk("Highs::passModel - after assessLp"));
+  assert(lp.dimensionsOk("Highs::passModel - after assessLp"));
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
@@ -308,8 +300,8 @@ HighsStatus Highs::passModel(
     const double* q_value, const HighsInt* integrality) {
   HighsModel model;
   HighsLp& lp = model.lp_;
-  // Check that the values of a_format and q_format are valid
-  if (!aFormatOk(num_nz, a_format)) return HighsStatus::kError;
+  // Check that the formats of the constraint matrix and Hessian are valid
+  if (lp.a_matrix_.formatOk()) return HighsStatus::kError;
   if (!qFormatOk(q_num_nz, q_format)) return HighsStatus::kError;
 
   bool a_rowwise = false;
@@ -348,12 +340,10 @@ HighsStatus Highs::passModel(
   if (a_rowwise) {
     lp.a_matrix_.start_.resize(num_row + 1);
     lp.a_matrix_.start_[num_row] = num_nz;
-    lp.format_ = MatrixFormat::kRowwise;
     lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   } else {
     lp.a_matrix_.start_.resize(num_col + 1);
     lp.a_matrix_.start_[num_col] = num_nz;
-    lp.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
   }
   if (sense == (HighsInt)ObjSense::kMaximize) {
@@ -757,8 +747,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
 	reduced_lp.setMatrixDimensions();
-	const bool to_a_matrix = false;
-        reduced_lp.matrixCopy(to_a_matrix);
+	assert(reduced_lp.dimensionsOk("Reduced LP"));
         // Validate the reduced LP
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
@@ -961,7 +950,6 @@ HighsStatus Highs::run() {
                       hmos_[original_hmo].basis_);
 
           hmos_[solved_hmo].ekk_instance_.lp_name_ = "Postsolve LP";
-          hmos_[solved_hmo].lp_.matrixOk("Postsolve LP");
           // Set up the iteration count and timing records so that
           // adding the corresponding values after callSolveLp gives
           // difference
@@ -2255,9 +2243,9 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
   if (!model_index_ok) return HighsStatus::kError;
 
   HighsModelObject& model = hmos_[model_index];
-  assert(model_.lp_.dimensionsAndMatrixOk("Highs::callSolveLp"));
-  // Check that the model isn't row-wise
-  assert(model_.lp_.format_ != MatrixFormat::kRowwise);
+  assert(model_.lp_.dimensionsOk("Highs::callSolveLp"));
+  // Check that the model is column-wise
+  assert(model_.lp_.a_matrix_.isColwise());
 
   // Copy the LP solver iteration counts to this model so that they
   // are updated
@@ -2276,10 +2264,10 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
 
 HighsStatus Highs::callSolveQp() {
   HighsStatus return_status = HighsStatus::kOk;
-  // Check that the model isn't row-wise - not yet in master
+  // Check that the model is column-wise
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
-  assert(lp.format_ != MatrixFormat::kRowwise);
+  assert(model_.lp_.a_matrix_.isColwise());
   if (hessian.dim_ != lp.num_col_) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "Hessian dimension = %" HIGHSINT_FORMAT
@@ -2439,8 +2427,8 @@ HighsStatus Highs::callSolveMip() {
   // Run the MIP solver
   HighsInt log_dev_level = options_.log_dev_level;
   //  options_.log_dev_level = kHighsLogDevLevelInfo;
-  // Check that the model isn't row-wise
-  assert(model_.lp_.format_ != MatrixFormat::kRowwise);
+  // Check that the model is column-wise
+  assert(model_.lp_.a_matrix_.isColwise());
   HighsMipSolver solver(options_, model_.lp_, solution_);
   solver.run();
   options_.log_dev_level = log_dev_level;

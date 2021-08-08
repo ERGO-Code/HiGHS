@@ -78,7 +78,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                    "matrix not found in EMS file\n");
       return FilereaderRetcode::kParserError;
     }
-    lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     lp.a_matrix_.start_.resize(numCol + 1);
     lp.a_matrix_.index_.resize(AcountX);
     lp.a_matrix_.value_.resize(AcountX);

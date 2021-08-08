@@ -1076,12 +1076,6 @@ void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
     lp.col_lower_[iCol] /= scale.col[iCol];
     lp.col_upper_[iCol] /= scale.col[iCol];
     lp.col_cost_[iCol] *= scale.col[iCol];
-    if (!kill_a_) {
-      for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++) {
-	HighsInt iRow = lp.a_index_[iEl];
-	lp.a_value_[iEl] *= (scale.col[iCol] * scale.row[iRow]);
-      }
-    }
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     lp.row_lower_[iRow] *= scale.row[iRow];
@@ -1100,12 +1094,6 @@ void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale,
     lp.col_lower_[iCol] *= scale.col[iCol];
     lp.col_upper_[iCol] *= scale.col[iCol];
     lp.col_cost_[iCol] /= scale.col[iCol];
-    if (!kill_a_) {
-      for (HighsInt iEl = lp.a_start_[iCol]; iEl < lp.a_start_[iCol + 1]; iEl++) {
-	HighsInt iRow = lp.a_index_[iEl];
-	lp.a_value_[iEl] /= (scale.col[iCol] * scale.row[iRow]);
-      }
-    }
   }
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     lp.row_lower_[iRow] /= scale.row[iRow];

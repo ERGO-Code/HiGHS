@@ -65,7 +65,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       lp.col_cost_, lp.col_lower_, lp.col_upper_, lp.row_lower_, lp.row_upper_,
       lp.integrality_, lp.col_names_, lp.row_names_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) {
-    lp.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
     if (setFormat(lp) != HighsStatus::kOk)
       return FilereaderRetcode::kParserError;
   }
@@ -89,6 +89,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
                                             const HighsModel& model) {
-  assert(model.lp_.format_ != MatrixFormat::kRowwise);
+  assert(model.lp_.a_matrix_.isColwise());
   return writeModelAsMps(options, filename, model);
 }

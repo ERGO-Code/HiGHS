@@ -882,7 +882,7 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   }
 
   // Save the original orientation so that it is recovered
-  MatrixFormat original_a_format = lp.format_;
+  MatrixFormat original_a_format = lp.a_matrix_.format_;
   // Determine the desired orientation and number of start entries to
   // be copied
   MatrixFormat desired_a_format = MatrixFormat::kColwise;
@@ -897,14 +897,14 @@ HighsInt Highs_getModel(void* highs, const HighsInt a_format,
   if (return_status != HighsStatuskOk) return return_status;
 
   if (*numcol > 0 && *numrow > 0) {
-    memcpy(astart, &lp.a_matrix_.start_[0], num_start_entries * sizeof(HighsInt));
     *numnz = lp.a_matrix_.numNz();
+    memcpy(astart, &lp.a_matrix_.start_[0], num_start_entries * sizeof(HighsInt));
     memcpy(aindex, &lp.a_matrix_.index_[0], *numnz * sizeof(HighsInt));
     memcpy(avalue, &lp.a_matrix_.value_[0], *numnz * sizeof(double));
   }
   if (hessian.dim_ > 0) {
-    memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));
     *q_num_nz = hessian.q_start_[*numcol];
+    memcpy(qstart, &hessian.q_start_[0], *numcol * sizeof(HighsInt));
     memcpy(qindex, &hessian.q_index_[0], *q_num_nz * sizeof(HighsInt));
     memcpy(qvalue, &hessian.q_value_[0], *q_num_nz * sizeof(double));
   }

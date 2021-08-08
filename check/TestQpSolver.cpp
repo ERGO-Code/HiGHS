@@ -297,7 +297,6 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   lp.a_matrix_.start_ = {0, 1, 1, 2};
   lp.a_matrix_.index_ = {0, 0};
   lp.a_matrix_.value_ = {1.0, 1.0};
-  lp.format_ = MatrixFormat::kColwise;
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
   return_status = highs.passModel(local_model);
   REQUIRE(return_status == HighsStatus::kOk);

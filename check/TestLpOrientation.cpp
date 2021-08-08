@@ -51,7 +51,6 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   const HighsLp& highs_lp = highs.getLp();
   const HighsInfo& info = highs.getInfo();
 
-  REQUIRE(highs_lp.format_ == MatrixFormat::kNone);
   REQUIRE(highs_lp.a_matrix_.format_ == MatrixFormat::kColwise);
 
   // Set up the LP externally
@@ -66,7 +65,6 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   lp.a_matrix_.start_ = Astart;
   lp.a_matrix_.index_ = Aindex;
   lp.a_matrix_.value_ = Avalue;
-  lp.format_ = MatrixFormat::kColwise;
   lp.a_matrix_.format_ = MatrixFormat::kColwise;
   // Have to set the matrix dimension so that setFormat can be used
   lp.a_matrix_.num_col_ = num_col;

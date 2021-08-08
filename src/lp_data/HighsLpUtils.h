@@ -19,10 +19,11 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"
 
-class HighsLp;
+//class HighsLp;
 struct SimplexScale;
 struct HighsBasis;
 struct HighsSolution;
@@ -92,31 +93,14 @@ HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
 HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
                                 const HighsInt row, const double rowScale);
 
-void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
-                    const HighsInt num_new_vec, const HighsInt num_new_nz,
-                    const HighsInt* XAstart, const HighsInt* XAindex,
-                    const double* XAvalue);
-
 HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
                                   const vector<double>& colCost,
                                   const vector<double>& colLower,
                                   const vector<double>& colUpper);
 
-HighsStatus appendColsToLpMatrix(HighsLp& lp, const HighsInt num_new_col,
-                                 const HighsInt num_new_nz,
-                                 const HighsInt* XAstart,
-                                 const HighsInt* XAindex,
-                                 const double* XAvalue);
-
 HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
                                   const vector<double>& rowLower,
                                   const vector<double>& rowUpper);
-
-HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
-                                 const HighsInt num_new_nz,
-                                 const HighsInt* XARstart,
-                                 const HighsInt* XARindex,
-                                 const double* XARvalue);
 
 HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection);
@@ -125,19 +109,11 @@ HighsStatus deleteColsFromLpVectors(
     const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_col,
     const HighsIndexCollection& index_collection);
 
-HighsStatus deleteColsFromLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const HighsIndexCollection& index_collection);
-
 HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
 HighsStatus deleteRowsFromLpVectors(
     const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_row,
-    const HighsIndexCollection& index_collection);
-
-HighsStatus deleteRowsFromLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp,
     const HighsIndexCollection& index_collection);
 
 HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
@@ -274,8 +250,6 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
-HighsStatus setFormat(
-    HighsLp& lp, const MatrixFormat desired_format = MatrixFormat::kColwise);
-void ensureColWise(HighsLp& lp);
-void ensureRowWise(HighsLp& lp);
+HighsStatus setFormat(HighsLp& lp,
+		      const MatrixFormat desired_format = MatrixFormat::kColwise);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

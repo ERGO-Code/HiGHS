@@ -38,7 +38,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // If the LP has no columns there is nothing left to test
   if (lp.num_col_ == 0) return HighsStatus::kOk;
-  assert(lp.format_ == MatrixFormat::kColwise);
+  assert(lp.a_matrix_.isColwise());
 
   // From here, any LP has lp.num_col_ > 0 and lp.a_matrix_.start_[lp.num_col_] exists
   // (as the number of nonzeros)
@@ -108,103 +108,11 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 }
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
-  HighsStatus return_status = HighsStatus::kOk;
-
-  // Use error_found to track whether an error has been found in multiple tests
-  bool error_found = false;
-
-  // Don't expect the matrix_start_size to be legal if there are no columns
-  bool check_matrix_start_size = lp.num_col_ > 0;
-
-  // Assess column-related dimensions
-  bool legal_num_col = lp.num_col_ >= 0;
-  if (!legal_num_col) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "LP has illegal number of cols = %" HIGHSINT_FORMAT "\n",
-                 lp.num_col_);
-    error_found = true;
+  if (lp.dimensionsOk("")) {
+    return HighsStatus::kOk;
   } else {
-    // Check the size of the column vectors
-    HighsInt col_cost_size = lp.col_cost_.size();
-    HighsInt col_lower_size = lp.col_lower_.size();
-    HighsInt col_upper_size = lp.col_upper_.size();
-    HighsInt matrix_start_size = lp.a_matrix_.start_.size();
-    bool legal_col_cost_size = col_cost_size >= lp.num_col_;
-    bool legal_col_lower_size = col_lower_size >= lp.num_col_;
-    bool legal_col_upper_size = col_lower_size >= lp.num_col_;
-    bool legal_matrix_start_size = lp.format_ == MatrixFormat::kNone ||
-                                   matrix_start_size >= lp.num_col_ + 1;
-    if (!legal_col_cost_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal col_cost size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   col_cost_size, lp.num_col_);
-      error_found = true;
-    }
-    if (!legal_col_lower_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal col_lower size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   col_lower_size, lp.num_col_);
-      error_found = true;
-    }
-    if (!legal_col_upper_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal col_upper size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   col_upper_size, lp.num_col_);
-      error_found = true;
-    }
-    if (!legal_matrix_start_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal matrix_start size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_start_size, lp.num_col_ + 1);
-      error_found = true;
-    }
+    return HighsStatus::kError;
   }
-
-  // Assess row-related dimensions
-  bool legal_num_row = lp.num_row_ >= 0;
-  if (!legal_num_row) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "LP has illegal number of rows = %" HIGHSINT_FORMAT "\n",
-                 lp.num_row_);
-    error_found = true;
-  } else {
-    HighsInt row_lower_size = lp.row_lower_.size();
-    HighsInt row_upper_size = lp.row_upper_.size();
-    bool legal_row_lower_size = row_lower_size >= lp.num_row_;
-    bool legal_row_upper_size = row_lower_size >= lp.num_row_;
-    if (!legal_row_lower_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal rowLower size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   row_lower_size, lp.num_row_);
-      error_found = true;
-    }
-    if (!legal_row_upper_size) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "LP has illegal rowUpper size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   row_upper_size, lp.num_row_);
-      error_found = true;
-    }
-  }
-
-  // Assess matrix-related dimensions
-  if (assessMatrixDimensions(options.log_options, "LP", lp.num_col_,
-                             lp.a_matrix_.start_, lp.a_matrix_.index_,
-                             lp.a_matrix_.value_) == HighsStatus::kError) {
-    error_found = true;
-  }
-  assert(!error_found);
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
-
-  return return_status;
 }
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
@@ -798,202 +706,18 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   return HighsStatus::kOk;
 }
 
-void appendToMatrix(HighsLp& lp, const HighsInt num_vec,
-                    const HighsInt num_new_vec, const HighsInt num_new_nz,
-                    const HighsInt* XAstart, const HighsInt* XAindex,
-                    const double* XAvalue) {
-  // Append packed vectors to a matrix
-  // Determine the new number of vectors in the matrix and resize the
-  // starts accordingly.
-  HighsInt new_num_vec = num_vec + num_new_vec;
-  lp.a_matrix_.start_.resize(new_num_vec + 1);
-  // If adding vectors to an empty matrix then introduce the start for the
-  // fictitious vector 0
-  if (num_vec == 0) lp.a_matrix_.start_[0] = 0;
-
-  // Determine the current number of nonzeros and the new number of nonzeros
-  HighsInt current_num_nz = lp.a_matrix_.start_[num_vec];
-  HighsInt new_num_nz = current_num_nz + num_new_nz;
-
-  // Append the starts of the new vectors
-  if (num_new_nz) {
-    // Nontrivial number of nonzeros being added, so use XAstart
-    assert(XAstart != NULL);
-    for (HighsInt vec = 0; vec < num_new_vec; vec++)
-      lp.a_matrix_.start_[num_vec + vec] = current_num_nz + XAstart[vec];
-  } else {
-    // No nonzeros being added, so XAstart may be null, but entries of
-    // zero are implied.
-    for (HighsInt vec = 0; vec < num_new_vec; vec++)
-      lp.a_matrix_.start_[num_vec + vec] = current_num_nz;
-  }
-  lp.a_matrix_.start_[num_vec + num_new_vec] = new_num_nz;
-
-  // If no nonzeros are being added then there's nothing else to do
-  if (num_new_nz <= 0) return;
-
-  // Adding a non-trivial matrix: resize the matrix arrays accordingly
-  lp.a_matrix_.index_.resize(new_num_nz);
-  lp.a_matrix_.value_.resize(new_num_nz);
-  // Copy in the new indices and values
-  for (HighsInt el = 0; el < num_new_nz; el++) {
-    lp.a_matrix_.index_[current_num_nz + el] = XAindex[el];
-    lp.a_matrix_.value_[current_num_nz + el] = XAvalue[el];
-  }
-}
-
-HighsStatus appendColsToLpMatrix(HighsLp& lp, const HighsInt num_new_col,
-                                 const HighsInt num_new_nz,
-                                 const HighsInt* XAstart,
-                                 const HighsInt* XAindex,
-                                 const double* XAvalue) {
-  if (num_new_col < 0) return HighsStatus::kError;
-  if (num_new_col == 0) return HighsStatus::kOk;
-  // Check that nonzeros aren't being appended to a matrix with no rows
-  if (num_new_nz > 0 && lp.num_row_ <= 0) return HighsStatus::kError;
-  // Adding a positive number of columns to a matrix
-  if (lp.format_ == MatrixFormat::kNone) {
-    // LP is currently empty, store the matrix column-wise
-    assert(lp.num_col_ == 0 && lp.num_row_ == 0);
-    lp.format_ = MatrixFormat::kColwise;
-  } else {
-    // Ensure that the matrix is stored column-wise
-    setFormat(lp);
-  }
-  // Determine the new number of columns in the matrix and resize the
-  // starts accordingly.
-  HighsInt new_num_col = lp.num_col_ + num_new_col;
-  lp.a_matrix_.start_.resize(new_num_col + 1);
-  // If adding columns to an empty LP then introduce the start for the
-  // fictitious column 0
-  if (lp.num_col_ == 0) lp.a_matrix_.start_[0] = 0;
-
-  // Determine the current number of nonzeros and the new number of nonzeros
-  HighsInt current_num_nz = lp.a_matrix_.start_[lp.num_col_];
-  HighsInt new_num_nz = current_num_nz + num_new_nz;
-
-  // Append the starts of the new columns
-  if (num_new_nz) {
-    // Nontrivial number of nonzeros being added, so use XAstart
-    assert(XAstart != NULL);
-    for (HighsInt col = 0; col < num_new_col; col++)
-      lp.a_matrix_.start_[lp.num_col_ + col] = current_num_nz + XAstart[col];
-  } else {
-    // No nonzeros being added, so XAstart may be null, but entries of
-    // zero are implied.
-    for (HighsInt col = 0; col < num_new_col; col++)
-      lp.a_matrix_.start_[lp.num_col_ + col] = current_num_nz;
-  }
-  lp.a_matrix_.start_[lp.num_col_ + num_new_col] = new_num_nz;
-
-  // If no nonzeros are being added then there's nothing else to do
-  if (num_new_nz <= 0) return HighsStatus::kOk;
-
-  // Adding a non-trivial matrix: resize the column-wise matrix arrays
-  // accordingly
-  lp.a_matrix_.index_.resize(new_num_nz);
-  lp.a_matrix_.value_.resize(new_num_nz);
-  // Copy in the new indices and values
-  for (HighsInt el = 0; el < num_new_nz; el++) {
-    lp.a_matrix_.index_[current_num_nz + el] = XAindex[el];
-    lp.a_matrix_.value_[current_num_nz + el] = XAvalue[el];
-  }
-  return HighsStatus::kOk;
-}
-
-HighsStatus appendRowsToLpMatrix(HighsLp& lp, const HighsInt num_new_row,
-                                 const HighsInt num_new_nz,
-                                 const HighsInt* XARstart,
-                                 const HighsInt* XARindex,
-                                 const double* XARvalue) {
-  if (num_new_row < 0) return HighsStatus::kError;
-  if (num_new_row == 0) return HighsStatus::kOk;
-  // Check that nonzeros aren't being appended to a matrix with no columns
-  if (num_new_nz > 0 && lp.num_col_ <= 0) return HighsStatus::kError;
-  // Adding a positive number of rows to a matrix
-  HighsInt current_num_nz = 0;
-  if (lp.format_ == MatrixFormat::kNone) {
-    // LP is currently empty, store the matrix row-wise
-    assert(lp.num_col_ == 0 && lp.num_row_ == 0);
-    lp.format_ = MatrixFormat::kRowwise;
-  } else if (lp.format_ == MatrixFormat::kColwise) {
-    assert(lp.num_col_ > 0);
-    assert((HighsInt)lp.a_matrix_.start_.size() >= lp.num_col_);
-    current_num_nz = lp.a_matrix_.start_[lp.num_col_];
-    if (current_num_nz == 0) {
-      // Matrix is currently empty and stored column-wise. It can be
-      // converted trivially to row-wise storage so that rows can be
-      // added easily.
-      //
-      // It's possible that the model could have columns and (empty)
-      // rows - hence the assignment of zero starts for rows
-      // 0...lp.num_row_.
-      //
-      // However, this allows efficient handling of the (common) case
-      // where a modeller defines variables without constraints, and
-      // then constraints one-by-one.
-      lp.format_ = MatrixFormat::kRowwise;
-      lp.a_matrix_.start_.assign(lp.num_row_ + 1, 0);
-    }
-  }
-  if (lp.format_ == MatrixFormat::kRowwise) {
-    appendToMatrix(lp, lp.num_row_, num_new_row, num_new_nz, XARstart, XARindex,
-                   XARvalue);
-  } else {
-    // Storing the matrix column-wise, so have to insert the new rows
-    assert(lp.format_ == MatrixFormat::kColwise);
-    vector<HighsInt> Alength;
-    Alength.assign(lp.num_col_, 0);
-    for (HighsInt el = 0; el < num_new_nz; el++) Alength[XARindex[el]]++;
-    // Determine the new number of nonzeros and resize the column-wise matrix
-    // arrays
-    HighsInt new_num_nz = current_num_nz + num_new_nz;
-    lp.a_matrix_.index_.resize(new_num_nz);
-    lp.a_matrix_.value_.resize(new_num_nz);
-    // Append the new rows
-    // Shift the existing columns to make space for the new entries
-    HighsInt new_el = new_num_nz;
-    for (HighsInt col = lp.num_col_ - 1; col >= 0; col--) {
-      HighsInt start_col_plus_1 = new_el;
-      new_el -= Alength[col];
-      for (HighsInt el = lp.a_matrix_.start_[col + 1] - 1; el >= lp.a_matrix_.start_[col];
-           el--) {
-        new_el--;
-        lp.a_matrix_.index_[new_el] = lp.a_matrix_.index_[el];
-        lp.a_matrix_.value_[new_el] = lp.a_matrix_.value_[el];
-      }
-      lp.a_matrix_.start_[col + 1] = start_col_plus_1;
-    }
-    assert(new_el == 0);
-    // Insert the new entries
-    for (HighsInt row = 0; row < num_new_row; row++) {
-      HighsInt first_el = XARstart[row];
-      HighsInt last_el =
-          (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
-      for (HighsInt el = first_el; el < last_el; el++) {
-        HighsInt col = XARindex[el];
-        new_el = lp.a_matrix_.start_[col + 1] - Alength[col];
-        Alength[col]--;
-        lp.a_matrix_.index_[new_el] = lp.num_row_ + row;
-        lp.a_matrix_.value_[new_el] = XARvalue[el];
-      }
-    }
-  }
-  return HighsStatus::kOk;
-}
-
 HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection) {
+  HighsStatus return_status = HighsStatus::kOk;
   HighsInt new_num_col;
   HighsStatus call_status;
-  call_status =
-      deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
-  if (call_status != HighsStatus::kOk) return call_status;
-  call_status = deleteColsFromLpMatrix(log_options, lp, index_collection);
-  HighsStatus alt_call_status =
-      lp.a_matrix_.deleteCols(log_options, index_collection);
-  assert(alt_call_status == call_status);
-  if (call_status != HighsStatus::kOk) return call_status;
+  call_status = deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
+  return_status = interpretCallStatus(call_status, return_status,
+                                      "deleteColsFromLpVectors");
+  if (return_status == HighsStatus::kError) return return_status;
+  call_status = lp.a_matrix_.deleteCols(log_options, index_collection);
+  return_status = interpretCallStatus(call_status, return_status, "lp.a_matrix_.deleteCols");
+  if (return_status == HighsStatus::kError) return return_status;
   lp.num_col_ = new_num_col;
   return HighsStatus::kOk;
 }
@@ -1054,95 +778,17 @@ HighsStatus deleteColsFromLpVectors(
   return HighsStatus::kOk;
 }
 
-HighsStatus deleteColsFromLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_col_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  HighsInt delete_from_col;
-  HighsInt delete_to_col;
-  HighsInt keep_from_col;
-  HighsInt keep_to_col = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt col_dim = lp.num_col_;
-  HighsInt new_num_col = 0;
-  HighsInt new_num_nz = 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
-    if (k == from_k) {
-      // Account for the initial columns being kept
-      new_num_col = delete_from_col;
-      new_num_nz = lp.a_matrix_.start_[delete_from_col];
-    }
-    // Ensure that the starts of the deleted columns are zeroed to
-    // avoid redundant start information for columns whose indices
-    // are't used after the deletion takes place. In particular, if
-    // all columns are deleted then something must be done to ensure
-    // that the matrix isn't magially recreated by increasing the
-    // number of columns from zero when there are no rows in the LP.
-    for (HighsInt col = delete_from_col; col <= delete_to_col; col++)
-      lp.a_matrix_.start_[col] = 0;
-    // Shift the starts - both in place and value - to account for the
-    // columns and nonzeros removed
-    const HighsInt keep_from_el = lp.a_matrix_.start_[keep_from_col];
-    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
-      lp.a_matrix_.start_[new_num_col] = new_num_nz + lp.a_matrix_.start_[col] - keep_from_el;
-      new_num_col++;
-    }
-    for (HighsInt el = keep_from_el; el < lp.a_matrix_.start_[keep_to_col + 1]; el++) {
-      lp.a_matrix_.index_[new_num_nz] = lp.a_matrix_.index_[el];
-      lp.a_matrix_.value_[new_num_nz] = lp.a_matrix_.value_[el];
-      new_num_nz++;
-    }
-    if (keep_to_col >= col_dim - 1) break;
-  }
-  // Ensure that the start of the spurious last column is zeroed so
-  // that it doesn't give a positive number of matrix entries if the
-  // number of columns in the LP is increased when there are no rows
-  // in the LP.
-  lp.a_matrix_.start_[lp.num_col_] = 0;
-  lp.a_matrix_.start_[new_num_col] = new_num_nz;
-  lp.a_matrix_.start_.resize(new_num_col + 1);
-  lp.a_matrix_.index_.resize(new_num_nz);
-  lp.a_matrix_.value_.resize(new_num_nz);
-  return HighsStatus::kOk;
-}
-
 HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsInt new_num_row;
-  call_status =
-      deleteRowsFromLpVectors(log_options, lp, new_num_row, index_collection);
+  call_status = deleteRowsFromLpVectors(log_options, lp, new_num_row, index_collection);
   return_status = interpretCallStatus(call_status, return_status,
                                       "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::kError) return return_status;
-  call_status = deleteRowsFromLpMatrix(log_options, lp, index_collection);
-  HighsStatus alt_call_status =
-      lp.a_matrix_.deleteRows(log_options, index_collection);
-  assert(alt_call_status == call_status);
-  return_status =
-      interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
+  call_status = lp.a_matrix_.deleteRows(log_options, index_collection);
+  return_status = interpretCallStatus(call_status, return_status, "lp.a_matrix_.deleteRows");
   if (return_status == HighsStatus::kError) return return_status;
   lp.num_row_ = new_num_row;
   return HighsStatus::kOk;
@@ -1201,96 +847,6 @@ HighsStatus deleteRowsFromLpVectors(
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
   if (have_names) lp.row_names_.resize(new_num_row);
-  return HighsStatus::kOk;
-}
-
-HighsStatus deleteRowsFromLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp,
-    const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_row_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  HighsInt delete_from_row;
-  HighsInt delete_to_row;
-  HighsInt keep_from_row;
-  HighsInt row_dim = lp.num_row_;
-  HighsInt keep_to_row = -1;
-  HighsInt current_set_entry = 0;
-
-  // Set up a row mask to indicate the new row index of kept rows and
-  // -1 for deleted rows so that the kept entries in the column-wise
-  // matrix can be identified and have their correct row index.
-  vector<HighsInt> new_index;
-  new_index.resize(lp.num_row_);
-  HighsInt new_num_row = 0;
-  bool mask = index_collection.is_mask_;
-  const HighsInt* row_mask = index_collection.mask_;
-  if (!mask) {
-    keep_to_row = -1;
-    current_set_entry = 0;
-    for (HighsInt k = from_k; k <= to_k; k++) {
-      updateIndexCollectionOutInIndex(index_collection, delete_from_row,
-                                      delete_to_row, keep_from_row, keep_to_row,
-                                      current_set_entry);
-      if (k == from_k) {
-        // Account for any initial rows being kept
-        for (HighsInt row = 0; row < delete_from_row; row++) {
-          new_index[row] = new_num_row;
-          new_num_row++;
-        }
-      }
-      for (HighsInt row = delete_from_row; row <= delete_to_row; row++) {
-        new_index[row] = -1;
-      }
-      for (HighsInt row = keep_from_row; row <= keep_to_row; row++) {
-        new_index[row] = new_num_row;
-        new_num_row++;
-      }
-      if (keep_to_row >= row_dim - 1) break;
-    }
-  } else {
-    for (HighsInt row = 0; row < lp.num_row_; row++) {
-      if (row_mask[row]) {
-        new_index[row] = -1;
-      } else {
-        new_index[row] = new_num_row;
-        new_num_row++;
-      }
-    }
-  }
-  HighsInt new_num_nz = 0;
-  for (HighsInt col = 0; col < lp.num_col_; col++) {
-    HighsInt from_el = lp.a_matrix_.start_[col];
-    lp.a_matrix_.start_[col] = new_num_nz;
-    for (HighsInt el = from_el; el < lp.a_matrix_.start_[col + 1]; el++) {
-      HighsInt row = lp.a_matrix_.index_[el];
-      HighsInt new_row = new_index[row];
-      if (new_row >= 0) {
-        lp.a_matrix_.index_[new_num_nz] = new_row;
-        lp.a_matrix_.value_[new_num_nz] = lp.a_matrix_.value_[el];
-        new_num_nz++;
-      }
-    }
-  }
-  lp.a_matrix_.start_[lp.num_col_] = new_num_nz;
-  lp.a_matrix_.start_.resize(lp.num_col_ + 1);
-  lp.a_matrix_.index_.resize(new_num_nz);
-  lp.a_matrix_.value_.resize(new_num_nz);
   return HighsStatus::kOk;
 }
 
@@ -2342,162 +1898,7 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
   return LiDSE_candidate;
 }
 
-HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
-  if (desired_format == MatrixFormat::kNone) return HighsStatus::kError;
-  if (lp.format_ == desired_format) return HighsStatus::kOk;
-  if (lp.num_col_ == 0 && lp.num_row_ == 0) {
-    // No rows or columns, so either orientation is possible and has
-    // identical data: just requires the start of the fictitious
-    // row/column 0
-    lp.a_matrix_.start_.assign(1, 0);
-    lp.format_ = desired_format;
-  } else {
-    // Any LP with positive numbers of rows or columns must have an orientation
-    assert(lp.format_ != MatrixFormat::kNone);
-    if (desired_format == MatrixFormat::kColwise) {
-      ensureColWise(lp);
-    } else {
-      ensureRowWise(lp);
-    }
-  }
-  assert(lp.format_ == desired_format);
+HighsStatus setFormat(HighsLp& lp,
+		      const MatrixFormat desired_format) {
   return lp.a_matrix_.setFormat(desired_format);
-}
-
-void ensureColWise(HighsLp& lp) {
-  // Should only call this is orientation is ROWWISE
-  assert(lp.format_ == MatrixFormat::kRowwise);
-  lp.a_matrix_.ensureColWise();
-  if ((HighsInt)lp.a_matrix_.index_.size() <=0) {
-    lp.format_ = MatrixFormat::kColwise;
-    return;
-  }
-  HighsInt num_nz;
-  bool empty_matrix = lp.num_col_ == 0 || lp.num_row_ == 0;
-  if (!empty_matrix) {
-    // Matrix is probably non-empty
-    assert((HighsInt)lp.a_matrix_.start_.size() >= lp.num_row_ + 1);
-    num_nz = lp.a_matrix_.start_[lp.num_row_];
-    assert(num_nz >= 0);
-    assert((HighsInt)lp.a_matrix_.index_.size() >= num_nz);
-    assert((HighsInt)lp.a_matrix_.value_.size() >= num_nz);
-    empty_matrix = num_nz == 0;
-    if (!empty_matrix) {
-      // Matrix is non-empty, so transpose it
-      vector<HighsInt>& ARstart = lp.a_matrix_.start_;
-      vector<HighsInt>& ARindex = lp.a_matrix_.index_;
-      vector<double>& ARvalue = lp.a_matrix_.value_;
-      vector<HighsInt> Astart;
-      vector<HighsInt> Aindex;
-      vector<double> Avalue;
-      Astart.resize(lp.num_col_ + 1);
-      Aindex.resize(num_nz);
-      Avalue.resize(num_nz);
-      vector<HighsInt> Alength;
-      Alength.assign(lp.num_col_, 0);
-      for (HighsInt iEl = ARstart[0]; iEl < num_nz; iEl++)
-        Alength[ARindex[iEl]]++;
-      Astart[0] = 0;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-        Astart[iCol + 1] = Astart[iCol] + Alength[iCol];
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-        for (HighsInt iEl = ARstart[iRow]; iEl < ARstart[iRow + 1]; iEl++) {
-          HighsInt iCol = ARindex[iEl];
-          HighsInt iCol_el = Astart[iCol];
-          Aindex[iCol_el] = iRow;
-          Avalue[iCol_el] = ARvalue[iEl];
-          Astart[iCol]++;
-        }
-      }
-      Astart[0] = 0;
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-        Astart[iCol + 1] = Astart[iCol] + Alength[iCol];
-      assert(Astart[lp.num_col_] == num_nz);
-      // Now update the LP's matrix
-      lp.a_matrix_.start_ = Astart;
-      lp.a_matrix_.index_ = Aindex;
-      lp.a_matrix_.value_ = Avalue;
-    }
-  }
-  if (empty_matrix) {
-    // Matrix is empty, so set up empty column-wise structure
-    lp.a_matrix_.start_.assign(lp.num_col_ + 1, 0);
-    lp.a_matrix_.index_.clear();
-    lp.a_matrix_.value_.clear();
-  }
-  assert((HighsInt)lp.a_matrix_.start_.size() >= lp.num_col_ + 1);
-  num_nz = lp.a_matrix_.start_[lp.num_col_];
-  assert(num_nz >= 0);
-  assert((HighsInt)lp.a_matrix_.index_.size() >= num_nz);
-  assert((HighsInt)lp.a_matrix_.value_.size() >= num_nz);
-  lp.format_ = MatrixFormat::kColwise;
-}
-
-void ensureRowWise(HighsLp& lp) {
-  // Should only call this is orientation is COLWISE
-  assert(lp.format_ == MatrixFormat::kColwise);
-  lp.a_matrix_.ensureRowWise();
-  if ((HighsInt)lp.a_matrix_.index_.size() <=0) {
-    lp.format_ = MatrixFormat::kRowwise;
-    return;
-  }
-  HighsInt num_nz;
-  bool empty_matrix = lp.num_col_ == 0 || lp.num_row_ == 0;
-  if (!empty_matrix) {
-    // Matrix is probably non-empty
-    assert((HighsInt)lp.a_matrix_.start_.size() >= lp.num_col_ + 1);
-    num_nz = lp.a_matrix_.start_[lp.num_col_];
-    assert(num_nz >= 0);
-    assert((HighsInt)lp.a_matrix_.index_.size() >= num_nz);
-    assert((HighsInt)lp.a_matrix_.value_.size() >= num_nz);
-    empty_matrix = num_nz == 0;
-    if (!empty_matrix) {
-      // Matrix is non-empty, so transpose it
-      vector<HighsInt>& Astart = lp.a_matrix_.start_;
-      vector<HighsInt>& Aindex = lp.a_matrix_.index_;
-      vector<double>& Avalue = lp.a_matrix_.value_;
-      vector<HighsInt> ARstart;
-      vector<HighsInt> ARindex;
-      vector<double> ARvalue;
-      ARstart.resize(lp.num_row_ + 1);
-      ARindex.resize(num_nz);
-      ARvalue.resize(num_nz);
-      vector<HighsInt> ARlength;
-      ARlength.assign(lp.num_row_, 0);
-      for (HighsInt iEl = Astart[0]; iEl < num_nz; iEl++)
-        ARlength[Aindex[iEl]]++;
-      ARstart[0] = 0;
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-        ARstart[iRow + 1] = ARstart[iRow] + ARlength[iRow];
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-        for (HighsInt iEl = Astart[iCol]; iEl < Astart[iCol + 1]; iEl++) {
-          HighsInt iRow = Aindex[iEl];
-          HighsInt iRow_el = ARstart[iRow];
-          ARindex[iRow_el] = iCol;
-          ARvalue[iRow_el] = Avalue[iEl];
-          ARstart[iRow]++;
-        }
-      }
-      ARstart[0] = 0;
-      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
-        ARstart[iRow + 1] = ARstart[iRow] + ARlength[iRow];
-      assert(ARstart[lp.num_row_] == num_nz);
-      // Now update the LP's matrix
-      lp.a_matrix_.start_ = ARstart;
-      lp.a_matrix_.index_ = ARindex;
-      lp.a_matrix_.value_ = ARvalue;
-    }
-  }
-  if (empty_matrix) {
-    // Matrix is empty, so set up empty row-wise structure
-    lp.a_matrix_.start_.assign(lp.num_row_ + 1, 0);
-    lp.a_matrix_.index_.clear();
-    lp.a_matrix_.value_.clear();
-  }
-  assert((HighsInt)lp.a_matrix_.start_.size() >= lp.num_row_ + 1);
-  num_nz = lp.a_matrix_.start_[lp.num_row_];
-  assert(num_nz >= 0);
-  assert((HighsInt)lp.a_matrix_.index_.size() >= num_nz);
-  assert((HighsInt)lp.a_matrix_.value_.size() >= num_nz);
-  lp.format_ = MatrixFormat::kRowwise;
 }

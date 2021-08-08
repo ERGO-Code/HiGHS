@@ -24,88 +24,6 @@
 #include "lp_data/HConst.h"
 #include "util/HighsUtils.h"
 
-HighsStatus assessMatrixDimensions(const HighsLogOptions& log_options,
-                                   const std::string matrix_name,
-                                   const HighsInt num_vec,
-                                   const vector<HighsInt>& matrix_start,
-                                   const vector<HighsInt>& matrix_index,
-                                   const vector<double>& matrix_value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Use error_found to track whether an error has been found in multiple tests
-  bool error_found = false;
-  // Assess main dimensions
-  bool legal_num_vec = num_vec >= 0;
-  if (!legal_num_vec) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "%s matrix has illegal number of vectors = %" HIGHSINT_FORMAT
-                 "\n",
-                 matrix_name.c_str(), num_vec);
-    error_found = true;
-  }
-  HighsInt matrix_start_size = matrix_start.size();
-  bool legal_matrix_start_size = false;
-  // Don't expect the matrix_start_size to be legal if there are no vectors
-  if (num_vec > 0) {
-    legal_matrix_start_size = matrix_start_size >= num_vec + 1;
-    if (!legal_matrix_start_size) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix has illegal start vector size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_name.c_str(), matrix_start_size, num_vec + 1);
-      error_found = true;
-    }
-  }
-  if (matrix_start_size > 0) {
-    // Check whether the first start is zero
-    if (matrix_start[0]) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "%s matrix start vector begins with %" HIGHSINT_FORMAT
-                   " rather than 0\n",
-                   matrix_name.c_str(), matrix_start[0]);
-      error_found = true;
-    }
-  }
-  // Possibly check the sizes of the index and value vectors. Can only
-  // do this with the number of nonzeros, and this is only known if
-  // the start vector has a legal size. Setting num_nz = 0 otherwise
-  // means that all tests pass, as they just check that the sizes of
-  // the index and value vectors are non-negative.
-  HighsInt num_nz = 0;
-  if (legal_matrix_start_size) num_nz = matrix_start[num_vec];
-  bool legal_num_nz = num_nz >= 0;
-  if (!legal_num_nz) {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "%s matrix has illegal number of nonzeros = %" HIGHSINT_FORMAT
-                 "\n",
-                 matrix_name.c_str(), num_nz);
-    error_found = true;
-  } else {
-    HighsInt matrix_index_size = matrix_index.size();
-    HighsInt matrix_value_size = matrix_value.size();
-    bool legal_matrix_index_size = matrix_index_size >= num_nz;
-    bool legal_matrix_value_size = matrix_value_size >= num_nz;
-    if (!legal_matrix_index_size) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix has illegal index vector size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_name.c_str(), matrix_index_size, num_nz);
-      error_found = true;
-    }
-    if (!legal_matrix_value_size) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "%s matrix has illegal value vector size = %" HIGHSINT_FORMAT
-                   " < %" HIGHSINT_FORMAT "\n",
-                   matrix_name.c_str(), matrix_value_size, num_nz);
-      error_found = true;
-    }
-  }
-  if (error_found)
-    return_status = HighsStatus::kError;
-  else
-    return_status = HighsStatus::kOk;
-  return return_status;
-}
-
 HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          const std::string matrix_name, const HighsInt vec_dim,
                          const HighsInt num_vec, vector<HighsInt>& matrix_start,
@@ -113,9 +31,9 @@ HighsStatus assessMatrix(const HighsLogOptions& log_options,
                          vector<double>& matrix_value,
                          const double small_matrix_value,
                          const double large_matrix_value) {
-  if (assessMatrixDimensions(log_options, matrix_name, num_vec, matrix_start,
-                             matrix_index, matrix_value) == HighsStatus::kError)
-    return HighsStatus::kError;
+  //  if (assessMatrixDimensions(log_options, matrix_name, num_vec, matrix_start,
+  //                             matrix_index, matrix_value) == HighsStatus::kError)
+  //    return HighsStatus::kError;
   const HighsInt num_nz = matrix_start[num_vec];
   if (num_vec <= 0) return HighsStatus::kOk;
   if (num_nz <= 0) return HighsStatus::kOk;

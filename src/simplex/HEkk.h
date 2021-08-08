@@ -66,12 +66,6 @@ class HEkk {
   void appendRowsToVectors(const HighsInt num_new_row,
                            const vector<double>& rowLower,
                            const vector<double>& rowUpper);
-  void appendColsToMatrix(const HighsInt num_new_col, const HighsInt num_new_nz,
-                          const HighsInt* XAstart, const HighsInt* XAindex,
-                          const double* XAvalue);
-  void appendRowsToMatrix(const HighsInt num_new_row, const HighsInt num_new_nz,
-                          const HighsInt* XARstart, const HighsInt* XARindex,
-                          const double* XARvalue);
 
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
