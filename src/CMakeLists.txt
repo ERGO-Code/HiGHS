@@ -129,7 +129,6 @@ set(sources
     model/HighsHessianUtils.cpp
     model/HighsModel.cpp
     presolve/ICrashX.cpp
-    #presolve/HPreData.cpp
     presolve/HAggregator.cpp
     presolve/HighsLpPropagator.cpp
     presolve/HighsPostsolveStack.cpp
@@ -269,6 +268,7 @@ set(headers
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
+    util/HighsDisjointSets.h
     util/HighsHash.h
     util/HighsInt.h
     util/HighsIntegers.h
@@ -491,7 +491,7 @@ if (NOT ${BUILD_SHARED_LIBS})
     target_compile_options(libhighs PRIVATE "-fPIC" )
 endif()
 
-target_sources(libhighs PRIVATE 
+target_sources(libhighs PRIVATE
     ../extern/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
@@ -658,6 +658,9 @@ set(headers_fast_build_
     mip/HighsTransformedLp.h
     model/HighsHessian.h
     model/HighsHessianUtils.h
+    model/HighsModel.h
+    qpsolver/solver.hpp
+    qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
