@@ -38,7 +38,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::kSuccess:
-        if (setFormat(lp) != HighsStatus::kOk)
+        if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
           return FilereaderRetcode::kParserError;
         return FilereaderRetcode::kOk;
       case FreeFormatParserReturnCode::kParserError:
@@ -67,7 +67,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               lp.row_names_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) {
     lp.a_matrix_.format_ = MatrixFormat::kColwise;
-    if (setFormat(lp) != HighsStatus::kOk)
+    if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
       return FilereaderRetcode::kParserError;
   }
   if (namesWithSpaces(lp.num_col_, lp.col_names_)) {

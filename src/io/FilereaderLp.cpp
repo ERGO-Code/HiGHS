@@ -129,7 +129,8 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::kParserError;
   }
-  if (setFormat(lp) != HighsStatus::kOk) return FilereaderRetcode::kParserError;
+  if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
+    return FilereaderRetcode::kParserError;
   return FilereaderRetcode::kOk;
 }
 

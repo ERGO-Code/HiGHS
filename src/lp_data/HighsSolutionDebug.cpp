@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "lp_data/HighsDebug.h"
+#include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 

@@ -1065,38 +1065,3 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   right_size = (HighsInt)basis.basicIndex_.size() == lp.num_row_ && right_size;
   return right_size;
 }
-
-void scaleSimplexLp(HighsLp& lp, const SimplexScale& scale, const bool force) {
-  // If the LP isscaled, then return
-  if (scale.is_scaled && !force) return;
-  // Scale the bounds and costs and matrix
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    lp.col_lower_[iCol] /= scale.col[iCol];
-    lp.col_upper_[iCol] /= scale.col[iCol];
-    lp.col_cost_[iCol] *= scale.col[iCol];
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    lp.row_lower_[iRow] *= scale.row[iRow];
-    lp.row_upper_[iRow] *= scale.row[iRow];
-  }
-  lp.a_matrix_.applyScale(scale);
-  //  scale.is_scaled = true;
-}
-
-void unscaleSimplexLp(HighsLp& lp, const SimplexScale& scale,
-                      const bool force) {
-  // If the LP isn't scaled, then return
-  if (!scale.is_scaled && !force) return;
-  // Unscale the bounds and costs and matrix
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    lp.col_lower_[iCol] *= scale.col[iCol];
-    lp.col_upper_[iCol] *= scale.col[iCol];
-    lp.col_cost_[iCol] /= scale.col[iCol];
-  }
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    lp.row_lower_[iRow] /= scale.row[iRow];
-    lp.row_upper_[iRow] /= scale.row[iRow];
-  }
-  lp.a_matrix_.unapplyScale(scale);
-  //  scale.is_scaled = false;
-}

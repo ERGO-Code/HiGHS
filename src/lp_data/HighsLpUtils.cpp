@@ -23,15 +23,19 @@
 #include "io/HMPSIO.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
 
+using std::fabs;
+using std::max;
+using std::min;
+
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  // Assess the LP dimensions and vector sizes, returning on error
-  call_status = assessLpDimensions(options, lp);
+  HighsStatus call_status =
+      lp.dimensionsOk("assessLp") ? HighsStatus::kOk : HighsStatus::kError;
   return_status =
       interpretCallStatus(call_status, return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
@@ -102,14 +106,6 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                 "assessLp returns HighsStatus = %s\n",
                 HighsStatusToString(return_status).c_str());
   return return_status;
-}
-
-HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
-  if (lp.dimensionsOk("")) {
-    return HighsStatus::kOk;
-  } else {
-    return HighsStatus::kError;
-  }
 }
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,

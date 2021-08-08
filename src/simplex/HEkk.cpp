@@ -21,6 +21,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
@@ -76,7 +77,6 @@ void HEkk::passScaledLp(const HighsLp& lp) {
 }
 
 HighsStatus HEkk::solve() {
-  assert(lp_.dimensionsOk("HEkk::solve"));
   initialiseAnalysis();
   // Set iteration_count_ = 0 and call initialiseControl(), just to
   // check that info-based density methods are identical
@@ -292,6 +292,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // Shouldn't have to check the incoming basis since this is an
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
+  //
+  // ToDo why does this not compile
   if (debugBasisConsistent(options_, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
     highsLogDev(options_.log_options, HighsLogType::kError,
@@ -514,7 +516,6 @@ void HEkk::updateFactorMatrixPointers() {
 // Private methods
 
 HighsStatus HEkk::setup() {
-  assert(lp_.dimensionsOk("HEkk::setup"));
   HighsStatus return_status = HighsStatus::kOk;
   // Shouldn't have to check the incoming LP since this is an internal
   // call, but it may be an LP that's set up internally with errors

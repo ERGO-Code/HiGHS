@@ -20,11 +20,9 @@
 
 #include "io/HighsIO.h"
 #include "ipm/IpxSolution.h"
-#include "lp_data/HighsInfo.h"
+#include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolutionDebug.h"
-#include "util/HighsUtils.h"
 
 #ifdef IPX_ON
 #include "ipm/ipx/include/ipx_status.h"

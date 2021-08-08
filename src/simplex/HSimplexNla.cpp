@@ -309,8 +309,7 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
       return HighsDebugStatus::kLogicalError;
     }
   } else {
-    const bool force_scale = true;
-    scaleSimplexLp(check_lp, *scale_, force_scale);
+    check_lp.applyScale(*scale_);
   }
   HighsInt error_col = -1;
   for (HighsInt iCol = 0; iCol < check_lp.num_col_ + 1; iCol++) {

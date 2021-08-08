@@ -42,8 +42,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(
   lp.a_matrix_.value_ = std::move(Avalue);
   // a_matrix must have at least start_[0]=0 for the fictitious column
   // 0
-  if ((int)lp.a_matrix_.start_.size() == 0)
-    lp.a_matrix_.clear();
+  if ((int)lp.a_matrix_.start_.size() == 0) lp.a_matrix_.clear();
   lp.col_cost_ = std::move(colCost);
   lp.col_lower_ = std::move(colLower);
   lp.col_upper_ = std::move(colUpper);

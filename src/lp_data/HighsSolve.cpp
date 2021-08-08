@@ -14,11 +14,12 @@
  * @brief Class-independent utilities for HiGHS
  */
 
-#include "lp_data/HighsInfo.h"
-#include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsSolution.h"
+//#include "lp_data/HighsInfo.h"
+//#include "lp_data/HighsModelObject.h"
+//#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HApp.h"
-#include "util/HighsUtils.h"
+//#include "util/HighsUtils.h"
 #ifdef IPX_ON
 #include "ipm/IpxWrapper.h"
 #else

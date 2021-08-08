@@ -248,19 +248,17 @@ HighsStatus Highs::passModel(HighsModel model) {
   }
   // Dimensions in a_matrix_ may not be set, so take them from lp.
   lp.setMatrixDimensions();
-  assert(lp.dimensionsOk("Highs::passModel"));
 
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
-  return_status =
-      interpretCallStatus(setFormat(lp), return_status, "setFormat");
+  return_status = interpretCallStatus(setFormat(lp, MatrixFormat::kColwise),
+                                      return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
-  assert(lp.dimensionsOk("Highs::passModel - after assessLp"));
   // Check validity of any Hessian, normalising its entries
   return_status = interpretCallStatus(assessHessian(hessian, options_),
                                       return_status, "assessHessian");
@@ -476,7 +474,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
   // Ensure that the LP is column-wise
   return_status =
-      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
+      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
+                          return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (filename == "") {
     // Empty file name: report model on logging stream
@@ -581,11 +580,13 @@ HighsStatus Highs::run() {
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   return_status =
-      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
+      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
+                          return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   if (hmos_[0].ekk_instance_.status_.valid) {
-    return_status = interpretCallStatus(setFormat(hmos_[0].ekk_instance_.lp_),
-                                        return_status, "setFormat");
+    return_status = interpretCallStatus(
+        setFormat(hmos_[0].ekk_instance_.lp_, MatrixFormat::kColwise),
+        return_status, "setFormat");
     if (return_status == HighsStatus::kError) return return_status;
   }
 #ifdef HIGHSDEV
@@ -729,7 +730,6 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.setMatrixDimensions();
-        assert(reduced_lp.dimensionsOk("Reduced LP"));
         // Validate the reduced LP
         assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
@@ -1217,7 +1217,8 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
+      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
+                          return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (row_vector == NULL) {
@@ -1279,7 +1280,8 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(setFormat(model_.lp_), return_status, "setFormat");
+      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
+                          return_status, "setFormat");
   if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
   if (col_vector == NULL) {
@@ -2098,7 +2100,7 @@ HighsPresolveStatus Highs::runPresolve() {
   }
 
   // Ensure that the LP is column-wise
-  // setFormat(model_.lp_);
+  // setFormat(model_.lp_, MatrixFormat::kColwise);
 
   if (model_.lp_.num_col_ == 0 && model_.lp_.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
@@ -2227,7 +2229,6 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
   if (!model_index_ok) return HighsStatus::kError;
 
   HighsModelObject& model = hmos_[model_index];
-  assert(model_.lp_.dimensionsOk("Highs::callSolveLp"));
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
 
@@ -2282,8 +2283,8 @@ HighsStatus Highs::callSolveQp() {
   instance.var_up = lp.col_upper_;
   instance.Q.mat.num_col = lp.num_col_;
   instance.Q.mat.num_row = lp.num_col_;
-  triangularToSquareHessian(hessian, instance.Q.mat.start,
-			    instance.Q.mat.index, instance.Q.mat.value);
+  triangularToSquareHessian(hessian, instance.Q.mat.start, instance.Q.mat.index,
+                            instance.Q.mat.value);
 
   for (HighsInt i = 0; i < instance.c.value.size(); i++) {
     if (instance.c.value[i] != 0.0) {

@@ -40,8 +40,6 @@ HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsBasis& basis,
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
-HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
-
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, const double infinite_cost);
@@ -250,6 +248,5 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
-HighsStatus setFormat(
-    HighsLp& lp, const MatrixFormat desired_format = MatrixFormat::kColwise);
+HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format);
 #endif  // LP_DATA_HIGHSLPUTILS_H_

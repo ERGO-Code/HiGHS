@@ -294,7 +294,6 @@ struct HighsOptionsStruct {
 
   // Advanced options
   HighsInt log_dev_level;
-  bool use_solveLpSimplex0;
   bool run_crossover;
   bool allow_unbounded_or_infeasible;
   bool use_implied_bounds_from_presolve;
@@ -672,11 +671,6 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &log_dev_level, kHighsLogDevLevelMin, kHighsLogDevLevelNone,
         kHighsLogDevLevelMax);
     records.push_back(record_int);
-
-    record_bool = new OptionRecordBool(
-        "use_solveLpSimplex0", "Use the original code for use_solveLpSimplex",
-        advanced, &use_solveLpSimplex0, false);
-    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("run_crossover",
                                        "Run the crossover routine for IPX",

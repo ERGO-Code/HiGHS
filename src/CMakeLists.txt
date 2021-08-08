@@ -167,6 +167,7 @@ set(sources
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
+    util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/HSet.cpp
@@ -280,6 +281,7 @@ set(headers
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
+    util/HighsMatrixUtils.h
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsSplay.h
@@ -587,6 +589,7 @@ target_sources(libhighs PRIVATE
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
+    util/HighsMatrixUtils.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/HSet.cpp
@@ -712,6 +715,7 @@ set(headers_fast_build_
     util/HighsInt.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
+    util/HighsMatrixUtils.h
     util/HighsMatrixPic.h
     util/HighsMatrixSlice.h
     util/HighsRandom.h

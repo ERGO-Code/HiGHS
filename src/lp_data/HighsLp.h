@@ -58,7 +58,9 @@ class HighsLp {
   double objectiveValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   bool dimensionsOk(std::string message) const;
-  bool equalScale(std::string message, const SimplexScale& scale) const;
+  bool equal(const SimplexScale& scale) const;
+  void applyScale(const SimplexScale& scale);
+  void unapplyScale(const SimplexScale& scale);
   void clear();
 };
 

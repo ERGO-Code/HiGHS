@@ -29,12 +29,9 @@ void HighsHessian::clear() {
 
 HighsInt HighsHessian::numNz() const {
   assert(this->formatOk());
-  printf("HighsHessian::numNz() has start_.size = %d and dim_ = %d\n",
-	 (int)this->start_.size(), (int)this->dim_);fflush(stdout);
   assert((HighsInt)this->start_.size() >= this->dim_ + 1);
   return this->start_[this->dim_];
 }
-
 
 void HighsHessian::print() {
   HighsInt num_nz = 0;
@@ -43,9 +40,8 @@ void HighsHessian::print() {
   printf("Hessian of dimension %" HIGHSINT_FORMAT " and %" HIGHSINT_FORMAT
          " nonzeros\n",
          dim_, num_nz);
-  printf("Start; Index; Value of sizes %d; %d; %d\n",
-         (int)this->start_.size(), (int)this->index_.size(),
-         (int)this->value_.size());
+  printf("Start; Index; Value of sizes %d; %d; %d\n", (int)this->start_.size(),
+         (int)this->index_.size(), (int)this->value_.size());
   if (dim_ <= 0) return;
   printf(" Row|");
   for (int iCol = 0; iCol < dim_; iCol++) printf(" %4d", iCol);
@@ -56,14 +52,12 @@ void HighsHessian::print() {
   std::vector<double> col;
   col.assign(dim_, 0);
   for (HighsInt iCol = 0; iCol < dim_; iCol++) {
-    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
-         iEl++)
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
       col[this->index_[iEl]] = this->value_[iEl];
     printf("%4d|", (int)iCol);
     for (int iRow = 0; iRow < dim_; iRow++) printf(" %4g", col[iRow]);
     printf("\n");
-    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
-         iEl++)
+    for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
       col[this->index_[iEl]] = 0;
   }
 }
@@ -96,8 +90,8 @@ double HighsHessian::objectiveValue(const std::vector<double>& solution) const {
     assert(this->index_[iEl] == iCol);
     objective_function_value +=
         0.5 * solution[iCol] * this->value_[iEl] * solution[iCol];
-    for (HighsInt iEl = this->start_[iCol] + 1;
-         iEl < this->start_[iCol + 1]; iEl++)
+    for (HighsInt iEl = this->start_[iCol] + 1; iEl < this->start_[iCol + 1];
+         iEl++)
       objective_function_value +=
           solution[iCol] * this->value_[iEl] * solution[this->index_[iEl]];
   }

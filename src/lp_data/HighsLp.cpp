@@ -17,6 +17,8 @@
 
 #include <cassert>
 
+#include "util/HighsMatrixUtils.h"
+
 bool HighsLp::isMip() const {
   HighsInt integrality_size = this->integrality_.size();
   if (integrality_size) {
@@ -95,30 +97,20 @@ bool HighsLp::dimensionsOk(std::string message) const {
   ok = legal_col_lower_size && ok;
   ok = legal_col_upper_size && ok;
 
-  bool legal_matrix_format = this->a_matrix_.formatOk();
-  ok = legal_matrix_format && ok;
-  bool legal_matrix_start_size;
+  bool legal_format = this->a_matrix_.format_ == MatrixFormat::kColwise ||
+                      this->a_matrix_.format_ == MatrixFormat::kRowwise;
+  HighsInt num_vec;
   if (this->a_matrix_.isColwise()) {
-    legal_matrix_start_size = matrix_start_size >= num_col + 1;
+    num_vec = num_col;
   } else {
-    assert(this->a_matrix_.isRowwise());
-    legal_matrix_start_size = matrix_start_size >= num_row + 1;
+    num_vec = num_row;
   }
-  ok = legal_matrix_start_size && ok;
-
-  // Check whether the first start is zero
-  ok = !this->a_matrix_.start_[0] && ok;
-
-  HighsInt num_nz = this->a_matrix_.numNz();
-  bool legal_num_nz = num_nz >= 0;
-  ok = legal_num_nz && ok;
-
-  HighsInt matrix_index_size = this->a_matrix_.index_.size();
-  HighsInt matrix_value_size = this->a_matrix_.value_.size();
-  bool legal_matrix_index_size = matrix_index_size >= num_nz;
-  bool legal_matrix_value_size = matrix_value_size >= num_nz;
-  ok = legal_matrix_index_size && ok;
-  ok = legal_matrix_value_size && ok;
+  const bool partitioned = false;
+  vector<HighsInt> a_matrix_p_end;
+  ok = assessMatrixDimensions(num_vec, partitioned, this->a_matrix_.start_,
+                              a_matrix_p_end, this->a_matrix_.index_,
+                              this->a_matrix_.value_) == HighsStatus::kOk &&
+       ok;
 
   HighsInt row_lower_size = this->row_lower_.size();
   HighsInt row_upper_size = this->row_upper_.size();
@@ -154,13 +146,10 @@ bool HighsLp::dimensionsOk(std::string message) const {
   return ok;
 }
 
-bool HighsLp::equalScale(std::string message, const SimplexScale& scale) const {
+bool HighsLp::equal(const SimplexScale& scale) const {
   bool equal = true;
   equal = this->scale_.col == scale.col && equal;
   equal = this->scale_.row == scale.row && equal;
-  if (!equal) {
-    printf("HighsLp::equalScale (%s) not equal\n", message.c_str());
-  }
   return equal;
 }
 
@@ -193,4 +182,34 @@ void HighsLp::clear() {
   this->scale_.cost = 1.0;
   this->scale_.col.clear();
   this->scale_.row.clear();
+}
+
+void HighsLp::applyScale(const SimplexScale& scale) {
+  // Scale the bounds and costs and matrix
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    this->col_lower_[iCol] /= scale.col[iCol];
+    this->col_upper_[iCol] /= scale.col[iCol];
+    this->col_cost_[iCol] *= scale.col[iCol];
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    this->row_lower_[iRow] *= scale.row[iRow];
+    this->row_upper_[iRow] *= scale.row[iRow];
+  }
+  this->a_matrix_.applyScale(scale);
+  //  scale.is_scaled = true;
+}
+
+void HighsLp::unapplyScale(const SimplexScale& scale) {
+  // Unscale the bounds and costs and matrix
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    this->col_lower_[iCol] *= scale.col[iCol];
+    this->col_upper_[iCol] *= scale.col[iCol];
+    this->col_cost_[iCol] /= scale.col[iCol];
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    this->row_lower_[iRow] /= scale.row[iRow];
+    this->row_upper_[iRow] /= scale.row[iRow];
+  }
+  this->a_matrix_.unapplyScale(scale);
+  //  scale.is_scaled = false;
 }

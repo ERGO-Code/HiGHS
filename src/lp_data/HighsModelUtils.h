@@ -16,17 +16,10 @@
 #ifndef LP_DATA_HIGHSMODELUTILS_H_
 #define LP_DATA_HIGHSMODELUTILS_H_
 
-#include "HConfig.h"
-#include "Highs.h"
-#include "lp_data/HighsStatus.h"
-
-HighsStatus assessMatrix(const HighsLogOptions& log_options,
-                         const std::string matrix_name, const HighsInt vec_dim,
-                         const HighsInt num_vec, vector<HighsInt>& matrix_start,
-                         vector<HighsInt>& matrix_index,
-                         vector<double>& matrix_value,
-                         const double small_matrix_value,
-                         const double large_matrix_value);
+//#include "Highs.h"
+//#include "lp_data/HighsStatus.h"
+#include "lp_data/HStruct.h"
+#include "lp_data/HighsOptions.h"
 
 // Analyse lower and upper bounds of a model
 void analyseModelBounds(const HighsLogOptions& log_options, const char* message,

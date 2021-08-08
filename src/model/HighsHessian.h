@@ -20,7 +20,7 @@
 
 #include "lp_data/HConst.h"
 
-//class HighsHessian;
+// class HighsHessian;
 
 class HighsHessian {
  public:
@@ -35,7 +35,10 @@ class HighsHessian {
                std::vector<double>& product) const;
   double objectiveValue(const std::vector<double>& solution) const;
   void clear();
-  bool formatOk() const { return (this->format_ == HessianFormat::kTriangular || this->format_ == HessianFormat::kSquare); };
+  bool formatOk() const {
+    return (this->format_ == HessianFormat::kTriangular ||
+            this->format_ == HessianFormat::kSquare);
+  };
   HighsInt numNz() const;
   void print();
 };

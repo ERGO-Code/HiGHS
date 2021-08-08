@@ -68,16 +68,11 @@ TEST_CASE("HighsHessian", "[highs_hessian]") {
   }
 
   HighsHessian negative_diagonal_hessian = triangular_hessian;
-  negative_diagonal_hessian.value_[0] =
-      -negative_diagonal_hessian.value_[0];
-  negative_diagonal_hessian.value_[4] =
-      -negative_diagonal_hessian.value_[4];
-  negative_diagonal_hessian.value_[6] =
-      -negative_diagonal_hessian.value_[6];
-  negative_diagonal_hessian.value_[8] =
-      -negative_diagonal_hessian.value_[8];
-  negative_diagonal_hessian.value_[9] =
-      -negative_diagonal_hessian.value_[9];
+  negative_diagonal_hessian.value_[0] = -negative_diagonal_hessian.value_[0];
+  negative_diagonal_hessian.value_[4] = -negative_diagonal_hessian.value_[4];
+  negative_diagonal_hessian.value_[6] = -negative_diagonal_hessian.value_[6];
+  negative_diagonal_hessian.value_[8] = -negative_diagonal_hessian.value_[8];
+  negative_diagonal_hessian.value_[9] = -negative_diagonal_hessian.value_[9];
   REQUIRE(assessHessian(negative_diagonal_hessian, options,
                         ObjSense::kMaximize) == HighsStatus::kOk);
 
