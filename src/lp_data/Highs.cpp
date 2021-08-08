@@ -2282,14 +2282,8 @@ HighsStatus Highs::callSolveQp() {
   instance.var_up = lp.col_upper_;
   instance.Q.mat.num_col = lp.num_col_;
   instance.Q.mat.num_row = lp.num_col_;
-  if (kHessianFormatInternal == HessianFormat::kSquare) {
-    instance.Q.mat.start = hessian.start_;
-    instance.Q.mat.index = hessian.index_;
-    instance.Q.mat.value = hessian.value_;
-  } else {
-    triangularToSquareHessian(hessian, instance.Q.mat.start,
-                              instance.Q.mat.index, instance.Q.mat.value);
-  }
+  triangularToSquareHessian(hessian, instance.Q.mat.start,
+			    instance.Q.mat.index, instance.Q.mat.value);
 
   for (HighsInt i = 0; i < instance.c.value.size(); i++) {
     if (instance.c.value[i] != 0.0) {

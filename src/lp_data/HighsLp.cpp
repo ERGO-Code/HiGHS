@@ -95,7 +95,7 @@ bool HighsLp::dimensionsOk(std::string message) const {
   ok = legal_col_lower_size && ok;
   ok = legal_col_upper_size && ok;
 
-  bool legal_matrix_format = this->a_matrix_.format_ != MatrixFormat::kNone;
+  bool legal_matrix_format = this->a_matrix_.formatOk();
   ok = legal_matrix_format && ok;
   bool legal_matrix_start_size;
   if (this->a_matrix_.isColwise()) {

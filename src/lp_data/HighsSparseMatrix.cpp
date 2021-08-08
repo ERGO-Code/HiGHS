@@ -59,7 +59,7 @@ bool HighsSparseMatrix::isColwise() const {
 }
 
 HighsInt HighsSparseMatrix::numNz() const {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   if (this->isColwise()) {
     assert((HighsInt)this->start_.size() >= this->num_col_ + 1);
     return this->start_[this->num_col_];
@@ -70,7 +70,7 @@ HighsInt HighsSparseMatrix::numNz() const {
 }
 
 void HighsSparseMatrix::range(double& min_value, double& max_value) const {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   for (HighsInt iEl = 0; iEl < this->start_[this->num_col_]; iEl++) {
     double value = fabs(this->value_[iEl]);
     min_value = min(min_value, value);
@@ -79,8 +79,7 @@ void HighsSparseMatrix::range(double& min_value, double& max_value) const {
 }
 
 HighsStatus HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
-  if (desired_format == MatrixFormat::kNone) return HighsStatus::kError;
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   if (this->format_ == desired_format) return HighsStatus::kOk;
   if (desired_format == MatrixFormat::kColwise) {
     this->ensureColWise();
@@ -92,7 +91,7 @@ HighsStatus HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
 }
 
 void HighsSparseMatrix::ensureColWise() {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   // Should only call this is orientation is ROWWISE
   assert(this->isRowwise());
   HighsInt num_col = this->num_col_;
@@ -148,7 +147,7 @@ void HighsSparseMatrix::ensureColWise() {
 }
 
 void HighsSparseMatrix::ensureRowWise() {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   // Should only call this is orientation is COLWISE
   assert(this->isColwise());
   HighsInt num_col = this->num_col_;
@@ -209,10 +208,7 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
                                        const HighsInt* new_matrix_index,
                                        const double* new_matrix_value,
                                        const int8_t* in_partition) {
-  if (this->format_ == MatrixFormat::kNone) {
-    printf("Call with format_ == MatrixFormat::kNone\n");
-  }
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   // Adding columns to a row-wise partitioned matrix needs the
   // partition information
   const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
@@ -301,7 +297,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
                                        const HighsInt* new_matrix_index,
                                        const double* new_matrix_value,
                                        const int8_t* in_partition) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   // Adding rows to a row-wise partitioned matrix needs the
   // partition information
   const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
@@ -332,7 +328,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && num_col <= 0) return HighsStatus::kError;
 
-  if (this->format_ == MatrixFormat::kColwise) {
+  if (this->isColwise()) {
     // Matrix is currently a standard col-wise matrix, so flip
     // row-wise if there are more new nonzeros than current nonzeros
     if (num_new_nz > num_nz && num_nz == 0) {
@@ -417,7 +413,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
     }
   } else {
     // Storing the matrix column-wise, so have to insert the new rows
-    assert(this->format_ == MatrixFormat::kColwise);
+    assert(this->isColwise());
     if (num_new_nz) {
       vector<HighsInt> length;
       length.assign(num_col, 0);
@@ -467,7 +463,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
 HighsStatus HighsSparseMatrix::deleteCols(
     const HighsLogOptions& log_options,
     const HighsIndexCollection& index_collection) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
   HighsStatus return_status = HighsStatus::kOk;
@@ -546,7 +542,7 @@ HighsStatus HighsSparseMatrix::deleteCols(
 HighsStatus HighsSparseMatrix::deleteRows(
     const HighsLogOptions& log_options,
     const HighsIndexCollection& index_collection) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   HighsStatus return_status = HighsStatus::kOk;
   if (!assessIndexCollection(log_options, index_collection))
     return interpretCallStatus(HighsStatus::kError, return_status,
@@ -638,14 +634,12 @@ HighsStatus HighsSparseMatrix::deleteRows(
 
 HighsStatus HighsSparseMatrix::assessDimensions(
     const HighsLogOptions& log_options, const std::string matrix_name) {
-  if (this->format_ == MatrixFormat::kNone) return HighsStatus::kOk;
+  assert(this->formatOk());
   // Use error_found to track whether an error has been found in multiple tests
   bool error_found = false;
   // Identify main dimensions
-  assert(this->format_ == MatrixFormat::kColwise ||
-         this->format_ == MatrixFormat::kRowwise);
   HighsInt num_vec;
-  if (this->format_ == MatrixFormat::kColwise) {
+  if (this->isColwise()) {
     num_vec = this->num_col_;
   } else {
     num_vec = this->num_row_;
@@ -734,7 +728,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const std::string matrix_name,
                                       const double small_matrix_value,
                                       const double large_matrix_value) {
-  if (this->format_ == MatrixFormat::kNone) return HighsStatus::kOk;
+  assert(this->formatOk());
   if (this->assessDimensions(log_options, matrix_name) == HighsStatus::kError)
     return HighsStatus::kError;
   // Identify main dimensions
@@ -960,7 +954,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
 }
 
 void HighsSparseMatrix::scaleCol(const HighsInt col, const double colScale) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   assert(col >= 0);
   assert(col < this->num_col_);
   assert(colScale);
@@ -979,7 +973,7 @@ void HighsSparseMatrix::scaleCol(const HighsInt col, const double colScale) {
 }
 
 void HighsSparseMatrix::scaleRow(const HighsInt row, const double rowScale) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   assert(row >= 0);
   assert(row < this->num_row_);
   assert(rowScale);
@@ -998,7 +992,7 @@ void HighsSparseMatrix::scaleRow(const HighsInt row, const double rowScale) {
 }
 
 void HighsSparseMatrix::applyScale(const SimplexScale& scale) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
       for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
@@ -1019,7 +1013,7 @@ void HighsSparseMatrix::applyScale(const SimplexScale& scale) {
 }
 
 void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
       for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
@@ -1042,9 +1036,9 @@ void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
 void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
                                     const HighsInt from_col,
                                     const HighsInt to_col) {
-  assert(matrix.format_ != MatrixFormat::kNone);
-  assert(!matrix.isRowwise());
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(matrix.formatOk());
+  assert(matrix.isColwise());
+  assert(this->formatOk());
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
   HighsInt num_nz = matrix.numNz();
@@ -1073,9 +1067,9 @@ void HighsSparseMatrix::createSlice(const HighsSparseMatrix& matrix,
 }
 
 void HighsSparseMatrix::createRowwise(const HighsSparseMatrix& matrix) {
-  assert(matrix.format_ != MatrixFormat::kNone);
+  assert(matrix.formatOk());
   assert(matrix.isColwise());
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
 
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
@@ -1122,9 +1116,9 @@ void HighsSparseMatrix::createRowwise(const HighsSparseMatrix& matrix) {
 }
 
 void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
-  assert(matrix.format_ != MatrixFormat::kNone);
+  assert(matrix.formatOk());
   assert(matrix.isRowwise());
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
 
   HighsInt num_col = matrix.num_col_;
   HighsInt num_row = matrix.num_row_;
@@ -1172,7 +1166,7 @@ void HighsSparseMatrix::createColwise(const HighsSparseMatrix& matrix) {
 
 void HighsSparseMatrix::product(vector<double>& result,
                                 const vector<double>& row) const {
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(this->formatOk());
   assert((int)row.size() >= this->num_col_);
   result.assign(this->num_row_, 0.0);
   if (this->isColwise()) {
@@ -1192,9 +1186,9 @@ void HighsSparseMatrix::product(vector<double>& result,
 
 void HighsSparseMatrix::createRowwisePartitioned(
     const HighsSparseMatrix& matrix, const int8_t* in_partition) {
-  assert(matrix.format_ != MatrixFormat::kNone);
-  assert(!matrix.isRowwise());
-  assert(this->format_ != MatrixFormat::kNone);
+  assert(matrix.formatOk());
+  assert(matrix.isColwise());
+  assert(this->formatOk());
   const bool all_in_partition = in_partition == NULL;
 
   HighsInt num_col = matrix.num_col_;
@@ -1396,7 +1390,7 @@ void HighsSparseMatrix::update(const HighsInt var_in, const HighsInt var_out,
 
 double HighsSparseMatrix::computeDot(const HVector& column,
                                      const HighsInt use_col) const {
-  assert(this->format_ == MatrixFormat::kColwise);
+  assert(this->isColwise());
   double result = 0;
   if (use_col < this->num_col_) {
     for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
@@ -1410,7 +1404,7 @@ double HighsSparseMatrix::computeDot(const HVector& column,
 
 void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
                                   const double multiplier) const {
-  assert(this->format_ == MatrixFormat::kColwise);
+  assert(this->isColwise());
   if (use_col < this->num_col_) {
     for (HighsInt iEl = this->start_[use_col]; iEl < this->start_[use_col + 1];
          iEl++) {

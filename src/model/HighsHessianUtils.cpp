@@ -64,15 +64,13 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
         interpretCallStatus(call_status, return_status, "normaliseHessian");
     if (return_status == HighsStatus::kError) return return_status;
   }
-  if (kHessianFormatInternal == HessianFormat::kTriangular) {
-    // Extract the triangular part of Q: lower triangle column-wise
-    // or, equivalently, upper triangle row-wise, ensuring that the
-    // diagonal entry comes first, unless it's zero
-    call_status = extractTriangularHessian(options, hessian);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "extractTriangularHessian");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
+  // Extract the triangular part of Q: lower triangle column-wise
+  // or, equivalently, upper triangle row-wise, ensuring that the
+  // diagonal entry comes first, unless it's zero
+  call_status = extractTriangularHessian(options, hessian);
+  return_status = interpretCallStatus(call_status, return_status,
+				      "extractTriangularHessian");
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Assess Q
   call_status =
