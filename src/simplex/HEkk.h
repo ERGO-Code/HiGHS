@@ -38,8 +38,7 @@ class HEkk {
 
   HighsStatus moveNewLp(HighsLp lp);
   HighsStatus passNewLp(const HighsLp& pass_lp);
-  void moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
-                      const HighsSparseMatrix* scaled_a_matrix);
+  void moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix);
   void passScaledLp(const HighsLp& lp);
   HighsStatus solve();
   HighsStatus cleanup();
@@ -95,7 +94,7 @@ class HEkk {
   HighsSparseMatrix ar_matrix_;
   HSimplexNla simplex_nla_;
 
-  const SimplexScale* scale_;
+  const HighsScale* scale_;
   const HighsSparseMatrix* factor_a_matrix_;
 
   double build_synthetic_tick_;

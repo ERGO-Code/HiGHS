@@ -20,6 +20,7 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
+#include "lp_data/HStruct.h" //For  HighsScale
 #include "simplex/HVector.h"
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "util/HighsUtils.h"
@@ -73,6 +74,8 @@ class HighsSparseMatrix {
   void scaleRow(const HighsInt row, const double rowScale);
   void applyScale(const SimplexScale& scale);
   void unapplyScale(const SimplexScale& scale);
+  void applyScale(const HighsScale& scale);
+  void unapplyScale(const HighsScale& scale);
   void createSlice(const HighsSparseMatrix& matrix, const HighsInt from_col,
                    const HighsInt to_col);
   void createColwise(const HighsSparseMatrix& matrix);

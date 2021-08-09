@@ -52,8 +52,17 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
-                             const SimplexScale& scale);
+void getScaling(const HighsOptions& options,
+		HighsLp& lp);
+void scaleLp(const HighsOptions& options,
+	     HighsLp& lp);
+void clearScale(HighsLp& lp);
+bool equilibrationScaleMatrix(const HighsOptions& options,
+			      HighsLp& lp,
+			      const HighsInt use_scale_strategy);
+bool maxValueScaleMatrix(const HighsOptions& options,
+			 HighsLp& lp, const HighsInt
+			 use_scale_strategy);
 
 HighsStatus applyScalingToLpColCost(
     const HighsLogOptions& log_options, HighsLp& lp,
@@ -69,11 +78,6 @@ HighsStatus applyScalingToLpRowBounds(
     const HighsLogOptions& log_options, HighsLp& lp,
     const vector<double>& rowScale,
     const HighsIndexCollection& index_collection);
-
-HighsStatus applyScalingToLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp, const double* colScale,
-    const double* rowScale, const HighsInt from_col, const HighsInt to_col,
-    const HighsInt from_row, const HighsInt to_row);
 
 void applyRowScalingToMatrix(const vector<double>& rowScale,
                              const HighsInt numCol,
@@ -214,6 +218,7 @@ HighsStatus getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
 HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
                                    const HighsInt col, double* val);
 // Analyse the data in an LP problem
+void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
                const std::string message);
 

@@ -43,11 +43,11 @@ struct HighsBasis {
 };
 
 struct HighsScale {
-  HighsInt strategy = kSimplexScaleStrategyOff;
-  bool has_scaling = false;
-  HighsInt num_col = 0;
-  HighsInt num_row = 0;
-  double cost = 1.0;
+  HighsInt strategy;
+  bool has_scaling;
+  HighsInt num_col;
+  HighsInt num_row;
+  double cost;
   std::vector<double> col;
   std::vector<double> row;
 };

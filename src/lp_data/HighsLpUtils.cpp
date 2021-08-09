@@ -362,39 +362,566 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-HighsStatus applyScalingToLp(const HighsLogOptions& log_options, HighsLp& lp,
-                             const SimplexScale& scale) {
-  if (!scale.is_scaled) return HighsStatus::kOk;
-  if ((HighsInt)scale.col.size() < lp.num_col_) return HighsStatus::kError;
-  if ((HighsInt)scale.row.size() < lp.num_row_) return HighsStatus::kError;
-  bool scale_error = false;
-  // Set up column and row index collections for scaling
-  HighsIndexCollection all_cols;
-  all_cols.is_interval_ = true;
-  all_cols.dimension_ = lp.num_col_;
-  all_cols.from_ = 0;
-  all_cols.to_ = lp.num_col_ - 1;
-  HighsIndexCollection all_rows;
-  all_rows.is_interval_ = true;
-  all_rows.dimension_ = lp.num_row_;
-  all_rows.from_ = 0;
-  all_rows.to_ = lp.num_row_ - 1;
+void getScaling(const HighsOptions& options, HighsLp& lp) {
+  // Possibly scale the LP
+  bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
+                  lp.num_col_ > 0;
+  const bool force_no_scaling = false;  // true;//
+  if (force_no_scaling) {
+    highsLogDev(options.log_options, HighsLogType::kWarning,
+                "Forcing no scaling\n");
+    scale_lp = false;
+  }
+  const bool analyse_lp_data =
+      kHighsAnalysisLevelModelData & options.highs_analysis_level;
+  if (analyse_lp_data) analyseLp(options.log_options, lp);
+  if (scale_lp) {
+    scaleLp(options, lp);
+    if (analyse_lp_data && lp.is_scaled_) analyseLp(options.log_options, lp);
+  }
+}
 
-  scale_error = applyScalingToLpColCost(log_options, lp, scale.col, all_cols) !=
-                    HighsStatus::kOk ||
-                scale_error;
-  scale_error = applyScalingToLpColBounds(log_options, lp, scale.col,
-                                          all_cols) != HighsStatus::kOk ||
-                scale_error;
-  scale_error = applyScalingToLpRowBounds(log_options, lp, scale.row,
-                                          all_rows) != HighsStatus::kOk ||
-                scale_error;
-  scale_error = applyScalingToLpMatrix(log_options, lp, &scale.col[0],
-                                       &scale.row[0], 0, lp.num_col_ - 1, 0,
-                                       lp.num_row_ - 1) != HighsStatus::kOk ||
-                scale_error;
-  if (scale_error) return HighsStatus::kError;
-  return HighsStatus::kOk;
+void scaleLp(const HighsOptions& options, HighsLp& lp) {
+  lp.clearScale();
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  // Scaling not well defined for models with no columns
+  assert(numCol > 0);
+  vector<double>& colCost = lp.col_cost_;
+  vector<double>& colLower = lp.col_lower_;
+  vector<double>& colUpper = lp.col_upper_;
+  vector<double>& rowLower = lp.row_lower_;
+  vector<double>& rowUpper = lp.row_upper_;
+
+  // Save the simplex_scale_strategy so that the option can be
+  // modified for the course of this method
+  HighsInt simplex_scale_strategy = options.simplex_scale_strategy;
+  // Determine the actual strategy to use
+  HighsInt use_scale_strategy = simplex_scale_strategy;
+  if (use_scale_strategy == kSimplexScaleStrategyChoose) {
+    // HiGHS is left to choose: currently use forced equilibration, but maybe do
+    // something more intelligent
+    use_scale_strategy = kSimplexScaleStrategyForcedEquilibration;
+  }
+  bool allow_cost_scaling = options.allowed_simplex_cost_scale_factor > 0;
+  // Find out range of matrix values and skip matrix scaling if all
+  // |values| are in [0.2, 5]
+  const double no_scaling_original_matrix_min_value = 0.2;
+  const double no_scaling_original_matrix_max_value = 5.0;
+  double original_matrix_min_value = kHighsInf;
+  double original_matrix_max_value = 0;
+  lp.a_matrix_.range(original_matrix_min_value, original_matrix_max_value);
+  bool no_scaling =
+      (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
+      (original_matrix_max_value <= no_scaling_original_matrix_max_value);
+  const bool force_scaling = false;
+  if (force_scaling) {
+    no_scaling = false;
+    printf("!!!! FORCE SCALING !!!!\n");
+  }
+  bool scaled_matrix = false;
+  if (no_scaling) {
+    // No matrix scaling, but possible cost scaling
+    if (options.highs_debug_level)
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Matrix has [min, max] values of [%g, %g] within "
+                  "[%g, %g] so no scaling performed\n",
+                  original_matrix_min_value, original_matrix_max_value,
+                  no_scaling_original_matrix_min_value,
+                  no_scaling_original_matrix_max_value);
+  } else {
+    // Try scaling, so assign unit factors - partly because initial
+    // factors may be assumed by the scaling method, but also because
+    // scaling factors may not be computed for empty rows/columns
+    HighsScale& scale = lp.scale_;
+    scale.col.assign(numCol, 1);
+    scale.row.assign(numRow, 1);
+    const bool equilibration_scaling =
+        use_scale_strategy == kSimplexScaleStrategyEquilibration ||
+        use_scale_strategy == kSimplexScaleStrategyForcedEquilibration;
+    if (equilibration_scaling) {
+      scaled_matrix = equilibrationScaleMatrix(options, lp, use_scale_strategy);
+    } else {
+      scaled_matrix = maxValueScaleMatrix(options, lp, use_scale_strategy);
+    }
+    lp.is_scaled_ = scaled_matrix;
+    if (scaled_matrix) {
+      // Matrix is scaled, so scale the bounds and costs
+      for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+        colLower[iCol] /= scale.col[iCol];
+        colUpper[iCol] /= scale.col[iCol];
+        colCost[iCol] *= scale.col[iCol];
+      }
+      for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+        rowLower[iRow] *= scale.row[iRow];
+        rowUpper[iRow] *= scale.row[iRow];
+      }
+      scale.has_scaling = true;
+      scale.num_col = numCol;
+      scale.num_row = numRow;
+      scale.cost = 1.0;
+      lp.is_scaled_ = true;
+    } else {
+      // Matrix is not scaled, so clear the scaling
+      lp.clearScale();
+    }
+  }
+  // Record the scaling strategy used
+  lp.scale_.strategy = use_scale_strategy;
+  // Possibly scale the costs
+  //  if (allow_cost_scaling) scaleSimplexCost(options, lp, scale.cost);
+
+  // If matrix is unscaled, then LP is only scaled if there is a cost scaling
+  // factor
+  //  if (!scaled_matrix) lp.is_scaled_ = scale.cost != 1;
+}
+
+bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
+                                     const HighsInt use_scale_strategy) {
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  HighsScale& scale = lp.scale_;
+  vector<double>& colScale = scale.col;
+  vector<double>& rowScale = scale.row;
+  vector<HighsInt>& Astart = lp.a_matrix_.start_;
+  vector<HighsInt>& Aindex = lp.a_matrix_.index_;
+  vector<double>& Avalue = lp.a_matrix_.value_;
+  vector<double>& colCost = lp.col_cost_;
+
+  HighsInt simplex_scale_strategy = use_scale_strategy;
+
+  double original_matrix_min_value = kHighsInf;
+  double original_matrix_max_value = 0;
+  for (HighsInt k = 0, AnX = Astart[numCol]; k < AnX; k++) {
+    double value = fabs(Avalue[k]);
+    original_matrix_min_value = min(original_matrix_min_value, value);
+    original_matrix_max_value = max(original_matrix_max_value, value);
+  }
+
+  // Include cost in scaling if minimum nonzero cost is less than 0.1
+  double min_nonzero_cost = kHighsInf;
+  for (HighsInt i = 0; i < numCol; i++) {
+    if (colCost[i]) min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
+  }
+  bool include_cost_in_scaling = false;
+  include_cost_in_scaling = min_nonzero_cost < 0.1;
+
+  // Limits on scaling factors
+  double max_allow_scale;
+  double min_allow_scale;
+  // Now that kHighsInf =
+  // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
+  // work so, in recognition, use the old value of kHighsInf
+  const double finite_infinity = 1e200;
+  max_allow_scale = pow(2.0, options.allowed_simplex_matrix_scale_factor);
+  min_allow_scale = 1 / max_allow_scale;
+
+  double min_allow_col_scale = min_allow_scale;
+  double max_allow_col_scale = max_allow_scale;
+  double min_allow_row_scale = min_allow_scale;
+  double max_allow_row_scale = max_allow_scale;
+
+  // Search up to 6 times
+  vector<double> row_min_value(numRow, finite_infinity);
+  vector<double> row_max_value(numRow, 1 / finite_infinity);
+  for (HighsInt search_count = 0; search_count < 6; search_count++) {
+    // Find column scale, prepare row data
+    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+      // For column scale (find)
+      double col_min_value = finite_infinity;
+      double col_max_value = 1 / finite_infinity;
+      double abs_col_cost = fabs(colCost[iCol]);
+      if (include_cost_in_scaling && abs_col_cost != 0) {
+        col_min_value = min(col_min_value, abs_col_cost);
+        col_max_value = max(col_max_value, abs_col_cost);
+      }
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        double value = fabs(Avalue[k]) * rowScale[Aindex[k]];
+        col_min_value = min(col_min_value, value);
+        col_max_value = max(col_max_value, value);
+      }
+      double col_equilibration = 1 / sqrt(col_min_value * col_max_value);
+      // Ensure that column scale factor is not excessively large or small
+      colScale[iCol] =
+          min(max(min_allow_col_scale, col_equilibration), max_allow_col_scale);
+      // For row scale (only collect)
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        HighsInt iRow = Aindex[k];
+        double value = fabs(Avalue[k]) * colScale[iCol];
+        row_min_value[iRow] = min(row_min_value[iRow], value);
+        row_max_value[iRow] = max(row_max_value[iRow], value);
+      }
+    }
+    // For row scale (find)
+    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+      double row_equilibration =
+          1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+      // Ensure that row scale factor is not excessively large or small
+      rowScale[iRow] =
+          min(max(min_allow_row_scale, row_equilibration), max_allow_row_scale);
+    }
+    row_min_value.assign(numRow, finite_infinity);
+    row_max_value.assign(numRow, 1 / finite_infinity);
+  }
+  // Make it numerically better
+  // Also determine the max and min row and column scaling factors
+  double min_col_scale = finite_infinity;
+  double max_col_scale = 1 / finite_infinity;
+  double min_row_scale = finite_infinity;
+  double max_row_scale = 1 / finite_infinity;
+  const double log2 = log(2.0);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / log2 + 0.5));
+    min_col_scale = min(colScale[iCol], min_col_scale);
+    max_col_scale = max(colScale[iCol], max_col_scale);
+  }
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / log2 + 0.5));
+    min_row_scale = min(rowScale[iRow], min_row_scale);
+    max_row_scale = max(rowScale[iRow], max_row_scale);
+  }
+  // Apply scaling to matrix and bounds
+  double matrix_min_value = finite_infinity;
+  double matrix_max_value = 0;
+  double min_original_col_equilibration = finite_infinity;
+  double sum_original_log_col_equilibration = 0;
+  double max_original_col_equilibration = 0;
+  double min_original_row_equilibration = finite_infinity;
+  double sum_original_log_row_equilibration = 0;
+  double max_original_row_equilibration = 0;
+  double min_col_equilibration = finite_infinity;
+  double sum_log_col_equilibration = 0;
+  double max_col_equilibration = 0;
+  double min_row_equilibration = finite_infinity;
+  double sum_log_row_equilibration = 0;
+  double max_row_equilibration = 0;
+  vector<double> original_row_min_value(numRow, finite_infinity);
+  vector<double> original_row_max_value(numRow, 1 / finite_infinity);
+  row_min_value.assign(numRow, finite_infinity);
+  row_max_value.assign(numRow, 1 / finite_infinity);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    double original_col_min_value = finite_infinity;
+    double original_col_max_value = 1 / finite_infinity;
+    double col_min_value = finite_infinity;
+    double col_max_value = 1 / finite_infinity;
+    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      HighsInt iRow = Aindex[k];
+      const double original_value = fabs(Avalue[k]);
+      original_col_min_value = min(original_value, original_col_min_value);
+      original_col_max_value = max(original_value, original_col_max_value);
+      original_row_min_value[iRow] =
+          min(original_row_min_value[iRow], original_value);
+      original_row_max_value[iRow] =
+          max(original_row_max_value[iRow], original_value);
+      Avalue[k] *= (colScale[iCol] * rowScale[iRow]);
+      const double value = fabs(Avalue[k]);
+      col_min_value = min(value, col_min_value);
+      col_max_value = max(value, col_max_value);
+      row_min_value[iRow] = min(row_min_value[iRow], value);
+      row_max_value[iRow] = max(row_max_value[iRow], value);
+    }
+    matrix_min_value = min(matrix_min_value, col_min_value);
+    matrix_max_value = max(matrix_max_value, col_max_value);
+
+    const double original_col_equilibration =
+        1 / sqrt(original_col_min_value * original_col_max_value);
+    min_original_col_equilibration =
+        min(original_col_equilibration, min_original_col_equilibration);
+    sum_original_log_col_equilibration += log(original_col_equilibration);
+    max_original_col_equilibration =
+        max(original_col_equilibration, max_original_col_equilibration);
+    const double col_equilibration = 1 / sqrt(col_min_value * col_max_value);
+    min_col_equilibration = min(col_equilibration, min_col_equilibration);
+    sum_log_col_equilibration += log(col_equilibration);
+    max_col_equilibration = max(col_equilibration, max_col_equilibration);
+  }
+
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    const double original_row_equilibration =
+        1 / sqrt(original_row_min_value[iRow] * original_row_max_value[iRow]);
+    min_original_row_equilibration =
+        min(original_row_equilibration, min_original_row_equilibration);
+    sum_original_log_row_equilibration += log(original_row_equilibration);
+    max_original_row_equilibration =
+        max(original_row_equilibration, max_original_row_equilibration);
+    const double row_equilibration =
+        1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+    min_row_equilibration = min(row_equilibration, min_row_equilibration);
+    sum_log_row_equilibration += log(row_equilibration);
+    max_row_equilibration = max(row_equilibration, max_row_equilibration);
+  }
+  const double geomean_original_col_equilibration =
+      exp(sum_original_log_col_equilibration / numCol);
+  const double geomean_original_row_equilibration =
+      exp(sum_original_log_row_equilibration / numRow);
+  const double geomean_col_equilibration =
+      exp(sum_log_col_equilibration / numCol);
+  const double geomean_row_equilibration =
+      exp(sum_log_row_equilibration / numRow);
+  if (options.highs_debug_level) {
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
+        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
+        min_original_col_equilibration, geomean_original_col_equilibration,
+        max_original_col_equilibration, min_original_row_equilibration,
+        geomean_original_row_equilibration, max_original_row_equilibration);
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Final    equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
+        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
+        min_col_equilibration, geomean_col_equilibration, max_col_equilibration,
+        min_row_equilibration, geomean_row_equilibration,
+        max_row_equilibration);
+  }
+
+  // Compute the mean equilibration improvement
+  const double geomean_original_col =
+      max(geomean_original_col_equilibration,
+          1 / geomean_original_col_equilibration);
+  const double geomean_original_row =
+      max(geomean_original_row_equilibration,
+          1 / geomean_original_row_equilibration);
+  const double geomean_col =
+      max(geomean_col_equilibration, 1 / geomean_col_equilibration);
+  const double geomean_row =
+      max(geomean_row_equilibration, 1 / geomean_row_equilibration);
+  const double mean_equilibration_improvement =
+      (geomean_original_col * geomean_original_row) /
+      (geomean_col * geomean_row);
+  // Compute the extreme equilibration improvement
+  const double original_col_ratio =
+      max_original_col_equilibration / min_original_col_equilibration;
+  const double original_row_ratio =
+      max_original_row_equilibration / min_original_row_equilibration;
+  const double col_ratio = max_col_equilibration / min_col_equilibration;
+  const double row_ratio = max_row_equilibration / min_row_equilibration;
+  const double extreme_equilibration_improvement =
+      (original_col_ratio + original_row_ratio) / (col_ratio + row_ratio);
+  // Compute the max/min matrix value improvement
+  const double matrix_value_ratio = matrix_max_value / matrix_min_value;
+  const double original_matrix_value_ratio =
+      original_matrix_max_value / original_matrix_min_value;
+  const double matrix_value_ratio_improvement =
+      original_matrix_value_ratio / matrix_value_ratio;
+  if (options.highs_debug_level) {
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Extreme equilibration improvement = ( %11.4g + "
+                "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g\n",
+                original_col_ratio, original_row_ratio, col_ratio, row_ratio,
+                (original_col_ratio + original_row_ratio),
+                (col_ratio + row_ratio), extreme_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling:    Mean equilibration improvement = ( %11.4g * "
+                "%11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g\n",
+                geomean_original_col, geomean_original_row, geomean_col,
+                geomean_row, (geomean_original_col * geomean_original_row),
+                (geomean_col * geomean_row), mean_equilibration_improvement);
+    highsLogDev(
+        options.log_options, HighsLogType::kInfo,
+        "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
+        "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
+        matrix_min_value, matrix_max_value, matrix_value_ratio,
+        original_matrix_min_value, original_matrix_max_value,
+        original_matrix_value_ratio, matrix_value_ratio_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves    mean equilibration by a factor %0.4g\n",
+                mean_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves extreme equilibration by a factor %0.4g\n",
+                extreme_equilibration_improvement);
+    highsLogDev(options.log_options, HighsLogType::kInfo,
+                "Scaling: Improves max/min matrix values by a factor %0.4g\n",
+                matrix_value_ratio_improvement);
+  }
+  const bool possibly_abandon_scaling =
+      simplex_scale_strategy != kSimplexScaleStrategyForcedEquilibration;
+  const double improvement_factor = extreme_equilibration_improvement *
+                                    mean_equilibration_improvement *
+                                    matrix_value_ratio_improvement;
+
+  const double improvement_factor_required = 1.0;
+  const bool poor_improvement =
+      improvement_factor < improvement_factor_required;
+
+  // Possibly abandon scaling if it's not improved equlibration significantly
+  if (possibly_abandon_scaling && poor_improvement) {
+    // Unscale the matrix
+    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        HighsInt iRow = Aindex[k];
+        Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
+      }
+    }
+    if (options.highs_debug_level)
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor %0.4g < %0.4g required, so no "
+                  "scaling applied\n",
+                  improvement_factor, improvement_factor_required);
+    return false;
+  } else {
+    if (options.highs_debug_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
+                  improvement_factor, improvement_factor_required);
+      if (extreme_equilibration_improvement < 1.0) {
+        highsLogDev(
+            options.log_options, HighsLogType::kWarning,
+            "Scaling: Applying scaling with extreme improvement of %0.4g\n",
+            extreme_equilibration_improvement);
+      }
+      if (mean_equilibration_improvement < 1.0) {
+        highsLogDev(
+            options.log_options, HighsLogType::kWarning,
+            "Scaling: Applying scaling with mean improvement of %0.4g\n",
+            mean_equilibration_improvement);
+      }
+      if (matrix_value_ratio_improvement < 1.0) {
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "Scaling: Applying scaling with matrix value ratio "
+                    "improvement of %0.4g\n",
+                    matrix_value_ratio_improvement);
+      }
+      if (improvement_factor < 10 * improvement_factor_required) {
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "Scaling: Applying scaling with improvement factor %0.4g "
+                    "< 10*(%0.4g) improvement\n",
+                    improvement_factor, improvement_factor_required);
+      }
+    }
+  }
+  return true;
+}
+
+bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
+			 const HighsInt use_scale_strategy) {
+  HighsInt numCol = lp.num_col_;
+  HighsInt numRow = lp.num_row_;
+  HighsScale& scale = lp.scale_;
+  vector<double>& colScale = scale.col;
+  vector<double>& rowScale = scale.row;
+  vector<HighsInt>& Astart = lp.a_matrix_.start_;
+  vector<HighsInt>& Aindex = lp.a_matrix_.index_;
+  vector<double>& Avalue = lp.a_matrix_.value_;
+
+  HighsInt simplex_scale_strategy = use_scale_strategy;
+
+  assert(options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue015 ||
+         options.simplex_scale_strategy == kSimplexScaleStrategyMaxValue0157);
+  const double log2 = log(2.0);
+  const double max_allow_scale =
+      pow(2.0, options.allowed_simplex_matrix_scale_factor);
+  const double min_allow_scale = 1 / max_allow_scale;
+
+  const double min_allow_col_scale = min_allow_scale;
+  const double max_allow_col_scale = max_allow_scale;
+  const double min_allow_row_scale = min_allow_scale;
+  const double max_allow_row_scale = max_allow_scale;
+
+  double min_row_scale = kHighsInf;
+  double max_row_scale = 0;
+  double original_matrix_min_value = kHighsInf;
+  double original_matrix_max_value = 0;
+  // Determine the row scaling. Also determine the max/min row scaling
+  // factors, and max/min original matrix values
+  vector<double> row_max_value(numRow, 0);
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      const HighsInt iRow = Aindex[k];
+      const double value = fabs(Avalue[k]);
+      row_max_value[iRow] = max(row_max_value[iRow], value);
+      original_matrix_min_value = min(original_matrix_min_value, value);
+      original_matrix_max_value = max(original_matrix_max_value, value);
+    }
+  }
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    if (row_max_value[iRow]) {
+      double row_scale_value = 1 / row_max_value[iRow];
+      // Convert the row scale factor to the nearest power of two, and
+      // ensure that it is not excessively large or small
+      row_scale_value = pow(2.0, floor(log(row_scale_value) / log2 + 0.5));
+      row_scale_value =
+          min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
+      min_row_scale = min(row_scale_value, min_row_scale);
+      max_row_scale = max(row_scale_value, max_row_scale);
+      rowScale[iRow] = row_scale_value;
+    }
+  }
+  // Determine the column scaling, whilst applying the row scaling
+  // Also determine the max/min column scaling factors, and max/min
+  // matrix values
+  double min_col_scale = kHighsInf;
+  double max_col_scale = 0;
+  double matrix_min_value = kHighsInf;
+  double matrix_max_value = 0;
+  for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+    double col_max_value = 0;
+    for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      const HighsInt iRow = Aindex[k];
+      Avalue[k] *= rowScale[iRow];
+      const double value = fabs(Avalue[k]);
+      col_max_value = max(col_max_value, value);
+    }
+    if (col_max_value) {
+      double col_scale_value = 1 / col_max_value;
+      // Convert the col scale factor to the nearest power of two, and
+      // ensure that it is not excessively large or small
+      col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
+      col_scale_value =
+          min(max(min_allow_col_scale, col_scale_value), max_allow_col_scale);
+      min_col_scale = min(col_scale_value, min_col_scale);
+      max_col_scale = max(col_scale_value, max_col_scale);
+      colScale[iCol] = col_scale_value;
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        Avalue[k] *= colScale[iCol];
+        const double value = fabs(Avalue[k]);
+        matrix_min_value = min(matrix_min_value, value);
+        matrix_max_value = max(matrix_max_value, value);
+      }
+    }
+  }
+  const double matrix_value_ratio = matrix_max_value / matrix_min_value;
+  const double original_matrix_value_ratio =
+      original_matrix_max_value / original_matrix_min_value;
+  const double matrix_value_ratio_improvement =
+      original_matrix_value_ratio / matrix_value_ratio;
+
+  const double improvement_factor = matrix_value_ratio_improvement;
+
+  const double improvement_factor_required = 1.0;
+  const bool poor_improvement =
+      improvement_factor < improvement_factor_required;
+
+
+  if (poor_improvement) {
+    // Unscale the matrix
+    for (HighsInt iCol = 0; iCol < numCol; iCol++) {
+      for (HighsInt k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        HighsInt iRow = Aindex[k];
+        Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
+      }
+    }
+    if (options.highs_debug_level)
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+                  "Scaling: Improvement factor %0.4g < %0.4g required, so no "
+                  "scaling applied\n",
+                  improvement_factor, improvement_factor_required);
+    return false;
+  } else {
+    if (options.highs_debug_level) {
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+		  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+		  "[%0.4g, %0.4g] for rows\n",
+		  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
+      highsLogDev(options.log_options, HighsLogType::kInfo,
+		  "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
+		  "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
+		  matrix_min_value, matrix_max_value, matrix_value_ratio,
+		  original_matrix_min_value, original_matrix_max_value,
+		  original_matrix_value_ratio, matrix_value_ratio_improvement);
+    }
+    return true;
+  }
 }
 
 HighsStatus applyScalingToLpColCost(
@@ -517,53 +1044,6 @@ HighsStatus applyScalingToLpRowBounds(
       lp.row_upper_[ml_row] *= rowScale[ml_row];
   }
 
-  return HighsStatus::kOk;
-}
-
-HighsStatus applyScalingToLpMatrix(
-    const HighsLogOptions& log_options, HighsLp& lp, const double* colScale,
-    const double* rowScale, const HighsInt from_col, const HighsInt to_col,
-    const HighsInt from_row, const HighsInt to_row) {
-  assert(from_col == 0 && to_col == lp.num_col_ - 1);
-  assert(from_row == 0 && to_row == lp.num_row_ - 1);
-  if (from_col < 0) return HighsStatus::kError;
-  if (to_col >= lp.num_col_) return HighsStatus::kError;
-  if (from_row < 0) return HighsStatus::kError;
-  if (to_row >= lp.num_row_) return HighsStatus::kError;
-  if (colScale != NULL) {
-    if (rowScale != NULL) {
-      for (HighsInt iCol = from_col; iCol <= to_col; iCol++) {
-        for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-             iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-          HighsInt iRow = lp.a_matrix_.index_[iEl];
-          if (iRow < from_row || iRow > to_row) continue;
-          lp.a_matrix_.value_[iEl] *= (colScale[iCol] * rowScale[iRow]);
-        }
-      }
-    } else {
-      // No row scaling
-      for (HighsInt iCol = from_col; iCol <= to_col; iCol++) {
-        for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-             iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-          HighsInt iRow = lp.a_matrix_.index_[iEl];
-          if (iRow < from_row || iRow > to_row) continue;
-          lp.a_matrix_.value_[iEl] *= colScale[iCol];
-        }
-      }
-    }
-  } else {
-    // No column scaling
-    if (rowScale != NULL) {
-      for (HighsInt iCol = from_col; iCol <= to_col; iCol++) {
-        for (HighsInt iEl = lp.a_matrix_.start_[iCol];
-             iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
-          HighsInt iRow = lp.a_matrix_.index_[iEl];
-          if (iRow < from_row || iRow > to_row) continue;
-          lp.a_matrix_.value_[iEl] *= rowScale[iRow];
-        }
-      }
-    }
-  }
   return HighsStatus::kOk;
 }
 
@@ -1281,6 +1761,16 @@ void reportMatrix(const HighsLogOptions& log_options, const std::string message,
                "             Start   %10" HIGHSINT_FORMAT "\n", num_nz);
 }
 
+void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
+  std::string message;
+  if (lp.is_scaled_) {
+    message = "Scaled";
+  } else {
+    message = "Unscaled";
+  }
+  analyseLp(log_options, lp, message);
+}
+
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
                const std::string message) {
   vector<double> min_colBound;
@@ -1301,6 +1791,11 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
     rowRange[row] = lp.row_upper_[row] - lp.row_lower_[row];
 
   printf("\n%s model data: Analysis\n", message.c_str());
+  if (lp.is_scaled_) {
+    const HighsScale& scale = lp.scale_;
+    analyseVectorValues(log_options, "Column scaling factors", lp.num_col_, scale.col);
+    analyseVectorValues(log_options, "Row    scaling factors", lp.num_row_, scale.row);
+  }
   analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_);
   analyseVectorValues(log_options, "Column lower bounds", lp.num_col_,
                       lp.col_lower_);

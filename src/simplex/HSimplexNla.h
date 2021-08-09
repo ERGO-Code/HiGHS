@@ -32,7 +32,7 @@
 
 class HSimplexNla {
  public:
-  void setup(const HighsLp* lp, HighsInt* base_index, const SimplexScale* scale,
+  void setup(const HighsLp* lp, HighsInt* base_index, const HighsScale* scale,
              const HighsSparseMatrix* factor_a_matrix,
              const double factor_pivot_threshold, const HighsOptions* options,
              HighsTimer* timer, HighsSimplexAnalysis* analysis);
@@ -50,7 +50,7 @@ class HSimplexNla {
   void setPivotThreshold(const double new_pivot_threshold);
 
   void passLpPointer(const HighsLp* lp);
-  void passScalePointer(const SimplexScale* scale);
+  void passScalePointer(const HighsScale* scale);
   void applyBasisMatrixColScale(HVector& rhs) const;
   void applyBasisMatrixRowScale(HVector& rhs) const;
   bool sparseLoopStyle(const HighsInt count, const HighsInt dim,
@@ -73,7 +73,7 @@ class HSimplexNla {
   // Class data members
   bool is_setup_ = false;
   const HighsLp* lp_;
-  const SimplexScale* scale_;
+  const HighsScale* scale_;
   HighsInt* base_index_;
   const HighsOptions* options_;
   HighsTimer* timer_;

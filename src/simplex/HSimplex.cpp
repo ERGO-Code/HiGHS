@@ -322,15 +322,12 @@ void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
   }
 }
 
-void unscaleSolution(HighsSolution& solution, const SimplexScale scale) {
-  HighsInt num_col = solution.col_value.size();
-  HighsInt num_row = solution.row_value.size();
-
-  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+void unscaleSolution(HighsSolution& solution, const HighsScale scale) {
+  for (HighsInt iCol = 0; iCol < scale.num_col; iCol++) {
     solution.col_value[iCol] *= scale.col[iCol];
     solution.col_dual[iCol] /= (scale.col[iCol] / scale.cost);
   }
-  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+  for (HighsInt iRow = 0; iRow < scale.num_row; iRow++) {
     solution.row_value[iRow] /= scale.row[iRow];
     solution.row_dual[iRow] *= (scale.row[iRow] * scale.cost);
   }
@@ -383,12 +380,11 @@ HighsStatus deleteScale(const HighsLogOptions& log_options,
   return HighsStatus::kOk;
 }
 
-void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
+void getUnscaledInfeasibilities(const HighsOptions& options,
+				const HighsScale& scale,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
-                                const SimplexScale& scale,
-                                HighsSolutionParams& solution_params,
-                                const bool scaled_simplex_lp) {
+                                HighsSolutionParams& solution_params) {
   const double primal_feasibility_tolerance =
       options.primal_feasibility_tolerance;
   const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
@@ -409,26 +405,24 @@ void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
   sum_dual_infeasibility = 0;
 
   double scale_mu = 1.0;
-  assert(int(scale.col.size()) == lp.num_col_);
-  assert(int(scale.row.size()) == lp.num_row_);
-  for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
+  assert(int(scale.col.size()) == scale.num_col);
+  assert(int(scale.row.size()) == scale.num_row);
+  for (HighsInt iVar = 0; iVar < scale.num_col + scale.num_row; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == kNonbasicFlagFalse) continue;
     // No dual infeasiblity for fixed rows and columns
     if (info.workLower_[iVar] == info.workUpper_[iVar]) continue;
-    if (scaled_simplex_lp) {
-      bool col = iVar < lp.num_col_;
-      HighsInt iCol = 0;
-      HighsInt iRow = 0;
-      if (col) {
-        iCol = iVar;
-        assert(int(scale.col.size()) > iCol);
-        scale_mu = 1 / (scale.col[iCol] / scale.cost);
-      } else {
-        iRow = iVar - lp.num_col_;
-        assert(int(scale.row.size()) > iRow);
-        scale_mu = scale.row[iRow] * scale.cost;
-      }
+    bool col = iVar < scale.num_col;
+    HighsInt iCol = 0;
+    HighsInt iRow = 0;
+    if (col) {
+      iCol = iVar;
+      assert(int(scale.col.size()) > iCol);
+      scale_mu = 1 / (scale.col[iCol] / scale.cost);
+    } else {
+      iRow = iVar - scale.num_col;
+      assert(int(scale.row.size()) > iRow);
+      scale_mu = scale.row[iRow] * scale.cost;
     }
     const double dual = info.workDual_[iVar];
     const double lower = info.workLower_[iVar];
@@ -453,19 +447,17 @@ void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
     }
   }
   // Look at the primal infeasibilities of basic variables
-  for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
+  for (HighsInt ix = 0; ix < scale.num_row; ix++) {
     HighsInt iVar = basis.basicIndex_[ix];
-    if (scaled_simplex_lp) {
-      bool col = iVar < lp.num_col_;
-      HighsInt iCol = 0;
-      HighsInt iRow = 0;
-      if (col) {
-        iCol = iVar;
-        scale_mu = scale.col[iCol];
-      } else {
-        iRow = iVar - lp.num_col_;
-        scale_mu = 1 / scale.row[iRow];
-      }
+    bool col = iVar < scale.num_col;
+    HighsInt iCol = 0;
+    HighsInt iRow = 0;
+    if (col) {
+      iCol = iVar;
+      scale_mu = scale.col[iCol];
+    } else {
+      iRow = iVar - scale.num_col;
+      scale_mu = 1 / scale.row[iRow];
     }
     double unscaled_lower = info.baseLower_[ix] * scale_mu;
     double unscaled_value = info.baseValue_[ix] * scale_mu;

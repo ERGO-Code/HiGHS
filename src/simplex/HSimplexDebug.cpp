@@ -42,26 +42,23 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsOptions& options = ekk_instance.options_;
   const HighsLp& highs_lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = ekk_instance.lp_;
-  const SimplexScale& scale = highs_model_object.scale_;
+  const HighsScale& scale = simplex_lp.scale_;
   const HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
   bool right_size = true;
-  right_size = (HighsInt)scale.col.size() == simplex_lp.num_col_ && right_size;
-  right_size = (HighsInt)scale.row.size() == simplex_lp.num_row_ && right_size;
-  if (!right_size) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "scale size error\n");
-    assert(right_size);
-    return_status = HighsDebugStatus::kLogicalError;
+  if (scale.has_scaling) {
+    right_size = (HighsInt)scale.col.size() == simplex_lp.num_col_ && right_size;
+    right_size = (HighsInt)scale.row.size() == simplex_lp.num_row_ && right_size;
+    if (!right_size) {
+      highsLogDev(options.log_options, HighsLogType::kError,
+		  "scale size error\n");
+      assert(right_size);
+      return_status = HighsDebugStatus::kLogicalError;
+    }
   }
   // Take a copy of the original LP
   HighsLp check_lp = highs_lp;
-  if (applyScalingToLp(options.log_options, check_lp, scale) !=
-      HighsStatus::kOk) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "debugSimplexLp: Error scaling check LP\n");
-    return HighsDebugStatus::kLogicalError;
-  }
+  check_lp.applyScale();
   const bool lp_data_ok = check_lp == simplex_lp;
   if (!lp_data_ok) {
     highsLogDev(options.log_options, HighsLogType::kError,

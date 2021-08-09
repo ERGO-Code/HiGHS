@@ -66,18 +66,17 @@ void updateSimplexLpStatus(
     LpAction action              // !< Action prompting update
 );
 
-void unscaleSolution(HighsSolution& solution, const SimplexScale scale);
+void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 
 HighsStatus deleteScale(const HighsLogOptions& log_options,
                         vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
-void getUnscaledInfeasibilities(const HighsOptions& options, const HighsLp& lp,
+void getUnscaledInfeasibilities(const HighsOptions& options,
+				const HighsScale& scale,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
-                                const SimplexScale& scale,
-                                HighsSolutionParams& solution_params,
-                                const bool scaled_simplex_lp = true);
+                                HighsSolutionParams& solution_params);
 
 // SCALE:
 

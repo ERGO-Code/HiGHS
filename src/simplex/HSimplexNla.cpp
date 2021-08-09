@@ -31,7 +31,7 @@
 // using std::vector;
 
 void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
-                        const SimplexScale* scale,
+                        const HighsScale* scale,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold,
                         const HighsOptions* options, HighsTimer* timer,
@@ -151,7 +151,7 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
 
 void HSimplexNla::passLpPointer(const HighsLp* lp) { lp_ = lp; }
 
-void HSimplexNla::passScalePointer(const SimplexScale* scale) {
+void HSimplexNla::passScalePointer(const HighsScale* scale) {
   scale_ = scale;
 }
 
@@ -309,7 +309,7 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
       return HighsDebugStatus::kLogicalError;
     }
   } else {
-    check_lp.applyScale(*scale_);
+    check_lp.applyScale();
   }
   HighsInt error_col = -1;
   for (HighsInt iCol = 0; iCol < check_lp.num_col_ + 1; iCol++) {

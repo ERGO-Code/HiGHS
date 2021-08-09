@@ -50,11 +50,10 @@ HighsStatus HEkk::passNewLp(const HighsLp& pass_lp) {
   return setup();
 }
 
-void HEkk::moveUnscaledLp(HighsLp lp, const SimplexScale* scale,
-                          const HighsSparseMatrix* scaled_a_matrix) {
+void HEkk::moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix) {
   lp_ = std::move(lp);
   if (status_.has_matrix) initialiseMatrix(true);
-  scale_ = scale;
+  scale_ = &lp_.scale_;
   factor_a_matrix_ = scaled_a_matrix;
   if (simplex_nla_.is_setup_) {
     // Simplex NLA has been set up in previous call to

@@ -127,19 +127,28 @@ bool HighsLp::dimensionsOk(std::string message) const {
   HighsInt scale_strategy = (HighsInt)this->scale_.strategy;
   bool legal_scale_strategy = scale_strategy >= 0;
   ok = legal_scale_strategy && ok;
-  if (scale_strategy) {
-    bool legal_scale_num_col = this->scale_.num_col == num_col;
-    ok = legal_scale_num_col && ok;
-    bool legal_scale_num_row = this->scale_.num_row == num_row;
-    ok = legal_scale_num_row && ok;
-    HighsInt scale_row_size = (HighsInt)this->scale_.row.size();
-    HighsInt scale_col_size = (HighsInt)this->scale_.col.size();
-    bool legal_scale_row_size = scale_row_size >= num_row;
-    bool legal_scale_col_size = scale_col_size >= num_col;
-    ok = legal_scale_row_size && ok;
-    ok = legal_scale_col_size && ok;
+  HighsInt scale_row_size = (HighsInt)this->scale_.row.size();
+  HighsInt scale_col_size = (HighsInt)this->scale_.col.size();
+  bool legal_scale_num_col = false;
+  bool legal_scale_num_row = false;
+  bool legal_scale_row_size = false;
+  bool legal_scale_col_size = false;
+  if (this->scale_.has_scaling) {
+    legal_scale_num_col = this->scale_.num_col == num_col;
+    legal_scale_num_row = this->scale_.num_row == num_row;
+    legal_scale_row_size = scale_row_size >= num_row;
+    legal_scale_col_size = scale_col_size >= num_col;
+  } else {
+    legal_scale_num_col = this->scale_.num_col == 0;
+    legal_scale_num_row = this->scale_.num_row == 0;
+    legal_scale_row_size = scale_row_size == 0;
+    legal_scale_col_size = scale_col_size == 0;
   }
-
+  ok = legal_scale_num_col && ok;
+  ok = legal_scale_num_row && ok;
+  ok = legal_scale_row_size && ok;
+  ok = legal_scale_col_size && ok;
+  
   if (!ok) {
     printf("HighsLp::dimensionsOk (%s) not OK\n", message.c_str());
   }
@@ -182,6 +191,19 @@ void HighsLp::clear() {
   this->scale_.cost = 1.0;
   this->scale_.col.clear();
   this->scale_.row.clear();
+  this->clearScale();
+}
+
+void HighsLp::clearScale() {
+  this->unapplyScale();
+  HighsScale& scale = this->scale_;
+  scale.strategy = kSimplexScaleStrategyOff;
+  scale.has_scaling = false;
+  scale.num_col = 0;
+  scale.num_row = 0;
+  scale.cost = 0;
+  scale.col.clear();
+  scale.row.clear();
 }
 
 void HighsLp::applyScale(const SimplexScale& scale) {
@@ -212,4 +234,55 @@ void HighsLp::unapplyScale(const SimplexScale& scale) {
   }
   this->a_matrix_.unapplyScale(scale);
   //  scale.is_scaled = false;
+}
+
+void HighsLp::applyScale() {
+  // Ensure that any scaling is applied
+  const HighsScale& scale = this->scale_;
+  if (this->is_scaled_) {
+    // Already scaled - so check that there is scaling and return
+    assert(scale.has_scaling);
+    return;
+  }
+  // No scaling currently applied
+  this->is_scaled_ = false;
+  if (scale.has_scaling) {
+    // Apply the scaling to the bounds, costs and matrix, and record
+    // that it has been applied
+    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+      this->col_lower_[iCol] /= scale.col[iCol];
+      this->col_upper_[iCol] /= scale.col[iCol];
+      this->col_cost_[iCol] *= scale.col[iCol];
+    }
+    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+      this->row_lower_[iRow] *= scale.row[iRow];
+      this->row_upper_[iRow] *= scale.row[iRow];
+    }
+    this->a_matrix_.applyScale(scale);
+    this->is_scaled_ = true;
+  }
+}
+
+void HighsLp::unapplyScale() {
+  // Ensure that any scaling is not applied
+  const HighsScale& scale = this->scale_;
+  if (!this->is_scaled_) {
+    // Not scaled so return
+    return;
+  }
+  // Already scaled - so check that there is scaling
+  assert(scale.has_scaling);
+  // Unapply the scaling to the bounds, costs and matrix, and record
+  // that it has been unapplied
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
+    this->col_lower_[iCol] *= scale.col[iCol];
+    this->col_upper_[iCol] *= scale.col[iCol];
+    this->col_cost_[iCol] /= scale.col[iCol];
+  }
+  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
+    this->row_lower_[iRow] /= scale.row[iRow];
+    this->row_upper_[iRow] /= scale.row[iRow];
+  }
+  this->a_matrix_.unapplyScale(scale);
+  this->is_scaled_ = false;
 }
