@@ -36,7 +36,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsLp& lp = lpRelaxation.getLp();
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
 
-  randgen.initialise(mip.options_mip_->highs_random_seed +
+  randgen.initialise(mip.options_mip_->random_seed +
                      lpRelaxation.getNumLpIterations());
   std::vector<RowType> rowtype;
   rowtype.resize(lp.num_row_);

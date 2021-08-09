@@ -27,22 +27,34 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
 
     std::string presolve, solver, parallel;
 
-    cxx_options.add_options()(kModelFileString, "File of model to solve.",
-                              cxxopts::value<std::vector<std::string>>())(
-        kPresolveString,
-        "Presolve: \"choose\" by default - \"on\"/\"off\"/\"mip\" are "
-        "alternatives.",
-        cxxopts::value<std::string>(presolve))(
-        kSolverString,
+    // clang-format off
+    cxx_options.add_options()
+        (kModelFileString,
+        "File of model to solve.",
+        cxxopts::value<std::vector<std::string>>())
+        (kPresolveString,
+        "Presolve: \"choose\" by default - \"on\"/\"off\"/\"mip\" are alternatives.",
+        cxxopts::value<std::string>(presolve))
+        (kSolverString,
         "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
-        cxxopts::value<std::string>(solver))(
-        kParallelString,
-        "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
-        "alternatives.",
-        cxxopts::value<std::string>(parallel))(
-        kTimeLimitString, "Run time limit (double).", cxxopts::value<double>())(
-        kOptionsFileString, "File containing HiGHS options.",
-        cxxopts::value<std::vector<std::string>>())("h, help", "Print help.");
+        cxxopts::value<std::string>(solver))
+        (kParallelString,
+        "Parallel solve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
+        cxxopts::value<std::string>(parallel))
+        (kTimeLimitString,
+        "Run time limit (double).",
+        cxxopts::value<double>())
+        (kOptionsFileString,
+        "File containing HiGHS options.",
+        cxxopts::value<std::vector<std::string>>())
+        (kSolutionFileString,
+        "File for writing out model solution.",
+        cxxopts::value<std::vector<std::string>>())
+        (kRandomSeedString,
+        "Seed to initialize random number generation.",
+        cxxopts::value<HighsInt>())
+        ("h, help", "Print help.");
+    // clang-format on
     cxx_options.parse_positional("model_file");
 
     auto result = cxx_options.parse(argc, argv);
@@ -108,6 +120,25 @@ bool loadOptions(int argc, char** argv, HighsOptions& options,
       if (!loadOptionsFromFile(options, v[0])) return false;
     }
 
+    if (result.count(kSolutionFileString)) {
+      auto& v = result[kSolutionFileString].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        std::cout << "Multiple solution files not implemented.\n";
+        return false;
+      }
+      if (setLocalOptionValue(options.log_options, kSolutionFileString,
+                              options.records, v[0]) != OptionStatus::kOk ||
+          setLocalOptionValue(options.log_options, "write_solution_to_file",
+                              options.records, true) != OptionStatus::kOk)
+        return false;
+    }
+
+    if (result.count(kRandomSeedString)) {
+      HighsInt value = result[kRandomSeedString].as<HighsInt>();
+      if (setLocalOptionValue(options.log_options, kRandomSeedString,
+                              options.records, value) != OptionStatus::kOk)
+        return false;
+    }
   } catch (const cxxopts::OptionException& e) {
     highsLogUser(options.log_options, HighsLogType::kError,
                  "Error parsing options: %s\n", e.what());
