@@ -382,7 +382,7 @@ void getScaling(const HighsOptions& options, HighsLp& lp) {
 }
 
 void scaleLp(const HighsOptions& options, HighsLp& lp) {
-  lp.clearScale();
+  lp.scaleClear();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   // Scaling not well defined for models with no columns
@@ -463,7 +463,7 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
       lp.is_scaled_ = true;
     } else {
       // Matrix is not scaled, so clear the scaling
-      lp.clearScale();
+      lp.scaleClear();
     }
   }
   // Record the scaling strategy used

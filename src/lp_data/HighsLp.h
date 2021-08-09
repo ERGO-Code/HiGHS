@@ -27,9 +27,10 @@ class HighsLp;
 
 class HighsLp {
  public:
+  HighsLp() { clear(); }
   // Model data
-  HighsInt num_col_ = 0;
-  HighsInt num_row_ = 0;
+  HighsInt num_col_;
+  HighsInt num_row_;
 
   std::vector<double> col_cost_;
   std::vector<double> col_lower_;
@@ -39,10 +40,10 @@ class HighsLp {
 
   HighsSparseMatrix a_matrix_;
 
-  ObjSense sense_ = ObjSense::kMinimize;
-  double offset_ = 0;
+  ObjSense sense_;
+  double offset_;
 
-  std::string model_name_ = "";
+  std::string model_name_;
 
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
@@ -50,7 +51,7 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   HighsScale scale_;
-  bool is_scaled_ = false;
+  bool is_scaled_;
 
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
@@ -59,7 +60,7 @@ class HighsLp {
   void setMatrixDimensions();
   bool dimensionsOk(std::string message) const;
   bool equal(const SimplexScale& scale) const;
-  void clearScale();
+  void scaleClear();
   void applyScale(const SimplexScale& scale);
   void unapplyScale(const SimplexScale& scale);
   void applyScale();

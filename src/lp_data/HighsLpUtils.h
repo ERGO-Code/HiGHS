@@ -56,7 +56,6 @@ void getScaling(const HighsOptions& options,
 		HighsLp& lp);
 void scaleLp(const HighsOptions& options,
 	     HighsLp& lp);
-void clearScale(HighsLp& lp);
 bool equilibrationScaleMatrix(const HighsOptions& options,
 			      HighsLp& lp,
 			      const HighsInt use_scale_strategy);

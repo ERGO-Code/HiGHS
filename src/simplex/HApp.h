@@ -113,16 +113,19 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     // for the incumbent LP correspond to a different strategy, so
     // consider finding scaling factors
     getScaling(options, lp);
-    incumbent_lp_scaled = true;
+    incumbent_lp_scaled = lp.is_scaled_;
     // Any scaling has been applied to the incumbent LP in the course
     // of finding the scaling factors, so move the LP to Ekk
     HighsStatus call_status = ekk_instance.moveNewLp(std::move(lp));
-    if (call_status == HighsStatus::kError) return HighsStatus::kError;
+    if (call_status == HighsStatus::kError) {
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
+      return HighsStatus::kError;
+    }
     incumbent_lp_moved = true;
   } else {
     // Update the pointers to the HFactor matrix since they may have
     // moved if the LP has been modified
-    assert(1==0);
     ekk_instance.updateFactorMatrixPointers();
   }
   // If there is no simplex basis, use the HiGHS basis
@@ -132,12 +135,14 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
                                    ekk_lp);
       assert(!incumbent_lp_moved && !incumbent_lp_scaled);
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
       return return_status;
     }
   }
   HighsInt num_unscaled_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   HighsInt num_unscaled_dual_infeasibility = kHighsIllegalInfeasibilityCount;
-  if (lp.is_scaled_) {
+  if (lp.scale_.has_scaling) {
     // Indicate that there is no (current) need to refine the solution
     // by solving the unscaled LP with scaled NLA
     bool refine_solution = false;
@@ -151,6 +156,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 	recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
 				     ekk_lp);
 	assert(!incumbent_lp_moved && !incumbent_lp_scaled);
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
 	return return_status;
       }
       // Copy solution data into the HMO
@@ -161,9 +168,11 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 	ekk_instance.iteration_count_;
       solution = ekk_instance.getSolution();
       basis = ekk_instance.getHighsBasis();
-      // Move back the incumbent LP
-      lp = std::move(ekk_lp);
-      incumbent_lp_moved = false;
+      if (incumbent_lp_moved) {
+	// Move back the incumbent LP
+	lp = std::move(ekk_lp);
+	incumbent_lp_moved = false;
+      }
       unscaleSolution(solution, lp.scale_);
       // Determine whether the unscaled LP has been solved
       getUnscaledInfeasibilities(options, lp.scale_, ekk_instance.basis_,
@@ -217,6 +226,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 	recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
 				     ekk_lp);
 	assert(!incumbent_lp_moved && !incumbent_lp_scaled);
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
 	return return_status;
       }
     }
@@ -287,11 +298,19 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     incumbent_lp_moved = false;
     // Pass the scaled LP to Ekk
     ekk_instance.passScaledLp(scaled_lp);
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
+    if (return_status == HighsStatus::kError) {
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
+      return HighsStatus::kError;
+    }
   } else {
     // Solve the unscaled LP with unscaled NLA
     return_status = ekk_instance.solve();
-    if (return_status == HighsStatus::kError) return HighsStatus::kError;
+    if (return_status == HighsStatus::kError) {
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
+      return HighsStatus::kError;
+    }
     // Move the incumbent LP back from Ekk
     lp = std::move(ekk_lp);
     incumbent_lp_moved = false;
@@ -339,6 +358,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   }
   unscaled_model_status = scaled_model_status;
   return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
+	assert(incumbent_lp_scaled == lp.is_scaled_);
+	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
   return return_status;
 }
 #endif

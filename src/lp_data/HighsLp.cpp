@@ -184,17 +184,11 @@ void HighsLp::clear() {
 
   this->integrality_.clear();
 
-  this->scale_.strategy = kSimplexScaleStrategyOff;
-  this->scale_.has_scaling = false;
-  this->scale_.num_col = 0;
-  this->scale_.num_row = 0;
-  this->scale_.cost = 1.0;
-  this->scale_.col.clear();
-  this->scale_.row.clear();
-  this->clearScale();
+  this->scaleClear();
+  this->is_scaled_ = false;
 }
 
-void HighsLp::clearScale() {
+void HighsLp::scaleClear() {
   this->unapplyScale();
   HighsScale& scale = this->scale_;
   scale.strategy = kSimplexScaleStrategyOff;
