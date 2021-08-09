@@ -200,36 +200,6 @@ void HighsLp::scaleClear() {
   scale.row.clear();
 }
 
-void HighsLp::applyScale(const SimplexScale& scale) {
-  // Scale the bounds and costs and matrix
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    this->col_lower_[iCol] /= scale.col[iCol];
-    this->col_upper_[iCol] /= scale.col[iCol];
-    this->col_cost_[iCol] *= scale.col[iCol];
-  }
-  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-    this->row_lower_[iRow] *= scale.row[iRow];
-    this->row_upper_[iRow] *= scale.row[iRow];
-  }
-  this->a_matrix_.applyScale(scale);
-  //  scale.is_scaled = true;
-}
-
-void HighsLp::unapplyScale(const SimplexScale& scale) {
-  // Unscale the bounds and costs and matrix
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-    this->col_lower_[iCol] *= scale.col[iCol];
-    this->col_upper_[iCol] *= scale.col[iCol];
-    this->col_cost_[iCol] /= scale.col[iCol];
-  }
-  for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-    this->row_lower_[iRow] /= scale.row[iRow];
-    this->row_upper_[iRow] /= scale.row[iRow];
-  }
-  this->a_matrix_.unapplyScale(scale);
-  //  scale.is_scaled = false;
-}
-
 void HighsLp::applyScale() {
   // Ensure that any scaling is applied
   const HighsScale& scale = this->scale_;

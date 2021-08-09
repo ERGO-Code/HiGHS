@@ -65,22 +65,12 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
                 "Forcing no scaling\n");
     scale_lp = false;
   }
-  const bool analyse_lp_data =
-      kHighsAnalysisLevelModelData & options.highs_analysis_level;
-  if (analyse_lp_data) analyseLp(options.log_options, lp, "Unscaled");
-  // Possibly scale the LP. At least set the scaling factors to 1
-  SimplexScale& scale = highs_model_object.scale_;
-  if (scale_lp) {
+  if (scale_lp) getScaling(options, lp);
+  if (lp.scale_.has_scaling) {
     HighsLp scaled_lp = lp;
-    // Perform scaling - if it's worth it.
-    scaleSimplexLp(options, scaled_lp, scale);
-    if (analyse_lp_data) analyseScaledLp(options.log_options, scale, scaled_lp);
-    // Pass the scaled LP to Ekk
     ekk_instance.passNewLp(scaled_lp);
+    lp.unapplyScale();
   } else {
-    // Initialise unit scaling factors
-    initialiseScale(lp, scale);
-    // Pass the original LP to Ekk
     ekk_instance.passNewLp(lp);
   }
 }

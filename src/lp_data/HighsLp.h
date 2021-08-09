@@ -61,8 +61,6 @@ class HighsLp {
   bool dimensionsOk(std::string message) const;
   bool equal(const SimplexScale& scale) const;
   void scaleClear();
-  void applyScale(const SimplexScale& scale);
-  void unapplyScale(const SimplexScale& scale);
   void applyScale();
   void unapplyScale();
   void clear();
