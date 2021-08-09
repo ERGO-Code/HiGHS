@@ -112,8 +112,12 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     // The simplex instance isn't initialised or the scaling factors
     // for the incumbent LP correspond to a different strategy, so
     // consider finding scaling factors
+    const bool analyse_lp_data =
+      kHighsAnalysisLevelModelData & options.highs_analysis_level;
+    if (analyse_lp_data) analyseLp(options.log_options, lp);
     getScaling(options, lp);
     incumbent_lp_scaled = lp.is_scaled_;
+    if (lp.is_scaled_) analyseLp(options.log_options, lp);
     // Any scaling has been applied to the incumbent LP in the course
     // of finding the scaling factors, so move the LP to Ekk
     HighsStatus call_status = ekk_instance.moveNewLp(std::move(lp));

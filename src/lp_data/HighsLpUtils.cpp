@@ -1762,17 +1762,6 @@ void reportMatrix(const HighsLogOptions& log_options, const std::string message,
 }
 
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
-  std::string message;
-  if (lp.is_scaled_) {
-    message = "Scaled";
-  } else {
-    message = "Unscaled";
-  }
-  analyseLp(log_options, lp, message);
-}
-
-void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
-               const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;
@@ -1790,6 +1779,12 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
   for (HighsInt row = 0; row < lp.num_row_; row++)
     rowRange[row] = lp.row_upper_[row] - lp.row_lower_[row];
 
+  std::string message;
+  if (lp.is_scaled_) {
+    message = "Scaled";
+  } else {
+    message = "Unscaled";
+  }
   printf("\n%s model data: Analysis\n", message.c_str());
   if (lp.is_scaled_) {
     const HighsScale& scale = lp.scale_;
@@ -1820,16 +1815,6 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
                      lp.col_upper_);
   analyseModelBounds(log_options, "Row", lp.num_row_, lp.row_lower_,
                      lp.row_upper_);
-}
-
-void analyseScaledLp(const HighsLogOptions& log_options,
-                     const SimplexScale& scale, const HighsLp& scaled_lp) {
-  if (!scale.is_scaled) return;
-  analyseVectorValues(log_options, "Column scaling factors", scaled_lp.num_col_,
-                      scale.col);
-  analyseVectorValues(log_options, "Row    scaling factors", scaled_lp.num_row_,
-                      scale.row);
-  analyseLp(log_options, scaled_lp, "Scaled");
 }
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,

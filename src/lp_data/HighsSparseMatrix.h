@@ -72,8 +72,6 @@ class HighsSparseMatrix {
                      const double large_matrix_value);
   void scaleCol(const HighsInt col, const double colScale);
   void scaleRow(const HighsInt row, const double rowScale);
-  void applyScale(const SimplexScale& scale);
-  void unapplyScale(const SimplexScale& scale);
   void applyScale(const HighsScale& scale);
   void unapplyScale(const HighsScale& scale);
   void createSlice(const HighsSparseMatrix& matrix, const HighsInt from_col,

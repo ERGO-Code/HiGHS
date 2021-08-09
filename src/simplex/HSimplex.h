@@ -33,8 +33,6 @@ enum class LpAction {
   kBacktracking
 };
 
-void getSimplexScaling(HighsOptions& options, HighsLp& lp, SimplexScale& scale);
-
 void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
@@ -80,18 +78,9 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
 
 // SCALE:
 
-// void initialiseScale(HighsModelObject& highs_model);
-
-void initialiseScale(const HighsLp& lp, SimplexScale& scale);
-
-void scaleSimplexLp(HighsOptions& options, HighsLp& lp, SimplexScale& scale);
 void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,
                       double& cost_scale);
 void unscaleSimplexCost(HighsLp& lp, double cost_scale);
-bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
-                                     SimplexScale& scale);
-bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
-                                SimplexScale& scale);
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 

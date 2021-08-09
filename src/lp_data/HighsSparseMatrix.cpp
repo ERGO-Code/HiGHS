@@ -692,48 +692,6 @@ void HighsSparseMatrix::scaleRow(const HighsInt row, const double rowScale) {
   }
 }
 
-void HighsSparseMatrix::applyScale(const SimplexScale& scale) {
-  assert(this->formatOk());
-  if (this->isColwise()) {
-    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
-           iEl++) {
-        HighsInt iRow = this->index_[iEl];
-        this->value_[iEl] *= (scale.col[iCol] * scale.row[iRow]);
-      }
-    }
-  } else {
-    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
-           iEl++) {
-        HighsInt iCol = this->index_[iEl];
-        this->value_[iEl] *= (scale.col[iCol] * scale.row[iRow]);
-      }
-    }
-  }
-}
-
-void HighsSparseMatrix::unapplyScale(const SimplexScale& scale) {
-  assert(this->formatOk());
-  if (this->isColwise()) {
-    for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
-           iEl++) {
-        HighsInt iRow = this->index_[iEl];
-        this->value_[iEl] /= (scale.col[iCol] * scale.row[iRow]);
-      }
-    }
-  } else {
-    for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
-           iEl++) {
-        HighsInt iCol = this->index_[iEl];
-        this->value_[iEl] /= (scale.col[iCol] * scale.row[iRow]);
-      }
-    }
-  }
-}
-
 void HighsSparseMatrix::applyScale(const HighsScale& scale) {
   assert(this->formatOk());
   if (this->isColwise()) {

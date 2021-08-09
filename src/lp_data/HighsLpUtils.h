@@ -218,12 +218,6 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt row,
                                    const HighsInt col, double* val);
 // Analyse the data in an LP problem
 void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp);
-void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp,
-               const std::string message);
-
-// Analyse the scaling and data in a scaled LP problem
-void analyseScaledLp(const HighsLogOptions& log_options,
-                     const SimplexScale& scale, const HighsLp& scaled_lp);
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty);

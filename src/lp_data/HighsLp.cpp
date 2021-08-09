@@ -155,13 +155,6 @@ bool HighsLp::dimensionsOk(std::string message) const {
   return ok;
 }
 
-bool HighsLp::equal(const SimplexScale& scale) const {
-  bool equal = true;
-  equal = this->scale_.col == scale.col && equal;
-  equal = this->scale_.row == scale.row && equal;
-  return equal;
-}
-
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;

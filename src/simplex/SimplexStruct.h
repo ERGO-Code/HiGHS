@@ -21,14 +21,6 @@
 #include "lp_data/HConst.h"
 #include "simplex/SimplexConst.h"
 
-struct SimplexScale {
-  bool is_scaled = false;
-  HighsInt strategy = kSimplexScaleStrategyOff;
-  double cost;
-  std::vector<double> col;
-  std::vector<double> row;
-};
-
 struct SimplexBasis {
   // The basis for the simplex method consists of basicIndex,
   // nonbasicFlag and nonbasicMove. If HighsSimplexStatus has_basis
