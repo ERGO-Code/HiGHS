@@ -48,27 +48,27 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-void getKktFailures(const HighsModel& model, const HighsSolution& solution,
+void getKktFailures(const HighsOptions& options, const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsInfo& highs_info);
 
-void getKktFailures(const HighsModel& model, const HighsSolution& solution,
+void getKktFailures(const HighsOptions& options, const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
-void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
                       HighsInfo& highs_info);
 
-void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals = false);
 
-void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
+void getKktFailures(const HighsOptions& options, const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,

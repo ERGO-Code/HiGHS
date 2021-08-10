@@ -29,41 +29,41 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void getKktFailures(const HighsModel& model, const HighsSolution& solution,
+void getKktFailures(const HighsOptions& options, const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsInfo& highs_info) {
   HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(model, solution, basis, highs_info, primal_dual_errors);
+  getKktFailures(options, model, solution, basis, highs_info, primal_dual_errors);
 }
 
-void getKktFailures(const HighsModel& model, const HighsSolution& solution,
+void getKktFailures(const HighsOptions& options, const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
-  getKktFailures(model.lp_, gradient, solution, basis, highs_info,
+  getKktFailures(options, model.lp_, gradient, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
 }
 
-void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
                       HighsInfo& highs_info) {
   HighsPrimalDualErrors primal_dual_errors;
-  getLpKktFailures(lp, solution, basis, highs_info, primal_dual_errors);
+  getLpKktFailures(options, lp, solution, basis, highs_info, primal_dual_errors);
 }
 
-void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals) {
-  getKktFailures(lp, lp.col_cost_, solution, basis, highs_info,
+  getKktFailures(options, lp, lp.col_cost_, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
 }
 
-void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
+void getKktFailures(const HighsOptions& options, const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,

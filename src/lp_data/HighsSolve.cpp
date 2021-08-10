@@ -77,7 +77,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // ToDo: This should take model.basis_ and use it if it's valid
     //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
     //    model.highs_info_);
-    getLpKktFailures(model.lp_, model.solution_, model.basis_,
+    getLpKktFailures(options, model.lp_, model.solution_, model.basis_,
                      model.highs_info_);
     const double objective_function_value =
         model.lp_.objectiveValue(model.solution_.col_value);
@@ -89,7 +89,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         options.primal_feasibility_tolerance;
     check_highs_info.dual_feasibility_tolerance =
         options.dual_feasibility_tolerance;
-    getLpKktFailures(model.lp_, model.solution_, model.basis_,
+    getLpKktFailures(options, model.lp_, model.solution_, model.basis_,
                      check_highs_info);
 
     if (debugCompareSolutionParams(options, model.highs_info_,

@@ -2360,7 +2360,7 @@ HighsStatus Highs::callSolveQp() {
   highs_info.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(model_, solution_, basis_, highs_info);
+  getKktFailures(options_, model_, solution_, basis_, highs_info);
   if (model_status_ == HighsModelStatus::kOptimal) {
     // Determine whether optimality is justified
     if (highs_info.num_primal_infeasibilities ||
@@ -2440,7 +2440,7 @@ HighsStatus Highs::callSolveMip() {
   highs_info.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(model_, solution_, basis_, highs_info);
+  getKktFailures(options_, model_, solution_, basis_, highs_info);
   // Set the values in HighsInfo instance info_.
   highs_info.objective_function_value = solver.solution_objective_;
   //  Most come from highs_info...
@@ -2829,7 +2829,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
                          basis_, model_status_,
                          info_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
-  //  getReportKktFailures(options_, model_.lp_, solution_, basis_);
   if (debugInfo(options_, model_.lp_, basis_, solution_, info_,
                 scaled_model_status_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;

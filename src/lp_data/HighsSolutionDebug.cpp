@@ -142,7 +142,7 @@ HighsDebugStatus debugHighsSolution(
   }
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     gradient[iCol] += lp.col_cost_[iCol];
-  getKktFailures(lp, gradient, solution, basis, local_highs_info,
+  getKktFailures(options, lp, gradient, solution, basis, local_highs_info,
                  primal_dual_errors, get_residuals);
   HighsInt& num_primal_infeasibility =
       local_highs_info.num_primal_infeasibilities;
