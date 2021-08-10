@@ -24,16 +24,15 @@
 
 class HEkk {
  public:
-  HEkk(HighsOptions& options, HighsTimer& timer)
-      : NOToptions_(options), timer_(timer) { analysis_.timer_ = &timer_; }
+  HEkk(HighsTimer& timer)
+      : NOTtimer_(timer) { analysis_.timer_ = &NOTtimer_; }
   /**
    * @brief Interface to simplex solvers
    */
   // References:
   //
   // LP to be solved, HiGHS options to be used
-  HighsOptions& NOToptions_;
-  HighsTimer& timer_;
+  HighsTimer& NOTtimer_;
   HighsOptions* opt_point_;
   HighsTimer* tim_point_;
   HighsSimplexAnalysis analysis_;

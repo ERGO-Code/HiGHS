@@ -934,7 +934,7 @@ HighsInt HEkk::computeFactor() {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= opt_point_->factor_pivot_threshold);
     simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_matrix_,
-                       info_.factor_pivot_threshold, opt_point_, &timer_,
+                       info_.factor_pivot_threshold, opt_point_, tim_point_,
                        &analysis_);
     status_.has_factor_arrays = true;
   }
@@ -2135,7 +2135,7 @@ bool HEkk::bailoutOnTimeIterations() {
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
            model_status_ == HighsModelStatus::kObjectiveTarget);
-  } else if (timer_.readRunHighsClock() > opt_point_->time_limit) {
+  } else if (tim_point_->readRunHighsClock() > opt_point_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
   } else if (iteration_count_ >= opt_point_->simplex_iteration_limit) {
