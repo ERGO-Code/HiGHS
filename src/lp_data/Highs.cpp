@@ -2455,7 +2455,7 @@ HighsStatus Highs::callSolveMip() {
   // Use generic method to set data required for info
   HighsSolutionParams solution_params;
   solution_params.primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
+      options_.mip_feasibility_tolerance;
   solution_params.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
@@ -2464,6 +2464,14 @@ HighsStatus Highs::callSolveMip() {
   solution_params.objective_function_value = solver.solution_objective_;
   //  Most come from solution_params...
   copyFromSolutionParams(info_, solution_params);
+  // Overwrite max infeasibility to include integrality if there is a solution
+  if (solver.solution_objective_ != kHighsInf) {
+    info_.max_primal_infeasibility =
+        std::max({solver.row_violation_, solver.bound_violation_,
+                  solver.integrality_violation_});
+    if (info_.max_primal_infeasibility > options_.mip_feasibility_tolerance)
+      info_.primal_solution_status = kSolutionStatusInfeasible;
+  }
   // ... and iteration counts...
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
