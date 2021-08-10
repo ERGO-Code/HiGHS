@@ -519,7 +519,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsIterationCounts& iteration_counts,
                        HighsModelStatus& model_status,
-                       HighsSolutionParams& solution_params) {
+                       HighsInfo& highs_info) {
   // Use IPX to try to solve the LP
   //
   // Can return HighsModelStatus (HighsStatus) values:
@@ -551,7 +551,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   highs_solution.dual_valid = false;
   // Indicate that no imprecise soluition hs (yet) been found
   imprecise_solution = false;
-  resetModelStatusAndSolutionParams(model_status, solution_params, options);
+  resetModelStatusAndSolutionParams(model_status, highs_info, options);
   // Create the LpSolver instance
   ipx::LpSolver lps;
   // Set IPX parameters
@@ -808,5 +808,5 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model) {
   return solveLpIpx(model.options_, model.timer_, model.lp_, imprecise_solution,
                     model.basis_, model.solution_, model.iteration_counts_,
-                    model.unscaled_model_status_, model.solution_params_);
+                    model.unscaled_model_status_, model.highs_info_);
 }

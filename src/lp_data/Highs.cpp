@@ -2042,9 +2042,9 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
     solution = hmos_[hmo_ix].solution_;
     basis = hmos_[hmo_ix].basis_;
     unscaled_primal_solution_status =
-        hmos_[hmo_ix].solution_params_.primal_solution_status;
+        hmos_[hmo_ix].highs_info_.primal_solution_status;
     unscaled_dual_solution_status =
-        hmos_[hmo_ix].solution_params_.dual_solution_status;
+        hmos_[hmo_ix].highs_info_.dual_solution_status;
     lp = hmos_[hmo_ix].lp_;
   }
   printf(
@@ -2354,39 +2354,39 @@ HighsStatus Highs::callSolveQp() {
   //	 runtime_objective_function_value,
   //	 model_objective_function_value);
   // Use generic method to set data required for info
-  HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance =
+  HighsInfo highs_info;
+  highs_info.primal_feasibility_tolerance =
       options_.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance =
+  highs_info.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(model_, solution_, basis_, solution_params);
+  getKktFailures(model_, solution_, basis_, highs_info);
   if (model_status_ == HighsModelStatus::kOptimal) {
     // Determine whether optimality is justified
-    if (solution_params.num_primal_infeasibilities ||
-        solution_params.num_dual_infeasibilities) {
-      if ((solution_params.max_primal_infeasibility >
+    if (highs_info.num_primal_infeasibilities ||
+        highs_info.num_dual_infeasibilities) {
+      if ((highs_info.max_primal_infeasibility >
            sqrt(options_.primal_feasibility_tolerance)) ||
-          (solution_params.max_dual_infeasibility >
+          (highs_info.max_dual_infeasibility >
            sqrt(options_.dual_feasibility_tolerance))) {
         highsLogUser(options_.log_options, HighsLogType::kWarning,
                      "QP solver claim optimality, but with num/sum/max "
                      "primal(%" HIGHSINT_FORMAT
                      "/%g/%g) and dual(%" HIGHSINT_FORMAT
                      "/%g/%g) infeasibility\n",
-                     solution_params.num_primal_infeasibilities,
-                     solution_params.sum_primal_infeasibilities,
-                     solution_params.max_primal_infeasibility,
-                     solution_params.num_dual_infeasibilities,
-                     solution_params.sum_dual_infeasibilities,
-                     solution_params.max_dual_infeasibility);
+                     highs_info.num_primal_infeasibilities,
+                     highs_info.sum_primal_infeasibilities,
+                     highs_info.max_primal_infeasibility,
+                     highs_info.num_dual_infeasibilities,
+                     highs_info.sum_dual_infeasibilities,
+                     highs_info.max_dual_infeasibility);
       }
     }
   }
   // Set the values in HighsInfo instance info_.
-  solution_params.objective_function_value = model_objective_function_value;
-  //  Most come from solution_params...
-  copyFromSolutionParams(info_, solution_params);
+  highs_info.objective_function_value = model_objective_function_value;
+  //  Most come from highs_info...
+  copyAsSolutionParams(info_, highs_info);
   // ... and iteration counts...
   info_.simplex_iteration_count = runtime.statistics.phase1_iterations;
   info_.ipm_iteration_count = iteration_counts_.ipm;
@@ -2434,17 +2434,17 @@ HighsStatus Highs::callSolveMip() {
   // There is no basis: should be so by default
   assert(!basis_.valid);
   // Use generic method to set data required for info
-  HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance =
+  HighsInfo highs_info;
+  highs_info.primal_feasibility_tolerance =
       options_.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance =
+  highs_info.dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
-  getKktFailures(model_, solution_, basis_, solution_params);
+  getKktFailures(model_, solution_, basis_, highs_info);
   // Set the values in HighsInfo instance info_.
-  solution_params.objective_function_value = solver.solution_objective_;
-  //  Most come from solution_params...
-  copyFromSolutionParams(info_, solution_params);
+  highs_info.objective_function_value = solver.solution_objective_;
+  //  Most come from highs_info...
+  copyAsSolutionParams(info_, highs_info);
   // ... and iteration counts...
   info_.simplex_iteration_count = iteration_counts_.simplex;
   info_.ipm_iteration_count = iteration_counts_.ipm;
@@ -2542,21 +2542,21 @@ void Highs::setHighsModelStatusBasisSolutionAndInfo() {
   info_.crossover_iteration_count = iteration_counts_.crossover;
   info_.qp_iteration_count = iteration_counts_.qp;
 
-  HighsSolutionParams& solution_params = hmos_[0].solution_params_;
-  info_.primal_solution_status = solution_params.primal_solution_status;
-  info_.dual_solution_status = solution_params.dual_solution_status;
+  HighsInfo& highs_info = hmos_[0].highs_info_;
+  info_.primal_solution_status = highs_info.primal_solution_status;
+  info_.dual_solution_status = highs_info.dual_solution_status;
   if (basis_.valid) {
     info_.basis_validity = kBasisValidityValid;
   } else {
     info_.basis_validity = kBasisValidityInvalid;
   }
-  info_.objective_function_value = solution_params.objective_function_value;
-  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
-  info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
-  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
-  info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  info_.objective_function_value = highs_info.objective_function_value;
+  info_.num_primal_infeasibilities = highs_info.num_primal_infeasibilities;
+  info_.max_primal_infeasibility = highs_info.max_primal_infeasibility;
+  info_.sum_primal_infeasibilities = highs_info.sum_primal_infeasibilities;
+  info_.num_dual_infeasibilities = highs_info.num_dual_infeasibilities;
+  info_.max_dual_infeasibility = highs_info.max_dual_infeasibility;
+  info_.sum_dual_infeasibilities = highs_info.sum_dual_infeasibilities;
   info_.valid = true;
 }
 

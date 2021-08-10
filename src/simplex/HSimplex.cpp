@@ -350,17 +350,17 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
 				const HighsScale& scale,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
-                                HighsSolutionParams& solution_params) {
+                                HighsInfo& highs_info) {
   const double primal_feasibility_tolerance =
       options.primal_feasibility_tolerance;
   const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
 
-  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibilities;
-  double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibilities;
-  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibilities;
-  double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibilities;
+  HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
+  double& max_primal_infeasibility = highs_info.max_primal_infeasibility;
+  double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
+  HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
+  double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
+  double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
   // Zero the counts of unscaled primal and dual infeasibilities
   num_primal_infeasibility = 0;

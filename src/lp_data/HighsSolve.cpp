@@ -76,24 +76,24 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // Get the infeasibilities and objective value
     // ToDo: This should take model.basis_ and use it if it's valid
     //    getPrimalDualInfeasibilities(model.lp_, model.solution_,
-    //    model.solution_params_);
+    //    model.highs_info_);
     getLpKktFailures(model.lp_, model.solution_, model.basis_,
-                     model.solution_params_);
+                     model.highs_info_);
     const double objective_function_value =
         model.lp_.objectiveValue(model.solution_.col_value);
-    model.solution_params_.objective_function_value = objective_function_value;
+    model.highs_info_.objective_function_value = objective_function_value;
 
-    HighsSolutionParams check_solution_params;
-    check_solution_params.objective_function_value = objective_function_value;
-    check_solution_params.primal_feasibility_tolerance =
+    HighsInfo check_highs_info;
+    check_highs_info.objective_function_value = objective_function_value;
+    check_highs_info.primal_feasibility_tolerance =
         options.primal_feasibility_tolerance;
-    check_solution_params.dual_feasibility_tolerance =
+    check_highs_info.dual_feasibility_tolerance =
         options.dual_feasibility_tolerance;
     getLpKktFailures(model.lp_, model.solution_, model.basis_,
-                     check_solution_params);
+                     check_highs_info);
 
-    if (debugCompareSolutionParams(options, model.solution_params_,
-                                   check_solution_params) !=
+    if (debugCompareSolutionParams(options, model.highs_info_,
+                                   check_highs_info) !=
         HighsDebugStatus::kOk) {
       return HighsStatus::kError;
     }
@@ -152,23 +152,23 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
-// and HighsSolutionParams
+// and HighsInfo
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   return (solveUnconstrainedLp(
       highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.unscaled_model_status_,
-      highs_model_object.solution_params_, highs_model_object.solution_,
+      highs_model_object.highs_info_, highs_model_object.solution_,
       highs_model_object.basis_));
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
-// and HighsSolutionParams
+// and HighsInfo
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
-                                 HighsSolutionParams& solution_params,
+                                 HighsInfo& highs_info,
                                  HighsSolution& solution, HighsBasis& basis) {
   // Aliase to model status and solution parameters
-  resetModelStatusAndSolutionParams(model_status, solution_params, options);
+  resetModelStatusAndSolutionParams(model_status, highs_info, options);
 
   // Check that the LP really is unconstrained!
   assert(lp.num_row_ == 0);
@@ -188,9 +188,9 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   basis.row_status.clear();
 
   double primal_feasibility_tolerance =
-      solution_params.primal_feasibility_tolerance;
+      highs_info.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
-      solution_params.dual_feasibility_tolerance;
+      highs_info.dual_feasibility_tolerance;
 
   // Initialise the objective value calculation. Done using
   // HighsSolution so offset is vanilla
@@ -198,12 +198,12 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   bool infeasible = false;
   bool unbounded = false;
 
-  solution_params.num_primal_infeasibilities = 0;
-  solution_params.max_primal_infeasibility = 0;
-  solution_params.sum_primal_infeasibilities = 0;
-  solution_params.num_dual_infeasibilities = 0;
-  solution_params.max_dual_infeasibility = 0;
-  solution_params.sum_dual_infeasibilities = 0;
+  highs_info.num_primal_infeasibilities = 0;
+  highs_info.max_primal_infeasibility = 0;
+  highs_info.sum_primal_infeasibilities = 0;
+  highs_info.num_dual_infeasibilities = 0;
+  highs_info.max_dual_infeasibility = 0;
+  highs_info.sum_dual_infeasibilities = 0;
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     double cost = lp.col_cost_[iCol];
@@ -293,36 +293,36 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     basis.col_status[iCol] = status;
     objective += value * cost;
     if (primal_infeasibility > primal_feasibility_tolerance)
-      solution_params.num_primal_infeasibilities++;
-    solution_params.sum_primal_infeasibilities += primal_infeasibility;
-    solution_params.max_primal_infeasibility = std::max(
-        primal_infeasibility, solution_params.max_primal_infeasibility);
+      highs_info.num_primal_infeasibilities++;
+    highs_info.sum_primal_infeasibilities += primal_infeasibility;
+    highs_info.max_primal_infeasibility = std::max(
+        primal_infeasibility, highs_info.max_primal_infeasibility);
     if (dual_infeasibility > dual_feasibility_tolerance)
-      solution_params.num_dual_infeasibilities++;
-    solution_params.sum_dual_infeasibilities += dual_infeasibility;
-    solution_params.max_dual_infeasibility =
-        std::max(dual_infeasibility, solution_params.max_dual_infeasibility);
+      highs_info.num_dual_infeasibilities++;
+    highs_info.sum_dual_infeasibilities += dual_infeasibility;
+    highs_info.max_dual_infeasibility =
+        std::max(dual_infeasibility, highs_info.max_dual_infeasibility);
   }
-  solution_params.objective_function_value = objective;
+  highs_info.objective_function_value = objective;
   solution.value_valid = true;
   solution.dual_valid = true;
   basis.valid = true;
-  assert(solution_params.num_primal_infeasibilities >= 0);
-  assert(solution_params.num_dual_infeasibilities >= 0);
-  if (solution_params.num_primal_infeasibilities) {
-    solution_params.primal_solution_status = kSolutionStatusInfeasible;
+  assert(highs_info.num_primal_infeasibilities >= 0);
+  assert(highs_info.num_dual_infeasibilities >= 0);
+  if (highs_info.num_primal_infeasibilities) {
+    highs_info.primal_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.primal_solution_status = kSolutionStatusFeasible;
+    highs_info.primal_solution_status = kSolutionStatusFeasible;
   }
-  if (solution_params.num_dual_infeasibilities) {
-    solution_params.dual_solution_status = kSolutionStatusInfeasible;
+  if (highs_info.num_dual_infeasibilities) {
+    highs_info.dual_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.dual_solution_status = kSolutionStatusFeasible;
+    highs_info.dual_solution_status = kSolutionStatusFeasible;
   }
-  if (solution_params.num_primal_infeasibilities) {
+  if (highs_info.num_primal_infeasibilities) {
     // Primal infeasible
     model_status = HighsModelStatus::kInfeasible;
-  } else if (solution_params.num_dual_infeasibilities) {
+  } else if (highs_info.num_dual_infeasibilities) {
     // Dual infeasible => primal unbounded for unconstrained LP
     model_status = HighsModelStatus::kUnbounded;
   } else {

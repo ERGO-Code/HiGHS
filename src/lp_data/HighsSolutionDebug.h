@@ -39,12 +39,12 @@ HighsDebugStatus debugHighsSolution(
     const std::string message, const HighsOptions& options, const HighsLp& lp,
     const HighsHessian& hessian, const HighsSolution& solution,
     const HighsBasis& basis, const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params,
-    const bool check_model_status_and_solution_params);
+    const HighsInfo& highs_info,
+    const bool check_model_status_and_highs_info);
 
 void debugReportHighsSolution(const string message,
                               const HighsLogOptions& log_options,
-                              const HighsSolutionParams& solution_params,
+                              const HighsInfo& highs_info,
                               const HighsModelStatus model_status);
 
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
@@ -69,17 +69,17 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors);
 
 HighsDebugStatus debugCompareSolutionParams(
-    const HighsOptions& options, const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
+    const HighsOptions& options, const HighsInfo& highs_info0,
+    const HighsInfo& highs_info1);
 HighsDebugStatus debugCompareSolutionObjectiveParams(
-    const HighsOptions& options, const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
+    const HighsOptions& options, const HighsInfo& highs_info0,
+    const HighsInfo& highs_info1);
 HighsDebugStatus debugCompareSolutionStatusParams(
-    const HighsOptions& options, const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
+    const HighsOptions& options, const HighsInfo& highs_info0,
+    const HighsInfo& highs_info1);
 HighsDebugStatus debugCompareSolutionInfeasibilityParams(
-    const HighsOptions& options, const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
+    const HighsOptions& options, const HighsInfo& highs_info0,
+    const HighsInfo& highs_info1);
 
 HighsDebugStatus debugCompareSolutionParamValue(const string name,
                                                 const HighsOptions& options,

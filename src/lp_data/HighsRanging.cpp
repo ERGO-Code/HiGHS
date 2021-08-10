@@ -80,7 +80,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const double H_TT = 1e-13;
   const double H_INF = kHighsInf;
   const double objective =
-      highs_model_object.solution_params_.objective_function_value;
+      highs_model_object.highs_info_.objective_function_value;
 
   // Code written for minimization problems. Maximization problems are
   // solved by using negated costs in the simplex solver and
@@ -596,7 +596,7 @@ void writeRanging(const HighsRanging& ranging,
               "Col Status | DownObj    Down       (Lower      Value      Upper "
               "    ) Up         UpObj     "
               " | DownObj    Down       Value      Up         UpObj\n",
-              highs_model_object.solution_params_.objective_function_value);
+              highs_model_object.highs_info_.objective_function_value);
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "

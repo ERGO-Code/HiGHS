@@ -50,27 +50,27 @@ struct HighsPrimalDualErrors {
 
 void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
-                    HighsSolutionParams& solution_params);
+                    HighsInfo& highs_info);
 
 void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
-                    HighsSolutionParams& solution_params,
+                    HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
 void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
-                      HighsSolutionParams& solution_params);
+                      HighsInfo& highs_info);
 
 void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
-                      HighsSolutionParams& solution_params,
+                      HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals = false);
 
 void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
-                    HighsSolutionParams& solution_params,
+                    HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals = false);
 
@@ -104,24 +104,22 @@ std::string iterationsToString(const HighsIterationCounts& iterations_counts);
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
-                                       HighsSolutionParams& solution_params,
+                                       HighsInfo& highs_info,
                                        const HighsOptions& options);
-void resetSolutionParams(HighsSolutionParams& solution_params,
+void resetSolutionParams(HighsInfo& highs_info,
                          const HighsOptions& options);
 
-void invalidateSolutionParams(HighsSolutionParams& solution_params);
-void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);
+void invalidateSolutionParams(HighsInfo& highs_info);
+void invalidateSolutionStatusParams(HighsInfo& highs_info);
 void invalidateSolutionInfeasibilityParams(
-    HighsSolutionParams& solution_params);
+    HighsInfo& highs_info);
 
 void copySolutionObjectiveParams(
-    const HighsSolutionParams& from_solution_params,
-    HighsSolutionParams& to_solution_params);
+    const HighsInfo& from_highs_info,
+    HighsInfo& to_highs_info);
 
-void copyFromSolutionParams(HighsInfo& highs_info,
-                            const HighsSolutionParams& solution_params);
-void copyFromInfo(HighsSolutionParams& solution_params,
-                  const HighsInfo& highs_info);
+void copyAsSolutionParams(HighsInfo& to_highs_info,
+			  const HighsInfo& from_highs_info);
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 

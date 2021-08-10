@@ -21,6 +21,6 @@ HighsStatus solveLp(HighsModelObject& highs_model_object, const string message);
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
-                                 HighsSolutionParams& solution_params,
+                                 HighsInfo& highs_info,
                                  HighsSolution& solution, HighsBasis& basis);
 #endif  // LP_DATA_HIGHSSOLVE_H_

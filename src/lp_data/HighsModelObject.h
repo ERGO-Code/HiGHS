@@ -16,6 +16,7 @@
 #include "HConfig.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HEkk.h"
 #include "simplex/HighsSimplexAnalysis.h"
@@ -41,7 +42,7 @@ class HighsModelObject {
   HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
-  HighsSolutionParams solution_params_;
+  HighsInfo highs_info_;
   HighsIterationCounts iteration_counts_;
   HighsBasis basis_;
   HighsSolution solution_;

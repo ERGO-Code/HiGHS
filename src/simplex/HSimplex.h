@@ -74,7 +74,7 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
 				const HighsScale& scale,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
-                                HighsSolutionParams& solution_params);
+                                HighsInfo& highs_info);
 
 // SCALE:
 

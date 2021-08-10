@@ -31,64 +31,64 @@
 
 void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
-                    HighsSolutionParams& solution_params) {
+                    HighsInfo& highs_info) {
   HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(model, solution, basis, solution_params, primal_dual_errors);
+  getKktFailures(model, solution, basis, highs_info, primal_dual_errors);
 }
 
 void getKktFailures(const HighsModel& model, const HighsSolution& solution,
                     const HighsBasis& basis,
-                    HighsSolutionParams& solution_params,
+                    HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
-  getKktFailures(model.lp_, gradient, solution, basis, solution_params,
+  getKktFailures(model.lp_, gradient, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
 }
 
 void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
-                      HighsSolutionParams& solution_params) {
+                      HighsInfo& highs_info) {
   HighsPrimalDualErrors primal_dual_errors;
-  getLpKktFailures(lp, solution, basis, solution_params, primal_dual_errors);
+  getLpKktFailures(lp, solution, basis, highs_info, primal_dual_errors);
 }
 
 void getLpKktFailures(const HighsLp& lp, const HighsSolution& solution,
                       const HighsBasis& basis,
-                      HighsSolutionParams& solution_params,
+                      HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals) {
-  getKktFailures(lp, lp.col_cost_, solution, basis, solution_params,
+  getKktFailures(lp, lp.col_cost_, solution, basis, highs_info,
                  primal_dual_errors, get_residuals);
 }
 
 void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
-                    HighsSolutionParams& solution_params,
+                    HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
   double primal_feasibility_tolerance =
-      solution_params.primal_feasibility_tolerance;
+      highs_info.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
-      solution_params.dual_feasibility_tolerance;
-  // solution_params are the values computed in this method.
-  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibilities;
-  double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibilities;
-  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibilities;
-  double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibilities;
+      highs_info.dual_feasibility_tolerance;
+  // highs_info are the values computed in this method.
+  HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
+  double& max_primal_infeasibility = highs_info.max_primal_infeasibility;
+  double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
+  HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
+  double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
+  double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
 
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.primal_solution_status = kSolutionStatusNone;
+  highs_info.primal_solution_status = kSolutionStatusNone;
 
   num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
   max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.dual_solution_status = kSolutionStatusNone;
+  highs_info.dual_solution_status = kSolutionStatusNone;
 
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
@@ -297,16 +297,16 @@ void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
   }
   // Assign primal solution status
   if (num_primal_infeasibility) {
-    solution_params.primal_solution_status = kSolutionStatusInfeasible;
+    highs_info.primal_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.primal_solution_status = kSolutionStatusFeasible;
+    highs_info.primal_solution_status = kSolutionStatusFeasible;
   }
   if (have_dual_solution) {
     // Assign dual solution status
     if (num_dual_infeasibility) {
-      solution_params.dual_solution_status = kSolutionStatusInfeasible;
+      highs_info.dual_solution_status = kSolutionStatusInfeasible;
     } else {
-      solution_params.dual_solution_status = kSolutionStatusFeasible;
+      highs_info.dual_solution_status = kSolutionStatusFeasible;
     }
   }
 }
@@ -808,100 +808,83 @@ std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
   resetModelStatusAndSolutionParams(highs_model_object.unscaled_model_status_,
-                                    highs_model_object.solution_params_,
+                                    highs_model_object.highs_info_,
                                     highs_model_object.options_);
 }
 
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
-                                       HighsSolutionParams& solution_params,
+                                       HighsInfo& highs_info,
                                        const HighsOptions& options) {
   model_status = HighsModelStatus::kNotset;
-  resetSolutionParams(solution_params, options);
+  resetSolutionParams(highs_info, options);
 }
 
-void resetSolutionParams(HighsSolutionParams& solution_params,
+void resetSolutionParams(HighsInfo& highs_info,
                          const HighsOptions& options) {
   // Set the feasibility tolerances - not affected by invalidateSolutionParams
-  solution_params.primal_feasibility_tolerance =
+  highs_info.primal_feasibility_tolerance =
       options.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance =
+  highs_info.dual_feasibility_tolerance =
       options.dual_feasibility_tolerance;
 
   // Save a copy of the unscaled solution params to recover the iteration counts
   // and objective
-  HighsSolutionParams save_solution_params;
-  copySolutionObjectiveParams(solution_params, save_solution_params);
+  HighsInfo save_highs_info;
+  copySolutionObjectiveParams(highs_info, save_highs_info);
   // Invalidate the solution params then reset the feasibility
   // tolerances and recover the objective
-  invalidateSolutionParams(solution_params);
-  copySolutionObjectiveParams(save_solution_params, solution_params);
+  invalidateSolutionParams(highs_info);
+  copySolutionObjectiveParams(save_highs_info, highs_info);
 }
 
-// Invalidate a HighsSolutionParams instance
-void invalidateSolutionParams(HighsSolutionParams& solution_params) {
-  solution_params.objective_function_value = 0;
-  invalidateSolutionStatusParams(solution_params);
-  invalidateSolutionInfeasibilityParams(solution_params);
+// Invalidate a HighsInfo instance
+void invalidateSolutionParams(HighsInfo& highs_info) {
+  highs_info.objective_function_value = 0;
+  invalidateSolutionStatusParams(highs_info);
+  invalidateSolutionInfeasibilityParams(highs_info);
 }
 
-// Invalidate the solution status values in a HighsSolutionParams
+// Invalidate the solution status values in a HighsInfo
 // instance.
-void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
-  solution_params.primal_solution_status = kSolutionStatusNone;
-  solution_params.dual_solution_status = kSolutionStatusNone;
+void invalidateSolutionStatusParams(HighsInfo& highs_info) {
+  highs_info.primal_solution_status = kSolutionStatusNone;
+  highs_info.dual_solution_status = kSolutionStatusNone;
 }
 
-// Invalidate the infeasibility values in a HighsSolutionParams
+// Invalidate the infeasibility values in a HighsInfo
 // instance.
 void invalidateSolutionInfeasibilityParams(
-    HighsSolutionParams& solution_params) {
-  solution_params.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  solution_params.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  solution_params.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  solution_params.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    HighsInfo& highs_info) {
+  highs_info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  highs_info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  highs_info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  highs_info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 }
 
 void copySolutionObjectiveParams(
-    const HighsSolutionParams& from_solution_params,
-    HighsSolutionParams& to_solution_params) {
-  to_solution_params.objective_function_value =
-      from_solution_params.objective_function_value;
+    const HighsInfo& from_highs_info,
+    HighsInfo& to_highs_info) {
+  to_highs_info.objective_function_value =
+      from_highs_info.objective_function_value;
 }
 
-void copyFromSolutionParams(HighsInfo& highs_info,
-                            const HighsSolutionParams& solution_params) {
-  highs_info.primal_solution_status = solution_params.primal_solution_status;
-  highs_info.dual_solution_status = solution_params.dual_solution_status;
-  highs_info.objective_function_value =
-      solution_params.objective_function_value;
-  highs_info.num_primal_infeasibilities =
-      solution_params.num_primal_infeasibilities;
-  highs_info.max_primal_infeasibility =
-      solution_params.max_primal_infeasibility;
-  highs_info.sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
-  highs_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
-  highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
-}
-
-void copyFromInfo(HighsSolutionParams& solution_params,
-                  const HighsInfo& highs_info) {
-  solution_params.primal_solution_status = highs_info.primal_solution_status;
-  solution_params.dual_solution_status = highs_info.dual_solution_status;
-  solution_params.objective_function_value =
-      highs_info.objective_function_value;
-  solution_params.num_primal_infeasibilities =
-      highs_info.num_primal_infeasibilities;
-  solution_params.max_primal_infeasibility =
-      highs_info.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities =
-      highs_info.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities = highs_info.num_dual_infeasibilities;
-  solution_params.max_dual_infeasibility = highs_info.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities = highs_info.sum_dual_infeasibilities;
+void copyAsSolutionParams(HighsInfo& to_highs_info,
+                  const HighsInfo& from_highs_info) {
+  to_highs_info.primal_solution_status = from_highs_info.primal_solution_status;
+  to_highs_info.dual_solution_status = from_highs_info.dual_solution_status;
+  to_highs_info.objective_function_value =
+      from_highs_info.objective_function_value;
+  to_highs_info.num_primal_infeasibilities =
+      from_highs_info.num_primal_infeasibilities;
+  to_highs_info.max_primal_infeasibility =
+      from_highs_info.max_primal_infeasibility;
+  to_highs_info.sum_primal_infeasibilities =
+      from_highs_info.sum_primal_infeasibilities;
+  to_highs_info.num_dual_infeasibilities = from_highs_info.num_dual_infeasibilities;
+  to_highs_info.max_dual_infeasibility = from_highs_info.max_dual_infeasibility;
+  to_highs_info.sum_dual_infeasibilities = from_highs_info.sum_dual_infeasibilities;
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {

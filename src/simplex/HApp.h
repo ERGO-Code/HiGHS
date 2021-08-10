@@ -68,7 +68,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       highs_model_object.unscaled_model_status_;
   HighsModelStatus& scaled_model_status =
       highs_model_object.scaled_model_status_;
-  HighsSolutionParams& solution_params = highs_model_object.solution_params_;
+  HighsInfo& highs_info = highs_model_object.highs_info_;
   HighsBasis& basis = highs_model_object.basis_;
 
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
@@ -166,7 +166,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       }
       // Copy solution data into the HMO
       scaled_model_status = ekk_instance.model_status_;
-      solution_params.objective_function_value =
+      highs_info.objective_function_value =
 	ekk_instance.info_.primal_objective_value;
       highs_model_object.iteration_counts_.simplex +=
 	ekk_instance.iteration_count_;
@@ -180,21 +180,21 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       unscaleSolution(solution, lp.scale_);
       // Determine whether the unscaled LP has been solved
       getUnscaledInfeasibilities(options, lp.scale_, ekk_instance.basis_,
-				 ekk_instance.info_, solution_params);
+				 ekk_instance.info_, highs_info);
       num_unscaled_primal_infeasibility =
-	solution_params.num_primal_infeasibilities;
-      num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibilities;
-      assert(solution_params.num_primal_infeasibilities >= 0);
-      assert(solution_params.num_dual_infeasibilities >= 0);
+	highs_info.num_primal_infeasibilities;
+      num_unscaled_dual_infeasibility = highs_info.num_dual_infeasibilities;
+      assert(highs_info.num_primal_infeasibilities >= 0);
+      assert(highs_info.num_dual_infeasibilities >= 0);
       if (num_unscaled_primal_infeasibility) {
-	solution_params.primal_solution_status = kSolutionStatusInfeasible;
+	highs_info.primal_solution_status = kSolutionStatusInfeasible;
       } else {
-	solution_params.primal_solution_status = kSolutionStatusFeasible;
+	highs_info.primal_solution_status = kSolutionStatusFeasible;
       }
       if (num_unscaled_dual_infeasibility) {
-	solution_params.dual_solution_status = kSolutionStatusInfeasible;
+	highs_info.dual_solution_status = kSolutionStatusInfeasible;
       } else {
-	solution_params.dual_solution_status = kSolutionStatusFeasible;
+	highs_info.dual_solution_status = kSolutionStatusFeasible;
       }
       // Determine whether the unscaled solution has infeasibilities
       // after the scaled LP has been solved to optimality
@@ -208,11 +208,11 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 		    "/%g/%g) "
 		    "unscaled infeasibilities\n",
 		    num_unscaled_primal_infeasibility,
-		    solution_params.max_primal_infeasibility,
-		    solution_params.sum_primal_infeasibilities,
+		    highs_info.max_primal_infeasibility,
+		    highs_info.sum_primal_infeasibilities,
 		    num_unscaled_dual_infeasibility,
-		    solution_params.max_dual_infeasibility,
-		    solution_params.sum_dual_infeasibilities);
+		    highs_info.max_dual_infeasibility,
+		    highs_info.sum_dual_infeasibilities);
       // Determine whether refinement will take place
       refine_solution =
 	options.simplex_unscaled_solution_strategy ==
@@ -324,41 +324,41 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // Copy solution data into the HMO
   //
   scaled_model_status = ekk_instance.model_status_;
-  solution_params.objective_function_value =
+  highs_info.objective_function_value =
     ekk_instance.info_.primal_objective_value;
   highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
   solution = ekk_instance.getSolution();
   basis = ekk_instance.getHighsBasis();
   // The unscaled LP has been solved - either directly, or because
-  // there was no scaling. Copy values into the HighsSolutionParams
+  // there was no scaling. Copy values into the HighsInfo
   // that are set (above) by the call to getUnscaledInfeasibilities
-  solution_params.num_primal_infeasibilities =
+  highs_info.num_primal_infeasibilities =
     ekk_instance.info_.num_primal_infeasibilities;
-  solution_params.max_primal_infeasibility =
+  highs_info.max_primal_infeasibility =
     ekk_instance.info_.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities =
+  highs_info.sum_primal_infeasibilities =
     ekk_instance.info_.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities =
+  highs_info.num_dual_infeasibilities =
     ekk_instance.info_.num_dual_infeasibilities;
-  solution_params.max_dual_infeasibility =
+  highs_info.max_dual_infeasibility =
     ekk_instance.info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities =
+  highs_info.sum_dual_infeasibilities =
     ekk_instance.info_.sum_dual_infeasibilities;
 
-  num_unscaled_primal_infeasibility = solution_params.num_primal_infeasibilities;
-  num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibilities;
+  num_unscaled_primal_infeasibility = highs_info.num_primal_infeasibilities;
+  num_unscaled_dual_infeasibility = highs_info.num_dual_infeasibilities;
 
-  assert(solution_params.num_primal_infeasibilities >= 0);
-  assert(solution_params.num_dual_infeasibilities >= 0);
+  assert(highs_info.num_primal_infeasibilities >= 0);
+  assert(highs_info.num_dual_infeasibilities >= 0);
   if (num_unscaled_primal_infeasibility) {
-    solution_params.primal_solution_status = kSolutionStatusInfeasible;
+    highs_info.primal_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.primal_solution_status = kSolutionStatusFeasible;
+    highs_info.primal_solution_status = kSolutionStatusFeasible;
   }
   if (num_unscaled_dual_infeasibility) {
-    solution_params.dual_solution_status = kSolutionStatusInfeasible;
+    highs_info.dual_solution_status = kSolutionStatusInfeasible;
   } else {
-    solution_params.dual_solution_status = kSolutionStatusFeasible;
+    highs_info.dual_solution_status = kSolutionStatusFeasible;
   }
   unscaled_model_status = scaled_model_status;
   return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
