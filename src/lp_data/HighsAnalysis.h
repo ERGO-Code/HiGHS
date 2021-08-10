@@ -21,11 +21,8 @@
 #include "HConfig.h"
 #include "util/HighsTimer.h"
 
-//#ifdef HiGHSDEV
 struct HighsTimerClock {
   HighsTimer* timer_pointer_;
   std::vector<HighsInt> clock_;
 };
-//#endif
-
 #endif /* LP_DATA_HIGHS_ANALYSIS_H_ */

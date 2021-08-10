@@ -76,6 +76,9 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   HighsLp& ekk_lp = ekk_instance.lp_;
   HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
+  // Refresh the HEkk pointers
+  ekk_instance.refreshPointers(&options, &highs_model_object.timer_);
+
   // Reset the model status and solution parameters for the unscaled
   // LP in case of premature return
   resetModelStatusAndSolutionParams(highs_model_object);

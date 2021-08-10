@@ -40,6 +40,12 @@
 // using std::cout;
 // using std::endl;
 
+void HEkk::refreshPointers(HighsOptions* options_pointer,
+			   HighsTimer* timer_pointer) {
+  options_pointer_ = options_pointer;
+  timer_pointer_ = timer_pointer;
+}
+
 HighsStatus HEkk::moveNewLp(HighsLp lp) {
   lp_ = std::move(lp);
   return setup();

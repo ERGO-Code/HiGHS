@@ -62,28 +62,8 @@ const HighsLogType kIterationReportLogType = HighsLogType::kVerbose;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsTimer& timer)
-      : timer_reference(timer), analysis_log(new std::stringstream()) {
-    timer_ = &timer;
-    /*
-    HighsInt omp_max_threads = 1;
-#ifdef OPENMP
-    omp_max_threads = omp_get_max_threads();
-#endif
-    for (HighsInt i = 0; i < omp_max_threads; i++) {
-      HighsTimerClock clock(timer);
-      thread_simplex_clocks.push_back(clock);
-      thread_factor_clocks.push_back(clock);
-    }
-    pointer_serial_factor_clocks = &thread_factor_clocks[0];
-    */
-    //#ifdef HiGHSDEV
-    //#else
-    //    pointer_serial_factor_clocks = NULL;
-    //#endif
-  }
-  // Reference and pointer to timer
-  HighsTimer& timer_reference;
+  HighsSimplexAnalysis(){}
+  // Pointer to timer
   HighsTimer* timer_;
 
   void setup(const std::string lp_name, const HighsLp& lp,
