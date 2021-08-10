@@ -196,7 +196,6 @@ set(headers
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
     lp_data/HighsModelObject.h
-    lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
     lp_data/HighsRuntimeOptions.h
@@ -632,7 +631,6 @@ set(headers_fast_build_
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
     lp_data/HighsModelObject.h
-    lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
     lp_data/HighsRuntimeOptions.h
