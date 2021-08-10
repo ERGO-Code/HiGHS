@@ -212,7 +212,7 @@ HighsStatus HEkkPrimal::solve() {
 
   if (solve_phase == kSolvePhaseCleanup) {
     highsLogDev(
-        ekk_instance_.options_.log_options, HighsLogType::kInfo,
+        ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
         "HEkkPrimal:: Using dual simplex to try to clean up %" HIGHSINT_FORMAT
         " primal infeasibilities\n",
         info.num_primal_infeasibilities);
@@ -247,7 +247,7 @@ HighsStatus HEkkPrimal::solve() {
       return ekk_instance_.returnFromSolve(return_status);
     if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
         info.num_primal_infeasibilities + info.num_dual_infeasibilities)
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
                   "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
                   "with %" HIGHSINT_FORMAT
                   " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
@@ -290,31 +290,31 @@ void HEkkPrimal::initialiseInstance() {
   // Set up the HSet instances, possibly using the internal error reporting and
   // debug option
   const bool debug =
-      ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap;
+      ekk_instance_.options_pointer_->highs_debug_level > kHighsDebugLevelCheap;
   if (num_free_col) {
-    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
                 "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
                 num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot,
-                                ekk_instance_.options_.output_flag,
-                                ekk_instance_.options_.log_file_stream, debug);
+                                ekk_instance_.options_pointer_->output_flag,
+                                ekk_instance_.options_pointer_->log_file_stream, debug);
   }
   // Set up the hyper-sparse CHUZC data
   hyper_chuzc_candidate.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_measure.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_candidate_set.setup(max_num_hyper_chuzc_candidates, num_tot,
-                                  ekk_instance_.options_.output_flag,
-                                  ekk_instance_.options_.log_file_stream,
+                                  ekk_instance_.options_pointer_->output_flag,
+                                  ekk_instance_.options_pointer_->log_file_stream,
                                   debug);
 }
 
 void HEkkPrimal::initialiseSolve() {
   // Copy values of simplex solver options to dual simplex options
   primal_feasibility_tolerance =
-      ekk_instance_.options_.primal_feasibility_tolerance;
+      ekk_instance_.options_pointer_->primal_feasibility_tolerance;
   dual_feasibility_tolerance =
-      ekk_instance_.options_.dual_feasibility_tolerance;
-  objective_target = ekk_instance_.options_.objective_target;
+      ekk_instance_.options_pointer_->dual_feasibility_tolerance;
+  objective_target = ekk_instance_.options_pointer_->objective_target;
 
   ekk_instance_.status_.has_primal_objective_value = false;
   ekk_instance_.status_.has_dual_objective_value = false;
@@ -340,7 +340,7 @@ void HEkkPrimal::solvePhase1() {
   status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutOnTimeIterations()) return;
-  highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
+  highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
               "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
@@ -402,7 +402,7 @@ void HEkkPrimal::solvePhase1() {
     //
     // It may have been prevented to avoid cleanup-perturbation loops
     if (!info.allow_bound_perturbation)
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
                   "Moving to phase 2, but not allowing bound perturbation\n");
   }
 }
@@ -512,7 +512,7 @@ void HEkkPrimal::solvePhase2() {
 void HEkkPrimal::cleanup() {
   HighsSimplexInfo& info = ekk_instance_.info_;
   if (!info.bounds_perturbed) return;
-  highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kDetailed,
+  highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
               "primal-cleanup-shift\n");
   // Remove perturbation and don't permit further perturbation
   ekk_instance_.initialiseBound(SimplexAlgorithm::kPrimal, solve_phase, false);
@@ -521,7 +521,7 @@ void HEkkPrimal::cleanup() {
   // Possibly take a copy of the original duals before recomputing them
   /*
   vector<double> original_baseValue;
-  if (ekk_instance_.options_.highs_debug_level > kHighsDebugLevelCheap)
+  if (ekk_instance_.options_pointer_->highs_debug_level > kHighsDebugLevelCheap)
     original_baseValue = info.baseValue_;
   */
   // Compute the primal values
@@ -620,7 +620,7 @@ void HEkkPrimal::rebuild() {
     // Primal infeasibilities so should be in phase 1
     if (solve_phase == kSolvePhase2) {
       highsLogDev(
-          ekk_instance_.options_.log_options, HighsLogType::kWarning,
+          ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
           "HEkkPrimal::rebuild switching back to phase 1 from phase 2\n");
       solve_phase = kSolvePhase1;
     }
@@ -673,7 +673,7 @@ void HEkkPrimal::iterate() {
   bool check = ekk_instance_.iteration_count_ >= check_iter;
   if (check) {
     printf("Iter %" HIGHSINT_FORMAT "\n", ekk_instance_.iteration_count_);
-    ekk_instance_.options_.highs_debug_level = kHighsDebugLevelExpensive;
+    ekk_instance_.options_pointer_->highs_debug_level = kHighsDebugLevelExpensive;
   }
   if (debugPrimalSimplex("Before iteration") ==
       HighsDebugStatus::kLogicalError) {
@@ -705,7 +705,7 @@ void HEkkPrimal::iterate() {
   if (solve_phase == kSolvePhase1) {
     phase1ChooseRow();
     if (row_out < 0) {
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
+      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kError,
                   "Primal phase 1 choose row failed\n");
       solve_phase = kSolvePhaseError;
       return;
@@ -931,7 +931,7 @@ bool HEkkPrimal::useVariableIn() {
     if (theta_dual_small) theta_dual_size = "; too small";
     std::string theta_dual_sign = "";
     if (theta_dual_sign_error) theta_dual_sign = "; sign error";
-    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
                 "Chosen entering variable %" HIGHSINT_FORMAT
                 " (Iter = %" HIGHSINT_FORMAT "; Update = %" HIGHSINT_FORMAT
                 ") has computed "
@@ -1709,7 +1709,7 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     }
     info.num_primal_infeasibilities++;
     highsLogDev(
-        ekk_instance_.options_.log_options, HighsLogType::kWarning,
+        ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
         "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
         primal_infeasibility, lower, value_in, upper);
     rebuild_reason = kRebuildReasonPrimalInfeasibleInPrimalSimplex;
@@ -1895,14 +1895,14 @@ bool HEkkPrimal::correctPrimal(const bool initialise) {
     }
   }
   if (num_primal_correction_skipped) {
-    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
+    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kError,
                 "correctPrimal: Missed %d bound shifts\n",
                 num_primal_correction_skipped);
     assert(!num_primal_correction_skipped);
     return false;
   }
   if (max_primal_correction > 2 * max_max_primal_correction) {
-    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
                 "phase2CorrectPrimal: num / max / sum primal corrections = "
                 "%" HIGHSINT_FORMAT
                 " / %g / "
@@ -2147,7 +2147,7 @@ void HEkkPrimal::updateVerify() {
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   if (numericalTrouble > numerical_trouble_tolerance)
-    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
                 "Numerical check: Iter %4" HIGHSINT_FORMAT
                 ": alpha_col = %12g, (From %3s alpha_row = "
                 "%12g), aDiff = %12g: measure = %12g\n",
@@ -2300,7 +2300,7 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
     bool removed_nonbasic_free_column =
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
-      highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kError,
+      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kError,
                   "HEkkPrimal::phase1update failed to remove nonbasic free "
                   "column %" HIGHSINT_FORMAT "\n",
                   variable_in);
@@ -2344,7 +2344,7 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
   // Gets the num/max/sum of basic primal infeasibliities,
   analysis->simplexTimerStart(ComputePrIfsClock);
   const double primal_feasibility_tolerance =
-      ekk_instance_.options_.primal_feasibility_tolerance;
+      ekk_instance_.options_pointer_->primal_feasibility_tolerance;
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsInt& num_primal_infeasibility = info.num_primal_infeasibilities;
   double& max_primal_infeasibility = info.max_primal_infeasibility;
@@ -2426,7 +2426,7 @@ void HEkkPrimal::shiftBound(const bool lower, const HighsInt iVar,
   }
   double error = fabs(-new_infeasibility - feasibility);
   if (report)
-    highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kVerbose,
+    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kVerbose,
                 "Value(%4" HIGHSINT_FORMAT
                 ") = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
                 "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",

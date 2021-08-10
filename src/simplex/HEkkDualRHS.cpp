@@ -329,7 +329,7 @@ void HEkkDualRHS::updatePrimal(HVector* column, double theta) {
 
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  const double Tp = ekk_instance_.options_.primal_feasibility_tolerance;
+  const double Tp = ekk_instance_.options_pointer_->primal_feasibility_tolerance;
   double* baseValue = &ekk_instance_.info_.baseValue_[0];
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
@@ -432,7 +432,7 @@ void HEkkDualRHS::updatePivots(HighsInt iRow, double value) {
   //
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  const double Tp = ekk_instance_.options_.primal_feasibility_tolerance;
+  const double Tp = ekk_instance_.options_pointer_->primal_feasibility_tolerance;
   double* baseValue = &ekk_instance_.info_.baseValue_[0];
   baseValue[iRow] = value;
   double pivotInfeas = 0;
@@ -488,7 +488,7 @@ void HEkkDualRHS::createArrayOfPrimalInfeasibilities() {
   const double* baseValue = &ekk_instance_.info_.baseValue_[0];
   const double* baseLower = &ekk_instance_.info_.baseLower_[0];
   const double* baseUpper = &ekk_instance_.info_.baseUpper_[0];
-  const double Tp = ekk_instance_.options_.primal_feasibility_tolerance;
+  const double Tp = ekk_instance_.options_pointer_->primal_feasibility_tolerance;
   for (HighsInt i = 0; i < numRow; i++) {
     const double value = baseValue[i];
     const double less = baseLower[i] - value;
