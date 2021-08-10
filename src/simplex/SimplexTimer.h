@@ -120,104 +120,104 @@ enum iClockSimplex {
 class SimplexTimer {
  public:
   void initialiseSimplexClocks(HighsTimerClock& simplex_timer_clock) {
-    HighsTimer& timer = simplex_timer_clock.timer_;
+    HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
     clock.resize(SimplexNumClock);
-    clock[SimplexTotalClock] = timer.clock_def("Simplex total", "STT");
-    clock[SimplexIzDseWtClock] = timer.clock_def("Iz DSE Wt", "IWT");
-    clock[SimplexDualPhase1Clock] = timer.clock_def("Dual Phase 1", "DP1");
-    clock[SimplexDualPhase2Clock] = timer.clock_def("Dual Phase 2", "DP2");
-    clock[SimplexPrimalPhase1Clock] = timer.clock_def("Primal Phase 1", "PP1");
-    clock[SimplexPrimalPhase2Clock] = timer.clock_def("Primal Phase 2", "PP2");
-    clock[Group1Clock] = timer.clock_def("GROUP1", "GP1");
-    clock[IterateClock] = timer.clock_def("ITERATE", "ITR");
-    clock[IterateDualRebuildClock] = timer.clock_def("DUAL REBUILD", "DRB");
-    clock[IteratePrimalRebuildClock] = timer.clock_def("PRIMAL REBUILD", "PRB");
-    clock[IterateChuzrClock] = timer.clock_def("CHUZR", "CZR");
-    clock[IterateChuzcClock] = timer.clock_def("CHUZC", "CZC");
-    clock[IterateFtranClock] = timer.clock_def("FTRAN", "FTR");
-    clock[IterateVerifyClock] = timer.clock_def("VERIFY", "VRF");
-    clock[IterateDualClock] = timer.clock_def("DUAL", "UDU");
-    clock[IteratePrimalClock] = timer.clock_def("PRIMAL", "UPR");
-    clock[IterateDevexIzClock] = timer.clock_def("DEVEX_IZ", "DVI");
-    clock[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
+    clock[SimplexTotalClock] = timer_pointer->clock_def("Simplex total", "STT");
+    clock[SimplexIzDseWtClock] = timer_pointer->clock_def("Iz DSE Wt", "IWT");
+    clock[SimplexDualPhase1Clock] = timer_pointer->clock_def("Dual Phase 1", "DP1");
+    clock[SimplexDualPhase2Clock] = timer_pointer->clock_def("Dual Phase 2", "DP2");
+    clock[SimplexPrimalPhase1Clock] = timer_pointer->clock_def("Primal Phase 1", "PP1");
+    clock[SimplexPrimalPhase2Clock] = timer_pointer->clock_def("Primal Phase 2", "PP2");
+    clock[Group1Clock] = timer_pointer->clock_def("GROUP1", "GP1");
+    clock[IterateClock] = timer_pointer->clock_def("ITERATE", "ITR");
+    clock[IterateDualRebuildClock] = timer_pointer->clock_def("DUAL REBUILD", "DRB");
+    clock[IteratePrimalRebuildClock] = timer_pointer->clock_def("PRIMAL REBUILD", "PRB");
+    clock[IterateChuzrClock] = timer_pointer->clock_def("CHUZR", "CZR");
+    clock[IterateChuzcClock] = timer_pointer->clock_def("CHUZC", "CZC");
+    clock[IterateFtranClock] = timer_pointer->clock_def("FTRAN", "FTR");
+    clock[IterateVerifyClock] = timer_pointer->clock_def("VERIFY", "VRF");
+    clock[IterateDualClock] = timer_pointer->clock_def("DUAL", "UDU");
+    clock[IteratePrimalClock] = timer_pointer->clock_def("PRIMAL", "UPR");
+    clock[IterateDevexIzClock] = timer_pointer->clock_def("DEVEX_IZ", "DVI");
+    clock[IteratePivotsClock] = timer_pointer->clock_def("PIVOTS", "PIV");
     clock[initialiseSimplexLpBasisAndFactorClock] =
-        timer.clock_def("IZ_SIMPLEX_LP_DEF", "ISD");
+        timer_pointer->clock_def("IZ_SIMPLEX_LP_DEF", "ISD");
     clock[allocateSimplexArraysClock] =
-        timer.clock_def("ALLOC_SIMPLEX_ARRS", "ASA");
+        timer_pointer->clock_def("ALLOC_SIMPLEX_ARRS", "ASA");
     clock[initialiseSimplexCostBoundsClock] =
-        timer.clock_def("IZ_SIMPLEX_CO_BD", "ICB");
-    clock[ScaleClock] = timer.clock_def("SCALE", "SCL");
-    clock[CrashClock] = timer.clock_def("CRASH", "CSH");
-    clock[BasisConditionClock] = timer.clock_def("BASIS_CONDITION", "CON");
-    clock[matrixSetupClock] = timer.clock_def("MATRIX_SETUP", "FST");
-    clock[setNonbasicMoveClock] = timer.clock_def("SET_NONBASICMOVE", "SNM");
-    clock[DseIzClock] = timer.clock_def("DSE_IZ", "DEI");
-    clock[InvertClock] = timer.clock_def("INVERT", "INV");
-    clock[PermWtClock] = timer.clock_def("PERM_WT", "PWT");
-    clock[ComputeDualClock] = timer.clock_def("COMPUTE_DUAL", "CPD");
-    clock[CorrectDualClock] = timer.clock_def("CORRECT_DUAL", "CRD");
-    clock[ComputePrimalClock] = timer.clock_def("COMPUTE_PRIMAL", "CPP");
-    clock[CollectPrIfsClock] = timer.clock_def("COLLECT_PR_IFS", "IFS");
-    clock[ComputePrIfsClock] = timer.clock_def("COMPUTE_PR_IFS", "PIF");
-    clock[ComputeDuIfsClock] = timer.clock_def("COMPUTE_DU_IFS", "DIF");
-    clock[ComputeDuObjClock] = timer.clock_def("COMPUTE_DU_OBJ", "DOB");
-    clock[ComputePrObjClock] = timer.clock_def("COMPUTE_PR_OBJ", "POB");
-    clock[ReportRebuildClock] = timer.clock_def("REPORT_REBUILD", "RPR");
-    clock[ChuzrDualClock] = timer.clock_def("CHUZR_DUAL", "CRD");
-    clock[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
-    clock[Chuzr2Clock] = timer.clock_def("CHUZR2", "CR2");
-    clock[ChuzcPrimalClock] = timer.clock_def("CHUZC_PRIMAL", "CCP");
+        timer_pointer->clock_def("IZ_SIMPLEX_CO_BD", "ICB");
+    clock[ScaleClock] = timer_pointer->clock_def("SCALE", "SCL");
+    clock[CrashClock] = timer_pointer->clock_def("CRASH", "CSH");
+    clock[BasisConditionClock] = timer_pointer->clock_def("BASIS_CONDITION", "CON");
+    clock[matrixSetupClock] = timer_pointer->clock_def("MATRIX_SETUP", "FST");
+    clock[setNonbasicMoveClock] = timer_pointer->clock_def("SET_NONBASICMOVE", "SNM");
+    clock[DseIzClock] = timer_pointer->clock_def("DSE_IZ", "DEI");
+    clock[InvertClock] = timer_pointer->clock_def("INVERT", "INV");
+    clock[PermWtClock] = timer_pointer->clock_def("PERM_WT", "PWT");
+    clock[ComputeDualClock] = timer_pointer->clock_def("COMPUTE_DUAL", "CPD");
+    clock[CorrectDualClock] = timer_pointer->clock_def("CORRECT_DUAL", "CRD");
+    clock[ComputePrimalClock] = timer_pointer->clock_def("COMPUTE_PRIMAL", "CPP");
+    clock[CollectPrIfsClock] = timer_pointer->clock_def("COLLECT_PR_IFS", "IFS");
+    clock[ComputePrIfsClock] = timer_pointer->clock_def("COMPUTE_PR_IFS", "PIF");
+    clock[ComputeDuIfsClock] = timer_pointer->clock_def("COMPUTE_DU_IFS", "DIF");
+    clock[ComputeDuObjClock] = timer_pointer->clock_def("COMPUTE_DU_OBJ", "DOB");
+    clock[ComputePrObjClock] = timer_pointer->clock_def("COMPUTE_PR_OBJ", "POB");
+    clock[ReportRebuildClock] = timer_pointer->clock_def("REPORT_REBUILD", "RPR");
+    clock[ChuzrDualClock] = timer_pointer->clock_def("CHUZR_DUAL", "CRD");
+    clock[Chuzr1Clock] = timer_pointer->clock_def("CHUZR1", "CR1");
+    clock[Chuzr2Clock] = timer_pointer->clock_def("CHUZR2", "CR2");
+    clock[ChuzcPrimalClock] = timer_pointer->clock_def("CHUZC_PRIMAL", "CCP");
     clock[ChuzcHyperInitialiselClock] =
-        timer.clock_def("CHUZC_HYPER_IZ", "CHI");
+        timer_pointer->clock_def("CHUZC_HYPER_IZ", "CHI");
     clock[ChuzcHyperBasicFeasibilityChangeClock] =
-        timer.clock_def("CHUZC_HYPER_FEAS", "CHF");
-    clock[ChuzcHyperDualClock] = timer.clock_def("CHUZC_HYPER_DUAL", "CHD");
-    clock[ChuzcHyperClock] = timer.clock_def("CHUZC_HYPER", "CHC");
-    clock[Chuzc0Clock] = timer.clock_def("CHUZC0", "CC0");
-    clock[PriceChuzc1Clock] = timer.clock_def("PRICE_CHUZC1", "PC1");
-    clock[Chuzc1Clock] = timer.clock_def("CHUZC1", "CC1");
-    clock[Chuzc2Clock] = timer.clock_def("CHUZC2", "CC2");
-    clock[Chuzc3Clock] = timer.clock_def("CHUZC3", "CC3");
-    clock[Chuzc3a0Clock] = timer.clock_def("CHUZC3a0", "C30");
-    clock[Chuzc3a1Clock] = timer.clock_def("CHUZC3a1", "C31");
-    clock[Chuzc3bClock] = timer.clock_def("CHUZC3b", "C3b");
-    clock[Chuzc3cClock] = timer.clock_def("CHUZC3c", "C3c");
-    clock[Chuzc3dClock] = timer.clock_def("CHUZC3d", "C3d");
-    clock[Chuzc3eClock] = timer.clock_def("CHUZC3e", "C3e");
-    clock[Chuzc4Clock] = timer.clock_def("CHUZC4", "CC4");
-    clock[DevexWtClock] = timer.clock_def("DEVEX_WT", "DWT");
-    clock[BtranClock] = timer.clock_def("BTRAN", "REP");
+        timer_pointer->clock_def("CHUZC_HYPER_FEAS", "CHF");
+    clock[ChuzcHyperDualClock] = timer_pointer->clock_def("CHUZC_HYPER_DUAL", "CHD");
+    clock[ChuzcHyperClock] = timer_pointer->clock_def("CHUZC_HYPER", "CHC");
+    clock[Chuzc0Clock] = timer_pointer->clock_def("CHUZC0", "CC0");
+    clock[PriceChuzc1Clock] = timer_pointer->clock_def("PRICE_CHUZC1", "PC1");
+    clock[Chuzc1Clock] = timer_pointer->clock_def("CHUZC1", "CC1");
+    clock[Chuzc2Clock] = timer_pointer->clock_def("CHUZC2", "CC2");
+    clock[Chuzc3Clock] = timer_pointer->clock_def("CHUZC3", "CC3");
+    clock[Chuzc3a0Clock] = timer_pointer->clock_def("CHUZC3a0", "C30");
+    clock[Chuzc3a1Clock] = timer_pointer->clock_def("CHUZC3a1", "C31");
+    clock[Chuzc3bClock] = timer_pointer->clock_def("CHUZC3b", "C3b");
+    clock[Chuzc3cClock] = timer_pointer->clock_def("CHUZC3c", "C3c");
+    clock[Chuzc3dClock] = timer_pointer->clock_def("CHUZC3d", "C3d");
+    clock[Chuzc3eClock] = timer_pointer->clock_def("CHUZC3e", "C3e");
+    clock[Chuzc4Clock] = timer_pointer->clock_def("CHUZC4", "CC4");
+    clock[DevexWtClock] = timer_pointer->clock_def("DEVEX_WT", "DWT");
+    clock[BtranClock] = timer_pointer->clock_def("BTRAN", "REP");
     clock[BtranBasicFeasibilityChangeClock] =
-        timer.clock_def("BTRAN_FEAS", "BT1");
-    clock[BtranFullClock] = timer.clock_def("BTRAN_FULL", "BTF");
-    clock[PriceClock] = timer.clock_def("PRICE", "RAP");
+        timer_pointer->clock_def("BTRAN_FEAS", "BT1");
+    clock[BtranFullClock] = timer_pointer->clock_def("BTRAN_FULL", "BTF");
+    clock[PriceClock] = timer_pointer->clock_def("PRICE", "RAP");
     clock[PriceBasicFeasibilityChangeClock] =
-        timer.clock_def("PRICE_FEAS", "PC1");
-    clock[PriceFullClock] = timer.clock_def("PRICE_FULL", "PCF");
-    clock[FtranClock] = timer.clock_def("FTRAN", "COL");
-    clock[FtranDseClock] = timer.clock_def("FTRAN_DSE", "DSE");
-    clock[FtranMixParClock] = timer.clock_def("FTRAN_MIX_PAR", "FMP");
-    clock[FtranMixFinalClock] = timer.clock_def("FTRAN_MIX_FINAL", "FMF");
-    clock[FtranBfrtClock] = timer.clock_def("FTRAN_BFRT", "BFR");
-    clock[UpdateRowClock] = timer.clock_def("UPDATE_ROW", "UPR");
-    clock[UpdateDualClock] = timer.clock_def("UPDATE_DUAL", "UPD");
+        timer_pointer->clock_def("PRICE_FEAS", "PC1");
+    clock[PriceFullClock] = timer_pointer->clock_def("PRICE_FULL", "PCF");
+    clock[FtranClock] = timer_pointer->clock_def("FTRAN", "COL");
+    clock[FtranDseClock] = timer_pointer->clock_def("FTRAN_DSE", "DSE");
+    clock[FtranMixParClock] = timer_pointer->clock_def("FTRAN_MIX_PAR", "FMP");
+    clock[FtranMixFinalClock] = timer_pointer->clock_def("FTRAN_MIX_FINAL", "FMF");
+    clock[FtranBfrtClock] = timer_pointer->clock_def("FTRAN_BFRT", "BFR");
+    clock[UpdateRowClock] = timer_pointer->clock_def("UPDATE_ROW", "UPR");
+    clock[UpdateDualClock] = timer_pointer->clock_def("UPDATE_DUAL", "UPD");
     clock[UpdateDualBasicFeasibilityChangeClock] =
-        timer.clock_def("UPDATE_DUAL_FEAS", "UD1");
-    clock[UpdatePrimalClock] = timer.clock_def("UPDATE_PRIMAL", "UPP");
-    clock[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
-    clock[DevexUpdateWeightClock] = timer.clock_def("UPDATE_DVX_WEIGHT", "UDW");
-    clock[DseUpdateWeightClock] = timer.clock_def("UPDATE_DSE_WEIGHT", "USW");
-    clock[UpdatePivotsClock] = timer.clock_def("UPDATE_PIVOTS", "UPP");
-    clock[UpdateFactorClock] = timer.clock_def("UPDATE_FACTOR", "UPF");
-    clock[UpdateMatrixClock] = timer.clock_def("UPDATE_MATRIX", "UPM");
-    clock[UpdateRowEpClock] = timer.clock_def("UPDATE_ROW_EP", "UPR");
+        timer_pointer->clock_def("UPDATE_DUAL_FEAS", "UD1");
+    clock[UpdatePrimalClock] = timer_pointer->clock_def("UPDATE_PRIMAL", "UPP");
+    clock[DevexIzClock] = timer_pointer->clock_def("DEVEX_IZ", "DIZ");
+    clock[DevexUpdateWeightClock] = timer_pointer->clock_def("UPDATE_DVX_WEIGHT", "UDW");
+    clock[DseUpdateWeightClock] = timer_pointer->clock_def("UPDATE_DSE_WEIGHT", "USW");
+    clock[UpdatePivotsClock] = timer_pointer->clock_def("UPDATE_PIVOTS", "UPP");
+    clock[UpdateFactorClock] = timer_pointer->clock_def("UPDATE_FACTOR", "UPF");
+    clock[UpdateMatrixClock] = timer_pointer->clock_def("UPDATE_MATRIX", "UPM");
+    clock[UpdateRowEpClock] = timer_pointer->clock_def("UPDATE_ROW_EP", "UPR");
   }
 
   void reportSimplexClockList(const char* grepStamp,
                               std::vector<HighsInt> simplex_clock_list,
                               HighsTimerClock& simplex_timer_clock) {
-    HighsTimer& timer = simplex_timer_clock.timer_;
+    HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
     HighsInt simplex_clock_list_size = simplex_clock_list.size();
     std::vector<HighsInt> clockList;
@@ -225,13 +225,13 @@ class SimplexTimer {
     for (HighsInt en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = clock[simplex_clock_list[en]];
     }
-    const double ideal_sum_time = timer.clock_time[clock[SimplexTotalClock]];
-    timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
+    const double ideal_sum_time = timer_pointer->clock_time[clock[SimplexTotalClock]];
+    timer_pointer->report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
   void reportChuzc3ClockList(std::vector<HighsInt> simplex_clock_list,
                              HighsTimerClock& simplex_timer_clock) {
-    HighsTimer& timer = simplex_timer_clock.timer_;
+    HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = simplex_timer_clock.clock_;
     HighsInt simplex_clock_list_size = simplex_clock_list.size();
     std::vector<HighsInt> clockList;
@@ -239,9 +239,9 @@ class SimplexTimer {
     for (HighsInt en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = clock[simplex_clock_list[en]];
     }
-    const double ideal_sum_time = timer.read(clock[Chuzc3Clock]);
+    const double ideal_sum_time = timer_pointer->read(clock[Chuzc3Clock]);
     printf("reportChuzc3ClockList: ideal_sum_time = %g\n", ideal_sum_time);
-    timer.report_tl("CHUZC3:", clockList, ideal_sum_time, 1e-8);
+    timer_pointer->report_tl("CHUZC3:", clockList, ideal_sum_time, 1e-8);
   };
 
   void reportSimplexTotalClock(HighsTimerClock& simplex_timer_clock) {

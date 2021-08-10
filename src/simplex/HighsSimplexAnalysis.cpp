@@ -57,14 +57,14 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
 #endif
   if (analyse_simplex_time) {
     for (HighsInt i = 0; i < omp_max_threads; i++) {
-      HighsTimerClock clock(timer_reference);
+      HighsTimerClock clock;
       clock.timer_pointer_ = timer_;
       thread_simplex_clocks.push_back(clock);
     }
   }
   if (analyse_factor_time) {
     for (HighsInt i = 0; i < omp_max_threads; i++) {
-      HighsTimerClock clock(timer_reference);
+      HighsTimerClock clock;
       clock.timer_pointer_ = timer_;
       thread_factor_clocks.push_back(clock);
     }
@@ -584,8 +584,7 @@ HighsInt HighsSimplexAnalysis::simplexTimerNumCall(const HighsInt simplex_clock,
   if (!analyse_simplex_time) return -1;
   // assert(analyse_simplex_time);
   return thread_simplex_clocks[thread_id]
-      .timer_
-      .clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+      .timer_pointer_->clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
 }
 
 double HighsSimplexAnalysis::simplexTimerRead(const HighsInt simplex_clock,
@@ -1065,8 +1064,9 @@ void HighsSimplexAnalysis::reportFactorTimer() {
     factor_timer.reportFactorClock(thread_factor_clocks[i]);
   }
   if (omp_max_threads > 1) {
-    HighsTimer& timer = thread_factor_clocks[0].timer_;
-    HighsTimerClock all_factor_clocks(timer);
+    HighsTimer* timer_pointer = thread_factor_clocks[0].timer_pointer_;
+    HighsTimerClock all_factor_clocks;
+    all_factor_clocks.timer_pointer_ = timer_pointer;
     vector<HighsInt>& clock = all_factor_clocks.clock_;
     factor_timer.initialiseFactorClocks(all_factor_clocks);
     for (HighsInt i = 0; i < omp_max_threads; i++) {
@@ -1074,10 +1074,10 @@ void HighsSimplexAnalysis::reportFactorTimer() {
       for (HighsInt clock_id = 0; clock_id < FactorNumClock; clock_id++) {
         HighsInt all_factor_iClock = clock[clock_id];
         HighsInt thread_factor_iClock = thread_clock[clock_id];
-        timer.clock_num_call[all_factor_iClock] +=
-            timer.clock_num_call[thread_factor_iClock];
-        timer.clock_time[all_factor_iClock] +=
-            timer.clock_time[thread_factor_iClock];
+        timer_pointer->clock_num_call[all_factor_iClock] +=
+            timer_pointer->clock_num_call[thread_factor_iClock];
+        timer_pointer->clock_time[all_factor_iClock] +=
+            timer_pointer->clock_time[thread_factor_iClock];
       }
     }
     printf("reportFactorTimer: HFactor clocks for all %" HIGHSINT_FORMAT

@@ -85,55 +85,55 @@ class FactorTimer {
   };
 
   void initialiseFactorClocks(HighsTimerClock& factor_timer_clock) {
-    HighsTimer& timer = factor_timer_clock.timer_;
+    HighsTimer* timer_pointer = factor_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = factor_timer_clock.clock_;
     clock.resize(FactorNumClock);
-    clock[FactorInvert] = timer.clock_def("INVERT", "INV");
-    clock[FactorInvertSimple] = timer.clock_def("INVERT Simple", "IVS");
-    clock[FactorInvertKernel] = timer.clock_def("INVERT Kernel", "IVK");
-    clock[FactorInvertDeficient] = timer.clock_def("INVERT Deficient", "IVD");
-    clock[FactorInvertFinish] = timer.clock_def("INVERT Finish", "IVF");
-    clock[FactorFtran] = timer.clock_def("FTRAN", "FTR");
-    clock[FactorFtranLower] = timer.clock_def("FTRAN Lower", "FTL");
-    clock[FactorFtranLowerAPF] = timer.clock_def("FTRAN Lower APF", "FLA");
-    clock[FactorFtranLowerSps] = timer.clock_def("FTRAN Lower Sps", "FLS");
-    clock[FactorFtranLowerHyper] = timer.clock_def("FTRAN Lower Hyper", "FLH");
-    clock[FactorFtranUpper] = timer.clock_def("FTRAN Upper", "FTU");
-    clock[FactorFtranUpperFT] = timer.clock_def("FTRAN Upper FT", "FUF");
-    clock[FactorFtranUpperMPF] = timer.clock_def("FTRAN Upper MPF", "FUM");
-    clock[FactorFtranUpperSps0] = timer.clock_def("FTRAN Upper Sps0", "FUS");
-    clock[FactorFtranUpperSps1] = timer.clock_def("FTRAN Upper Sps1", "FUS");
-    clock[FactorFtranUpperSps2] = timer.clock_def("FTRAN Upper Sps2", "FUS");
+    clock[FactorInvert] = timer_pointer->clock_def("INVERT", "INV");
+    clock[FactorInvertSimple] = timer_pointer->clock_def("INVERT Simple", "IVS");
+    clock[FactorInvertKernel] = timer_pointer->clock_def("INVERT Kernel", "IVK");
+    clock[FactorInvertDeficient] = timer_pointer->clock_def("INVERT Deficient", "IVD");
+    clock[FactorInvertFinish] = timer_pointer->clock_def("INVERT Finish", "IVF");
+    clock[FactorFtran] = timer_pointer->clock_def("FTRAN", "FTR");
+    clock[FactorFtranLower] = timer_pointer->clock_def("FTRAN Lower", "FTL");
+    clock[FactorFtranLowerAPF] = timer_pointer->clock_def("FTRAN Lower APF", "FLA");
+    clock[FactorFtranLowerSps] = timer_pointer->clock_def("FTRAN Lower Sps", "FLS");
+    clock[FactorFtranLowerHyper] = timer_pointer->clock_def("FTRAN Lower Hyper", "FLH");
+    clock[FactorFtranUpper] = timer_pointer->clock_def("FTRAN Upper", "FTU");
+    clock[FactorFtranUpperFT] = timer_pointer->clock_def("FTRAN Upper FT", "FUF");
+    clock[FactorFtranUpperMPF] = timer_pointer->clock_def("FTRAN Upper MPF", "FUM");
+    clock[FactorFtranUpperSps0] = timer_pointer->clock_def("FTRAN Upper Sps0", "FUS");
+    clock[FactorFtranUpperSps1] = timer_pointer->clock_def("FTRAN Upper Sps1", "FUS");
+    clock[FactorFtranUpperSps2] = timer_pointer->clock_def("FTRAN Upper Sps2", "FUS");
     clock[FactorFtranUpperHyper0] =
-        timer.clock_def("FTRAN Upper Hyper0", "FUH");
+        timer_pointer->clock_def("FTRAN Upper Hyper0", "FUH");
     clock[FactorFtranUpperHyper1] =
-        timer.clock_def("FTRAN Upper Hyper1", "FUH");
+        timer_pointer->clock_def("FTRAN Upper Hyper1", "FUH");
     clock[FactorFtranUpperHyper2] =
-        timer.clock_def("FTRAN Upper Hyper2", "FUH");
+        timer_pointer->clock_def("FTRAN Upper Hyper2", "FUH");
     clock[FactorFtranUpperHyper3] =
-        timer.clock_def("FTRAN Upper Hyper3", "FUH");
+        timer_pointer->clock_def("FTRAN Upper Hyper3", "FUH");
     clock[FactorFtranUpperHyper4] =
-        timer.clock_def("FTRAN Upper Hyper4", "FUH");
+        timer_pointer->clock_def("FTRAN Upper Hyper4", "FUH");
     clock[FactorFtranUpperHyper5] =
-        timer.clock_def("FTRAN Upper Hyper5", "FUH");
-    clock[FactorFtranUpperPF] = timer.clock_def("FTRAN Upper PF", "FUP");
-    clock[FactorBtran] = timer.clock_def("BTRAN", "BTR");
-    clock[FactorBtranLower] = timer.clock_def("BTRAN Lower", "BTL");
-    clock[FactorBtranLowerSps] = timer.clock_def("BTRAN Lower Sps", "BLS");
-    clock[FactorBtranLowerHyper] = timer.clock_def("BTRAN Lower Hyper", "BLH");
-    clock[FactorBtranLowerAPF] = timer.clock_def("BTRAN Lower APF", "BLA");
-    clock[FactorBtranUpper] = timer.clock_def("BTRAN Upper", "BTU");
-    clock[FactorBtranUpperPF] = timer.clock_def("BTRAN Upper PF", "BUP");
-    clock[FactorBtranUpperSps] = timer.clock_def("BTRAN Upper Sps", "BUS");
-    clock[FactorBtranUpperHyper] = timer.clock_def("BTRAN Upper Hyper", "BUH");
-    clock[FactorBtranUpperFT] = timer.clock_def("BTRAN Upper FT", "BUF");
-    clock[FactorBtranUpperMPF] = timer.clock_def("BTRAN Upper MPS", "BUM");
+        timer_pointer->clock_def("FTRAN Upper Hyper5", "FUH");
+    clock[FactorFtranUpperPF] = timer_pointer->clock_def("FTRAN Upper PF", "FUP");
+    clock[FactorBtran] = timer_pointer->clock_def("BTRAN", "BTR");
+    clock[FactorBtranLower] = timer_pointer->clock_def("BTRAN Lower", "BTL");
+    clock[FactorBtranLowerSps] = timer_pointer->clock_def("BTRAN Lower Sps", "BLS");
+    clock[FactorBtranLowerHyper] = timer_pointer->clock_def("BTRAN Lower Hyper", "BLH");
+    clock[FactorBtranLowerAPF] = timer_pointer->clock_def("BTRAN Lower APF", "BLA");
+    clock[FactorBtranUpper] = timer_pointer->clock_def("BTRAN Upper", "BTU");
+    clock[FactorBtranUpperPF] = timer_pointer->clock_def("BTRAN Upper PF", "BUP");
+    clock[FactorBtranUpperSps] = timer_pointer->clock_def("BTRAN Upper Sps", "BUS");
+    clock[FactorBtranUpperHyper] = timer_pointer->clock_def("BTRAN Upper Hyper", "BUH");
+    clock[FactorBtranUpperFT] = timer_pointer->clock_def("BTRAN Upper FT", "BUF");
+    clock[FactorBtranUpperMPF] = timer_pointer->clock_def("BTRAN Upper MPS", "BUM");
   };
 
   void reportFactorClockList(const char* grepStamp,
                              HighsTimerClock& factor_timer_clock,
                              std::vector<HighsInt> factor_clock_list) {
-    HighsTimer& timer = factor_timer_clock.timer_;
+    HighsTimer* timer_pointer = factor_timer_clock.timer_pointer_;
     std::vector<HighsInt>& clock = factor_timer_clock.clock_;
     HighsInt factor_clock_list_size = factor_clock_list.size();
     std::vector<HighsInt> clockList;
@@ -142,10 +142,10 @@ class FactorTimer {
       clockList[en] = clock[factor_clock_list[en]];
     }
     double ideal_sum_time = 0;
-    ideal_sum_time += timer.read(clock[FactorInvert]);
-    ideal_sum_time += timer.read(clock[FactorFtran]);
-    ideal_sum_time += timer.read(clock[FactorBtran]);
-    timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
+    ideal_sum_time += timer_pointer->read(clock[FactorInvert]);
+    ideal_sum_time += timer_pointer->read(clock[FactorFtran]);
+    ideal_sum_time += timer_pointer->read(clock[FactorBtran]);
+    timer_pointer->report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
   void reportFactorLevel0Clock(HighsTimerClock& factor_timer_clock) {
