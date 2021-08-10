@@ -58,12 +58,14 @@ void HighsSimplexAnalysis::setup(const std::string lp_name, const HighsLp& lp,
   if (analyse_simplex_time) {
     for (HighsInt i = 0; i < omp_max_threads; i++) {
       HighsTimerClock clock(timer_reference);
+      clock.timer_pointer_ = timer_;
       thread_simplex_clocks.push_back(clock);
     }
   }
   if (analyse_factor_time) {
     for (HighsInt i = 0; i < omp_max_threads; i++) {
       HighsTimerClock clock(timer_reference);
+      clock.timer_pointer_ = timer_;
       thread_factor_clocks.push_back(clock);
     }
     pointer_serial_factor_clocks = &thread_factor_clocks[0];
@@ -557,7 +559,7 @@ void HighsSimplexAnalysis::simplexTimerStart(const HighsInt simplex_clock,
                                              const HighsInt thread_id) {
   if (!analyse_simplex_time) return;
   // assert(analyse_simplex_time);
-  thread_simplex_clocks[thread_id].timer_.start(
+  thread_simplex_clocks[thread_id].timer_pointer_->start(
       thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 }
 
@@ -565,7 +567,7 @@ void HighsSimplexAnalysis::simplexTimerStop(const HighsInt simplex_clock,
                                             const HighsInt thread_id) {
   if (!analyse_simplex_time) return;
   // assert(analyse_simplex_time);
-  thread_simplex_clocks[thread_id].timer_.stop(
+  thread_simplex_clocks[thread_id].timer_pointer_->stop(
       thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 }
 
@@ -573,7 +575,7 @@ bool HighsSimplexAnalysis::simplexTimerRunning(const HighsInt simplex_clock,
                                                const HighsInt thread_id) {
   if (!analyse_simplex_time) return false;
   // assert(analyse_simplex_time);
-  return thread_simplex_clocks[thread_id].timer_.clock_start
+  return thread_simplex_clocks[thread_id].timer_pointer_->clock_start
              [thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
 }
 
@@ -590,7 +592,7 @@ double HighsSimplexAnalysis::simplexTimerRead(const HighsInt simplex_clock,
                                               const HighsInt thread_id) {
   if (!analyse_simplex_time) return -1.0;
   // assert(analyse_simplex_time);
-  return thread_simplex_clocks[thread_id].timer_.read(
+  return thread_simplex_clocks[thread_id].timer_pointer_->read(
       thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 }
 

@@ -64,14 +64,14 @@ class FactorTimer {
   void start(const HighsInt factor_clock,
              HighsTimerClock* factor_timer_clock_pointer) {
     if (factor_timer_clock_pointer != NULL)
-      factor_timer_clock_pointer->timer_.start(
+      factor_timer_clock_pointer->timer_pointer_->start(
           factor_timer_clock_pointer->clock_[factor_clock]);
   };
 
   void stop(const HighsInt factor_clock,
             HighsTimerClock* factor_timer_clock_pointer) {
     if (factor_timer_clock_pointer != NULL)
-      factor_timer_clock_pointer->timer_.stop(
+      factor_timer_clock_pointer->timer_pointer_->stop(
           factor_timer_clock_pointer->clock_[factor_clock]);
   };
 
@@ -79,7 +79,7 @@ class FactorTimer {
               HighsTimerClock* factor_timer_clock_pointer) {
     double argument = 0;
     if (factor_timer_clock_pointer != NULL)
-      argument = factor_timer_clock_pointer->timer_.read(
+      argument = factor_timer_clock_pointer->timer_pointer_->read(
           factor_timer_clock_pointer->clock_[factor_clock]);
     return argument;
   };
