@@ -32,8 +32,7 @@ class HighsModelObject {
   HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
       : lp_(lp),
         options_(options),
-        timer_(timer),
-        ekk_instance_(timer) {}
+        timer_(timer) {}
 
   HighsLp& lp_;
   HighsOptions& options_;

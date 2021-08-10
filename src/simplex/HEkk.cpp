@@ -44,6 +44,7 @@ void HEkk::refreshPointers(HighsOptions* opt_point,
 			   HighsTimer* tim_point) {
   opt_point_ = opt_point;
   tim_point_ = tim_point;
+  analysis_.timer_ = tim_point;
 }
 
 HighsStatus HEkk::moveNewLp(HighsLp lp) {
