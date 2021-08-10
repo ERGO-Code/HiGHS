@@ -182,10 +182,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       getUnscaledInfeasibilities(options, lp.scale_, ekk_instance.basis_,
 				 ekk_instance.info_, solution_params);
       num_unscaled_primal_infeasibility =
-	solution_params.num_primal_infeasibility;
-      num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
-      assert(solution_params.num_primal_infeasibility >= 0);
-      assert(solution_params.num_dual_infeasibility >= 0);
+	solution_params.num_primal_infeasibilities;
+      num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibilities;
+      assert(solution_params.num_primal_infeasibilities >= 0);
+      assert(solution_params.num_dual_infeasibilities >= 0);
       if (num_unscaled_primal_infeasibility) {
 	solution_params.primal_solution_status = kSolutionStatusInfeasible;
       } else {
@@ -209,10 +209,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 		    "unscaled infeasibilities\n",
 		    num_unscaled_primal_infeasibility,
 		    solution_params.max_primal_infeasibility,
-		    solution_params.sum_primal_infeasibility,
+		    solution_params.sum_primal_infeasibilities,
 		    num_unscaled_dual_infeasibility,
 		    solution_params.max_dual_infeasibility,
-		    solution_params.sum_dual_infeasibility);
+		    solution_params.sum_dual_infeasibilities);
       // Determine whether refinement will take place
       refine_solution =
 	options.simplex_unscaled_solution_strategy ==
@@ -332,24 +332,24 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // The unscaled LP has been solved - either directly, or because
   // there was no scaling. Copy values into the HighsSolutionParams
   // that are set (above) by the call to getUnscaledInfeasibilities
-  solution_params.num_primal_infeasibility =
-    ekk_instance.info_.num_primal_infeasibility;
+  solution_params.num_primal_infeasibilities =
+    ekk_instance.info_.num_primal_infeasibilities;
   solution_params.max_primal_infeasibility =
     ekk_instance.info_.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibility =
-    ekk_instance.info_.sum_primal_infeasibility;
-  solution_params.num_dual_infeasibility =
-    ekk_instance.info_.num_dual_infeasibility;
+  solution_params.sum_primal_infeasibilities =
+    ekk_instance.info_.sum_primal_infeasibilities;
+  solution_params.num_dual_infeasibilities =
+    ekk_instance.info_.num_dual_infeasibilities;
   solution_params.max_dual_infeasibility =
     ekk_instance.info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibility =
-    ekk_instance.info_.sum_dual_infeasibility;
+  solution_params.sum_dual_infeasibilities =
+    ekk_instance.info_.sum_dual_infeasibilities;
 
-  num_unscaled_primal_infeasibility = solution_params.num_primal_infeasibility;
-  num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
+  num_unscaled_primal_infeasibility = solution_params.num_primal_infeasibilities;
+  num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibilities;
 
-  assert(solution_params.num_primal_infeasibility >= 0);
-  assert(solution_params.num_dual_infeasibility >= 0);
+  assert(solution_params.num_primal_infeasibilities >= 0);
+  assert(solution_params.num_dual_infeasibilities >= 0);
   if (num_unscaled_primal_infeasibility) {
     solution_params.primal_solution_status = kSolutionStatusInfeasible;
   } else {

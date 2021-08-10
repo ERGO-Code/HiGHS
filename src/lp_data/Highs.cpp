@@ -2363,8 +2363,8 @@ HighsStatus Highs::callSolveQp() {
   getKktFailures(model_, solution_, basis_, solution_params);
   if (model_status_ == HighsModelStatus::kOptimal) {
     // Determine whether optimality is justified
-    if (solution_params.num_primal_infeasibility ||
-        solution_params.num_dual_infeasibility) {
+    if (solution_params.num_primal_infeasibilities ||
+        solution_params.num_dual_infeasibilities) {
       if ((solution_params.max_primal_infeasibility >
            sqrt(options_.primal_feasibility_tolerance)) ||
           (solution_params.max_dual_infeasibility >
@@ -2374,11 +2374,11 @@ HighsStatus Highs::callSolveQp() {
                      "primal(%" HIGHSINT_FORMAT
                      "/%g/%g) and dual(%" HIGHSINT_FORMAT
                      "/%g/%g) infeasibility\n",
-                     solution_params.num_primal_infeasibility,
-                     solution_params.sum_primal_infeasibility,
+                     solution_params.num_primal_infeasibilities,
+                     solution_params.sum_primal_infeasibilities,
                      solution_params.max_primal_infeasibility,
-                     solution_params.num_dual_infeasibility,
-                     solution_params.sum_dual_infeasibility,
+                     solution_params.num_dual_infeasibilities,
+                     solution_params.sum_dual_infeasibilities,
                      solution_params.max_dual_infeasibility);
       }
     }
@@ -2551,12 +2551,12 @@ void Highs::setHighsModelStatusBasisSolutionAndInfo() {
     info_.basis_validity = kBasisValidityInvalid;
   }
   info_.objective_function_value = solution_params.objective_function_value;
-  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibility;
+  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
   info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibility;
-  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibility;
+  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
   info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibility;
+  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
   info_.valid = true;
 }
 

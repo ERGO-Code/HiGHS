@@ -273,7 +273,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   // Check that the number, max and sums of primal and dual infeasibilities (if
   // known) are correct
   const HighsInt info_num_primal_infeasibility =
-      ekk_instance.info_.num_primal_infeasibility;
+      ekk_instance.info_.num_primal_infeasibilities;
   if (info_num_primal_infeasibility >= 0) {
     const bool illegal_num_primal_infeasibility =
         num_primal_infeasibility != info_num_primal_infeasibility;
@@ -307,7 +307,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const double info_sum_primal_infeasibility =
-      ekk_instance.info_.sum_primal_infeasibility;
+      ekk_instance.info_.sum_primal_infeasibilities;
   if (info_sum_primal_infeasibility >= 0) {
     const bool illegal_sum_primal_infeasibility =
         abs(sum_primal_infeasibility - info_sum_primal_infeasibility) >
@@ -324,7 +324,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const HighsInt info_num_dual_infeasibility =
-      ekk_instance.info_.num_dual_infeasibility;
+      ekk_instance.info_.num_dual_infeasibilities;
   if (info_num_dual_infeasibility >= 0) {
     const bool illegal_num_dual_infeasibility =
         num_dual_infeasibility != info_num_dual_infeasibility;
@@ -358,7 +358,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   const double info_sum_dual_infeasibility =
-      ekk_instance.info_.sum_dual_infeasibility;
+      ekk_instance.info_.sum_dual_infeasibilities;
   if (info_sum_dual_infeasibility >= 0) {
     const bool illegal_sum_dual_infeasibility =
         abs(sum_dual_infeasibility - info_sum_dual_infeasibility) >

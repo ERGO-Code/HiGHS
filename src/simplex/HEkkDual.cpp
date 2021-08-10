@@ -85,15 +85,15 @@ HighsStatus HEkkDual::solve() {
   // very much larger for non-trivial LPs that are dual feasible for a
   // logical or crash basis.
   const bool near_optimal =
-      info.num_dual_infeasibility == 0 && info.sum_primal_infeasibility < 1;
+      info.num_dual_infeasibilities == 0 && info.sum_primal_infeasibilities < 1;
   if (near_optimal)
     highsLogDev(options.log_options, HighsLogType::kDetailed,
                 "Dual feasible and num / max / sum primal infeasibilities are "
                 "%" HIGHSINT_FORMAT
                 " / %g "
                 "/ %g, so near-optimal\n",
-                info.num_primal_infeasibility, info.max_primal_infeasibility,
-                info.sum_primal_infeasibility);
+                info.num_primal_infeasibilities, info.max_primal_infeasibility,
+                info.sum_primal_infeasibilities);
 
   // Perturb costs according to whether the solution is near-optimnal
   const bool perturb_costs = !near_optimal;
@@ -202,7 +202,7 @@ HighsStatus HEkkDual::solve() {
   ekk_instance_.computeDual();
   // Determine the number of dual infeasibilities, and hence the solve phase
   ekk_instance_.computeDualInfeasibleWithFlips();
-  dualInfeasCount = info.num_dual_infeasibility;
+  dualInfeasCount = info.num_dual_infeasibilities;
   solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::kDual, solve_phase,
                          ekk_instance_.model_status_) ==
@@ -226,7 +226,7 @@ HighsStatus HEkkDual::solve() {
       ekk_instance_.initialiseNonbasicValueAndMove();
       // Determine the number of dual infeasibilities, and hence the solve phase
       ekk_instance_.computeDualInfeasibleWithFlips();
-      dualInfeasCount = info.num_dual_infeasibility;
+      dualInfeasCount = info.num_dual_infeasibilities;
       solve_phase = dualInfeasCount > 0 ? kSolvePhase1 : kSolvePhase2;
       if (info.backtracking_) {
         // Backtracking, so set the bounds and primal values
@@ -304,7 +304,7 @@ HighsStatus HEkkDual::solve() {
                   " primal simplex cleanup for %" HIGHSINT_FORMAT
                   " dual infeasibilities\n",
                   ekk_instance_.dual_simplex_cleanup_level_,
-                  info.num_dual_infeasibility);
+                  info.num_dual_infeasibilities);
       ekk_instance_.model_status_ = HighsModelStatus::kOptimal;
     } else {
       // Use primal simplex to clean up. This almost always yields
@@ -316,7 +316,7 @@ HighsStatus HEkkDual::solve() {
           ekk_instance_.options_.log_options, HighsLogType::kInfo,
           "HEkkDual:: Using primal simplex to try to clean up %" HIGHSINT_FORMAT
           " dual infeasibilities\n",
-          info.num_dual_infeasibility);
+          info.num_dual_infeasibilities);
       HighsStatus return_status = HighsStatus::kOk;
       analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
       // Switch off any bound perturbation
@@ -338,14 +338,14 @@ HighsStatus HEkkDual::solve() {
       if (return_status != HighsStatus::kOk)
         return ekk_instance_.returnFromSolve(return_status);
       if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
-          info.num_primal_infeasibility + info.num_dual_infeasibility)
+          info.num_primal_infeasibilities + info.num_dual_infeasibilities)
         highsLogDev(ekk_instance_.options_.log_options, HighsLogType::kWarning,
                     "HEkkDual:: Primal simplex clean up yields optimality, "
                     "but with %" HIGHSINT_FORMAT
                     " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
                     " (max %g) dual infeasibilities\n",
-                    info.num_primal_infeasibility,
-                    info.max_primal_infeasibility, info.num_dual_infeasibility,
+                    info.num_primal_infeasibilities,
+                    info.max_primal_infeasibility, info.num_dual_infeasibilities,
                     info.max_dual_infeasibility);
     }
   }
@@ -689,7 +689,7 @@ void HEkkDual::solvePhase1() {
   // when the LP is dual infeasible. However, the model status can't
   // be set to dual infeasible until perturbations have been removed.
   //
-  const bool no_debug = ekk_instance_.info_.num_dual_infeasibility > 0 &&
+  const bool no_debug = ekk_instance_.info_.num_dual_infeasibilities > 0 &&
                         model_status == HighsModelStatus::kNotset;
   if (!no_debug) {
     if (debugDualSimplex("End of solvePhase1") ==
@@ -1035,7 +1035,7 @@ void HEkkDual::cleanup() {
   //  debugCleanup(ekk_instance_, original_workDual);
   // Compute the dual infeasibilities
   ekk_instance_.computeSimplexDualInfeasible();
-  dualInfeasCount = ekk_instance_.info_.num_dual_infeasibility;
+  dualInfeasCount = ekk_instance_.info_.num_dual_infeasibilities;
 
   // Compute the dual objective value
   ekk_instance_.computeDualObjectiveValue(solve_phase);
@@ -1186,16 +1186,16 @@ void HEkkDual::iterationAnalysisData() {
   // its sign according to the LP sense
   if (solve_phase == kSolvePhase2)
     analysis->objective_value *= (HighsInt)ekk_instance_.lp_.sense_;
-  analysis->num_primal_infeasibility = info.num_primal_infeasibility;
-  analysis->sum_primal_infeasibility = info.sum_primal_infeasibility;
+  analysis->num_primal_infeasibility = info.num_primal_infeasibilities;
+  analysis->sum_primal_infeasibility = info.sum_primal_infeasibilities;
   if (solve_phase == kSolvePhase1) {
     analysis->num_dual_infeasibility =
         analysis->num_dual_phase_1_lp_dual_infeasibility;
     analysis->sum_dual_infeasibility =
         analysis->sum_dual_phase_1_lp_dual_infeasibility;
   } else {
-    analysis->num_dual_infeasibility = info.num_dual_infeasibility;
-    analysis->sum_dual_infeasibility = info.sum_dual_infeasibility;
+    analysis->num_dual_infeasibility = info.num_dual_infeasibilities;
+    analysis->sum_dual_infeasibility = info.sum_dual_infeasibilities;
   }
   if ((dual_edge_weight_mode == DualEdgeWeightMode::kDevex) &&
       (num_devex_iterations == 0))

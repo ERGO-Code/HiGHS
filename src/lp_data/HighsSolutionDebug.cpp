@@ -145,9 +145,9 @@ HighsDebugStatus debugHighsSolution(
   getKktFailures(lp, gradient, solution, basis, local_solution_params,
                  primal_dual_errors, get_residuals);
   HighsInt& num_primal_infeasibility =
-      local_solution_params.num_primal_infeasibility;
+      local_solution_params.num_primal_infeasibilities;
   HighsInt& num_dual_infeasibility =
-      local_solution_params.num_dual_infeasibility;
+      local_solution_params.num_dual_infeasibilities;
   if (check_model_status_and_solution_params) {
     // Can assume that model_status and solution_params are known, so should be
     // checked
@@ -201,12 +201,12 @@ void debugReportHighsSolution(const string message,
               "(Max %.4g, Sum %.4g); Du %" HIGHSINT_FORMAT
               "(Max %.4g, "
               "Sum %.4g); Status: %s\n",
-              solution_params.num_primal_infeasibility,
+              solution_params.num_primal_infeasibilities,
               solution_params.max_primal_infeasibility,
-              solution_params.sum_primal_infeasibility,
-              solution_params.num_dual_infeasibility,
+              solution_params.sum_primal_infeasibilities,
+              solution_params.num_dual_infeasibilities,
               solution_params.max_dual_infeasibility,
-              solution_params.sum_dual_infeasibility,
+              solution_params.sum_dual_infeasibilities,
               utilModelStatusToString(model_status).c_str());
 }
 
@@ -424,13 +424,13 @@ HighsDebugStatus debugCompareSolutionInfeasibilityParams(
   return_status =
       debugWorseStatus(debugCompareSolutionParamInteger(
                            "num_primal_infeasibility", options,
-                           solution_params0.num_primal_infeasibility,
-                           solution_params1.num_primal_infeasibility),
+                           solution_params0.num_primal_infeasibilities,
+                           solution_params1.num_primal_infeasibilities),
                        return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("sum_primal_infeasibility", options,
-                                     solution_params0.sum_primal_infeasibility,
-                                     solution_params1.sum_primal_infeasibility),
+                                     solution_params0.sum_primal_infeasibilities,
+                                     solution_params1.sum_primal_infeasibilities),
       return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("max_primal_infeasibility", options,
@@ -440,13 +440,13 @@ HighsDebugStatus debugCompareSolutionInfeasibilityParams(
 
   return_status = debugWorseStatus(
       debugCompareSolutionParamInteger("num_dual_infeasibility", options,
-                                       solution_params0.num_dual_infeasibility,
-                                       solution_params1.num_dual_infeasibility),
+                                       solution_params0.num_dual_infeasibilities,
+                                       solution_params1.num_dual_infeasibilities),
       return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("sum_dual_infeasibility", options,
-                                     solution_params0.sum_dual_infeasibility,
-                                     solution_params1.sum_dual_infeasibility),
+                                     solution_params0.sum_dual_infeasibilities,
+                                     solution_params1.sum_dual_infeasibilities),
       return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("max_dual_infeasibility", options,

@@ -73,12 +73,12 @@ void getKktFailures(const HighsLp& lp, const std::vector<double>& gradient,
   double dual_feasibility_tolerance =
       solution_params.dual_feasibility_tolerance;
   // solution_params are the values computed in this method.
-  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibility;
+  HighsInt& num_primal_infeasibility = solution_params.num_primal_infeasibilities;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
-  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibility;
+  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibilities;
+  HighsInt& num_dual_infeasibility = solution_params.num_dual_infeasibilities;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
+  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibilities;
 
   num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
   max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
@@ -855,12 +855,12 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
 // instance.
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params) {
-  solution_params.num_primal_infeasibility = kHighsIllegalInfeasibilityCount;
+  solution_params.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
   solution_params.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.sum_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.num_dual_infeasibility = kHighsIllegalInfeasibilityCount;
+  solution_params.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  solution_params.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   solution_params.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solution_params.sum_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solution_params.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 }
 
 void copySolutionObjectiveParams(
@@ -877,14 +877,14 @@ void copyFromSolutionParams(HighsInfo& highs_info,
   highs_info.objective_function_value =
       solution_params.objective_function_value;
   highs_info.num_primal_infeasibilities =
-      solution_params.num_primal_infeasibility;
+      solution_params.num_primal_infeasibilities;
   highs_info.max_primal_infeasibility =
       solution_params.max_primal_infeasibility;
   highs_info.sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibility;
-  highs_info.num_dual_infeasibilities = solution_params.num_dual_infeasibility;
+      solution_params.sum_primal_infeasibilities;
+  highs_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
   highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibility;
+  highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
 }
 
 void copyFromInfo(HighsSolutionParams& solution_params,
@@ -893,15 +893,15 @@ void copyFromInfo(HighsSolutionParams& solution_params,
   solution_params.dual_solution_status = highs_info.dual_solution_status;
   solution_params.objective_function_value =
       highs_info.objective_function_value;
-  solution_params.num_primal_infeasibility =
+  solution_params.num_primal_infeasibilities =
       highs_info.num_primal_infeasibilities;
   solution_params.max_primal_infeasibility =
       highs_info.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibility =
+  solution_params.sum_primal_infeasibilities =
       highs_info.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibility = highs_info.num_dual_infeasibilities;
+  solution_params.num_dual_infeasibilities = highs_info.num_dual_infeasibilities;
   solution_params.max_dual_infeasibility = highs_info.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
+  solution_params.sum_dual_infeasibilities = highs_info.sum_dual_infeasibilities;
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {

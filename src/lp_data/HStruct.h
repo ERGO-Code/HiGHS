@@ -60,12 +60,12 @@ struct HighsSolutionParams {
   HighsInt dual_solution_status;
   // Output from solution analysis method
   double objective_function_value;
-  HighsInt num_primal_infeasibility;
-  double sum_primal_infeasibility;
+  HighsInt num_primal_infeasibilities;
   double max_primal_infeasibility;
-  HighsInt num_dual_infeasibility;
-  double sum_dual_infeasibility;
+  double sum_primal_infeasibilities;
+  HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
+  double sum_dual_infeasibilities;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */
