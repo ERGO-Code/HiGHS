@@ -2355,10 +2355,6 @@ HighsStatus Highs::callSolveQp() {
   //	 model_objective_function_value);
   // Use generic method to set data required for info
   HighsInfo highs_info;
-  highs_info.primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
-  highs_info.dual_feasibility_tolerance =
-      options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(options_, model_, solution_, basis_, highs_info);
   if (model_status_ == HighsModelStatus::kOptimal) {
@@ -2435,10 +2431,6 @@ HighsStatus Highs::callSolveMip() {
   assert(!basis_.valid);
   // Use generic method to set data required for info
   HighsInfo highs_info;
-  highs_info.primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
-  highs_info.dual_feasibility_tolerance =
-      options_.dual_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
   getKktFailures(options_, model_, solution_, basis_, highs_info);
   // Set the values in HighsInfo instance info_.

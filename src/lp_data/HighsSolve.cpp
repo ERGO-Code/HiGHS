@@ -85,10 +85,6 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 
     HighsInfo check_highs_info;
     check_highs_info.objective_function_value = objective_function_value;
-    check_highs_info.primal_feasibility_tolerance =
-        options.primal_feasibility_tolerance;
-    check_highs_info.dual_feasibility_tolerance =
-        options.dual_feasibility_tolerance;
     getLpKktFailures(options, model.lp_, model.solution_, model.basis_,
                      check_highs_info);
 
@@ -187,10 +183,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.row_dual.clear();
   basis.row_status.clear();
 
-  double primal_feasibility_tolerance =
-      highs_info.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance =
-      highs_info.dual_feasibility_tolerance;
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
 
   // Initialise the objective value calculation. Done using
   // HighsSolution so offset is vanilla

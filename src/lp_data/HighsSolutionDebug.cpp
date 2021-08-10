@@ -86,10 +86,6 @@ HighsDebugStatus debugHighsSolution(
   //
   HighsInfo highs_info;
   copyAsSolutionParams(highs_info, info);
-  highs_info.primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  highs_info.dual_feasibility_tolerance =
-      options.dual_feasibility_tolerance;
   const bool check_model_status_and_highs_info = true;
   return debugHighsSolution(message, options, model.lp_, model.hessian_,
                             solution, basis, model_status, highs_info,
@@ -114,10 +110,6 @@ HighsDebugStatus debugHighsSolution(
   // Use local_highs_info to determine highs_info for
   // checking - or if it's not known
   HighsInfo local_highs_info;
-  local_highs_info.primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  local_highs_info.dual_feasibility_tolerance =
-      options.dual_feasibility_tolerance;
   if (check_model_status_and_highs_info) {
     double local_objective_function_value = 0;
     if (solution.value_valid)

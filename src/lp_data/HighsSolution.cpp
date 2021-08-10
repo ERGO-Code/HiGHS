@@ -68,10 +68,8 @@ void getKktFailures(const HighsOptions& options, const HighsLp& lp, const std::v
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
-  double primal_feasibility_tolerance =
-      highs_info.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance =
-      highs_info.dual_feasibility_tolerance;
+  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   // highs_info are the values computed in this method.
   HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
   double& max_primal_infeasibility = highs_info.max_primal_infeasibility;
@@ -821,14 +819,7 @@ void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
 
 void resetSolutionParams(HighsInfo& highs_info,
                          const HighsOptions& options) {
-  // Set the feasibility tolerances - not affected by invalidateSolutionParams
-  highs_info.primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  highs_info.dual_feasibility_tolerance =
-      options.dual_feasibility_tolerance;
-
-  // Save a copy of the unscaled solution params to recover the iteration counts
-  // and objective
+  // Save a copy of the unscaled solution params to recover the objective
   HighsInfo save_highs_info;
   copySolutionObjectiveParams(highs_info, save_highs_info);
   // Invalidate the solution params then reset the feasibility

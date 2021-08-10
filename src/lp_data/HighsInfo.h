@@ -146,8 +146,6 @@ struct HighsInfoStruct {
   HighsInt num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
-  double primal_feasibility_tolerance;
-  double dual_feasibility_tolerance;
 };
 
 class HighsInfo : public HighsInfoStruct {
