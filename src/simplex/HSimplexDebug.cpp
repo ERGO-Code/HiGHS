@@ -39,7 +39,7 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
       highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   const HighsLp& highs_lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = ekk_instance.lp_;
   const HighsScale& scale = simplex_lp.scale_;

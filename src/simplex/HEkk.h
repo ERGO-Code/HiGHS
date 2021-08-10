@@ -25,21 +25,21 @@
 class HEkk {
  public:
   HEkk(HighsOptions& options, HighsTimer& timer)
-      : options_(options), timer_(timer) { analysis_.timer_ = &timer_; }
+      : NOToptions_(options), timer_(timer) { analysis_.timer_ = &timer_; }
   /**
    * @brief Interface to simplex solvers
    */
   // References:
   //
   // LP to be solved, HiGHS options to be used
-  HighsOptions& options_;
+  HighsOptions& NOToptions_;
   HighsTimer& timer_;
-  HighsOptions* options_pointer_;
-  HighsTimer* timer_pointer_;
+  HighsOptions* opt_point_;
+  HighsTimer* tim_point_;
   HighsSimplexAnalysis analysis_;
 
-  void refreshPointers(HighsOptions* options_pointer,
-		       HighsTimer* timer_pointer);
+  void refreshPointers(HighsOptions* opt_point,
+		       HighsTimer* tim_point);
   HighsStatus moveNewLp(HighsLp lp);
   HighsStatus passNewLp(const HighsLp& pass_lp);
   void moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix);

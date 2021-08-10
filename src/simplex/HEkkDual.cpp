@@ -55,7 +55,7 @@ HighsStatus HEkkDual::solve() {
   if (ekk_instance_.isUnconstrainedLp())
     return ekk_instance_.returnFromSolve(HighsStatus::kError);
 
-  HighsOptions& options = ekk_instance_.options_;
+  HighsOptions& options = *ekk_instance_.opt_point_;
   HighsSimplexInfo& info = ekk_instance_.info_;
   HighsSimplexStatus& status = ekk_instance_.status_;
   HighsModelStatus& model_status = ekk_instance_.model_status_;
@@ -299,7 +299,7 @@ HighsStatus HEkkDual::solve() {
       // optimally. Optimality (unlikely) for the unscaled LP will
       // still be assessed honestly, so leave it to the user to decide
       // whether the solution can be accepted.
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                   "HEkkDual:: Cannot use level %" HIGHSINT_FORMAT
                   " primal simplex cleanup for %" HIGHSINT_FORMAT
                   " dual infeasibilities\n",
@@ -313,7 +313,7 @@ HighsStatus HEkkDual::solve() {
       // unboundedness. Time/iteration limit return is, of course,
       // possible, as are solver error
       highsLogDev(
-          ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+          ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
           "HEkkDual:: Using primal simplex to try to clean up %" HIGHSINT_FORMAT
           " dual infeasibilities\n",
           info.num_dual_infeasibilities);
@@ -339,7 +339,7 @@ HighsStatus HEkkDual::solve() {
         return ekk_instance_.returnFromSolve(return_status);
       if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
           info.num_primal_infeasibilities + info.num_dual_infeasibilities)
-        highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+        highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                     "HEkkDual:: Primal simplex clean up yields optimality, "
                     "but with %" HIGHSINT_FORMAT
                     " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
@@ -405,7 +405,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
     pass_num_slice = num_threads - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                   "SIP trying to use using %" HIGHSINT_FORMAT
                   " slices due to number of "
                   "threads (%" HIGHSINT_FORMAT
@@ -425,7 +425,7 @@ void HEkkDual::initialiseInstanceParallel(HEkk& simplex) {
     pass_num_slice = max(multi_num - 1, HighsInt{1});
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                   "PAMI trying to use using %" HIGHSINT_FORMAT
                   " slices due to number of "
                   "threads (%" HIGHSINT_FORMAT
@@ -448,7 +448,7 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
   if (slice_num < 1) slice_num = 1;
   assert(slice_num <= kHighsSlicedLimit);
   if (slice_num > kHighsSlicedLimit) {
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                 "WARNING: %" HIGHSINT_FORMAT
                 " = slice_num > kHighsSlicedLimit = %" HIGHSINT_FORMAT
                 " so truncating "
@@ -505,10 +505,10 @@ void HEkkDual::initSlice(const HighsInt initial_num_slice) {
 void HEkkDual::initialiseSolve() {
   // Copy values of simplex solver options to dual simplex options
   primal_feasibility_tolerance =
-      ekk_instance_.options_pointer_->primal_feasibility_tolerance;
+      ekk_instance_.opt_point_->primal_feasibility_tolerance;
   dual_feasibility_tolerance =
-      ekk_instance_.options_pointer_->dual_feasibility_tolerance;
-  objective_bound = ekk_instance_.options_pointer_->objective_bound;
+      ekk_instance_.opt_point_->dual_feasibility_tolerance;
+  objective_bound = ekk_instance_.opt_point_->objective_bound;
 
   // Copy tolerances
   // ToDo: Eliminate these horribly-named unnecessary copies!
@@ -559,7 +559,7 @@ void HEkkDual::solvePhase1() {
   assert(!ekk_instance_.solve_bailout_);
   if (ekk_instance_.bailoutOnTimeIterations()) return;
   // Report the phase start
-  highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+  highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
               "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
@@ -622,7 +622,7 @@ void HEkkDual::solvePhase1() {
   assert(!ekk_instance_.solve_bailout_);
   // Assess outcome of dual phase 1
   if (row_out == -1) {
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                 "dual-phase-1-optimal\n");
     // Optimal in phase 1
     if (info.dual_objective_value == 0) {
@@ -655,17 +655,17 @@ void HEkkDual::solvePhase1() {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solve_phase = kSolvePhaseError;
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
   } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "dual-phase-1-unbounded\n");
     if (ekk_instance_.info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                   "Cleaning up cost perturbation when unbounded in phase 1\n");
       if (dualInfeasCount == 0) {
         // No dual infeasibilities and (since unbounded) at least zero
@@ -675,7 +675,7 @@ void HEkkDual::solvePhase1() {
     } else {
       // Report strange issues
       solve_phase = kSolvePhaseError;
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                   "dual-phase-1-not-solved\n");
       model_status = HighsModelStatus::kSolveError;
     }
@@ -718,7 +718,7 @@ void HEkkDual::solvePhase1() {
       //
       // It may have been prevented to avoid cleanup-perturbation loops
       if (!info.allow_cost_perturbation)
-        highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+        highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
                     "Moving to phase 2, but not allowing cost perturbation\n");
     }
   }
@@ -763,7 +763,7 @@ void HEkkDual::solvePhase2() {
   ekk_instance_.solve_bailout_ = false;
   if (ekk_instance_.bailoutOnTimeIterations()) return;
   // Report the phase start
-  highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+  highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
               "dual-phase-2-start\n");
   // Collect free variables
   dualRow.createFreelist();
@@ -835,12 +835,12 @@ void HEkkDual::solvePhase2() {
     // return. "Possibly" because, if dual infeasibility has already
     // been shown, primal simplex is used to distinguish primal
     // unboundedness from primal infeasibility
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                 "dual-phase-2-found-free\n");
     solve_phase = kSolvePhase1;
   } else if (row_out == -1) {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                 "dual-phase-2-optimal\n");
     // Remove any cost perturbations and see if basis is still dual feasible
     cleanup();
@@ -851,7 +851,7 @@ void HEkkDual::solvePhase2() {
     } else {
       // There are no dual infeasiblities so optimal!
       solve_phase = kSolvePhaseOptimal;
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                   "problem-optimal\n");
       model_status = HighsModelStatus::kOptimal;
     }
@@ -859,12 +859,12 @@ void HEkkDual::solvePhase2() {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solve_phase = kSolvePhaseError;
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-not-solved\n");
     model_status = HighsModelStatus::kSolveError;
   } else if (variable_in == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "dual-phase-2-unbounded\n");
     if (ekk_instance_.info_.costs_perturbed) {
       // If the costs have been perturbed, clean up and return
@@ -877,7 +877,7 @@ void HEkkDual::solvePhase2() {
       saveDualRay();
       // Model status should be unset?
       assert(model_status == HighsModelStatus::kNotset);
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                   "problem-primal-infeasible\n");
       model_status = HighsModelStatus::kInfeasible;
     }
@@ -1016,7 +1016,7 @@ void HEkkDual::rebuild() {
 }
 
 void HEkkDual::cleanup() {
-  highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+  highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
               "dual-cleanup-shift\n");
   HighsSimplexInfo& info = ekk_instance_.info_;
   // Remove perturbation and don't permit further perturbation
@@ -1027,7 +1027,7 @@ void HEkkDual::cleanup() {
   ekk_instance_.initialiseBound(SimplexAlgorithm::kDual, solve_phase);
   // Possibly take a copy of the original duals before recomputing them
   vector<double> original_workDual;
-  if (ekk_instance_.options_pointer_->highs_debug_level > kHighsDebugLevelCheap)
+  if (ekk_instance_.opt_point_->highs_debug_level > kHighsDebugLevelCheap)
     original_workDual = info.workDual_;
   // Compute the dual values
   ekk_instance_.computeDual();
@@ -1947,7 +1947,7 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else {
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "HEkkDual::interpretDualEdgeWeightStrategy: "
                 "unrecognised dual_edge_weight_strategy = %" HIGHSINT_FORMAT
                 " - using "
@@ -1990,7 +1990,7 @@ void HEkkDual::assessPhase1Optimality() {
   } else {
     log_type = HighsLogType::kInfo;
   }
-  highsLogDev(ekk_instance_.options_pointer_->log_options, log_type,
+  highsLogDev(ekk_instance_.opt_point_->log_options, log_type,
               "Optimal in phase 1 but not jumping to phase 2 since "
               "dual objective is %10.4g: Costs perturbed = %" HIGHSINT_FORMAT
               "\n",
@@ -2040,7 +2040,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
     if (dual_objective_value == 0) {
       // No dual infeasibilities with respect to phase 2 bounds so
       // go to phase 2
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                   "LP is dual feasible wrt Phase 2 bounds after removing cost "
                   "perturbations "
                   "so go to phase 2\n");
@@ -2053,7 +2053,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
       } else {
         log_type = HighsLogType::kInfo;
       }
-      highsLogDev(ekk_instance_.options_pointer_->log_options, log_type,
+      highsLogDev(ekk_instance_.opt_point_->log_options, log_type,
                   "LP is dual feasible wrt Phase 1 bounds after removing cost "
                   "perturbations: "
                   "dual objective is %10.4g\n",
@@ -2075,7 +2075,7 @@ void HEkkDual::assessPhase1OptimalityUnperturbed() {
       }
     }
   } else {
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "LP has %d dual feasibilities wrt Phase 1 bounds after "
                 "removing cost perturbations "
                 "so return to phase 1\n",
@@ -2091,10 +2091,10 @@ void HEkkDual::exitPhase1ResetDuals() {
   bool& costs_perturbed = info.costs_perturbed;
 
   if (costs_perturbed) {
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "Costs are already perturbed in exitPhase1ResetDuals\n");
   } else {
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                 "Re-perturbing costs when optimal in phase 1\n");
     ekk_instance_.initialiseCost(SimplexAlgorithm::kDual, kSolvePhase2, true);
     ekk_instance_.computeDual();
@@ -2121,7 +2121,7 @@ void HEkkDual::exitPhase1ResetDuals() {
         info.workCost_[iVar] = info.workCost_[iVar] + shift;
         num_shift++;
         sum_shift += fabs(shift);
-        highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kVerbose,
+        highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kVerbose,
                     "Variable %" HIGHSINT_FORMAT
                     " is free: shift cost to zero dual of %g\n",
                     iVar, shift);
@@ -2129,7 +2129,7 @@ void HEkkDual::exitPhase1ResetDuals() {
     }
   }
   if (num_shift)
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                 "Performed %" HIGHSINT_FORMAT
                 " cost shift(s) for free variables to zero "
                 "dual values: total = %g\n",
@@ -2149,7 +2149,7 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   } else {
     lp_dual_status = "feasible";
   }
-  highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+  highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
               "LP is dual %s with dual phase 1 objective %10.4g and num / "
               "max / sum dual infeasibilities = %" HIGHSINT_FORMAT
               " / %9.4g / %9.4g\n",
@@ -2197,7 +2197,7 @@ bool HEkkDual::bailoutOnDualObjective() {
   } else if (ekk_instance_.lp_.sense_ == ObjSense::kMinimize &&
              solve_phase == kSolvePhase2) {
     if (ekk_instance_.info_.updated_dual_objective_value >
-        ekk_instance_.options_pointer_->objective_bound)
+        ekk_instance_.opt_point_->objective_bound)
       ekk_instance_.solve_bailout_ = reachedExactObjectiveBound();
   }
   return ekk_instance_.solve_bailout_;
@@ -2220,7 +2220,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
       ekk_instance_.info_.update_count % check_frequency == 0;
 
   if (check_exact_dual_objective_value) {
-    const double objective_bound = ekk_instance_.options_pointer_->objective_bound;
+    const double objective_bound = ekk_instance_.opt_point_->objective_bound;
     const double perturbed_dual_objective_value =
         ekk_instance_.info_.updated_dual_objective_value;
     const double perturbed_value_residual =
@@ -2230,7 +2230,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
         exact_dual_objective_value - objective_bound;
     std::string action;
     if (exact_dual_objective_value > objective_bound) {
-      highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kDetailed,
+      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kDetailed,
                   "HEkkDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
                   ekk_instance_.info_.updated_dual_objective_value,
                   objective_bound);
@@ -2240,7 +2240,7 @@ bool HEkkDual::reachedExactObjectiveBound() {
     } else {
       action = "No   DualUB bailout";
     }
-    highsLogDev(ekk_instance_.options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "%s on iteration %" HIGHSINT_FORMAT
                 ": Density %11.4g; Frequency %" HIGHSINT_FORMAT
                 ": "
@@ -2291,7 +2291,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_delta_dual += residual;
     if (residual > 1e10)
       highsLogDev(
-          ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+          ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
           "Col %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iCol, exact_dual, info.workDual_[iCol], residual);
@@ -2306,7 +2306,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_delta_dual += residual;
     if (residual > 1e10)
       highsLogDev(
-          ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+          ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
           "Row %4" HIGHSINT_FORMAT
           ": ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iRow, exact_dual, info.workDual_[iVar], residual);
@@ -2315,7 +2315,7 @@ double HEkkDual::computeExactDualObjectiveValue() {
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
   if (relative_delta > 1e-3)
     highsLogDev(
-        ekk_instance_.options_pointer_->log_options, HighsLogType::kWarning,
+        ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g\n",
         norm_dual, norm_delta_dual, relative_delta);
   return dual_objective;

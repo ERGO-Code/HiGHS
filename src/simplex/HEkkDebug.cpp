@@ -45,7 +45,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
                                  const HighsInt phase, const bool initialise) {
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCheap)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   static double max_max_basic_dual;
   static double max_max_primal_residual;
@@ -60,7 +60,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const HighsLp& lp = ekk_instance.lp_;
   const HighsSimplexInfo& info = ekk_instance.info_;
   const SimplexBasis& basis = ekk_instance.basis_;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
 
   const HighsInt num_col = lp.num_col_;
   const HighsInt num_row = lp.num_row_;
@@ -419,7 +419,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     return HighsDebugStatus::kLogicalError;
   }
 
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCostly)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Now determine the primal and dual residuals.
   //
@@ -513,7 +513,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
 HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   // Nontrivially expensive analysis of a Simplex basis, checking
   // consistency, and then correctness of nonbasicMove
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
@@ -540,10 +540,10 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
 
 HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
   // Non-trivially expensive check of NonbasicMove
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCostly)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   const HighsLp& lp = ekk_instance.lp_;
   const SimplexBasis& basis = ekk_instance.basis_;
   HighsInt num_free_variable_move_errors = 0;
@@ -635,10 +635,10 @@ HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance) {
 HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
   // Cheap analysis of a Simplex basis, checking vector sizes, numbers
   // of basic/nonbasic variables and non-repetition of basic variables
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCheap)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   const HighsLp& lp = ekk_instance.lp_;
   const SimplexBasis& basis = ekk_instance.basis_;
   // Check consistency of nonbasicFlag
@@ -688,10 +688,10 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
 }
 
 HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance) {
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCheap)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   const HighsLp& lp = ekk_instance.lp_;
   const SimplexBasis& basis = ekk_instance.basis_;
   HighsInt numTot = lp.num_col_ + lp.num_row_;
@@ -726,13 +726,13 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
                                     const HighsInt phase,
                                     const HighsModelStatus model_status) {
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCheap)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   const HighsDebugStatus return_status = HighsDebugStatus::kOk;
   const HighsLp& lp = ekk_instance.lp_;
   const HighsSimplexStatus& status = ekk_instance.status_;
   const SimplexBasis& basis = ekk_instance.basis_;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
   ok = status.has_basis && status.has_matrix && status.has_factor_arrays &&
@@ -766,7 +766,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                   "%" HIGHSINT_FORMAT "\n",
                   status.has_invert);
   }
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCostly)
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCostly)
     return return_status;
   // Basis and data check
   if (ekkDebugBasisConsistent(ekk_instance) == HighsDebugStatus::kLogicalError)
@@ -794,7 +794,7 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
                           const HighsModelStatus model_status) {
   const HighsLp& lp = ekk_instance.lp_;
   const HighsSimplexInfo& info = ekk_instance.info_;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   bool ok = true;
   // Don't check dual simplex phase 1 bounds or perturbed bounds
   const bool dual_phase1 = algorithm == SimplexAlgorithm::kDual && phase == 1;
@@ -907,7 +907,7 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
   const HighsLp& lp = ekk_instance.lp_;
   const HighsSimplexInfo& info = ekk_instance.info_;
   const SimplexBasis& basis = ekk_instance.basis_;
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   assert(var >= 0);
   assert(var < lp.num_col_ + lp.num_row_);
   // Make sure we're not checking a basic variable
@@ -1089,7 +1089,7 @@ void ekkDebugReportReinvertOnNumericalTrouble(
     const double numerical_trouble_measure, const double alpha_from_col,
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert) {
-  if (ekk_instance.options_pointer_->highs_debug_level < kHighsDebugLevelCheap) return;
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap) return;
   const double abs_alpha_from_col = abs(alpha_from_col);
   const double abs_alpha_from_row = abs(alpha_from_row);
   const double abs_alpha_diff = abs(abs_alpha_from_col - abs_alpha_from_row);
@@ -1112,7 +1112,7 @@ void ekkDebugReportReinvertOnNumericalTrouble(
   } else {
     adjective = "clearly satisfies";
   }
-  highsLogDev(ekk_instance.options_pointer_->log_options, HighsLogType::kWarning,
+  highsLogDev(ekk_instance.opt_point_->log_options, HighsLogType::kWarning,
               "%s (%s) [Iter %" HIGHSINT_FORMAT "; Update %" HIGHSINT_FORMAT
               "] Col: %11.4g; Row: %11.4g; Diff "
               "= %11.4g: Measure %11.4g %s %11.4g\n",
@@ -1121,12 +1121,12 @@ void ekkDebugReportReinvertOnNumericalTrouble(
               abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
               numerical_trouble_tolerance);
   if (wrong_sign) {
-    highsLogDev(ekk_instance.options_pointer_->log_options, HighsLogType::kWarning,
+    highsLogDev(ekk_instance.opt_point_->log_options, HighsLogType::kWarning,
                 "   Incompatible signs for Col: %11.4g and Row: %11.4g\n",
                 alpha_from_col, alpha_from_row);
   }
   if ((numerical_trouble || wrong_sign) && !reinvert) {
-    highsLogDev(ekk_instance.options_pointer_->log_options, HighsLogType::kWarning,
+    highsLogDev(ekk_instance.opt_point_->log_options, HighsLogType::kWarning,
                 "   Numerical trouble or wrong sign and not reinverting\n");
   }
 }
@@ -1187,7 +1187,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
 HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
     const HEkk& ekk_instance, const HighsInt num_free_col,
     const HSet nonbasic_free_col_set) {
-  const HighsOptions& options = ekk_instance.options_;
+  const HighsOptions& options = *ekk_instance.opt_point_;
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
   const HighsLp& lp = ekk_instance.lp_;

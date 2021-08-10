@@ -40,10 +40,10 @@
 // using std::cout;
 // using std::endl;
 
-void HEkk::refreshPointers(HighsOptions* options_pointer,
-			   HighsTimer* timer_pointer) {
-  options_pointer_ = options_pointer;
-  timer_pointer_ = timer_pointer;
+void HEkk::refreshPointers(HighsOptions* opt_point,
+			   HighsTimer* tim_point) {
+  opt_point_ = opt_point;
+  tim_point_ = tim_point;
 }
 
 HighsStatus HEkk::moveNewLp(HighsLp lp) {
@@ -98,7 +98,7 @@ HighsStatus HEkk::solve() {
       simplex_nla_.debugCheckData("Before HEkk::solve()");
   const bool simplex_nla_ok = simplex_nla_status == HighsDebugStatus::kOk;
   if (!simplex_nla_ok) {
-    highsLogUser(options_pointer_->log_options, HighsLogType::kError,
+    highsLogUser(opt_point_->log_options, HighsLogType::kError,
                  "Error in simplex NLA data\n");
     assert(simplex_nla_ok);
     return HighsStatus::kError;
@@ -122,15 +122,15 @@ HighsStatus HEkk::solve() {
   info_.allow_cost_perturbation = true;
   info_.allow_bound_perturbation = true;
 
-  chooseSimplexStrategyThreads(options_, info_);
+  chooseSimplexStrategyThreads(*opt_point_, info_);
   HighsInt& simplex_strategy = info_.simplex_strategy;
 
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
     algorithm_name = "primal";
-    reportSimplexPhaseIterations(options_pointer_->log_options, iteration_count_, info_,
+    reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_, info_,
                                  true);
-    highsLogUser(options_pointer_->log_options, HighsLogType::kInfo,
+    highsLogUser(opt_point_->log_options, HighsLogType::kInfo,
                  "Using EKK primal simplex solver\n");
     HEkkPrimal primal_solver(*this);
     workEdWt_ = NULL;
@@ -141,23 +141,23 @@ HighsStatus HEkk::solve() {
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
     algorithm_name = "dual";
-    reportSimplexPhaseIterations(options_pointer_->log_options, iteration_count_, info_,
+    reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_, info_,
                                  true);
     // Solve, depending on the particular strategy
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(
-          options_pointer_->log_options, HighsLogType::kInfo,
+          opt_point_->log_options, HighsLogType::kInfo,
           "Using EKK parallel dual simplex solver - SIP with %" HIGHSINT_FORMAT
           " threads\n",
           info_.num_threads);
     } else if (simplex_strategy == kSimplexStrategyDualMulti) {
       highsLogUser(
-          options_pointer_->log_options, HighsLogType::kInfo,
+          opt_point_->log_options, HighsLogType::kInfo,
           "Using EKK parallel dual simplex solver - PAMI with %" HIGHSINT_FORMAT
           " threads\n",
           info_.num_threads);
     } else {
-      highsLogUser(options_pointer_->log_options, HighsLogType::kInfo,
+      highsLogUser(opt_point_->log_options, HighsLogType::kInfo,
                    "Using EKK dual simplex solver - serial\n");
     }
     HEkkDual dual_solver(*this);
@@ -172,7 +172,7 @@ HighsStatus HEkk::solve() {
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
     // be returned, so use primal simplex to distinguish
     if (model_status_ == HighsModelStatus::kUnboundedOrInfeasible &&
-        !options_pointer_->allow_unbounded_or_infeasible) {
+        !opt_point_->allow_unbounded_or_infeasible) {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
       assert(called_return_from_solve_);
@@ -180,9 +180,9 @@ HighsStatus HEkk::solve() {
           interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
     }
   }
-  reportSimplexPhaseIterations(options_pointer_->log_options, iteration_count_, info_);
+  reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_, info_);
   if (return_status == HighsStatus::kError) return return_status;
-  highsLogDev(options_pointer_->log_options, HighsLogType::kInfo,
+  highsLogDev(opt_point_->log_options, HighsLogType::kInfo,
               "EKK %s simplex solver returns %" HIGHSINT_FORMAT
               " primal and %" HIGHSINT_FORMAT
               " dual infeasibilities: "
@@ -299,9 +299,9 @@ HighsStatus HEkk::setBasis(const HighsBasis& highs_basis) {
   // with errors :-) ...
   //
   // ToDo why does this not compile
-  if (debugBasisConsistent(options_, lp_, highs_basis) ==
+  if (debugBasisConsistent(*opt_point_, lp_, highs_basis) ==
       HighsDebugStatus::kLogicalError) {
-    highsLogDev(options_pointer_->log_options, HighsLogType::kError,
+    highsLogDev(opt_point_->log_options, HighsLogType::kError,
                 "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
@@ -371,9 +371,9 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   // Shouldn't have to check the incoming basis since this is an
   // internal call, but it may be a basis that's set up internally
   // with errors :-) ...
-  if (debugBasisConsistent(options_, lp_, basis) ==
+  if (debugBasisConsistent(*opt_point_, lp_, basis) ==
       HighsDebugStatus::kLogicalError) {
-    highsLogDev(options_pointer_->log_options, HighsLogType::kError,
+    highsLogDev(opt_point_->log_options, HighsLogType::kError,
                 "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::kError;
   }
@@ -472,7 +472,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   // otherwise set a logical basis
   if (!status_.has_basis) {
     if (only_from_known_basis) {
-      highsLogDev(options_pointer_->log_options, HighsLogType::kError,
+      highsLogDev(opt_point_->log_options, HighsLogType::kError,
                   "Simplex basis should be known but isn't\n");
       return -(HighsInt)HighsStatus::kError;
     }
@@ -483,7 +483,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     // Basis is rank deficient
     if (only_from_known_basis) {
       // If only this basis should be used, then return error
-      highsLogDev(options_pointer_->log_options, HighsLogType::kError,
+      highsLogDev(opt_point_->log_options, HighsLogType::kError,
                   "Supposed to be a full-rank basis, but incorrect\n");
       return rank_deficiency;
     }
@@ -525,9 +525,9 @@ HighsStatus HEkk::setup() {
   // Shouldn't have to check the incoming LP since this is an internal
   // call, but it may be an LP that's set up internally with errors
   // :-) ...
-  if (options_pointer_->highs_debug_level > kHighsDebugLevelNone) {
+  if (opt_point_->highs_debug_level > kHighsDebugLevelNone) {
     // ... so, if debugging, check the LP.
-    HighsStatus call_status = assessLp(lp_, options_);
+    HighsStatus call_status = assessLp(lp_, *opt_point_);
     return_status = interpretCallStatus(call_status, return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
@@ -549,7 +549,7 @@ bool HEkk::isUnconstrainedLp() {
   bool is_unconstrained_lp = lp_.num_row_ <= 0;
   if (is_unconstrained_lp)
     highsLogDev(
-        options_pointer_->log_options, HighsLogType::kError,
+        opt_point_->log_options, HighsLogType::kError,
         "HEkkDual::solve called for LP with non-positive (%" HIGHSINT_FORMAT
         ") number of constraints\n",
         lp_.num_row_);
@@ -592,15 +592,15 @@ void HEkk::setSimplexOptions() {
   //
   // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
   //
-  info_.dual_edge_weight_strategy = options_pointer_->simplex_dual_edge_weight_strategy;
-  info_.price_strategy = options_pointer_->simplex_price_strategy;
+  info_.dual_edge_weight_strategy = opt_point_->simplex_dual_edge_weight_strategy;
+  info_.price_strategy = opt_point_->simplex_price_strategy;
   info_.dual_simplex_cost_perturbation_multiplier =
-      options_pointer_->dual_simplex_cost_perturbation_multiplier;
+      opt_point_->dual_simplex_cost_perturbation_multiplier;
   info_.primal_simplex_bound_perturbation_multiplier =
-      options_pointer_->primal_simplex_bound_perturbation_multiplier;
-  info_.factor_pivot_threshold = options_pointer_->factor_pivot_threshold;
-  info_.update_limit = options_pointer_->simplex_update_limit;
-  random_.initialise(options_pointer_->highs_random_seed);
+      opt_point_->primal_simplex_bound_perturbation_multiplier;
+  info_.factor_pivot_threshold = opt_point_->factor_pivot_threshold;
+  info_.update_limit = opt_point_->simplex_update_limit;
+  random_.initialise(opt_point_->highs_random_seed);
 
   // Set values of internal options
   info_.store_squared_primal_infeasibility = true;
@@ -615,9 +615,9 @@ void HEkk::updateSimplexOptions() {
   // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
   //
   info_.dual_simplex_cost_perturbation_multiplier =
-      options_pointer_->dual_simplex_cost_perturbation_multiplier;
+      opt_point_->dual_simplex_cost_perturbation_multiplier;
   info_.primal_simplex_bound_perturbation_multiplier =
-      options_pointer_->primal_simplex_bound_perturbation_multiplier;
+      opt_point_->primal_simplex_bound_perturbation_multiplier;
 }
 
 void HEkk::initialiseSimplexLpRandomVectors() {
@@ -806,7 +806,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     HighsInt use_simplex_update_limit = info_.update_limit;
     HighsInt new_simplex_update_limit = simplex_update_count / 2;
     info_.update_limit = new_simplex_update_limit;
-    highsLogDev(options_pointer_->log_options, HighsLogType::kWarning,
+    highsLogDev(opt_point_->log_options, HighsLogType::kWarning,
                 "Rank deficiency of %" HIGHSINT_FORMAT
                 " after %" HIGHSINT_FORMAT
                 " simplex updates, so "
@@ -821,7 +821,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     info_.backtracking_ = false;
     // Reset the update limit in case this is the first successful
     // inversion after backtracking
-    info_.update_limit = options_pointer_->simplex_update_limit;
+    info_.update_limit = opt_point_->simplex_update_limit;
   }
   if (handle_edge_weights) {
     // Gather the edge weights according to the permutation of
@@ -932,9 +932,9 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
-    assert(info_.factor_pivot_threshold >= options_pointer_->factor_pivot_threshold);
+    assert(info_.factor_pivot_threshold >= opt_point_->factor_pivot_threshold);
     simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_matrix_,
-                       info_.factor_pivot_threshold, &options_, &timer_,
+                       info_.factor_pivot_threshold, opt_point_, &timer_,
                        &analysis_);
     status_.has_factor_arrays = true;
   }
@@ -1612,7 +1612,7 @@ void HEkk::computeDualInfeasibleWithFlips() {
   // relates to the phase 1 bounds, but workLower and workUpper will
   // have been set to phase 2 values!
   const double scaled_dual_feasibility_tolerance =
-      options_pointer_->dual_feasibility_tolerance;
+      opt_point_->dual_feasibility_tolerance;
   // Possibly verify that nonbasicMove is correct for fixed variables
   //  debugFixedNonbasicMove(ekk_instance_);
 
@@ -1667,7 +1667,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
 }
 
 bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
-  const double tau_d = options_pointer_->dual_feasibility_tolerance;
+  const double tau_d = opt_point_->dual_feasibility_tolerance;
   const double inf = kHighsInf;
   HighsInt workCount = 0;
   double flip_dual_objective_value_change = 0;
@@ -1725,7 +1725,7 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
             shift_dual_objective_value_change += local_dual_objective_change;
             num_shift++;
             sum_shift += fabs(shift);
-            highsLogDev(options_pointer_->log_options, HighsLogType::kVerbose,
+            highsLogDev(opt_point_->log_options, HighsLogType::kVerbose,
                         "Move %s: cost shift = %g; objective change = %g\n",
                         direction.c_str(), shift, local_dual_objective_change);
           } else {
@@ -1749,7 +1749,7 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
     }
   }
   if (num_shift_skipped) {
-    highsLogDev(options_pointer_->log_options, HighsLogType::kError,
+    highsLogDev(opt_point_->log_options, HighsLogType::kError,
                 "correctDual: Missed %d cost shifts\n", num_shift_skipped);
     // todo@Julian assert fails quickly on miplib2017 models momentum1, arki001,
     // glass4, and milo-v12-6-r2-40-1
@@ -1757,12 +1757,12 @@ bool HEkk::correctDual(HighsInt* free_infeasibility_count) {
     return false;
   }
   if (num_flip)
-    highsLogDev(options_pointer_->log_options, HighsLogType::kVerbose,
+    highsLogDev(opt_point_->log_options, HighsLogType::kVerbose,
                 "Performed %" HIGHSINT_FORMAT
                 " flip(s): total = %g; objective change = %g\n",
                 num_flip, sum_flip, flip_dual_objective_value_change);
   if (num_shift)
-    highsLogDev(options_pointer_->log_options, HighsLogType::kDetailed,
+    highsLogDev(opt_point_->log_options, HighsLogType::kDetailed,
                 "Performed %" HIGHSINT_FORMAT
                 " cost shift(s): total = %g; objective change = %g\n",
                 num_shift, sum_shift, shift_dual_objective_value_change);
@@ -1813,7 +1813,7 @@ bool HEkk::reinvertOnNumericalTrouble(
                 kMaxPivotThreshold);
     }
     if (new_pivot_threshold) {
-      highsLogUser(options_pointer_->log_options, HighsLogType::kWarning,
+      highsLogUser(opt_point_->log_options, HighsLogType::kWarning,
                    "   Increasing Markowitz threshold to %g\n",
                    new_pivot_threshold);
       info_.factor_pivot_threshold = new_pivot_threshold;
@@ -1913,7 +1913,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
   // workLower/Upper.
   analysis_.simplexTimerStart(ComputePrIfsClock);
   const double scaled_primal_feasibility_tolerance =
-      options_pointer_->primal_feasibility_tolerance;
+      opt_point_->primal_feasibility_tolerance;
   HighsInt& num_primal_infeasibility = info_.num_primal_infeasibilities;
   double& max_primal_infeasibility = info_.max_primal_infeasibility;
   double& sum_primal_infeasibility = info_.sum_primal_infeasibilities;
@@ -1973,7 +1973,7 @@ void HEkk::computeSimplexDualInfeasible() {
   // free variables. Fixed variables are assumed to have
   // nonbasicMove=0 so that no dual infeasibility is counted for them.
   const double scaled_dual_feasibility_tolerance =
-      options_pointer_->dual_feasibility_tolerance;
+      opt_point_->dual_feasibility_tolerance;
   HighsInt& num_dual_infeasibility = info_.num_dual_infeasibilities;
   double& max_dual_infeasibility = info_.max_dual_infeasibility;
   double& sum_dual_infeasibility = info_.sum_dual_infeasibilities;
@@ -2014,7 +2014,7 @@ void HEkk::computeSimplexLpDualInfeasible() {
   // dual so should only be used in dual phase 1 - where it's only
   // used for reporting after rebuilds.
   const double scaled_dual_feasibility_tolerance =
-      options_pointer_->dual_feasibility_tolerance;
+      opt_point_->dual_feasibility_tolerance;
   HighsInt& num_dual_infeasibility =
       analysis_.num_dual_phase_1_lp_dual_infeasibility;
   double& max_dual_infeasibility =
@@ -2135,10 +2135,10 @@ bool HEkk::bailoutOnTimeIterations() {
            model_status_ == HighsModelStatus::kIterationLimit ||
            model_status_ == HighsModelStatus::kObjectiveBound ||
            model_status_ == HighsModelStatus::kObjectiveTarget);
-  } else if (timer_.readRunHighsClock() > options_pointer_->time_limit) {
+  } else if (timer_.readRunHighsClock() > opt_point_->time_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kTimeLimit;
-  } else if (iteration_count_ >= options_pointer_->simplex_iteration_limit) {
+  } else if (iteration_count_ >= opt_point_->simplex_iteration_limit) {
     solve_bailout_ = true;
     model_status_ = HighsModelStatus::kIterationLimit;
   }
@@ -2254,7 +2254,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     default: {
       std::string algorithm_name = "primal";
       if (exit_algorithm_ == SimplexAlgorithm::kDual) algorithm_name = "dual";
-      highsLogDev(options_pointer_->log_options, HighsLogType::kError,
+      highsLogDev(opt_point_->log_options, HighsLogType::kError,
                   "EKK %s simplex solver returns status %s\n",
                   algorithm_name.c_str(),
                   utilModelStatusToString(model_status_).c_str());
@@ -2275,7 +2275,7 @@ HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
     return_dual_solution_status_ = kSolutionStatusInfeasible;
   }
   computePrimalObjectiveValue();
-  if (!options_pointer_->log_dev_level) {
+  if (!opt_point_->log_dev_level) {
     const bool force = true;
     analysis_.userInvertReport(force);
   }
@@ -2380,5 +2380,5 @@ double HEkk::computeBasisCondition() {
 }
 
 void HEkk::initialiseAnalysis() {
-  analysis_.setup(lp_name_, lp_, options_, iteration_count_);
+  analysis_.setup(lp_name_, lp_, *opt_point_, iteration_count_);
 }
