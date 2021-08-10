@@ -332,7 +332,6 @@ struct HighsOptionsStruct {
   HighsInt mip_pscost_minreliable;
   HighsInt mip_report_level;
   double mip_feasibility_tolerance;
-  double mip_epsilon;
   double mip_heuristic_effort;
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
@@ -650,11 +649,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_double = new OptionRecordDouble(
         "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
         &mip_feasibility_tolerance, 1e-10, 1e-6, kHighsInf);
-    records.push_back(record_double);
-
-    record_double =
-        new OptionRecordDouble("mip_epsilon", "MIP epsilon tolerance", advanced,
-                               &mip_epsilon, 1e-15, 1e-9, kHighsInf);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
