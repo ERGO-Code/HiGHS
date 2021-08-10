@@ -1122,6 +1122,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
       complementation[i] = 1 - complementation[i];
       rhs -= upper[i] * vals[i];
       vals[i] = -vals[i];
+      solval[i] = upper[i] - solval[i];
     }
   }
 
@@ -1181,6 +1182,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
             if (complementation[i]) {
               rhs -= upper[i] * vals[i];
               vals[i] = -vals[i];
+              solval[i] = upper[i] - solval[i];
             }
           }
         }
