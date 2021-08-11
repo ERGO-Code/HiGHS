@@ -1070,7 +1070,7 @@ class Highs {
   // whether Highs::run() is called recursively.
   bool called_return_from_run = true;
 
-  HighsStatus callSolveLp(const HighsInt model_index, const string message);
+  HighsStatus callSolveLp(HighsLp& lp, const string message);
   HighsStatus callSolveQp();
   HighsStatus callSolveMip();
 

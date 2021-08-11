@@ -26,7 +26,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
 #include "lp_data/HighsStatus.h"
@@ -60,33 +59,33 @@ void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved,
   }
 }
 
-HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object, HighsModelObject& highs_model_object) {
+HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  HighsSolution& solution = highs_model_object.solution_;
+  HighsOptions& options = solver_object.options_;
+  HighsLp& lp = solver_object.lp_;
+  HighsSolution& solution = solver_object.solution_;
   HighsModelStatus& unscaled_model_status =
-      highs_model_object.unscaled_model_status_;
+      solver_object.unscaled_model_status_;
   HighsModelStatus& scaled_model_status =
-      highs_model_object.scaled_model_status_;
-  HighsInfo& highs_info = highs_model_object.highs_info_;
-  HighsBasis& basis = highs_model_object.basis_;
+      solver_object.scaled_model_status_;
+  HighsInfo& highs_info = solver_object.highs_info_;
+  HighsBasis& basis = solver_object.basis_;
 
-  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HEkk& ekk_instance = solver_object.ekk_instance_;
   HighsSimplexStatus& status = ekk_instance.status_;
   HighsLp& ekk_lp = ekk_instance.lp_;
   HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
 
   // Refresh the HEkk pointers
-  ekk_instance.refreshPointers(&options, &highs_model_object.timer_);
+  ekk_instance.refreshPointers(&options, &solver_object.timer_);
 
   // Reset the model status and solution parameters for the unscaled
   // LP in case of premature return
-  resetModelStatusAndSolutionParams(highs_model_object);
+  resetModelStatusAndHighsInfo(solver_object);
 
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLp
-  bool positive_num_row = highs_model_object.lp_.num_row_ > 0;
+  bool positive_num_row = solver_object.lp_.num_row_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) {
     highsLogUser(
@@ -121,7 +120,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object, HighsModelObject&
     if (analyse_lp_data) analyseLp(options.log_options, lp);
     getScaling(options, lp);
     incumbent_lp_scaled = lp.is_scaled_;
-    if (lp.is_scaled_) analyseLp(options.log_options, lp);
+    if (lp.is_scaled_ && analyse_lp_data) analyseLp(options.log_options, lp);
     // Any scaling has been applied to the incumbent LP in the course
     // of finding the scaling factors, so move the LP to Ekk
     HighsStatus call_status = ekk_instance.moveNewLp(std::move(lp));
@@ -172,7 +171,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object, HighsModelObject&
       scaled_model_status = ekk_instance.model_status_;
       highs_info.objective_function_value =
 	ekk_instance.info_.primal_objective_value;
-      highs_model_object.iteration_counts_.simplex +=
+      solver_object.iteration_counts_.simplex +=
 	ekk_instance.iteration_count_;
       solution = ekk_instance.getSolution();
       basis = ekk_instance.getHighsBasis();
@@ -330,7 +329,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object, HighsModelObject&
   scaled_model_status = ekk_instance.model_status_;
   highs_info.objective_function_value =
     ekk_instance.info_.primal_objective_value;
-  highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
+  solver_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
   solution = ekk_instance.getSolution();
   basis = ekk_instance.getHighsBasis();
   // The unscaled LP has been solved - either directly, or because

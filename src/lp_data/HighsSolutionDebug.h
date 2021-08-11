@@ -22,7 +22,7 @@
 #include "lp_data/HighsSolution.h"
 
 HighsDebugStatus debugHighsLpSolution(const std::string message,
-                                      const HighsModelObject& model);
+                                      const HighsLpSolverObject& solver_object);
 
 HighsDebugStatus debugHighsSolution(const string message,
                                     const HighsOptions& options,

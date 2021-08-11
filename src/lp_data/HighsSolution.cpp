@@ -804,6 +804,35 @@ std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
   return iteration_statement;
 }
 
+void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
+  solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
+  solver_object.scaled_model_status_ = HighsModelStatus::kNotset;
+  solver_object.highs_info_.objective_function_value = 0;
+  solver_object.highs_info_.primal_solution_status = kSolutionStatusNone;
+  solver_object.highs_info_.dual_solution_status = kSolutionStatusNone;
+  solver_object.highs_info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  solver_object.highs_info_.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  solver_object.highs_info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+}
+
+void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
+				  HighsInfo& highs_info) {
+  model_status = HighsModelStatus::kNotset;
+  highs_info.objective_function_value = 0;
+  highs_info.primal_solution_status = kSolutionStatusNone;
+  highs_info.dual_solution_status = kSolutionStatusNone;
+  highs_info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  highs_info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  highs_info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  highs_info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+
+}
+
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
   resetModelStatusAndSolutionParams(highs_model_object.unscaled_model_status_,
                                     highs_model_object.highs_info_,

@@ -33,7 +33,7 @@ const double excessive_residual_error = sqrt(large_residual_error);
 
 // Called from HighsSolve - solveLp
 HighsDebugStatus debugHighsLpSolution(const std::string message,
-                                      const HighsModelObject& model) {
+                                      const HighsLpSolverObject& solver_object) {
   // Non-trivially expensive analysis of a solution to a model
   //
   // Called to check the unscaled model status and solution params
@@ -41,8 +41,8 @@ HighsDebugStatus debugHighsLpSolution(const std::string message,
   // Define an empty Hessian
   HighsHessian hessian;
   return debugHighsSolution(
-      message, model.options_, model.lp_, hessian, model.solution_,
-      model.basis_, model.unscaled_model_status_, model.highs_info_,
+      message, solver_object.options_, solver_object.lp_, hessian, solver_object.solution_,
+      solver_object.basis_, solver_object.unscaled_model_status_, solver_object.highs_info_,
       check_model_status_and_highs_info);
 }
 

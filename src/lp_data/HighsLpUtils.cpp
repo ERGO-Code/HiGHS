@@ -1785,7 +1785,7 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
   } else {
     message = "Unscaled";
   }
-  printf("\n%s model data: Analysis\n", message.c_str());
+  highsLogDev(log_options, HighsLogType::kInfo, "\n%s model data: Analysis\n", message.c_str());
   if (lp.is_scaled_) {
     const HighsScale& scale = lp.scale_;
     analyseVectorValues(log_options, "Column scaling factors", lp.num_col_, scale.col);

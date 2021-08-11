@@ -73,5 +73,5 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsModelStatus& model_status,
                        HighsInfo& highs_info);
 
-HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model);
+HighsStatus solveLpIpx(bool& imprecise_solution, HighsLpSolverObject& solver_object);
 #endif

@@ -22,6 +22,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsInfo.h"
+#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsStatus.h"
 #include "model/HighsModel.h"
 
@@ -102,6 +103,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 
 std::string iterationsToString(const HighsIterationCounts& iterations_counts);
 
+void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
+void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
+				  HighsInfo& highs_info);
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
                                        HighsInfo& highs_info,

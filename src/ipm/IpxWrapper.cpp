@@ -805,8 +805,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
-HighsStatus solveLpIpx(bool& imprecise_solution, HighsModelObject& model) {
-  return solveLpIpx(model.options_, model.timer_, model.lp_, imprecise_solution,
-                    model.basis_, model.solution_, model.iteration_counts_,
-                    model.unscaled_model_status_, model.highs_info_);
+HighsStatus solveLpIpx(bool& imprecise_solution, HighsLpSolverObject& solver_object) {
+  return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, imprecise_solution,
+                    solver_object.basis_, solver_object.solution_, solver_object.iteration_counts_,
+                    solver_object.unscaled_model_status_, solver_object.highs_info_);
 }
