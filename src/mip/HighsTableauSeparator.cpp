@@ -171,7 +171,8 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     lpAggregator.clear();
 
     if (cutpool.getNumCuts() - numCuts >=
-        0.1 * mip.options_mip_->mip_pool_soft_limit)
+            0.1 * mip.options_mip_->mip_pool_soft_limit ||
+        mip.mipdata_->domain.infeasible())
       break;
   }
 }
