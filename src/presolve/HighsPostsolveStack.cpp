@@ -543,30 +543,38 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
     // do postsolve using basis status if a basis is available:
     // if the merged column is nonbasic, we can just set both columns
     // to the corresponding basis status and value
-    if (basis.col_status[col] == HighsBasisStatus::kLower) {
-      solution.col_value[col] = colLower;
-      if (colScale > 0) {
-        basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
-        solution.col_value[duplicateCol] = duplicateColLower;
-      } else {
-        basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
-        solution.col_value[duplicateCol] = duplicateColUpper;
+    switch (basis.col_status[col]) {
+      case HighsBasisStatus::kLower: {
+        solution.col_value[col] = colLower;
+        if (colScale > 0) {
+          basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
+          solution.col_value[duplicateCol] = duplicateColLower;
+        } else {
+          basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
+          solution.col_value[duplicateCol] = duplicateColUpper;
+        }
+        // nothing else to do
+        return;
       }
-      // nothing else to do
-      return;
-    }
-
-    if (basis.col_status[col] == HighsBasisStatus::kUpper) {
-      solution.col_value[col] = colUpper;
-      if (colScale > 0) {
-        basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
-        solution.col_value[duplicateCol] = duplicateColUpper;
-      } else {
-        basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
-        solution.col_value[duplicateCol] = duplicateColLower;
+      case HighsBasisStatus::kUpper: {
+        solution.col_value[col] = colUpper;
+        if (colScale > 0) {
+          basis.col_status[duplicateCol] = HighsBasisStatus::kUpper;
+          solution.col_value[duplicateCol] = duplicateColUpper;
+        } else {
+          basis.col_status[duplicateCol] = HighsBasisStatus::kLower;
+          solution.col_value[duplicateCol] = duplicateColLower;
+        }
+        // nothing else to do
+        return;
       }
-      // nothing else to do
-      return;
+      case HighsBasisStatus::kZero: {
+        solution.col_value[col] = 0.0;
+        basis.col_status[duplicateCol] = HighsBasisStatus::kZero;
+        solution.col_value[duplicateCol] = 0.0;
+        // nothing else to do
+        return;
+      }
     }
 
     assert(basis.col_status[col] == HighsBasisStatus::kBasic);
