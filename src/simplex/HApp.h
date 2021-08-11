@@ -24,6 +24,7 @@
 
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsSolution.h"
@@ -59,7 +60,7 @@ void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved,
   }
 }
 
-HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
+HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object, HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;

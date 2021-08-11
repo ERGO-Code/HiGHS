@@ -21,20 +21,15 @@
 #include <memory>
 #include <sstream>
 
-#include "HConfig.h"
 #include "io/Filereader.h"
-#include "io/HighsIO.h"
 #include "io/LoadOptions.h"
 #include "lp_data/HighsInfoDebug.h"
-#include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsSolve.h"
 #include "mip/HighsMipSolver.h"
 #include "model/HighsHessianUtils.h"
 #include "presolve/ICrashX.h"
 #include "qpsolver/solver.hpp"
-#include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 
@@ -2228,6 +2223,8 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
   assert(model_index_ok);
   if (!model_index_ok) return HighsStatus::kError;
 
+  HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_, ekk_instance_, options_, timer_);
+  
   HighsModelObject& model = hmos_[model_index];
   // Check that the model is column-wise
   assert(model_.lp_.a_matrix_.isColwise());
@@ -2237,7 +2234,7 @@ HighsStatus Highs::callSolveLp(const HighsInt model_index,
   hmos_[model_index].iteration_counts_ = iteration_counts_;
 
   // Solve the LP
-  call_status = solveLp(model, message);
+  call_status = solveLp(solver_object, model, message);
   return_status = interpretCallStatus(call_status, return_status, "solveLp");
   if (return_status == HighsStatus::kError) return return_status;
 

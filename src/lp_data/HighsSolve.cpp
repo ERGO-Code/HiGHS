@@ -27,7 +27,7 @@
 #endif
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus solveLp(HighsModelObject& model, const string message) {
+HighsStatus solveLp(HighsLpSolverObject& solver_object, HighsModelObject& model, const string message) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsOptions& options = model.options_;
@@ -48,7 +48,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 #endif
   if (!model.lp_.num_row_) {
     // Unconstrained LP so solve directly
-    call_status = solveUnconstrainedLp(model);
+    call_status = solveUnconstrainedLp(solver_object, model);
     return_status =
         interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
@@ -114,7 +114,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       // Reset the return status since it will now be determined by
       // the outcome of the simplex solve
       return_status = HighsStatus::kOk;
-      call_status = solveLpSimplex(model);
+      call_status = solveLpSimplex(solver_object, model);
       return_status =
           interpretCallStatus(call_status, return_status, "solveLpSimplex");
       if (return_status == HighsStatus::kError) return return_status;
@@ -131,7 +131,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 #endif
   } else {
     // Use Simplex
-    call_status = solveLpSimplex(model);
+    call_status = solveLpSimplex(solver_object, model);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
@@ -149,7 +149,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
 // and HighsInfo
-HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
+HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object, HighsModelObject& highs_model_object) {
   return (solveUnconstrainedLp(
       highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.unscaled_model_status_,

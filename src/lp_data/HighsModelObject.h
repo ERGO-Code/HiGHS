@@ -47,6 +47,10 @@ class HighsModelObject {
   HighsSolution solution_;
 
   HEkk ekk_instance_;
+  HEkk* ekk_pointer_;
+
+  void refreshPointers(HEkk* ekk_instance) { ekk_pointer_ = ekk_instance; }
 };
 
 #endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_
+

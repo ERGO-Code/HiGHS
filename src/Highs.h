@@ -1058,6 +1058,7 @@ class Highs {
   // Each HighsModelObject holds a const ref to its lp_. There are at most two
   // entries in hmos_: the original LP and the LP reduced by presolve
   std::vector<HighsModelObject> hmos_;
+  HEkk ekk_instance_;
 
   // Record of maximum number of OMP threads. If OMP is available then
   // it's set to the correct positive number in Highs::run()
