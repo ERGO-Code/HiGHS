@@ -155,6 +155,21 @@ const HighsInt kIllegalMoveValue =
 // Threshold for accepting updated DSE weight
 const double kAcceptDseWeightThreshold = 0.25;
 
+enum class LpAction {
+  kScale = 0,
+  kNewCosts,
+  kNewBounds,
+  kNewBasis,
+  kNewCols,
+  kNewRows,
+  kDelCols,
+  kDelRows,
+  kDelRowsBasisOk,
+  kScaledCol,
+  kScaledRow,
+  kBacktracking
+};
+
 //
 // Relation between HiGHS basis and Simplex basis
 //

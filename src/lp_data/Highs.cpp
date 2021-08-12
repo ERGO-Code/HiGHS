@@ -877,7 +877,7 @@ HighsStatus Highs::run() {
           refineBasis(incumbent_lp, solution_, basis_);
 
 	  // Scrap the EKK data from solving the presolved LP
-	  invalidateEkk(ekk_instance_.status_);
+	  ekk_instance_.invalidate();
           ekk_instance_.lp_name_ = "Postsolve LP";
           // Set up the iteration count and timing records so that
           // adding the corresponding values after callSolveLp gives
@@ -2067,7 +2067,7 @@ void Highs::clearBasis() { clearBasisUtil(basis_); }
 
 void Highs::clearInfo() { info_.clear(); }
 
-void Highs::clearEkk() { invalidateEkk(ekk_instance_.status_); }
+void Highs::clearEkk() { ekk_instance_.invalidate(); }
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {

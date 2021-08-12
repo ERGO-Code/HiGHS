@@ -18,20 +18,16 @@
 
 #include "simplex/HEkk.h"
 
-#include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
-//#include "simplex/HFactorDebug.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HSimplexNlaDebug.h"
 #include "simplex/HSimplexReport.h"
-#include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
-#include "util/HighsRandom.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -39,6 +35,138 @@
 
 // using std::cout;
 // using std::endl;
+
+void HEkk::clear() {
+  this->invalidate();
+}
+
+void HEkk::invalidate() {
+  this->status_.initialised = false;
+  this->status_.valid = false;
+  this->invalidateBasis();
+}
+
+void HEkk::invalidateBasis() {
+  // Invalidate the basis of the simplex LP, and all its other
+  // properties - since they are basis-related
+  this->status_.has_basis = false;
+  this->invalidateBasisArtifacts();
+}
+
+void HEkk::invalidateBasisArtifacts() {
+  // Invalidate the artifacts of the basis of the simplex LP
+  this->status_.has_matrix = false;
+  // has_factor_arrays shouldn't be set false unless model dimension
+  // changes, but invalidateBasisArtifacts() is all that's
+  // called when rows or columns are added, so can't change this now.
+  this->status_.has_factor_arrays = false;
+  this->status_.has_dual_steepest_edge_weights = false;
+  this->status_.has_nonbasic_dual_values = false;
+  this->status_.has_basic_primal_values = false;
+  this->status_.has_invert = false;
+  this->status_.has_fresh_invert = false;
+  this->status_.has_fresh_rebuild = false;
+  this->status_.has_dual_objective_value = false;
+  this->status_.has_primal_objective_value = false;
+  this->status_.has_dual_ray = false;
+  this->status_.has_primal_ray = false;
+}
+
+void HEkk::clearData() {
+  this->opt_point_ = NULL;
+  this->tim_point_ = NULL;
+  // analysis_; No clear yet
+
+  this->lp_.clear();
+  lp_name_ = "";
+  // status_; Invalidated elsewhere
+  this->clearInfo();
+  model_status_ = HighsModelStatus::kNotset;
+  this->clearBasis();
+  // random_; Has no data
+  this->workEdWt_ = NULL;
+  this->workEdWtFull_ = NULL;
+
+  this->ar_matrix_.clear();
+  // simplex_nla_; No clear yet
+
+  this->scale_ = NULL;
+  this->factor_a_matrix_ = NULL;
+
+  this->cost_scale_ = 1;
+  this->iteration_count_ = 0;
+  this->dual_simplex_cleanup_level_ = 0;
+
+  this->solve_bailout_ = false;
+  this->called_return_from_solve_ = false;
+  //  this->exit_algorithm_ = ; No clear yet
+  this->return_primal_solution_status_ = 0;
+  this->return_dual_solution_status_ = 0;
+
+  this->build_synthetic_tick_ = 0;
+  this->total_synthetic_tick_ = 0;
+
+}
+
+void HEkk::clearInfo() {
+}
+
+void HEkk::clearBasis() {
+}
+
+void HEkk::updateStatus(LpAction action) {
+  switch (action) {
+    case LpAction::kScale:
+      this->invalidateBasis();
+      break;
+    case LpAction::kNewCosts:
+      this->status_.has_nonbasic_dual_values = false;
+      this->status_.has_fresh_rebuild = false;
+      this->status_.has_dual_objective_value = false;
+      this->status_.has_primal_objective_value = false;
+      break;
+    case LpAction::kNewBounds:
+      this->status_.has_basic_primal_values = false;
+      this->status_.has_fresh_rebuild = false;
+      this->status_.has_dual_objective_value = false;
+      this->status_.has_primal_objective_value = false;
+      break;
+    case LpAction::kNewBasis:
+      this->invalidateBasis();
+      break;
+    case LpAction::kNewCols:
+      this->invalidateBasisArtifacts();
+      break;
+    case LpAction::kNewRows:
+      this->invalidateBasisArtifacts();
+      break;
+    case LpAction::kDelCols:
+      this->invalidateBasis();
+      break;
+    case LpAction::kDelRows:
+      this->invalidateBasis();
+      break;
+    case LpAction::kDelRowsBasisOk:
+      //      info.lp_ = true;
+      break;
+    case LpAction::kScaledCol:
+      this->invalidateBasisArtifacts();
+      break;
+    case LpAction::kScaledRow:
+      this->invalidateBasisArtifacts();
+      break;
+    case LpAction::kBacktracking:
+      this->status_.has_matrix = false;
+      this->status_.has_nonbasic_dual_values = false;
+      this->status_.has_basic_primal_values = false;
+      this->status_.has_fresh_rebuild = false;
+      this->status_.has_dual_objective_value = false;
+      this->status_.has_primal_objective_value = false;
+      break;
+    default:
+      break;
+  }
+}
 
 void HEkk::refreshPointers(HighsOptions* opt_point,
 			   HighsTimer* tim_point) {
@@ -486,7 +614,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     }
     // Account for rank deficiency by correcing nonbasicFlag
     handleRankDeficiency();
-    updateSimplexLpStatus(status_, LpAction::kNewBasis);
+    this->updateStatus(LpAction::kNewBasis);
     setNonbasicMove();
     status_.has_basis = true;
     status_.has_invert = true;
@@ -792,7 +920,7 @@ bool HEkk::getNonsingularInverse(const HighsInt solve_phase) {
     if (!getBacktrackingBasis(workEdWtFull_)) return false;
     // Record that backtracking is taking place
     info_.backtracking_ = true;
-    updateSimplexLpStatus(status_, LpAction::kBacktracking);
+    this->updateStatus(LpAction::kBacktracking);
     HighsInt backtrack_rank_deficiency = computeFactor();
     // This basis has previously been inverted successfully, so it shouldn't be
     // singular

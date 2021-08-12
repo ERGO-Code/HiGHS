@@ -51,7 +51,8 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   HighsScale scale_;
-  bool is_scaled_;
+  // Have to set 
+  bool is_scaled_ = false;
 
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
@@ -59,7 +60,10 @@ class HighsLp {
   double objectiveValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   bool dimensionsOk(std::string message) const;
-  void scaleClear();
+  void ensureColWise() { this->a_matrix_.ensureColWise(); };
+  void ensureRowWise() { this->a_matrix_.ensureRowWise(); };
+  void clearScaling();
+  void clearScale();
   void applyScale();
   void unapplyScale();
   void clear();

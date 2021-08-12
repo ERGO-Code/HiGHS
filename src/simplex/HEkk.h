@@ -19,6 +19,7 @@
 #include "lp_data/HStruct.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
+//#include "simplex/HSimplex.h"
 #include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
 
@@ -28,13 +29,15 @@ class HEkk {
   /**
    * @brief Interface to simplex solvers
    */
-  // References:
-  //
-  // LP to be solved, HiGHS options to be used
-  HighsOptions* opt_point_;
-  HighsTimer* tim_point_;
-  HighsSimplexAnalysis analysis_;
+  void clear();
+  void invalidate();
+  void invalidateBasis();
+  void invalidateBasisArtifacts();
+  void clearData();
+  void clearInfo();
+  void clearBasis();
 
+  void updateStatus(LpAction action);
   void refreshPointers(HighsOptions* opt_point,
 		       HighsTimer* tim_point);
   HighsStatus moveNewLp(HighsLp lp);
@@ -71,15 +74,10 @@ class HEkk {
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
 
-  double cost_scale_ = 1;
-  HighsInt iteration_count_ = 0;
-  HighsInt dual_simplex_cleanup_level_ = 0;
-
-  bool solve_bailout_;
-  bool called_return_from_solve_;
-  SimplexAlgorithm exit_algorithm_;
-  HighsInt return_primal_solution_status_;
-  HighsInt return_dual_solution_status_;
+  // Data members
+  HighsOptions* opt_point_;
+  HighsTimer* tim_point_;
+  HighsSimplexAnalysis analysis_;
 
   HighsLp lp_;
   std::string lp_name_;
@@ -97,6 +95,16 @@ class HEkk {
 
   const HighsScale* scale_;
   const HighsSparseMatrix* factor_a_matrix_;
+
+  double cost_scale_ = 1;
+  HighsInt iteration_count_ = 0;
+  HighsInt dual_simplex_cleanup_level_ = 0;
+
+  bool solve_bailout_;
+  bool called_return_from_solve_;
+  SimplexAlgorithm exit_algorithm_;
+  HighsInt return_primal_solution_status_;
+  HighsInt return_dual_solution_status_;
 
   double build_synthetic_tick_;
   double total_synthetic_tick_;

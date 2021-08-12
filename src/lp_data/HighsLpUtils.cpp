@@ -382,7 +382,7 @@ void getScaling(const HighsOptions& options, HighsLp& lp) {
 }
 
 void scaleLp(const HighsOptions& options, HighsLp& lp) {
-  lp.scaleClear();
+  lp.clearScaling();
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   // Scaling not well defined for models with no columns
@@ -439,12 +439,14 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
     const bool equilibration_scaling =
         use_scale_strategy == kSimplexScaleStrategyEquilibration ||
         use_scale_strategy == kSimplexScaleStrategyForcedEquilibration;
+    // Try scaling. Value of scaled_matrix indicates whether scaling
+    // was considered valuable (and performed). If it's not valuable
+    // then the matrix remains unscaled
     if (equilibration_scaling) {
       scaled_matrix = equilibrationScaleMatrix(options, lp, use_scale_strategy);
     } else {
       scaled_matrix = maxValueScaleMatrix(options, lp, use_scale_strategy);
     }
-    lp.is_scaled_ = scaled_matrix;
     if (scaled_matrix) {
       // Matrix is scaled, so scale the bounds and costs
       for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -463,7 +465,7 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
       lp.is_scaled_ = true;
     } else {
       // Matrix is not scaled, so clear the scaling
-      lp.scaleClear();
+      lp.clearScaling();
     }
   }
   // Record the scaling strategy used

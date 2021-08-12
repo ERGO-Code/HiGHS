@@ -18,21 +18,6 @@
 
 #include "lp_data/HighsLpSolverObject.h"
 
-enum class LpAction {
-  kScale = 0,
-  kNewCosts,
-  kNewBounds,
-  kNewBasis,
-  kNewCols,
-  kNewRows,
-  kDelCols,
-  kDelRows,
-  kDelRowsBasisOk,
-  kScaledCol,
-  kScaledRow,
-  kBacktracking
-};
-
 void scaleAndPassLpToEkk(HighsLpSolverObject& solver_object);
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
@@ -44,25 +29,6 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                             HighsInt XnumNewRow);
 void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
                             HighsInt XnumNewRow);
-
-void invalidateEkkBasisArtifacts(
-    HighsSimplexStatus& status  // !< Status of simplex LP whose
-                                // basis artifacts are to be invalidated
-);
-
-void invalidateEkkBasis(
-    HighsSimplexStatus& status  // !< Status of simplex LP whose
-                                // basis is to be invalidated
-);
-
-void invalidateEkk(
-    HighsSimplexStatus& status  // !< Status of simplex LP to be invalidated
-);
-
-void updateSimplexLpStatus(
-    HighsSimplexStatus& status,  // !< Status of simplex LP to be updated
-    LpAction action              // !< Action prompting update
-);
 
 void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 

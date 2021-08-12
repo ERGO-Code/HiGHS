@@ -189,7 +189,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   // Deduce the consequences of adding new columns
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(simplex_status, LpAction::kNewCols);
+  ekk_instance_.updateStatus(LpAction::kNewCols);
 
   // Increase the number of columns in the LPs
   lp.num_col_ += XnumNewCol;
@@ -369,7 +369,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   // Deduce the consequences of adding new rows
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(simplex_status, LpAction::kNewRows);
+  ekk_instance_.updateStatus(LpAction::kNewRows);
 
   // Increase the number of rows in the LPs
   lp.num_row_ += XnumNewRow;
@@ -433,7 +433,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
       // Nontrivial deletion so initialise the random vectors and all
       // data relating to the simplex basis
       ekk_instance_.initialiseSimplexLpRandomVectors();
-      invalidateEkkBasis(simplex_status);
+      ekk_instance_.invalidateBasis();
     }
   }
   if (index_collection.is_mask_) {
@@ -508,7 +508,7 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
       // Nontrivial deletion so initialise the random vectors and all
       // data relating to the simplex basis
       ekk_instance_.initialiseSimplexLpRandomVectors();
-      invalidateEkkBasis(simplex_status);
+      ekk_instance_.invalidateBasis();
     }
   }
   if (index_collection.is_mask_) {
@@ -880,7 +880,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   // Deduce the consequences of new costs
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(ekk_instance_.status_, LpAction::kNewCosts);
+  ekk_instance_.updateStatus(LpAction::kNewCosts);
   return HighsStatus::kOk;
 }
 
@@ -951,7 +951,7 @@ HighsStatus Highs::changeColBoundsInterface(
   // Deduce the consequences of new col bounds
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(ekk_instance_.status_, LpAction::kNewBounds);
+  ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
 }
 
@@ -1021,7 +1021,7 @@ HighsStatus Highs::changeRowBoundsInterface(
   // Deduce the consequences of new row bounds
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(ekk_instance_.status_, LpAction::kNewBounds);
+  ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
 }
 
@@ -1059,7 +1059,7 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
   // Otherwise, treat it as if it's a new row
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(simplex_status, LpAction::kNewRows);
+  ekk_instance_.updateStatus(LpAction::kNewRows);
   return HighsStatus::kOk;
 }
 
@@ -1118,7 +1118,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   // Deduce the consequences of a scaled column
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(simplex_status, LpAction::kScaledCol);
+  ekk_instance_.updateStatus(LpAction::kScaledCol);
   return HighsStatus::kOk;
 }
 
@@ -1178,7 +1178,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   // Deduce the consequences of a scaled row
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  updateSimplexLpStatus(simplex_status, LpAction::kScaledRow);
+  ekk_instance_.updateStatus(LpAction::kScaledRow);
   return HighsStatus::kOk;
 }
 
@@ -1325,14 +1325,18 @@ HighsStatus Highs::setNonbasicStatusInterface(
 }
 
 void Highs::clearBasisInterface() {
-  updateSimplexLpStatus(ekk_instance_.status_, LpAction::kNewBasis);
+  ekk_instance_.updateStatus(LpAction::kNewBasis);
 }
 
 // Get the basic variables, performing INVERT if necessary
 HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
-  HighsLp& lp = model_.lp_;
-  HighsSimplexStatus& simplex_status = ekk_instance_.status_;
   HighsStatus return_status = HighsStatus::kOk;
+  HighsLp& lp = model_.lp_;
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_col = lp.num_col_;
+  //
+  // For an LP with no rows the solution is vacuous
+  if (num_row==0) return return_status;
 
   // Initialise analysis so that (even null) timing data structures
   // are set up
@@ -1341,6 +1345,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   // Ensure that the LP (and any simplex LP) is column-wise
   if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
     return HighsStatus::kError;
+  HighsSimplexStatus& simplex_status = ekk_instance_.status_;
   if (simplex_status.valid) {
     if (setFormat(ekk_instance_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
       return HighsStatus::kError;
@@ -1361,9 +1366,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     //
     // Arguable that a warning should be issued and a logical basis
     // set up
-    HighsBasis& basis = basis_;
-    if (basis.valid) {
-      return_status = interpretCallStatus(ekk_instance_.setBasis(basis),
+    if (basis_.valid) {
+      return_status = interpretCallStatus(ekk_instance_.setBasis(basis_),
                                           return_status, "setBasis");
       if (return_status == HighsStatus::kError) return return_status;
     } else {
@@ -1383,15 +1387,12 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     return HighsStatus::kError;
   assert(simplex_status.has_invert);
 
-  HighsInt numRow = lp.num_row_;
-  HighsInt numCol = lp.num_col_;
-  assert(numRow == ekk_instance_.lp_.num_row_);
-  for (HighsInt row = 0; row < numRow; row++) {
+  for (HighsInt row = 0; row < num_row; row++) {
     HighsInt var = ekk_instance_.basis_.basicIndex_[row];
-    if (var < numCol) {
+    if (var < num_col) {
       basic_variables[row] = var;
     } else {
-      basic_variables[row] = -(1 + var - numCol);
+      basic_variables[row] = -(1 + var - num_col);
     }
   }
   return return_status;
@@ -1404,25 +1405,30 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
                                        HighsInt* solution_num_nz,
                                        HighsInt* solution_indices,
                                        bool transpose) {
-  HVector solve_vector;
-  HighsInt numRow = ekk_instance_.lp_.num_row_;
-  HighsInt numCol = ekk_instance_.lp_.num_col_;
-  HighsScale& scale = model_.lp_.scale_;
+  HighsStatus return_status = HighsStatus::kOk;
+  HighsLp& lp = model_.lp_;
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_col = lp.num_col_;
+  //
+  // For an LP with no rows the solution is vacuous
+  if (num_row==0) return return_status;
   // Set up solve vector with suitably scaled RHS
-  solve_vector.setup(numRow);
+  HVector solve_vector;
+  solve_vector.setup(num_row);
   solve_vector.clear();
+  HighsScale& scale = lp.scale_;
   HighsInt rhs_num_nz = 0;
   if (transpose) {
-    for (HighsInt row = 0; row < numRow; row++) {
+    for (HighsInt row = 0; row < num_row; row++) {
       if (rhs[row]) {
         solve_vector.index[rhs_num_nz++] = row;
         double rhs_value = rhs[row];
-	if (model_.lp_.scale_.has_scaling) {
+	if (scale.has_scaling) {
 	  HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-	  if (col < numCol) {
+	  if (col < num_col) {
 	    rhs_value *= scale.col[col];
 	  } else {
-	    double scale_value = scale.row[col - numCol];
+	    double scale_value = scale.row[col - num_col];
 	    rhs_value /= scale_value;
 	  }
 	}
@@ -1430,11 +1436,11 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
       }
     }
   } else {
-    for (HighsInt row = 0; row < numRow; row++) {
+    for (HighsInt row = 0; row < num_row; row++) {
       if (rhs[row]) {
         solve_vector.index[rhs_num_nz++] = row;
         solve_vector.array[row] = rhs[row];
-	if (model_.lp_.scale_.has_scaling)
+	if (scale.has_scaling)
 	  solve_vector.array[row] *= scale.row[row];
       }
     }
@@ -1444,7 +1450,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // Note that solve_vector.count is just used to determine whether
   // hyper-sparse solves should be used. The indices of the nonzeros
   // in the solution are always accumulated. There's no switch (such
-  // as setting solve_vector.count = numRow+1) to not do this.
+  // as setting solve_vector.count = num_row+1) to not do this.
   //
   // Get expected_density from analysis during simplex solve.
   const double expected_density = 1;
@@ -1456,14 +1462,14 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // Extract the solution
   if (solution_indices == NULL) {
     // Nonzeros in the solution not required
-    if (solve_vector.count > numRow) {
+    if (solve_vector.count > num_row) {
       // Solution nonzeros not known
-      for (HighsInt row = 0; row < numRow; row++) {
+      for (HighsInt row = 0; row < num_row; row++) {
         solution_vector[row] = solve_vector.array[row];
       }
     } else {
       // Solution nonzeros are known
-      for (HighsInt row = 0; row < numRow; row++) solution_vector[row] = 0;
+      for (HighsInt row = 0; row < num_row; row++) solution_vector[row] = 0;
       for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
         HighsInt row = solve_vector.index[ix];
         solution_vector[row] = solve_vector.array[row];
@@ -1471,10 +1477,10 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     }
   } else {
     // Nonzeros in the solution are required
-    if (solve_vector.count > numRow) {
+    if (solve_vector.count > num_row) {
       // Solution nonzeros not known
       solution_num_nz = 0;
-      for (HighsInt row = 0; row < numRow; row++) {
+      for (HighsInt row = 0; row < num_row; row++) {
         solution_vector[row] = 0;
         if (solve_vector.array[row]) {
           solution_vector[row] = solve_vector.array[row];
@@ -1483,7 +1489,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
       }
     } else {
       // Solution nonzeros are known
-      for (HighsInt row = 0; row < numRow; row++) solution_vector[row] = 0;
+      for (HighsInt row = 0; row < num_row; row++) solution_vector[row] = 0;
       for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
         HighsInt row = solve_vector.index[ix];
         solution_vector[row] = solve_vector.array[row];
@@ -1493,11 +1499,11 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     }
   }
   // Scale the solution
-  if (model_.lp_.scale_.has_scaling) {
+  if (scale.has_scaling) {
     if (transpose) {
-      if (solve_vector.count > numRow) {
+      if (solve_vector.count > num_row) {
 	// Solution nonzeros not known
-	for (HighsInt row = 0; row < numRow; row++) {
+	for (HighsInt row = 0; row < num_row; row++) {
 	  double scale_value = scale.row[row];
 	  solution_vector[row] *= scale_value;
 	}
@@ -1509,14 +1515,14 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
 	}
       }
     } else {
-      if (solve_vector.count > numRow) {
+      if (solve_vector.count > num_row) {
 	// Solution nonzeros not known
-	for (HighsInt row = 0; row < numRow; row++) {
+	for (HighsInt row = 0; row < num_row; row++) {
 	  HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-	  if (col < numCol) {
+	  if (col < num_col) {
 	    solution_vector[row] *= scale.col[col];
 	  } else {
-	    double scale_value = scale.row[col - numCol];
+	    double scale_value = scale.row[col - num_col];
 	    solution_vector[row] /= scale_value;
 	  }
 	}
@@ -1524,10 +1530,10 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
 	for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
 	  HighsInt row = solve_vector.index[ix];
 	  HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-	  if (col < numCol) {
+	  if (col < num_col) {
 	    solution_vector[row] *= scale.col[col];
 	  } else {
-	    double scale_value = scale.row[col - numCol];
+	    double scale_value = scale.row[col - num_col];
 	    solution_vector[row] /= scale_value;
 	  }
 	}
@@ -1546,25 +1552,33 @@ void Highs::zeroIterationCounts() {
 
 HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
                                        double* dual_ray_value) {
+  HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
-  HighsInt numRow = lp.num_row_;
+  HighsInt num_row = lp.num_row_;
+  //
+  // For an LP with no rows the dual ray is vacuous
+  if (num_row==0) return return_status;
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
   if (has_dual_ray && dual_ray_value != NULL) {
     vector<double> rhs;
     HighsInt iRow = ekk_instance_.info_.dual_ray_row_;
-    rhs.assign(numRow, 0);
+    rhs.assign(num_row, 0);
     rhs[iRow] = ekk_instance_.info_.dual_ray_sign_;
     HighsInt* dual_ray_num_nz = 0;
     basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
   }
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
                                          double* primal_ray_value) {
+  HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
-  HighsInt numRow = lp.num_row_;
-  HighsInt numCol = lp.num_col_;
+  HighsInt num_row = lp.num_row_;
+  HighsInt num_col = lp.num_col_;
+  //
+  // For an LP with no rows the primal ray is vacuous
+  if (num_row==0) return return_status;
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
     HighsInt col = ekk_instance_.info_.primal_ray_col_;
@@ -1572,32 +1586,30 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     // Get this pivotal column
     vector<double> rhs;
     vector<double> column;
-    column.assign(numRow, 0);
-    rhs.assign(numRow, 0);
-    // Ensure that the LP is column-wise
-    if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
+    column.assign(num_row, 0);
+    rhs.assign(num_row, 0);
+    lp.ensureColWise();
     HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
-    if (col < numCol) {
+    if (col < num_col) {
       for (HighsInt iEl = lp.a_matrix_.start_[col];
            iEl < lp.a_matrix_.start_[col + 1]; iEl++)
         rhs[lp.a_matrix_.index_[iEl]] =
             primal_ray_sign * lp.a_matrix_.value_[iEl];
     } else {
-      rhs[col - numCol] = primal_ray_sign;
+      rhs[col - num_col] = primal_ray_sign;
     }
     HighsInt* column_num_nz = 0;
     basisSolveInterface(rhs, &column[0], column_num_nz, NULL, false);
     // Now zero primal_ray_value and scatter the column according to
     // the basic variables.
-    for (HighsInt iCol = 0; iCol < numCol; iCol++) primal_ray_value[iCol] = 0;
-    for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) primal_ray_value[iCol] = 0;
+    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
       HighsInt iCol = ekk_instance_.basis_.basicIndex_[iRow];
-      if (iCol < numCol) primal_ray_value[iCol] = column[iRow];
+      if (iCol < num_col) primal_ray_value[iCol] = column[iRow];
     }
-    if (col < numCol) primal_ray_value[col] = -primal_ray_sign;
+    if (col < num_col) primal_ray_value[col] = -primal_ray_sign;
   }
-  return HighsStatus::kOk;
+  return return_status;
 }
 
 bool Highs::qFormatOk(const HighsInt num_nz, const HighsInt format) {
