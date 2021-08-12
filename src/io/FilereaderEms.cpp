@@ -175,9 +175,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "end_linear") {
       // File read completed OK
       f.close();
-      if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-        return FilereaderRetcode::kParserError;
-      return FilereaderRetcode::kOk;
+      lp.ensureColWise();
     }
 
     // Act if the next keyword is names
@@ -205,11 +203,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     } else {
       // OK if file just ends after the integer_columns section without
       // end_linear
-      if (!f) {
-        if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-          return FilereaderRetcode::kParserError;
-        return FilereaderRetcode::kOk;
-      }
+      if (!f) lp.ensureColWise();
       highsLogUser(options.log_options, HighsLogType::kError,
                    "names not found in EMS file\n");
       return FilereaderRetcode::kParserError;
@@ -220,8 +214,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                  "EMS file not found\n");
     return FilereaderRetcode::kFileNotFound;
   }
-  if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return FilereaderRetcode::kParserError;
+  lp.ensureColWise();
   return FilereaderRetcode::kOk;
 }
 

@@ -79,22 +79,19 @@ void HighsSparseMatrix::range(double& min_value, double& max_value) const {
   }
 }
 
-HighsStatus HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
+void HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
   assert(this->formatOk());
-  if (this->format_ == desired_format) return HighsStatus::kOk;
   if (desired_format == MatrixFormat::kColwise) {
     this->ensureColWise();
   } else {
     this->ensureRowWise();
   }
   assert(this->format_ == desired_format);
-  return HighsStatus::kOk;
 }
 
 void HighsSparseMatrix::ensureColWise() {
   assert(this->formatOk());
-  // Should only call this is orientation is ROWWISE
-  assert(this->isRowwise());
+  if (this->isColwise()) return;
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
   HighsInt num_nz = this->numNz();
@@ -149,8 +146,7 @@ void HighsSparseMatrix::ensureColWise() {
 
 void HighsSparseMatrix::ensureRowWise() {
   assert(this->formatOk());
-  // Should only call this is orientation is COLWISE
-  assert(this->isColwise());
+  if (this->isRowwise()) return;
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
   HighsInt num_nz = this->numNz();
@@ -247,10 +243,9 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
     // Matrix is currently a standard row-wise matrix, so flip
     // column-wise if there are more new nonzeros than current
     // nonzeros
-    if (num_new_nz > num_nz && num_nz == 0) {
+    if (num_new_nz > num_nz) {
       assert(1 == 0);
-      // ToDo remove num_nz == 0 when only using a_matrix
-      this->setFormat(MatrixFormat::kColwise);
+      this->ensureColWise();
     }
   }
   // Determine the new number of columns and nonzeros in the matrix
@@ -332,10 +327,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   if (this->isColwise()) {
     // Matrix is currently a standard col-wise matrix, so flip
     // row-wise if there are more new nonzeros than current nonzeros
-    if (num_new_nz > num_nz && num_nz == 0) {
-      // ToDo remove num_nz == 0 when only using a_matrix
-      this->setFormat(MatrixFormat::kRowwise);
-    }
+    if (num_new_nz > num_nz) this->ensureRowWise();
   }
   // Determine the new number of rows and nonzeros in the matrix
   HighsInt new_num_nz = num_nz + num_new_nz;

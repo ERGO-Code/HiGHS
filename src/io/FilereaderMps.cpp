@@ -38,8 +38,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
         parser.loadProblem(options.log_options, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::kSuccess:
-        if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-          return FilereaderRetcode::kParserError;
+        lp.ensureColWise();
         return FilereaderRetcode::kOk;
       case FreeFormatParserReturnCode::kParserError:
         return FilereaderRetcode::kParserError;
@@ -65,11 +64,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               lp.a_matrix_.value_, lp.col_cost_, lp.col_lower_, lp.col_upper_,
               lp.row_lower_, lp.row_upper_, lp.integrality_, lp.col_names_,
               lp.row_names_, options.keep_n_rows);
-  if (return_code == FilereaderRetcode::kOk) {
-    lp.a_matrix_.format_ = MatrixFormat::kColwise;
-    if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return FilereaderRetcode::kParserError;
-  }
+  if (return_code == FilereaderRetcode::kOk) lp.ensureColWise();
   if (namesWithSpaces(lp.num_col_, lp.col_names_)) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Model has column names with spaces\n");

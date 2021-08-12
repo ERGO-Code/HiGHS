@@ -458,28 +458,6 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   HighsStatus highs_status;
 
-  // Check the no model traps
-  highs_status = highs.getBasicVariables(&basic_variables[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisInverseRow(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisInverseCol(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getBasisTransposeSolve(&rhs[0], &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getReducedRow(0, &solution_row[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
-  highs_status = highs.getReducedColumn(0, &solution_col[0]);
-  REQUIRE(highs_status == HighsStatus::kError);
-
   // Read the LP given by filename
   highs_status = highs.readModel(filename);
   REQUIRE(highs_status == HighsStatus::kOk);

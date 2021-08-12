@@ -243,9 +243,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
-  return_status = interpretCallStatus(setFormat(lp, MatrixFormat::kColwise),
-                                      return_status, "setFormat");
-  if (return_status == HighsStatus::kError) return return_status;
+  lp.ensureColWise();
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
@@ -462,10 +460,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  return_status =
-      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
-                          return_status, "setFormat");
-  if (return_status == HighsStatus::kError) return return_status;
+  model_.lp_.ensureColWise();
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel();
@@ -563,10 +558,7 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  return_status =
-      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
-                          return_status, "setFormat");
-  if (return_status == HighsStatus::kError) return return_status;
+  model_.lp_.ensureColWise();
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -1143,13 +1135,10 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
 HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                                  HighsInt* row_num_nz, HighsInt* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
-  // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
-                          return_status, "setFormat");
-  if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
   if (row_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "getReducedRow: row_vector is NULL\n");
@@ -1205,13 +1194,10 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                                     HighsInt* col_num_nz,
                                     HighsInt* col_indices) {
-  // Ensure that the LP is column-wise
   HighsStatus return_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(setFormat(model_.lp_, MatrixFormat::kColwise),
-                          return_status, "setFormat");
-  if (return_status == HighsStatus::kError) return return_status;
   HighsLp& lp = model_.lp_;
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
   if (col_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "getReducedColumn: col_vector is NULL\n");
@@ -1952,7 +1938,7 @@ HighsPresolveStatus Highs::runPresolve() {
   }
 
   // Ensure that the LP is column-wise
-  // setFormat(model_.lp_, MatrixFormat::kColwise);
+  model_.lp_.ensureColWise();
 
   if (model_.lp_.num_col_ == 0 && model_.lp_.num_row_ == 0)
     return HighsPresolveStatus::kNullError;

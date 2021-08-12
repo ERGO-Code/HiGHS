@@ -2390,7 +2390,3 @@ bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                average_col_num_en, max_average_col_num_en, logic1.c_str());
   return LiDSE_candidate;
 }
-
-HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format) {
-  return lp.a_matrix_.setFormat(desired_format);
-}

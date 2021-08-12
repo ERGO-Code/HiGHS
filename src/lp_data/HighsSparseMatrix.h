@@ -45,8 +45,7 @@ class HighsSparseMatrix {
   bool isColwise() const;
   HighsInt numNz() const;
   void range(double& min_value, double& max_value) const;
-  HighsStatus setFormat(
-      const MatrixFormat desired_format = MatrixFormat::kColwise);
+  void setFormat(const MatrixFormat desired_format);
   void ensureColWise();
   void ensureRowWise();
 

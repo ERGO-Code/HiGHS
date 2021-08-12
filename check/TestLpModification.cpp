@@ -978,7 +978,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]) ==
           HighsStatus::kOk);
 
-  avgas_highs.setMatrixFormat();
+  avgas_highs.setMatrixFormat(MatrixFormat::kColwise);
   REQUIRE(
       areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound));
 

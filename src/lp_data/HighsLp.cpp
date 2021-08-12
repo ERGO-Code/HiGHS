@@ -155,6 +155,8 @@ bool HighsLp::dimensionsOk(std::string message) const {
   return ok;
 }
 
+void HighsLp::setFormat(const MatrixFormat format) { this->a_matrix_.setFormat(format); }
+
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;

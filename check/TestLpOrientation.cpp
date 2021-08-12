@@ -75,13 +75,13 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Make the external LP row-wise then pass and solve it
-  REQUIRE(setFormat(lp, MatrixFormat::kRowwise) == HighsStatus::kOk);
+  lp.ensureRowWise();
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);
 
   // Make the external LP col-wise then pass and solve it
-  REQUIRE(setFormat(lp, MatrixFormat::kColwise) == HighsStatus::kOk);
+  lp.ensureColWise();
   highs.passModel(lp);
   highs.run();
   REQUIRE(info.objective_function_value == optimal_objective_function_value);

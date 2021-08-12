@@ -389,14 +389,8 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   HighsBasis& basis = basis_;
   HighsSimplexStatus& simplex_status = ekk_instance_.status_;
   // Query: should simplex_status.valid be simplex_status.valid_?
-  // Ensure that the LP (and any simplex LP) is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  if (simplex_status.valid) {
-    if (setFormat(ekk_instance_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
-  }
-  assert(&model_.lp_ == &lp);
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
 
   bool valid_simplex_lp = false;//simplex_status.valid;
   // Keep a copy of the original number of columns to check whether
@@ -463,13 +457,8 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   HighsSimplexStatus& simplex_status = ekk_instance_.status_;
   // Query: should simplex_status.valid be simplex_status.valid_?
   // Ensure that the LP (and any simplex LP) is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  if (simplex_status.valid) {
-    if (setFormat(ekk_instance_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
-  }
-  assert(&model_.lp_ == &lp);
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
 
   bool valid_simplex_lp = false;//simplex_status.valid;
   // Keep a copy of the original number of rows to check whether
@@ -539,9 +528,7 @@ HighsStatus Highs::getColsInterface(
   HighsLp& lp = model_.lp_;
   HighsOptions& options = options_;
   // Ensure that the LP is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  assert(&model_.lp_ == &lp);
+  lp.ensureColWise();
   if (!assessIndexCollection(options.log_options, index_collection))
     return interpretCallStatus(HighsStatus::kError, return_status,
                                "assessIndexCollection");
@@ -567,9 +554,6 @@ HighsStatus Highs::getColsInterface(
   HighsInt in_to_col = -1;
   HighsInt current_set_entry = 0;
   HighsInt col_dim = lp.num_col_;
-  // Ensure that the matrix is column-wise
-  if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
   num_col = 0;
   num_nz = 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
@@ -609,9 +593,7 @@ HighsStatus Highs::getRowsInterface(
   HighsLp& lp = model_.lp_;
   HighsOptions& options = options_;
   // Ensure that the LP is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  assert(&model_.lp_ == &lp);
+  lp.ensureColWise();
   if (!assessIndexCollection(options.log_options, index_collection))
     return interpretCallStatus(HighsStatus::kError, return_status,
                                "assessIndexCollection");
@@ -641,10 +623,8 @@ HighsStatus Highs::getRowsInterface(
   HighsInt in_to_row = -1;
   HighsInt current_set_entry = 0;
   HighsInt row_dim = lp.num_row_;
-  // Ensure that the matrix is column-wise
-  if (setFormat(lp, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
   // Set up a row mask so that entries to be got from the column-wise
   // matrix can be identified and have their correct row index.
   vector<HighsInt> new_index;
@@ -757,16 +737,16 @@ HighsStatus Highs::getRowsInterface(
 
 HighsStatus Highs::getCoefficientInterface(const HighsInt Xrow,
                                            const HighsInt Xcol, double& value) {
-  if (Xrow < 0 || Xrow >= model_.lp_.num_row_) return HighsStatus::kError;
-  if (Xcol < 0 || Xcol >= model_.lp_.num_col_) return HighsStatus::kError;
+  HighsLp& lp = model_.lp_;
+  if (Xrow < 0 || Xrow >= lp.num_row_) return HighsStatus::kError;
+  if (Xcol < 0 || Xcol >= lp.num_col_) return HighsStatus::kError;
   value = 0;
   // Ensure that the LP is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  for (HighsInt el = model_.lp_.a_matrix_.start_[Xcol];
-       el < model_.lp_.a_matrix_.start_[Xcol + 1]; el++) {
-    if (model_.lp_.a_matrix_.index_[el] == Xrow) {
-      value = model_.lp_.a_matrix_.value_[el];
+  lp.ensureColWise();
+  for (HighsInt el = lp.a_matrix_.start_[Xcol];
+       el < lp.a_matrix_.start_[Xcol + 1]; el++) {
+    if (lp.a_matrix_.index_[el] == Xrow) {
+      value = lp.a_matrix_.value_[el];
       break;
     }
   }
@@ -783,9 +763,6 @@ HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   model_.lp_.sense_ = Xsense;
   scaled_model_status_ = HighsModelStatus::kNotset;
   model_status_ = scaled_model_status_;
-  // Set any Simplex LP objective sense
-  if (ekk_instance_.status_.valid)
-    ekk_instance_.lp_.sense_ = Xsense;
   return HighsStatus::kOk;
 }
 
@@ -1030,30 +1007,11 @@ HighsStatus Highs::changeCoefficientInterface(const HighsInt Xrow,
                                               const HighsInt Xcol,
                                               const double XnewValue) {
   HighsLp& lp = model_.lp_;
-  // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  if (ekk_instance_.status_.valid) {
-    if (setFormat(ekk_instance_.lp_,
-                  MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
-  }
-  assert(&model_.lp_ == &lp);
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
   if (Xrow < 0 || Xrow >= lp.num_row_) return HighsStatus::kError;
   if (Xcol < 0 || Xcol >= lp.num_col_) return HighsStatus::kError;
-  HighsSimplexStatus& simplex_status = ekk_instance_.status_;
-  bool valid_simplex_lp = false;//simplex_status.valid;
-  // Check that if there is no simplex LP then there is no matrix or scaling
-  if (!valid_simplex_lp) {
-    assert(!simplex_status.has_matrix);
-  }
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
-  if (valid_simplex_lp) {
-    HighsLp& simplex_lp = ekk_instance_.lp_;
-    HighsScale& scale = lp.scale_;
-    double scaledXnewValue = XnewValue * scale.row[Xrow] * scale.col[Xcol];
-    changeLpMatrixCoefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
-  }
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if it's a new row
@@ -1073,15 +1031,8 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   HighsLp& simplex_lp = ekk_instance_.lp_;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
 
-  // Ensure that the LP (and any simplex LP) is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  if (simplex_status.valid) {
-    if (setFormat(ekk_instance_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
-  }
-  assert(&model_.lp_ == &lp);
-
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
   if (col < 0) return HighsStatus::kError;
   if (col >= lp.num_col_) return HighsStatus::kError;
   if (!scaleval) return HighsStatus::kError;
@@ -1132,14 +1083,8 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   HighsLp& simplex_lp = ekk_instance_.lp_;
   SimplexBasis& simplex_basis = ekk_instance_.basis_;
 
-  // Ensure that the LP (and any simplex LP) is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  if (simplex_status.valid) {
-    if (setFormat(ekk_instance_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
-  }
-  assert(&model_.lp_ == &lp);
+  // Ensure that the LP is column-wise
+  lp.ensureColWise();
 
   if (row < 0) return HighsStatus::kError;
   if (row >= lp.num_row_) return HighsStatus::kError;
@@ -1337,21 +1282,9 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   //
   // For an LP with no rows the solution is vacuous
   if (num_row==0) return return_status;
-
-  // Initialise analysis so that (even null) timing data structures
-  // are set up
-  ekk_instance_.initialiseAnalysis();
-
-  // Ensure that the LP (and any simplex LP) is column-wise
-  if (setFormat(model_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-    return HighsStatus::kError;
-  HighsSimplexStatus& simplex_status = ekk_instance_.status_;
-  if (simplex_status.valid) {
-    if (setFormat(ekk_instance_.lp_, MatrixFormat::kColwise) != HighsStatus::kOk)
-      return HighsStatus::kError;
-  }
+  lp.ensureColWise();
   // If the simplex LP isn't initialised, scale and pass the current LP
-  if (!simplex_status.initialised) {
+  if (!ekk_instance_.status_.initialised) {
     // Create a HighsLpSolverObject of references to data in the Highs
     // class, and the scaled/unscaled model status
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_, options_, timer_);
@@ -1359,7 +1292,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   }
   
 
-  if (!simplex_status.has_basis) {
+  if (!ekk_instance_.status_.has_basis) {
     //
     // The Ekk instance has no simplex basis, so pass the HiGHS basis
     // if it's valid, otherwise return an error for consistency with old code
@@ -1380,12 +1313,12 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
       return HighsStatus::kError;
     }
   }
-  assert(simplex_status.has_basis);
+  assert(ekk_instance_.status_.has_basis);
 
   const bool only_from_known_basis = true;
   if (ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis))
     return HighsStatus::kError;
-  assert(simplex_status.has_invert);
+  assert(ekk_instance_.status_.has_invert);
 
   for (HighsInt row = 0; row < num_row; row++) {
     HighsInt var = ekk_instance_.basis_.basicIndex_[row];

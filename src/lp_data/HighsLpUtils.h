@@ -246,5 +246,4 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
 
-HighsStatus setFormat(HighsLp& lp, const MatrixFormat desired_format);
 #endif  // LP_DATA_HIGHSLPUTILS_H_
