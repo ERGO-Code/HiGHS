@@ -20,7 +20,6 @@
 
 #include "io/HighsIO.h"
 #include "ipm/IpxSolution.h"
-#include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 

@@ -196,7 +196,6 @@ set(headers
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
-    lp_data/HighsModelObject.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
     lp_data/HighsRuntimeOptions.h
@@ -632,7 +631,6 @@ set(headers_fast_build_
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
-    lp_data/HighsModelObject.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
     lp_data/HighsRuntimeOptions.h
@@ -736,7 +734,7 @@ else()
     set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
 endif()
 
-#set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h;src/lp_data/HighsLpSolverObject.h")
+#set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsLpSolverObject.h")
 
 # set the install rpath to the installed destination
 set_target_properties(libhighs PROPERTIES INSTALL_RPATH

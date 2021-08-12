@@ -19,7 +19,7 @@
 #include <set>
 #include <vector>
 
-#include "lp_data/HighsModelObject.h"
+#include "simplex/HEkk.h"
 
 class HVector;
 const double initial_total_change = 1e-12;

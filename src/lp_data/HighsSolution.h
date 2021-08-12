@@ -29,7 +29,6 @@
 class HighsLp;
 struct IpxSolution;
 class HighsOptions;
-class HighsModelObject;
 
 using std::string;
 

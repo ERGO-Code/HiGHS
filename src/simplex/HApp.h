@@ -182,6 +182,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       solver_object.highs_info_.simplex_iteration_count = ekk_instance.iteration_count_;
       solution = ekk_instance.getSolution();
       basis = ekk_instance.getHighsBasis();
+       assert(basis.valid);
+  highs_info.basis_validity = kBasisValidityValid;
       if (incumbent_lp_moved) {
 	// Move back the incumbent LP
 	lp = std::move(ekk_lp);
@@ -338,6 +340,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   solver_object.highs_info_.simplex_iteration_count = ekk_instance.iteration_count_;
   solution = ekk_instance.getSolution();
   basis = ekk_instance.getHighsBasis();
+       assert(basis.valid);
+  highs_info.basis_validity = kBasisValidityValid;
+
   // The unscaled LP has been solved - either directly, or because
   // there was no scaling. Copy values into the HighsInfo
   // that are set (above) by the call to getUnscaledInfeasibilities

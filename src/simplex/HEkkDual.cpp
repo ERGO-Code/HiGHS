@@ -22,18 +22,10 @@
 #include <iostream>
 #include <set>
 
-#include "io/HighsIO.h"
-#include "lp_data/HConst.h"
-#include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsModelUtils.h"  // for utilModelStatusToString
-#include "simplex/HCrash.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkPrimal.h"
-#include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
-#include "util/HighsTimer.h"
 
 #ifdef OPENMP
 #include "omp.h"

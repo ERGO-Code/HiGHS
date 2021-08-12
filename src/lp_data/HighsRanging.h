@@ -18,7 +18,7 @@
 
 #include <vector>
 
-#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsLpSolverObject.h"
 
 struct HighsRangingRecord {
   std::vector<double> value_;
@@ -36,8 +36,6 @@ struct HighsRanging {
   HighsRangingRecord row_bound_dn;
 };
 
-HighsStatus getRangingData(HighsRanging& ranging,
-                           const HighsModelObject& highs_model_object);
-void writeRanging(const HighsRanging& ranging,
-                  const HighsModelObject& highs_model_object);
+HighsStatus getRangingData(HighsRanging& ranging, const HighsLpSolverObject& solver_object);
+void writeRanging(const HighsRanging& ranging, const HighsLpSolverObject& solver_object);
 #endif

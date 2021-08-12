@@ -19,7 +19,6 @@
 #include <sstream>
 
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "model/HighsModel.h"
@@ -61,9 +60,7 @@ class Highs {
 
   /**
    * @brief Every model loading module eventually uses
-   * passModel(HighsModel model) to communicate the model to HiGHS. It clears
-   * the vector of HighsModelObjects (hmos), creates a HighsModelObject for the
-   * LP and makes it the first of the vector of HighsModelObjects
+   * passModel(HighsModel model) to communicate the model to HiGHS. 
    */
   HighsStatus passModel(
       HighsModel model  //!< The HighsModel instance for this model
@@ -100,7 +97,7 @@ class Highs {
                           const HighsInt* index, const double* value);
 
   /**
-   * @brief reads in a model and initializes the HighsModelObject
+   * @brief reads in a model as the incumbent model
    */
   HighsStatus readModel(const std::string filename  //!< the filename
   );
@@ -854,30 +851,24 @@ class Highs {
    */
 
   /**
-   * Methods for setting the basis and solution
+   * Methods for setting basis_ and solution_
    */
 
   /**
-   * @brief Uses the HighsSolution passed to set the solution for the
-   * LP of the (first?) HighsModelObject, according to ?? TODO Understand this
-   * ??
+   * @brief Uses the HighsSolution passed to set solution_
    */
   // In the solution passed as a parameter below can have one or many of
   // col_value, col_dual and row_dual set. If any of them are not set the
   // solution in Highs does not get updated.
-  HighsStatus setSolution(
-      const HighsSolution& solution  //!< Solution to be used
-  );
+  HighsStatus setSolution(const HighsSolution& solution);
 
   /**
-   * @brief Uses the HighsBasis passed to set the basis for the
-   * LP of the (first?) HighsModelObject
+   * @brief Uses the HighsBasis passed to set basis_
    */
-  HighsStatus setBasis(const HighsBasis& basis  //!< Basis to be used
-  );
+  HighsStatus setBasis(const HighsBasis& basis);
 
   /**
-   * @brief Clears the HighsBasis for the LP of the HighsModelObject
+   * @brief Clears basis_
    */
   HighsStatus setBasis();
 
@@ -1054,9 +1045,6 @@ class Highs {
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
-  // Each HighsModelObject holds a const ref to its lp_. There are at most two
-  // entries in hmos_: the original LP and the LP reduced by presolve
-  std::vector<HighsModelObject> hmos_;
   HEkk ekk_instance_;
 
   // Record of maximum number of OMP threads. If OMP is available then
@@ -1089,8 +1077,6 @@ class Highs {
   bool unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
                        const double unscaled_dual_feasibility_tolerance,
                        const bool report = false);
-
-  bool haveHmo(const string method_name) const;
 
   void reportModel();
   void newHighsBasis();

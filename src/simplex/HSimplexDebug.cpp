@@ -19,53 +19,19 @@
 #include <string>
 
 #include "lp_data/HighsDebug.h"
-#include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HEkkDebug.h"
-#include "simplex/HEkkDualRow.h"
-#include "simplex/HSimplex.h"
 #include "simplex/HSimplexNlaDebug.h"
-#include "simplex/SimplexTimer.h"
 
-// Methods for Ekk
-
-HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
-  // Non-trivially expensive check that the .lp, if valid is .lp scaled
-  // according to .scale
-  const HEkk& ekk_instance = highs_model_object.ekk_instance_;
+HighsDebugStatus ekkDebugSimplexLp(const HighsLpSolverObject& solver_object) {
+  const HEkk& ekk_instance = solver_object.ekk_instance_;
   const HighsSimplexStatus& status = ekk_instance.status_;
   if (!status.valid ||
-      highs_model_object.options_.highs_debug_level < kHighsDebugLevelCostly)
+      solver_object.options_.highs_debug_level < kHighsDebugLevelCostly)
     return HighsDebugStatus::kNotChecked;
   HighsDebugStatus return_status = HighsDebugStatus::kOk;
-  const HighsOptions& options = *ekk_instance.opt_point_;
-  const HighsLp& highs_lp = highs_model_object.lp_;
-  const HighsLp& simplex_lp = ekk_instance.lp_;
-  const HighsScale& scale = simplex_lp.scale_;
+  const HighsOptions& options = solver_object.options_;
+  const HighsLp& highs_lp = solver_object.lp_;
   const HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
-
-  bool right_size = true;
-  if (scale.has_scaling) {
-    right_size = (HighsInt)scale.col.size() == simplex_lp.num_col_ && right_size;
-    right_size = (HighsInt)scale.row.size() == simplex_lp.num_row_ && right_size;
-    if (!right_size) {
-      highsLogDev(options.log_options, HighsLogType::kError,
-		  "scale size error\n");
-      assert(right_size);
-      return_status = HighsDebugStatus::kLogicalError;
-    }
-  }
-  // Take a copy of the original LP
-  HighsLp check_lp = highs_lp;
-  check_lp.applyScale();
-  const bool lp_data_ok = check_lp == simplex_lp;
-  if (!lp_data_ok) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "debugSimplexLp: Check LP and simplex LP not equal\n");
-    assert(lp_data_ok);
-    return_status = HighsDebugStatus::kLogicalError;
-  }
 
   if (status.has_basis) {
     const bool basis_correct =

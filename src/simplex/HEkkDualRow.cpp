@@ -18,11 +18,7 @@
 #include <cassert>
 #include <iostream>
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsModelObject.h"
-#include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
 

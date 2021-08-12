@@ -18,7 +18,7 @@
 
 #include <vector>
 
-#include "lp_data/HighsModelObject.h"
+#include "simplex/HEkk.h"
 
 class HVector;
 

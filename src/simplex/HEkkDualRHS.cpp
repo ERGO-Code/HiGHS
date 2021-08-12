@@ -20,9 +20,6 @@
 #include <iostream>
 #include <set>
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsModelObject.h"
-#include "simplex/HVector.h"
 #include "simplex/SimplexTimer.h"
 
 using std::fill_n;

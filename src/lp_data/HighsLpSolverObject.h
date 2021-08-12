@@ -16,7 +16,7 @@
 #ifndef LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
 #define LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_
 
-//#include "lp_data/HighsInfo.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HEkk.h"
 //#include "util/HighsTimer.h"

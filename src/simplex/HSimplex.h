@@ -16,7 +16,7 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
-#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsLpSolverObject.h"
 
 enum class LpAction {
   kScale = 0,
@@ -33,7 +33,7 @@ enum class LpAction {
   kBacktracking
 };
 
-void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
+void scaleAndPassLpToEkk(HighsLpSolverObject& solver_object);
 
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol);

@@ -28,13 +28,13 @@ using std::runtime_error;
 #include "omp.h"
 #endif
 
-void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
-  HEkk& ekk_instance = highs_model_object.ekk_instance_;
-  HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
+void scaleAndPassLpToEkk(HighsLpSolverObject& solver_object) {
+  HEkk& ekk_instance = solver_object.ekk_instance_;
+  HighsOptions& options = solver_object.options_;
+  HighsLp& lp = solver_object.lp_;
   // Possibly scale the LP
   bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
-                  highs_model_object.lp_.num_col_ > 0;
+                  solver_object.lp_.num_col_ > 0;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
     highsLogDev(options.log_options, HighsLogType::kWarning,
