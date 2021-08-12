@@ -42,6 +42,7 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
                                 const HighsSimplexInfo& info,
                                 HighsInfo& highs_info);
 
+void setSolutionStatus(HighsInfo& highs_info);
 // SCALE:
 
 void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,

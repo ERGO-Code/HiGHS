@@ -181,6 +181,7 @@ void HighsLp::clear() {
 
   this->clearScale();
   this->is_scaled_ = false;
+  this->is_moved_ = false;
 }
 
 void HighsLp::clearScale() {
@@ -248,3 +249,17 @@ void HighsLp::unapplyScale() {
   this->a_matrix_.unapplyScale(scale);
   this->is_scaled_ = false;
 }
+
+void HighsLp::moveLp(HighsLp& lp) {
+  assert(this->is_moved_ == false);
+  lp = std::move(*this);
+  this->is_moved_ = true;
+}
+
+void HighsLp::moveLpBackAndUnapplyScaling(HighsLp lp) {
+  assert(this->is_moved_ == true);
+  *this = std::move(lp);
+  this->unapplyScale();
+  assert(this->is_moved_ == false);
+}
+

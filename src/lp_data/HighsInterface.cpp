@@ -1277,25 +1277,36 @@ void Highs::clearBasisInterface() {
 HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
+  HighsLp& ekk_lp = ekk_instance_.lp_;
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
+  HighsSimplexStatus& ekk_status = ekk_instance_.status_;
   //
   // For an LP with no rows the solution is vacuous
   if (num_row==0) return return_status;
-  lp.ensureColWise();
-  // If the simplex LP isn't initialised, scale and pass the current LP
-  if (!ekk_instance_.status_.initialised) {
-    // Create a HighsLpSolverObject of references to data in the Highs
-    // class, and the scaled/unscaled model status
-    HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_, options_, timer_);
-    scaleAndPassLpToEkk(solver_object);
+  if (!ekk_status.has_invert) {
+    // The LP has no invert to use, so have to set one up
+    lp.ensureColWise();
+    // Consider scaling the LP, and then move to EKK
+    considerScaling(options_, lp);
+    lp.moveLp(ekk_lp);
+    // If the simplex LP isn't initialised, do so
+    if (!ekk_status.initialised) {
+      return_status = ekk_instance_.setup();
+      if (return_status == HighsStatus::kError) {
+	// Setup has failed - can only happen if there are excessive
+	// matrix entries in an LP that should already have been
+	// assessed - so move the LP back and unscale
+	lp.moveLpBackAndUnapplyScaling(ekk_lp);
+	return return_status;
+      }
+    }
   }
-  
-
-  if (!ekk_instance_.status_.has_basis) {
+  if (!ekk_status.has_basis) {
     //
     // The Ekk instance has no simplex basis, so pass the HiGHS basis
-    // if it's valid, otherwise return an error for consistency with old code
+    // if it's valid, otherwise return an error for consistency with
+    // old code
     //
     // Arguable that a warning should be issued and a logical basis
     // set up
@@ -1307,18 +1318,18 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
       highsLogUser(
           options_.log_options, HighsLogType::kError,
           "getBasicVariables called without a simplex or HiGHS basis\n");
-      // Arguable that a warning should be issued and a logical basis
-      // set up
-      //      ekk_instance_.setBasis();
+      lp.moveLpBackAndUnapplyScaling(ekk_lp);
       return HighsStatus::kError;
     }
   }
-  assert(ekk_instance_.status_.has_basis);
+  assert(ekk_status.has_basis);
 
   const bool only_from_known_basis = true;
-  if (ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis))
+  if (ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis)) {
+    lp.moveLpBackAndUnapplyScaling(ekk_lp);
     return HighsStatus::kError;
-  assert(ekk_instance_.status_.has_invert);
+  }
+  assert(ekk_status.has_invert);
 
   for (HighsInt row = 0; row < num_row; row++) {
     HighsInt var = ekk_instance_.basis_.basicIndex_[row];
@@ -1328,6 +1339,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
       basic_variables[row] = -(1 + var - num_col);
     }
   }
+  lp.moveLpBackAndUnapplyScaling(ekk_lp);
   return return_status;
 }
 

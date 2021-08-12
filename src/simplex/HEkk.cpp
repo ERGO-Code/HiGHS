@@ -13,14 +13,12 @@
 /**@file simplex/HEkk.cpp
  * @brief
  */
-//#include <cassert>
-////#include <iostream>
-
 #include "simplex/HEkk.h"
 
-#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "lp_data/HighsLpSolverObject.h"
+#include "lp_data/HighsLpUtils.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
@@ -168,11 +166,10 @@ void HEkk::updateStatus(LpAction action) {
   }
 }
 
-void HEkk::refreshPointers(HighsOptions* opt_point,
-			   HighsTimer* tim_point) {
-  opt_point_ = opt_point;
-  tim_point_ = tim_point;
-  analysis_.timer_ = tim_point;
+void HEkk::refreshPointers(HighsLpSolverObject& solver_object) {
+  opt_point_ = &solver_object.options_;
+  tim_point_ = &solver_object.timer_;
+  analysis_.timer_ = tim_point_;
 }
 
 HighsStatus HEkk::moveNewLp(HighsLp lp) {

@@ -27,29 +27,6 @@ using std::runtime_error;
 #include "omp.h"
 #endif
 
-void scaleAndPassLpToEkk(HighsLpSolverObject& solver_object) {
-  HEkk& ekk_instance = solver_object.ekk_instance_;
-  HighsOptions& options = solver_object.options_;
-  HighsLp& lp = solver_object.lp_;
-  // Possibly scale the LP
-  bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
-                  solver_object.lp_.num_col_ > 0;
-  const bool force_no_scaling = false;  // true;//
-  if (force_no_scaling) {
-    highsLogDev(options.log_options, HighsLogType::kWarning,
-                "Forcing no scaling\n");
-    scale_lp = false;
-  }
-  if (scale_lp) getScaling(options, lp);
-  if (lp.scale_.has_scaling) {
-    HighsLp scaled_lp = lp;
-    ekk_instance.passNewLp(scaled_lp);
-    lp.unapplyScale();
-  } else {
-    ekk_instance.passNewLp(lp);
-  }
-}
-
 void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& highs_basis,
                                HighsInt XnumNewCol) {
   assert(highs_basis.valid);
@@ -228,20 +205,20 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
       options.primal_feasibility_tolerance;
   const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
 
-  HighsInt& num_primal_infeasibility = highs_info.num_primal_infeasibilities;
+  HighsInt& num_primal_infeasibilities = highs_info.num_primal_infeasibilities;
   double& max_primal_infeasibility = highs_info.max_primal_infeasibility;
-  double& sum_primal_infeasibility = highs_info.sum_primal_infeasibilities;
-  HighsInt& num_dual_infeasibility = highs_info.num_dual_infeasibilities;
+  double& sum_primal_infeasibilities = highs_info.sum_primal_infeasibilities;
+  HighsInt& num_dual_infeasibilities = highs_info.num_dual_infeasibilities;
   double& max_dual_infeasibility = highs_info.max_dual_infeasibility;
-  double& sum_dual_infeasibility = highs_info.sum_dual_infeasibilities;
+  double& sum_dual_infeasibilities = highs_info.sum_dual_infeasibilities;
 
   // Zero the counts of unscaled primal and dual infeasibilities
-  num_primal_infeasibility = 0;
+  num_primal_infeasibilities = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibility = 0;
-  num_dual_infeasibility = 0;
+  sum_primal_infeasibilities = 0;
+  num_dual_infeasibilities = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibility = 0;
+  sum_dual_infeasibilities = 0;
 
   double scale_mu = 1.0;
   assert(int(scale.col.size()) == scale.num_col);
@@ -280,9 +257,9 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= dual_feasibility_tolerance)
-        num_dual_infeasibility++;
+        num_dual_infeasibilities++;
       max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibility += dual_infeasibility;
+      sum_dual_infeasibilities += dual_infeasibility;
     }
   }
   // Look at the primal infeasibilities of basic variables
@@ -309,14 +286,31 @@ void getUnscaledInfeasibilities(const HighsOptions& options,
       primal_infeasibility = unscaled_value - unscaled_upper;
     }
     if (primal_infeasibility > 0) {
-      num_primal_infeasibility++;
+      num_primal_infeasibilities++;
       max_primal_infeasibility =
           max(primal_infeasibility, max_primal_infeasibility);
-      sum_primal_infeasibility += primal_infeasibility;
+      sum_primal_infeasibilities += primal_infeasibility;
     }
   }
+  setSolutionStatus(highs_info);
 }
 
+void setSolutionStatus(HighsInfo& highs_info) {
+  if (highs_info.num_primal_infeasibilities < 0) {
+    highs_info.primal_solution_status = kSolutionStatusNone;
+  } else if (highs_info.num_primal_infeasibilities == 0) {
+    highs_info.primal_solution_status = kSolutionStatusFeasible;
+  } else {
+    highs_info.primal_solution_status = kSolutionStatusInfeasible;
+  }
+  if (highs_info.num_dual_infeasibilities < 0) {
+    highs_info.dual_solution_status = kSolutionStatusNone;
+  } else if (highs_info.num_dual_infeasibilities == 0) {
+    highs_info.dual_solution_status = kSolutionStatusFeasible;
+  } else {
+    highs_info.dual_solution_status = kSolutionStatusInfeasible;
+  }
+}
 // SCALING
 
 void scaleSimplexCost(const HighsOptions& options, HighsLp& lp,

@@ -51,8 +51,8 @@ class HighsLp {
   std::vector<HighsVarType> integrality_;
 
   HighsScale scale_;
-  // Have to set 
-  bool is_scaled_ = false;
+  bool is_scaled_;
+  bool is_moved_;
 
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp) const;
@@ -67,6 +67,8 @@ class HighsLp {
   void clearScale();
   void applyScale();
   void unapplyScale();
+  void moveLp(HighsLp& lp);
+  void moveLpBackAndUnapplyScaling(HighsLp lp);
   void clear();
 };
 

@@ -19,7 +19,6 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HEkk.h"
-//#include "util/HighsTimer.h"
 
 class HighsLpSolverObject {
  public:

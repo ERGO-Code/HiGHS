@@ -16,12 +16,11 @@
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
 
-#include "lp_data/HStruct.h"
 #include "simplex/HSimplexNla.h"
 #include "simplex/HighsSimplexAnalysis.h"
-//#include "simplex/HSimplex.h"
-#include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
+
+class HighsLpSolverObject;
 
 class HEkk {
  public:
@@ -38,12 +37,12 @@ class HEkk {
   void clearBasis();
 
   void updateStatus(LpAction action);
-  void refreshPointers(HighsOptions* opt_point,
-		       HighsTimer* tim_point);
+  void refreshPointers(HighsLpSolverObject& solver_object);
   HighsStatus moveNewLp(HighsLp lp);
   HighsStatus passNewLp(const HighsLp& pass_lp);
   void moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix);
   void passScaledLp(const HighsLp& lp);
+  HighsStatus setup();
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
@@ -110,7 +109,6 @@ class HEkk {
   double total_synthetic_tick_;
 
  private:
-  HighsStatus setup();
   void initialiseForNewLp();
   bool isUnconstrainedLp();
   HighsStatus initialiseForSolve();

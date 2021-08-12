@@ -362,23 +362,31 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::kOk;
 }
 
-void getScaling(const HighsOptions& options, HighsLp& lp) {
-  // Possibly scale the LP
-  bool scale_lp = options.simplex_scale_strategy != kSimplexScaleStrategyOff &&
-                  lp.num_col_ > 0;
-  const bool force_no_scaling = false;  // true;//
-  if (force_no_scaling) {
-    highsLogDev(options.log_options, HighsLogType::kWarning,
-                "Forcing no scaling\n");
-    scale_lp = false;
-  }
-  const bool analyse_lp_data =
+void considerScaling(const HighsOptions& options, HighsLp& lp) {
+  // Consider scaling the LP - either by finding new factors or by
+  // applying any existing factors
+  const bool allow_scaling = lp.num_col_ > 0 &&
+    options.simplex_scale_strategy != kSimplexScaleStrategyOff;
+  const bool scaling_not_tried = lp.scale_.strategy == kSimplexScaleStrategyOff;
+  const bool new_scaling_strategy =
+    options.simplex_scale_strategy != lp.scale_.strategy &&
+    options.simplex_scale_strategy != kSimplexScaleStrategyChoose;
+  const bool try_scaling = allow_scaling && (scaling_not_tried || new_scaling_strategy);
+  if (try_scaling) {
+    // Scaling will be tried, so ensure that any previous scaling is not applied
+    lp.unapplyScale();
+    const bool analyse_lp_data =
       kHighsAnalysisLevelModelData & options.highs_analysis_level;
-  if (analyse_lp_data) analyseLp(options.log_options, lp);
-  if (scale_lp) {
+    if (analyse_lp_data) analyseLp(options.log_options, lp);
     scaleLp(options, lp);
     if (analyse_lp_data && lp.is_scaled_) analyseLp(options.log_options, lp);
+  } else if (lp.scale_.has_scaling) {
+    // Scaling factors are known, so ensure that they are applied
+    lp.applyScale();
   }
+  // Ensure that either the LP has scale factors and is scaled, or
+  // it doesn't have scale factors and isn't scaled
+  assert(lp.scale_.has_scaling == lp.is_scaled_); 
 }
 
 void scaleLp(const HighsOptions& options, HighsLp& lp) {
