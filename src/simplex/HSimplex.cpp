@@ -162,11 +162,11 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void invalidateSimplexLpBasisArtifacts(HighsSimplexStatus& status) {
+void invalidateEkkBasisArtifacts(HighsSimplexStatus& status) {
   // Invalidate the artifacts of the basis of the simplex LP
   status.has_matrix = false;
   // has_factor_arrays shouldn't be set false unless model dimension
-  // changes, but invalidateSimplexLpBasisArtifacts is all that's
+  // changes, but invalidateEkkBasisArtifacts is all that's
   // called when rows or columns are added, so can't change this now.
   status.has_factor_arrays = false;
   status.has_dual_steepest_edge_weights = false;
@@ -181,17 +181,17 @@ void invalidateSimplexLpBasisArtifacts(HighsSimplexStatus& status) {
   status.has_primal_ray = false;
 }
 
-void invalidateSimplexLpBasis(HighsSimplexStatus& status) {
+void invalidateEkkBasis(HighsSimplexStatus& status) {
   // Invalidate the basis of the simplex LP, and all its other
   // properties - since they are basis-related
   status.has_basis = false;
-  invalidateSimplexLpBasisArtifacts(status);
+  invalidateEkkBasisArtifacts(status);
 }
 
-void invalidateSimplexLp(HighsSimplexStatus& status) {
+void invalidateEkk(HighsSimplexStatus& status) {
   status.initialised = false;
   status.valid = false;
-  invalidateSimplexLpBasis(status);
+  invalidateEkkBasis(status);
 }
 
 void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
@@ -200,7 +200,7 @@ void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
 #ifdef HIGHSDEV
       printf(" LpAction::kScale\n");
 #endif
-      invalidateSimplexLpBasis(status);
+      invalidateEkkBasis(status);
       break;
     case LpAction::kNewCosts:
 #ifdef HIGHSDEV
@@ -224,31 +224,31 @@ void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
 #ifdef HIGHSDEV
       printf(" LpAction::kNewBasis\n");
 #endif
-      invalidateSimplexLpBasis(status);
+      invalidateEkkBasis(status);
       break;
     case LpAction::kNewCols:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewCols\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(status);
+      invalidateEkkBasisArtifacts(status);
       break;
     case LpAction::kNewRows:
 #ifdef HIGHSDEV
       printf(" LpAction::kNewRows\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(status);
+      invalidateEkkBasisArtifacts(status);
       break;
     case LpAction::kDelCols:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelCols\n");
 #endif
-      invalidateSimplexLpBasis(status);
+      invalidateEkkBasis(status);
       break;
     case LpAction::kDelRows:
 #ifdef HIGHSDEV
       printf(" LpAction::kDelRows\n");
 #endif
-      invalidateSimplexLpBasis(status);
+      invalidateEkkBasis(status);
       break;
     case LpAction::kDelRowsBasisOk:
 #ifdef HIGHSDEV
@@ -260,13 +260,13 @@ void updateSimplexLpStatus(HighsSimplexStatus& status, LpAction action) {
 #ifdef HIGHSDEV
       printf(" LpAction::kScaledCol\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(status);
+      invalidateEkkBasisArtifacts(status);
       break;
     case LpAction::kScaledRow:
 #ifdef HIGHSDEV
       printf(" LpAction::kScaledRow\n");
 #endif
-      invalidateSimplexLpBasisArtifacts(status);
+      invalidateEkkBasisArtifacts(status);
       break;
     case LpAction::kBacktracking:
 #ifdef HIGHSDEV

@@ -433,7 +433,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
       // Nontrivial deletion so initialise the random vectors and all
       // data relating to the simplex basis
       ekk_instance_.initialiseSimplexLpRandomVectors();
-      invalidateSimplexLpBasis(simplex_status);
+      invalidateEkkBasis(simplex_status);
     }
   }
   if (index_collection.is_mask_) {
@@ -508,7 +508,7 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
       // Nontrivial deletion so initialise the random vectors and all
       // data relating to the simplex basis
       ekk_instance_.initialiseSimplexLpRandomVectors();
-      invalidateSimplexLpBasis(simplex_status);
+      invalidateEkkBasis(simplex_status);
     }
   }
   if (index_collection.is_mask_) {

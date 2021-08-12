@@ -45,17 +45,17 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& highs_basis,
 void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
                             HighsInt XnumNewRow);
 
-void invalidateSimplexLpBasisArtifacts(
+void invalidateEkkBasisArtifacts(
     HighsSimplexStatus& status  // !< Status of simplex LP whose
                                 // basis artifacts are to be invalidated
 );
 
-void invalidateSimplexLpBasis(
+void invalidateEkkBasis(
     HighsSimplexStatus& status  // !< Status of simplex LP whose
                                 // basis is to be invalidated
 );
 
-void invalidateSimplexLp(
+void invalidateEkk(
     HighsSimplexStatus& status  // !< Status of simplex LP to be invalidated
 );
 

@@ -1115,6 +1115,9 @@ class Highs {
   // Invalidates info_ and resets the values of its members
   void clearInfo();
 
+  // Invalidates ekk_instance_
+  void clearEkk();
+
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();

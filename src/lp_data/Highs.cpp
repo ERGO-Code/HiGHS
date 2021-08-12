@@ -217,6 +217,8 @@ HighsStatus Highs::writeInfo(const std::string filename) {
 // each
 HighsStatus Highs::passModel(HighsModel model) {
   HighsStatus return_status = HighsStatus::kOk;
+  // Clear the incumbent model and any associated data
+  clearModel();
   HighsLp& lp = model_.lp_;
   HighsHessian& hessian = model_.hessian_;
   // Move the model's LP and Hessian to the internal LP and Hessian
@@ -874,9 +876,9 @@ HighsStatus Highs::run() {
           // and EKK expects a refined basis, so set it up now
           refineBasis(incumbent_lp, solution_, basis_);
 
-          ekk_instance_.lp_name_ = "Postsolve LP";
 	  // Scrap the EKK data from solving the presolved LP
-	  invalidateSimplexLp(ekk_instance_.status_);
+	  invalidateEkk(ekk_instance_.status_);
+          ekk_instance_.lp_name_ = "Postsolve LP";
           // Set up the iteration count and timing records so that
           // adding the corresponding values after callSolveLp gives
           // difference
@@ -2047,6 +2049,7 @@ void Highs::clearUserSolverData() {
   clearSolution();
   clearBasis();
   clearInfo();
+  clearEkk();
 }
 
 void Highs::clearModelStatus() {
@@ -2063,6 +2066,8 @@ void Highs::clearSolution() {
 void Highs::clearBasis() { clearBasisUtil(basis_); }
 
 void Highs::clearInfo() { info_.clear(); }
+
+void Highs::clearEkk() { invalidateEkk(ekk_instance_.status_); }
 
 // The method below runs calls solveLp for the given LP
 HighsStatus Highs::callSolveLp(HighsLp& lp, const string message) {
