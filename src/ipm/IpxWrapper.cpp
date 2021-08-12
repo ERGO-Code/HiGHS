@@ -515,9 +515,9 @@ void getHighsNonVertexSolution(const HighsLogOptions& log_options,
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, bool& imprecise_solution,
-                       HighsBasis& highs_basis, HighsSolution& highs_solution,
-                       HighsIterationCounts& iteration_counts,
+                       const HighsLp& lp, 
+                       HighsBasis& highs_basis,
+		       HighsSolution& highs_solution,
                        HighsModelStatus& model_status,
                        HighsInfo& highs_info) {
   // Use IPX to try to solve the LP
@@ -550,8 +550,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   highs_solution.value_valid = false;
   highs_solution.dual_valid = false;
   // Indicate that no imprecise soluition hs (yet) been found
-  imprecise_solution = false;
-  resetModelStatusAndSolutionParams(model_status, highs_info, options);
+  resetModelStatusAndHighsInfo(model_status, highs_info);
   // Create the LpSolver instance
   ipx::LpSolver lps;
   // Set IPX parameters
@@ -584,7 +583,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.crossover_start = options.start_crossover_tolerance;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  parameters.ipm_maxiter = options.ipm_iteration_limit - iteration_counts.ipm;
+  parameters.ipm_maxiter = options.ipm_iteration_limit - highs_info.ipm_iteration_count;
   // Determine if crossover is to be run or not
   parameters.crossover = options.run_crossover;
   if (!parameters.crossover) {
@@ -623,10 +622,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   const ipx::Info ipx_info = lps.GetInfo();
-  iteration_counts.ipm += (HighsInt)ipx_info.iter;
-
-  iteration_counts.crossover += (HighsInt)ipx_info.updates_crossover;
-  // iteration_counts.crossover += (int)ipx_info.pushes_crossover;
+  highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
+  highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  // highs_info.crossover_iteration_count += (int)ipx_info.pushes_crossover;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
@@ -768,8 +766,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   const bool have_basic_solution =
       ipx_info.status_crossover != IPX_STATUS_not_run;
   // Both crossover and IPM can be imprecise
-  imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise ||
-                       ipx_info.status_ipm == IPX_STATUS_imprecise;
+  const bool imprecise_solution =
+    ipx_info.status_crossover == IPX_STATUS_imprecise ||
+    ipx_info.status_ipm == IPX_STATUS_imprecise;
   if (have_basic_solution) {
     IpxSolution ipx_solution;
     ipx_solution.num_col = num_col;
@@ -805,8 +804,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   return return_status;
 }
 
-HighsStatus solveLpIpx(bool& imprecise_solution, HighsLpSolverObject& solver_object) {
-  return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, imprecise_solution,
-                    solver_object.basis_, solver_object.solution_, solver_object.iteration_counts_,
+HighsStatus solveLpIpx(HighsLpSolverObject& solver_object) {
+  return solveLpIpx(solver_object.options_, solver_object.timer_, solver_object.lp_, 
+                    solver_object.basis_, solver_object.solution_, 
                     solver_object.unscaled_model_status_, solver_object.highs_info_);
 }

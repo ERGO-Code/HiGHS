@@ -382,13 +382,6 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
   }
 }
 
-void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts) {
-  iteration_counts.simplex = 0;
-  iteration_counts.ipm = 0;
-  iteration_counts.crossover = 0;
-  iteration_counts.qp = 0;
-}
-
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {

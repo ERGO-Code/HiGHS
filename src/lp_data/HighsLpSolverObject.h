@@ -48,8 +48,6 @@ class HighsLpSolverObject {
 
   HighsModelStatus unscaled_model_status_ = HighsModelStatus::kNotset;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
-  HighsIterationCounts iteration_counts_;
-
 };
 
 #endif  // LP_DATA_HIGHS_LP_SOLVER_OBJECT_H_

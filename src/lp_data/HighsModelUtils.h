@@ -54,8 +54,6 @@ std::string utilBasisStatusToString(const HighsBasisStatus basis_status);
 
 std::string utilBasisValidityToString(const HighsInt basis_validity);
 
-void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts);
-
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 
 std::string statusToString(const HighsBasisStatus status, const double lower,

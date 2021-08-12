@@ -761,49 +761,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 }
 #endif
 
-std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
-  std::string iteration_statement = "";
-  bool not_first = false;
-  HighsInt num_positive_count = 0;
-  if (iterations_counts.simplex) num_positive_count++;
-  if (iterations_counts.ipm) num_positive_count++;
-  if (iterations_counts.crossover) num_positive_count++;
-  if (num_positive_count == 0) {
-    iteration_statement += "0 iterations; ";
-    return iteration_statement;
-  }
-  if (num_positive_count > 1) iteration_statement += "(";
-  HighsInt count;
-  std::string count_str;
-  count = iterations_counts.simplex;
-  if (count) {
-    count_str = std::to_string(count);
-    if (not_first) iteration_statement += "; ";
-    iteration_statement += count_str + " " + "Simplex";
-    not_first = true;
-  }
-  count = iterations_counts.ipm;
-  if (count) {
-    count_str = std::to_string(count);
-    if (not_first) iteration_statement += "; ";
-    iteration_statement += count_str + " " + "IPM";
-    not_first = true;
-  }
-  count = iterations_counts.crossover;
-  if (count) {
-    count_str = std::to_string(count);
-    if (not_first) iteration_statement += "; ";
-    iteration_statement += count_str + " " + "Crossover";
-    not_first = true;
-  }
-  if (num_positive_count > 1) {
-    iteration_statement += ") Iterations; ";
-  } else {
-    iteration_statement += " iterations; ";
-  }
-  return iteration_statement;
-}
-
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.unscaled_model_status_ = HighsModelStatus::kNotset;
   solver_object.scaled_model_status_ = HighsModelStatus::kNotset;
@@ -831,80 +788,6 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
   highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 
-}
-
-void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
-  resetModelStatusAndSolutionParams(highs_model_object.unscaled_model_status_,
-                                    highs_model_object.highs_info_,
-                                    highs_model_object.options_);
-}
-
-void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
-                                       HighsInfo& highs_info,
-                                       const HighsOptions& options) {
-  model_status = HighsModelStatus::kNotset;
-  resetSolutionParams(highs_info, options);
-}
-
-void resetSolutionParams(HighsInfo& highs_info,
-                         const HighsOptions& options) {
-  // Save a copy of the unscaled solution params to recover the objective
-  HighsInfo save_highs_info;
-  copySolutionObjectiveParams(highs_info, save_highs_info);
-  // Invalidate the solution params then reset the feasibility
-  // tolerances and recover the objective
-  invalidateSolutionParams(highs_info);
-  copySolutionObjectiveParams(save_highs_info, highs_info);
-}
-
-// Invalidate a HighsInfo instance
-void invalidateSolutionParams(HighsInfo& highs_info) {
-  highs_info.objective_function_value = 0;
-  invalidateSolutionStatusParams(highs_info);
-  invalidateSolutionInfeasibilityParams(highs_info);
-}
-
-// Invalidate the solution status values in a HighsInfo
-// instance.
-void invalidateSolutionStatusParams(HighsInfo& highs_info) {
-  highs_info.primal_solution_status = kSolutionStatusNone;
-  highs_info.dual_solution_status = kSolutionStatusNone;
-}
-
-// Invalidate the infeasibility values in a HighsInfo
-// instance.
-void invalidateSolutionInfeasibilityParams(
-    HighsInfo& highs_info) {
-  highs_info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  highs_info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  highs_info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  highs_info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-}
-
-void copySolutionObjectiveParams(
-    const HighsInfo& from_highs_info,
-    HighsInfo& to_highs_info) {
-  to_highs_info.objective_function_value =
-      from_highs_info.objective_function_value;
-}
-
-void copyAsSolutionParams(HighsInfo& to_highs_info,
-                  const HighsInfo& from_highs_info) {
-  to_highs_info.primal_solution_status = from_highs_info.primal_solution_status;
-  to_highs_info.dual_solution_status = from_highs_info.dual_solution_status;
-  to_highs_info.objective_function_value =
-      from_highs_info.objective_function_value;
-  to_highs_info.num_primal_infeasibilities =
-      from_highs_info.num_primal_infeasibilities;
-  to_highs_info.max_primal_infeasibility =
-      from_highs_info.max_primal_infeasibility;
-  to_highs_info.sum_primal_infeasibilities =
-      from_highs_info.sum_primal_infeasibilities;
-  to_highs_info.num_dual_infeasibilities = from_highs_info.num_dual_infeasibilities;
-  to_highs_info.max_dual_infeasibility = from_highs_info.max_dual_infeasibility;
-  to_highs_info.sum_dual_infeasibilities = from_highs_info.sum_dual_infeasibilities;
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {

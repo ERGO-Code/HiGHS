@@ -42,7 +42,6 @@ class HighsModelObject {
   HighsModelStatus scaled_model_status_ = HighsModelStatus::kNotset;
 
   HighsInfo highs_info_;
-  HighsIterationCounts iteration_counts_;
   HighsBasis basis_;
   HighsSolution solution_;
 

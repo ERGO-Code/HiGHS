@@ -59,6 +59,13 @@ void recoverIncumbentAndSimplexLp(bool& incumbent_lp_moved,
   }
 }
 
+HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object, HighsStatus return_status) {
+  // Copy the simplex iteration count to highs_info_ from ekk_instance
+  solver_object.highs_info_.simplex_iteration_count =
+    solver_object.ekk_instance_.iteration_count_;
+  return return_status;
+}
+
 HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = solver_object.options_;
@@ -78,6 +85,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
 
   // Refresh the HEkk pointers
   ekk_instance.refreshPointers(&options, &solver_object.timer_);
+  // Copy the simplex iteration count from highs_info_ to ekk_instance, just for convenience
+  ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
 
   // Reset the model status and solution parameters for the unscaled
   // LP in case of premature return
@@ -94,7 +103,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
         ") "
         "number of constraints\n",
         lp.num_row_);
-    return HighsStatus::kError;
+    return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }
   // On entry to solveLpSimplex, the incumbent LP is assumed to be
   // unscaled and, if the simplex instance is initialised, it is
@@ -127,7 +136,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     if (call_status == HighsStatus::kError) {
 	assert(incumbent_lp_scaled == lp.is_scaled_);
 	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-      return HighsStatus::kError;
+      return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
     }
     incumbent_lp_moved = true;
   } else {
@@ -142,9 +151,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       recoverIncumbentAndSimplexLp(incumbent_lp_moved, incumbent_lp_scaled, lp,
                                    ekk_lp);
       assert(!incumbent_lp_moved && !incumbent_lp_scaled);
-	assert(incumbent_lp_scaled == lp.is_scaled_);
-	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-      return return_status;
+      assert(incumbent_lp_scaled == lp.is_scaled_);
+      assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
+      return returnFromSolveLpSimplex(solver_object, return_status);
     }
   }
   HighsInt num_unscaled_primal_infeasibility = kHighsIllegalInfeasibilityCount;
@@ -165,14 +174,12 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
 	assert(!incumbent_lp_moved && !incumbent_lp_scaled);
 	assert(incumbent_lp_scaled == lp.is_scaled_);
 	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-	return return_status;
+	return returnFromSolveLpSimplex(solver_object, return_status);
       }
-      // Copy solution data into the HMO
+      // Copy solution data from the EKK instance
       scaled_model_status = ekk_instance.model_status_;
-      highs_info.objective_function_value =
-	ekk_instance.info_.primal_objective_value;
-      solver_object.iteration_counts_.simplex +=
-	ekk_instance.iteration_count_;
+      highs_info.objective_function_value = ekk_instance.info_.primal_objective_value;
+      solver_object.highs_info_.simplex_iteration_count = ekk_instance.iteration_count_;
       solution = ekk_instance.getSolution();
       basis = ekk_instance.getHighsBasis();
       if (incumbent_lp_moved) {
@@ -235,7 +242,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
 	assert(!incumbent_lp_moved && !incumbent_lp_scaled);
 	assert(incumbent_lp_scaled == lp.is_scaled_);
 	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-	return return_status;
+	return returnFromSolveLpSimplex(solver_object, return_status);
       }
     }
     assert(options.simplex_unscaled_solution_strategy ==
@@ -308,7 +315,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     if (return_status == HighsStatus::kError) {
 	assert(incumbent_lp_scaled == lp.is_scaled_);
 	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-      return HighsStatus::kError;
+      return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
     }
   } else {
     // Solve the unscaled LP with unscaled NLA
@@ -316,7 +323,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     if (return_status == HighsStatus::kError) {
 	assert(incumbent_lp_scaled == lp.is_scaled_);
 	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-      return HighsStatus::kError;
+      return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
     }
     // Move the incumbent LP back from Ekk
     lp = std::move(ekk_lp);
@@ -324,12 +331,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // Copy the incumbent LP to Ekk
     ekk_lp = lp;
   }
-  // Copy solution data into the HMO
+  // Copy solution data from the EKK istance
   //
   scaled_model_status = ekk_instance.model_status_;
-  highs_info.objective_function_value =
-    ekk_instance.info_.primal_objective_value;
-  solver_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
+  highs_info.objective_function_value = ekk_instance.info_.primal_objective_value;
+  solver_object.highs_info_.simplex_iteration_count = ekk_instance.iteration_count_;
   solution = ekk_instance.getSolution();
   basis = ekk_instance.getHighsBasis();
   // The unscaled LP has been solved - either directly, or because
@@ -367,6 +373,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   return_status = highsStatusFromHighsModelStatus(unscaled_model_status);
 	assert(incumbent_lp_scaled == lp.is_scaled_);
 	assert(ekk_instance.lp_.is_scaled_ == lp.scale_.has_scaling);
-  return return_status;
+  return returnFromSolveLpSimplex(solver_object, return_status);
 }
 #endif

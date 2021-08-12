@@ -23,9 +23,6 @@ void HEkk::initialiseControl() {
       kSimplexDualEdgeWeightStrategyChoose;
   info_.dual_steepest_edge_weight_log_error_threshold =
       (*opt_point_).dual_steepest_edge_weight_log_error_threshold;
-  // Initialise the iteration count when control started. Need to
-  // consider what to do if this isn't zero
-  assert(iteration_count_ == 0);
   info_.control_iteration_count0 = iteration_count_;
   // Initialise the densities
   info_.col_aq_density = 0;

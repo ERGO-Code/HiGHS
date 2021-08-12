@@ -302,7 +302,7 @@ void HEkkDual::minorUpdate() {
   if (minor_new_devex_framework) {
     /*
     printf("Iter %7" HIGHSINT_FORMAT " (Major %7" HIGHSINT_FORMAT "): Minor new
-    Devex framework\n", ekk_instance_.iteration_counts_.simplex,
+    Devex framework\n", ekk_instance_.iteration_count_,
            multi_iteration);
     */
     minorInitialiseDevexFramework();
@@ -554,7 +554,7 @@ void HEkkDual::majorUpdate() {
   majorUpdateFactor();
   if (new_devex_framework) {
     //    printf("Iter %7" HIGHSINT_FORMAT ": New Devex framework\n",
-    //    ekk_instance_.iteration_counts_.simplex);
+    //    ekk_instance_.iteration_count_);
     const bool parallel = true;
     initialiseDevexFramework(parallel);
   }

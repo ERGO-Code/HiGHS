@@ -101,30 +101,9 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
     const IpxSolution& ipx_solution, HighsBasis& highs_basis,
     HighsSolution& highs_solution);
 
-std::string iterationsToString(const HighsIterationCounts& iterations_counts);
-
 void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object);
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
 				  HighsInfo& highs_info);
-void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
-void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
-                                       HighsInfo& highs_info,
-                                       const HighsOptions& options);
-void resetSolutionParams(HighsInfo& highs_info,
-                         const HighsOptions& options);
-
-void invalidateSolutionParams(HighsInfo& highs_info);
-void invalidateSolutionStatusParams(HighsInfo& highs_info);
-void invalidateSolutionInfeasibilityParams(
-    HighsInfo& highs_info);
-
-void copySolutionObjectiveParams(
-    const HighsInfo& from_highs_info,
-    HighsInfo& to_highs_info);
-
-void copyAsSolutionParams(HighsInfo& to_highs_info,
-			  const HighsInfo& from_highs_info);
-
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 
 bool isPrimalSolutionRightSize(const HighsLp& lp,

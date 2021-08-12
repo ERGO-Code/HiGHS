@@ -1047,7 +1047,6 @@ class Highs {
   HighsTimer timer_;
 
   HighsOptions options_;
-  HighsIterationCounts iteration_counts_;
   HighsInfo info_;
 
   HighsPresolveStatus model_presolve_status_ =
@@ -1098,14 +1097,12 @@ class Highs {
   void forceHighsSolutionBasisSize();
   //
   // For cases where there is no solution data for the model, but its
-  // status is proved otherwise. Calls clearSolver(), then sets
-  // unscaled and scaled model status to model_status and copies in
-  // the iteration counts.
-  void setHighsModelStatusAndInfo(const HighsModelStatus model_status);
+  // status is proved otherwise. Sets the model status, then clears any solution and basis data 
+  void setHighsModelStatusAndClearSolutionAndBasis(const HighsModelStatus model_status);
   //
   // Sets unscaled and scaled model status, basis, solution and info
   // from the highs_model_object
-  void setHighsModelStatusBasisSolutionAndInfo();
+  void setBasisValidity();
   //
   // Clears the presolved model and its status
   void clearPresolve();
@@ -1196,6 +1193,7 @@ class Highs {
                                   HighsInt* solution_num_nz,
                                   HighsInt* solution_indices, bool transpose);
   void clearBasisInterface();
+  void zeroIterationCounts();
 
   HighsStatus getDualRayInterface(bool& has_dual_ray, double* dual_ray_value);
 
@@ -1204,6 +1202,7 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
+  HighsStatus checkOptimality(const std::string solver_type, HighsStatus return_status);
 };
 
 #endif

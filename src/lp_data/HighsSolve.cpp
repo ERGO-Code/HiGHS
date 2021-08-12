@@ -32,16 +32,16 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   resetModelStatusAndHighsInfo(solver_object);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                (message + "\n").c_str());
-#ifdef HIGHSDEV
-  // Shouldn't have to check validity of the LP since this is done when it is
-  // loaded or modified
-  call_status = assessLp(solver_object.lp_, options_);
-  // If any errors have been found or normalisation carried out,
-  // call_status will be ERROR or WARNING, so only valid return is OK.
-  assert(call_status == HighsStatus::kOk);
-  return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::kError) return return_status;
-#endif
+  if (options.highs_debug_level > kHighsDebugLevelMin) {
+    // Shouldn't have to check validity of the LP since this is done when it is
+    // loaded or modified
+    call_status = assessLp(solver_object.lp_, options);
+    // If any errors have been found or normalisation carried out,
+    // call_status will be ERROR or WARNING, so only valid return is OK.
+    assert(call_status == HighsStatus::kOk);
+    return_status = interpretCallStatus(call_status, return_status, "assessLp");
+    if (return_status == HighsStatus::kError) return return_status;
+  }
   if (!solver_object.lp_.num_row_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(solver_object);
@@ -56,43 +56,30 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     bool imprecise_solution;
     // Use IPX to solve the LP
     try {
-      call_status = solveLpIpx(imprecise_solution, solver_object);
+      call_status = solveLpIpx(solver_object);
     } catch (const std::exception& exception) {
       highsLogDev(options.log_options, HighsLogType::kError,
                   "Exception %s in solveLpIpx\n", exception.what());
       call_status = HighsStatus::kError;
     }
+    // Non-error return requires a primal solution
+    assert(solver_object.solution_.value_valid);
+    // Set the return_status, model status and, for completeness, scaled
+    // model status
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) return return_status;
-    // Non-error return requires a primal solution
-    assert(solver_object.solution_.value_valid);
-    // Set the scaled model status for completeness
+    // model status has been set in solveLpIpx
     solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
-    // Get the infeasibilities and objective value
-    // ToDo: This should take solver_object.basis_ and use it if it's valid
-    //    getPrimalDualInfeasibilities(solver_object.lp_, solver_object.solution_,
-    //    solver_object.highs_info_);
+   // Get the objective and any KKT failures
+    solver_object.highs_info_.objective_function_value =
+      solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
     getLpKktFailures(options, solver_object.lp_, solver_object.solution_, solver_object.basis_,
                      solver_object.highs_info_);
-    const double objective_function_value =
-        solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
-    solver_object.highs_info_.objective_function_value = objective_function_value;
-
-    HighsInfo check_highs_info;
-    check_highs_info.objective_function_value = objective_function_value;
-    getLpKktFailures(options, solver_object.lp_, solver_object.solution_, solver_object.basis_,
-                     check_highs_info);
-
-    if (debugCompareSolutionParams(options, solver_object.highs_info_,
-                                   check_highs_info) !=
-        HighsDebugStatus::kOk) {
-      return HighsStatus::kError;
-    }
-
+    // Seting the IPM-specific values of (highs_)info_ has been done in solveLpIpx
     if ((solver_object.unscaled_model_status_ == HighsModelStatus::kUnknown ||
          (solver_object.unscaled_model_status_ ==
-              HighsModelStatus::kUnboundedOrInfeasible &&
+	  HighsModelStatus::kUnboundedOrInfeasible &&
           !options.allow_unbounded_or_infeasible)) &&
         options.run_crossover) {
       // IPX has returned a model status that HiGHS would rather

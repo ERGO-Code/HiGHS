@@ -84,14 +84,10 @@ void HEkk::passScaledLp(const HighsLp& lp) {
 
 HighsStatus HEkk::solve() {
   initialiseAnalysis();
-  // Set iteration_count_ = 0 and call initialiseControl(), just to
-  // check that info-based density methods are identical
-  iteration_count_ = 0;
   initialiseControl();
 
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
-  iteration_count_ = 0;
   dual_simplex_cleanup_level_ = 0;
   if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
 

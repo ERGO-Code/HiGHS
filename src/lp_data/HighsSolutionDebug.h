@@ -68,25 +68,25 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors);
 
-HighsDebugStatus debugCompareSolutionParams(
+HighsDebugStatus debugCompareHighsInfo(
     const HighsOptions& options, const HighsInfo& highs_info0,
     const HighsInfo& highs_info1);
-HighsDebugStatus debugCompareSolutionObjectiveParams(
+HighsDebugStatus debugCompareHighsInfoObjective(
     const HighsOptions& options, const HighsInfo& highs_info0,
     const HighsInfo& highs_info1);
-HighsDebugStatus debugCompareSolutionStatusParams(
+HighsDebugStatus debugCompareHighsInfoStatus(
     const HighsOptions& options, const HighsInfo& highs_info0,
     const HighsInfo& highs_info1);
-HighsDebugStatus debugCompareSolutionInfeasibilityParams(
+HighsDebugStatus debugCompareHighsInfoInfeasibility(
     const HighsOptions& options, const HighsInfo& highs_info0,
     const HighsInfo& highs_info1);
 
-HighsDebugStatus debugCompareSolutionParamValue(const string name,
+HighsDebugStatus debugCompareHighsInfoDouble(const string name,
                                                 const HighsOptions& options,
                                                 const double v0,
                                                 const double v1);
 
-HighsDebugStatus debugCompareSolutionParamInteger(const string name,
+HighsDebugStatus debugCompareHighsInfoInteger(const string name,
                                                   const HighsOptions& options,
                                                   const HighsInt v0,
                                                   const HighsInt v1);

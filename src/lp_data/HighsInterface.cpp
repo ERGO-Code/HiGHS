@@ -1575,6 +1575,13 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   return HighsStatus::kOk;
 }
 
+void Highs::zeroIterationCounts() {
+  info_.simplex_iteration_count = 0;
+  info_.ipm_iteration_count = 0;
+  info_.crossover_iteration_count = 0;
+  info_.qp_iteration_count = 0;
+}
+
 HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
                                        double* dual_ray_value) {
   HighsModelObject& highs_model_object = hmos_[0];
@@ -1660,3 +1667,33 @@ void Highs::clearZeroHessian() {
     }
   }
 }
+
+HighsStatus Highs::checkOptimality(const std::string solver_type, HighsStatus return_status) {
+  // Check for infeasibility measures incompatible with optimality
+  assert(return_status != HighsStatus::kError);
+  // Cannot expect to have no dual_infeasibilities since the QP solver
+  // (and, of course, the MIP solver) give no dual information
+  if (info_.num_primal_infeasibilities == 0 &&
+      info_.num_dual_infeasibilities <=0) return HighsStatus::kOk;
+  HighsLogType log_type = HighsLogType::kWarning;
+  return_status = HighsStatus::kWarning;
+  if (info_.max_primal_infeasibility > sqrt(options_.primal_feasibility_tolerance) ||
+      info_.max_dual_infeasibility > sqrt(options_.dual_feasibility_tolerance)) {
+    // Check for gross errors
+    log_type = HighsLogType::kError;
+    return_status = HighsStatus::kError;
+  }
+  highsLogUser(options_.log_options, log_type,
+                     "%s solver claims optimality, but with num/sum/max "
+                     "primal(%" HIGHSINT_FORMAT
+                     "/%g/%g) and dual(%" HIGHSINT_FORMAT
+                     "/%g/%g) infeasibilities\n", solver_type.c_str(),
+                     info_.num_primal_infeasibilities,
+                     info_.sum_primal_infeasibilities,
+                     info_.max_primal_infeasibility,
+                     info_.num_dual_infeasibilities,
+                     info_.sum_dual_infeasibilities,
+                     info_.max_dual_infeasibility);
+  return return_status;
+}
+
