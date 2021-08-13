@@ -76,11 +76,11 @@ HighsStatus applyScalingToLpRowBounds(
     const vector<double>& rowScale,
     const HighsIndexCollection& index_collection);
 
-void applyRowScalingToMatrix(const vector<double>& rowScale,
-                             const HighsInt numCol,
-                             const vector<HighsInt>& Astart,
-                             const vector<HighsInt>& Aindex,
-                             vector<double>& Avalue);
+void applyScalingToMatrix(const vector<double>& rowScale,
+			  const HighsInt num_col,
+			  const vector<HighsInt>& start,
+			  const vector<HighsInt>& index,
+			  vector<double>& value);
 
 void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
                     const HighsInt numCol, const vector<HighsInt>& Astart,

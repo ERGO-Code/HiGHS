@@ -48,7 +48,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   bool& valid_basis = basis.valid;
   bool valid_simplex_lp = false;//simplex_status.valid;
   bool& valid_simplex_basis = simplex_status.has_basis;
-  bool& scaled_lp = lp.scale_.has_scaling;
+  bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of rows
@@ -130,9 +130,9 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
                              &local_Aindex[0], &local_Avalue[0]),
         return_status, "lp.a_matrix_.addCols");
     if (return_status == HighsStatus::kError) return return_status;
-    if (scaled_lp) {
+    if (lp_has_scaling) {
       // Apply the row scaling to the new columns
-      applyRowScalingToMatrix(scale.row, XnumNewCol, local_Astart,
+      applyScalingToMatrix(scale.row, XnumNewCol, local_Astart,
 			      local_Aindex, local_Avalue);
       // Determine and apply the column scaling for the new columns
       colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
@@ -147,7 +147,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
                                        &local_Avalue[0]),
           return_status, "simplex_lp.a_matrix_.addCols");
       if (return_status == HighsStatus::kError) return return_status;
-      if (scaled_lp) {
+      if (lp_has_scaling) {
         // Apply the column scaling to the new costs and bounds
         HighsIndexCollection scaling_index_collection;
         scaling_index_collection.dimension_ = newNumCol;
@@ -236,7 +236,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   bool& valid_basis = basis.valid;
   bool valid_simplex_lp = false;//simplex_status.valid;
   bool& valid_simplex_basis = simplex_status.has_basis;
-  bool& scaled_lp = lp.scale_.has_scaling;
+  bool& lp_has_scaling = lp.scale_.has_scaling;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of columns
@@ -277,57 +277,58 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     if (return_status == HighsStatus::kError) return return_status;
   }
 
-  // Now consider scaling. First resize the scaling factors and
-  // initialise the new components
-  scale.row.resize(newNumRow);
-  for (HighsInt row = 0; row < XnumNewRow; row++)
-    scale.row[lp.num_row_ + row] = 1.0;
+  if (lp_has_scaling) {
+    scale.row.resize(newNumRow);
+    for (HighsInt iRow = 0; iRow < XnumNewRow; iRow++)
+      scale.row[lp.num_row_ + iRow] = 1.0;
+  }
 
   // Now consider any new matrix rows
   if (XnumNewNZ) {
     // There are nonzeros, so take a copy of the matrix that can be
     // normalised
+    HighsSparseMatrix local_ar_matrix;
     HighsInt local_num_new_nz = XnumNewNZ;
-    std::vector<HighsInt> local_ARstart{XARstart, XARstart + XnumNewRow};
-    std::vector<HighsInt> local_ARindex{XARindex, XARindex + XnumNewNZ};
-    std::vector<double> local_ARvalue{XARvalue, XARvalue + XnumNewNZ};
-    local_ARstart.resize(XnumNewRow + 1);
-    local_ARstart[XnumNewRow] = XnumNewNZ;
+    std::vector<HighsInt> local_ar_start{XARstart, XARstart + XnumNewRow};
+    std::vector<HighsInt> local_ar_index{XARindex, XARindex + XnumNewNZ};
+    std::vector<double> local_ar_value{XARvalue, XARvalue + XnumNewNZ};
+    local_ar_start.resize(XnumNewRow + 1);
+    local_ar_start[XnumNewRow] = XnumNewNZ;
     // Assess the matrix columns
     return_status = interpretCallStatus(
         assessMatrix(options.log_options, "LP", lp.num_col_, XnumNewRow,
-                     local_ARstart, local_ARindex, local_ARvalue,
+                     local_ar_start, local_ar_index, local_ar_value,
                      options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::kError) return return_status;
-    local_num_new_nz = local_ARstart[XnumNewRow];
+    local_num_new_nz = local_ar_start[XnumNewRow];
     // Append the rows to LP matrix
     return_status = interpretCallStatus(
-        lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz, &local_ARstart[0],
-                             &local_ARindex[0], &local_ARvalue[0]),
+        lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz, &local_ar_start[0],
+                             &local_ar_index[0], &local_ar_value[0]),
         return_status, "lp.a_matrix_.addRows");
     if (return_status == HighsStatus::kError) return return_status;
-    if (scaled_lp) {
+    if (lp_has_scaling) {
       // Apply the column scaling to the new rows
-      applyRowScalingToMatrix(scale.col, XnumNewRow, local_ARstart,
-			      local_ARindex, local_ARvalue);
+      applyScalingToMatrix(scale.col, XnumNewRow, local_ar_start,
+			   local_ar_index, local_ar_value);
       // Determine and apply the row scaling for the new rows. Using
       // colScaleMatrix to take the row-wise matrix and then treat
       // it col-wise
       colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-		     &scale.row[lp.num_row_], XnumNewRow, local_ARstart,
-		     local_ARindex, local_ARvalue);
+		     &scale.row[lp.num_row_], XnumNewRow, local_ar_start,
+		     local_ar_index, local_ar_value);
     }
     if (valid_simplex_lp) {
       // Append the rows to the Simplex LP matrix
       return_status = interpretCallStatus(
           simplex_lp.a_matrix_.addRows(XnumNewRow, local_num_new_nz,
-                                       &local_ARstart[0], &local_ARindex[0],
-                                       &local_ARvalue[0]),
+                                       &local_ar_start[0], &local_ar_index[0],
+                                       &local_ar_value[0]),
           return_status, "simplex_lp.a_matrix_.addRows");
       if (return_status == HighsStatus::kError) return return_status;
       // Should be extendSimplexLpRandomVectors
-      if (scaled_lp) {
+      if (lp_has_scaling) {
         // Apply the row scaling to the bounds
         HighsIndexCollection scaling_index_collection;
         scaling_index_collection.dimension_ = newNumRow;

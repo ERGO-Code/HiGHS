@@ -1057,15 +1057,14 @@ HighsStatus applyScalingToLpRowBounds(
   return HighsStatus::kOk;
 }
 
-void applyRowScalingToMatrix(const vector<double>& rowScale,
-                             const HighsInt numCol,
-                             const vector<HighsInt>& Astart,
-                             const vector<HighsInt>& Aindex,
-                             vector<double>& Avalue) {
+void applyScalingToMatrix(const vector<double>& rowScale,
+			  const HighsInt numCol,
+			  const vector<HighsInt>& start,
+			  const vector<HighsInt>& index,
+			  vector<double>& value) {
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
-    for (HighsInt el = Astart[iCol]; el < Astart[iCol + 1]; el++) {
-      Avalue[el] *= rowScale[Aindex[el]];
-    }
+    for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
+      value[iEl] *= rowScale[index[iEl]];
   }
 }
 
