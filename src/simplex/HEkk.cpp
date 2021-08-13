@@ -80,7 +80,7 @@ void HEkk::clearData() {
   // status_; Invalidated elsewhere
   this->clearInfo();
   model_status_ = HighsModelStatus::kNotset;
-  this->clearBasis();
+  this->clearSimplexBasis(this->basis_);
   // random_; Has no data
   this->workEdWt_ = NULL;
   this->workEdWtFull_ = NULL;
@@ -97,7 +97,7 @@ void HEkk::clearData() {
 
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
-  //  this->exit_algorithm_ = ; No clear yet
+  this->exit_algorithm_ = SimplexAlgorithm::kPrimal; 
   this->return_primal_solution_status_ = 0;
   this->return_dual_solution_status_ = 0;
 
@@ -107,9 +107,104 @@ void HEkk::clearData() {
 }
 
 void HEkk::clearInfo() {
+  HighsSimplexInfo& info = this->info_;
+  info.workCost_.clear();
+  info.workDual_.clear();
+  info.workShift_.clear();
+  info.workLower_.clear();
+  info.workUpper_.clear();
+  info.workRange_.clear();
+  info.workValue_.clear();
+  info.workLowerShift_.clear();
+  info.workUpperShift_.clear();
+  info.baseLower_.clear();
+  info.baseUpper_.clear();
+  info.baseValue_.clear();
+  info.numTotRandomValue_.clear();
+  info.numTotPermutation_.clear();
+  info.numColPermutation_.clear();
+  info.devex_index_.clear();
+  info.phase1_backtracking_test_done = false;
+  info.phase2_backtracking_test_done = false;
+  info.backtracking_ = false;
+  info.valid_backtracking_basis_ = false;
+  this->clearSimplexBasis(info.backtracking_basis_);
+  info.backtracking_basis_costs_perturbed_ = 0;
+  info.backtracking_basis_bounds_perturbed_ = 0;
+  info.backtracking_basis_workShift_.clear();
+  info.backtracking_basis_workLowerShift_.clear();
+  info.backtracking_basis_workUpperShift_.clear();
+  info.backtracking_basis_edge_weights_.clear();
+  info.dual_ray_row_ = -1;
+  info.dual_ray_sign_ = 0;
+  info.primal_ray_col_ = -1;
+  info.primal_ray_sign_ = 0;
+  info.simplex_strategy = 0;
+  info.dual_edge_weight_strategy = 0;
+  info.primal_edge_weight_strategy = 0;
+  info.price_strategy = 0;
+  info.dual_simplex_cost_perturbation_multiplier = 1;
+  info.primal_simplex_phase1_cost_perturbation_multiplier = 1;
+  info.primal_simplex_bound_perturbation_multiplier = 1;
+  info.factor_pivot_threshold = 0;
+  info.update_limit = 0;
+  info.control_iteration_count0 = 0;
+  info.col_aq_density = 0.0;
+  info.row_ep_density = 0.0;
+  info.row_ap_density = 0.0;
+  info.row_DSE_density = 0.0;
+  info.col_basic_feasibility_change_density = 0.0;
+  info.row_basic_feasibility_change_density = 0.0;
+  info.col_BFRT_density = 0.0;
+  info.primal_col_density = 0.0;
+  info.dual_col_density = 0.0;
+  info.allow_dual_steepest_edge_to_devex_switch = 0;
+  info.dual_steepest_edge_weight_log_error_threshold = 0;
+  info.costly_DSE_frequency = 0;
+  info.num_costly_DSE_iteration = 0;
+  info.costly_DSE_measure = 0;
+  info.average_log_low_DSE_weight_error = 0;
+  info.average_log_high_DSE_weight_error = 0;
+  info.run_quiet = false;
+  info.store_squared_primal_infeasibility = false;
+  info.report_simplex_inner_clock = false;
+  info.report_simplex_outer_clock = false;
+  info.report_simplex_phases_clock = false;
+  info.report_HFactor_clock = false;
+  info.analyse_lp = false;
+  info.analyse_iterations = false;
+  info.analyse_invert_form = false;
+  info.allow_cost_perturbation = true;
+  info.allow_bound_perturbation = true;
+  info.costs_perturbed = false;
+  info.bounds_perturbed = false;
+  info.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  info.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  info.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  info.dual_phase1_iteration_count = 0;
+  info.dual_phase2_iteration_count = 0;
+  info.primal_phase1_iteration_count = 0;
+  info.primal_phase2_iteration_count = 0;
+  info.primal_bound_swap = 0;
+  info.min_threads = 1;
+  info.num_threads = 1;
+  info.max_threads = kHighsThreadLimit;
+  info.multi_iteration = 0;
+  info.update_count = 0;
+  info.dual_objective_value = 0;
+  info.primal_objective_value = 0;
+  info.updated_dual_objective_value = 0;
+  info.updated_primal_objective_value = 0;
+  info.num_basic_logicals = 0;
 }
 
-void HEkk::clearBasis() {
+void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
+  simplex_basis.basicIndex_.clear();
+  simplex_basis.nonbasicFlag_.clear();
+  simplex_basis.nonbasicMove_.clear();
 }
 
 void HEkk::updateStatus(LpAction action) {
@@ -166,10 +261,14 @@ void HEkk::updateStatus(LpAction action) {
   }
 }
 
-void HEkk::refreshPointers(HighsLpSolverObject& solver_object) {
-  opt_point_ = &solver_object.options_;
-  tim_point_ = &solver_object.timer_;
-  analysis_.timer_ = tim_point_;
+void HEkk::setPointers(HighsLpSolverObject& solver_object) {
+  setPointers(&solver_object.options_, &solver_object.timer_);
+}
+
+void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
+  opt_point_ = opt_point;
+  tim_point_ = tim_point;
+  analysis_.timer_ = tim_point;
 }
 
 HighsStatus HEkk::moveNewLp(HighsLp lp) {
@@ -588,15 +687,18 @@ HighsBasis HEkk::getHighsBasis() {
   return highs_basis;
 }
 
-HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
-    const bool only_from_known_basis) {
+HighsInt HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
   // If there's no basis, return error if the basis has to be known,
   // otherwise set a logical basis
+  //
+  // If the basis has to be known, then non-negative return value is
+  // rank deficiency; negative return value is error. Otherwise, any
+  // rank deficiency is handled and return is 0
   if (!status_.has_basis) {
     if (only_from_known_basis) {
       highsLogDev(opt_point_->log_options, HighsLogType::kError,
                   "Simplex basis should be known but isn't\n");
-      return -(HighsInt)HighsStatus::kError;
+      return -1;
     }
     setBasis();
   }

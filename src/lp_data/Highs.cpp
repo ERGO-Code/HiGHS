@@ -980,12 +980,15 @@ HighsStatus Highs::run() {
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getDualRay");
   return getDualRayInterface(has_dual_ray, dual_ray_value);
 }
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
-  underDevelopmentLogMessage("getPrimalRay");
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getPrimalRay");
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
@@ -1015,24 +1018,20 @@ HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  HighsInt numRow = model_.lp_.num_row_;
-  if (row < 0 || row >= numRow) {
+  HighsInt num_row = model_.lp_.num_row_;
+  if (row < 0 || row >= num_row) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Row index %" HIGHSINT_FORMAT
                  " out of range [0, %" HIGHSINT_FORMAT
                  "] in getBasisInverseRow\n",
-                 row, numRow - 1);
+                 row, num_row - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = ekk_instance_.status_.has_invert;
-  if (!has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "No invertible representation for getBasisInverseRow\n");
-    return HighsStatus::kError;
-  }
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisInverseRow");
   // Compute a row i of the inverse of the basis matrix by solving B^Tx=e_i
   vector<double> rhs;
-  rhs.assign(numRow, 0);
+  rhs.assign(num_row, 0);
   rhs[row] = 1;
   basisSolveInterface(rhs, row_vector, row_num_nz, row_indices, true);
   return HighsStatus::kOk;
@@ -1048,24 +1047,20 @@ HighsStatus Highs::getBasisInverseCol(const HighsInt col, double* col_vector,
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  HighsInt numRow = model_.lp_.num_row_;
-  if (col < 0 || col >= numRow) {
+  HighsInt num_row = model_.lp_.num_row_;
+  if (col < 0 || col >= num_row) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Column index %" HIGHSINT_FORMAT
                  " out of range [0, %" HIGHSINT_FORMAT
                  "] in getBasisInverseCol\n",
-                 col, numRow - 1);
+                 col, num_row - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = ekk_instance_.status_.has_invert;
-  if (!has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "No invertible representation for getBasisInverseCol\n");
-    return HighsStatus::kError;
-  }
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisInverseCol");
   // Compute a col i of the inverse of the basis matrix by solving Bx=e_i
   vector<double> rhs;
-  rhs.assign(numRow, 0);
+  rhs.assign(num_row, 0);
   rhs[col] = 1;
   basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
   return HighsStatus::kOk;
@@ -1086,16 +1081,12 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  bool has_invert = ekk_instance_.status_.has_invert;
-  if (!has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "No invertible representation for getBasisSolve\n");
-    return HighsStatus::kError;
-  }
-  HighsInt numRow = model_.lp_.num_row_;
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisSolve");
+  HighsInt num_row = model_.lp_.num_row_;
   vector<double> rhs;
-  rhs.assign(numRow, 0);
-  for (HighsInt row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
+  rhs.assign(num_row, 0);
+  for (HighsInt row = 0; row < num_row; row++) rhs[row] = Xrhs[row];
   basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices,
                       false);
   return HighsStatus::kOk;
@@ -1117,16 +1108,12 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  bool has_invert = ekk_instance_.status_.has_invert;
-  if (!has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "No invertible representation for getBasisTransposeSolve\n");
-    return HighsStatus::kError;
-  }
-  HighsInt numRow = model_.lp_.num_row_;
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getBasisTransposeSolve");
+  HighsInt num_row = model_.lp_.num_row_;
   vector<double> rhs;
-  rhs.assign(numRow, 0);
-  for (HighsInt row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
+  rhs.assign(num_row, 0);
+  for (HighsInt row = 0; row < num_row; row++) rhs[row] = Xrhs[row];
   basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices,
                       true);
   return HighsStatus::kOk;
@@ -1154,21 +1141,17 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                  row, lp.num_row_ - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = ekk_instance_.status_.has_invert;
-  if (!has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "No invertible representation for getReducedRow\n");
-    return HighsStatus::kError;
-  }
-  HighsInt numRow = lp.num_row_;
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getReducedRow");
+  HighsInt num_row = lp.num_row_;
   vector<double> basis_inverse_row;
   double* basis_inverse_row_vector = (double*)pass_basis_inverse_row_vector;
   if (basis_inverse_row_vector == NULL) {
     vector<double> rhs;
     vector<HighsInt> col_indices;
-    rhs.assign(numRow, 0);
+    rhs.assign(num_row, 0);
     rhs[row] = 1;
-    basis_inverse_row.resize(numRow, 0);
+    basis_inverse_row.resize(num_row, 0);
     // Form B^{-T}e_{row}
     basisSolveInterface(rhs, &basis_inverse_row[0], NULL, NULL, true);
     basis_inverse_row_vector = &basis_inverse_row[0];
@@ -1213,15 +1196,11 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                  col, lp.num_col_ - 1);
     return HighsStatus::kError;
   }
-  bool has_invert = ekk_instance_.status_.has_invert;
-  if (!has_invert) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "No invertible representation for getReducedColumn\n");
-    return HighsStatus::kError;
-  }
-  HighsInt numRow = lp.num_row_;
+  if (!ekk_instance_.status_.has_invert)
+    return invertRequirementError("getReducedColumn");
+  HighsInt num_row = lp.num_row_;
   vector<double> rhs;
-  rhs.assign(numRow, 0);
+  rhs.assign(num_row, 0);
   for (HighsInt el = lp.a_matrix_.start_[col];
        el < lp.a_matrix_.start_[col + 1]; el++)
     rhs[lp.a_matrix_.index_[el]] = lp.a_matrix_.value_[el];
@@ -1938,12 +1917,13 @@ HighsPresolveStatus Highs::runPresolve() {
   }
 
   // Ensure that the LP is column-wise
-  model_.lp_.ensureColWise();
+  HighsLp& original_lp = model_.lp_;
+  original_lp.ensureColWise();
 
-  if (model_.lp_.num_col_ == 0 && model_.lp_.num_row_ == 0)
+  if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
-  // Clear info from previous runs if model_.lp_ has been modified.
+  // Clear info from previous runs if original_lp has been modified.
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
@@ -1962,7 +1942,7 @@ HighsPresolveStatus Highs::runPresolve() {
   }
 
   // Presolve.
-  presolve_.init(model_.lp_, timer_);
+  presolve_.init(original_lp, timer_);
   presolve_.options_ = &options_;
   if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
     double current = timer_.readRunHighsClock();
@@ -1986,21 +1966,25 @@ HighsPresolveStatus Highs::runPresolve() {
               presolve_.presolveStatusToString(presolve_return_status).c_str());
 
   // Update reduction counts.
+  assert(presolve_return_status == presolve_.presolve_status_);
   switch (presolve_.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
       presolve_.info_.n_cols_removed =
-          model_.lp_.num_col_ - reduced_lp.num_col_;
+          original_lp.num_col_ - reduced_lp.num_col_;
       presolve_.info_.n_rows_removed =
-          model_.lp_.num_row_ - reduced_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_matrix_.numNz() -
+          original_lp.num_row_ - reduced_lp.num_row_;
+      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.a_matrix_.numNz() -
                                       (HighsInt)reduced_lp.a_matrix_.numNz();
+      // Clear any scaling information inherited by the reduced LP
+      reduced_lp.clearScale();
+      assert(reduced_lp.dimensionsOk("RunPresolve: reduced_lp"));
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
-      presolve_.info_.n_cols_removed = model_.lp_.num_col_;
-      presolve_.info_.n_rows_removed = model_.lp_.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)model_.lp_.a_matrix_.numNz();
+      presolve_.info_.n_cols_removed = original_lp.num_col_;
+      presolve_.info_.n_rows_removed = original_lp.num_row_;
+      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.a_matrix_.numNz();
       break;
     }
     default:
@@ -2022,7 +2006,11 @@ HighsPostsolveStatus Highs::runPostsolve() {
   if (model_.lp_.sense_ == ObjSense::kMaximize)
     presolve_.negateReducedLpColDuals(true);
 
-  return HighsPostsolveStatus::kSolutionRecovered;
+  // Ensure that the postsolve status is used to set
+  // presolve_.postsolve_status_, as well as being returned
+  HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::kSolutionRecovered;
+  presolve_.postsolve_status_ = postsolve_status;
+  return postsolve_status;
 }
 
 void Highs::clearPresolve() {

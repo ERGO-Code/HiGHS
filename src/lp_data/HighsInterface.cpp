@@ -1281,7 +1281,6 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
   HighsSimplexStatus& ekk_status = ekk_instance_.status_;
-  //
   // For an LP with no rows the solution is vacuous
   if (num_row==0) return return_status;
   if (!ekk_status.has_invert) {
@@ -1290,6 +1289,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // Consider scaling the LP, and then move to EKK
     considerScaling(options_, lp);
     lp.moveLp(ekk_lp);
+    ekk_instance_.setPointers(&options_, &timer_);
     // If the simplex LP isn't initialised, do so
     if (!ekk_status.initialised) {
       return_status = ekk_instance_.setup();
@@ -1301,33 +1301,31 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
 	return return_status;
       }
     }
-  }
-  if (!ekk_status.has_basis) {
-    //
-    // The Ekk instance has no simplex basis, so pass the HiGHS basis
-    // if it's valid, otherwise return an error for consistency with
-    // old code
-    //
-    // Arguable that a warning should be issued and a logical basis
-    // set up
-    if (basis_.valid) {
-      return_status = interpretCallStatus(ekk_instance_.setBasis(basis_),
-                                          return_status, "setBasis");
-      if (return_status == HighsStatus::kError) return return_status;
-    } else {
-      highsLogUser(
-          options_.log_options, HighsLogType::kError,
-          "getBasicVariables called without a simplex or HiGHS basis\n");
-      lp.moveLpBackAndUnapplyScaling(ekk_lp);
-      return HighsStatus::kError;
+    if (!ekk_status.has_basis) {
+      //
+      // The Ekk instance has no simplex basis, so pass the HiGHS basis
+      // if it's valid, otherwise return an error for consistency with
+      // old code
+      //
+      // Arguable that a warning should be issued and a logical basis
+      // set up
+      if (basis_.valid) {
+	return_status = interpretCallStatus(ekk_instance_.setBasis(basis_),
+					    return_status, "setBasis");
+	if (return_status == HighsStatus::kError) return return_status;
+      } else {
+	highsLogUser(
+		     options_.log_options, HighsLogType::kError,
+		     "getBasicVariables called without a simplex or HiGHS basis\n");
+	lp.moveLpBackAndUnapplyScaling(ekk_lp);
+	return HighsStatus::kError;
+      }
     }
-  }
-  assert(ekk_status.has_basis);
-
-  const bool only_from_known_basis = true;
-  if (ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis)) {
+    assert(ekk_status.has_basis);
+    const bool only_from_known_basis = true;
+    HighsInt return_value = ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
     lp.moveLpBackAndUnapplyScaling(ekk_lp);
-    return HighsStatus::kError;
+    if (return_value) return HighsStatus::kError;
   }
   assert(ekk_status.has_invert);
 
@@ -1339,7 +1337,6 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
       basic_variables[row] = -(1 + var - num_col);
     }
   }
-  lp.moveLpBackAndUnapplyScaling(ekk_lp);
   return return_status;
 }
 
@@ -1354,9 +1351,10 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
-  //
   // For an LP with no rows the solution is vacuous
   if (num_row==0) return return_status;
+  assert(ekk_instance_.status_.has_invert);
+  assert(!lp.is_moved_);
   // Set up solve vector with suitably scaled RHS
   HVector solve_vector;
   solve_vector.setup(num_row);
@@ -1500,9 +1498,10 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
-  //
   // For an LP with no rows the dual ray is vacuous
   if (num_row==0) return return_status;
+  assert(ekk_instance_.status_.has_invert);
+  assert(!lp.is_moved_);
   has_dual_ray = ekk_instance_.status_.has_dual_ray;
   if (has_dual_ray && dual_ray_value != NULL) {
     vector<double> rhs;
@@ -1521,9 +1520,10 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   HighsLp& lp = model_.lp_;
   HighsInt num_row = lp.num_row_;
   HighsInt num_col = lp.num_col_;
-  //
   // For an LP with no rows the primal ray is vacuous
   if (num_row==0) return return_status;
+  assert(ekk_instance_.status_.has_invert);
+  assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
     HighsInt col = ekk_instance_.info_.primal_ray_col_;
@@ -1612,3 +1612,9 @@ HighsStatus Highs::checkOptimality(const std::string solver_type, HighsStatus re
   return return_status;
 }
 
+HighsStatus Highs::invertRequirementError(std::string method_name) {
+  assert(!ekk_instance_.status_.has_invert);
+  highsLogUser(options_.log_options, HighsLogType::kError,
+	       "No invertible representation for %s\n", method_name.c_str());
+  return HighsStatus::kError;
+}

@@ -75,8 +75,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
   HighsSimplexStatus& status = ekk_instance.status_;
   
-  // Refresh the HEkk pointers
-  ekk_instance.refreshPointers(solver_object);
+  ekk_instance.setPointers(solver_object);
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
   

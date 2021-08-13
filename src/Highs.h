@@ -1191,6 +1191,7 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   HighsStatus checkOptimality(const std::string solver_type, HighsStatus return_status);
+  HighsStatus invertRequirementError(std::string method_name);
 };
 
 #endif

@@ -34,10 +34,11 @@ class HEkk {
   void invalidateBasisArtifacts();
   void clearData();
   void clearInfo();
-  void clearBasis();
+  void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void updateStatus(LpAction action);
-  void refreshPointers(HighsLpSolverObject& solver_object);
+  void setPointers(HighsLpSolverObject& solver_object);
+  void setPointers(HighsOptions* opt_point, HighsTimer* tim_point);
   HighsStatus moveNewLp(HighsLp lp);
   HighsStatus passNewLp(const HighsLp& pass_lp);
   void moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix);

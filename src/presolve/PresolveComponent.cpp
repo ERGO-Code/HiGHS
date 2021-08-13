@@ -74,16 +74,24 @@ HighsPresolveStatus PresolveComponent::run() {
 
   HighsModelStatus status = presolve.run(data_.postSolveStack);
 
+  // Ensure that the presolve status is used to set
+  // presolve_.presolve_status_, as well as being returned
+  HighsPresolveStatus presolve_status;
   switch (status) {
     case HighsModelStatus::kInfeasible:
-      return HighsPresolveStatus::kInfeasible;
+      presolve_status = HighsPresolveStatus::kInfeasible;
+      break;
     case HighsModelStatus::kUnboundedOrInfeasible:
-      return HighsPresolveStatus::kUnboundedOrInfeasible;
+      presolve_status = HighsPresolveStatus::kUnboundedOrInfeasible;
+      break;
     case HighsModelStatus::kOptimal:
-      return HighsPresolveStatus::kReducedToEmpty;
+      presolve_status = HighsPresolveStatus::kReducedToEmpty;
+      break;
     default:
-      return HighsPresolveStatus::kReduced;
+      presolve_status = HighsPresolveStatus::kReduced;
   }
+  this->presolve_status_ = presolve_status;
+  return presolve_status;
 }
 
 void PresolveComponent::clear() {
