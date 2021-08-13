@@ -49,6 +49,7 @@ class HEkk {
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& highs_basis);
   HighsStatus setBasis(const SimplexBasis& basis);
+  HighsStatus addRows(const HighsSparseMatrix& scaled_ar_matrix);
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis();

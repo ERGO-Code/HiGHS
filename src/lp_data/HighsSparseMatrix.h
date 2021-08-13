@@ -49,12 +49,20 @@ class HighsSparseMatrix {
   void ensureColWise();
   void ensureRowWise();
 
-  HighsStatus addCols(const HighsInt num_new_col, const HighsInt num_new_nz,
+  HighsStatus addCols(const HighsSparseMatrix new_cols, 
+		      const int8_t* in_partition = NULL);
+
+  HighsStatus addRows(const HighsSparseMatrix new_rows, 
+		      const int8_t* in_partition = NULL);
+
+  HighsStatus addCols(const HighsInt num_new_col,
+		      const HighsInt num_new_nz,
                       const HighsInt* new_matrix_start,
                       const HighsInt* new_matrix_index,
                       const double* new_matrix_value,
                       const int8_t* in_partition = NULL);
-  HighsStatus addRows(const HighsInt num_new_row, const HighsInt num_new_nz,
+  HighsStatus addRows(const HighsInt num_new_row,
+		      const HighsInt num_new_nz,
                       const HighsInt* new_matrix_start,
                       const HighsInt* new_matrix_index,
                       const double* new_matrix_value,
@@ -69,9 +77,13 @@ class HighsSparseMatrix {
                      const std::string matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value);
+  void considerColScaling(const HighsInt max_scale_factor_exponent, double* col_scale);
+  void considerRowScaling(const HighsInt max_scale_factor_exponent, double* row_scale);
   void scaleCol(const HighsInt col, const double colScale);
   void scaleRow(const HighsInt row, const double rowScale);
   void applyScale(const HighsScale& scale);
+  void applyRowScale(const HighsScale& scale);
+  void applyColScale(const HighsScale& scale);
   void unapplyScale(const HighsScale& scale);
   void createSlice(const HighsSparseMatrix& matrix, const HighsInt from_col,
                    const HighsInt to_col);

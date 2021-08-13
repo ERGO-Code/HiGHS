@@ -605,6 +605,20 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   return HighsStatus::kOk;
 }
 
+HighsStatus HEkk::addRows(const HighsSparseMatrix& scaled_ar_matrix) {
+  // Should be extendSimplexLpRandomVectors
+  //  if (valid_simplex_basis)
+  //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
+  //  ekk_instance_.updateStatus(LpAction::kNewRows);
+  //  if (valid_simplex_lp) {
+  //    simplex_lp.num_row_ += XnumNewRow;
+  //    ekk_instance_.initialiseSimplexLpRandomVectors();
+  //  }
+  //  if (valid_simplex_lp)
+  //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
+  return HighsStatus::kOk;
+}
+
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values

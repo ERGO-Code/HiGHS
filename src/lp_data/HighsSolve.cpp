@@ -284,18 +284,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   solution.value_valid = true;
   solution.dual_valid = true;
   basis.valid = true;
-  assert(highs_info.num_primal_infeasibilities >= 0);
-  assert(highs_info.num_dual_infeasibilities >= 0);
-  if (highs_info.num_primal_infeasibilities) {
-    highs_info.primal_solution_status = kSolutionStatusInfeasible;
-  } else {
-    highs_info.primal_solution_status = kSolutionStatusFeasible;
-  }
-  if (highs_info.num_dual_infeasibilities) {
-    highs_info.dual_solution_status = kSolutionStatusInfeasible;
-  } else {
-    highs_info.dual_solution_status = kSolutionStatusFeasible;
-  }
+  highs_info.basis_validity = kBasisValidityValid;
+  setSolutionStatus(highs_info);
   if (highs_info.num_primal_infeasibilities) {
     // Primal infeasible
     model_status = HighsModelStatus::kInfeasible;
@@ -305,5 +295,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   } else {
     model_status = HighsModelStatus::kOptimal;
   }
+  
   return HighsStatus::kOk;
 }
