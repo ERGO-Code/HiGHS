@@ -67,9 +67,9 @@ class HighsSparseMatrix {
                       const HighsInt* new_matrix_index,
                       const double* new_matrix_value,
                       const int8_t* in_partition = NULL);
-  HighsStatus deleteCols(const HighsLogOptions& log_options,
+  void deleteCols(const HighsLogOptions& log_options,
                          const HighsIndexCollection& index_collection);
-  HighsStatus deleteRows(const HighsLogOptions& log_options,
+  void deleteRows(const HighsLogOptions& log_options,
                          const HighsIndexCollection& index_collection);
   HighsStatus assessDimensions(const HighsLogOptions& log_options,
                                const std::string matrix_name);

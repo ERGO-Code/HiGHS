@@ -1146,12 +1146,12 @@ HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
   return HighsStatus::kOk;
 }
 
-HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
-                                  const vector<double>& colCost,
-                                  const vector<double>& colLower,
-                                  const vector<double>& colUpper) {
-  if (num_new_col < 0) return HighsStatus::kError;
-  if (num_new_col == 0) return HighsStatus::kOk;
+void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
+			   const vector<double>& colCost,
+			   const vector<double>& colLower,
+			   const vector<double>& colUpper) {
+  assert(num_new_col >= 0);
+  if (num_new_col == 0) return;
   HighsInt new_num_col = lp.num_col_ + num_new_col;
   lp.col_cost_.resize(new_num_col);
   lp.col_lower_.resize(new_num_col);
@@ -1166,14 +1166,13 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
-                                  const vector<double>& rowLower,
-                                  const vector<double>& rowUpper) {
-  if (num_new_row < 0) return HighsStatus::kError;
-  if (num_new_row == 0) return HighsStatus::kOk;
+void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
+			   const vector<double>& rowLower,
+			   const vector<double>& rowUpper) {
+  assert(num_new_row >=0);
+  if (num_new_row == 0) return;
   HighsInt new_num_row = lp.num_row_ + num_new_row;
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
@@ -1187,49 +1186,32 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.row_names_[iRow] = "";
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
+void deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
+		  const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
   HighsStatus call_status;
-  call_status =
-      deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
-  return_status = interpretCallStatus(call_status, return_status,
-                                      "deleteColsFromLpVectors");
-  if (return_status == HighsStatus::kError) return return_status;
-  call_status = lp.a_matrix_.deleteCols(log_options, index_collection);
-  return_status = interpretCallStatus(call_status, return_status,
-                                      "lp.a_matrix_.deleteCols");
-  if (return_status == HighsStatus::kError) return return_status;
+  deleteColsFromLpVectors(log_options, lp, new_num_col, index_collection);
+  lp.a_matrix_.deleteCols(log_options, index_collection);
   lp.num_col_ = new_num_col;
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteColsFromLpVectors(
+void deleteColsFromLpVectors(
     const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_col,
     const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  // For deletion by set it must be increasing
+  if (index_collection.is_set_)
+    assert(increasingSetOk(index_collection.set_,
                          index_collection.set_num_entries_, 0, lp.num_col_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
+			   true));
   // Initialise new_num_col in case none is removed due to from_k > to_k
   new_num_col = lp.num_col_;
-  if (from_k > to_k) return HighsStatus::kOk;
+  if (from_k > to_k) return;
 
   HighsInt delete_from_col;
   HighsInt delete_to_col;
@@ -1261,49 +1243,32 @@ HighsStatus deleteColsFromLpVectors(
   lp.col_lower_.resize(new_num_col);
   lp.col_upper_.resize(new_num_col);
   if (have_names) lp.col_names_.resize(new_num_col);
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
+void deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
                          const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsInt new_num_row;
-  call_status =
-      deleteRowsFromLpVectors(log_options, lp, new_num_row, index_collection);
-  return_status = interpretCallStatus(call_status, return_status,
-                                      "deleteRowsFromLpVectors");
-  if (return_status == HighsStatus::kError) return return_status;
-  call_status = lp.a_matrix_.deleteRows(log_options, index_collection);
-  return_status = interpretCallStatus(call_status, return_status,
-                                      "lp.a_matrix_.deleteRows");
-  if (return_status == HighsStatus::kError) return return_status;
+  deleteRowsFromLpVectors(log_options, lp, new_num_row, index_collection);
+  lp.a_matrix_.deleteRows(log_options, index_collection);
   lp.num_row_ = new_num_row;
-  return HighsStatus::kOk;
 }
 
-HighsStatus deleteRowsFromLpVectors(
+void deleteRowsFromLpVectors(
     const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_row,
     const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_row_ - 1,
-                         true))
-      return HighsStatus::kError;
-  }
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  // For deletion by set it must be increasing
+  if (index_collection.is_set_)
+    assert(increasingSetOk(index_collection.set_,
+			   index_collection.set_num_entries_, 0, lp.num_row_ - 1,
+			   true));
   // Initialise new_num_row in case none is removed due to from_k > to_k
   new_num_row = lp.num_row_;
-  if (from_k > to_k) return HighsStatus::kOk;
+  if (from_k > to_k) return;
 
   HighsInt delete_from_row;
   HighsInt delete_to_row;
@@ -1335,14 +1300,52 @@ HighsStatus deleteRowsFromLpVectors(
   lp.row_lower_.resize(new_num_row);
   lp.row_upper_.resize(new_num_row);
   if (have_names) lp.row_names_.resize(new_num_row);
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                                      const HighsInt col,
-                                      const double new_value) {
-  if (row < 0 || row > lp.num_row_) return HighsStatus::kError;
-  if (col < 0 || col > lp.num_col_) return HighsStatus::kError;
+void deleteScale(vector<double>& scale,
+                        const HighsIndexCollection& index_collection) {
+  HighsStatus return_status = HighsStatus::kOk;
+  assert(assessIndexCollection(log_options, index_collection));
+  HighsInt from_k;
+  HighsInt to_k;
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  // For deletion by set it must be increasing
+  if (index_collection.is_set_) 
+    assert(increasingSetOk(index_collection.set_,
+			   index_collection.set_num_entries_, 0,
+			   index_collection.dimension_ - 1, true));
+  if (from_k > to_k) return;
+
+  HighsInt delete_from_col;
+  HighsInt delete_to_col;
+  HighsInt keep_from_col;
+  HighsInt keep_to_col = -1;
+  HighsInt current_set_entry = 0;
+
+  HighsInt col_dim = index_collection.dimension_;
+  HighsInt new_num_col = 0;
+  for (HighsInt k = from_k; k <= to_k; k++) {
+    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
+                                    delete_to_col, keep_from_col, keep_to_col,
+                                    current_set_entry);
+    // Account for the initial columns being kept
+    if (k == from_k) new_num_col = delete_from_col;
+    if (delete_to_col >= col_dim - 1) break;
+    assert(delete_to_col < col_dim);
+    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
+      assert((HighsInt)scale.size() > new_num_col);
+      scale[new_num_col] = scale[col];
+      new_num_col++;
+    }
+    if (keep_to_col >= col_dim - 1) break;
+  }
+}
+
+void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
+			       const HighsInt col,
+			       const double new_value) {
+  assert(0 <= row && row < lp.num_row_);
+  assert(0 <= col && col < lp.num_col_);
   HighsInt changeElement = -1;
   for (HighsInt el = lp.a_matrix_.start_[col];
        el < lp.a_matrix_.start_[col + 1]; el++) {
@@ -1364,24 +1367,17 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
   }
   lp.a_matrix_.index_[changeElement] = row;
   lp.a_matrix_.value_[changeElement] = new_value;
-
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
                                 const vector<HighsVarType>& new_integrality) {
-  HighsStatus return_status = HighsStatus::kOk;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  if (from_k > to_k) return;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1410,23 +1406,17 @@ HighsStatus changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
     if (mask && !col_mask[col]) continue;
     lp.integrality_[col] = new_integrality[usr_col];
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
                           const vector<double>& new_col_cost) {
-  HighsStatus return_status = HighsStatus::kOk;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  if (from_k > to_k) return;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1451,41 +1441,35 @@ HighsStatus changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
     if (mask && !col_mask[col]) continue;
     lp.col_cost_[col] = new_col_cost[usr_col];
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_col_lower,
                               const vector<double>& new_col_upper) {
-  return changeBounds(log_options, lp.col_lower_, lp.col_upper_,
-                      index_collection, new_col_lower, new_col_upper);
+  changeBounds(log_options, lp.col_lower_, lp.col_upper_,
+	       index_collection, new_col_lower, new_col_upper);
 }
 
-HighsStatus changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper) {
-  return changeBounds(log_options, lp.row_lower_, lp.row_upper_,
-                      index_collection, new_row_lower, new_row_upper);
+  changeBounds(log_options, lp.row_lower_, lp.row_upper_,
+	       index_collection, new_row_lower, new_row_upper);
 }
 
-HighsStatus changeBounds(const HighsLogOptions& log_options,
+void changeBounds(const HighsLogOptions& log_options,
                          vector<double>& lower, vector<double>& upper,
                          const HighsIndexCollection& index_collection,
                          const vector<double>& new_lower,
                          const vector<double>& new_upper) {
-  HighsStatus return_status = HighsStatus::kOk;
   // Check parameters for technique and, if OK set the loop limits
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (from_k > to_k) return HighsStatus::kOk;
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  if (from_k > to_k) return;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1511,7 +1495,6 @@ HighsStatus changeBounds(const HighsLogOptions& log_options,
     lower[ix] = new_lower[usr_ix];
     upper[ix] = new_upper[usr_ix];
   }
-  return HighsStatus::kOk;
 }
 
 HighsInt getNumInt(const HighsLp& lp) {
@@ -1523,44 +1506,41 @@ HighsInt getNumInt(const HighsLp& lp) {
   return num_int;
 }
 
-HighsStatus getLpCosts(const HighsLp& lp, const HighsInt from_col,
-                       const HighsInt to_col, double* XcolCost) {
-  if (from_col < 0 || to_col >= lp.num_col_) return HighsStatus::kError;
-  if (from_col > to_col) return HighsStatus::kOk;
+void getLpCosts(const HighsLp& lp, const HighsInt from_col,
+		const HighsInt to_col, double* XcolCost) {
+  assert(0 <= from_col && to_col < lp.num_col_);
+  if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++)
     XcolCost[col - from_col] = lp.col_cost_[col];
-  return HighsStatus::kOk;
 }
 
-HighsStatus getLpColBounds(const HighsLp& lp, const HighsInt from_col,
+void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
                            const HighsInt to_col, double* XcolLower,
                            double* XcolUpper) {
-  if (from_col < 0 || to_col >= lp.num_col_) return HighsStatus::kError;
-  if (from_col > to_col) return HighsStatus::kOk;
+  assert(0 <= from_col && to_col < lp.num_col_);
+  if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
     if (XcolLower != NULL) XcolLower[col - from_col] = lp.col_lower_[col];
     if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.col_upper_[col];
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
+void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
                            const HighsInt to_row, double* XrowLower,
                            double* XrowUpper) {
-  if (from_row < 0 || to_row >= lp.num_row_) return HighsStatus::kError;
-  if (from_row > to_row) return HighsStatus::kOk;
+  assert(0 <= to_row && from_row < lp.num_row_);
+  if (from_row > to_row) return;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
     if (XrowLower != NULL) XrowLower[row - from_row] = lp.row_lower_[row];
     if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.row_upper_[row];
   }
-  return HighsStatus::kOk;
 }
 
 // Get a single coefficient from the matrix
-HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
+void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
                                    const HighsInt Xcol, double* val) {
-  if (Xrow < 0 || Xrow >= lp.num_row_) return HighsStatus::kError;
-  if (Xcol < 0 || Xcol >= lp.num_col_) return HighsStatus::kError;
+  assert(0 <= Xrow && Xrow < lp.num_row_);
+  assert(0 <= Xcol && Xcol < lp.num_col_);
 
   HighsInt get_el = -1;
   for (HighsInt el = lp.a_matrix_.start_[Xcol];
@@ -1575,7 +1555,6 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
   } else {
     *val = lp.a_matrix_.value_[get_el];
   }
-  return HighsStatus::kOk;
 }
 
 // Methods for reporting an LP, including its row and column data and matrix

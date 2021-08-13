@@ -82,11 +82,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   // Append the columns to the LP vectors and matrix
-  return_status =
-      interpretCallStatus(appendColsToLpVectors(lp, XnumNewCol, local_colCost,
-                                                local_colLower, local_colUpper),
-                          return_status, "appendColsToLpVectors");
-  if (return_status == HighsStatus::kError) return return_status;
+  appendColsToLpVectors(lp, XnumNewCol, local_colCost, local_colLower, local_colUpper);
 
   // Form a column-wise HighsSparseMatrix of the new matrix columns so
   // that is is easy to handle and, if there are nonzeros, it can be
@@ -218,10 +214,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   if (return_status == HighsStatus::kError) return return_status;
 
   // Append the rows to the LP vectors
-  return_status = interpretCallStatus(
-      appendRowsToLpVectors(lp, XnumNewRow, local_rowLower, local_rowUpper),
-      return_status, "appendRowsToLpVectors");
-  if (return_status == HighsStatus::kError) return return_status;
+  appendRowsToLpVectors(lp, XnumNewRow, local_rowLower, local_rowUpper);
 
   // Form a row-wise HighsSparseMatrix of the new matrix rows so that
   // is is easy to handle and, if there are nonzeros, it can be
@@ -311,8 +304,7 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   HighsInt original_num_col = lp.num_col_;
 
   HighsStatus return_status;
-  return_status = deleteLpCols(options.log_options, lp, index_collection);
-  if (return_status != HighsStatus::kOk) return return_status;
+  deleteLpCols(options.log_options, lp, index_collection);
   assert(lp.num_col_ <= original_num_col);
   if (lp.num_col_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -323,18 +315,12 @@ HighsStatus Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     basis.valid = false;
   }
   if (lp.scale_.has_scaling) {
-    return_status = interpretCallStatus(
-		    deleteScale(options.log_options, lp.scale_.col,
-				index_collection),
-		    return_status, "deleteScale");
-    if (return_status == HighsStatus::kError) return return_status;
+    deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
   }
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = ekk_instance_.lp_;
-    return_status =
-        deleteLpCols(options.log_options, simplex_lp, index_collection);
-    if (return_status != HighsStatus::kOk) return return_status;
+    deleteLpCols(options.log_options, simplex_lp, index_collection);
     assert(simplex_lp.num_col_ <= original_num_col);
     if (simplex_lp.num_col_ < original_num_col) {
       // Nontrivial deletion so initialise the random vectors and all
@@ -379,32 +365,22 @@ HighsStatus Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   HighsInt original_num_row = lp.num_row_;
 
   HighsStatus return_status;
-  return_status = deleteLpRows(options.log_options, lp, index_collection);
-  if (return_status != HighsStatus::kOk) return return_status;
+  deleteLpRows(options.log_options, lp, index_collection);
   assert(lp.num_row_ <= original_num_row);
   if (lp.num_row_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
     scaled_model_status_ = HighsModelStatus::kNotset;
-    model_status_ =
-        scaled_model_status_;
+    model_status_ = scaled_model_status_;
     basis.valid = false;
   }
-
   if (lp.scale_.has_scaling) {
-    return_status = interpretCallStatus(
-        deleteScale(options.log_options, lp.scale_.row,
-                    index_collection),
-        return_status, "deleteScale");
-    if (return_status == HighsStatus::kError) return return_status;
+    deleteScale(lp.scale_.row, index_collection);
     lp.scale_.row.resize(lp.num_row_);
   }
-
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = ekk_instance_.lp_;
-    return_status =
-        deleteLpRows(options.log_options, simplex_lp, index_collection);
-    if (return_status != HighsStatus::kOk) return return_status;
+    deleteLpRows(options.log_options, simplex_lp, index_collection);
     assert(simplex_lp.num_row_ <= original_num_row);
     if (simplex_lp.num_row_ < original_num_row) {
       // Nontrivial deletion so initialise the random vectors and all
@@ -714,9 +690,8 @@ HighsStatus Highs::changeIntegralityInterface(
                 usr_integrality, &local_integrality[0]);
   HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status = changeLpIntegrality(
-      options.log_options, lp, index_collection, local_integrality);
-  if (call_status == HighsStatus::kError) return HighsStatus::kError;
+  HighsStatus call_status;
+  changeLpIntegrality(options.log_options, lp, index_collection, local_integrality);
 
   // Deduce the consequences of new integrality
   scaled_model_status_ = HighsModelStatus::kNotset;
@@ -750,18 +725,15 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
                           return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status =
-      changeLpCosts(options.log_options, lp, index_collection, local_colCost);
-  if (call_status == HighsStatus::kError) return HighsStatus::kError;
+  HighsStatus call_status;
+  changeLpCosts(options.log_options, lp, index_collection, local_colCost);
 
   if (ekk_instance_.status_.valid) {
     // Also change the simplex LP's costs
     HighsLp& simplex_lp = ekk_instance_.lp_;
     assert(lp.num_col_ == simplex_lp.num_col_);
     assert(lp.num_row_ == simplex_lp.num_row_);
-    call_status = changeLpCosts(options.log_options, simplex_lp,
-                                index_collection, local_colCost);
-    if (call_status == HighsStatus::kError) return HighsStatus::kError;
+    changeLpCosts(options.log_options, simplex_lp, index_collection, local_colCost);
     if (lp.scale_.has_scaling) {
       applyScalingToLpColCost(options.log_options, simplex_lp,
                               lp.scale_.col, index_collection);
@@ -809,20 +781,17 @@ HighsStatus Highs::changeColBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status =
-      changeLpColBounds(options.log_options, lp, index_collection,
-                        local_colLower, local_colUpper);
-  if (call_status == HighsStatus::kError) return HighsStatus::kError;
+  HighsStatus call_status;
+  changeLpColBounds(options.log_options, lp, index_collection,
+		    local_colLower, local_colUpper);
 
   if (ekk_instance_.status_.valid) {
     // Also change the simplex LP's column bounds
     HighsLp& simplex_lp = ekk_instance_.lp_;
     assert(lp.num_col_ == simplex_lp.num_col_);
     assert(lp.num_row_ == simplex_lp.num_row_);
-    call_status =
-        changeLpColBounds(options.log_options, simplex_lp, index_collection,
-                          local_colLower, local_colUpper);
-    if (call_status == HighsStatus::kError) return HighsStatus::kError;
+    changeLpColBounds(options.log_options, simplex_lp, index_collection,
+		      local_colLower, local_colUpper);
     if (lp.scale_.has_scaling) {
       applyScalingToLpColBounds(options.log_options, simplex_lp,
                                 lp.scale_.col,
@@ -880,20 +849,16 @@ HighsStatus Highs::changeRowBoundsInterface(
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  HighsStatus call_status;
-  call_status = changeLpRowBounds(options.log_options, lp, index_collection,
+  changeLpRowBounds(options.log_options, lp, index_collection,
                                   local_rowLower, local_rowUpper);
-  if (call_status == HighsStatus::kError) return HighsStatus::kError;
 
   if (ekk_instance_.status_.valid) {
     // Also change the simplex LP's row bounds
     HighsLp& simplex_lp = ekk_instance_.lp_;
     assert(lp.num_col_ == simplex_lp.num_col_);
     assert(lp.num_row_ == simplex_lp.num_row_);
-    call_status =
-        changeLpRowBounds(options.log_options, simplex_lp, index_collection,
-                          local_rowLower, local_rowUpper);
-    if (call_status == HighsStatus::kError) return HighsStatus::kError;
+    changeLpRowBounds(options.log_options, simplex_lp, index_collection,
+		      local_rowLower, local_rowUpper);
     if (lp.scale_.has_scaling) {
       applyScalingToLpRowBounds(options.log_options, simplex_lp,
                                 lp.scale_.row,

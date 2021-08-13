@@ -149,53 +149,6 @@ void unscaleSolution(HighsSolution& solution, const HighsScale scale) {
   }
 }
 
-HighsStatus deleteScale(const HighsLogOptions& log_options,
-                        vector<double>& scale,
-                        const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
-  HighsInt from_k;
-  HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0,
-                         index_collection.dimension_ - 1, true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
-
-  HighsInt delete_from_col;
-  HighsInt delete_to_col;
-  HighsInt keep_from_col;
-  HighsInt keep_to_col = -1;
-  HighsInt current_set_entry = 0;
-
-  HighsInt col_dim = index_collection.dimension_;
-  HighsInt new_num_col = 0;
-  for (HighsInt k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
-    // Account for the initial columns being kept
-    if (k == from_k) new_num_col = delete_from_col;
-    if (delete_to_col >= col_dim - 1) break;
-    assert(delete_to_col < col_dim);
-    for (HighsInt col = keep_from_col; col <= keep_to_col; col++) {
-      assert((HighsInt)scale.size() > new_num_col);
-      scale[new_num_col] = scale[col];
-      new_num_col++;
-    }
-    if (keep_to_col >= col_dim - 1) break;
-  }
-  return HighsStatus::kOk;
-}
-
 void getUnscaledInfeasibilities(const HighsOptions& options,
 				const HighsScale& scale,
                                 const SimplexBasis& basis,

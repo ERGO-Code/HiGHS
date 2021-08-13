@@ -473,29 +473,22 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::deleteCols(
-    const HighsLogOptions& log_options,
-    const HighsIndexCollection& index_collection) {
+void HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options,
+				   const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
   HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0,
-                         this->num_col_ - 1, true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  // For deletion by set it must be increasing
+  if (index_collection.is_set_)
+    assert(increasingSetOk(index_collection.set_,
+			   index_collection.set_num_entries_, 0,
+			   this->num_col_ - 1, true));
+  if (from_k > to_k) return;
 
   HighsInt delete_from_col;
   HighsInt delete_to_col;
@@ -549,30 +542,22 @@ HighsStatus HighsSparseMatrix::deleteCols(
   this->value_.resize(new_num_nz);
   // Update the number of columns
   this->num_col_ = new_num_col;
-  return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::deleteRows(
+void HighsSparseMatrix::deleteRows(
     const HighsLogOptions& log_options,
     const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
-  HighsStatus return_status = HighsStatus::kOk;
-  if (!assessIndexCollection(log_options, index_collection))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "assessIndexCollection");
+  assert(assessIndexCollection(log_options, index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  if (!limitsForIndexCollection(log_options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::kError, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
+  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  // For deletion by set it must be increasing
+  if (index_collection.is_set_)
+    assert(increasingSetOk(index_collection.set_,
                          index_collection.set_num_entries_, 0,
-                         this->num_row_ - 1, true))
-      return HighsStatus::kError;
-  }
-  if (from_k > to_k) return HighsStatus::kOk;
+			   this->num_row_ - 1, true));
+  if (from_k > to_k) return;
 
   HighsInt delete_from_row;
   HighsInt delete_to_row;
@@ -642,7 +627,6 @@ HighsStatus HighsSparseMatrix::deleteRows(
   this->value_.resize(new_num_nz);
   // Update the number of rows
   this->num_row_ = new_num_row;
-  return HighsStatus::kOk;
 }
 
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,

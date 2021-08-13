@@ -32,10 +32,6 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
 
 void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 
-HighsStatus deleteScale(const HighsLogOptions& log_options,
-                        vector<double>& scale,
-                        const HighsIndexCollection& index_collection);
-
 void getUnscaledInfeasibilities(const HighsOptions& options,
 				const HighsScale& scale,
                                 const SimplexBasis& basis,
