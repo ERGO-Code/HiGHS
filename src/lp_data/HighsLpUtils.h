@@ -62,17 +62,17 @@ bool maxValueScaleMatrix(const HighsOptions& options,
 			 use_scale_strategy);
 
 HighsStatus applyScalingToLpColCost(
-    const HighsLogOptions& log_options, HighsLp& lp,
+    HighsLp& lp,
     const vector<double>& colScale,
     const HighsIndexCollection& index_collection);
 
 HighsStatus applyScalingToLpColBounds(
-    const HighsLogOptions& log_options, HighsLp& lp,
+    HighsLp& lp,
     const vector<double>& colScale,
     const HighsIndexCollection& index_collection);
 
 HighsStatus applyScalingToLpRowBounds(
-    const HighsLogOptions& log_options, HighsLp& lp,
+    HighsLp& lp,
     const vector<double>& rowScale,
     const HighsIndexCollection& index_collection);
 
@@ -86,10 +86,10 @@ void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
                     const HighsInt numCol, const vector<HighsInt>& Astart,
                     const vector<HighsInt>& Aindex, vector<double>& Avalue);
 
-HighsStatus applyScalingToLpCol(const HighsLogOptions& log_options, HighsLp& lp,
+HighsStatus applyScalingToLpCol(HighsLp& lp,
                                 const HighsInt col, const double colScale);
 
-HighsStatus applyScalingToLpRow(const HighsLogOptions& log_options, HighsLp& lp,
+HighsStatus applyScalingToLpRow(HighsLp& lp,
                                 const HighsInt row, const double rowScale);
 
 void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
@@ -101,18 +101,18 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 			   const vector<double>& rowLower,
 			   const vector<double>& rowUpper);
 
-void deleteLpCols(const HighsLogOptions& log_options, HighsLp& lp,
+void deleteLpCols(HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
 void deleteColsFromLpVectors(
-    const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_col,
+    HighsLp& lp, HighsInt& new_num_col,
     const HighsIndexCollection& index_collection);
 
-void deleteLpRows(const HighsLogOptions& log_options, HighsLp& lp,
+void deleteLpRows(HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
 void deleteRowsFromLpVectors(
-    const HighsLogOptions& log_options, HighsLp& lp, HighsInt& new_num_row,
+    HighsLp& lp, HighsInt& new_num_row,
     const HighsIndexCollection& index_collection);
 
 void deleteScale(vector<double>& scale,
@@ -122,29 +122,28 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
                                       const HighsInt col,
                                       const double new_value);
 
-void changeLpIntegrality(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
                                 const vector<HighsVarType>& new_integrality);
 
-void changeLpCosts(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpCosts(HighsLp& lp,
                           const HighsIndexCollection& index_collection,
                           const vector<double>& new_col_cost);
 
-void changeLpColBounds(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpColBounds(HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_col_lower,
                               const vector<double>& new_col_upper);
 
-void changeLpRowBounds(const HighsLogOptions& log_options, HighsLp& lp,
+void changeLpRowBounds(HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper);
 
-void changeBounds(const HighsLogOptions& log_options,
-                         vector<double>& lower, vector<double>& upper,
-                         const HighsIndexCollection& index_collection,
-                         const vector<double>& new_lower,
-                         const vector<double>& new_upper);
+void changeBounds(vector<double>& lower, vector<double>& upper,
+		  const HighsIndexCollection& index_collection,
+		  const vector<double>& new_lower,
+		  const vector<double>& new_upper);
 
 /**
  * @brief Report the data of an LP

@@ -473,16 +473,15 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   return HighsStatus::kOk;
 }
 
-void HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options,
-				   const HighsIndexCollection& index_collection) {
+void HighsSparseMatrix::deleteCols(const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
   HighsStatus return_status = HighsStatus::kOk;
-  assert(assessIndexCollection(log_options, index_collection));
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  limits(index_collection, from_k, to_k);
   // For deletion by set it must be increasing
   if (index_collection.is_set_)
     assert(increasingSetOk(index_collection.set_,
@@ -500,7 +499,7 @@ void HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options,
   HighsInt new_num_col = 0;
   HighsInt new_num_nz = 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
+    updateOutInIndex(index_collection, delete_from_col,
                                     delete_to_col, keep_from_col, keep_to_col,
                                     current_set_entry);
     if (k == from_k) {
@@ -544,14 +543,12 @@ void HighsSparseMatrix::deleteCols(const HighsLogOptions& log_options,
   this->num_col_ = new_num_col;
 }
 
-void HighsSparseMatrix::deleteRows(
-    const HighsLogOptions& log_options,
-    const HighsIndexCollection& index_collection) {
+void HighsSparseMatrix::deleteRows(const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
-  assert(assessIndexCollection(log_options, index_collection));
+  assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  assert(limitsForIndexCollection(log_options, index_collection, from_k, to_k));
+  limits(index_collection, from_k, to_k);
   // For deletion by set it must be increasing
   if (index_collection.is_set_)
     assert(increasingSetOk(index_collection.set_,
@@ -578,7 +575,7 @@ void HighsSparseMatrix::deleteRows(
     keep_to_row = -1;
     current_set_entry = 0;
     for (HighsInt k = from_k; k <= to_k; k++) {
-      updateIndexCollectionOutInIndex(index_collection, delete_from_row,
+      updateOutInIndex(index_collection, delete_from_row,
                                       delete_to_row, keep_from_row, keep_to_row,
                                       current_set_entry);
       if (k == from_k) {

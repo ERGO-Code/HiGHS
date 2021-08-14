@@ -21,9 +21,7 @@
 #include <cstdio>
 #include <vector>
 
-#include "HConfig.h"
-//#include "io/HighsIO.h"
-//#include "lp_data/HConst.h"
+#include "util/HighsSort.h"
 
 /*
 HighsInt getOmpNumThreads() {
@@ -61,30 +59,29 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
   }
 }
 
-bool assessIndexCollection(const HighsLogOptions& log_options,
-                           const HighsIndexCollection& index_collection) {
+bool ok(const HighsIndexCollection& index_collection) {
   // Check parameter for each technique of defining an index collection
   if (index_collection.is_interval_) {
     // Changing by interval: check the parameters and that check set and mask
     // are false
     if (index_collection.is_set_) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index collection is both interval and set\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index collection is both interval and mask\n");
       return false;
     }
     if (index_collection.from_ < 0) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index interval lower limit is %" HIGHSINT_FORMAT " < 0\n",
                    index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index interval upper limit is %" HIGHSINT_FORMAT
                    " > %" HIGHSINT_FORMAT "\n",
                    index_collection.to_, index_collection.dimension_ - 1);
@@ -94,34 +91,35 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
     // Changing by set: check the parameters and check that interval and mask
     // are false
     if (index_collection.is_interval_) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index collection is both set and interval\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index collection is both set and mask\n");
       return false;
     }
     if (index_collection.set_ == NULL) {
-      highsLogUser(log_options, HighsLogType::kError, "Index set is NULL\n");
+      printf( "Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
     const HighsInt* set = index_collection.set_;
-    const HighsInt set_entry_upper = index_collection.dimension_ - 1;
+    const HighsInt num_entries = index_collection.set_num_entries_;
+    const HighsInt entry_upper = index_collection.dimension_ - 1;
     HighsInt prev_set_entry = -1;
-    for (HighsInt k = 0; k < index_collection.set_num_entries_; k++) {
-      if (set[k] < 0 || set[k] > set_entry_upper) {
-        highsLogUser(log_options, HighsLogType::kError,
+    for (HighsInt k = 0; k < num_entries; k++) {
+      if (set[k] < 0 || set[k] > entry_upper) {
+        printf(
                      "Index set entry set[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT
                      " is out of bounds [0, %" HIGHSINT_FORMAT "]\n",
-                     k, set[k], set_entry_upper);
+                     k, set[k], entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
-        highsLogUser(log_options, HighsLogType::kError,
+        printf(
                      "Index set entry set[%" HIGHSINT_FORMAT
                      "] = %" HIGHSINT_FORMAT
                      " is not greater than "
@@ -131,35 +129,37 @@ bool assessIndexCollection(const HighsLogOptions& log_options,
       }
       prev_set_entry = set[k];
     }
+    // This was the old check done independently, and should be
+    // equivalent.
+    assert(increasingSetOk(set, num_entries, 0, entry_upper, true));
   } else if (index_collection.is_mask_) {
     // Changing by mask: check the parameters and check that set and interval
     // are false
     if (index_collection.mask_ == NULL) {
-      highsLogUser(log_options, HighsLogType::kError, "Index mask is NULL\n");
+      printf( "Index mask is NULL\n");
       return false;
     }
     if (index_collection.is_interval_) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index collection is both mask and interval\n");
       return false;
     }
     if (index_collection.is_set_) {
-      highsLogUser(log_options, HighsLogType::kError,
+      printf(
                    "Index collection is both mask and set\n");
       return false;
     }
   } else {
     // No method defined
-    highsLogUser(log_options, HighsLogType::kError,
+    printf(
                  "Undefined index collection\n");
     return false;
   }
   return true;
 }
 
-bool limitsForIndexCollection(const HighsLogOptions& log_options,
-                              const HighsIndexCollection& index_collection,
-                              HighsInt& from_k, HighsInt& to_k) {
+void limits(const HighsIndexCollection& index_collection,
+	    HighsInt& from_k, HighsInt& to_k) {
   if (index_collection.is_interval_) {
     from_k = index_collection.from_;
     to_k = index_collection.to_;
@@ -170,17 +170,14 @@ bool limitsForIndexCollection(const HighsLogOptions& log_options,
     from_k = 0;
     to_k = index_collection.dimension_ - 1;
   } else {
-    highsLogUser(log_options, HighsLogType::kError,
-                 "Undefined index collection\n");
-    return false;
+    assert(1==0);
   }
-  return true;
 }
 
-void updateIndexCollectionOutInIndex(
-    const HighsIndexCollection& index_collection, HighsInt& out_from_ix,
-    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix,
-    HighsInt& current_set_entry) {
+void updateOutInIndex(const HighsIndexCollection& index_collection,
+		      HighsInt& out_from_ix, HighsInt& out_to_ix,
+		      HighsInt& in_from_ix, HighsInt& in_to_ix,
+		      HighsInt& current_set_entry) {
   if (index_collection.is_interval_) {
     out_from_ix = index_collection.from_;
     out_to_ix = index_collection.to_;
@@ -188,7 +185,7 @@ void updateIndexCollectionOutInIndex(
     in_to_ix = index_collection.dimension_ - 1;
   } else if (index_collection.is_set_) {
     out_from_ix = index_collection.set_[current_set_entry];
-    out_to_ix = out_from_ix;  //+1;
+    out_to_ix = out_from_ix;
     current_set_entry++;
     HighsInt current_set_entry0 = current_set_entry;
     for (HighsInt set_entry = current_set_entry0;
@@ -225,8 +222,7 @@ void updateIndexCollectionOutInIndex(
   }
 }
 
-HighsInt dataSizeOfIndexCollection(
-    const HighsIndexCollection& index_collection) {
+HighsInt dataSize(const HighsIndexCollection& index_collection) {
   if (index_collection.is_set_) {
     return index_collection.set_num_entries_;
   } else {

@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
-#include "util/HighsInt.h"
 
 using std::vector;
 

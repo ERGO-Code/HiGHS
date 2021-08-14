@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "HConfig.h"
 #include "lp_data/HighsOptions.h"
 
 void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
@@ -84,20 +83,17 @@ const double awful_regression_error = 2.0;
 const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
-bool assessIndexCollection(const HighsLogOptions& log_options,
-                           const HighsIndexCollection& index_collection);
+bool ok(const HighsIndexCollection& index_collection);
 
-bool limitsForIndexCollection(const HighsLogOptions& log_options,
-                              const HighsIndexCollection& index_collection,
-                              HighsInt& from_k, HighsInt& to_k);
+void limits(const HighsIndexCollection& index_collection,
+	    HighsInt& from_k, HighsInt& to_k);
 
-void updateIndexCollectionOutInIndex(
-    const HighsIndexCollection& index_collection, HighsInt& out_from_ix,
-    HighsInt& out_to_ix, HighsInt& in_from_ix, HighsInt& in_to_ix,
-    HighsInt& current_set_entry);
+void updateOutInIndex(const HighsIndexCollection& index_collection,
+		      HighsInt& out_from_ix, HighsInt& out_to_ix,
+		      HighsInt& in_from_ix, HighsInt& in_to_ix,
+		      HighsInt& current_set_entry);
 
-HighsInt dataSizeOfIndexCollection(
-    const HighsIndexCollection& index_collection);
+HighsInt dataSize(const HighsIndexCollection& index_collection);
 
 bool highsVarTypeUserDataNotNull(const HighsLogOptions& log_options,
                                  const HighsVarType* user_data,
