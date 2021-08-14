@@ -199,18 +199,18 @@ void HighsSparseMatrix::ensureRowWise() {
   assert((HighsInt)this->value_.size() >= num_nz);
 }
 
-HighsStatus HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols, 
-                                       const int8_t* in_partition) {
+void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols, 
+				const int8_t* in_partition) {
   assert(new_cols.isColwise());
   const HighsInt num_new_nz = new_cols.numNz();
-  return this->addCols(new_cols.num_col_, num_new_nz,
+  addCols(new_cols.num_col_, num_new_nz,
 		       &new_cols.start_[0], &new_cols.index_[0], &new_cols.value_[0],
 		       in_partition);
 }
 
 
 
-HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
+void HighsSparseMatrix::addCols(const HighsInt num_new_col,
                                        const HighsInt num_new_nz,
                                        const HighsInt* new_matrix_start,
                                        const HighsInt* new_matrix_index,
@@ -226,15 +226,14 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
   }
   // Cannot handle the row-wise case
   assert(!this->isRowwise());
-  if (num_new_col < 0) return HighsStatus::kError;
-  if (num_new_nz < 0) return HighsStatus::kError;
+  assert(num_new_col >= 0);
+  assert(num_new_nz >=0);
   if (num_new_col == 0) {
     // No columns are being added, so check that no nonzeros are being
     // added
     assert(1 == 0);
     assert(num_new_nz == 0);
-    if (num_new_nz != 0) return HighsStatus::kError;
-    return HighsStatus::kOk;
+    return;
   }
   // Adding a positive number of columns to a matrix
   if (num_new_nz) {
@@ -248,7 +247,7 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
   HighsInt num_row = this->num_row_;
   HighsInt num_nz = this->numNz();
   // Check that nonzeros aren't being appended to a matrix with no rows
-  if (num_new_nz > 0 && num_row <= 0) return HighsStatus::kError;
+  assert(num_new_nz <=0 || num_row > 0);
 
   if (this->format_ == MatrixFormat::kRowwise) {
     // Matrix is currently a standard row-wise matrix, so flip
@@ -281,7 +280,7 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
     // Update the number of columns
     this->num_col_ += num_new_col;
     // If no nonzeros are being added then there's nothing else to do
-    if (num_new_nz <= 0) return HighsStatus::kOk;
+    if (num_new_nz <= 0) return;
     // Adding a non-trivial matrix: resize the column-wise matrix arrays
     // accordingly
     this->index_.resize(new_num_nz);
@@ -295,19 +294,18 @@ HighsStatus HighsSparseMatrix::addCols(const HighsInt num_new_col,
     // Matrix is row-wise
     assert(1 == 0);
   }
-  return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows, 
+void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows, 
                                        const int8_t* in_partition) {
   assert(new_rows.isRowwise());
   const HighsInt num_new_nz = new_rows.numNz();
-  return this->addRows(new_rows.num_row_, num_new_nz,
+  addRows(new_rows.num_row_, num_new_nz,
 		       &new_rows.start_[0], &new_rows.index_[0], &new_rows.value_[0],
 		       in_partition);
 }
 
-HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
+void HighsSparseMatrix::addRows(const HighsInt num_new_row,
                                        const HighsInt num_new_nz,
                                        const HighsInt* new_matrix_start,
                                        const HighsInt* new_matrix_index,
@@ -321,14 +319,13 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
     assert(1 == 0);
     assert(in_partition != NULL);
   }
-  if (num_new_row < 0) return HighsStatus::kError;
-  if (num_new_nz < 0) return HighsStatus::kError;
+  assert(num_new_row >=0);
+  assert(num_new_nz >= 0);
   if (num_new_row == 0) {
     // No rows are being added, so check that no nonzeros are being
     // added
     assert(num_new_nz == 0);
-    if (num_new_nz != 0) return HighsStatus::kError;
-    return HighsStatus::kOk;
+    return;
   }
   // Adding a positive number of rows to a matrix
   if (num_new_nz) {
@@ -342,7 +339,7 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   HighsInt num_row = this->num_row_;
   HighsInt num_nz = this->numNz();
   // Check that nonzeros aren't being appended to a matrix with no columns
-  if (num_new_nz > 0 && num_col <= 0) return HighsStatus::kError;
+  assert(num_new_nz <= 0 || num_col > 0);
 
   if (this->isColwise()) {
     // Matrix is currently a standard col-wise matrix, so flip
@@ -469,15 +466,12 @@ HighsStatus HighsSparseMatrix::addRows(const HighsInt num_new_row,
   }
   // Update the number of rows
   this->num_row_ += num_new_row;
-
-  return HighsStatus::kOk;
 }
 
 void HighsSparseMatrix::deleteCols(const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
-  HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;

@@ -49,7 +49,7 @@ class Highs {
   HighsStatus clearModel();
 
   /**
-   * @brief Clears solver, and creates a HiGHS model object for the LP
+   * @brief Clears solver, and creates an empty model
    * in HiGHS
    */
   HighsStatus clearSolver();
@@ -1097,9 +1097,12 @@ class Highs {
   // the inumcumbent model.
   //
   // Clears all solver data in Highs class members by calling
-  // clearModelStatus(), clearSolution(), clearBasis() and
-  // clearInfo().
+  // clearModelStatus(), clearSolution(), clearBasis(),
+  // clearInfo() and clearEkk()
   void clearUserSolverData();
+  //
+  // Clears the model status, solution_ and info_
+  void clearModelStatusSolutionAndInfo();
   //
   // Sets unscaled and scaled model status to HighsModelStatus::kNotset
   void clearModelStatus();
@@ -1135,26 +1138,26 @@ class Highs {
                                const HighsInt* XARindex,
                                const double* XARvalue);
 
-  HighsStatus deleteColsInterface(HighsIndexCollection& index_collection);
+  void deleteColsInterface(HighsIndexCollection& index_collection);
 
-  HighsStatus deleteRowsInterface(HighsIndexCollection& index_collection);
+  void deleteRowsInterface(HighsIndexCollection& index_collection);
 
-  HighsStatus getColsInterface(const HighsIndexCollection& index_collection,
-                               HighsInt& num_col, double* col_cost,
-                               double* col_lower, double* col_upper,
-                               HighsInt& num_nz, HighsInt* col_matrix_start,
-                               HighsInt* col_matrix_index,
-                               double* col_matrix_value);
+  void getColsInterface(const HighsIndexCollection& index_collection,
+			HighsInt& num_col, double* col_cost,
+			double* col_lower, double* col_upper,
+			HighsInt& num_nz, HighsInt* col_matrix_start,
+			HighsInt* col_matrix_index,
+			double* col_matrix_value);
 
-  HighsStatus getRowsInterface(const HighsIndexCollection& index_collection,
-                               HighsInt& num_row, double* row_lower,
-                               double* row_upper, HighsInt& num_nz,
-                               HighsInt* row_matrix_start,
-                               HighsInt* row_matrix_index,
-                               double* row_matrix_value);
-
-  HighsStatus getCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
-                                      double& value);
+  void getRowsInterface(const HighsIndexCollection& index_collection,
+			HighsInt& num_row, double* row_lower,
+			double* row_upper, HighsInt& num_nz,
+			HighsInt* row_matrix_start,
+			HighsInt* row_matrix_index,
+			double* row_matrix_value);
+  
+  void getCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
+			       double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
   HighsStatus changeObjectiveOffsetInterface(const double Xoffset);
@@ -1168,13 +1171,16 @@ class Highs {
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
-  HighsStatus changeCoefficientInterface(const HighsInt Xrow,
+  void changeCoefficientInterface(const HighsInt Xrow,
                                          const HighsInt Xcol,
                                          const double XnewValue);
   HighsStatus scaleColInterface(const HighsInt col, const double scaleval);
   HighsStatus scaleRowInterface(const HighsInt row, const double scaleval);
-  HighsStatus setNonbasicStatusInterface(
-      const HighsIndexCollection& index_collection, const bool columns);
+
+  void setNonbasicStatusInterface(const HighsIndexCollection& index_collection, const bool columns);
+  void appendNonbasicColsToBasisInterface(const HighsInt XnumNewCol);
+  void appendBasicRowsToBasisInterface(const HighsInt XnumNewRow);
+
   HighsStatus getBasicVariablesInterface(HighsInt* basic_variables);
   HighsStatus basisSolveInterface(const vector<double>& rhs,
                                   double* solution_vector,

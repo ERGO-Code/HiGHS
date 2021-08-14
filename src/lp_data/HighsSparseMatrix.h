@@ -49,24 +49,24 @@ class HighsSparseMatrix {
   void ensureColWise();
   void ensureRowWise();
 
-  HighsStatus addCols(const HighsSparseMatrix new_cols, 
-		      const int8_t* in_partition = NULL);
-
-  HighsStatus addRows(const HighsSparseMatrix new_rows, 
-		      const int8_t* in_partition = NULL);
-
-  HighsStatus addCols(const HighsInt num_new_col,
-		      const HighsInt num_new_nz,
-                      const HighsInt* new_matrix_start,
-                      const HighsInt* new_matrix_index,
-                      const double* new_matrix_value,
-                      const int8_t* in_partition = NULL);
-  HighsStatus addRows(const HighsInt num_new_row,
-		      const HighsInt num_new_nz,
-                      const HighsInt* new_matrix_start,
-                      const HighsInt* new_matrix_index,
-                      const double* new_matrix_value,
-                      const int8_t* in_partition = NULL);
+  void addCols(const HighsSparseMatrix new_cols, 
+	       const int8_t* in_partition = NULL);
+  
+  void addRows(const HighsSparseMatrix new_rows, 
+	       const int8_t* in_partition = NULL);
+  
+  void addCols(const HighsInt num_new_col,
+	       const HighsInt num_new_nz,
+	       const HighsInt* new_matrix_start,
+	       const HighsInt* new_matrix_index,
+	       const double* new_matrix_value,
+	       const int8_t* in_partition = NULL);
+  void addRows(const HighsInt num_new_row,
+	       const HighsInt num_new_nz,
+	       const HighsInt* new_matrix_start,
+	       const HighsInt* new_matrix_index,
+	       const double* new_matrix_value,
+	       const int8_t* in_partition = NULL);
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   HighsStatus assessDimensions(const HighsLogOptions& log_options,

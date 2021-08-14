@@ -1322,23 +1322,21 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
 }
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
-  HighsStatus return_status = HighsStatus::kOk;
-  clearPresolve();
-  HighsStatus call_status = changeObjectiveSenseInterface(sense);
-  return_status =
-      interpretCallStatus(call_status, return_status, "changeObjectiveSense");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  if ((sense == ObjSense::kMinimize) !=
+      (model_.lp_.sense_ == ObjSense::kMinimize)) {
+    // Nontrivial change
+    clearPresolve();
+    clearModelStatusSolutionAndInfo();
+  }
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::changeObjectiveOffset(const double offset) {
-  HighsStatus return_status = HighsStatus::kOk;
-  clearPresolve();
-  HighsStatus call_status = changeObjectiveOffsetInterface(offset);
-  return_status =
-      interpretCallStatus(call_status, return_status, "changeObjectiveOffset");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  // Update the objective value
+  info_.objective_function_value += (offset - model_.lp_.offset_);
+  model_.lp_.offset_ = offset;
+  presolved_model_.lp_.offset_ += offset;
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::changeColIntegrality(const HighsInt col,
@@ -1567,12 +1565,24 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
 
 HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
                                const double value) {
-  HighsStatus call_status = changeCoefficientInterface(row, col, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(call_status, return_status, "changeCoefficient");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  if (row < 0 || row >= model_.lp_.num_row_) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Row %" HIGHSINT_FORMAT
+		 " supplied to Highs::changeCoeff is not in the range [0, %"
+		 HIGHSINT_FORMAT "]\n", row, model_.lp_.num_row_);
+    return HighsStatus::kError;
+  }
+  if (col < 0 || col >= model_.lp_.num_col_) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Col %" HIGHSINT_FORMAT
+		 " supplied to Highs::changeCoeff is not in the range [0, %"
+		 HIGHSINT_FORMAT "]\n", col, model_.lp_.num_col_);
+    return HighsStatus::kError;
+  }
+  changeCoefficientInterface(row, col, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getObjectiveSense(ObjSense& sense) {
@@ -1596,13 +1606,8 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
 		 "Interval supplied to Highs::getCols is out of range\n");
     return HighsStatus::kError;
   }
-
-  HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
-                                 num_nz, start, index, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "getCols");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  getColsInterface(index_collection, num_col, costs, lower, upper, num_nz, start, index, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
@@ -1617,12 +1622,8 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
 		 "Set supplied to Highs::getCols not ordered\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
-                                 num_nz, start, index, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "getCols");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  getColsInterface(index_collection, num_col, costs, lower, upper, num_nz, start, index, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
@@ -1631,12 +1632,8 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
                            double* value) {
   HighsIndexCollection index_collection;
   create(index_collection, mask, model_.lp_.num_col_);
-  HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
-					     num_nz, start, index, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "getCols");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  getColsInterface(index_collection, num_col, costs, lower, upper, num_nz, start, index, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
@@ -1650,12 +1647,8 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
 		 "Interval supplied to Highs::getRows is out of range\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
-                                 num_nz, start, index, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "getRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  getRowsInterface(index_collection, num_row, lower, upper, num_nz, start, index, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
@@ -1670,12 +1663,8 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
 		 "Set supplied to Highs::getRows is not ordered\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
-                                 num_nz, start, index, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "getRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  getRowsInterface(index_collection, num_row, lower, upper, num_nz, start, index, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
@@ -1683,22 +1672,30 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            HighsInt* start, HighsInt* index, double* value) {
   HighsIndexCollection index_collection;
   create(index_collection, mask, model_.lp_.num_row_);
-  HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
-					     num_nz, start, index, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "getRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  getRowsInterface(index_collection, num_row, lower, upper, num_nz, start, index, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
                             double& value) {
-  HighsStatus call_status = getCoefficientInterface(row, col, value);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status =
-      interpretCallStatus(call_status, return_status, "getCoefficient");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  if (row < 0 || row >= model_.lp_.num_row_) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Row %" HIGHSINT_FORMAT
+		 " supplied to Highs::getCoeff is not in the range [0, %"
+		 HIGHSINT_FORMAT "]\n", row, model_.lp_.num_row_);
+    return HighsStatus::kError;
+  }
+  if (col < 0 || col >= model_.lp_.num_col_) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Col %" HIGHSINT_FORMAT
+		 " supplied to Highs::getCoeff is not in the range [0, %"
+		 HIGHSINT_FORMAT "]\n", col, model_.lp_.num_col_);
+    return HighsStatus::kError;
+  }
+  getCoefficientInterface(row, col, value);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
@@ -1710,11 +1707,8 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
 		 "Interval supplied to Highs::deleteCols is out of range\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = deleteColsInterface(index_collection);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "deleteCols");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  deleteColsInterface(index_collection);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
@@ -1728,22 +1722,16 @@ HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
 		 "Set supplied to Highs::deleteCols is not ordered\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = deleteColsInterface(index_collection);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "deleteCols");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  deleteColsInterface(index_collection);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::deleteCols(HighsInt* mask) {
   clearPresolve();
   HighsIndexCollection index_collection;
   create(index_collection, mask, model_.lp_.num_col_);
-  HighsStatus call_status = deleteColsInterface(index_collection);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "deleteCols");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  deleteColsInterface(index_collection);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
@@ -1755,11 +1743,8 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
 		 "Interval supplied to Highs::deleteRows is out of range\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = deleteRowsInterface(index_collection);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "deleteRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  deleteRowsInterface(index_collection);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
@@ -1773,22 +1758,16 @@ HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
 		 "Set supplied to Highs::deleteRows is not ordered\n");
     return HighsStatus::kError;
   }
-  HighsStatus call_status = deleteRowsInterface(index_collection);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "deleteRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  deleteRowsInterface(index_collection);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::deleteRows(HighsInt* mask) {
   clearPresolve();
   HighsIndexCollection index_collection;
   create(index_collection, mask, model_.lp_.num_row_);
-  HighsStatus call_status = deleteRowsInterface(index_collection);
-  HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(call_status, return_status, "deleteRows");
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
-  return returnFromHighs(return_status);
+  deleteRowsInterface(index_collection);
+  return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
@@ -1963,6 +1942,12 @@ void Highs::clearUserSolverData() {
   clearBasis();
   clearInfo();
   clearEkk();
+}
+
+void Highs::clearModelStatusSolutionAndInfo() {
+  clearModelStatus();
+  clearSolution();
+  clearInfo();
 }
 
 void Highs::clearModelStatus() {

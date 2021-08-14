@@ -228,16 +228,20 @@ void HEkk::updateStatus(LpAction action) {
       this->invalidateBasis();
       break;
     case LpAction::kNewCols:
-      this->invalidateBasisArtifacts();
+      this->clear();
+      //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
-      this->invalidateBasisArtifacts();
+      this->clear();
+      //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
-      this->invalidateBasis();
+      this->clear();
+      //    this->invalidateBasis();
       break;
     case LpAction::kDelRows:
-      this->invalidateBasis();
+      this->clear();
+      //   this->invalidateBasis();
       break;
     case LpAction::kDelRowsBasisOk:
       //      info.lp_ = true;
@@ -605,7 +609,7 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   return HighsStatus::kOk;
 }
 
-HighsStatus HEkk::addRows(const HighsSparseMatrix& scaled_ar_matrix) {
+void HEkk::addCols(const HighsSparseMatrix& scaled_a_matrix) {
   // Should be extendSimplexLpRandomVectors
   //  if (valid_simplex_basis)
   //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
@@ -616,7 +620,28 @@ HighsStatus HEkk::addRows(const HighsSparseMatrix& scaled_ar_matrix) {
   //  }
   //  if (valid_simplex_lp)
   //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
-  return HighsStatus::kOk;
+  this->updateStatus(LpAction::kNewCols);
+}
+
+void HEkk::addRows(const HighsSparseMatrix& scaled_ar_matrix) {
+  // Should be extendSimplexLpRandomVectors
+  //  if (valid_simplex_basis)
+  //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
+  //  ekk_instance_.updateStatus(LpAction::kNewRows);
+  //  if (valid_simplex_lp) {
+  //    simplex_lp.num_row_ += XnumNewRow;
+  //    ekk_instance_.initialiseSimplexLpRandomVectors();
+  //  }
+  //  if (valid_simplex_lp)
+  //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
+  this->updateStatus(LpAction::kNewRows);
+}
+
+void HEkk::deleteCols(const HighsIndexCollection& index_collection) {
+  this->updateStatus(LpAction::kDelCols);
+}
+void HEkk::deleteRows(const HighsIndexCollection& index_collection) {
+  this->updateStatus(LpAction::kDelCols);
 }
 
 HighsSolution HEkk::getSolution() {
