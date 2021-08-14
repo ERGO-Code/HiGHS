@@ -275,16 +275,6 @@ void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
   analysis_.timer_ = tim_point;
 }
 
-HighsStatus HEkk::moveNewLp(HighsLp lp) {
-  lp_ = std::move(lp);
-  return setup();
-}
-
-HighsStatus HEkk::passNewLp(const HighsLp& pass_lp) {
-  lp_ = pass_lp;
-  return setup();
-}
-
 void HEkk::moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix) {
   lp_ = std::move(lp);
   if (status_.has_matrix) initialiseMatrix(true);
@@ -294,20 +284,11 @@ void HEkk::moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix) 
     // Simplex NLA has been set up in previous call to
     // computeFactor(), so update its scale pointer and the matrix
     // pointers in the HFactor instance
-    simplex_nla_.lp_ = &lp_;
-    simplex_nla_.scale_ = scale_;
-    simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
+    simplex_nla_.setPointers(&lp_, NULL, scale_, factor_a_matrix_, NULL, NULL, NULL);
+    //    simplex_nla_.lp_ = &lp_;
+    //    simplex_nla_.scale_ = scale_;
+    //    simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
   }
-}
-
-void HEkk::passScaledLp(const HighsLp& lp) {
-  lp_ = lp;
-  initialiseMatrix(true);
-  scale_ = NULL;
-  // Consider the consequences for simplex NLA and its HFactor instance
-  simplex_nla_.lp_ = &lp_;
-  simplex_nla_.scale_ = scale_;
-  updateFactorMatrixPointers();
 }
 
 HighsStatus HEkk::solve() {

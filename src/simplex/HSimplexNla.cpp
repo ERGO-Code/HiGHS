@@ -53,6 +53,22 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
+void HSimplexNla::setPointers(const HighsLp* lp,
+			      HighsInt* base_index,
+			      const HighsScale* scale,
+			      const HighsSparseMatrix* factor_a_matrix,
+			      const HighsOptions* options,
+			      HighsTimer* timer,
+			      HighsSimplexAnalysis* analysis) {
+  lp_ = lp;
+  scale_ = scale;
+  if (base_index) base_index_ = base_index;
+  if (options) options_ = options;
+  if (timer) timer_ = timer;
+  if (analysis) analysis_ = analysis;
+  if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
+}
+
 void HSimplexNla::clear() {
   lp_ = NULL;
   scale_ = NULL;

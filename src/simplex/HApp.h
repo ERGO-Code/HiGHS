@@ -72,7 +72,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsLp& ekk_lp = ekk_instance.lp_;
   HighsSimplexInfo& ekk_info = ekk_instance.info_;
   SimplexBasis& ekk_basis = ekk_instance.basis_;
-  HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
   HighsSimplexStatus& status = ekk_instance.status_;
   
   ekk_instance.setPointers(solver_object);

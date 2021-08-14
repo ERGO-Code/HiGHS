@@ -1137,6 +1137,8 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HighsInt num_col = lp.num_col_;
   // For an LP with no rows the solution is vacuous
   if (num_row==0) return return_status;
+  // EKK must have an INVERT, but simplex NLA may need the pointer to
+  // its LP to be refreshed so that it can use its scale factors
   assert(ekk_instance_.status_.has_invert);
   assert(!lp.is_moved_);
   // Set up solve vector with suitably scaled RHS

@@ -39,10 +39,7 @@ class HEkk {
   void updateStatus(LpAction action);
   void setPointers(HighsLpSolverObject& solver_object);
   void setPointers(HighsOptions* opt_point, HighsTimer* tim_point);
-  HighsStatus moveNewLp(HighsLp lp);
-  HighsStatus passNewLp(const HighsLp& pass_lp);
   void moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix);
-  void passScaledLp(const HighsLp& lp);
   HighsStatus setup();
   HighsStatus solve();
   HighsStatus cleanup();
