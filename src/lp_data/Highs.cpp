@@ -1324,8 +1324,7 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  call_status = changeObjectiveSenseInterface(sense);
+  HighsStatus call_status = changeObjectiveSenseInterface(sense);
   return_status =
       interpretCallStatus(call_status, return_status, "changeObjectiveSense");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1335,8 +1334,7 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
 HighsStatus Highs::changeObjectiveOffset(const double offset) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  call_status = changeObjectiveOffsetInterface(offset);
+  HighsStatus call_status = changeObjectiveOffsetInterface(offset);
   return_status =
       interpretCallStatus(call_status, return_status, "changeObjectiveOffset");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1351,15 +1349,11 @@ HighsStatus Highs::changeColIntegrality(const HighsInt col,
 HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
                                          const HighsInt to_col,
                                          const HighsVarType* integrality) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_col;
-  index_collection.to_ = to_col;
-  call_status = changeIntegralityInterface(index_collection, integrality);
+  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  HighsStatus call_status = changeIntegralityInterface(index_collection, integrality);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeIntegrality");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1370,18 +1364,16 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
                                          const HighsInt* set,
                                          const HighsVarType* integrality) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = changeIntegralityInterface(index_collection, integrality);
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::changeColsIntegrality is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = changeIntegralityInterface(index_collection, integrality);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeIntegrality");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1390,18 +1382,11 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
 
 HighsStatus Highs::changeColsIntegrality(const HighsInt* mask,
                                          const HighsVarType* integrality) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local mask that is not const since
-  // index_collection.mask_ cannot be const as it changes when
-  // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &local_mask[0];
-  call_status = changeIntegralityInterface(index_collection, integrality);
+  create(index_collection, mask, model_.lp_.num_col_);
+  HighsStatus call_status = changeIntegralityInterface(index_collection, integrality);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeIntegrality");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1414,15 +1399,11 @@ HighsStatus Highs::changeColCost(const HighsInt col, const double cost) {
 
 HighsStatus Highs::changeColsCost(const HighsInt from_col,
                                   const HighsInt to_col, const double* cost) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_col;
-  index_collection.to_ = to_col;
-  call_status = changeCostsInterface(index_collection, cost);
+  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  HighsStatus call_status = changeCostsInterface(index_collection, cost);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1432,18 +1413,16 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
 HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
                                   const HighsInt* set, const double* cost) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = changeCostsInterface(index_collection, cost);
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::changeColsCost is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = changeCostsInterface(index_collection, cost);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1451,18 +1430,11 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
 }
 
 HighsStatus Highs::changeColsCost(const HighsInt* mask, const double* cost) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local mask that is not const since
-  // index_collection.mask_ cannot be const as it changes when
-  // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &local_mask[0];
-  call_status = changeCostsInterface(index_collection, cost);
+  create(index_collection, mask, model_.lp_.num_col_);
+  HighsStatus call_status = changeCostsInterface(index_collection, cost);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1477,15 +1449,11 @@ HighsStatus Highs::changeColBounds(const HighsInt col, const double lower,
 HighsStatus Highs::changeColsBounds(const HighsInt from_col,
                                     const HighsInt to_col, const double* lower,
                                     const double* upper) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_col;
-  index_collection.to_ = to_col;
-  call_status = changeColBoundsInterface(index_collection, lower, upper);
+  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  HighsStatus call_status = changeColBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1496,18 +1464,16 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = changeColBoundsInterface(index_collection, lower, upper);
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::changeColsBounds is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = changeColBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1516,18 +1482,11 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
 
 HighsStatus Highs::changeColsBounds(const HighsInt* mask, const double* lower,
                                     const double* upper) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local mask that is not const since
-  // index_collection.mask_ cannot be const as it changes when
-  // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &local_mask[0];
-  call_status = changeColBoundsInterface(index_collection, lower, upper);
+  create(index_collection, mask, model_.lp_.num_col_);
+  HighsStatus call_status = changeColBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1542,15 +1501,11 @@ HighsStatus Highs::changeRowBounds(const HighsInt row, const double lower,
 HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
                                     const HighsInt to_row, const double* lower,
                                     const double* upper) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_row;
-  index_collection.to_ = to_row;
-  call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  HighsStatus call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1561,18 +1516,16 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::changeRowsBounds is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1581,18 +1534,11 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
 
 HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
                                     const double* upper) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local mask that is not const since
-  // index_collection.mask_ cannot be const as it changes when
-  // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_row_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &local_mask[0];
-  call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  create(index_collection, mask, model_.lp_.num_row_);
+  HighsStatus call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1601,9 +1547,8 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
 
 HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
                                const double value) {
+  HighsStatus call_status = changeCoefficientInterface(row, col, value);
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  call_status = changeCoefficientInterface(row, col, value);
   return_status =
       interpretCallStatus(call_status, return_status, "changeCoefficient");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1624,15 +1569,12 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            HighsInt& num_col, double* costs, double* lower,
                            double* upper, HighsInt& num_nz, HighsInt* start,
                            HighsInt* index, double* value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_col;
-  index_collection.to_ = to_col;
-  call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
+  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+
+  HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
                                  num_nz, start, index, value);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1643,18 +1585,16 @@ HighsStatus Highs::getCols(const HighsInt num_set_entries, const HighsInt* set,
                            double* upper, HighsInt& num_nz, HighsInt* start,
                            HighsInt* index, double* value) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::getCols not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
                                  num_nz, start, index, value);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1664,18 +1604,11 @@ HighsStatus Highs::getCols(const HighsInt* mask, HighsInt& num_col,
                            double* costs, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  // Create a local mask that is not const since
-  // index_collection.mask_ cannot be const as it changes when
-  // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_col_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &local_mask[0];
-  call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
-                                 num_nz, start, index, value);
+  create(index_collection, mask, model_.lp_.num_col_);
+  HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
+					     num_nz, start, index, value);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1685,15 +1618,11 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_row, double* lower, double* upper,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_row;
-  index_collection.to_ = to_row;
-  call_status = getRowsInterface(index_collection, num_row, lower, upper,
+  create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
                                  num_nz, start, index, value);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1704,18 +1633,16 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = getRowsInterface(index_collection, num_row, lower, upper,
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::getRows is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
                                  num_nz, start, index, value);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1724,18 +1651,11 @@ HighsStatus Highs::getRows(const HighsInt num_set_entries, const HighsInt* set,
 HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
                            double* lower, double* upper, HighsInt& num_nz,
                            HighsInt* start, HighsInt* index, double* value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  // Create a local mask that is not const since
-  // index_collection.mask_ cannot be const as it changes when
-  // deleting rows/columns
-  vector<HighsInt> local_mask{mask, mask + model_.lp_.num_row_};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &local_mask[0];
-  call_status = getRowsInterface(index_collection, num_row, lower, upper,
-                                 num_nz, start, index, value);
+  create(index_collection, mask, model_.lp_.num_row_);
+  HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
+					     num_nz, start, index, value);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1743,9 +1663,8 @@ HighsStatus Highs::getRows(const HighsInt* mask, HighsInt& num_row,
 
 HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
                             double& value) {
+  HighsStatus call_status = getCoefficientInterface(row, col, value);
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
-  call_status = getCoefficientInterface(row, col, value);
   return_status =
       interpretCallStatus(call_status, return_status, "getCoefficient");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
@@ -1753,15 +1672,11 @@ HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
 }
 
 HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_col;
-  index_collection.to_ = to_col;
-  call_status = deleteColsInterface(index_collection);
+  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  HighsStatus call_status = deleteColsInterface(index_collection);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1770,47 +1685,38 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
 HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
                               const HighsInt* set) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = deleteColsInterface(index_collection);
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::deleteCols is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = deleteColsInterface(index_collection);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::deleteCols(HighsInt* mask) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_col_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
-  call_status = deleteColsInterface(index_collection);
+  create(index_collection, mask, model_.lp_.num_col_);
+  HighsStatus call_status = deleteColsInterface(index_collection);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_interval_ = true;
-  index_collection.from_ = from_row;
-  index_collection.to_ = to_row;
-  call_status = deleteRowsInterface(index_collection);
+  create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  HighsStatus call_status = deleteRowsInterface(index_collection);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1819,32 +1725,27 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
 HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
                               const HighsInt* set) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  // Create a local set that is not const since index_collection.set_
-  // cannot be const as it may change if the set is not ordered
-  vector<HighsInt> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_set_ = true;
-  index_collection.set_ = &local_set[0];
-  index_collection.set_num_entries_ = num_set_entries;
-  call_status = deleteRowsInterface(index_collection);
+  if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Set supplied to Highs::deleteRows is not ordered\n");
+    return HighsStatus::kError;
+  }
+  HighsStatus call_status = deleteRowsInterface(index_collection);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::deleteRows(HighsInt* mask) {
-  HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
   HighsIndexCollection index_collection;
-  index_collection.dimension_ = model_.lp_.num_row_;
-  index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
-  call_status = deleteRowsInterface(index_collection);
+  create(index_collection, mask, model_.lp_.num_row_);
+  HighsStatus call_status = deleteRowsInterface(index_collection);
+  HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1853,8 +1754,7 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
 HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  call_status = scaleColInterface(col, scaleval);
+  HighsStatus call_status = scaleColInterface(col, scaleval);
   return_status = interpretCallStatus(call_status, return_status, "scaleCol");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
@@ -1863,8 +1763,7 @@ HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
 HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  HighsStatus call_status;
-  call_status = scaleRowInterface(row, scaleval);
+  HighsStatus call_status = scaleRowInterface(row, scaleval);
   return_status = interpretCallStatus(call_status, return_status, "scaleRow");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);

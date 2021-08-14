@@ -141,12 +141,12 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   bool ok;
   // Check that the values in the vector of doubles are ascending - can do
   // strict test
-  ok = increasingSetOk(&double_values[0], num_values, 0, 1, true);
+  ok = increasingSetOk(double_values, 0, 1, true);
   REQUIRE(ok == true);
 
   // Check that the values in the vector of integers are ascending - maybe can't
   // do strict test
-  ok = increasingSetOk(&int_values[0], num_values, 0, num_values, false);
+  ok = increasingSetOk(int_values, 0, num_values, false);
   REQUIRE(ok == true);
 
   num_values = 14;
@@ -206,8 +206,9 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   sorted_lb.resize(num_values);
   sorted_ub.resize(num_values);
 
-  sortSetData(num_values, &sorted_set[0], &lb[0], &ub[0], NULL, &sorted_lb[0],
-              &sorted_ub[0], NULL);
+  sortSetData(num_values, sorted_set,
+	      &lb[0], &ub[0], NULL,
+	      &sorted_lb[0], &sorted_ub[0], NULL);
 
   HighsInt prev_ix = -kHighsIInf;
   for (HighsInt k0 = 0; k0 < num_values; k0++) {

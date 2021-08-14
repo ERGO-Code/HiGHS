@@ -358,7 +358,7 @@ HighsStatus normaliseHessian(const HighsOptions& options,
     if (exploit_sparsity) {
       // Exploit sparsity
       to_ix = column_num_nz;
-      sortSetData(column_num_nz, &column_index[0], NULL, NULL);
+      sortSetData(column_num_nz, column_index, NULL, NULL);
     } else {
       to_ix = dim;
     }

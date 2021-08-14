@@ -217,8 +217,8 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
   HighsInt keep_from_index;
   HighsInt keep_to_index;
   HighsInt current_set_entry;
-  const HighsInt* set = index_collection.set_;
-  const HighsInt* mask = index_collection.mask_;
+  const vector<HighsInt>& set = index_collection.set_;
+  const vector<HighsInt>& mask = index_collection.mask_;
   const HighsInt dimension = index_collection.dimension_;
   if (dev_run) {
     if (index_collection.is_interval_) {
@@ -280,8 +280,8 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
 
 bool testAllDeleteKeep(HighsInt num_row) {
   // Test the extraction of intervals from index collections
-  HighsInt set[] = {1, 4, 5, 8};
-  HighsInt mask[] = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+  vector<HighsInt> set = {1, 4, 5, 8};
+  vector<HighsInt> mask = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
 
   HighsIndexCollection index_collection;
   index_collection.dimension_ = num_row;
@@ -290,9 +290,9 @@ bool testAllDeleteKeep(HighsInt num_row) {
   index_collection.to_ = 6;
   index_collection.is_set_ = false;
   index_collection.set_num_entries_ = 4;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = set;
   index_collection.is_mask_ = false;
-  index_collection.mask_ = &mask[0];
+  index_collection.mask_ = mask;
 
   HighsInt save_from = index_collection.from_;
   HighsInt save_set_0 = set[0];

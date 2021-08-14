@@ -29,6 +29,38 @@ HighsInt getOmpNumThreads() {
 }
 */
 
+void create(HighsIndexCollection& index_collection,
+	    const HighsInt from_col,
+	    const HighsInt to_col,
+	    const HighsInt dimension) {
+  index_collection.dimension_ = dimension;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_col;
+  index_collection.to_ = to_col;
+}
+
+bool create(HighsIndexCollection& index_collection,
+	    const HighsInt num_set_entries,
+	    const HighsInt* set,
+	    const HighsInt dimension) {
+  // Create an index collection for the given set - so long as it is strictly ordered
+  index_collection.dimension_ = dimension;
+  index_collection.is_set_ = true;
+  index_collection.set_ = {set, set + num_set_entries};
+  index_collection.set_num_entries_ = num_set_entries;
+  if (!increasingSetOk(index_collection.set_, 1, 0, true)) return false;
+  return true;
+}
+
+void create(HighsIndexCollection& index_collection,
+	    const HighsInt* mask,
+	    const HighsInt dimension) {
+  // Create an index collection for the given mask
+  index_collection.dimension_ = dimension;
+  index_collection.is_mask_ = true;
+  index_collection.mask_ = {mask, mask + dimension};
+}
+
 void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
                           const std::vector<HighsInt>& Astart,
                           const std::vector<HighsInt>& Aindex,
@@ -100,12 +132,12 @@ bool ok(const HighsIndexCollection& index_collection) {
                    "Index collection is both set and mask\n");
       return false;
     }
-    if (index_collection.set_ == NULL) {
+    if (&index_collection.set_[0] == NULL) {
       printf( "Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
-    const HighsInt* set = index_collection.set_;
+    const vector<HighsInt>& set = index_collection.set_;
     const HighsInt num_entries = index_collection.set_num_entries_;
     const HighsInt entry_upper = index_collection.dimension_ - 1;
     HighsInt prev_set_entry = -1;
@@ -131,11 +163,11 @@ bool ok(const HighsIndexCollection& index_collection) {
     }
     // This was the old check done independently, and should be
     // equivalent.
-    assert(increasingSetOk(set, num_entries, 0, entry_upper, true));
+    assert(increasingSetOk(set, 0, entry_upper, true));
   } else if (index_collection.is_mask_) {
     // Changing by mask: check the parameters and check that set and interval
     // are false
-    if (index_collection.mask_ == NULL) {
+    if (&index_collection.mask_[0] == NULL) {
       printf( "Index mask is NULL\n");
       return false;
     }

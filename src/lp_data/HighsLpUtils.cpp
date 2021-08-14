@@ -936,8 +936,8 @@ HighsStatus applyScalingToLpColCost(
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
+  const vector<HighsInt>& col_set = index_collection.set_;
+  const vector<HighsInt>& col_mask = index_collection.mask_;
 
   HighsInt local_col;
   HighsInt ml_col;
@@ -970,8 +970,8 @@ HighsStatus applyScalingToLpColBounds(
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
+  const vector<HighsInt>& col_set = index_collection.set_;
+  const vector<HighsInt>& col_mask = index_collection.mask_;
 
   HighsInt local_col;
   HighsInt ml_col;
@@ -1007,8 +1007,8 @@ HighsStatus applyScalingToLpRowBounds(
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* row_set = index_collection.set_;
-  const HighsInt* row_mask = index_collection.mask_;
+  const vector<HighsInt>& row_set = index_collection.set_;
+  const vector<HighsInt>& row_mask = index_collection.mask_;
 
   HighsInt local_row;
   HighsInt ml_row;
@@ -1177,11 +1177,6 @@ void deleteColsFromLpVectors(
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);;
-  // For deletion by set it must be increasing
-  if (index_collection.is_set_)
-    assert(increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0, lp.num_col_ - 1,
-			   true));
   // Initialise new_num_col in case none is removed due to from_k > to_k
   new_num_col = lp.num_col_;
   if (from_k > to_k) return;
@@ -1234,11 +1229,6 @@ void deleteRowsFromLpVectors(
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
-  // For deletion by set it must be increasing
-  if (index_collection.is_set_)
-    assert(increasingSetOk(index_collection.set_,
-			   index_collection.set_num_entries_, 0, lp.num_row_ - 1,
-			   true));
   // Initialise new_num_row in case none is removed due to from_k > to_k
   new_num_row = lp.num_row_;
   if (from_k > to_k) return;
@@ -1282,11 +1272,6 @@ void deleteScale(vector<double>& scale,
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
-  // For deletion by set it must be increasing
-  if (index_collection.is_set_) 
-    assert(increasingSetOk(index_collection.set_,
-			   index_collection.set_num_entries_, 0,
-			   index_collection.dimension_ - 1, true));
   if (from_k > to_k) return;
 
   HighsInt delete_from_col;
@@ -1353,8 +1338,8 @@ void changeLpIntegrality(HighsLp& lp,
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
+  const vector<HighsInt>& col_set = index_collection.set_;
+  const vector<HighsInt>& col_mask = index_collection.mask_;
 
   // Change the integrality to the user-supplied integrality, according to the
   // technique
@@ -1391,8 +1376,8 @@ void changeLpCosts(HighsLp& lp,
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* col_set = index_collection.set_;
-  const HighsInt* col_mask = index_collection.mask_;
+  const vector<HighsInt>& col_set = index_collection.set_;
+  const vector<HighsInt>& col_mask = index_collection.mask_;
 
   // Change the costs to the user-supplied costs, according to the technique
   HighsInt lp_col;
@@ -1442,8 +1427,8 @@ void changeBounds(vector<double>& lower, vector<double>& upper,
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
-  const HighsInt* ix_set = index_collection.set_;
-  const HighsInt* ix_mask = index_collection.mask_;
+  const vector<HighsInt>& ix_set = index_collection.set_;
+  const vector<HighsInt>& ix_mask = index_collection.mask_;
 
   // Change the bounds to the user-supplied bounds, according to the technique
   HighsInt lp_ix;

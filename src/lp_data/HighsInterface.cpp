@@ -670,14 +670,15 @@ HighsStatus Highs::changeIntegralityInterface(
   // If a non-positive number of integrality (may) need changing nothing needs
   // to be done
   if (num_usr_integrality <= 0) return HighsStatus::kOk;
-  // Take a copy of the cost that can be normalised
+  // Take a copy of the integrality that can be normalised
   std::vector<HighsVarType> local_integrality{
       usr_integrality, usr_integrality + num_usr_integrality};
   // If changing the integrality for a set of columns, ensure that the
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                usr_integrality, &local_integrality[0]);
+		usr_integrality,
+		&local_integrality[0]);
   HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -706,7 +707,8 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                usr_col_cost, NULL, NULL, &local_colCost[0], NULL, NULL);
+		usr_col_cost, NULL, NULL,
+		&local_colCost[0], NULL, NULL);
   HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
@@ -761,8 +763,8 @@ HighsStatus Highs::changeColBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                usr_col_lower, usr_col_upper, NULL, &local_colLower[0],
-                &local_colUpper[0], NULL);
+                usr_col_lower, usr_col_upper, NULL,
+		&local_colLower[0], &local_colUpper[0], NULL);
   HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(

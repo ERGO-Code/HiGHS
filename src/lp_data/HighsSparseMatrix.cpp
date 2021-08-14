@@ -482,11 +482,6 @@ void HighsSparseMatrix::deleteCols(const HighsIndexCollection& index_collection)
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
-  // For deletion by set it must be increasing
-  if (index_collection.is_set_)
-    assert(increasingSetOk(index_collection.set_,
-			   index_collection.set_num_entries_, 0,
-			   this->num_col_ - 1, true));
   if (from_k > to_k) return;
 
   HighsInt delete_from_col;
@@ -549,11 +544,6 @@ void HighsSparseMatrix::deleteRows(const HighsIndexCollection& index_collection)
   HighsInt from_k;
   HighsInt to_k;
   limits(index_collection, from_k, to_k);
-  // For deletion by set it must be increasing
-  if (index_collection.is_set_)
-    assert(increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0,
-			   this->num_row_ - 1, true));
   if (from_k > to_k) return;
 
   HighsInt delete_from_row;
@@ -570,7 +560,7 @@ void HighsSparseMatrix::deleteRows(const HighsIndexCollection& index_collection)
   new_index.resize(this->num_row_);
   HighsInt new_num_row = 0;
   bool mask = index_collection.is_mask_;
-  const HighsInt* row_mask = index_collection.mask_;
+  const vector<HighsInt>& row_mask = index_collection.mask_;
   if (!mask) {
     keep_to_row = -1;
     current_set_entry = 0;
