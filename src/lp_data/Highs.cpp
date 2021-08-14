@@ -1351,7 +1351,12 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
                                          const HighsVarType* integrality) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::changeColsIntegrality is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeIntegralityInterface(index_collection, integrality);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
@@ -1401,7 +1406,12 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
                                   const HighsInt to_col, const double* cost) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::changeColsCost is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeCostsInterface(index_collection, cost);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
@@ -1451,7 +1461,12 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
                                     const double* upper) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::changeColsBounds is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeColBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
@@ -1503,7 +1518,12 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
                                     const double* upper) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::changeRowsBounds is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = changeRowBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
@@ -1570,7 +1590,12 @@ HighsStatus Highs::getCols(const HighsInt from_col, const HighsInt to_col,
                            double* upper, HighsInt& num_nz, HighsInt* start,
                            HighsInt* index, double* value) {
   HighsIndexCollection index_collection;
-  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::getCols is out of range\n");
+    return HighsStatus::kError;
+  }
 
   HighsStatus call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
                                  num_nz, start, index, value);
@@ -1619,7 +1644,12 @@ HighsStatus Highs::getRows(const HighsInt from_row, const HighsInt to_row,
                            HighsInt& num_nz, HighsInt* start, HighsInt* index,
                            double* value) {
   HighsIndexCollection index_collection;
-  create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::getRows is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = getRowsInterface(index_collection, num_row, lower, upper,
                                  num_nz, start, index, value);
   HighsStatus return_status = HighsStatus::kOk;
@@ -1674,7 +1704,12 @@ HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
 HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, from_col, to_col, model_.lp_.num_col_);
+  if (!create(index_collection, from_col, to_col, model_.lp_.num_col_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::deleteCols is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = deleteColsInterface(index_collection);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
@@ -1714,7 +1749,12 @@ HighsStatus Highs::deleteCols(HighsInt* mask) {
 HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
   clearPresolve();
   HighsIndexCollection index_collection;
-  create(index_collection, from_row, to_row, model_.lp_.num_row_);
+  if (!create(index_collection, from_row, to_row, model_.lp_.num_row_)) {
+    highsLogUser(options_.log_options,
+		 HighsLogType::kError,
+		 "Interval supplied to Highs::deleteRows is out of range\n");
+    return HighsStatus::kError;
+  }
   HighsStatus call_status = deleteRowsInterface(index_collection);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");

@@ -29,14 +29,17 @@ HighsInt getOmpNumThreads() {
 }
 */
 
-void create(HighsIndexCollection& index_collection,
+bool create(HighsIndexCollection& index_collection,
 	    const HighsInt from_col,
 	    const HighsInt to_col,
 	    const HighsInt dimension) {
+  if (from_col<0) return false;
+  if (to_col>=dimension) return false;
   index_collection.dimension_ = dimension;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
+  return true;
 }
 
 bool create(HighsIndexCollection& index_collection,

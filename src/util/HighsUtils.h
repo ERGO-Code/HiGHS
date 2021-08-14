@@ -83,7 +83,7 @@ const double awful_regression_error = 2.0;
 const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
-void create(HighsIndexCollection& index_collection,
+bool create(HighsIndexCollection& index_collection,
 	    const HighsInt from_col,
 	    const HighsInt to_col,
 	    const HighsInt dimension);
