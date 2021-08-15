@@ -37,9 +37,12 @@ class HEkk {
   void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void updateStatus(LpAction action);
-  void setPointers(HighsLpSolverObject& solver_object);
+  void moveLp(HighsLp lp,
+	      HighsLpSolverObject& solver_object,
+	      const HighsSparseMatrix* scaled_a_matrix=NULL);
   void setPointers(HighsOptions* opt_point, HighsTimer* tim_point);
-  void moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix);
+  void setSimplexNlaScale(const HighsLp& lp);
+
   HighsStatus setup();
   HighsStatus solve();
   HighsStatus cleanup();
@@ -59,7 +62,6 @@ class HEkk {
   HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
-  void updateFactorMatrixPointers();
   void initialiseMatrix(const bool forced = false);
 
   // Interface methods
@@ -75,6 +77,7 @@ class HEkk {
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
 
+  void reportScalingPointers(std::string message, HighsLpSolverObject& solver_object);
   // Data members
   HighsOptions* opt_point_;
   HighsTimer* tim_point_;

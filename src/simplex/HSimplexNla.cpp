@@ -30,12 +30,14 @@
 // using std::min;
 // using std::vector;
 
-void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
+void HSimplexNla::setup(const HighsLp* lp,
                         const HighsScale* scale,
+			HighsInt* base_index,
+                        const HighsOptions* options,
+			HighsTimer* timer,
+                        HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
-                        const double factor_pivot_threshold,
-                        const HighsOptions* options, HighsTimer* timer,
-                        HighsSimplexAnalysis* analysis) {
+                        const double factor_pivot_threshold) {
   lp_ = lp;
   scale_ = scale;
   base_index_ = base_index;
@@ -53,20 +55,24 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
-void HSimplexNla::setPointers(const HighsLp* lp,
-			      HighsInt* base_index,
-			      const HighsScale* scale,
+void HSimplexNla::setPointers(const HighsLp* ekk_lp,
 			      const HighsSparseMatrix* factor_a_matrix,
+			      HighsInt* base_index,
 			      const HighsOptions* options,
 			      HighsTimer* timer,
 			      HighsSimplexAnalysis* analysis) {
-  lp_ = lp;
-  scale_ = scale;
+  lp_ = ekk_lp;
+  if (lp_->is_scaled_ || !lp_->scale_.has_scaling) {
+    scale_ = NULL;
+  } else {
+    const HighsScale* ekk_lp_scale = &(lp_->scale_);
+    scale_ = ekk_lp_scale;
+  }
+  if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
   if (base_index) base_index_ = base_index;
   if (options) options_ = options;
   if (timer) timer_ = timer;
   if (analysis) analysis_ = analysis;
-  if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
 }
 
 void HSimplexNla::clear() {

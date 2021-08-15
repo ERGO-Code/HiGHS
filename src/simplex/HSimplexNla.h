@@ -32,16 +32,21 @@
 
 class HSimplexNla {
  public:
-  void setup(const HighsLp* lp, HighsInt* base_index, const HighsScale* scale,
+  void setup(const HighsLp* lp,
+	     const HighsScale* scale,
+	     HighsInt* base_index, 
+	     const HighsOptions* options,
+             HighsTimer* timer,
+	     HighsSimplexAnalysis* analysis,
              const HighsSparseMatrix* factor_a_matrix,
-             const double factor_pivot_threshold, const HighsOptions* options,
-             HighsTimer* timer, HighsSimplexAnalysis* analysis);
-  void setPointers(const HighsLp* lp, HighsInt* base_index,
-		   const HighsScale* scale,
-		   const HighsSparseMatrix* factor_a_matrix,
-		   const HighsOptions* options,
-		   HighsTimer* timer,
-		   HighsSimplexAnalysis* analysis);
+             const double factor_pivot_threshold);
+
+  void setPointers(const HighsLp* lp,
+		   const HighsSparseMatrix* factor_a_matrix = NULL,
+		   HighsInt* base_index = NULL,
+		   const HighsOptions* options = NULL,
+		   HighsTimer* timer = NULL,
+		   HighsSimplexAnalysis* analysis = NULL);
   void clear();
   HighsInt invert();
   void btran(HVector& rhs, const double expected_density,

@@ -265,31 +265,65 @@ void HEkk::updateStatus(LpAction action) {
   }
 }
 
-void HEkk::setPointers(HighsLpSolverObject& solver_object) {
-  setPointers(&solver_object.options_, &solver_object.timer_);
+void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object, const HighsSparseMatrix* scaled_a_matrix) {
+  // Move the incumbent LP to EKK
+  this->lp_ = std::move(incumbent_lp);
+  incumbent_lp.is_moved_ = true;
+  if (status_.has_matrix) initialiseMatrix(true);
+  if (incumbent_lp.is_scaled_) {
+    // Solving a scaled LP, so no scaling in simplex NLA, and HFactor
+    // uses the LP's constraint matrix
+    this->scale_ = NULL;
+    this->factor_a_matrix_ = &(this->lp_.a_matrix_);
+  } else {
+    // Solving an unscaled LP
+    //
+    // Scaling in simplex NLA depends on whether the LP has scaling.
+    //
+    // this->scale_ becomes the pointer to scaling factors used by
+    // simplex NLA
+    if (this->lp_.scale_.has_scaling) {
+      // Solving an LP that has scaling factors but is unscaled, so
+      // the scaling factors are used in simplex NLA, which also
+      // requires a scaled constraint matrix for HFactor
+      //
+      // Now that the incumbent LP has been moved to EKK, this->scale_
+      // must be the pointer to the scaling of the EKK LP. However,
+      // once the incumbent LP is moved back, the pointer to scaling
+      // factors used by simplex NLA must be updated
+      this->scale_ = &(this->lp_.scale_);
+      assert(scaled_a_matrix);
+      this->factor_a_matrix_ = scaled_a_matrix;
+    } else {
+      // Solving an LP that has no scaling factors, so HFactor uses
+      // the LP's constraint matrix and simplex NLA has no scaling.
+      this->scale_ = NULL;
+      this->factor_a_matrix_ = &(this->lp_.a_matrix_);
+    }
+  }
+  // Update other EKK pointers
+  this->setPointers(&solver_object.options_, &solver_object.timer_);
+  // If simplex NLA is set up, pass the pointers that it uses
+  if (this->simplex_nla_.is_setup_)
+    this->simplex_nla_.setPointers(&(this->lp_),
+				   this->factor_a_matrix_,
+				   &solver_object.ekk_instance_.basis_.basicIndex_[0],
+				   &solver_object.options_,
+				   &solver_object.timer_,
+				   &(this->analysis_));
 }
 
 void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
-  opt_point_ = opt_point;
-  tim_point_ = tim_point;
-  analysis_.timer_ = tim_point;
+  this->opt_point_ = opt_point;
+  this->tim_point_ = tim_point;
+  this->analysis_.timer_ = this->tim_point_;
 }
 
-void HEkk::moveUnscaledLp(HighsLp lp, const HighsSparseMatrix* scaled_a_matrix) {
-  lp_ = std::move(lp);
-  if (status_.has_matrix) initialiseMatrix(true);
-  scale_ = &lp_.scale_;
-  factor_a_matrix_ = scaled_a_matrix;
-  if (simplex_nla_.is_setup_) {
-    // Simplex NLA has been set up in previous call to
-    // computeFactor(), so update its scale pointer and the matrix
-    // pointers in the HFactor instance
-    simplex_nla_.setPointers(&lp_, NULL, scale_, factor_a_matrix_, NULL, NULL, NULL);
-    //    simplex_nla_.lp_ = &lp_;
-    //    simplex_nla_.scale_ = scale_;
-    //    simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
-  }
+void HEkk::setSimplexNlaScale(const HighsLp& lp) {
+  assert(lp.scale_.has_scaling);
+  this->simplex_nla_.scale_ = &lp.scale_;
 }
+
 
 HighsStatus HEkk::solve() {
   initialiseAnalysis();
@@ -757,11 +791,6 @@ void HEkk::handleRankDeficiency() {
   status_.has_matrix = false;
 }
 
-void HEkk::updateFactorMatrixPointers() {
-  factor_a_matrix_ = &lp_.a_matrix_;
-  simplex_nla_.factor_.setupMatrix(factor_a_matrix_);
-}
-
 // Private methods
 
 HighsStatus HEkk::setup() {
@@ -1177,9 +1206,9 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= opt_point_->factor_pivot_threshold);
-    simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], scale_, factor_a_matrix_,
-                       info_.factor_pivot_threshold, opt_point_, tim_point_,
-                       &analysis_);
+    simplex_nla_.setup(&lp_, scale_, &basis_.basicIndex_[0],
+                       opt_point_, tim_point_, &analysis_,
+		       factor_a_matrix_, info_.factor_pivot_threshold);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
@@ -2625,4 +2654,13 @@ double HEkk::computeBasisCondition() {
 
 void HEkk::initialiseAnalysis() {
   analysis_.setup(lp_name_, lp_, *opt_point_, iteration_count_);
+}
+
+void HEkk::reportScalingPointers(std::string message, HighsLpSolverObject& solver_object) {
+  HEkk& ekk_instance = solver_object.ekk_instance_;
+  HighsLp& incumbent_lp = solver_object.lp_;
+  HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
+  void* nla_scale = (void*)simplex_nla.scale_;
+  void* lp_scale = (void*)(&incumbent_lp.scale_);
+  printf("nla_scale = %p; lp_scale = %p: %s\n", nla_scale, lp_scale, message.c_str());
 }

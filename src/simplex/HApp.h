@@ -32,6 +32,7 @@
 #include "simplex/HEkk.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HSimplexNlaDebug.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
@@ -46,12 +47,43 @@
 // If possible, it sets the HiGHS basis and solution
 
 HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object, HighsStatus return_status) {
+  HighsOptions& options = solver_object.options_;
+  HEkk& ekk_instance = solver_object.ekk_instance_;
+  HighsLp& incumbent_lp = solver_object.lp_;
+  HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
   // Copy the simplex iteration count to highs_info_ from ekk_instance
   solver_object.highs_info_.simplex_iteration_count =
-    solver_object.ekk_instance_.iteration_count_;
+    ekk_instance.iteration_count_;
   // Ensure that the incumbent LP is neither moved, not scaled
-  assert(!solver_object.lp_.is_scaled_);
-  assert(!solver_object.lp_.is_moved_);
+  assert(!incumbent_lp.is_scaled_);
+  assert(!incumbent_lp.is_moved_);
+  // Cannot expect any more with an error return
+  if (return_status == HighsStatus::kError) return return_status;
+  // Ensure that there is an invert for the current LP
+  assert(ekk_instance.status_.has_invert);
+  // Ensure that simplex NLA is set up and has the right scaling
+  assert(simplex_nla.is_setup_);
+  // Set the simplex NLA scaling
+  ekk_instance.setSimplexNlaScale(incumbent_lp);
+  if (incumbent_lp.scale_.has_scaling) {
+    // The LP has scaling, so ensure that the simplex NLA has its scaling
+    void* nla_scale = (void*)simplex_nla.scale_;
+    void* lp_scale = (void*)(&incumbent_lp.scale_);
+    assert(nla_scale == lp_scale);
+  } else {
+    // The LP has no scaling, so ensure that the simplex NLA has no scaling
+    assert(!simplex_nla.scale_);
+  }
+  // ToDo Need to switch off this forced debug
+  const bool force_debug = true;
+  if (simplex_nla.options_->highs_debug_level >= kHighsDebugLevelCostly || force_debug) {
+    simplex_nla.lp_ = &incumbent_lp;
+    if (debugCheckInvert(simplex_nla, true) != HighsDebugStatus::kOk) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+		   "Error in basis matrix inverse after solving the LP\n");
+      return_status = HighsStatus::kError;
+    }
+  }
   return return_status;
 }
 
@@ -74,7 +106,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   SimplexBasis& ekk_basis = ekk_instance.basis_;
   HighsSimplexStatus& status = ekk_instance.status_;
   
-  ekk_instance.setPointers(solver_object);
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
   
@@ -98,9 +129,15 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // unscaled and not moved
   assert(!incumbent_lp.is_scaled_);
   assert(!incumbent_lp.is_moved_);
-  // Consider scaling the LP, and then move to EKK
+  // Consider scaling the LP - either with any existing scaling, or by
+  // considering computing scaling factors if there are none - and
+  // then move to EKK
   considerScaling(options, incumbent_lp);
-  incumbent_lp.moveLp(ekk_lp);
+  // Move the LP to EKK, updating other EKK pointers and any simplex
+  // NLA pointers, since they may have moved if the LP has been
+  // modified
+  ekk_instance.moveLp(std::move(incumbent_lp), solver_object);
+  incumbent_lp.is_moved_ = true;
   if (!status.initialised) {
     // The simplex instance isn't initialised
     call_status = ekk_instance.setup();
@@ -108,10 +145,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
       return returnFromSolveLpSimplex(solver_object, call_status);
     }
-  } else {
-    // Update the pointers to the HFactor matrix since they may have
-    // moved if the LP has been modified
-    ekk_instance.updateFactorMatrixPointers();
   }
   // If there is no simplex basis, use the HiGHS basis
   if (!status.has_basis && basis.valid) {
@@ -152,6 +185,9 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       assert(basis.valid);
       highs_info.basis_validity = kBasisValidityValid;
       incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
+      // Now that the incumbent LP is unscaled, to use the simplex NLA
+      // requires scaling to be applied
+      ekk_instance.setSimplexNlaScale(incumbent_lp);
       unscaleSolution(solution, incumbent_lp.scale_);
       // Determine whether the unscaled LP has been solved
       getUnscaledInfeasibilities(options, incumbent_lp.scale_, ekk_basis, ekk_info, highs_info);
@@ -209,7 +245,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     //
     // Move the incumbent LP and pass pointers to the scaling factors
     // and scaled matrix for the HFactor instance
-    ekk_instance.moveUnscaledLp(std::move(incumbent_lp), &scaled_lp.a_matrix_);
+    ekk_instance.moveLp(std::move(incumbent_lp), solver_object, &scaled_lp.a_matrix_);
     incumbent_lp.is_moved_ = true;
     // Save options/strategies that may be changed
     HighsInt simplex_strategy = options.simplex_strategy;
@@ -253,6 +289,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Move the incumbent LP back from Ekk
   incumbent_lp = std::move(ekk_lp);
   incumbent_lp.is_moved_ = false;
+  ekk_instance.setSimplexNlaScale(incumbent_lp);
   if (return_status == HighsStatus::kError) {
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }

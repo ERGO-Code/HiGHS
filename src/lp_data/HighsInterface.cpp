@@ -490,9 +490,13 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
     }
   }
   // bail out if no matrix is to be extracted
-  const bool extract_matrix = row_matrix_start != NULL &&
-    (row_matrix_index != NULL || row_matrix_value != NULL);
-  if (!extract_matrix) return;
+  const bool extract_start = row_matrix_start != NULL;
+  const bool extract_index = row_matrix_index != NULL;
+  const bool extract_value = row_matrix_value != NULL;
+  const bool extract_matrix = extract_index || extract_value;
+  // Someone might just want the values, but to get them makes use of
+  // the starts so tough!
+  if (!extract_start) return;
   // Allocate an array of lengths for the row-wise matrix to be extracted
   vector<HighsInt> row_matrix_length;
   row_matrix_length.assign(get_num_row, 0);
@@ -513,6 +517,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   }
   HighsInt iRow = get_num_row-1;
   get_num_nz = row_matrix_start[iRow] + row_matrix_length[iRow];
+  // Bail out if matrix indices and values are not required 
+  if (!extract_matrix) return;
   row_matrix_length[iRow] = row_matrix_start[iRow];
   // Fill the row-wise matrix with indices and values
   for (HighsInt col = 0; col < lp.num_col_; col++) {
@@ -521,8 +527,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
       HighsInt new_iRow = new_index[iRow];
       if (new_iRow >= 0) {
 	HighsInt row_iEl = row_matrix_length[new_iRow];
-	if (row_matrix_index != NULL) row_matrix_index[row_iEl] = col;
-	if (row_matrix_value != NULL) row_matrix_value[row_iEl] = lp.a_matrix_.value_[iEl];
+	if (extract_index) row_matrix_index[row_iEl] = col;
+	if (extract_value) row_matrix_value[row_iEl] = lp.a_matrix_.value_[iEl];
 	row_matrix_length[new_iRow]++;
       }
     }
@@ -1140,28 +1146,36 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // EKK must have an INVERT, but simplex NLA may need the pointer to
   // its LP to be refreshed so that it can use its scale factors
   assert(ekk_instance_.status_.has_invert);
+  // Reset the pointers of the unscaled LP
+  ekk_instance_.simplex_nla_.setPointers(&lp);
   assert(!lp.is_moved_);
   // Set up solve vector with suitably scaled RHS
   HVector solve_vector;
   solve_vector.setup(num_row);
   solve_vector.clear();
+  // ToDo The scaling doesn't seem to have to be applied since it's
+  // taken care of in simplex NLA, so delete the use of scaling
+  // factors that's currently only bypassed with use_scaling
+  const bool use_scaling = false;
   HighsScale& scale = lp.scale_;
   HighsInt rhs_num_nz = 0;
   if (transpose) {
     for (HighsInt row = 0; row < num_row; row++) {
       if (rhs[row]) {
-        solve_vector.index[rhs_num_nz++] = row;
-        double rhs_value = rhs[row];
-	if (scale.has_scaling) {
-	  HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-	  if (col < num_col) {
-	    rhs_value *= scale.col[col];
-	  } else {
-	    double scale_value = scale.row[col - num_col];
-	    rhs_value /= scale_value;
+	solve_vector.index[rhs_num_nz++] = row;
+	double rhs_value = rhs[row];
+	if (use_scaling) {
+	  if (scale.has_scaling) {
+	    HighsInt col = ekk_instance_.basis_.basicIndex_[row];
+	    if (col < num_col) {
+	      rhs_value *= scale.col[col];
+	    } else {
+	      double scale_value = scale.row[col - num_col];
+	      rhs_value /= scale_value;
+	    }
 	  }
 	}
-        solve_vector.array[row] = rhs_value;
+	solve_vector.array[row] = rhs_value;
       }
     }
   } else {
@@ -1169,8 +1183,10 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
       if (rhs[row]) {
         solve_vector.index[rhs_num_nz++] = row;
         solve_vector.array[row] = rhs[row];
-	if (scale.has_scaling)
-	  solve_vector.array[row] *= scale.row[row];
+	if (use_scaling) {
+	  if (scale.has_scaling)
+	    solve_vector.array[row] *= scale.row[row];
+	}
       }
     }
   }
@@ -1228,42 +1244,44 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     }
   }
   // Scale the solution
-  if (scale.has_scaling) {
-    if (transpose) {
-      if (solve_vector.count > num_row) {
-	// Solution nonzeros not known
-	for (HighsInt row = 0; row < num_row; row++) {
-	  double scale_value = scale.row[row];
-	  solution_vector[row] *= scale_value;
-	}
-      } else {
-	for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
-	  HighsInt row = solve_vector.index[ix];
-	  double scale_value = scale.row[row];
-	  solution_vector[row] *= scale_value;
-	}
-      }
-    } else {
-      if (solve_vector.count > num_row) {
-	// Solution nonzeros not known
-	for (HighsInt row = 0; row < num_row; row++) {
-	  HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-	  if (col < num_col) {
-	    solution_vector[row] *= scale.col[col];
-	  } else {
-	    double scale_value = scale.row[col - num_col];
-	    solution_vector[row] /= scale_value;
+  if (use_scaling) {
+    if (scale.has_scaling) {
+      if (transpose) {
+	if (solve_vector.count > num_row) {
+	  // Solution nonzeros not known
+	  for (HighsInt row = 0; row < num_row; row++) {
+	    double scale_value = scale.row[row];
+	    solution_vector[row] *= scale_value;
+	  }
+	} else {
+	  for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
+	    HighsInt row = solve_vector.index[ix];
+	    double scale_value = scale.row[row];
+	    solution_vector[row] *= scale_value;
 	  }
 	}
       } else {
-	for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
-	  HighsInt row = solve_vector.index[ix];
-	  HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-	  if (col < num_col) {
-	    solution_vector[row] *= scale.col[col];
-	  } else {
-	    double scale_value = scale.row[col - num_col];
-	    solution_vector[row] /= scale_value;
+	if (solve_vector.count > num_row) {
+	  // Solution nonzeros not known
+	  for (HighsInt row = 0; row < num_row; row++) {
+	    HighsInt col = ekk_instance_.basis_.basicIndex_[row];
+	    if (col < num_col) {
+	      solution_vector[row] *= scale.col[col];
+	    } else {
+	      double scale_value = scale.row[col - num_col];
+	      solution_vector[row] /= scale_value;
+	    }
+	  }
+	} else {
+	  for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
+	    HighsInt row = solve_vector.index[ix];
+	    HighsInt col = ekk_instance_.basis_.basicIndex_[row];
+	    if (col < num_col) {
+	      solution_vector[row] *= scale.col[col];
+	    } else {
+	      double scale_value = scale.row[col - num_col];
+	      solution_vector[row] /= scale_value;
+	    }
 	  }
 	}
       }
