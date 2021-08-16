@@ -168,7 +168,7 @@ void HighsMipSolverData::init() {
   if (mipsolver.clqtableinit) cliquetable.buildFrom(*mipsolver.clqtableinit);
   if (mipsolver.implicinit) implications.buildFrom(*mipsolver.implicinit);
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
-  epsilon = mipsolver.options_mip_->mip_epsilon;
+  epsilon = mipsolver.options_mip_->small_matrix_value;
   heuristic_effort = mipsolver.options_mip_->mip_heuristic_effort;
   detectSymmetries = mipsolver.options_mip_->mip_detect_symmetry;
 

@@ -230,7 +230,7 @@ HighsSymmetries::computeStabilizerOrbits(const HighsDomain& localdom) {
     HighsInt orbit = getOrbit(permutationColumns[i]);
     if (orbitSize[orbit] == 1)
       stabilizerOrbits.stabilizedCols.push_back(permutationColumns[i]);
-    else
+    else if (localdom.isGlobalBinary(permutationColumns[i]))
       stabilizerOrbits.orbitCols.push_back(permutationColumns[i]);
   }
   stabilizerOrbits.symmetries = this;

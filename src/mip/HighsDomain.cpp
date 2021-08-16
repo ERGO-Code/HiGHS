@@ -1398,8 +1398,6 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   assert(boundchg.column >= 0);
   assert(boundchg.column < (HighsInt)col_upper_.size());
   // assert(infeasible_ == 0);
-  mipsolver->mipdata_->debugSolution.boundChangeAdded(
-      *this, boundchg, reason.type == Reason::kBranching);
   HighsInt prevPos;
   if (boundchg.boundtype == HighsBoundType::kLower) {
     if (boundchg.boundval <= col_lower_[boundchg.column]) {
@@ -1446,6 +1444,9 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     prevPos = colUpperPos_[boundchg.column];
     colUpperPos_[boundchg.column] = domchgstack_.size();
   }
+
+  mipsolver->mipdata_->debugSolution.boundChangeAdded(
+      *this, boundchg, reason.type == Reason::kBranching);
 
   if (reason.type == Reason::kBranching)
     branchPos_.push_back(domchgstack_.size());

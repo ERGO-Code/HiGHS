@@ -2164,7 +2164,29 @@ HighsStatus Highs::callSolveMip() {
   assert(!basis_.valid);
   // Get the objective and any KKT failures
   info_.objective_function_value = solver.solution_objective_;
+  const bool use_mip_feasibility_tolerance = false;
+  double primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
+  if (use_mip_feasibility_tolerance) {
+    options_.primal_feasibility_tolerance = options_.mip_feasibility_tolerance;
+  }
+  // NB getKktFailures sets the primal and dual solution status
   getKktFailures(options_, model_, solution_, basis_, info_);
+  if (use_mip_feasibility_tolerance) {
+    // Overwrite max infeasibility to include integrality if there is a solution
+    if (solver.solution_objective_ != kHighsInf) {
+      info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+      info_.max_primal_infeasibility =
+        std::max({solver.row_violation_, solver.bound_violation_,
+                  solver.integrality_violation_});
+      if (info_.max_primal_infeasibility > options_.mip_feasibility_tolerance) {
+	info_.primal_solution_status = kSolutionStatusInfeasible;
+      // model_status_ = HighsModelStatus::kNotset;
+      }
+      info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+    }
+    // Recover the primal feasibility tolerance
+    options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  }
   // Set the MIP-specific values of info_
   info_.mip_node_count = solver.node_count_;
   info_.mip_dual_bound = solver.dual_bound_;

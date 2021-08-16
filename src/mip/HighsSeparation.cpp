@@ -110,8 +110,13 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   }
   HighsLpAggregator lpAggregator(*lp);
 
-  for (const std::unique_ptr<HighsSeparator>& separator : separators)
+  for (const std::unique_ptr<HighsSeparator>& separator : separators) {
     separator->run(*lp, lpAggregator, transLp, mipdata.cutpool);
+    if (mipdata.domain.infeasible()) {
+      status = HighsLpRelaxation::Status::kInfeasible;
+      return 0;
+    }
+  }
 
   numboundchgs = propagateAndResolve();
   if (numboundchgs == -1)

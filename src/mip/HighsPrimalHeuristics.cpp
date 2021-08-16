@@ -28,7 +28,7 @@
 HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
       lp_iterations(0),
-      randgen(mipsolver.options_mip_->highs_random_seed) {
+      randgen(mipsolver.options_mip_->random_seed) {
   successObservations = 0;
   numSuccessObservations = 0;
   infeasObservations = 0;

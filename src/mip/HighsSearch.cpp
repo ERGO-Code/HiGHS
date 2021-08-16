@@ -422,9 +422,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             if (!solutionValid) continue;
           }
 
-          if (objdelta <= mipsolver.mipdata_->feastol)
+          if (objdelta <= mipsolver.mipdata_->feastol) {
             pseudocost.addObservation(fracints[k].first,
                                       otherdownval - otherfracval, objdelta);
+            markBranchingVarDownReliableAtNode(fracints[k].first);
+          }
 
           downscore[k] = std::min(downscore[k], objdelta);
         } else if (sol[fracints[k].first] >=
@@ -473,9 +475,11 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
             if (!solutionValid) continue;
           }
 
-          if (objdelta <= mipsolver.mipdata_->feastol)
+          if (objdelta <= mipsolver.mipdata_->feastol) {
             pseudocost.addObservation(fracints[k].first,
                                       otherupval - otherfracval, objdelta);
+            markBranchingVarUpReliableAtNode(fracints[k].first);
+          }
 
           upscore[k] = std::min(upscore[k], objdelta);
         }
@@ -484,7 +488,10 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters) {
 
     if (!downscorereliable[candidate] &&
         (upscorereliable[candidate] ||
-         downscore[candidate] >= upscore[candidate])) {
+         std::make_pair(downscore[candidate],
+                        pseudocost.getAvgInferencesDown(col)) >=
+             std::make_pair(upscore[candidate],
+                            pseudocost.getAvgInferencesUp(col)))) {
       // evaluate down branch
       int64_t inferences = -(int64_t)localdom.getDomainChangeStack().size() - 1;
 
