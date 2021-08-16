@@ -996,6 +996,8 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
   // Create a HighsLpSolverObject of references to data in the Highs
   // class, and the scaled/unscaled model status
   HighsLpSolverObject solver_object(model_.lp_, basis_, solution_, info_, ekk_instance_, options_, timer_);
+  solver_object.scaled_model_status_ = scaled_model_status_;
+  solver_object.unscaled_model_status_ = model_status_;
   return getRangingData(ranging, solver_object);
 }
 

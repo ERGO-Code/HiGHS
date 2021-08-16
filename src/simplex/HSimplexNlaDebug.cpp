@@ -125,7 +125,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
         value_adjective.c_str(), residual_error_norm);
   }
 
-  //  if (options->highs_debug_level < kHighsDebugLevelExpensive) return return_status;
+  if (options->highs_debug_level < kHighsDebugLevelExpensive) return return_status;
 
   expected_density = 0;
   double inverse_error_norm = 0;
