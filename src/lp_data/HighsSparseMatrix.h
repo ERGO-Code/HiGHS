@@ -19,8 +19,8 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HStruct.h"  //For  HighsScale
 #include "lp_data/HighsStatus.h"
-#include "lp_data/HStruct.h" //For  HighsScale
 #include "simplex/HVector.h"
 #include "simplex/SimplexStruct.h"  //For SimplexScale until scaling is HighsScale
 #include "util/HighsUtils.h"
@@ -49,24 +49,20 @@ class HighsSparseMatrix {
   void ensureColWise();
   void ensureRowWise();
 
-  void addCols(const HighsSparseMatrix new_cols, 
-	       const int8_t* in_partition = NULL);
-  
-  void addRows(const HighsSparseMatrix new_rows, 
-	       const int8_t* in_partition = NULL);
-  
-  void addCols(const HighsInt num_new_col,
-	       const HighsInt num_new_nz,
-	       const HighsInt* new_matrix_start,
-	       const HighsInt* new_matrix_index,
-	       const double* new_matrix_value,
-	       const int8_t* in_partition = NULL);
-  void addRows(const HighsInt num_new_row,
-	       const HighsInt num_new_nz,
-	       const HighsInt* new_matrix_start,
-	       const HighsInt* new_matrix_index,
-	       const double* new_matrix_value,
-	       const int8_t* in_partition = NULL);
+  void addCols(const HighsSparseMatrix new_cols,
+               const int8_t* in_partition = NULL);
+
+  void addRows(const HighsSparseMatrix new_rows,
+               const int8_t* in_partition = NULL);
+
+  void addCols(const HighsInt num_new_col, const HighsInt num_new_nz,
+               const HighsInt* new_matrix_start,
+               const HighsInt* new_matrix_index, const double* new_matrix_value,
+               const int8_t* in_partition = NULL);
+  void addRows(const HighsInt num_new_row, const HighsInt num_new_nz,
+               const HighsInt* new_matrix_start,
+               const HighsInt* new_matrix_index, const double* new_matrix_value,
+               const int8_t* in_partition = NULL);
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   HighsStatus assessDimensions(const HighsLogOptions& log_options,
@@ -75,8 +71,10 @@ class HighsSparseMatrix {
                      const std::string matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value);
-  void considerColScaling(const HighsInt max_scale_factor_exponent, double* col_scale);
-  void considerRowScaling(const HighsInt max_scale_factor_exponent, double* row_scale);
+  void considerColScaling(const HighsInt max_scale_factor_exponent,
+                          double* col_scale);
+  void considerRowScaling(const HighsInt max_scale_factor_exponent,
+                          double* row_scale);
   void scaleCol(const HighsInt col, const double colScale);
   void scaleRow(const HighsInt row, const double rowScale);
   void applyScale(const HighsScale& scale);

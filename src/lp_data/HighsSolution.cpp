@@ -28,15 +28,16 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void getKktFailures(const HighsOptions& options, const HighsModel& model, const HighsSolution& solution,
-                    const HighsBasis& basis,
+void getKktFailures(const HighsOptions& options, const HighsModel& model,
+                    const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info) {
   HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(options, model, solution, basis, highs_info, primal_dual_errors);
+  getKktFailures(options, model, solution, basis, highs_info,
+                 primal_dual_errors);
 }
 
-void getKktFailures(const HighsOptions& options, const HighsModel& model, const HighsSolution& solution,
-                    const HighsBasis& basis,
+void getKktFailures(const HighsOptions& options, const HighsModel& model,
+                    const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
                     const bool get_residuals) {
@@ -46,15 +47,16 @@ void getKktFailures(const HighsOptions& options, const HighsModel& model, const 
                  primal_dual_errors, get_residuals);
 }
 
-void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const HighsSolution& solution,
-                      const HighsBasis& basis,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
+                      const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info) {
   HighsPrimalDualErrors primal_dual_errors;
-  getLpKktFailures(options, lp, solution, basis, highs_info, primal_dual_errors);
+  getLpKktFailures(options, lp, solution, basis, highs_info,
+                   primal_dual_errors);
 }
 
-void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const HighsSolution& solution,
-                      const HighsBasis& basis,
+void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
+                      const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
                       HighsPrimalDualErrors& primal_dual_errors,
                       const bool get_residuals) {
@@ -62,7 +64,8 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp, const High
                  primal_dual_errors, get_residuals);
 }
 
-void getKktFailures(const HighsOptions& options, const HighsLp& lp, const std::vector<double>& gradient,
+void getKktFailures(const HighsOptions& options, const HighsLp& lp,
+                    const std::vector<double>& gradient,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
                     HighsPrimalDualErrors& primal_dual_errors,
@@ -766,16 +769,22 @@ void resetModelStatusAndHighsInfo(HighsLpSolverObject& solver_object) {
   solver_object.highs_info_.objective_function_value = 0;
   solver_object.highs_info_.primal_solution_status = kSolutionStatusNone;
   solver_object.highs_info_.dual_solution_status = kSolutionStatusNone;
-  solver_object.highs_info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
-  solver_object.highs_info_.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
-  solver_object.highs_info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
-  solver_object.highs_info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.num_primal_infeasibilities =
+      kHighsIllegalInfeasibilityCount;
+  solver_object.highs_info_.max_primal_infeasibility =
+      kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.sum_primal_infeasibilities =
+      kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.num_dual_infeasibilities =
+      kHighsIllegalInfeasibilityCount;
+  solver_object.highs_info_.max_dual_infeasibility =
+      kHighsIllegalInfeasibilityMeasure;
+  solver_object.highs_info_.sum_dual_infeasibilities =
+      kHighsIllegalInfeasibilityMeasure;
 }
 
 void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
-				  HighsInfo& highs_info) {
+                                  HighsInfo& highs_info) {
   model_status = HighsModelStatus::kNotset;
   highs_info.objective_function_value = 0;
   highs_info.primal_solution_status = kSolutionStatusNone;
@@ -786,7 +795,6 @@ void resetModelStatusAndHighsInfo(HighsModelStatus& model_status,
   highs_info.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   highs_info.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   highs_info.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
-
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {

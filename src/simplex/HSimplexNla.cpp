@@ -17,9 +17,9 @@
  */
 #include "simplex/HSimplexNla.h"
 
-#include "simplex/HSimplex.h"
-
 #include <stdio.h>
+
+#include "simplex/HSimplex.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -27,12 +27,9 @@
 
 using std::vector;
 
-void HSimplexNla::setup(const HighsLp* lp,
-                        const HighsScale* scale,
-			HighsInt* base_index,
-                        const HighsOptions* options,
-			HighsTimer* timer,
-                        HighsSimplexAnalysis* analysis,
+void HSimplexNla::setup(const HighsLp* lp, const HighsScale* scale,
+                        HighsInt* base_index, const HighsOptions* options,
+                        HighsTimer* timer, HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
   lp_ = lp;
@@ -62,11 +59,10 @@ void HSimplexNla::setLpAndScalePointers(const HighsLp& for_lp) {
 }
 
 void HSimplexNla::setPointers(const HighsLp* for_lp,
-			      const HighsSparseMatrix* factor_a_matrix,
-			      HighsInt* base_index,
-			      const HighsOptions* options,
-			      HighsTimer* timer,
-			      HighsSimplexAnalysis* analysis) {
+                              const HighsSparseMatrix* factor_a_matrix,
+                              HighsInt* base_index, const HighsOptions* options,
+                              HighsTimer* timer,
+                              HighsSimplexAnalysis* analysis) {
   this->setLpAndScalePointers(*for_lp);
   if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
   if (base_index) base_index_ = base_index;
@@ -173,9 +169,7 @@ void HSimplexNla::setPivotThreshold(const double new_pivot_threshold) {
 
 void HSimplexNla::passLpPointer(const HighsLp* lp) { lp_ = lp; }
 
-void HSimplexNla::passScalePointer(const HighsScale* scale) {
-  scale_ = scale;
-}
+void HSimplexNla::passScalePointer(const HighsScale* scale) { scale_ = scale; }
 
 void HSimplexNla::applyBasisMatrixRowScale(HVector& rhs) const {
   if (scale_ == NULL) return;

@@ -39,8 +39,7 @@ HighsDebugStatus debugHighsSolution(
     const std::string message, const HighsOptions& options, const HighsLp& lp,
     const HighsHessian& hessian, const HighsSolution& solution,
     const HighsBasis& basis, const HighsModelStatus model_status,
-    const HighsInfo& highs_info,
-    const bool check_model_status_and_highs_info);
+    const HighsInfo& highs_info, const bool check_model_status_and_highs_info);
 
 void debugReportHighsSolution(const string message,
                               const HighsLogOptions& log_options,
@@ -68,27 +67,26 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors);
 
-HighsDebugStatus debugCompareHighsInfo(
-    const HighsOptions& options, const HighsInfo& highs_info0,
-    const HighsInfo& highs_info1);
-HighsDebugStatus debugCompareHighsInfoObjective(
-    const HighsOptions& options, const HighsInfo& highs_info0,
-    const HighsInfo& highs_info1);
-HighsDebugStatus debugCompareHighsInfoStatus(
-    const HighsOptions& options, const HighsInfo& highs_info0,
-    const HighsInfo& highs_info1);
+HighsDebugStatus debugCompareHighsInfo(const HighsOptions& options,
+                                       const HighsInfo& highs_info0,
+                                       const HighsInfo& highs_info1);
+HighsDebugStatus debugCompareHighsInfoObjective(const HighsOptions& options,
+                                                const HighsInfo& highs_info0,
+                                                const HighsInfo& highs_info1);
+HighsDebugStatus debugCompareHighsInfoStatus(const HighsOptions& options,
+                                             const HighsInfo& highs_info0,
+                                             const HighsInfo& highs_info1);
 HighsDebugStatus debugCompareHighsInfoInfeasibility(
     const HighsOptions& options, const HighsInfo& highs_info0,
     const HighsInfo& highs_info1);
 
 HighsDebugStatus debugCompareHighsInfoDouble(const string name,
-                                                const HighsOptions& options,
-                                                const double v0,
-                                                const double v1);
+                                             const HighsOptions& options,
+                                             const double v0, const double v1);
 
 HighsDebugStatus debugCompareHighsInfoInteger(const string name,
-                                                  const HighsOptions& options,
-                                                  const HighsInt v0,
-                                                  const HighsInt v1);
+                                              const HighsOptions& options,
+                                              const HighsInt v0,
+                                              const HighsInt v1);
 
 #endif  // SIMPLEX_HIGHSSOLUTIONDEBUG_H_

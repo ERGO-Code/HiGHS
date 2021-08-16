@@ -71,15 +71,16 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     if (return_status == HighsStatus::kError) return return_status;
     // model status has been set in solveLpIpx
     solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
-   // Get the objective and any KKT failures
+    // Get the objective and any KKT failures
     solver_object.highs_info_.objective_function_value =
-      solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
-    getLpKktFailures(options, solver_object.lp_, solver_object.solution_, solver_object.basis_,
-                     solver_object.highs_info_);
-    // Seting the IPM-specific values of (highs_)info_ has been done in solveLpIpx
+        solver_object.lp_.objectiveValue(solver_object.solution_.col_value);
+    getLpKktFailures(options, solver_object.lp_, solver_object.solution_,
+                     solver_object.basis_, solver_object.highs_info_);
+    // Seting the IPM-specific values of (highs_)info_ has been done in
+    // solveLpIpx
     if ((solver_object.unscaled_model_status_ == HighsModelStatus::kUnknown ||
          (solver_object.unscaled_model_status_ ==
-	  HighsModelStatus::kUnboundedOrInfeasible &&
+              HighsModelStatus::kUnboundedOrInfeasible &&
           !options.allow_unbounded_or_infeasible)) &&
         options.run_crossover) {
       // IPX has returned a model status that HiGHS would rather
@@ -125,7 +126,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     }
   }
   // Analyse the HiGHS (basic) solution
-  if (debugHighsLpSolution(message, solver_object) == HighsDebugStatus::kLogicalError)
+  if (debugHighsLpSolution(message, solver_object) ==
+      HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
   return return_status;
 }
@@ -133,19 +135,18 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
 // and HighsInfo
 HighsStatus solveUnconstrainedLp(HighsLpSolverObject& solver_object) {
-  return (solveUnconstrainedLp(
-      solver_object.options_, solver_object.lp_,
-      solver_object.unscaled_model_status_,
-      solver_object.highs_info_, solver_object.solution_,
-      solver_object.basis_));
+  return (solveUnconstrainedLp(solver_object.options_, solver_object.lp_,
+                               solver_object.unscaled_model_status_,
+                               solver_object.highs_info_,
+                               solver_object.solution_, solver_object.basis_));
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
 // and HighsInfo
 HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
                                  HighsModelStatus& model_status,
-                                 HighsInfo& highs_info,
-                                 HighsSolution& solution, HighsBasis& basis) {
+                                 HighsInfo& highs_info, HighsSolution& solution,
+                                 HighsBasis& basis) {
   // Aliase to model status and solution parameters
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
@@ -272,8 +273,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     if (primal_infeasibility > primal_feasibility_tolerance)
       highs_info.num_primal_infeasibilities++;
     highs_info.sum_primal_infeasibilities += primal_infeasibility;
-    highs_info.max_primal_infeasibility = std::max(
-        primal_infeasibility, highs_info.max_primal_infeasibility);
+    highs_info.max_primal_infeasibility =
+        std::max(primal_infeasibility, highs_info.max_primal_infeasibility);
     if (dual_infeasibility > dual_feasibility_tolerance)
       highs_info.num_dual_infeasibilities++;
     highs_info.sum_dual_infeasibilities += dual_infeasibility;
@@ -295,6 +296,6 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   } else {
     model_status = HighsModelStatus::kOptimal;
   }
-  
+
   return HighsStatus::kOk;
 }

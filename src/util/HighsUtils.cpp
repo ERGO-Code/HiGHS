@@ -29,12 +29,10 @@ HighsInt getOmpNumThreads() {
 }
 */
 
-bool create(HighsIndexCollection& index_collection,
-	    const HighsInt from_col,
-	    const HighsInt to_col,
-	    const HighsInt dimension) {
-  if (from_col<0) return false;
-  if (to_col>=dimension) return false;
+bool create(HighsIndexCollection& index_collection, const HighsInt from_col,
+            const HighsInt to_col, const HighsInt dimension) {
+  if (from_col < 0) return false;
+  if (to_col >= dimension) return false;
   index_collection.dimension_ = dimension;
   index_collection.is_interval_ = true;
   index_collection.from_ = from_col;
@@ -43,10 +41,10 @@ bool create(HighsIndexCollection& index_collection,
 }
 
 bool create(HighsIndexCollection& index_collection,
-	    const HighsInt num_set_entries,
-	    const HighsInt* set,
-	    const HighsInt dimension) {
-  // Create an index collection for the given set - so long as it is strictly ordered
+            const HighsInt num_set_entries, const HighsInt* set,
+            const HighsInt dimension) {
+  // Create an index collection for the given set - so long as it is strictly
+  // ordered
   index_collection.dimension_ = dimension;
   index_collection.is_set_ = true;
   index_collection.set_ = {set, set + num_set_entries};
@@ -55,9 +53,8 @@ bool create(HighsIndexCollection& index_collection,
   return true;
 }
 
-void create(HighsIndexCollection& index_collection,
-	    const HighsInt* mask,
-	    const HighsInt dimension) {
+void create(HighsIndexCollection& index_collection, const HighsInt* mask,
+            const HighsInt dimension) {
   // Create an index collection for the given mask
   index_collection.dimension_ = dimension;
   index_collection.is_mask_ = true;
@@ -100,43 +97,37 @@ bool ok(const HighsIndexCollection& index_collection) {
     // Changing by interval: check the parameters and that check set and mask
     // are false
     if (index_collection.is_set_) {
-      printf(
-                   "Index collection is both interval and set\n");
+      printf("Index collection is both interval and set\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      printf(
-                   "Index collection is both interval and mask\n");
+      printf("Index collection is both interval and mask\n");
       return false;
     }
     if (index_collection.from_ < 0) {
-      printf(
-                   "Index interval lower limit is %" HIGHSINT_FORMAT " < 0\n",
-                   index_collection.from_);
+      printf("Index interval lower limit is %" HIGHSINT_FORMAT " < 0\n",
+             index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
-      printf(
-                   "Index interval upper limit is %" HIGHSINT_FORMAT
-                   " > %" HIGHSINT_FORMAT "\n",
-                   index_collection.to_, index_collection.dimension_ - 1);
+      printf("Index interval upper limit is %" HIGHSINT_FORMAT
+             " > %" HIGHSINT_FORMAT "\n",
+             index_collection.to_, index_collection.dimension_ - 1);
       return false;
     }
   } else if (index_collection.is_set_) {
     // Changing by set: check the parameters and check that interval and mask
     // are false
     if (index_collection.is_interval_) {
-      printf(
-                   "Index collection is both set and interval\n");
+      printf("Index collection is both set and interval\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      printf(
-                   "Index collection is both set and mask\n");
+      printf("Index collection is both set and mask\n");
       return false;
     }
     if (&index_collection.set_[0] == NULL) {
-      printf( "Index set is NULL\n");
+      printf("Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
@@ -146,20 +137,16 @@ bool ok(const HighsIndexCollection& index_collection) {
     HighsInt prev_set_entry = -1;
     for (HighsInt k = 0; k < num_entries; k++) {
       if (set[k] < 0 || set[k] > entry_upper) {
-        printf(
-                     "Index set entry set[%" HIGHSINT_FORMAT
-                     "] = %" HIGHSINT_FORMAT
-                     " is out of bounds [0, %" HIGHSINT_FORMAT "]\n",
-                     k, set[k], entry_upper);
+        printf("Index set entry set[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
+               " is out of bounds [0, %" HIGHSINT_FORMAT "]\n",
+               k, set[k], entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
-        printf(
-                     "Index set entry set[%" HIGHSINT_FORMAT
-                     "] = %" HIGHSINT_FORMAT
-                     " is not greater than "
-                     "previous entry %" HIGHSINT_FORMAT "\n",
-                     k, set[k], prev_set_entry);
+        printf("Index set entry set[%" HIGHSINT_FORMAT "] = %" HIGHSINT_FORMAT
+               " is not greater than "
+               "previous entry %" HIGHSINT_FORMAT "\n",
+               k, set[k], prev_set_entry);
         return false;
       }
       prev_set_entry = set[k];
@@ -171,30 +158,27 @@ bool ok(const HighsIndexCollection& index_collection) {
     // Changing by mask: check the parameters and check that set and interval
     // are false
     if (&index_collection.mask_[0] == NULL) {
-      printf( "Index mask is NULL\n");
+      printf("Index mask is NULL\n");
       return false;
     }
     if (index_collection.is_interval_) {
-      printf(
-                   "Index collection is both mask and interval\n");
+      printf("Index collection is both mask and interval\n");
       return false;
     }
     if (index_collection.is_set_) {
-      printf(
-                   "Index collection is both mask and set\n");
+      printf("Index collection is both mask and set\n");
       return false;
     }
   } else {
     // No method defined
-    printf(
-                 "Undefined index collection\n");
+    printf("Undefined index collection\n");
     return false;
   }
   return true;
 }
 
-void limits(const HighsIndexCollection& index_collection,
-	    HighsInt& from_k, HighsInt& to_k) {
+void limits(const HighsIndexCollection& index_collection, HighsInt& from_k,
+            HighsInt& to_k) {
   if (index_collection.is_interval_) {
     from_k = index_collection.from_;
     to_k = index_collection.to_;
@@ -205,14 +189,14 @@ void limits(const HighsIndexCollection& index_collection,
     from_k = 0;
     to_k = index_collection.dimension_ - 1;
   } else {
-    assert(1==0);
+    assert(1 == 0);
   }
 }
 
 void updateOutInIndex(const HighsIndexCollection& index_collection,
-		      HighsInt& out_from_ix, HighsInt& out_to_ix,
-		      HighsInt& in_from_ix, HighsInt& in_to_ix,
-		      HighsInt& current_set_entry) {
+                      HighsInt& out_from_ix, HighsInt& out_to_ix,
+                      HighsInt& in_from_ix, HighsInt& in_to_ix,
+                      HighsInt& current_set_entry) {
   if (index_collection.is_interval_) {
     out_from_ix = index_collection.from_;
     out_to_ix = index_collection.to_;

@@ -62,7 +62,7 @@ const HighsLogType kIterationReportLogType = HighsLogType::kVerbose;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(){}
+  HighsSimplexAnalysis() {}
   // Pointer to timer
   HighsTimer* timer_;
 

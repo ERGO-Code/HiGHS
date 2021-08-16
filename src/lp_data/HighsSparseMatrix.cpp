@@ -199,23 +199,20 @@ void HighsSparseMatrix::ensureRowWise() {
   assert((HighsInt)this->value_.size() >= num_nz);
 }
 
-void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols, 
-				const int8_t* in_partition) {
+void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
+                                const int8_t* in_partition) {
   assert(new_cols.isColwise());
   const HighsInt num_new_nz = new_cols.numNz();
-  addCols(new_cols.num_col_, num_new_nz,
-		       &new_cols.start_[0], &new_cols.index_[0], &new_cols.value_[0],
-		       in_partition);
+  addCols(new_cols.num_col_, num_new_nz, &new_cols.start_[0],
+          &new_cols.index_[0], &new_cols.value_[0], in_partition);
 }
 
-
-
 void HighsSparseMatrix::addCols(const HighsInt num_new_col,
-                                       const HighsInt num_new_nz,
-                                       const HighsInt* new_matrix_start,
-                                       const HighsInt* new_matrix_index,
-                                       const double* new_matrix_value,
-                                       const int8_t* in_partition) {
+                                const HighsInt num_new_nz,
+                                const HighsInt* new_matrix_start,
+                                const HighsInt* new_matrix_index,
+                                const double* new_matrix_value,
+                                const int8_t* in_partition) {
   assert(this->formatOk());
   // Adding columns to a row-wise partitioned matrix needs the
   // partition information
@@ -227,7 +224,7 @@ void HighsSparseMatrix::addCols(const HighsInt num_new_col,
   // Cannot handle the row-wise case
   assert(!this->isRowwise());
   assert(num_new_col >= 0);
-  assert(num_new_nz >=0);
+  assert(num_new_nz >= 0);
   if (num_new_col == 0) {
     // No columns are being added, so check that no nonzeros are being
     // added
@@ -247,7 +244,7 @@ void HighsSparseMatrix::addCols(const HighsInt num_new_col,
   HighsInt num_row = this->num_row_;
   HighsInt num_nz = this->numNz();
   // Check that nonzeros aren't being appended to a matrix with no rows
-  assert(num_new_nz <=0 || num_row > 0);
+  assert(num_new_nz <= 0 || num_row > 0);
 
   if (this->format_ == MatrixFormat::kRowwise) {
     // Matrix is currently a standard row-wise matrix, so flip
@@ -296,21 +293,20 @@ void HighsSparseMatrix::addCols(const HighsInt num_new_col,
   }
 }
 
-void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows, 
-                                       const int8_t* in_partition) {
+void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
+                                const int8_t* in_partition) {
   assert(new_rows.isRowwise());
   const HighsInt num_new_nz = new_rows.numNz();
-  addRows(new_rows.num_row_, num_new_nz,
-		       &new_rows.start_[0], &new_rows.index_[0], &new_rows.value_[0],
-		       in_partition);
+  addRows(new_rows.num_row_, num_new_nz, &new_rows.start_[0],
+          &new_rows.index_[0], &new_rows.value_[0], in_partition);
 }
 
 void HighsSparseMatrix::addRows(const HighsInt num_new_row,
-                                       const HighsInt num_new_nz,
-                                       const HighsInt* new_matrix_start,
-                                       const HighsInt* new_matrix_index,
-                                       const double* new_matrix_value,
-                                       const int8_t* in_partition) {
+                                const HighsInt num_new_nz,
+                                const HighsInt* new_matrix_start,
+                                const HighsInt* new_matrix_index,
+                                const double* new_matrix_value,
+                                const int8_t* in_partition) {
   assert(this->formatOk());
   // Adding rows to a row-wise partitioned matrix needs the
   // partition information
@@ -319,7 +315,7 @@ void HighsSparseMatrix::addRows(const HighsInt num_new_row,
     assert(1 == 0);
     assert(in_partition != NULL);
   }
-  assert(num_new_row >=0);
+  assert(num_new_row >= 0);
   assert(num_new_nz >= 0);
   if (num_new_row == 0) {
     // No rows are being added, so check that no nonzeros are being
@@ -468,7 +464,8 @@ void HighsSparseMatrix::addRows(const HighsInt num_new_row,
   this->num_row_ += num_new_row;
 }
 
-void HighsSparseMatrix::deleteCols(const HighsIndexCollection& index_collection) {
+void HighsSparseMatrix::deleteCols(
+    const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
   // Can't handle rowwise matrices yet
   assert(!this->isRowwise());
@@ -488,9 +485,8 @@ void HighsSparseMatrix::deleteCols(const HighsIndexCollection& index_collection)
   HighsInt new_num_col = 0;
   HighsInt new_num_nz = 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
+    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
+                     keep_from_col, keep_to_col, current_set_entry);
     if (k == from_k) {
       // Account for the initial columns being kept
       new_num_col = delete_from_col;
@@ -532,7 +528,8 @@ void HighsSparseMatrix::deleteCols(const HighsIndexCollection& index_collection)
   this->num_col_ = new_num_col;
 }
 
-void HighsSparseMatrix::deleteRows(const HighsIndexCollection& index_collection) {
+void HighsSparseMatrix::deleteRows(
+    const HighsIndexCollection& index_collection) {
   assert(this->formatOk());
   assert(ok(index_collection));
   HighsInt from_k;
@@ -559,9 +556,8 @@ void HighsSparseMatrix::deleteRows(const HighsIndexCollection& index_collection)
     keep_to_row = -1;
     current_set_entry = 0;
     for (HighsInt k = from_k; k <= to_k; k++) {
-      updateOutInIndex(index_collection, delete_from_row,
-                                      delete_to_row, keep_from_row, keep_to_row,
-                                      current_set_entry);
+      updateOutInIndex(index_collection, delete_from_row, delete_to_row,
+                       keep_from_row, keep_to_row, current_set_entry);
       if (k == from_k) {
         // Account for any initial rows being kept
         for (HighsInt row = 0; row < delete_from_row; row++) {
@@ -631,7 +627,8 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                       small_matrix_value, large_matrix_value);
 }
 
-void HighsSparseMatrix::considerColScaling(const HighsInt max_scale_factor_exponent, double* col_scale) {
+void HighsSparseMatrix::considerColScaling(
+    const HighsInt max_scale_factor_exponent, double* col_scale) {
   const double log2 = log(2.0);
   const double max_allow_scale = pow(2.0, max_scale_factor_exponent);
   const double min_allow_scale = 1 / max_allow_scale;
@@ -642,30 +639,33 @@ void HighsSparseMatrix::considerColScaling(const HighsInt max_scale_factor_expon
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
       double col_max_value = 0;
-      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
-	col_max_value = max(fabs(this->value_[iEl]), col_max_value);
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
+        col_max_value = max(fabs(this->value_[iEl]), col_max_value);
       if (col_max_value) {
-	double col_scale_value = 1 / col_max_value;
-	// Convert the col scale factor to the nearest power of two, and
-	// ensure that it is not excessively large or small
-	col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
-	col_scale_value =
-          min(max(min_allow_col_scale, col_scale_value), max_allow_col_scale);
-	col_scale[iCol] = col_scale_value;
-	// Scale the column
-	for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
-	  this->value_[iEl] *= col_scale[iCol];
+        double col_scale_value = 1 / col_max_value;
+        // Convert the col scale factor to the nearest power of two, and
+        // ensure that it is not excessively large or small
+        col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
+        col_scale_value =
+            min(max(min_allow_col_scale, col_scale_value), max_allow_col_scale);
+        col_scale[iCol] = col_scale_value;
+        // Scale the column
+        for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+             iEl++)
+          this->value_[iEl] *= col_scale[iCol];
       } else {
-	// Empty column
-	col_scale[iCol] = 1;
+        // Empty column
+        col_scale[iCol] = 1;
       }
     }
   } else {
-    assert(1==0);
+    assert(1 == 0);
   }
 }
 
-void HighsSparseMatrix::considerRowScaling(const HighsInt max_scale_factor_exponent, double* row_scale) {
+void HighsSparseMatrix::considerRowScaling(
+    const HighsInt max_scale_factor_exponent, double* row_scale) {
   const double log2 = log(2.0);
   const double max_allow_scale = pow(2.0, max_scale_factor_exponent);
   const double min_allow_scale = 1 / max_allow_scale;
@@ -676,26 +676,28 @@ void HighsSparseMatrix::considerRowScaling(const HighsInt max_scale_factor_expon
   if (this->isRowwise()) {
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
       double row_max_value = 0;
-      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
-	row_max_value = max(fabs(this->value_[iEl]), row_max_value);
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
+        row_max_value = max(fabs(this->value_[iEl]), row_max_value);
       if (row_max_value) {
-	double row_scale_value = 1 / row_max_value;
-	// Convert the row scale factor to the nearest power of two, and
-	// ensure that it is not excessively large or small
-	row_scale_value = pow(2.0, floor(log(row_scale_value) / log2 + 0.5));
-	row_scale_value =
-          min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
-	row_scale[iRow] = row_scale_value;
-	// Scale the rowumn
-	for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
-	  this->value_[iEl] *= row_scale[iRow];
+        double row_scale_value = 1 / row_max_value;
+        // Convert the row scale factor to the nearest power of two, and
+        // ensure that it is not excessively large or small
+        row_scale_value = pow(2.0, floor(log(row_scale_value) / log2 + 0.5));
+        row_scale_value =
+            min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
+        row_scale[iRow] = row_scale_value;
+        // Scale the rowumn
+        for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+             iEl++)
+          this->value_[iEl] *= row_scale[iRow];
       } else {
-	// Empty rowumn
-	row_scale[iRow] = 1;
+        // Empty rowumn
+        row_scale[iRow] = 1;
       }
     }
   } else {
-    assert(1==0);
+    assert(1 == 0);
   }
 }
 
@@ -762,12 +764,14 @@ void HighsSparseMatrix::applyColScale(const HighsScale& scale) {
   assert(this->formatOk());
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
         this->value_[iEl] *= scale.col[iCol];
     }
   } else {
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
         this->value_[iEl] *= scale.col[this->index_[iEl]];
     }
   }
@@ -777,12 +781,14 @@ void HighsSparseMatrix::applyRowScale(const HighsScale& scale) {
   assert(this->formatOk());
   if (this->isColwise()) {
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
-      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1]; iEl++)
+      for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
+           iEl++)
         this->value_[iEl] *= scale.row[this->index_[iEl]];
     }
   } else {
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
-      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1]; iEl++)
+      for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
+           iEl++)
         this->value_[iEl] *= scale.row[iRow];
     }
   }

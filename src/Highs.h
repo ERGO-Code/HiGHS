@@ -60,7 +60,7 @@ class Highs {
 
   /**
    * @brief Every model loading module eventually uses
-   * passModel(HighsModel model) to communicate the model to HiGHS. 
+   * passModel(HighsModel model) to communicate the model to HiGHS.
    */
   HighsStatus passModel(
       HighsModel model  //!< The HighsModel instance for this model
@@ -900,7 +900,8 @@ class Highs {
   std::string basisValidityToString(const HighsInt basis_validity) const;
 
   HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
-    this->model_.lp_.setFormat(desired_format); return HighsStatus::kOk;
+    this->model_.lp_.setFormat(desired_format);
+    return HighsStatus::kOk;
   }
 
 #ifdef OSI_FOUND
@@ -1082,8 +1083,10 @@ class Highs {
   void forceHighsSolutionBasisSize();
   //
   // For cases where there is no solution data for the model, but its
-  // status is proved otherwise. Sets the model status, then clears any solution and basis data 
-  void setHighsModelStatusAndClearSolutionAndBasis(const HighsModelStatus model_status);
+  // status is proved otherwise. Sets the model status, then clears any solution
+  // and basis data
+  void setHighsModelStatusAndClearSolutionAndBasis(
+      const HighsModelStatus model_status);
   //
   // Sets unscaled and scaled model status, basis, solution and info
   // from the highs_model_object
@@ -1143,21 +1146,18 @@ class Highs {
   void deleteRowsInterface(HighsIndexCollection& index_collection);
 
   void getColsInterface(const HighsIndexCollection& index_collection,
-			HighsInt& num_col, double* col_cost,
-			double* col_lower, double* col_upper,
-			HighsInt& num_nz, HighsInt* col_matrix_start,
-			HighsInt* col_matrix_index,
-			double* col_matrix_value);
+                        HighsInt& num_col, double* col_cost, double* col_lower,
+                        double* col_upper, HighsInt& num_nz,
+                        HighsInt* col_matrix_start, HighsInt* col_matrix_index,
+                        double* col_matrix_value);
 
   void getRowsInterface(const HighsIndexCollection& index_collection,
-			HighsInt& num_row, double* row_lower,
-			double* row_upper, HighsInt& num_nz,
-			HighsInt* row_matrix_start,
-			HighsInt* row_matrix_index,
-			double* row_matrix_value);
-  
+                        HighsInt& num_row, double* row_lower, double* row_upper,
+                        HighsInt& num_nz, HighsInt* row_matrix_start,
+                        HighsInt* row_matrix_index, double* row_matrix_value);
+
   void getCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
-			       double& value);
+                               double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
   HighsStatus changeObjectiveOffsetInterface(const double Xoffset);
@@ -1171,13 +1171,13 @@ class Highs {
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
-  void changeCoefficientInterface(const HighsInt Xrow,
-                                         const HighsInt Xcol,
-                                         const double XnewValue);
+  void changeCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
+                                  const double XnewValue);
   HighsStatus scaleColInterface(const HighsInt col, const double scaleval);
   HighsStatus scaleRowInterface(const HighsInt row, const double scaleval);
 
-  void setNonbasicStatusInterface(const HighsIndexCollection& index_collection, const bool columns);
+  void setNonbasicStatusInterface(const HighsIndexCollection& index_collection,
+                                  const bool columns);
   void appendNonbasicColsToBasisInterface(const HighsInt XnumNewCol);
   void appendBasicRowsToBasisInterface(const HighsInt XnumNewRow);
 
@@ -1196,7 +1196,8 @@ class Highs {
   bool aFormatOk(const HighsInt num_nz, const HighsInt format);
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
-  HighsStatus checkOptimality(const std::string solver_type, HighsStatus return_status);
+  HighsStatus checkOptimality(const std::string solver_type,
+                              HighsStatus return_status);
   HighsStatus invertRequirementError(std::string method_name);
 };
 

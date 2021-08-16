@@ -62,13 +62,10 @@ void getHighsNonVertexSolution(const HighsLogOptions& log_options,
                                const ipx::LpSolver& lps,
                                HighsSolution& highs_solution);
 
-HighsStatus solveLpIpx(const HighsOptions& options,
-		       HighsTimer& timer,
-                       const HighsLp& lp, 
-                       HighsBasis& highs_basis,
-		       HighsSolution& highs_solution,
-                       HighsModelStatus& model_status,
-                       HighsInfo& highs_info);
+HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
+                       const HighsLp& lp, HighsBasis& highs_basis,
+                       HighsSolution& highs_solution,
+                       HighsModelStatus& model_status, HighsInfo& highs_info);
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
 #endif

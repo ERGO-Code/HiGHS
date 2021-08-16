@@ -265,9 +265,8 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
     printf("Keep   [%2d, %2" HIGHSINT_FORMAT "]\n", 0, keep_to_index);
   if (keep_to_index >= dimension - 1) return;
   for (HighsInt k = 0; k < dimension; k++) {
-    updateOutInIndex(index_collection, delete_from_index,
-		     delete_to_index, keep_from_index,
-		     keep_to_index, current_set_entry);
+    updateOutInIndex(index_collection, delete_from_index, delete_to_index,
+                     keep_from_index, keep_to_index, current_set_entry);
     if (dev_run)
       printf("Delete [%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT
              "]; keep [%2" HIGHSINT_FORMAT ", %2" HIGHSINT_FORMAT "]\n",

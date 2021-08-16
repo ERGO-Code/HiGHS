@@ -84,8 +84,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const HighsInt numTotal = numCol + numRow;
   const double H_TT = 1e-13;
   const double H_INF = kHighsInf;
-  const double objective =
-      solver_object.highs_info_.objective_function_value;
+  const double objective = solver_object.highs_info_.objective_function_value;
 
   // Code written for minimization problems. Maximization problems are
   // solved by using negated costs in the simplex solver and
@@ -575,8 +574,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
 void writeRanging(const HighsRanging& ranging,
                   const HighsLpSolverObject& solver_object) {
   if (!solver_object.options_.log_dev_level) return;
-  if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal)
-    return;
+  if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal) return;
   HighsLp& use_lp = solver_object.lp_;
   HighsLogOptions& log_options = solver_object.options_.log_options;
   highsLogDev(log_options, HighsLogType::kVerbose,

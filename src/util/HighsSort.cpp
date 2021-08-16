@@ -263,10 +263,9 @@ void maxHeapify(double* heap_v, HighsInt* heap_i, HighsInt i, HighsInt n) {
   return;
 }
 
-bool increasingSetOk(const vector<HighsInt>& set, 
+bool increasingSetOk(const vector<HighsInt>& set,
                      const HighsInt set_entry_lower,
-                     const HighsInt set_entry_upper,
-		     bool strict) {
+                     const HighsInt set_entry_upper, bool strict) {
   HighsInt set_num_entries = set.size();
   bool check_bounds = set_entry_lower <= set_entry_upper;
   HighsInt previous_entry;
@@ -292,10 +291,8 @@ bool increasingSetOk(const vector<HighsInt>& set,
   return true;
 }
 
-bool increasingSetOk(const vector<double>& set, 
-                     const double set_entry_lower,
-		     const double set_entry_upper,
-                     bool strict) {
+bool increasingSetOk(const vector<double>& set, const double set_entry_lower,
+                     const double set_entry_upper, bool strict) {
   HighsInt set_num_entries = set.size();
   bool check_bounds = set_entry_lower <= set_entry_upper;
   double previous_entry;
@@ -327,7 +324,7 @@ bool increasingSetOk(const vector<double>& set,
   return true;
 }
 
-void sortSetData(const HighsInt num_entries, vector<HighsInt>& set, 
+void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
                  const double* data0, const double* data1, const double* data2,
                  double* sorted_data0, double* sorted_data1,
                  double* sorted_data2) {
@@ -351,7 +348,7 @@ void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
   }
 }
 
-void sortSetData(const HighsInt num_entries, vector<HighsInt>& set, 
+void sortSetData(const HighsInt num_entries, vector<HighsInt>& set,
                  const HighsVarType* data0, HighsVarType* sorted_data0) {
   if (num_entries <= 0) return;
   vector<HighsInt> sort_set_vec(1 + num_entries);

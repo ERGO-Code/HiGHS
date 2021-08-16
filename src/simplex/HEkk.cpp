@@ -15,10 +15,10 @@
  */
 #include "simplex/HEkk.h"
 
-#include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolutionDebug.h"
 #include "lp_data/HighsLpSolverObject.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
@@ -34,9 +34,7 @@
 // using std::cout;
 // using std::endl;
 
-void HEkk::clear() {
-  this->invalidate();
-}
+void HEkk::clear() { this->invalidate(); }
 
 void HEkk::invalidate() {
   this->status_.initialised = false;
@@ -98,13 +96,12 @@ void HEkk::clearData() {
 
   this->solve_bailout_ = false;
   this->called_return_from_solve_ = false;
-  this->exit_algorithm_ = SimplexAlgorithm::kPrimal; 
+  this->exit_algorithm_ = SimplexAlgorithm::kPrimal;
   this->return_primal_solution_status_ = 0;
   this->return_dual_solution_status_ = 0;
 
   this->build_synthetic_tick_ = 0;
   this->total_synthetic_tick_ = 0;
-
 }
 
 void HEkk::clearInfo() {
@@ -266,7 +263,8 @@ void HEkk::updateStatus(LpAction action) {
   }
 }
 
-void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object, const HighsSparseMatrix* scaled_a_matrix) {
+void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object,
+                  const HighsSparseMatrix* scaled_a_matrix) {
   // Move the incumbent LP to EKK
   this->lp_ = std::move(incumbent_lp);
   incumbent_lp.is_moved_ = true;
@@ -301,12 +299,10 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object, cons
   this->setPointers(&solver_object.options_, &solver_object.timer_);
   // If simplex NLA is set up, pass the pointers that it uses
   if (this->simplex_nla_.is_setup_)
-    this->simplex_nla_.setPointers(&(this->lp_),
-				   this->factor_a_matrix_,
-				   &solver_object.ekk_instance_.basis_.basicIndex_[0],
-				   &solver_object.options_,
-				   &solver_object.timer_,
-				   &(this->analysis_));
+    this->simplex_nla_.setPointers(
+        &(this->lp_), this->factor_a_matrix_,
+        &solver_object.ekk_instance_.basis_.basicIndex_[0],
+        &solver_object.options_, &solver_object.timer_, &(this->analysis_));
 }
 
 void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
@@ -358,8 +354,8 @@ HighsStatus HEkk::solve() {
   // Initial solve according to strategy
   if (simplex_strategy == kSimplexStrategyPrimal) {
     algorithm_name = "primal";
-    reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_, info_,
-                                 true);
+    reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_,
+                                 info_, true);
     highsLogUser(opt_point_->log_options, HighsLogType::kInfo,
                  "Using EKK primal simplex solver\n");
     HEkkPrimal primal_solver(*this);
@@ -371,8 +367,8 @@ HighsStatus HEkk::solve() {
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
     algorithm_name = "dual";
-    reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_, info_,
-                                 true);
+    reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_,
+                                 info_, true);
     // Solve, depending on the particular strategy
     if (simplex_strategy == kSimplexStrategyDualTasks) {
       highsLogUser(
@@ -410,7 +406,8 @@ HighsStatus HEkk::solve() {
           interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
     }
   }
-  reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_, info_);
+  reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_,
+                               info_);
   if (return_status == HighsStatus::kError) return return_status;
   highsLogDev(opt_point_->log_options, HighsLogType::kInfo,
               "EKK %s simplex solver returns %" HIGHSINT_FORMAT
@@ -470,8 +467,6 @@ HighsStatus HEkk::cleanup() {
   }
   return return_status;
 }
-
-
 
 HighsStatus HEkk::setBasis() {
   // Set up nonbasicFlag and basicIndex for a logical basis
@@ -687,7 +682,7 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     double factor;
     const HighsInt iVar = this->basis_.basicIndex_[iRow];
-    if (iVar<num_col) {
+    if (iVar < num_col) {
       factor = col_scale[iVar];
     } else {
       factor = 1.0 / row_scale[iVar - num_col];
@@ -696,7 +691,7 @@ void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
     this->info_.baseUpper_[iRow] *= factor;
     this->info_.baseValue_[iRow] *= factor;
   }
-  this->simplex_in_scaled_space_ = false;  
+  this->simplex_in_scaled_space_ = false;
 }
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
@@ -780,7 +775,8 @@ HighsBasis HEkk::getHighsBasis() {
   return highs_basis;
 }
 
-HighsInt HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
+HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
+    const bool only_from_known_basis) {
   // If there's no basis, return error if the basis has to be known,
   // otherwise set a logical basis
   //
@@ -904,7 +900,8 @@ void HEkk::setSimplexOptions() {
   //
   // NB simplex_strategy is set by chooseSimplexStrategyThreads in each call
   //
-  info_.dual_edge_weight_strategy = opt_point_->simplex_dual_edge_weight_strategy;
+  info_.dual_edge_weight_strategy =
+      opt_point_->simplex_dual_edge_weight_strategy;
   info_.price_strategy = opt_point_->simplex_price_strategy;
   info_.dual_simplex_cost_perturbation_multiplier =
       opt_point_->dual_simplex_cost_perturbation_multiplier;
@@ -971,7 +968,8 @@ void HEkk::initialiseSimplexLpRandomVectors() {
 void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
                                         HighsSimplexInfo& info) {
   // Ensure that this is not called with an optimal basis
-  assert(info.num_dual_infeasibilities > 0 || info.num_primal_infeasibilities > 0);
+  assert(info.num_dual_infeasibilities > 0 ||
+         info.num_primal_infeasibilities > 0);
   // Set the internal simplex strategy and number of threads for dual
   // simplex
   HighsInt& simplex_strategy = info.simplex_strategy;
@@ -1245,9 +1243,9 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= opt_point_->factor_pivot_threshold);
-    simplex_nla_.setup(&lp_, scale_, &basis_.basicIndex_[0],
-                       opt_point_, tim_point_, &analysis_,
-		       factor_a_matrix_, info_.factor_pivot_threshold);
+    simplex_nla_.setup(&lp_, scale_, &basis_.basicIndex_[0], opt_point_,
+                       tim_point_, &analysis_, factor_a_matrix_,
+                       info_.factor_pivot_threshold);
     status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
@@ -2694,11 +2692,13 @@ void HEkk::initialiseAnalysis() {
   analysis_.setup(lp_name_, lp_, *opt_point_, iteration_count_);
 }
 
-void HEkk::reportScalingPointers(std::string message, HighsLpSolverObject& solver_object) {
+void HEkk::reportScalingPointers(std::string message,
+                                 HighsLpSolverObject& solver_object) {
   HEkk& ekk_instance = solver_object.ekk_instance_;
   HighsLp& incumbent_lp = solver_object.lp_;
   HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
   void* nla_scale = (void*)simplex_nla.scale_;
   void* lp_scale = (void*)(&incumbent_lp.scale_);
-  printf("nla_scale = %p; lp_scale = %p: %s\n", nla_scale, lp_scale, message.c_str());
+  printf("nla_scale = %p; lp_scale = %p: %s\n", nla_scale, lp_scale,
+         message.c_str());
 }

@@ -31,5 +31,6 @@
 HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
                                   const bool force = false);
 
-double debugResidualError(const HSimplexNla& simplex_nla, const HVector& solution, HVector& rhs);
+double debugResidualError(const HSimplexNla& simplex_nla,
+                          const HVector& solution, HVector& rhs);
 #endif /* HSIMPLEXNLADEBUG_H_ */

@@ -1089,7 +1089,8 @@ void ekkDebugReportReinvertOnNumericalTrouble(
     const double numerical_trouble_measure, const double alpha_from_col,
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert) {
-  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap) return;
+  if (ekk_instance.opt_point_->highs_debug_level < kHighsDebugLevelCheap)
+    return;
   const double abs_alpha_from_col = abs(alpha_from_col);
   const double abs_alpha_from_row = abs(alpha_from_row);
   const double abs_alpha_diff = abs(abs_alpha_from_col - abs_alpha_from_row);

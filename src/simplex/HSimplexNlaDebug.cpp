@@ -125,7 +125,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
         value_adjective.c_str(), residual_error_norm);
   }
 
-  if (options->highs_debug_level < kHighsDebugLevelExpensive) return return_status;
+  if (options->highs_debug_level < kHighsDebugLevelExpensive)
+    return return_status;
 
   expected_density = 0;
   double inverse_error_norm = 0;
@@ -164,9 +165,10 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     }
     inverse_error_norm =
         std::max(inverse_column_error_norm, inverse_error_norm);
-    double residual_column_error_norm = debugResidualError(simplex_nla, column, residual);
+    double residual_column_error_norm =
+        debugResidualError(simplex_nla, column, residual);
     residual_error_norm =
-      std::max(residual_column_error_norm, residual_error_norm);
+        std::max(residual_column_error_norm, residual_error_norm);
   }
   if (inverse_error_norm) {
     if (inverse_error_norm > kInverseExcessiveError) {
@@ -196,17 +198,16 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       value_adjective = "Small";
     }
     if (force) report_level = HighsLogType::kInfo;
-    highsLogDev(
-        options->log_options, report_level,
-        "CheckINVERT:   %-9s (%9.4g) norm for inverse residual error\n",
-        value_adjective.c_str(), residual_error_norm);
+    highsLogDev(options->log_options, report_level,
+                "CheckINVERT:   %-9s (%9.4g) norm for inverse residual error\n",
+                value_adjective.c_str(), residual_error_norm);
   }
 
   return return_status;
 }
 
-double debugResidualError(const HSimplexNla& simplex_nla, const HVector& solution, HVector& residual) {
-
+double debugResidualError(const HSimplexNla& simplex_nla,
+                          const HVector& solution, HVector& residual) {
   const HighsInt num_row = simplex_nla.lp_->num_row_;
   const HighsInt num_col = simplex_nla.lp_->num_col_;
   const vector<HighsInt>& a_matrix_start = simplex_nla.lp_->a_matrix_.start_;

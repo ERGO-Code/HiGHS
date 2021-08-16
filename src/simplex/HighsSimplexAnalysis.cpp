@@ -584,7 +584,8 @@ HighsInt HighsSimplexAnalysis::simplexTimerNumCall(const HighsInt simplex_clock,
   if (!analyse_simplex_time) return -1;
   // assert(analyse_simplex_time);
   return thread_simplex_clocks[thread_id]
-      .timer_pointer_->clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+      .timer_pointer_
+      ->clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
 }
 
 double HighsSimplexAnalysis::simplexTimerRead(const HighsInt simplex_clock,

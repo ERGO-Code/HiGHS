@@ -64,6 +64,7 @@ class HighsLp {
   void ensureColWise() { this->a_matrix_.ensureColWise(); };
   void ensureRowWise() { this->a_matrix_.ensureRowWise(); };
   void clearScaling();
+  void resetScale();
   void clearScale();
   void applyScale();
   void unapplyScale();

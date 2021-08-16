@@ -353,18 +353,20 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
 void considerScaling(const HighsOptions& options, HighsLp& lp) {
   // Consider scaling the LP - either by finding new factors or by
   // applying any existing factors
-  const bool allow_scaling = lp.num_col_ > 0 &&
-    options.simplex_scale_strategy != kSimplexScaleStrategyOff;
+  const bool allow_scaling =
+      lp.num_col_ > 0 &&
+      options.simplex_scale_strategy != kSimplexScaleStrategyOff;
   const bool scaling_not_tried = lp.scale_.strategy == kSimplexScaleStrategyOff;
   const bool new_scaling_strategy =
-    options.simplex_scale_strategy != lp.scale_.strategy &&
-    options.simplex_scale_strategy != kSimplexScaleStrategyChoose;
-  const bool try_scaling = allow_scaling && (scaling_not_tried || new_scaling_strategy);
+      options.simplex_scale_strategy != lp.scale_.strategy &&
+      options.simplex_scale_strategy != kSimplexScaleStrategyChoose;
+  const bool try_scaling =
+      allow_scaling && (scaling_not_tried || new_scaling_strategy);
   if (try_scaling) {
     // Scaling will be tried, so ensure that any previous scaling is not applied
     lp.unapplyScale();
     const bool analyse_lp_data =
-      kHighsAnalysisLevelModelData & options.highs_analysis_level;
+        kHighsAnalysisLevelModelData & options.highs_analysis_level;
     if (analyse_lp_data) analyseLp(options.log_options, lp);
     scaleLp(options, lp);
     if (analyse_lp_data && lp.is_scaled_) analyseLp(options.log_options, lp);
@@ -374,7 +376,7 @@ void considerScaling(const HighsOptions& options, HighsLp& lp) {
   }
   // Ensure that either the LP has scale factors and is scaled, or
   // it doesn't have scale factors and isn't scaled
-  assert(lp.scale_.has_scaling == lp.is_scaled_); 
+  assert(lp.scale_.has_scaling == lp.is_scaled_);
 }
 
 void scaleLp(const HighsOptions& options, HighsLp& lp) {
@@ -475,7 +477,7 @@ void scaleLp(const HighsOptions& options, HighsLp& lp) {
 }
 
 bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
-                                     const HighsInt use_scale_strategy) {
+                              const HighsInt use_scale_strategy) {
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   HighsScale& scale = lp.scale_;
@@ -792,7 +794,7 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
 }
 
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
-			 const HighsInt use_scale_strategy) {
+                         const HighsInt use_scale_strategy) {
   HighsInt numCol = lp.num_col_;
   HighsInt numRow = lp.num_row_;
   HighsScale& scale = lp.scale_;
@@ -890,7 +892,6 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   const bool poor_improvement =
       improvement_factor < improvement_factor_required;
 
-
   if (poor_improvement) {
     // Unscale the matrix
     for (HighsInt iCol = 0; iCol < numCol; iCol++) {
@@ -908,23 +909,23 @@ bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
   } else {
     if (options.highs_debug_level) {
       highsLogDev(options.log_options, HighsLogType::kInfo,
-		  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
-		  "[%0.4g, %0.4g] for rows\n",
-		  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
-      highsLogDev(options.log_options, HighsLogType::kInfo,
-		  "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
-		  "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
-		  matrix_min_value, matrix_max_value, matrix_value_ratio,
-		  original_matrix_min_value, original_matrix_max_value,
-		  original_matrix_value_ratio, matrix_value_ratio_improvement);
+                  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
+                  "[%0.4g, %0.4g] for rows\n",
+                  min_col_scale, max_col_scale, min_row_scale, max_row_scale);
+      highsLogDev(
+          options.log_options, HighsLogType::kInfo,
+          "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
+          "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
+          matrix_min_value, matrix_max_value, matrix_value_ratio,
+          original_matrix_min_value, original_matrix_max_value,
+          original_matrix_value_ratio, matrix_value_ratio_improvement);
     }
     return true;
   }
 }
 
 HighsStatus applyScalingToLpColCost(
-    HighsLp& lp,
-    const vector<double>& colScale,
+    HighsLp& lp, const vector<double>& colScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
@@ -957,8 +958,7 @@ HighsStatus applyScalingToLpColCost(
 }
 
 HighsStatus applyScalingToLpColBounds(
-    HighsLp& lp,
-    const vector<double>& colScale,
+    HighsLp& lp, const vector<double>& colScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
@@ -994,8 +994,7 @@ HighsStatus applyScalingToLpColBounds(
 }
 
 HighsStatus applyScalingToLpRowBounds(
-    HighsLp& lp,
-    const vector<double>& rowScale,
+    HighsLp& lp, const vector<double>& rowScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
@@ -1030,11 +1029,10 @@ HighsStatus applyScalingToLpRowBounds(
   return HighsStatus::kOk;
 }
 
-void applyScalingToMatrix(const vector<double>& rowScale,
-			  const HighsInt numCol,
-			  const vector<HighsInt>& start,
-			  const vector<HighsInt>& index,
-			  vector<double>& value) {
+void applyScalingToMatrix(const vector<double>& rowScale, const HighsInt numCol,
+                          const vector<HighsInt>& start,
+                          const vector<HighsInt>& index,
+                          vector<double>& value) {
   for (HighsInt iCol = 0; iCol < numCol; iCol++) {
     for (HighsInt iEl = start[iCol]; iEl < start[iCol + 1]; iEl++)
       value[iEl] *= rowScale[index[iEl]];
@@ -1073,8 +1071,8 @@ void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
   }
 }
 
-HighsStatus applyScalingToLpCol(HighsLp& lp,
-                                const HighsInt col, const double colScale) {
+HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
+                                const double colScale) {
   if (col < 0) return HighsStatus::kError;
   if (col >= lp.num_col_) return HighsStatus::kError;
   if (!colScale) return HighsStatus::kError;
@@ -1095,8 +1093,8 @@ HighsStatus applyScalingToLpCol(HighsLp& lp,
   return HighsStatus::kOk;
 }
 
-HighsStatus applyScalingToLpRow(HighsLp& lp,
-                                const HighsInt row, const double rowScale) {
+HighsStatus applyScalingToLpRow(HighsLp& lp, const HighsInt row,
+                                const double rowScale) {
   if (row < 0) return HighsStatus::kError;
   if (row >= lp.num_row_) return HighsStatus::kError;
   if (!rowScale) return HighsStatus::kError;
@@ -1120,9 +1118,9 @@ HighsStatus applyScalingToLpRow(HighsLp& lp,
 }
 
 void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
-			   const vector<double>& colCost,
-			   const vector<double>& colLower,
-			   const vector<double>& colUpper) {
+                           const vector<double>& colCost,
+                           const vector<double>& colLower,
+                           const vector<double>& colUpper) {
   assert(num_new_col >= 0);
   if (num_new_col == 0) return;
   HighsInt new_num_col = lp.num_col_ + num_new_col;
@@ -1142,9 +1140,9 @@ void appendColsToLpVectors(HighsLp& lp, const HighsInt num_new_col,
 }
 
 void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
-			   const vector<double>& rowLower,
-			   const vector<double>& rowUpper) {
-  assert(num_new_row >=0);
+                           const vector<double>& rowLower,
+                           const vector<double>& rowUpper) {
+  assert(num_new_row >= 0);
   if (num_new_row == 0) return;
   HighsInt new_num_row = lp.num_row_ + num_new_row;
   lp.row_lower_.resize(new_num_row);
@@ -1161,8 +1159,7 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
   }
 }
 
-void deleteLpCols(HighsLp& lp,
-		  const HighsIndexCollection& index_collection) {
+void deleteLpCols(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsInt new_num_col;
   HighsStatus call_status;
   deleteColsFromLpVectors(lp, new_num_col, index_collection);
@@ -1170,13 +1167,13 @@ void deleteLpCols(HighsLp& lp,
   lp.num_col_ = new_num_col;
 }
 
-void deleteColsFromLpVectors(
-    HighsLp& lp, HighsInt& new_num_col,
-    const HighsIndexCollection& index_collection) {
+void deleteColsFromLpVectors(HighsLp& lp, HighsInt& new_num_col,
+                             const HighsIndexCollection& index_collection) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
-  limits(index_collection, from_k, to_k);;
+  limits(index_collection, from_k, to_k);
+  ;
   // Initialise new_num_col in case none is removed due to from_k > to_k
   new_num_col = lp.num_col_;
   if (from_k > to_k) return;
@@ -1191,9 +1188,8 @@ void deleteColsFromLpVectors(
   new_num_col = 0;
   bool have_names = lp.col_names_.size();
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
+    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
+                     keep_from_col, keep_to_col, current_set_entry);
     // Account for the initial columns being kept
     if (k == from_k) new_num_col = delete_from_col;
     if (delete_to_col >= col_dim - 1) break;
@@ -1213,8 +1209,7 @@ void deleteColsFromLpVectors(
   if (have_names) lp.col_names_.resize(new_num_col);
 }
 
-void deleteLpRows(HighsLp& lp,
-                         const HighsIndexCollection& index_collection) {
+void deleteLpRows(HighsLp& lp, const HighsIndexCollection& index_collection) {
   HighsStatus call_status;
   HighsInt new_num_row;
   deleteRowsFromLpVectors(lp, new_num_row, index_collection);
@@ -1222,9 +1217,8 @@ void deleteLpRows(HighsLp& lp,
   lp.num_row_ = new_num_row;
 }
 
-void deleteRowsFromLpVectors(
-    HighsLp& lp, HighsInt& new_num_row,
-    const HighsIndexCollection& index_collection) {
+void deleteRowsFromLpVectors(HighsLp& lp, HighsInt& new_num_row,
+                             const HighsIndexCollection& index_collection) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1243,9 +1237,8 @@ void deleteRowsFromLpVectors(
   new_num_row = 0;
   bool have_names = (HighsInt)lp.row_names_.size() > 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_row,
-                                    delete_to_row, keep_from_row, keep_to_row,
-                                    current_set_entry);
+    updateOutInIndex(index_collection, delete_from_row, delete_to_row,
+                     keep_from_row, keep_to_row, current_set_entry);
     if (k == from_k) {
       // Account for the initial rows being kept
       new_num_row = delete_from_row;
@@ -1266,7 +1259,7 @@ void deleteRowsFromLpVectors(
 }
 
 void deleteScale(vector<double>& scale,
-                        const HighsIndexCollection& index_collection) {
+                 const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -1283,9 +1276,8 @@ void deleteScale(vector<double>& scale,
   HighsInt col_dim = index_collection.dimension_;
   HighsInt new_num_col = 0;
   for (HighsInt k = from_k; k <= to_k; k++) {
-    updateOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
+    updateOutInIndex(index_collection, delete_from_col, delete_to_col,
+                     keep_from_col, keep_to_col, current_set_entry);
     // Account for the initial columns being kept
     if (k == from_k) new_num_col = delete_from_col;
     if (delete_to_col >= col_dim - 1) break;
@@ -1300,8 +1292,7 @@ void deleteScale(vector<double>& scale,
 }
 
 void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-			       const HighsInt col,
-			       const double new_value) {
+                               const HighsInt col, const double new_value) {
   assert(0 <= row && row < lp.num_row_);
   assert(0 <= col && col < lp.num_col_);
   HighsInt changeElement = -1;
@@ -1328,8 +1319,8 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
 }
 
 void changeLpIntegrality(HighsLp& lp,
-                                const HighsIndexCollection& index_collection,
-                                const vector<HighsVarType>& new_integrality) {
+                         const HighsIndexCollection& index_collection,
+                         const vector<HighsVarType>& new_integrality) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1365,9 +1356,8 @@ void changeLpIntegrality(HighsLp& lp,
   }
 }
 
-void changeLpCosts(HighsLp& lp,
-                          const HighsIndexCollection& index_collection,
-                          const vector<double>& new_col_cost) {
+void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
+                   const vector<double>& new_col_cost) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1400,25 +1390,25 @@ void changeLpCosts(HighsLp& lp,
 }
 
 void changeLpColBounds(HighsLp& lp,
-                              const HighsIndexCollection& index_collection,
-                              const vector<double>& new_col_lower,
-                              const vector<double>& new_col_upper) {
-  changeBounds(lp.col_lower_, lp.col_upper_,
-	       index_collection, new_col_lower, new_col_upper);
+                       const HighsIndexCollection& index_collection,
+                       const vector<double>& new_col_lower,
+                       const vector<double>& new_col_upper) {
+  changeBounds(lp.col_lower_, lp.col_upper_, index_collection, new_col_lower,
+               new_col_upper);
 }
 
 void changeLpRowBounds(HighsLp& lp,
-                              const HighsIndexCollection& index_collection,
-                              const vector<double>& new_row_lower,
-                              const vector<double>& new_row_upper) {
-  changeBounds(lp.row_lower_, lp.row_upper_,
-	       index_collection, new_row_lower, new_row_upper);
+                       const HighsIndexCollection& index_collection,
+                       const vector<double>& new_row_lower,
+                       const vector<double>& new_row_upper) {
+  changeBounds(lp.row_lower_, lp.row_upper_, index_collection, new_row_lower,
+               new_row_upper);
 }
 
 void changeBounds(vector<double>& lower, vector<double>& upper,
-		  const HighsIndexCollection& index_collection,
-		  const vector<double>& new_lower,
-		  const vector<double>& new_upper) {
+                  const HighsIndexCollection& index_collection,
+                  const vector<double>& new_lower,
+                  const vector<double>& new_upper) {
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -1461,7 +1451,7 @@ HighsInt getNumInt(const HighsLp& lp) {
 }
 
 void getLpCosts(const HighsLp& lp, const HighsInt from_col,
-		const HighsInt to_col, double* XcolCost) {
+                const HighsInt to_col, double* XcolCost) {
   assert(0 <= from_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++)
@@ -1469,8 +1459,8 @@ void getLpCosts(const HighsLp& lp, const HighsInt from_col,
 }
 
 void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
-                           const HighsInt to_col, double* XcolLower,
-                           double* XcolUpper) {
+                    const HighsInt to_col, double* XcolLower,
+                    double* XcolUpper) {
   assert(0 <= from_col && to_col < lp.num_col_);
   if (from_col > to_col) return;
   for (HighsInt col = from_col; col < to_col + 1; col++) {
@@ -1480,8 +1470,8 @@ void getLpColBounds(const HighsLp& lp, const HighsInt from_col,
 }
 
 void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
-                           const HighsInt to_row, double* XrowLower,
-                           double* XrowUpper) {
+                    const HighsInt to_row, double* XrowLower,
+                    double* XrowUpper) {
   assert(0 <= to_row && from_row < lp.num_row_);
   if (from_row > to_row) return;
   for (HighsInt row = from_row; row < to_row + 1; row++) {
@@ -1492,7 +1482,7 @@ void getLpRowBounds(const HighsLp& lp, const HighsInt from_row,
 
 // Get a single coefficient from the matrix
 void getLpMatrixCoefficient(const HighsLp& lp, const HighsInt Xrow,
-                                   const HighsInt Xcol, double* val) {
+                            const HighsInt Xcol, double* val) {
   assert(0 <= Xrow && Xrow < lp.num_row_);
   assert(0 <= Xcol && Xcol < lp.num_col_);
 
@@ -1727,11 +1717,14 @@ void analyseLp(const HighsLogOptions& log_options, const HighsLp& lp) {
   } else {
     message = "Unscaled";
   }
-  highsLogDev(log_options, HighsLogType::kInfo, "\n%s model data: Analysis\n", message.c_str());
+  highsLogDev(log_options, HighsLogType::kInfo, "\n%s model data: Analysis\n",
+              message.c_str());
   if (lp.is_scaled_) {
     const HighsScale& scale = lp.scale_;
-    analyseVectorValues(log_options, "Column scaling factors", lp.num_col_, scale.col);
-    analyseVectorValues(log_options, "Row    scaling factors", lp.num_row_, scale.row);
+    analyseVectorValues(log_options, "Column scaling factors", lp.num_col_,
+                        scale.col);
+    analyseVectorValues(log_options, "Row    scaling factors", lp.num_row_,
+                        scale.row);
   }
   analyseVectorValues(log_options, "Column costs", lp.num_col_, lp.col_cost_);
   analyseVectorValues(log_options, "Column lower bounds", lp.num_col_,

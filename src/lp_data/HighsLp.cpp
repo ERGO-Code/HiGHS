@@ -74,15 +74,25 @@ void HighsLp::setMatrixDimensions() {
   this->a_matrix_.num_row_ = this->num_row_;
 }
 
+void HighsLp::resetScale() {
+  // Should allow user-supplied scale to be retained
+  //  const bool dimensions_ok =
+  //    this->scale_.num_col_ == this->num_col_ &&
+  //    this->scale_.num_row_ == this->num_row_;
+  this->clearScale();
+}
+
 bool HighsLp::dimensionsOk(std::string message) const {
   bool ok = true;
   const HighsInt num_col = this->num_col_;
   const HighsInt num_row = this->num_row_;
   if (!(num_col >= 0))
-    printf("HighsLp::dimensionsOK (%s) fails on num_col >= 0\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on num_col >= 0\n",
+           message.c_str());
   ok = num_col >= 0 && ok;
   if (!(num_row >= 0))
-    printf("HighsLp::dimensionsOK (%s) fails on num_row >= 0\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on num_row >= 0\n",
+           message.c_str());
   ok = num_row >= 0 && ok;
   if (!ok) return ok;
 
@@ -94,19 +104,23 @@ bool HighsLp::dimensionsOk(std::string message) const {
   bool legal_col_lower_size = col_lower_size >= num_col;
   bool legal_col_upper_size = col_lower_size >= num_col;
   if (!legal_col_cost_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_col_cost_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_col_cost_size\n",
+           message.c_str());
   ok = legal_col_cost_size && ok;
   if (!legal_col_lower_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_col_lower_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_col_lower_size\n",
+           message.c_str());
   ok = legal_col_lower_size && ok;
   if (!legal_col_upper_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_col_upper_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_col_upper_size\n",
+           message.c_str());
   ok = legal_col_upper_size && ok;
 
   bool legal_format = this->a_matrix_.format_ == MatrixFormat::kColwise ||
                       this->a_matrix_.format_ == MatrixFormat::kRowwise;
   if (!legal_format)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_format\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_format\n",
+           message.c_str());
   ok = legal_format && ok;
   HighsInt num_vec;
   if (this->a_matrix_.isColwise()) {
@@ -117,11 +131,12 @@ bool HighsLp::dimensionsOk(std::string message) const {
   const bool partitioned = false;
   vector<HighsInt> a_matrix_p_end;
   bool legal_matrix_dimensions =
-    assessMatrixDimensions(num_vec, partitioned, this->a_matrix_.start_,
-			   a_matrix_p_end, this->a_matrix_.index_,
-			   this->a_matrix_.value_) == HighsStatus::kOk;
+      assessMatrixDimensions(num_vec, partitioned, this->a_matrix_.start_,
+                             a_matrix_p_end, this->a_matrix_.index_,
+                             this->a_matrix_.value_) == HighsStatus::kOk;
   if (!legal_matrix_dimensions)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_matrix_dimensions\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_matrix_dimensions\n",
+           message.c_str());
   ok = legal_matrix_dimensions && ok;
 
   HighsInt row_lower_size = this->row_lower_.size();
@@ -129,25 +144,30 @@ bool HighsLp::dimensionsOk(std::string message) const {
   bool legal_row_lower_size = row_lower_size >= num_row;
   bool legal_row_upper_size = row_lower_size >= num_row;
   if (!legal_row_lower_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_row_lower_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_row_lower_size\n",
+           message.c_str());
   ok = legal_row_lower_size && ok;
   if (!legal_row_upper_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_row_upper_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_row_upper_size\n",
+           message.c_str());
   ok = legal_row_upper_size && ok;
 
   bool legal_a_matrix_num_col = this->a_matrix_.num_col_ == num_col;
   bool legal_a_matrix_num_row = this->a_matrix_.num_row_ == num_row;
   if (!legal_a_matrix_num_col)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_a_matrix_num_col\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_a_matrix_num_col\n",
+           message.c_str());
   ok = legal_a_matrix_num_col && ok;
   if (!legal_a_matrix_num_row)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_a_matrix_num_row\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_a_matrix_num_row\n",
+           message.c_str());
   ok = legal_a_matrix_num_row && ok;
 
   HighsInt scale_strategy = (HighsInt)this->scale_.strategy;
   bool legal_scale_strategy = scale_strategy >= 0;
   if (!legal_scale_strategy)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_strategy\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_strategy\n",
+           message.c_str());
   ok = legal_scale_strategy && ok;
   HighsInt scale_row_size = (HighsInt)this->scale_.row.size();
   HighsInt scale_col_size = (HighsInt)this->scale_.col.size();
@@ -167,22 +187,31 @@ bool HighsLp::dimensionsOk(std::string message) const {
     legal_scale_col_size = scale_col_size == 0;
   }
   if (!legal_scale_num_col)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_num_col\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_num_col\n",
+           message.c_str());
   ok = legal_scale_num_col && ok;
   if (!legal_scale_num_row)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_num_row\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_num_row\n",
+           message.c_str());
   ok = legal_scale_num_row && ok;
   if (!legal_scale_row_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_row_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_row_size\n",
+           message.c_str());
   ok = legal_scale_row_size && ok;
   if (!legal_scale_col_size)
-    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_col_size\n", message.c_str());
+    printf("HighsLp::dimensionsOK (%s) fails on legal_scale_col_size\n",
+           message.c_str());
   ok = legal_scale_col_size && ok;
-  
+  if (!ok) {
+    printf("HighsLp::dimensionsOK (%s) fails \n", message.c_str());
+  }
+
   return ok;
 }
 
-void HighsLp::setFormat(const MatrixFormat format) { this->a_matrix_.setFormat(format); }
+void HighsLp::setFormat(const MatrixFormat format) {
+  this->a_matrix_.setFormat(format);
+}
 
 void HighsLp::clear() {
   this->num_col_ = 0;
@@ -289,4 +318,3 @@ void HighsLp::moveLpBackAndUnapplyScaling(HighsLp lp) {
   this->unapplyScale();
   assert(this->is_moved_ == false);
 }
-

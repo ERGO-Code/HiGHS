@@ -83,29 +83,25 @@ const double awful_regression_error = 2.0;
 const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
-bool create(HighsIndexCollection& index_collection,
-	    const HighsInt from_col,
-	    const HighsInt to_col,
-	    const HighsInt dimension);
+bool create(HighsIndexCollection& index_collection, const HighsInt from_col,
+            const HighsInt to_col, const HighsInt dimension);
 
 bool create(HighsIndexCollection& index_collection,
-	    const HighsInt num_set_entries,
-	    const HighsInt* set,
-	    const HighsInt dimension);
+            const HighsInt num_set_entries, const HighsInt* set,
+            const HighsInt dimension);
 
-void create(HighsIndexCollection& index_collection,
-	    const HighsInt* mask,
-	    const HighsInt dimension);
+void create(HighsIndexCollection& index_collection, const HighsInt* mask,
+            const HighsInt dimension);
 
 bool ok(const HighsIndexCollection& index_collection);
 
-void limits(const HighsIndexCollection& index_collection,
-	    HighsInt& from_k, HighsInt& to_k);
+void limits(const HighsIndexCollection& index_collection, HighsInt& from_k,
+            HighsInt& to_k);
 
 void updateOutInIndex(const HighsIndexCollection& index_collection,
-		      HighsInt& out_from_ix, HighsInt& out_to_ix,
-		      HighsInt& in_from_ix, HighsInt& in_to_ix,
-		      HighsInt& current_set_entry);
+                      HighsInt& out_from_ix, HighsInt& out_to_ix,
+                      HighsInt& in_from_ix, HighsInt& in_to_ix,
+                      HighsInt& current_set_entry);
 
 HighsInt dataSize(const HighsIndexCollection& index_collection);
 

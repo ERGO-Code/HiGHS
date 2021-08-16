@@ -252,8 +252,9 @@ HighsStatus HEkkPrimal::solve() {
                   "with %" HIGHSINT_FORMAT
                   " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
                   " (max %g) dual infeasibilities\n",
-                  info.num_primal_infeasibilities, info.max_primal_infeasibility,
-                  info.num_dual_infeasibilities, info.max_dual_infeasibility);
+                  info.num_primal_infeasibilities,
+                  info.max_primal_infeasibility, info.num_dual_infeasibilities,
+                  info.max_dual_infeasibility);
   }
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solve_phase,
                          ekk_instance_.model_status_) ==
@@ -295,9 +296,9 @@ void HEkkPrimal::initialiseInstance() {
     highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
                 "HEkkPrimal:: LP has %" HIGHSINT_FORMAT " free columns\n",
                 num_free_col);
-    nonbasic_free_col_set.setup(num_free_col, num_tot,
-                                ekk_instance_.opt_point_->output_flag,
-                                ekk_instance_.opt_point_->log_file_stream, debug);
+    nonbasic_free_col_set.setup(
+        num_free_col, num_tot, ekk_instance_.opt_point_->output_flag,
+        ekk_instance_.opt_point_->log_file_stream, debug);
   }
   // Set up the hyper-sparse CHUZC data
   hyper_chuzc_candidate.resize(1 + max_num_hyper_chuzc_candidates);

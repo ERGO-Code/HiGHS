@@ -33,7 +33,7 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis,
 void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 
 void getUnscaledInfeasibilities(const HighsOptions& options,
-				const HighsScale& scale,
+                                const HighsScale& scale,
                                 const SimplexBasis& basis,
                                 const HighsSimplexInfo& info,
                                 HighsInfo& highs_info);
