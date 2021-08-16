@@ -566,12 +566,11 @@ HighsStatus Highs::changeIntegralityInterface(
   // Take a copy of the integrality that can be normalised
   std::vector<HighsVarType> local_integrality{
       usr_integrality, usr_integrality + num_usr_integrality};
-  // If changing the integrality for a set of columns, ensure that the
-  // set and data are in ascending order
+  // If changing the integrality for a set of columns, verify that the
+  // set entries are in ascending order
   if (index_collection.is_set_)
-    sortSetData(index_collection.set_num_entries_, index_collection.set_,
-		usr_integrality,
-		&local_integrality[0]);
+    assert(increasingSetOk(index_collection.set_, 0, index_collection.dimension_, true));
+
   HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;

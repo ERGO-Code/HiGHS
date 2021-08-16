@@ -33,6 +33,7 @@
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
+#include "util/HighsSort.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -1371,14 +1372,14 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
                                          const HighsVarType* integrality) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
   clearPresolve();
+  // Ensure that the set and data are in ascending order
+  std::vector<HighsVarType> local_integrality{integrality, integrality + num_set_entries};
+  std::vector<HighsInt> local_set{set, set + num_set_entries};
+  sortSetData(num_set_entries, local_set, integrality, &local_integrality[0]);
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
-    highsLogUser(options_.log_options,
-		 HighsLogType::kError,
-		 "Set supplied to Highs::changeColsIntegrality is not ordered\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus call_status = changeIntegralityInterface(index_collection, integrality);
+  const bool create_ok = create(index_collection, num_set_entries, &local_set[0], model_.lp_.num_col_);
+  assert(create_ok);
+  HighsStatus call_status = changeIntegralityInterface(index_collection, &local_integrality[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeIntegrality");
