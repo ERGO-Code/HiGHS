@@ -1961,10 +1961,19 @@ void Highs::clearModelStatus() {
 void Highs::clearSolution() {
   info_.primal_solution_status = kSolutionStatusNone;
   info_.dual_solution_status = kSolutionStatusNone;
+  info_.num_primal_infeasibilities = kHighsIllegalInfeasibilityCount;
+  info_.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
+  info_.num_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
+  info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
+  info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
   clearSolutionUtil(solution_);
 }
 
-void Highs::clearBasis() { clearBasisUtil(basis_); }
+void Highs::clearBasis() {
+  info_.basis_validity = kBasisValidityInvalid;
+  clearBasisUtil(basis_);
+}
 
 void Highs::clearInfo() { info_.clear(); }
 
