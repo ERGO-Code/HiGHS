@@ -55,10 +55,12 @@ HighsStatus getRangingData(HighsRanging& ranging,
     return HighsStatus::kError;
   }
   // Aliases
+  const HighsLp& use_lp = solver_object.lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.info_;
   const SimplexBasis& simplex_basis = ekk_instance.basis_;
-  const vector<double>& col_scale = solver_object.lp_.scale_.col;
-  const vector<double>& row_scale = solver_object.lp_.scale_.row;
+  const bool use_scale = use_lp.scale_.has_scaling;
+  const vector<double>& col_scale = use_lp.scale_.col;
+  const vector<double>& row_scale = use_lp.scale_.row;
   const vector<double>& value_ = simplex_info.workValue_;
   const vector<double>& dual_ = simplex_info.workDual_;
   const vector<double>& cost_ = simplex_info.workCost_;
@@ -70,12 +72,12 @@ HighsStatus getRangingData(HighsRanging& ranging,
   const vector<int8_t>& Nflag_ = simplex_basis.nonbasicFlag_;
   const vector<int8_t>& Nmove_ = simplex_basis.nonbasicMove_;
   const vector<HighsInt>& Bindex_ = simplex_basis.basicIndex_;
-  const HighsSparseMatrix& matrix = ekk_instance.lp_.a_matrix_;
+  const HighsSparseMatrix& matrix = use_lp.a_matrix_;
 
   // Local copies of scalars
 
-  const HighsInt numRow = ekk_instance.lp_.num_row_;
-  const HighsInt numCol = ekk_instance.lp_.num_col_;
+  const HighsInt numRow = use_lp.num_row_;
+  const HighsInt numCol = use_lp.num_col_;
   const HighsInt numTotal = numCol + numRow;
   const double H_TT = 1e-13;
   const double H_INF = kHighsInf;
@@ -89,7 +91,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
   // sign, though. Maximization problems are, thus, accommodated by
   // applying the sign multiplier to dual information.
   HighsInt sense = 1;
-  if (solver_object.lp_.sense_ == ObjSense::kMaximize) sense = -1;
+  if (use_lp.sense_ == ObjSense::kMaximize) sense = -1;
 
   vector<HighsInt> iWork_(numTotal);
   vector<double> dWork_(numTotal);
@@ -483,20 +485,21 @@ HighsStatus getRangingData(HighsRanging& ranging,
     }
   }
 
-  //
-  // Ranging 4.1. Scale back
-  //
-  for (HighsInt j = 0; j < numCol; j++) {
-    c_up_c[j] /= (c_up_c[j] == +H_INF) ? 1 : col_scale[j];
-    c_dn_c[j] /= (c_dn_c[j] == -H_INF) ? 1 : col_scale[j];
-    b_up_b[j] *= (b_up_b[j] == +H_INF) ? 1 : col_scale[j];
-    b_dn_b[j] *= (b_dn_b[j] == +H_INF) ? 1 : col_scale[j];
+  if (use_scale) {
+    //
+    // Ranging 4.1. Scale back
+    //
+    for (HighsInt j = 0; j < numCol; j++) {
+      c_up_c[j] /= (c_up_c[j] == +H_INF) ? 1 : col_scale[j];
+      c_dn_c[j] /= (c_dn_c[j] == -H_INF) ? 1 : col_scale[j];
+      b_up_b[j] *= (b_up_b[j] == +H_INF) ? 1 : col_scale[j];
+      b_dn_b[j] *= (b_dn_b[j] == +H_INF) ? 1 : col_scale[j];
+    }
+    for (HighsInt i = 0, j = numCol; i < numRow; i++, j++) {
+      b_up_b[j] /= (b_up_b[j] == +H_INF) ? 1 : row_scale[i];
+      b_dn_b[j] /= (b_dn_b[j] == +H_INF) ? 1 : row_scale[i];
+    }
   }
-  for (HighsInt i = 0, j = numCol; i < numRow; i++, j++) {
-    b_up_b[j] /= (b_up_b[j] == +H_INF) ? 1 : row_scale[i];
-    b_dn_b[j] /= (b_dn_b[j] == +H_INF) ? 1 : row_scale[i];
-  }
-
   //
   // Ranging 4.1.1 Trim small value to zero
   //
@@ -586,7 +589,7 @@ void writeRanging(const HighsRanging& ranging,
   if (!solver_object.options_.log_dev_level) return;
   if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal)
     return;
-  HighsLp& lp = solver_object.lp_;
+  HighsLp& use_lp = solver_object.lp_;
   HighsLogOptions& log_options = solver_object.options_.log_options;
   highsLogDev(log_options, HighsLogType::kVerbose,
               "\nRanging data: Optimal objective = %g\n"
@@ -597,21 +600,21 @@ void writeRanging(const HighsRanging& ranging,
               "    ) Up         UpObj     "
               " | DownObj    Down       Value      Up         UpObj\n",
               solver_object.highs_info_.objective_function_value);
-  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+  for (HighsInt iCol = 0; iCol < use_lp.num_col_; iCol++) {
     highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g | %-10.4g %-10.4g %-10.4g %-10.4g %-10.4g\n",
                 iCol,
                 statusToString(solver_object.basis_.col_status[iCol],
-                               lp.col_lower_[iCol], lp.col_upper_[iCol])
+                               use_lp.col_lower_[iCol], use_lp.col_upper_[iCol])
                     .c_str(),
                 ranging.col_bound_dn.objective_[iCol],
-                ranging.col_bound_dn.value_[iCol], lp.col_lower_[iCol],
+                ranging.col_bound_dn.value_[iCol], use_lp.col_lower_[iCol],
                 solver_object.solution_.col_value[iCol],
-                lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
+                use_lp.col_upper_[iCol], ranging.col_bound_up.value_[iCol],
                 ranging.col_bound_up.objective_[iCol],
                 ranging.col_cost_dn.objective_[iCol],
-                ranging.col_cost_dn.value_[iCol], lp.col_cost_[iCol],
+                ranging.col_cost_dn.value_[iCol], use_lp.col_cost_[iCol],
                 ranging.col_cost_up.value_[iCol],
                 ranging.col_cost_up.objective_[iCol]);
   }
@@ -620,18 +623,18 @@ void writeRanging(const HighsRanging& ranging,
               "                             \n"
               "Col Status | DownObj    Down       (Lower      Value      Upper "
               "    ) Up         UpObj   \n");
-  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+  for (HighsInt iRow = 0; iRow < use_lp.num_row_; iRow++) {
     highsLogDev(log_options, HighsLogType::kVerbose,
                 "%3i   %4s | %-10.4g %-10.4g (%-10.4g %-10.4g %-10.4g) %-10.4g "
                 "%-10.4g |\n",
                 iRow,
                 statusToString(solver_object.basis_.row_status[iRow],
-                               lp.row_lower_[iRow], lp.row_upper_[iRow])
+                               use_lp.row_lower_[iRow], use_lp.row_upper_[iRow])
                     .c_str(),
                 ranging.row_bound_dn.objective_[iRow],
-                ranging.row_bound_dn.value_[iRow], lp.row_lower_[iRow],
+                ranging.row_bound_dn.value_[iRow], use_lp.row_lower_[iRow],
                 solver_object.solution_.row_value[iRow],
-                lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
+                use_lp.row_upper_[iRow], ranging.row_bound_up.value_[iRow],
                 ranging.row_bound_up.objective_[iRow]);
   }
 }

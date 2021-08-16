@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 HighsStatus quietRun(Highs& highs) {
   highs.setOptionValue("output_flag", false);
@@ -58,6 +58,8 @@ void testRanging(Highs& highs) {
 
   REQUIRE(highs.setBasis() == HighsStatus::kOk);
   //  REQUIRE(quietRun(highs) == HighsStatus::kOk);
+  highs.setOptionValue("log_dev_level", 3);
+  highs.setOptionValue("simplex_scale_strategy", 0);
   highs.run();
 
   REQUIRE(modelStatusOk(highs));
