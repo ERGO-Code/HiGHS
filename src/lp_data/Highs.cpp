@@ -1425,15 +1425,18 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
 HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
                                   const HighsInt* set, const double* cost) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
+  // Check for NULL data in "set" version of changeColsCost since
+  // values are sorted with set
+  if (doubleUserDataNotNull(options_.log_options, cost, "column costs")) return HighsStatus::kError;
   clearPresolve();
+  // Ensure that the set and data are in ascending order
+  std::vector<double> local_cost{cost, cost + num_set_entries};
+  std::vector<HighsInt> local_set{set, set + num_set_entries};
+  sortSetData(num_set_entries, local_set, cost, NULL, NULL, &local_cost[0], NULL, NULL);
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
-    highsLogUser(options_.log_options,
-		 HighsLogType::kError,
-		 "Set supplied to Highs::changeColsCost is not ordered\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus call_status = changeCostsInterface(index_collection, cost);
+  const bool create_ok = create(index_collection, num_set_entries, &local_set[0], model_.lp_.num_col_);
+  assert(create_ok);
+  HighsStatus call_status = changeCostsInterface(index_collection, &local_cost[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
@@ -1481,15 +1484,24 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
+  // Check for NULL data in "set" version of changeColsBounds since
+  // values are sorted with set
+  bool null_data = false;
+  null_data = doubleUserDataNotNull(options_.log_options, lower,
+                                    "column lower bounds") || null_data;
+  null_data = doubleUserDataNotNull(options_.log_options, upper,
+                                    "column upper bounds") || null_data;
+  if (null_data) return HighsStatus::kError;
   clearPresolve();
+  // Ensure that the set and data are in ascending order
+  std::vector<double> local_lower{lower, lower + num_set_entries};
+  std::vector<double> local_upper{upper, upper + num_set_entries};
+  std::vector<HighsInt> local_set{set, set + num_set_entries};
+  sortSetData(num_set_entries, local_set, lower, upper, NULL, &local_lower[0], &local_upper[0], NULL);
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_col_)) {
-    highsLogUser(options_.log_options,
-		 HighsLogType::kError,
-		 "Set supplied to Highs::changeColsBounds is not ordered\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus call_status = changeColBoundsInterface(index_collection, lower, upper);
+  const bool create_ok = create(index_collection, num_set_entries, &local_set[0], model_.lp_.num_col_);
+  assert(create_ok);
+  HighsStatus call_status = changeColBoundsInterface(index_collection, &local_lower[0], &local_upper[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
@@ -1538,15 +1550,24 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
   if (num_set_entries <= 0) return HighsStatus::kOk;
+  // Check for NULL data in "set" version of changeRowsBounds since
+  // values are sorted with set
+  bool null_data = false;
+  null_data = doubleUserDataNotNull(options_.log_options, lower,
+                                    "row lower bounds") || null_data;
+  null_data = doubleUserDataNotNull(options_.log_options, upper,
+                                    "row upper bounds") || null_data;
+  if (null_data) return HighsStatus::kError;
   clearPresolve();
+  // Ensure that the set and data are in ascending order
+  std::vector<double> local_lower{lower, lower + num_set_entries};
+  std::vector<double> local_upper{upper, upper + num_set_entries};
+  std::vector<HighsInt> local_set{set, set + num_set_entries};
+  sortSetData(num_set_entries, local_set, lower, upper, NULL, &local_lower[0], &local_upper[0], NULL);
   HighsIndexCollection index_collection;
-  if (!create(index_collection, num_set_entries, set, model_.lp_.num_row_)) {
-    highsLogUser(options_.log_options,
-		 HighsLogType::kError,
-		 "Set supplied to Highs::changeRowsBounds is not ordered\n");
-    return HighsStatus::kError;
-  }
-  HighsStatus call_status = changeRowBoundsInterface(index_collection, lower, upper);
+  const bool create_ok = create(index_collection, num_set_entries, &local_set[0], model_.lp_.num_row_);
+  assert(create_ok);
+  HighsStatus call_status = changeRowBoundsInterface(index_collection, &local_lower[0], &local_upper[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");

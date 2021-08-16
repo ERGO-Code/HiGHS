@@ -273,7 +273,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 }
 
 void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
-  HighsOptions& options = options_;
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   lp.ensureColWise();
@@ -320,7 +319,6 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
 }
 
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
-  HighsOptions& options = options_;
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   lp.ensureColWise();
@@ -366,7 +364,6 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection, Highs
 			     HighsInt* col_matrix_start, HighsInt* col_matrix_index,
 			     double* col_matrix_value) {
   HighsLp& lp = model_.lp_;
-  HighsOptions& options = options_;
   // Ensure that the LP is column-wise
   lp.ensureColWise();
   assert(ok(index_collection));
@@ -418,7 +415,6 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
 			     HighsInt* row_matrix_start, HighsInt* row_matrix_index,
 			     double* row_matrix_value) {
   HighsLp& lp = model_.lp_;
-  HighsOptions& options = options_;
   // Ensure that the LP is column-wise
   lp.ensureColWise();
   assert(ok(index_collection));
@@ -552,166 +548,127 @@ void Highs::getCoefficientInterface(const HighsInt Xrow,
   }
 }
 
-HighsStatus Highs::changeIntegralityInterface(
-    HighsIndexCollection& index_collection,
-    const HighsVarType* usr_integrality) {
-  HighsOptions& options = options_;
-  bool null_data = highsVarTypeUserDataNotNull(
-      options.log_options, usr_integrality, "column integrality");
-  if (null_data) return HighsStatus::kError;
-  HighsInt num_usr_integrality = dataSize(index_collection);
+HighsStatus Highs::changeIntegralityInterface(HighsIndexCollection& index_collection,
+					      const HighsVarType* integrality) {
+  HighsInt num_integrality = dataSize(index_collection);
   // If a non-positive number of integrality (may) need changing nothing needs
   // to be done
-  if (num_usr_integrality <= 0) return HighsStatus::kOk;
+  if (num_integrality <= 0) return HighsStatus::kOk;
+  if (highsVarTypeUserDataNotNull(options_.log_options, integrality, "column integrality")) return HighsStatus::kError;
   // Take a copy of the integrality that can be normalised
-  std::vector<HighsVarType> local_integrality{
-      usr_integrality, usr_integrality + num_usr_integrality};
+  std::vector<HighsVarType> local_integrality{integrality, integrality + num_integrality};
   // If changing the integrality for a set of columns, verify that the
   // set entries are in ascending order
   if (index_collection.is_set_)
     assert(increasingSetOk(index_collection.set_, 0, index_collection.dimension_, true));
-
-  HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
-  changeLpIntegrality(lp, index_collection, local_integrality);
-
+  changeLpIntegrality(model_.lp_, index_collection, local_integrality);
   // Deduce the consequences of new integrality
   clearModelStatus();
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
-                                        const double* usr_col_cost) {
-  HighsOptions& options = options_;
-  bool null_data =
-      doubleUserDataNotNull(options.log_options, usr_col_cost, "column costs");
-  if (null_data) return HighsStatus::kError;
-  HighsInt num_usr_col_cost = dataSize(index_collection);
+                                        const double* cost) {
+  HighsInt num_cost = dataSize(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
-  if (num_usr_col_cost <= 0) return HighsStatus::kOk;
+  if (num_cost <= 0) return HighsStatus::kOk;
+  if (doubleUserDataNotNull(options_.log_options, cost, "column costs")) return HighsStatus::kError;
   // Take a copy of the cost that can be normalised
-  std::vector<double> local_colCost{usr_col_cost,
-                                    usr_col_cost + num_usr_col_cost};
-  // If changing the costs for a set of columns, ensure that the
-  // set and data are in ascending order
-  if (index_collection.is_set_)
-    sortSetData(index_collection.set_num_entries_, index_collection.set_,
-		usr_col_cost, NULL, NULL,
-		&local_colCost[0], NULL, NULL);
-  HighsLp& lp = model_.lp_;
+  std::vector<double> local_colCost{cost, cost + num_cost};
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(assessCosts(options, 0, index_collection,
-                                      local_colCost, options.infinite_cost),
+      interpretCallStatus(assessCosts(options_, 0, index_collection,
+                                      local_colCost, options_.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
-
-  changeLpCosts(lp, index_collection, local_colCost);
-
+  changeLpCosts(model_.lp_, index_collection, local_colCost);
   // Deduce the consequences of new costs
   clearModelStatusSolutionAndInfo();
-
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewCosts);
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::changeColBoundsInterface(HighsIndexCollection& index_collection,
-					    const double* usr_col_lower,
-					    const double* usr_col_upper) {
-  HighsOptions& options = options_;
-  bool null_data = false;
-  null_data = doubleUserDataNotNull(options.log_options, usr_col_lower,
-                                    "column lower bounds") ||
-    null_data;
-  null_data = doubleUserDataNotNull(options.log_options, usr_col_upper,
-                                    "column upper bounds") ||
-    null_data;
-  if (null_data) return HighsStatus::kError;
-  HighsInt num_usr_col_bounds = dataSize(index_collection);
+					    const double* col_lower,
+					    const double* col_upper) {
+  HighsInt num_col_bounds = dataSize(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
-  if (num_usr_col_bounds <= 0) return HighsStatus::kOk;
+  if (num_col_bounds <= 0) return HighsStatus::kOk;
+  bool null_data = false;
+  null_data = doubleUserDataNotNull(options_.log_options, col_lower,
+                                    "column lower bounds") || null_data;
+  null_data = doubleUserDataNotNull(options_.log_options, col_upper,
+                                    "column upper bounds") || null_data;
+  if (null_data) return HighsStatus::kError;
   // Take a copy of the cost that can be normalised
-  std::vector<double> local_colLower{usr_col_lower,
-                                     usr_col_lower + num_usr_col_bounds};
-  std::vector<double> local_colUpper{usr_col_upper,
-                                     usr_col_upper + num_usr_col_bounds};
+  std::vector<double> local_colLower{col_lower, col_lower + num_col_bounds};
+  std::vector<double> local_colUpper{col_upper, col_upper + num_col_bounds};
   // If changing the bounds for a set of columns, ensure that the
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                usr_col_lower, usr_col_upper, NULL,
+                col_lower, col_upper, NULL,
 		&local_colLower[0], &local_colUpper[0], NULL);
-  HighsLp& lp = model_.lp_;
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
-      assessBounds(options, "col", 0, index_collection, local_colLower,
-                   local_colUpper, options.infinite_bound),
+      assessBounds(options_, "col", 0, index_collection, local_colLower,
+                   local_colUpper, options_.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
   HighsStatus call_status;
-  changeLpColBounds(lp, index_collection, local_colLower, local_colUpper);
+  changeLpColBounds(model_.lp_, index_collection, local_colLower, local_colUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, true);
-
   // Deduce the consequences of new col bounds
   clearModelStatusSolutionAndInfo();
-
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::changeRowBoundsInterface(
-    HighsIndexCollection& index_collection, const double* usr_row_lower,
-    const double* usr_row_upper) {
-  HighsOptions& options = options_;
-  bool null_data = false;
-  null_data = doubleUserDataNotNull(options.log_options, usr_row_lower,
-                                    "row lower bounds") ||
-              null_data;
-  null_data = doubleUserDataNotNull(options.log_options, usr_row_upper,
-                                    "row upper bounds") ||
-              null_data;
-  if (null_data) return HighsStatus::kError;
-  HighsInt num_usr_row_bounds = dataSize(index_collection);
+HighsStatus Highs::changeRowBoundsInterface(HighsIndexCollection& index_collection,
+					    const double* lower,
+					    const double* upper) {
+  HighsInt num_row_bounds = dataSize(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
-  if (num_usr_row_bounds <= 0) return HighsStatus::kOk;
+  if (num_row_bounds <= 0) return HighsStatus::kOk;
+  bool null_data = false;
+  null_data = doubleUserDataNotNull(options_.log_options, lower,
+                                    "row lower bounds") || null_data;
+  null_data = doubleUserDataNotNull(options_.log_options, upper,
+                                    "row upper bounds") || null_data;
+  if (null_data) return HighsStatus::kError;
   // Take a copy of the cost that can be normalised
-  std::vector<double> local_rowLower{usr_row_lower,
-                                     usr_row_lower + num_usr_row_bounds};
-  std::vector<double> local_rowUpper{usr_row_upper,
-                                     usr_row_upper + num_usr_row_bounds};
+  std::vector<double> local_rowLower{lower, lower + num_row_bounds};
+  std::vector<double> local_rowUpper{upper, upper + num_row_bounds};
   // If changing the bounds for a set of rows, ensure that the
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                usr_row_lower, usr_row_upper, NULL, &local_rowLower[0],
-                &local_rowUpper[0], NULL);
-  HighsLp& lp = model_.lp_;
+                lower, upper, NULL,
+		&local_rowLower[0], &local_rowUpper[0], NULL);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
-      assessBounds(options, "row", 0, index_collection, local_rowLower,
-                   local_rowUpper, options.infinite_bound),
+      assessBounds(options_, "row", 0, index_collection, local_rowLower,
+                   local_rowUpper, options_.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
 
-  changeLpRowBounds(lp, index_collection,
-                                  local_rowLower, local_rowUpper);
-
+  HighsStatus call_status;
+  changeLpRowBounds(model_.lp_, index_collection, local_rowLower, local_rowUpper);
   // Update HiGHS basis status and (any) simplex move status of
   // nonbasic variables whose bounds have changed
   setNonbasicStatusInterface(index_collection, false);
-
   // Deduce the consequences of new row bounds
   clearModelStatusSolutionAndInfo();
-
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewBounds);
   return HighsStatus::kOk;
@@ -740,7 +697,6 @@ void Highs::changeCoefficientInterface(const HighsInt Xrow,
 HighsStatus Highs::scaleColInterface(const HighsInt col,
                                      const double scaleval) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsOptions& options = options_;
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   HighsSimplexStatus& simplex_status = ekk_instance_.status_;
@@ -787,7 +743,6 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
 HighsStatus Highs::scaleRowInterface(const HighsInt row,
                                      const double scaleval) {
   HighsStatus return_status = HighsStatus::kOk;
-  HighsOptions& options = options_;
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
   HighsSimplexStatus& simplex_status = ekk_instance_.status_;
@@ -1103,8 +1058,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
 					    return_status, "setBasis");
 	if (return_status == HighsStatus::kError) return return_status;
       } else {
-	highsLogUser(
-		     options_.log_options, HighsLogType::kError,
+	highsLogUser(options_.log_options, HighsLogType::kError,
 		     "getBasicVariables called without a simplex or HiGHS basis\n");
 	lp.moveLpBackAndUnapplyScaling(ekk_lp);
 	return HighsStatus::kError;
