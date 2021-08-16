@@ -20,6 +20,9 @@
 
 //#include <stdio.h>
 
+const double kResidualLargeError = 1e-12;
+const double kResidualExcessiveError = sqrt(kResidualLargeError);
+
 const double kSolveLargeError = 1e-12;
 const double kSolveExcessiveError = sqrt(kSolveLargeError);
 
@@ -72,6 +75,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       rhs.array[index] += value;
     }
   }
+  HVector residual = rhs;
   simplex_nla.ftran(rhs, expected_density);
 
   double solve_error_norm = 0;
@@ -79,6 +83,8 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     double solve_error = fabs(rhs.array[iRow] - column.array[iRow]);
     solve_error_norm = std::max(solve_error, solve_error_norm);
   }
+  double residual_error_norm = debugResidualError(simplex_nla, rhs, residual);
+
   std::string value_adjective;
   HighsLogType report_level;
   return_status = HighsDebugStatus::kOk;
@@ -87,29 +93,43 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     if (solve_error_norm > kSolveExcessiveError) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
-      return_status = HighsDebugStatus::kError;
     } else if (solve_error_norm > kSolveLargeError) {
       value_adjective = "Large";
       report_level = HighsLogType::kWarning;
-      return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
-      report_level = HighsLogType::kVerbose;
     }
-
     if (force) report_level = HighsLogType::kInfo;
-
     highsLogDev(
         options->log_options, report_level,
         "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
         value_adjective.c_str(), solve_error_norm);
   }
 
-  if (options->highs_debug_level < kHighsDebugLevelExpensive)
-    return return_status;
+  if (residual_error_norm) {
+    if (residual_error_norm > kResidualExcessiveError) {
+      value_adjective = "Excessive";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kError;
+    } else if (residual_error_norm > kResidualLargeError) {
+      value_adjective = "Large";
+      report_level = HighsLogType::kWarning;
+      return_status = HighsDebugStatus::kWarning;
+    } else {
+      value_adjective = "Small";
+    }
+    if (force) report_level = HighsLogType::kInfo;
+    highsLogDev(
+        options->log_options, report_level,
+        "CheckINVERT:   %-9s (%9.4g) norm for random solution residual error\n",
+        value_adjective.c_str(), residual_error_norm);
+  }
+
+  //  if (options->highs_debug_level < kHighsDebugLevelExpensive) return return_status;
 
   expected_density = 0;
   double inverse_error_norm = 0;
+  residual_error_norm = 0;
   for (HighsInt iRow = 0; iRow < num_row; iRow++) {
     HighsInt iCol = base_index[iRow];
     column.clear();
@@ -127,6 +147,7 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       column.index[column.count++] = index;
     }
 
+    HVector residual = column;
     simplex_nla.ftran(column, expected_density);
     double inverse_column_error_norm = 0;
     for (HighsInt lc_iRow = 0; lc_iRow < num_row; lc_iRow++) {
@@ -143,24 +164,75 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
     }
     inverse_error_norm =
         std::max(inverse_column_error_norm, inverse_error_norm);
+    double residual_column_error_norm = debugResidualError(simplex_nla, column, residual);
+    residual_error_norm =
+      std::max(residual_column_error_norm, residual_error_norm);
   }
   if (inverse_error_norm) {
     if (inverse_error_norm > kInverseExcessiveError) {
       value_adjective = "Excessive";
       report_level = HighsLogType::kError;
-      return_status = HighsDebugStatus::kError;
     } else if (inverse_error_norm > kInverseLargeError) {
       value_adjective = "Large";
       report_level = HighsLogType::kWarning;
-      return_status = HighsDebugStatus::kWarning;
     } else {
       value_adjective = "Small";
-      report_level = HighsLogType::kVerbose;
     }
     highsLogDev(options->log_options, report_level,
                 "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
                 value_adjective.c_str(), inverse_error_norm);
   }
 
+  if (residual_error_norm) {
+    if (residual_error_norm > kResidualExcessiveError) {
+      value_adjective = "Excessive";
+      report_level = HighsLogType::kError;
+      return_status = HighsDebugStatus::kError;
+    } else if (residual_error_norm > kResidualLargeError) {
+      value_adjective = "Large";
+      report_level = HighsLogType::kWarning;
+      return_status = HighsDebugStatus::kWarning;
+    } else {
+      value_adjective = "Small";
+    }
+    if (force) report_level = HighsLogType::kInfo;
+    highsLogDev(
+        options->log_options, report_level,
+        "CheckINVERT:   %-9s (%9.4g) norm for inverse residual error\n",
+        value_adjective.c_str(), residual_error_norm);
+  }
+
   return return_status;
+}
+
+double debugResidualError(const HSimplexNla& simplex_nla, const HVector& solution, HVector& residual) {
+
+  const HighsInt num_row = simplex_nla.lp_->num_row_;
+  const HighsInt num_col = simplex_nla.lp_->num_col_;
+  const vector<HighsInt>& a_matrix_start = simplex_nla.lp_->a_matrix_.start_;
+  const vector<HighsInt>& a_matrix_index = simplex_nla.lp_->a_matrix_.index_;
+  const vector<double>& a_matrix_value = simplex_nla.lp_->a_matrix_.value_;
+  const HighsInt* base_index = simplex_nla.base_index_;
+
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    double value = solution.array[iRow];
+    HighsInt iCol = base_index[iRow];
+    if (iCol < num_col) {
+      for (HighsInt iEl = a_matrix_start[iCol]; iEl < a_matrix_start[iCol + 1];
+           iEl++) {
+        HighsInt index = a_matrix_index[iEl];
+        residual.array[index] -= value * a_matrix_value[iEl];
+      }
+    } else {
+      HighsInt index = iCol - num_col;
+      residual.array[index] -= value;
+    }
+  }
+
+  double residual_error_norm = 0;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    double residual_error = fabs(residual.array[iRow]);
+    residual_error_norm = std::max(residual_error, residual_error_norm);
+  }
+  return residual_error_norm;
 }

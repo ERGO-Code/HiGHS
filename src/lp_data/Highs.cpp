@@ -1324,6 +1324,7 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   if ((sense == ObjSense::kMinimize) !=
       (model_.lp_.sense_ == ObjSense::kMinimize)) {
+    model_.lp_.sense_ = sense;
     // Nontrivial change
     clearPresolve();
     clearModelStatusSolutionAndInfo();

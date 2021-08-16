@@ -41,7 +41,6 @@ class HEkk {
 	      HighsLpSolverObject& solver_object,
 	      const HighsSparseMatrix* scaled_a_matrix=NULL);
   void setPointers(HighsOptions* opt_point, HighsTimer* tim_point);
-  void setSimplexNlaScale(const HighsLp& lp);
 
   HighsStatus setup();
   HighsStatus solve();

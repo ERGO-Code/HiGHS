@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
@@ -18,7 +18,7 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Clear the current model
   highs.clearModel();
 
-  // Cannot load basis without a model
+  // Cannot load non-trivial basis for empty model
   if (from_file) {
     return_status = highs.readBasis(basis_file);
   } else {

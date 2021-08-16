@@ -41,7 +41,8 @@ class HSimplexNla {
              const HighsSparseMatrix* factor_a_matrix,
              const double factor_pivot_threshold);
 
-  void setPointers(const HighsLp* lp,
+  void setLpAndScalePointers(const HighsLp& for_lp);
+  void setPointers(const HighsLp* for_lp,
 		   const HighsSparseMatrix* factor_a_matrix = NULL,
 		   HighsInt* base_index = NULL,
 		   const HighsOptions* options = NULL,

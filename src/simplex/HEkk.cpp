@@ -319,12 +319,6 @@ void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
   this->analysis_.timer_ = this->tim_point_;
 }
 
-void HEkk::setSimplexNlaScale(const HighsLp& lp) {
-  assert(lp.scale_.has_scaling);
-  this->simplex_nla_.scale_ = &lp.scale_;
-}
-
-
 HighsStatus HEkk::solve() {
   initialiseAnalysis();
   initialiseControl();
@@ -2121,7 +2115,6 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, HighsInt* iRow,
     *hint = kRebuildReasonSyntheticClockSaysInvert;
 
   analysis_.simplexTimerStop(UpdateFactorClock);
-  debugCheckInvert(simplex_nla_);
 }
 
 void HEkk::updatePivots(const HighsInt variable_in, const HighsInt row_out,

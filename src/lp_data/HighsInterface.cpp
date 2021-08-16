@@ -1146,8 +1146,8 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   // EKK must have an INVERT, but simplex NLA may need the pointer to
   // its LP to be refreshed so that it can use its scale factors
   assert(ekk_instance_.status_.has_invert);
-  // Reset the pointers of the unscaled LP
-  ekk_instance_.simplex_nla_.setPointers(&lp);
+  // Reset the simplex NLA LP and scale pointers for the unscaled LP
+  ekk_instance_.simplex_nla_.setLpAndScalePointers(lp);
   assert(!lp.is_moved_);
   // Set up solve vector with suitably scaled RHS
   HVector solve_vector;

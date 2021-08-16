@@ -54,17 +54,18 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object, HighsSt
   // Copy the simplex iteration count to highs_info_ from ekk_instance
   solver_object.highs_info_.simplex_iteration_count =
     ekk_instance.iteration_count_;
-  // Ensure that the incumbent LP is neither moved, not scaled
-  assert(!incumbent_lp.is_scaled_);
+  // Ensure that the incumbent LP is neither moved, nor scaled
   assert(!incumbent_lp.is_moved_);
+  assert(!incumbent_lp.is_scaled_);
   // Cannot expect any more with an error return
   if (return_status == HighsStatus::kError) return return_status;
+  //
   // Ensure that there is an invert for the current LP
   assert(ekk_instance.status_.has_invert);
   // Ensure that simplex NLA is set up and has the right scaling
   assert(simplex_nla.is_setup_);
   // Set the simplex NLA scaling
-  ekk_instance.setSimplexNlaScale(incumbent_lp);
+  simplex_nla.setLpAndScalePointers(incumbent_lp);
   if (incumbent_lp.scale_.has_scaling) {
     // The LP has scaling, so ensure that the simplex NLA has its scaling
     void* nla_scale = (void*)simplex_nla.scale_;
@@ -105,6 +106,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   HighsSimplexInfo& ekk_info = ekk_instance.info_;
   SimplexBasis& ekk_basis = ekk_instance.basis_;
   HighsSimplexStatus& status = ekk_instance.status_;
+  HSimplexNla& simplex_nla = ekk_instance.simplex_nla_;
   
   // Copy the simplex iteration count from highs_info_ to ekk_instance, just for convenience
   ekk_instance.iteration_count_ = highs_info.simplex_iteration_count;
@@ -187,7 +189,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
       // Now that the incumbent LP is unscaled, to use the simplex NLA
       // requires scaling to be applied
-      ekk_instance.setSimplexNlaScale(incumbent_lp);
+      simplex_nla.setLpAndScalePointers(incumbent_lp);
       unscaleSolution(solution, incumbent_lp.scale_);
       // Determine whether the unscaled LP has been solved
       getUnscaledInfeasibilities(options, incumbent_lp.scale_, ekk_basis, ekk_info, highs_info);
@@ -289,7 +291,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Move the incumbent LP back from Ekk
   incumbent_lp = std::move(ekk_lp);
   incumbent_lp.is_moved_ = false;
-  ekk_instance.setSimplexNlaScale(incumbent_lp);
+  simplex_nla.setLpAndScalePointers(incumbent_lp);
   if (return_status == HighsStatus::kError) {
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }

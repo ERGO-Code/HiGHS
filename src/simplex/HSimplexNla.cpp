@@ -19,16 +19,13 @@
 
 #include "simplex/HSimplex.h"
 
-//#include <algorithm>
 #include <stdio.h>
 
 #ifdef OPENMP
 #include "omp.h"
 #endif
 
-// using std::max;
-// using std::min;
-// using std::vector;
+using std::vector;
 
 void HSimplexNla::setup(const HighsLp* lp,
                         const HighsScale* scale,
@@ -55,19 +52,22 @@ void HSimplexNla::setup(const HighsLp* lp,
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
-void HSimplexNla::setPointers(const HighsLp* ekk_lp,
+void HSimplexNla::setLpAndScalePointers(const HighsLp& for_lp) {
+  this->lp_ = &for_lp;
+  if (this->lp_->is_scaled_ || !this->lp_->scale_.has_scaling) {
+    this->scale_ = NULL;
+  } else {
+    this->scale_ = &(lp_->scale_);
+  }
+}
+
+void HSimplexNla::setPointers(const HighsLp* for_lp,
 			      const HighsSparseMatrix* factor_a_matrix,
 			      HighsInt* base_index,
 			      const HighsOptions* options,
 			      HighsTimer* timer,
 			      HighsSimplexAnalysis* analysis) {
-  lp_ = ekk_lp;
-  if (lp_->is_scaled_ || !lp_->scale_.has_scaling) {
-    scale_ = NULL;
-  } else {
-    const HighsScale* ekk_lp_scale = &(lp_->scale_);
-    scale_ = ekk_lp_scale;
-  }
+  this->setLpAndScalePointers(*for_lp);
   if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
   if (base_index) base_index_ = base_index;
   if (options) options_ = options;

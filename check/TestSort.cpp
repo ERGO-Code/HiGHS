@@ -134,6 +134,8 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
     double_values[ix] = double_values[ix + 1];
     int_values[ix] = indices[1 + ix];
   }
+  double_values.resize(num_values);
+  int_values.resize(num_values);
   std::make_heap(int_values.begin(), int_values.end());
   std::sort_heap(int_values.begin(), int_values.end());
   //  maxheapsort(&int_values[0], num_values);
