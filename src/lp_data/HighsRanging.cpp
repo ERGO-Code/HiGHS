@@ -100,7 +100,6 @@ HighsStatus getRangingData(HighsRanging& ranging,
   vector<double> dWork_(numTotal);
   HVector column;
   column.setup(numRow);
-  // As rgda/HModel.cpp HModel::sense() {
 
   vector<double> xi = Bvalue_;
   for (HighsInt i = 0; i < numRow; i++) {
@@ -488,25 +487,10 @@ HighsStatus getRangingData(HighsRanging& ranging,
     }
   }
 
-  const bool use_scale = false;//use_lp.scale_.has_scaling;
-  if (use_scale) {
-    //
-    // Ranging 4.1. Scale back
-    //
-    for (HighsInt j = 0; j < numCol; j++) {
-      c_up_c[j] /= (c_up_c[j] == +H_INF) ? 1 : col_scale[j];
-      c_dn_c[j] /= (c_dn_c[j] == -H_INF) ? 1 : col_scale[j];
-      b_up_b[j] *= (b_up_b[j] == +H_INF) ? 1 : col_scale[j];
-      b_dn_b[j] *= (b_dn_b[j] == +H_INF) ? 1 : col_scale[j];
-    }
-    for (HighsInt i = 0, j = numCol; i < numRow; i++, j++) {
-      b_up_b[j] /= (b_up_b[j] == +H_INF) ? 1 : row_scale[i];
-      b_dn_b[j] /= (b_dn_b[j] == +H_INF) ? 1 : row_scale[i];
-    }
-  }
   //
   // Ranging 4.1.1 Trim small value to zero
   //
+
   for (HighsInt j = 0; j < numCol; j++) {
     if (fabs(c_up_c[j]) < H_TT) c_up_c[j] = 0;
     if (fabs(c_dn_c[j]) < H_TT) c_dn_c[j] = 0;

@@ -230,7 +230,6 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   // Append the rows to LP matrix
   lp.a_matrix_.addRows(local_ar_matrix);
   if (lp_has_scaling) {
-    assert(1==0);
     // Extend the row scaling factors
     scale.row.resize(newNumRow);
     for (HighsInt iRow = 0; iRow < XnumNewRow; iRow++)
@@ -294,6 +293,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.col, index_collection);
     lp.scale_.col.resize(lp.num_col_);
+    lp.scale_.num_col = lp.num_col_;
   }
   // Deduce the consequences of deleting columns
   clearModelStatusSolutionAndInfo();
@@ -338,6 +338,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   if (lp.scale_.has_scaling) {
     deleteScale(lp.scale_.row, index_collection);
     lp.scale_.row.resize(lp.num_row_);
+    lp.scale_.num_row = lp.num_row_;
   }
   // Deduce the consequences of deleting rows
   clearModelStatusSolutionAndInfo();
