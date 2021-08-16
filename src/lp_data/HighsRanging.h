@@ -36,6 +36,6 @@ struct HighsRanging {
   HighsRangingRecord row_bound_dn;
 };
 
-HighsStatus getRangingData(HighsRanging& ranging, const HighsLpSolverObject& solver_object);
+HighsStatus getRangingData(HighsRanging& ranging, HighsLpSolverObject& solver_object);
 void writeRanging(const HighsRanging& ranging, const HighsLpSolverObject& solver_object);
 #endif

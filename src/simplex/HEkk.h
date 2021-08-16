@@ -52,6 +52,7 @@ class HEkk {
   void addRows(const HighsSparseMatrix& scaled_ar_matrix);
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
+  void unscaleSimplex(const HighsLp& incumbent_lp);
 
   HighsSolution getSolution();
   HighsBasis getHighsBasis();
@@ -93,6 +94,7 @@ class HEkk {
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
 
+  bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
   HSimplexNla simplex_nla_;
 

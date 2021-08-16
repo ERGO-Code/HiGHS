@@ -85,6 +85,7 @@ void HEkk::clearData() {
   this->workEdWt_ = NULL;
   this->workEdWtFull_ = NULL;
 
+  this->simplex_in_scaled_space_ = false;
   this->ar_matrix_.clear();
   // simplex_nla_; No clear yet
 
@@ -270,36 +271,31 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object, cons
   this->lp_ = std::move(incumbent_lp);
   incumbent_lp.is_moved_ = true;
   if (status_.has_matrix) initialiseMatrix(true);
-  if (incumbent_lp.is_scaled_) {
-    // Solving a scaled LP, so no scaling in simplex NLA, and HFactor
-    // uses the LP's constraint matrix
-    this->scale_ = NULL;
-    this->factor_a_matrix_ = &(this->lp_.a_matrix_);
-  } else {
-    // Solving an unscaled LP
+  assert(incumbent_lp.is_scaled_ == this->lp_.is_scaled_);
+  // By default, either solving a scaled LP, or solving an LP that has
+  // no scaling factors. In both cases, there is no scaling in simplex
+  // NLA, and HFactor uses the LP's constraint matrix
+  //
+  // this->scale_ becomes the pointer to scaling factors used by
+  // simplex NLA
+  this->scale_ = NULL;
+  this->factor_a_matrix_ = &(this->lp_.a_matrix_);
+  // Record whether the simplex algorithm runs in the scaled space. By
+  // default it will - if the LP has scaling factors
+  this->simplex_in_scaled_space_ = this->lp_.scale_.has_scaling;
+  if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) {
+    // Solving an LP that has scaling factors but is unscaled, so
+    // the scaling factors are used in simplex NLA, which also
+    // requires a scaled constraint matrix for HFactor
     //
-    // Scaling in simplex NLA depends on whether the LP has scaling.
-    //
-    // this->scale_ becomes the pointer to scaling factors used by
-    // simplex NLA
-    if (this->lp_.scale_.has_scaling) {
-      // Solving an LP that has scaling factors but is unscaled, so
-      // the scaling factors are used in simplex NLA, which also
-      // requires a scaled constraint matrix for HFactor
-      //
-      // Now that the incumbent LP has been moved to EKK, this->scale_
-      // must be the pointer to the scaling of the EKK LP. However,
-      // once the incumbent LP is moved back, the pointer to scaling
-      // factors used by simplex NLA must be updated
-      this->scale_ = &(this->lp_.scale_);
-      assert(scaled_a_matrix);
-      this->factor_a_matrix_ = scaled_a_matrix;
-    } else {
-      // Solving an LP that has no scaling factors, so HFactor uses
-      // the LP's constraint matrix and simplex NLA has no scaling.
-      this->scale_ = NULL;
-      this->factor_a_matrix_ = &(this->lp_.a_matrix_);
-    }
+    // Now that the incumbent LP has been moved to EKK, this->scale_
+    // must be the pointer to the scaling of the EKK LP. However,
+    // once the incumbent LP is moved back, the pointer to scaling
+    // factors used by simplex NLA must be updated
+    this->scale_ = &(this->lp_.scale_);
+    assert(scaled_a_matrix);
+    this->factor_a_matrix_ = scaled_a_matrix;
+    this->simplex_in_scaled_space_ = false;
   }
   // Update other EKK pointers
   this->setPointers(&solver_object.options_, &solver_object.timer_);
@@ -474,6 +470,8 @@ HighsStatus HEkk::cleanup() {
   }
   return return_status;
 }
+
+
 
 HighsStatus HEkk::setBasis() {
   // Set up nonbasicFlag and basicIndex for a logical basis
@@ -653,6 +651,53 @@ void HEkk::deleteRows(const HighsIndexCollection& index_collection) {
   this->updateStatus(LpAction::kDelCols);
 }
 
+void HEkk::unscaleSimplex(const HighsLp& incumbent_lp) {
+  if (!this->simplex_in_scaled_space_) return;
+  assert(incumbent_lp.scale_.has_scaling);
+  const HighsInt num_col = incumbent_lp.num_col_;
+  const HighsInt num_row = incumbent_lp.num_row_;
+  const vector<double>& col_scale = incumbent_lp.scale_.col;
+  const vector<double>& row_scale = incumbent_lp.scale_.row;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    const HighsInt iVar = iCol;
+    const double factor = col_scale[iCol];
+    this->info_.workCost_[iVar] /= factor;
+    this->info_.workDual_[iVar] /= factor;
+    this->info_.workShift_[iVar] /= factor;
+    this->info_.workLower_[iVar] *= factor;
+    this->info_.workUpper_[iVar] *= factor;
+    this->info_.workRange_[iVar] *= factor;
+    this->info_.workValue_[iVar] *= factor;
+    this->info_.workLowerShift_[iVar] *= factor;
+    this->info_.workUpperShift_[iVar] *= factor;
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    const HighsInt iVar = num_col + iRow;
+    const double factor = row_scale[iRow];
+    this->info_.workCost_[iVar] *= factor;
+    this->info_.workDual_[iVar] *= factor;
+    this->info_.workShift_[iVar] *= factor;
+    this->info_.workLower_[iVar] /= factor;
+    this->info_.workUpper_[iVar] /= factor;
+    this->info_.workRange_[iVar] /= factor;
+    this->info_.workValue_[iVar] /= factor;
+    this->info_.workLowerShift_[iVar] /= factor;
+    this->info_.workUpperShift_[iVar] /= factor;
+  }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    double factor;
+    const HighsInt iVar = this->basis_.basicIndex_[iRow];
+    if (iVar<num_col) {
+      factor = col_scale[iVar];
+    } else {
+      factor = 1.0 / row_scale[iVar - num_col];
+    }
+    this->info_.baseLower_[iRow] *= factor;
+    this->info_.baseUpper_[iRow] *= factor;
+    this->info_.baseValue_[iRow] *= factor;
+  }
+  this->simplex_in_scaled_space_ = false;  
+}
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values

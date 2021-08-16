@@ -42,23 +42,26 @@ double possInfProduct(double poss_inf, double value) {
 }
 
 HighsStatus getRangingData(HighsRanging& ranging,
-                           const HighsLpSolverObject& solver_object) {
+                           HighsLpSolverObject& solver_object) {
   if (solver_object.scaled_model_status_ != HighsModelStatus::kOptimal) {
     highsLogUser(solver_object.options_.log_options, HighsLogType::kError,
                  "Cannot get ranging without an optimal solution\n");
     return HighsStatus::kError;
   }
-  const HEkk& ekk_instance = solver_object.ekk_instance_;
+  HEkk& ekk_instance = solver_object.ekk_instance_;
   if (!ekk_instance.status_.valid) {
     highsLogUser(solver_object.options_.log_options, HighsLogType::kError,
-                 "Cannot get ranging without a valid Simplex LP\n");
+                 "Cannot get ranging without a valid Simplex instance\n");
     return HighsStatus::kError;
   }
-  // Aliases
   const HighsLp& use_lp = solver_object.lp_;
+
+  // Unscale the simplex data if the LP has been solved in the scaled space
+  ekk_instance.unscaleSimplex(use_lp);
+
+  // Aliases
   const HighsSimplexInfo& simplex_info = ekk_instance.info_;
   const SimplexBasis& simplex_basis = ekk_instance.basis_;
-  const bool use_scale = use_lp.scale_.has_scaling;
   const vector<double>& col_scale = use_lp.scale_.col;
   const vector<double>& row_scale = use_lp.scale_.row;
   const vector<double>& value_ = simplex_info.workValue_;
@@ -104,7 +107,6 @@ HighsStatus getRangingData(HighsRanging& ranging,
     xi[i] = max(xi[i], Blower_[i]);
     xi[i] = min(xi[i], Bupper_[i]);
   }
-
   vector<double> dj = dual_;
   for (HighsInt j = 0; j < numTotal; j++) {
     if (Nflag_[j] && (lower_[j] != upper_[j])) {
@@ -198,6 +200,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
       double alpha = dWork_[myk_inc];
       ixj_inc[j] = i;
       axj_inc[j] = alpha;
+      const double numerator = (alpha < 0 ? dxi_inc[i] : dxi_dec[i]);
       txj_inc[j] = (alpha < 0 ? dxi_inc[i] : dxi_dec[i]) / -alpha;
       wxj_inc[j] = (alpha < 0 ? +1 : -1);
     }
@@ -485,6 +488,7 @@ HighsStatus getRangingData(HighsRanging& ranging,
     }
   }
 
+  const bool use_scale = false;//use_lp.scale_.has_scaling;
   if (use_scale) {
     //
     // Ranging 4.1. Scale back

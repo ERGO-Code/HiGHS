@@ -79,7 +79,7 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object, HighsSt
   const bool force_debug = true;
   if (simplex_nla.options_->highs_debug_level >= kHighsDebugLevelCostly || force_debug) {
     simplex_nla.lp_ = &incumbent_lp;
-    if (debugCheckInvert(simplex_nla, true) != HighsDebugStatus::kOk) {
+    if (debugCheckInvert(simplex_nla, true) == HighsDebugStatus::kError) {
       highsLogUser(options.log_options, HighsLogType::kError,
 		   "Error in basis matrix inverse after solving the LP\n");
       return_status = HighsStatus::kError;
