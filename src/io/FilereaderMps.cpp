@@ -65,20 +65,9 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               lp.row_lower_, lp.row_upper_, lp.integrality_, lp.col_names_,
               lp.row_names_, options.keep_n_rows);
   if (return_code == FilereaderRetcode::kOk) lp.ensureColWise();
-  if (namesWithSpaces(lp.num_col_, lp.col_names_)) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Model has column names with spaces\n");
-#ifdef HiGHSDEV
-    namesWithSpaces(lp.num_col_, lp.col_names_, true);
-#endif
-  }
-  if (namesWithSpaces(lp.num_row_, lp.row_names_)) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "Model has row names with spaces\n");
-#ifdef HiGHSDEV
-    namesWithSpaces(lp.num_row_, lp.row_names_, true);
-#endif
-  }
+  // Comment on existence of names with spaces
+  hasNamesWithSpaces(options.log_options, lp.num_col_, lp.col_names_);
+  hasNamesWithSpaces(options.log_options, lp.num_row_, lp.row_names_);
   return return_code;
 }
 

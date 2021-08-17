@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "simplex/HCrash.h"
 #include "simplex/HEkk.h"
 #include "simplex/HEkkDualRHS.h"
 #include "simplex/HEkkDualRow.h"

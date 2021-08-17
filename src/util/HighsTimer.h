@@ -133,15 +133,6 @@ class HighsTimer {
     assert(i_clock < num_clock);
     // Check that the clock's been stopped. It should be set to
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
-#ifdef HiGHSDEV
-    if (clock_start[i_clock] <= 0) {
-      printf("recordStart [%2" HIGHSINT_FORMAT
-             "] (%s) is %11.4g: _num_call = %" HIGHSINT_FORMAT "\n",
-             i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-             clock_num_call[i_clock]);
-      fflush(stdout);
-    }
-#endif
     assert(clock_start[i_clock] > 0);
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
@@ -157,15 +148,6 @@ class HighsTimer {
     assert(i_clock < num_clock);
     // Check that the clock's been started. It should be set to
     // -getWallTime() <= 0
-#ifdef HiGHSDEV
-    if (clock_start[i_clock] > 0) {
-      printf("recordFinish[%2" HIGHSINT_FORMAT
-             "] (%s) is %11.4g: _num_call = %" HIGHSINT_FORMAT "\n",
-             i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-             clock_num_call[i_clock]);
-      fflush(stdout);
-    }
-#endif
     assert(clock_start[i_clock] < 0);
     double wall_time = getWallTime();
     double callClockTimes = wall_time + clock_start[i_clock];
@@ -244,17 +226,6 @@ class HighsTimer {
       assert(clock_list[i] < num_clock);
       // Check that the clock's not still running. It should be set to
       // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
-#ifdef HiGHSDEV
-      HighsInt i_clock = clock_list[i];
-      if (clock_start[i_clock] <= 0) {
-        printf("Clock %2" HIGHSINT_FORMAT
-               " (%s) is still running: Start = %11.4g: "
-               "_num_call = %" HIGHSINT_FORMAT "\n",
-               i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-               clock_num_call[i_clock]);
-        fflush(stdout);
-      }
-#endif
       assert(clock_start[clock_list[i]] > 0);
     }
     // Determine whether there are any times to report

@@ -37,7 +37,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus call_status =
       lp.dimensionsOk("assessLp") ? HighsStatus::kOk : HighsStatus::kError;
   return_status =
-      interpretCallStatus(call_status, return_status, "assessLpDimensions");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessLpDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the LP has no columns there is nothing left to test
@@ -57,13 +57,13 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   call_status = assessCosts(options, 0, index_collection, lp.col_cost_,
                             options.infinite_cost);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessCosts");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the LP column bounds
   call_status = assessBounds(options, "Col", 0, index_collection, lp.col_lower_,
                              lp.col_upper_, options.infinite_bound);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessBounds");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::kError) return return_status;
   if (lp.num_row_) {
     // Assess the LP row bounds
@@ -75,7 +75,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
         assessBounds(options, "Row", 0, index_collection, lp.row_lower_,
                      lp.row_upper_, options.infinite_bound);
     return_status =
-        interpretCallStatus(call_status, return_status, "assessBounds");
+        interpretCallStatus(options.log_options, call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::kError) return return_status;
   }
   // Assess the LP matrix - even if there are no rows!
@@ -83,7 +83,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
       lp.a_matrix_.assess(options.log_options, "LP", options.small_matrix_value,
                           options.large_matrix_value);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrix");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
   HighsInt lp_num_nz = lp.a_matrix_.start_[lp.num_col_];
   // If entries have been removed from the matrix, resize the index

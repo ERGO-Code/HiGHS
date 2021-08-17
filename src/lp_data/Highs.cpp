@@ -162,11 +162,11 @@ HighsStatus Highs::writeOptions(const std::string filename,
   FILE* file;
   bool html;
   return_status =
-      interpretCallStatus(openWriteFile(filename, "writeOptions", file, html),
+      interpretCallStatus(options_.log_options, openWriteFile(filename, "writeOptions", file, html),
                           return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
 
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       writeOptionsToFile(file, options_.records, report_only_deviations, html),
       return_status, "writeOptionsToFile");
   if (file != stdout) fclose(file);
@@ -202,11 +202,11 @@ HighsStatus Highs::writeInfo(const std::string filename) {
   FILE* file;
   bool html;
   return_status =
-      interpretCallStatus(openWriteFile(filename, "writeInfo", file, html),
+      interpretCallStatus(options_.log_options, openWriteFile(filename, "writeInfo", file, html),
                           return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
 
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       writeInfoToFile(file, info_.valid, info_.records, html), return_status,
       "writeInfoToFile");
   if (file != stdout) fclose(file);
@@ -251,10 +251,10 @@ HighsStatus Highs::passModel(HighsModel model) {
   lp.ensureColWise();
   // Check validity of the LP, normalising its values
   return_status =
-      interpretCallStatus(assessLp(lp, options_), return_status, "assessLp");
+      interpretCallStatus(options_.log_options, assessLp(lp, options_), return_status, "assessLp");
   if (return_status == HighsStatus::kError) return return_status;
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(assessHessian(hessian, options_),
+  return_status = interpretCallStatus(options_.log_options, assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   clearZeroHessian();
@@ -263,7 +263,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
   return_status =
-      interpretCallStatus(clearSolver(), return_status, "clearSolver");
+      interpretCallStatus(options_.log_options, clearSolver(), return_status, "clearSolver");
   return returnFromHighs(return_status);
 }
 
@@ -379,12 +379,12 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
   HighsHessian& hessian = model_.hessian_;
   hessian = std::move(hessian_);
   // Check validity of any Hessian, normalising its entries
-  return_status = interpretCallStatus(assessHessian(hessian, options_),
+  return_status = interpretCallStatus(options_.log_options, assessHessian(hessian, options_),
                                       return_status, "assessHessian");
   if (return_status == HighsStatus::kError) return return_status;
   clearZeroHessian();
   return_status =
-      interpretCallStatus(clearSolver(), return_status, "clearSolver");
+      interpretCallStatus(options_.log_options, clearSolver(), return_status, "clearSolver");
   return returnFromHighs(return_status);
 }
 
@@ -428,13 +428,13 @@ HighsStatus Highs::readModel(const std::string filename) {
   if (call_code != FilereaderRetcode::kOk) {
     interpretFilereaderRetcode(options_.log_options, filename.c_str(),
                                call_code);
-    return_status = interpretCallStatus(HighsStatus::kError, return_status,
+    return_status = interpretCallStatus(options_.log_options, HighsStatus::kError, return_status,
                                         "readModelFromFile");
     if (return_status == HighsStatus::kError) return return_status;
   }
   model.lp_.model_name_ = extractModelName(filename);
 
-  return_status = interpretCallStatus(passModel(std::move(model)),
+  return_status = interpretCallStatus(options_.log_options, passModel(std::move(model)),
                                       return_status, "passModel");
   return returnFromHighs(return_status);
 }
@@ -443,7 +443,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
   // Try to read basis file into read_basis
   HighsBasis read_basis = basis_;
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       readBasisFile(options_.log_options, read_basis, filename), return_status,
       "readBasis");
   if (return_status != HighsStatus::kOk) return return_status;
@@ -477,7 +477,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
                    "Model file %s not supported\n", filename.c_str());
       return HighsStatus::kError;
     }
-    return_status = interpretCallStatus(
+    return_status = interpretCallStatus(options_.log_options, 
         writer->writeModelToFile(options_, filename, model_), return_status,
         "writeModelToFile");
     delete writer;
@@ -487,7 +487,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
 HighsStatus Highs::writeBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       writeBasisFile(options_.log_options, basis_, filename), return_status,
       "writeBasis");
   return returnFromHighs(return_status);
@@ -556,7 +556,7 @@ HighsStatus Highs::run() {
     // If any errors have been found or normalisation carried out,
     // call_status will be kError or kWarning, so only valid return is OK.
     assert(call_status == HighsStatus::kOk);
-    return_status = interpretCallStatus(call_status, return_status, "assessLp");
+    return_status = interpretCallStatus(options_.log_options, call_status, return_status, "assessLp");
     if (return_status == HighsStatus::kError) return returnFromRun(return_status);
     // Shouldn't have to check that the options settings are legal,
     // since they are checked when modified
@@ -576,7 +576,7 @@ HighsStatus Highs::run() {
     // Solve the model as a QP
     call_status = callSolveQp();
     return_status =
-        interpretCallStatus(call_status, return_status, "callSolveQp");
+        interpretCallStatus(options_.log_options, call_status, return_status, "callSolveQp");
     return returnFromRun(return_status);
   }
 
@@ -584,7 +584,7 @@ HighsStatus Highs::run() {
     // Solve the model as a MIP
     call_status = callSolveMip();
     return_status =
-        interpretCallStatus(call_status, return_status, "callSolveMip");
+        interpretCallStatus(options_.log_options, call_status, return_status, "callSolveMip");
     return returnFromRun(return_status);
   }
   // Solve the model as an LP
@@ -614,7 +614,7 @@ HighsStatus Highs::run() {
     timer_.stop(timer_.solve_clock);
     this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status =
-        interpretCallStatus(call_status, return_status, "callSolveLp");
+        interpretCallStatus(options_.log_options, call_status, return_status, "callSolveLp");
     if (return_status == HighsStatus::kError)
       return returnFromRun(return_status);
   } else {
@@ -654,7 +654,7 @@ HighsStatus Highs::run() {
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
-            interpretCallStatus(call_status, return_status, "callSolveLp");
+            interpretCallStatus(options_.log_options, call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
         break;
@@ -670,7 +670,7 @@ HighsStatus Highs::run() {
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
-            interpretCallStatus(call_status, return_status, "callSolveLp");
+            interpretCallStatus(options_.log_options, call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
         break;
@@ -683,7 +683,7 @@ HighsStatus Highs::run() {
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve
-        if (interpretCallStatus(call_status, return_status, "cleanBounds") ==
+        if (interpretCallStatus(options_.log_options, call_status, return_status, "cleanBounds") ==
             HighsStatus::kError)
           return HighsStatus::kError;
         // Log the presolve reductions
@@ -706,7 +706,7 @@ HighsStatus Highs::run() {
         // Restore the dual objective cut-off
         options_.objective_bound = save_objective_bound;
         return_status =
-            interpretCallStatus(call_status, return_status, "callSolveLp");
+            interpretCallStatus(options_.log_options, call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
           return returnFromRun(return_status);
         have_optimal_solution =
@@ -885,7 +885,7 @@ HighsStatus Highs::run() {
           postsolve_iteration_count += info_.simplex_iteration_count;
           this_solve_original_lp_time += timer_.read(timer_.solve_clock);
           return_status =
-              interpretCallStatus(call_status, return_status, "callSolveLp");
+              interpretCallStatus(options_.log_options, call_status, return_status, "callSolveLp");
           // Recover the options
           options_ = save_options;
           if (return_status == HighsStatus::kError)
@@ -979,7 +979,7 @@ HighsStatus Highs::run() {
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
-  return_status = interpretCallStatus(call_status, return_status);
+  return_status = interpretCallStatus(options_.log_options, call_status, return_status);
   return returnFromRun(return_status);
 }
 
@@ -1226,7 +1226,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Worth computing the row values
       solution_.row_value.resize(model_.lp_.num_row_);
       return_status =
-          interpretCallStatus(calculateRowValues(model_.lp_, solution_),
+          interpretCallStatus(options_.log_options, calculateRowValues(model_.lp_, solution_),
                               return_status, "calculateRowValues");
       if (return_status == HighsStatus::kError) return return_status;
     }
@@ -1244,7 +1244,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
       // Worth computing the column duals
       solution_.col_dual.resize(model_.lp_.num_col_);
       return_status =
-          interpretCallStatus(calculateColDuals(model_.lp_, solution_),
+          interpretCallStatus(options_.log_options, calculateColDuals(model_.lp_, solution_),
                               return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }
@@ -1297,7 +1297,7 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
                            const HighsInt* indices, const double* values) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       addRowsInterface(num_new_row, lower_bounds, upper_bounds, num_new_nz,
                        starts, indices, values),
       return_status, "addRows");
@@ -1320,7 +1320,7 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
                            const HighsInt* indices, const double* values) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       addColsInterface(num_new_col, costs, lower_bounds, upper_bounds,
                        num_new_nz, starts, indices, values),
       return_status, "addCols");
@@ -1367,7 +1367,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
       changeIntegralityInterface(index_collection, integrality);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeIntegrality");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeIntegrality");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1390,7 +1390,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
       changeIntegralityInterface(index_collection, &local_integrality[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeIntegrality");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeIntegrality");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1404,7 +1404,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt* mask,
       changeIntegralityInterface(index_collection, integrality);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeIntegrality");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeIntegrality");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1426,7 +1426,7 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
   HighsStatus call_status = changeCostsInterface(index_collection, cost);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeCosts");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1452,7 +1452,7 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
       changeCostsInterface(index_collection, &local_cost[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeCosts");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1464,7 +1464,7 @@ HighsStatus Highs::changeColsCost(const HighsInt* mask, const double* cost) {
   HighsStatus call_status = changeCostsInterface(index_collection, cost);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeCosts");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1489,7 +1489,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
       changeColBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeColBounds");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1523,7 +1523,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
       index_collection, &local_lower[0], &local_upper[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeColBounds");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1537,7 +1537,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt* mask, const double* lower,
       changeColBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeColBounds");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1562,7 +1562,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
       changeRowBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeRowBounds");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1596,7 +1596,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
       index_collection, &local_lower[0], &local_upper[0]);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeRowBounds");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1610,7 +1610,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
       changeRowBoundsInterface(index_collection, lower, upper);
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(call_status, return_status, "changeRowBounds");
+      interpretCallStatus(options_.log_options, call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1832,7 +1832,7 @@ HighsStatus Highs::scaleCol(const HighsInt col, const double scaleval) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
   HighsStatus call_status = scaleColInterface(col, scaleval);
-  return_status = interpretCallStatus(call_status, return_status, "scaleCol");
+  return_status = interpretCallStatus(options_.log_options, call_status, return_status, "scaleCol");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -1841,7 +1841,7 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scaleval) {
   HighsStatus return_status = HighsStatus::kOk;
   clearPresolve();
   HighsStatus call_status = scaleRowInterface(row, scaleval);
-  return_status = interpretCallStatus(call_status, return_status, "scaleRow");
+  return_status = interpretCallStatus(options_.log_options, call_status, return_status, "scaleRow");
   if (return_status == HighsStatus::kError) return HighsStatus::kError;
   return returnFromHighs(return_status);
 }
@@ -2244,7 +2244,7 @@ HighsStatus Highs::writeSolution(const std::string filename,
   bool html;
   call_status = openWriteFile(filename, "writeSolution", file, html);
   return_status =
-      interpretCallStatus(call_status, return_status, "openWriteFile");
+      interpretCallStatus(options_.log_options, call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::kError) return return_status;
   writeSolutionToFile(file, model_.lp_, basis_, solution_, pretty);
   if (file != stdout) fclose(file);
@@ -2349,7 +2349,7 @@ HighsStatus Highs::getUseModelStatus(
       basis_.valid = false;
       options_.presolve = kHighsOnString;
       call_status = run();
-      return_status = interpretCallStatus(call_status, return_status, "run()");
+      return_status = interpretCallStatus(options_.log_options, call_status, return_status, "run()");
       options_.presolve = save_presolve;
       if (return_status == HighsStatus::kError) return return_status;
 

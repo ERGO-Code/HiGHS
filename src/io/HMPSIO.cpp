@@ -49,19 +49,13 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   // Astart.clear() added since setting Astart.push_back(0) in
   // setup_clearModel() messes up the MPS read
   Astart.clear();
-#ifdef HiGHSDEV
-  printf("readMPS: Trying to open file %s\n", filename.c_str());
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Trying to open file %s\n", filename.c_str());
   FILE* file = fopen(filename.c_str(), "r");
   if (file == 0) {
-#ifdef HiGHSDEV
-    printf("readMPS: Not opened file OK\n");
-#endif
+    highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Not opened file OK\n");
     return FilereaderRetcode::kFileNotFound;
   }
-#ifdef HiGHSDEV
-  printf("readMPS: Opened file  OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Opened file  OK\n");
   // Input buffer
   const HighsInt lmax = 128;
   char line[lmax];
@@ -73,9 +67,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
 
   // Load NAME
   load_mpsLine(file, integerCol, lmax, line, flag, data);
-#ifdef HiGHSDEV
-  printf("readMPS: Read NAME    OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read NAME    OK\n");
   // Load OBJSENSE or ROWS
   load_mpsLine(file, integerCol, lmax, line, flag, data);
   if (flag[0] == 'O') {
@@ -90,9 +82,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     } else {
       return FilereaderRetcode::kParserError;
     }
-#ifdef HiGHSDEV
-    printf("readMPS: Read OBJSENSE OK\n");
-#endif
+    highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read OBJSENSE OK\n");
     // Load ROWS
     load_mpsLine(file, integerCol, lmax, line, flag, data);
   }
@@ -124,9 +114,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
       row_names.push_back(name);
     }
   }
-#ifdef HiGHSDEV
-  printf("readMPS: Read ROWS    OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read ROWS    OK\n");
 
   // Load COLUMNS
   map<double, int> colIndex;
@@ -181,12 +169,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
           name = field_5;
         }
         num_alien_entries++;
-#ifdef HiGHSDEV
-        printf(
+        highsLogDev(log_options, HighsLogType::kInfo, 
             "COLUMNS section contains row %-8s not in ROWS    section, line: "
-            "%s\n",
-            name.c_str(), line);
-#endif
+            "%s\n", name.c_str(), line);
       }
     }
     save_flag1 = flag[1];
@@ -199,9 +184,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                  " with row not in ROWS  "
                  "  section: ignored",
                  num_alien_entries);
-#ifdef HiGHSDEV
-  printf("readMPS: Read COLUMNS OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read COLUMNS OK\n");
 
   // Load RHS
   num_alien_entries = 0;
@@ -234,12 +217,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
       // Treat negation of a RHS entry for the N row as an objective
       // offset. Not all MPS readers do this, so give different
       // reported objective values for problems (eg e226)
-#ifdef HiGHSDEV
-      printf(
+      highsLogDev(log_options, HighsLogType::kInfo, 
           "Using RHS value of %g for N-row in MPS file as negated objective "
-          "offset\n",
-          data[0]);
-#endif
+          "offset\n", data[0]);
       objOffset = -data[0];  // Objective offset
     }
     save_flag1 = flag[1];
@@ -250,9 +230,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                  " with row not in ROWS  "
                  "  section: ignored",
                  num_alien_entries);
-#ifdef HiGHSDEV
-  printf("readMPS: Read RHS     OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read RHS     OK\n");
 
   // Load RANGES
   num_alien_entries = 0;
@@ -284,12 +262,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
           name = field_5;
         }
         num_alien_entries++;
-#ifdef HiGHSDEV
-        printf(
+        highsLogDev(log_options, HighsLogType::kInfo, 
             "RANGES  section contains row %-8s not in ROWS    section, line: "
-            "%s\n",
-            name.c_str(), line);
-#endif
+            "%s\n", name.c_str(), line);
       }
       save_flag1 = flag[1];
     }
@@ -324,9 +299,7 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                  " with row not in ROWS  "
                  "  section: ignored",
                  num_alien_entries);
-#ifdef HiGHSDEV
-  printf("readMPS: Read RANGES  OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read RANGES  OK\n");
 
   // Load BOUNDS
   num_alien_entries = 0;
@@ -366,12 +339,9 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
         std::string name(&line[field_3_start],
                          &line[field_3_start] + field_3_width);
         num_alien_entries++;
-#ifdef HiGHSDEV
-        printf(
+        highsLogDev(log_options, HighsLogType::kInfo, 
             "BOUNDS  section contains col %-8s not in COLUMNS section, line: "
-            "%s\n",
-            name.c_str(), line);
-#endif
+            "%s\n", name.c_str(), line);
       }
     }
   }
@@ -390,13 +360,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                  " with col not in "
                  "COLUMNS section: ignored",
                  num_alien_entries);
-#ifdef HiGHSDEV
-  printf("readMPS: Read BOUNDS  OK\n");
-  printf("readMPS: Read ENDATA  OK\n");
-  printf("readMPS: Model has %" HIGHSINT_FORMAT " rows and %" HIGHSINT_FORMAT
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read BOUNDS  OK\n");
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read ENDATA  OK\n");
+  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Model has %" HIGHSINT_FORMAT " rows and %" HIGHSINT_FORMAT
          " columns with %" HIGHSINT_FORMAT " integer\n",
          numRow, numCol, num_int);
-#endif
   // Load ENDATA and close file
   fclose(file);
   return FilereaderRetcode::kOk;
@@ -551,18 +519,14 @@ HighsStatus writeMps(
   const bool write_zero_no_cost_columns = true;
   HighsInt num_zero_no_cost_columns = 0;
   HighsInt num_zero_no_cost_columns_in_bounds_section = 0;
-#ifdef HiGHSDEV
-  printf("writeMPS: Trying to open file %s\n", filename.c_str());
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "writeMPS: Trying to open file %s\n", filename.c_str());
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
     highsLogUser(log_options, HighsLogType::kError, "Cannot open file %s",
                  filename.c_str());
     return HighsStatus::kError;
   }
-#ifdef HiGHSDEV
-  printf("writeMPS: Opened file  OK\n");
-#endif
+  highsLogDev(log_options, HighsLogType::kInfo, "writeMPS: Opened file  OK\n");
   // Check that the names are no longer than 8 characters for fixed format write
   HighsInt max_col_name_length = maxNameLength(num_col, col_names);
   HighsInt max_row_name_length = maxNameLength(num_row, row_names);
@@ -647,11 +611,9 @@ HighsStatus writeMps(
       break;
     }
   }
-#ifdef HiGHSDEV
-  printf("Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
+  highsLogDev(log_options, HighsLogType::kInfo, "Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
          highsBoolToString(have_rhs), highsBoolToString(have_ranges),
          highsBoolToString(have_bounds));
-#endif
 
   // Field:    1           2          3         4         5         6
   // Columns:  2-3        5-12      15-22     25-36     40-47     50-61 Indexed
@@ -833,21 +795,19 @@ HighsStatus writeMps(
     }
   }
   fprintf(file, "ENDATA\n");
-  //#ifdef HiGHSDEV
   if (num_zero_no_cost_columns) {
-    printf("Model has %" HIGHSINT_FORMAT
+    highsLogDev(log_options, HighsLogType::kInfo, "Model has %" HIGHSINT_FORMAT
            " zero columns with no costs: %" HIGHSINT_FORMAT
            " have finite upper bounds "
            "or nonzero lower bounds",
            num_zero_no_cost_columns,
            num_zero_no_cost_columns_in_bounds_section);
     if (write_zero_no_cost_columns) {
-      printf(" and are written in MPS file\n");
+      highsLogDev(log_options, HighsLogType::kInfo, " and are written in MPS file\n");
     } else {
-      printf(" and are not written in MPS file\n");
+      highsLogDev(log_options, HighsLogType::kInfo, " and are not written in MPS file\n");
     }
   }
-  //#endif
   fclose(file);
   return HighsStatus::kOk;
 }

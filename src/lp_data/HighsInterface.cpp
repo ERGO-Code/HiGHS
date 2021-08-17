@@ -63,12 +63,12 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   std::vector<double> local_colUpper{XcolUpper, XcolUpper + XnumNewCol};
 
   return_status =
-      interpretCallStatus(assessCosts(options, lp.num_col_, index_collection,
+      interpretCallStatus(options_.log_options, assessCosts(options, lp.num_col_, index_collection,
                                       local_colCost, options.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
   // Assess the column bounds
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       assessBounds(options, "Col", lp.num_col_, index_collection,
                    local_colLower, local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
@@ -92,7 +92,7 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
     local_a_matrix.value_ = {XAvalue, XAvalue + XnumNewNZ};
     // Assess the matrix rows
     return_status =
-        interpretCallStatus(local_a_matrix.assess(options.log_options, "LP",
+        interpretCallStatus(options_.log_options, local_a_matrix.assess(options.log_options, "LP",
                                                   options.small_matrix_value,
                                                   options.large_matrix_value),
                             return_status, "assessMatrix");
@@ -176,7 +176,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
   std::vector<double> local_rowLower{XrowLower, XrowLower + XnumNewRow};
   std::vector<double> local_rowUpper{XrowUpper, XrowUpper + XnumNewRow};
 
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       assessBounds(options, "Row", lp.num_row_, index_collection,
                    local_rowLower, local_rowUpper, options.infinite_bound),
       return_status, "assessBounds");
@@ -200,7 +200,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
     local_ar_matrix.value_ = {XARvalue, XARvalue + XnumNewNZ};
     // Assess the matrix columns
     return_status =
-        interpretCallStatus(local_ar_matrix.assess(options.log_options, "LP",
+        interpretCallStatus(options_.log_options, local_ar_matrix.assess(options.log_options, "LP",
                                                    options.small_matrix_value,
                                                    options.large_matrix_value),
                             return_status, "assessMatrix");
@@ -556,7 +556,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   std::vector<double> local_colCost{cost, cost + num_cost};
   HighsStatus return_status = HighsStatus::kOk;
   return_status =
-      interpretCallStatus(assessCosts(options_, 0, index_collection,
+      interpretCallStatus(options_.log_options, assessCosts(options_, 0, index_collection,
                                       local_colCost, options_.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::kError) return return_status;
@@ -593,7 +593,7 @@ HighsStatus Highs::changeColBoundsInterface(
                 col_lower, col_upper, NULL, &local_colLower[0],
                 &local_colUpper[0], NULL);
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       assessBounds(options_, "col", 0, index_collection, local_colLower,
                    local_colUpper, options_.infinite_bound),
       return_status, "assessBounds");
@@ -636,7 +636,7 @@ HighsStatus Highs::changeRowBoundsInterface(
     sortSetData(index_collection.set_num_entries_, index_collection.set_, lower,
                 upper, NULL, &local_rowLower[0], &local_rowUpper[0], NULL);
   HighsStatus return_status = HighsStatus::kOk;
-  return_status = interpretCallStatus(
+  return_status = interpretCallStatus(options_.log_options, 
       assessBounds(options_, "row", 0, index_collection, local_rowLower,
                    local_rowUpper, options_.infinite_bound),
       return_status, "assessBounds");
@@ -687,7 +687,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   if (col >= lp.num_col_) return HighsStatus::kError;
   if (!scaleval) return HighsStatus::kError;
 
-  return_status = interpretCallStatus(applyScalingToLpCol(lp, col, scaleval),
+  return_status = interpretCallStatus(options_.log_options, applyScalingToLpCol(lp, col, scaleval),
                                       return_status, "applyScalingToLpCol");
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -733,7 +733,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   if (row >= lp.num_row_) return HighsStatus::kError;
   if (!scaleval) return HighsStatus::kError;
 
-  return_status = interpretCallStatus(applyScalingToLpRow(lp, row, scaleval),
+  return_status = interpretCallStatus(options_.log_options, applyScalingToLpRow(lp, row, scaleval),
                                       return_status, "applyScalingToLpRow");
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -1032,7 +1032,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
       // Arguable that a warning should be issued and a logical basis
       // set up
       if (basis_.valid) {
-        return_status = interpretCallStatus(ekk_instance_.setBasis(basis_),
+        return_status = interpretCallStatus(options_.log_options, ekk_instance_.setBasis(basis_),
                                             return_status, "setBasis");
         if (return_status == HighsStatus::kError) return return_status;
       } else {

@@ -291,7 +291,7 @@ HighsStatus HEkkDual::solve() {
       // optimally. Optimality (unlikely) for the unscaled LP will
       // still be assessed honestly, so leave it to the user to decide
       // whether the solution can be accepted.
-      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
+      highsLogDev(options.log_options, HighsLogType::kWarning,
                   "HEkkDual:: Cannot use level %" HIGHSINT_FORMAT
                   " primal simplex cleanup for %" HIGHSINT_FORMAT
                   " dual infeasibilities\n",
@@ -305,7 +305,7 @@ HighsStatus HEkkDual::solve() {
       // unboundedness. Time/iteration limit return is, of course,
       // possible, as are solver error
       highsLogDev(
-          ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
+          options.log_options, HighsLogType::kInfo,
           "HEkkDual:: Using primal simplex to try to clean up %" HIGHSINT_FORMAT
           " dual infeasibilities\n",
           info.num_dual_infeasibilities);
@@ -323,7 +323,7 @@ HighsStatus HEkkDual::solve() {
       analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
       assert(ekk_instance_.called_return_from_solve_);
       return_status =
-          interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
+          interpretCallStatus(options.log_options, call_status, return_status, "HEkkPrimal::solve");
       // Reset called_return_from_solve_ to be false, since it's
       // called for this solve
       ekk_instance_.called_return_from_solve_ = false;
@@ -332,7 +332,7 @@ HighsStatus HEkkDual::solve() {
       if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
           info.num_primal_infeasibilities + info.num_dual_infeasibilities)
         highsLogDev(
-            ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
+            options.log_options, HighsLogType::kWarning,
             "HEkkDual:: Primal simplex clean up yields optimality, "
             "but with %" HIGHSINT_FORMAT
             " (max %g) primal infeasibilities and " HIGHSINT_FORMAT

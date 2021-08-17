@@ -36,7 +36,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
       assessMatrixDimensions(hessian.dim_, partitioned, hessian.start_,
                              hessian_p_end, hessian.index_, hessian.value_);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrixDimensions");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessMatrixDimensions");
   if (return_status == HighsStatus::kError) return return_status;
 
   // If the Hessian has no columns there is nothing left to test
@@ -58,21 +58,21 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
                              hessian.dim_, hessian.start_, hessian.index_,
                              hessian.value_, 0, kHighsInf);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrix");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
 
   if (hessian.format_ == HessianFormat::kSquare) {
     // Form Q = (G+G^T)/2
     call_status = normaliseHessian(options, hessian);
     return_status =
-        interpretCallStatus(call_status, return_status, "normaliseHessian");
+        interpretCallStatus(options.log_options, call_status, return_status, "normaliseHessian");
     if (return_status == HighsStatus::kError) return return_status;
   }
   // Extract the triangular part of Q: lower triangle column-wise
   // or, equivalently, upper triangle row-wise, ensuring that the
   // diagonal entry comes first, unless it's zero
   call_status = extractTriangularHessian(options, hessian);
-  return_status = interpretCallStatus(call_status, return_status,
+  return_status = interpretCallStatus(options.log_options, call_status, return_status,
                                       "extractTriangularHessian");
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -82,7 +82,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
                    hessian.start_, hessian.index_, hessian.value_,
                    options.small_matrix_value, options.large_matrix_value);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessMatrix");
+      interpretCallStatus(options.log_options, call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
 
   HighsInt hessian_num_nz = hessian.start_[hessian.dim_];

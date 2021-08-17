@@ -172,21 +172,27 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
   }
 }
 
-bool namesWithSpaces(const HighsInt num_name,
-                     const std::vector<std::string>& names, const bool report) {
-  bool names_with_spaces = false;
+bool hasNamesWithSpaces(const HighsLogOptions& log_options,
+			const HighsInt num_name,
+			const std::vector<std::string>& names) {
+  HighsInt num_names_with_spaces = 0;
   for (HighsInt ix = 0; ix < num_name; ix++) {
     HighsInt space_pos = names[ix].find(" ");
     if (space_pos >= 0) {
-      if (report)
-        printf(
-            "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
-            "\n",
-            names[ix].c_str(), space_pos);
-      names_with_spaces = true;
+      if (num_names_with_spaces==0) {
+	highsLogDev(log_options, HighsLogType::kInfo,
+		    "Name |%s| contains a space character in position %" HIGHSINT_FORMAT
+		    "\n",
+		    names[ix].c_str(), space_pos);
+	num_names_with_spaces++;
+      }
     }
   }
-  return names_with_spaces;
+  if (num_names_with_spaces)
+    highsLogDev(log_options, HighsLogType::kInfo,
+		"There are %" HIGHSINT_FORMAT " names with spaces\n",
+		num_names_with_spaces);
+  return num_names_with_spaces>0;
 }
 
 HighsInt maxNameLength(const HighsInt num_name,
@@ -227,7 +233,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options,
       names[ix] = name_prefix + std::to_string(ix);
   } else {
     // Using original names, so look to see whether there are names with spaces
-    names_with_spaces = namesWithSpaces(num_name, names);
+    names_with_spaces = hasNamesWithSpaces(log_options, num_name, names);
   }
   // Find the final maximum name length
   max_name_length = maxNameLength(num_name, names);

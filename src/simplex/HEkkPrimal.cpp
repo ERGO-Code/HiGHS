@@ -212,7 +212,7 @@ HighsStatus HEkkPrimal::solve() {
 
   if (solve_phase == kSolvePhaseCleanup) {
     highsLogDev(
-        ekk_instance_.opt_point_->log_options, HighsLogType::kInfo,
+        options.log_options, HighsLogType::kInfo,
         "HEkkPrimal:: Using dual simplex to try to clean up %" HIGHSINT_FORMAT
         " primal infeasibilities\n",
         info.num_primal_infeasibilities);
@@ -239,7 +239,7 @@ HighsStatus HEkkPrimal::solve() {
     analysis->simplexTimerStop(SimplexDualPhase2Clock);
     assert(ekk_instance_.called_return_from_solve_);
     return_status =
-        interpretCallStatus(call_status, return_status, "HEkkDual::solve");
+        interpretCallStatus(options.log_options, call_status, return_status, "HEkkDual::solve");
     // Reset called_return_from_solve_ to be false, since it's
     // called for this solve
     ekk_instance_.called_return_from_solve_ = false;
@@ -247,7 +247,7 @@ HighsStatus HEkkPrimal::solve() {
       return ekk_instance_.returnFromSolve(return_status);
     if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
         info.num_primal_infeasibilities + info.num_dual_infeasibilities)
-      highsLogDev(ekk_instance_.opt_point_->log_options, HighsLogType::kWarning,
+      highsLogDev(options.log_options, HighsLogType::kWarning,
                   "HEkkPrimal:: Dual simplex clean up yields  optimality, but "
                   "with %" HIGHSINT_FORMAT
                   " (max %g) primal infeasibilities and " HIGHSINT_FORMAT

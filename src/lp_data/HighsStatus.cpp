@@ -12,6 +12,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsStatus.h"
 
+#include <cassert>
+
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::kOk:

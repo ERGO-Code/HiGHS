@@ -1112,10 +1112,9 @@ restart:
     lp.getLpSolver().setBasis(firstrootbasis);
   else
     lp.getLpSolver().setOptionValue("presolve", "on");
-#ifdef HiGHSDEV
-  lp.getLpSolver().setOptionValue("output_flag",
-                                  mipsolver.options_mip_->output_flag);
-#endif
+  if (mipsolver.options_mip_->highs_debug_level)
+    lp.getLpSolver().setOptionValue("output_flag",
+				    mipsolver.options_mip_->output_flag);
   //  lp.getLpSolver().setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
   //  lp.getLpSolver().setOptionValue("log_file",
   //  mipsolver.options_mip_->log_file);
