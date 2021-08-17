@@ -5,7 +5,7 @@
 #include "LoadOptions.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
@@ -177,9 +177,7 @@ TEST_CASE("internal-options", "[highs_options]") {
 
 TEST_CASE("highs-options", "[highs_options]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   HighsStatus return_status = highs.writeOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::kOk);
 

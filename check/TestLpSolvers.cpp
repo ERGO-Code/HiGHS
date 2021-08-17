@@ -316,9 +316,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   const double use_max_objective_bound = 150.0;
   double save_objective_bound;
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   const HighsInfo& info = highs.getInfo();
 
   //  status = highs.setOptionValue("log_dev_level",

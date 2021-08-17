@@ -445,9 +445,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
 
   vector<HighsInt> basic_variables;
   vector<double> rhs, solution_row, solution_col;

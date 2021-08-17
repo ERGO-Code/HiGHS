@@ -410,9 +410,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   Highs avgas_highs;
   avgas_highs.passOptions(options);
-  if (!dev_run) {
-    avgas_highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) avgas_highs.setOptionValue("output_flag", false);
   return_status = avgas_highs.passModel(avgas_lp);
   HighsStatusReport(options.log_options, "avgas_highs.passModel(avgas_lp)",
                     return_status);
@@ -428,9 +426,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   Highs highs;
   highs.passOptions(options);
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   return_status = highs.setOptionValue("highs_debug_level", 2);
   REQUIRE(return_status == HighsStatus::kOk);
 

@@ -285,9 +285,7 @@ void testUnboundedMps(const std::string model,
 
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -427,9 +425,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
@@ -462,9 +458,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   //
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
-  if (!dev_run) {
-    highs.setOptionValue("output_flag", false);
-  }
+  if (!dev_run) highs.setOptionValue("output_flag", false);
   double inf = highs.getInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
