@@ -143,7 +143,6 @@ set(sources
     qpsolver/basis.cpp
     qpsolver/solver.cpp
     qpsolver/ratiotest.cpp
-    simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -237,7 +236,6 @@ set(headers
     qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
-    simplex/HCrash.h
     simplex/HEkk.h
     simplex/HEkkDebug.h
     simplex/HEkkPrimal.h
@@ -564,7 +562,6 @@ target_sources(libhighs PRIVATE
     qpsolver/basis.cpp
     qpsolver/solver.cpp
     qpsolver/ratiotest.cpp
-    simplex/HCrash.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -672,7 +669,6 @@ set(headers_fast_build_
     qpsolver/vector.hpp
     simplex/HApp.h
     simplex/FactorTimer.h
-    simplex/HCrash.h
     simplex/HEkk.h
     simplex/HEkkDebug.h
     simplex/HEkkDual.h

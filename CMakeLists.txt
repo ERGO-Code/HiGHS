@@ -179,11 +179,6 @@ if (HIGHS_COVERAGE)
   endif()
 endif ()
 
-option(HiGHSDEV "HiGHS development" OFF)
-if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
-    message(STATUS "HiGHS development: " ${HiGHSDEV})
-endif()
-
 option(HIGHSINT64 "Use 64 bit integers indexing" OFF)
 if (NOT (${HIGHSINT64} STREQUAL  "OFF"))
     message(STATUS "HIGHSINT64: " ${HIGHSINT64})
