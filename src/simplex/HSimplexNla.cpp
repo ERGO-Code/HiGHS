@@ -33,6 +33,13 @@ void HSimplexNla::setup(const HighsLp* lp, const HighsScale* scale,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
   lp_ = lp;
+  if (lp_->scale_.has_scaling && !lp_->is_scaled_) {
+    const HighsScale* local_scale = &(lp_->scale_);
+    assert((void*)local_scale == (void*)scale_);
+  } else {
+    const HighsScale* local_scale = NULL;
+    assert((void*)local_scale == (void*)scale_);
+  }
   scale_ = scale;
   base_index_ = base_index;
   options_ = options;

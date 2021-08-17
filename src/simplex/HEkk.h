@@ -77,8 +77,6 @@ class HEkk {
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& info);
 
-  void reportScalingPointers(std::string message,
-                             HighsLpSolverObject& solver_object);
   // Data members
   HighsOptions* opt_point_;
   HighsTimer* tim_point_;
@@ -99,8 +97,6 @@ class HEkk {
   HighsSparseMatrix ar_matrix_;
   HighsSparseMatrix scaled_a_matrix_;
   HSimplexNla simplex_nla_;
-
-  const HighsScale* scale_;
 
   double cost_scale_ = 1;
   HighsInt iteration_count_ = 0;
