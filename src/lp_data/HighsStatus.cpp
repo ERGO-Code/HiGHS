@@ -12,9 +12,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsStatus.h"
 
-#include "io/HighsIO.h"
-
-// Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::kOk:
@@ -27,32 +24,23 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Error";
       break;
     default:
-#ifdef HiGHSDEV
-      printf("HiGHS status %" HIGHSINT_FORMAT " not recognised\n",
-             (HighsInt)status);
-#endif
+      assert(1==0);
       return "Unrecognised HiGHS status";
       break;
   }
   return "";
 }
 
-HighsStatus interpretCallStatus(const HighsStatus call_status,
+HighsStatus interpretCallStatus(const HighsLogOptions log_options,
+				const HighsStatus call_status,
                                 const HighsStatus from_return_status,
                                 const std::string& message) {
   HighsStatus to_return_status;
   to_return_status = worseStatus(call_status, from_return_status);
-#ifdef HiGHSDEV
-  if (call_status != HighsStatus::kOk) {
-    if (message != "") {
-      printf("HighsStatus::%s return from %s\n",
-             HighsStatusToString(call_status).c_str(), message.c_str());
-    } else {
-      printf("HighsStatus::%s return\n",
-             HighsStatusToString(call_status).c_str());
-    }
-  }
-#endif
+  if (call_status != HighsStatus::kOk)
+    highsLogDev(log_options, HighsLogType::kWarning,
+		"%s return of HighsStatus::%s\n", message.c_str(),
+		HighsStatusToString(call_status).c_str());
   return to_return_status;
 }
 

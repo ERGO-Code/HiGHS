@@ -496,32 +496,18 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  HighsInt min_highs_debug_level =  // kHighsDebugLevelMin;
-      kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level =  //kHighsDebugLevelMin;
+        kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
-#ifdef HiGHSDEV
-  min_highs_debug_level =  // kHighsDebugLevelMin;
-      kHighsDebugLevelCheap;
-  //    kHighsDebugLevelCostly;
-  //  kHighsDebugLevelExpensive;
-  //  kHighsDebugLevelMax;
-  if (options_.highs_debug_level < min_highs_debug_level)
-    highsLogDev(options_.log_options, HighsLogType::kWarning,
-                "Highs::run() HiGHSDEV defined, so switching "
-                "options_.highs_debug_level "
-                "from %" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT "\n",
-                options_.highs_debug_level, min_highs_debug_level);
-    //  writeModel("HighsRunModel.mps");
-    //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
-    //  writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
-#endif
+  //
+  //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
+  //  writeLpMatrixPicToFile(options_, "LpMatrix", model_.lp_);
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
   assert(omp_max_threads > 0);
-#ifdef HiGHSDEV
   if (omp_max_threads <= 0)
     highsLogDev(options_.log_options, HighsLogType::kWarning,
                 "WARNING: omp_get_max_threads() returns %" HIGHSINT_FORMAT "\n",
@@ -530,7 +516,6 @@ HighsStatus Highs::run() {
   highsLogDev(options_.log_options, HighsLogType::kDetailed,
               "Running with %" HIGHSINT_FORMAT " OMP thread(s)\n",
               omp_max_threads);
-#endif
 #endif
   assert(called_return_from_run);
   if (!called_return_from_run) {
@@ -564,25 +549,25 @@ HighsStatus Highs::run() {
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   model_.lp_.ensureColWise();
-#ifdef HIGHSDEV
-  // Shouldn't have to check validity of the LP since this is done when it is
-  // loaded or modified
-  call_status = assessLp(model_.lp_, options_);
-  // If any errors have been found or normalisation carried out,
-  // call_status will be kError or kWarning, so only valid return is OK.
-  assert(call_status == HighsStatus::kOk);
-  return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::kError) return returnFromRun(return_status);
-#endif
-
-  highsSetLogCallback(options_);
-#ifdef HiGHSDEV
-  if (checkOptions(options_.log_options, options_.records) !=
-      OptionStatus::kOk) {
-    return_status = HighsStatus::kError;
-    return returnFromRun(return_status);
+  if (options_.highs_debug_level > min_highs_debug_level) {
+    // Shouldn't have to check validity of the LP since this is done when it is
+    // loaded or modified
+    call_status = assessLp(model_.lp_, options_);
+    // If any errors have been found or normalisation carried out,
+    // call_status will be kError or kWarning, so only valid return is OK.
+    assert(call_status == HighsStatus::kOk);
+    return_status = interpretCallStatus(call_status, return_status, "assessLp");
+    if (return_status == HighsStatus::kError) return returnFromRun(return_status);
+    // Shouldn't have to check that the options settings are legal,
+    // since they are checked when modified
+    if (checkOptions(options_.log_options, options_.records) !=
+	OptionStatus::kOk) {
+      return_status = HighsStatus::kError;
+      return returnFromRun(return_status);
+    }
   }
-#endif
+  highsSetLogCallback(options_);
+
   if (model_.lp_.model_name_.compare(""))
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());

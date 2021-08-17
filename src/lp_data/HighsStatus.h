@@ -13,9 +13,10 @@
 #ifndef LP_DATA_HIGHS_STATUS_H_
 #define LP_DATA_HIGHS_STATUS_H_
 
+#include "io/HighsIO.h"
+
 #include <string>
 
-// HiGHS status
 enum class HighsStatus { kError = -1, kOk = 0, kWarning = 1 };
 
 // Return a string representation of HighsStatus.
@@ -23,7 +24,8 @@ std::string HighsStatusToString(HighsStatus status);
 
 // Return the maximum of two HighsStatus and possibly report on
 // call_status not being HighsStatus::kOk
-HighsStatus interpretCallStatus(const HighsStatus call_status,
+HighsStatus interpretCallStatus(const HighsLogOptions log_options,
+				const HighsStatus call_status,
                                 const HighsStatus from_return_status,
                                 const std::string& message = "");
 
