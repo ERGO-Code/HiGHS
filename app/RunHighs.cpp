@@ -31,14 +31,14 @@ int main(int argc, char** argv) {
   if (!options_ok) return 0;
   Highs highs;
   //
+  // Pass the option seetings to HiGHS
+  highs.passOptions(options);
+  //
   // Load the model from model_file
   HighsStatus read_status = highs.readModel(model_file);
   reportModelStatsOrError(options.log_options, read_status, highs.getModel());
   if (read_status == HighsStatus::kError)
     return 1;  // todo: change to read error
-  //
-  // Pass the option seetings to HiGHS
-  highs.passOptions(options);
   //
   // Solve the model
   HighsStatus run_status = highs.run();

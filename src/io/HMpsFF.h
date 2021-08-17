@@ -158,7 +158,8 @@ class HMpsFF {
   HMpsFF::Parsekey checkFirstWord(std::string& strline, HighsInt& start,
                                   HighsInt& end, std::string& word) const;
 
-  HMpsFF::Parsekey parseDefault(std::ifstream& file);
+  HMpsFF::Parsekey parseDefault(const HighsLogOptions& log_options,
+                                std::ifstream& file);
   HMpsFF::Parsekey parseObjsense(const HighsLogOptions& log_options,
                                  std::ifstream& file);
   HMpsFF::Parsekey parseRows(const HighsLogOptions& log_options,

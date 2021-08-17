@@ -151,6 +151,8 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
   HMpsFF::Parsekey keyword = HMpsFF::Parsekey::kNone;
 
   f.open(filename.c_str(), std::ios::in);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "readMPS: Trying to open file %s\n", filename.c_str());
   if (f.is_open()) {
     start_time = getWallTime();
     nnz = 0;
@@ -194,7 +196,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
           f.close();
           return FreeFormatParserReturnCode::kFixedFormat;
         default:
-          keyword = parseDefault(f);
+          keyword = parseDefault(log_options, f);
           break;
       }
     }
@@ -212,6 +214,8 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
       return FreeFormatParserReturnCode::kParserError;
     }
   } else {
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "readMPS: Not opened file OK\n");
     f.close();
     return FreeFormatParserReturnCode::kFileNotFound;
   }
@@ -351,7 +355,8 @@ HMpsFF::Parsekey HMpsFF::checkFirstWord(std::string& strline, HighsInt& start,
     return HMpsFF::Parsekey::kNone;
 }
 
-HMpsFF::Parsekey HMpsFF::parseDefault(std::ifstream& file) {
+HMpsFF::Parsekey HMpsFF::parseDefault(const HighsLogOptions& log_options,
+                                      std::ifstream& file) {
   std::string strline, word;
   if (getline(file, strline)) {
     strline = trim(strline);
@@ -363,6 +368,8 @@ HMpsFF::Parsekey HMpsFF::parseDefault(std::ifstream& file) {
       if (e < (HighsInt)strline.length()) {
         mpsName = first_word(strline, e);
       }
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read NAME    OK\n");
       return HMpsFF::Parsekey::kNone;
     }
     return key;
@@ -397,6 +404,8 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options,
       objSense = ObjSense::kMinimize;
       continue;
     }
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "readMPS: Read OBJSENSE OK\n");
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
       return key;
@@ -429,6 +438,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
       numRow = int(nrows);
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read ROWS    OK\n");
       if (!hasobj) {
         highsLogUser(log_options, HighsLogType::kWarning,
                      "No objective row found\n");
@@ -557,7 +568,11 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
     HMpsFF::Parsekey key = checkFirstWord(strline, start, end, word);
 
     // start of new section?
-    if (key != Parsekey::kNone) return key;
+    if (key != Parsekey::kNone) {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read COLUMNS OK\n");
+      return key;
+    }
 
     // check for integrality marker
     std::string marker = first_word(strline, end);
@@ -730,7 +745,11 @@ HMpsFF::Parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options,
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, word);
 
     // start of new section?
-    if (key != Parsekey::kNone && key != Parsekey::kRhs) return key;
+    if (key != Parsekey::kNone && key != Parsekey::kRhs) {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read RHS     OK\n");
+      return key;
+    }
 
     // Ignore lack of name for SIF format;
     // we know we have this case when "word" is a row name
@@ -895,6 +914,8 @@ HMpsFF::Parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options,
             log_options, HighsLogType::kInfo,
             "Number of UI entries in BOUNDS section is %" HIGHSINT_FORMAT "\n",
             num_ui);
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read BOUNDS  OK\n");
       return key;
     }
     bool islb = false;
@@ -1107,7 +1128,11 @@ HMpsFF::Parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options,
     std::string word;
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, word);
 
-    if (key != Parsekey::kNone) return key;
+    if (key != Parsekey::kNone) {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "readMPS: Read RANGES  OK\n");
+      return key;
+    }
 
     HighsInt rowidx;
 
@@ -1224,7 +1249,11 @@ typename HMpsFF::Parsekey HMpsFF::parseHessian(
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, col_name);
 
     // start of new section?
-    if (key != Parsekey::kNone) return key;
+    if (key != Parsekey::kNone) {
+      highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read %s  OK\n",
+                  section_name.c_str());
+      return key;
+    }
 
     // Get the column name
     auto mit = colname2idx.find(col_name);
