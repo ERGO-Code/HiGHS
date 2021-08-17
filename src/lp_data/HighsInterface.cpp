@@ -113,20 +113,9 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
       scale.col[lp.num_col_ + iCol] = 1.0;
     scale.num_col = newNumCol;
     // Apply the existing row scaling to the new columns
-    HighsSparseMatrix alt_local_a_matrix = local_a_matrix;
-    applyScalingToMatrix(scale.row, XnumNewCol, local_a_matrix.start_,
-                         local_a_matrix.index_, local_a_matrix.value_);
-    alt_local_a_matrix.applyRowScale(scale);
-    assert(alt_local_a_matrix == local_a_matrix);
+    local_a_matrix.applyRowScale(scale);
     // Consider applying column scaling to the new columns.
-    alt_local_a_matrix.considerColScaling(
-        options.allowed_simplex_matrix_scale_factor, &scale.col[lp.num_col_]);
-    // Use colScaleMatrix to take the column-wise matrix and then treat it
-    // row-wise
-    colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                   &scale.col[lp.num_col_], XnumNewCol, local_a_matrix.start_,
-                   local_a_matrix.index_, local_a_matrix.value_);
-    assert(alt_local_a_matrix == local_a_matrix);
+    local_a_matrix.considerColScaling(options.allowed_simplex_matrix_scale_factor, &scale.col[lp.num_col_]);
   }
   // Update the basis correponding to new nonbasic columns
   if (valid_basis)
@@ -232,20 +221,9 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
       scale.row[lp.num_row_ + iRow] = 1.0;
     scale.num_row = newNumRow;
     // Apply the existing column scaling to the new rows
-    HighsSparseMatrix alt_local_ar_matrix = local_ar_matrix;
-    applyScalingToMatrix(scale.col, XnumNewRow, local_ar_matrix.start_,
-                         local_ar_matrix.index_, local_ar_matrix.value_);
-    alt_local_ar_matrix.applyColScale(scale);
-    assert(alt_local_ar_matrix == local_ar_matrix);
+    local_ar_matrix.applyColScale(scale);
     // Consider applying row scaling to the new rows.
-    alt_local_ar_matrix.considerRowScaling(
-        options.allowed_simplex_matrix_scale_factor, &scale.row[lp.num_row_]);
-    // Use colScaleMatrix to take the row-wise matrix and then treat it
-    // col-wise
-    colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                   &scale.row[lp.num_row_], XnumNewRow, local_ar_matrix.start_,
-                   local_ar_matrix.index_, local_ar_matrix.value_);
-    assert(alt_local_ar_matrix == local_ar_matrix);
+    local_ar_matrix.considerRowScaling(options.allowed_simplex_matrix_scale_factor, &scale.row[lp.num_row_]);
   }
   // Update the basis correponding to new basic rows
   if (valid_basis)
