@@ -202,17 +202,12 @@ void HighsSparseMatrix::ensureRowWise() {
 void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
                                 const int8_t* in_partition) {
   assert(new_cols.isColwise());
+  const HighsInt num_new_col = new_cols.num_col_;
   const HighsInt num_new_nz = new_cols.numNz();
-  addCols(new_cols.num_col_, num_new_nz, &new_cols.start_[0],
-          &new_cols.index_[0], &new_cols.value_[0], in_partition);
-}
+  const vector<HighsInt>& new_matrix_start = new_cols.start_;
+  const vector<HighsInt>& new_matrix_index = new_cols.index_;
+  const vector<double>& new_matrix_value = new_cols.value_;
 
-void HighsSparseMatrix::addCols(const HighsInt num_new_col,
-                                const HighsInt num_new_nz,
-                                const HighsInt* new_matrix_start,
-                                const HighsInt* new_matrix_index,
-                                const double* new_matrix_value,
-                                const int8_t* in_partition) {
   assert(this->formatOk());
   // Adding columns to a row-wise partitioned matrix needs the
   // partition information
@@ -236,9 +231,9 @@ void HighsSparseMatrix::addCols(const HighsInt num_new_col,
   if (num_new_nz) {
     // Nonzeros are being added, so ensure that non-null data are
     // being passed
-    assert(new_matrix_start != NULL);
-    assert(new_matrix_index != NULL);
-    assert(new_matrix_value != NULL);
+    assert(!new_matrix_start.empty());
+    assert(!new_matrix_index.empty());
+    assert(!new_matrix_value.empty());
   }
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
@@ -296,17 +291,12 @@ void HighsSparseMatrix::addCols(const HighsInt num_new_col,
 void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
                                 const int8_t* in_partition) {
   assert(new_rows.isRowwise());
+  const HighsInt num_new_row = new_rows.num_row_;
   const HighsInt num_new_nz = new_rows.numNz();
-  addRows(new_rows.num_row_, num_new_nz, &new_rows.start_[0],
-          &new_rows.index_[0], &new_rows.value_[0], in_partition);
-}
+  const vector<HighsInt>& new_matrix_start = new_rows.start_;
+  const vector<HighsInt>& new_matrix_index = new_rows.index_;
+  const vector<double>& new_matrix_value = new_rows.value_;
 
-void HighsSparseMatrix::addRows(const HighsInt num_new_row,
-                                const HighsInt num_new_nz,
-                                const HighsInt* new_matrix_start,
-                                const HighsInt* new_matrix_index,
-                                const double* new_matrix_value,
-                                const int8_t* in_partition) {
   assert(this->formatOk());
   // Adding rows to a row-wise partitioned matrix needs the
   // partition information
@@ -327,9 +317,9 @@ void HighsSparseMatrix::addRows(const HighsInt num_new_row,
   if (num_new_nz) {
     // Nonzeros are being added, so ensure that non-null data are
     // being passed
-    assert(new_matrix_start != NULL);
-    assert(new_matrix_index != NULL);
-    assert(new_matrix_value != NULL);
+    assert(!new_matrix_start.empty());
+    assert(!new_matrix_index.empty());
+    assert(!new_matrix_value.empty());
   }
   HighsInt num_col = this->num_col_;
   HighsInt num_row = this->num_row_;
@@ -352,7 +342,6 @@ void HighsSparseMatrix::addRows(const HighsInt num_new_row,
     // Append the starts of the new rows
     if (num_new_nz) {
       // Nontrivial number of nonzeros being added, so use new_matrix_start
-      assert(new_matrix_start != NULL);
       for (HighsInt iNewRow = 0; iNewRow < num_new_row; iNewRow++)
         this->start_[num_row + iNewRow] = num_nz + new_matrix_start[iNewRow];
     } else {

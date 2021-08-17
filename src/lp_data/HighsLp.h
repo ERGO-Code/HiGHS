@@ -21,9 +21,6 @@
 
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsSparseMatrix.h"
-#include "simplex/SimplexStruct.h"  // for SimplexScale (temporary)
-
-class HighsLp;
 
 class HighsLp {
  public:

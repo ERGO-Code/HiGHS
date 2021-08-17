@@ -59,26 +59,6 @@ bool equilibrationScaleMatrix(const HighsOptions& options, HighsLp& lp,
 bool maxValueScaleMatrix(const HighsOptions& options, HighsLp& lp,
                          const HighsInt use_scale_strategy);
 
-HighsStatus applyScalingToLpColCost(
-    HighsLp& lp, const vector<double>& colScale,
-    const HighsIndexCollection& index_collection);
-
-HighsStatus applyScalingToLpColBounds(
-    HighsLp& lp, const vector<double>& colScale,
-    const HighsIndexCollection& index_collection);
-
-HighsStatus applyScalingToLpRowBounds(
-    HighsLp& lp, const vector<double>& rowScale,
-    const HighsIndexCollection& index_collection);
-
-void applyScalingToMatrix(const vector<double>& rowScale,
-                          const HighsInt num_col, const vector<HighsInt>& start,
-                          const vector<HighsInt>& index, vector<double>& value);
-
-void colScaleMatrix(const HighsInt max_scale_factor_exponent, double* colScale,
-                    const HighsInt numCol, const vector<HighsInt>& Astart,
-                    const vector<HighsInt>& Aindex, vector<double>& Avalue);
-
 HighsStatus applyScalingToLpCol(HighsLp& lp, const HighsInt col,
                                 const double colScale);
 
