@@ -37,9 +37,9 @@ class HEkk {
   void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void updateStatus(LpAction action);
-  void moveLp(HighsLp lp, HighsLpSolverObject* solver_object = NULL,
-              const HighsSparseMatrix* scaled_a_matrix = NULL);
+  void moveLp(HighsLp lp, HighsLpSolverObject* solver_object = NULL);
   void setPointers(HighsOptions* opt_point, HighsTimer* tim_point);
+  HighsSparseMatrix* scaledAMatrix();
 
   HighsStatus setup();
   HighsStatus solve();
@@ -96,6 +96,7 @@ class HEkk {
 
   bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
+  HighsSparseMatrix scaled_a_matrix_;
   HSimplexNla simplex_nla_;
 
   const HighsScale* scale_;

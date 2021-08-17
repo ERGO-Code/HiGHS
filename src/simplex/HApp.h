@@ -246,17 +246,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     // Check that the incumbent LP has been moved back and is unscaled
     assert(!incumbent_lp.is_moved_);
     assert(!incumbent_lp.is_scaled_);
-    // Create a scaled LP for the HFactor instance, by taking a copy of
-    // the incumbent LP
-    HighsLp scaled_lp = incumbent_lp;
-    scaled_lp.applyScale();
-    // Now the incumbent LP is unscaled, and the LP for the HFactor
-    // instance is scaled
-    //
-    // Move the incumbent LP and pass pointers to the scaling factors
-    // and scaled matrix for the HFactor instance
-    ekk_instance.moveLp(std::move(incumbent_lp), &solver_object,
-                        &scaled_lp.a_matrix_);
+    // Move the incumbent LP
+    ekk_instance.moveLp(std::move(incumbent_lp), &solver_object);
     incumbent_lp.is_moved_ = true;
     // Save options/strategies that may be changed
     HighsInt simplex_strategy = options.simplex_strategy;
