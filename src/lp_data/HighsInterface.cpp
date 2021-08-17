@@ -1108,40 +1108,12 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   HVector solve_vector;
   solve_vector.setup(num_row);
   solve_vector.clear();
-  // ToDo The scaling doesn't seem to have to be applied since it's
-  // taken care of in simplex NLA, so delete the use of scaling
-  // factors that's currently only bypassed with use_scaling
-  const bool use_scaling = false;
   HighsScale& scale = lp.scale_;
   HighsInt rhs_num_nz = 0;
-  if (transpose) {
-    for (HighsInt row = 0; row < num_row; row++) {
-      if (rhs[row]) {
-        solve_vector.index[rhs_num_nz++] = row;
-        double rhs_value = rhs[row];
-        if (use_scaling) {
-          if (scale.has_scaling) {
-            HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-            if (col < num_col) {
-              rhs_value *= scale.col[col];
-            } else {
-              double scale_value = scale.row[col - num_col];
-              rhs_value /= scale_value;
-            }
-          }
-        }
-        solve_vector.array[row] = rhs_value;
-      }
-    }
-  } else {
-    for (HighsInt row = 0; row < num_row; row++) {
-      if (rhs[row]) {
-        solve_vector.index[rhs_num_nz++] = row;
-        solve_vector.array[row] = rhs[row];
-        if (use_scaling) {
-          if (scale.has_scaling) solve_vector.array[row] *= scale.row[row];
-        }
-      }
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (rhs[iRow]) {
+      solve_vector.index[rhs_num_nz++] = iRow;
+      solve_vector.array[iRow] = rhs[iRow];
     }
   }
   solve_vector.count = rhs_num_nz;
@@ -1163,15 +1135,15 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     // Nonzeros in the solution not required
     if (solve_vector.count > num_row) {
       // Solution nonzeros not known
-      for (HighsInt row = 0; row < num_row; row++) {
-        solution_vector[row] = solve_vector.array[row];
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+        solution_vector[iRow] = solve_vector.array[iRow];
       }
     } else {
       // Solution nonzeros are known
-      for (HighsInt row = 0; row < num_row; row++) solution_vector[row] = 0;
-      for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
-        HighsInt row = solve_vector.index[ix];
-        solution_vector[row] = solve_vector.array[row];
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) solution_vector[iRow] = 0;
+      for (HighsInt iX = 0; iX < solve_vector.count; iX++) {
+        HighsInt iRow = solve_vector.index[iX];
+        solution_vector[iRow] = solve_vector.array[iRow];
       }
     }
   } else {
@@ -1179,66 +1151,22 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     if (solve_vector.count > num_row) {
       // Solution nonzeros not known
       solution_num_nz = 0;
-      for (HighsInt row = 0; row < num_row; row++) {
-        solution_vector[row] = 0;
-        if (solve_vector.array[row]) {
-          solution_vector[row] = solve_vector.array[row];
-          solution_indices[*solution_num_nz++] = row;
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+        solution_vector[iRow] = 0;
+        if (solve_vector.array[iRow]) {
+          solution_vector[iRow] = solve_vector.array[iRow];
+          solution_indices[*solution_num_nz++] = iRow;
         }
       }
     } else {
       // Solution nonzeros are known
-      for (HighsInt row = 0; row < num_row; row++) solution_vector[row] = 0;
-      for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
-        HighsInt row = solve_vector.index[ix];
-        solution_vector[row] = solve_vector.array[row];
-        solution_indices[ix] = row;
+      for (HighsInt iRow = 0; iRow < num_row; iRow++) solution_vector[iRow] = 0;
+      for (HighsInt iX = 0; iX < solve_vector.count; iX++) {
+        HighsInt iRow = solve_vector.index[iX];
+        solution_vector[iRow] = solve_vector.array[iRow];
+        solution_indices[iX] = iRow;
       }
       *solution_num_nz = solve_vector.count;
-    }
-  }
-  // Scale the solution
-  if (use_scaling) {
-    if (scale.has_scaling) {
-      if (transpose) {
-        if (solve_vector.count > num_row) {
-          // Solution nonzeros not known
-          for (HighsInt row = 0; row < num_row; row++) {
-            double scale_value = scale.row[row];
-            solution_vector[row] *= scale_value;
-          }
-        } else {
-          for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
-            HighsInt row = solve_vector.index[ix];
-            double scale_value = scale.row[row];
-            solution_vector[row] *= scale_value;
-          }
-        }
-      } else {
-        if (solve_vector.count > num_row) {
-          // Solution nonzeros not known
-          for (HighsInt row = 0; row < num_row; row++) {
-            HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-            if (col < num_col) {
-              solution_vector[row] *= scale.col[col];
-            } else {
-              double scale_value = scale.row[col - num_col];
-              solution_vector[row] /= scale_value;
-            }
-          }
-        } else {
-          for (HighsInt ix = 0; ix < solve_vector.count; ix++) {
-            HighsInt row = solve_vector.index[ix];
-            HighsInt col = ekk_instance_.basis_.basicIndex_[row];
-            if (col < num_col) {
-              solution_vector[row] *= scale.col[col];
-            } else {
-              double scale_value = scale.row[col - num_col];
-              solution_vector[row] /= scale_value;
-            }
-          }
-        }
-      }
     }
   }
   return HighsStatus::kOk;
