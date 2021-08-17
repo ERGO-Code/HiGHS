@@ -38,7 +38,7 @@ class HEkk {
 
   void updateStatus(LpAction action);
   void moveLp(HighsLp lp, HighsLpSolverObject* solver_object = NULL);
-  void setPointers(HighsOptions* opt_point, HighsTimer* tim_point);
+  void setPointers(HighsOptions* options, HighsTimer* tim_point);
   HighsSparseMatrix* getScaledAMatrixPointer();
   HighsScale* getScalePointer();
 
@@ -78,8 +78,8 @@ class HEkk {
                                     HighsSimplexInfo& info);
 
   // Data members
-  HighsOptions* opt_point_;
-  HighsTimer* tim_point_;
+  HighsOptions* options_;
+  HighsTimer* timer_;
   HighsSimplexAnalysis analysis_;
 
   HighsLp lp_;

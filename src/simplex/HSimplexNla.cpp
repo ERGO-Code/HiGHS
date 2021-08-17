@@ -27,9 +27,9 @@
 
 using std::vector;
 
-void HSimplexNla::setup(const HighsLp* lp, 
-                        HighsInt* base_index, const HighsOptions* options,
-                        HighsTimer* timer, HighsSimplexAnalysis* analysis,
+void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
+                        const HighsOptions* options, HighsTimer* timer,
+                        HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
   setLpAndScalePointers(lp);
@@ -51,7 +51,8 @@ void HSimplexNla::setup(const HighsLp* lp,
 void HSimplexNla::setLpAndScalePointers(const HighsLp* for_lp) {
   this->lp_ = for_lp;
   this->scale_ = NULL;
-  if (for_lp->scale_.has_scaling && !for_lp->is_scaled_) this->scale_ = &(for_lp->scale_);
+  if (for_lp->scale_.has_scaling && !for_lp->is_scaled_)
+    this->scale_ = &(for_lp->scale_);
 }
 
 void HSimplexNla::setPointers(const HighsLp* for_lp,

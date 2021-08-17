@@ -19,10 +19,10 @@
 void HEkk::initialiseControl() {
   // Copy tolerances from options
   info_.allow_dual_steepest_edge_to_devex_switch =
-      (*opt_point_).simplex_dual_edge_weight_strategy ==
+      (*options_).simplex_dual_edge_weight_strategy ==
       kSimplexDualEdgeWeightStrategyChoose;
   info_.dual_steepest_edge_weight_log_error_threshold =
-      (*opt_point_).dual_steepest_edge_weight_log_error_threshold;
+      (*options_).dual_steepest_edge_weight_log_error_threshold;
   info_.control_iteration_count0 = iteration_count_;
   // Initialise the densities
   info_.col_aq_density = 0;
@@ -110,7 +110,7 @@ bool HEkk::switchToDevex() {
          kCostlyDseFractionNumTotalIterationBeforeSwitch * local_num_tot);
 
     if (switch_to_devex) {
-      highsLogDev((*opt_point_).log_options, HighsLogType::kInfo,
+      highsLogDev((*options_).log_options, HighsLogType::kInfo,
                   "Switch from DSE to Devex after %" HIGHSINT_FORMAT
                   " costly DSE iterations of %" HIGHSINT_FORMAT
                   " with "
@@ -130,7 +130,7 @@ bool HEkk::switchToDevex() {
     switch_to_devex = info_.allow_dual_steepest_edge_to_devex_switch &&
                       local_measure > local_threshold;
     if (switch_to_devex) {
-      highsLogDev((*opt_point_).log_options, HighsLogType::kInfo,
+      highsLogDev((*options_).log_options, HighsLogType::kInfo,
                   "Switch from DSE to Devex with log error measure of %g > "
                   "%g = threshold\n",
                   local_measure, local_threshold);

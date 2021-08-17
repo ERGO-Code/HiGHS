@@ -88,7 +88,7 @@ void HEkkDualRow::choosePossible() {
   const double Ta = ekk_instance_.info_.update_count < 10
                         ? 1e-9
                         : ekk_instance_.info_.update_count < 20 ? 3e-8 : 1e-6;
-  const double Td = ekk_instance_.opt_point_->dual_feasibility_tolerance;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   const HighsInt move_out = workDelta < 0 ? -1 : 1;
   workTheta = kHighsInf;
   workCount = 0;
@@ -269,7 +269,7 @@ HighsInt HEkkDualRow::chooseFinal() {
 }
 
 bool HEkkDualRow::chooseFinalWorkGroupQuad() {
-  const double Td = ekk_instance_.opt_point_->dual_feasibility_tolerance;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   HighsInt fullCount = workCount;
   workCount = 0;
   double totalChange = initial_total_change;
@@ -308,7 +308,7 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
         (prev_remainTheta == remainTheta)) {
       HighsInt num_var =
           ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
-      debugDualChuzcFailQuad0(*ekk_instance_.opt_point_, workCount, workData,
+      debugDualChuzcFailQuad0(*ekk_instance_.options_, workCount, workData,
                               num_var, workDual, selectTheta, remainTheta,
                               true);
       return false;
@@ -323,7 +323,7 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
   // Check that at least one group has been identified
   if ((HighsInt)workGroup.size() <= 1) {
     HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
-    debugDualChuzcFailQuad1(*ekk_instance_.opt_point_, workCount, workData,
+    debugDualChuzcFailQuad1(*ekk_instance_.options_, workCount, workData,
                             num_var, workDual, selectTheta, true);
     return false;
   }
@@ -331,7 +331,7 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
 }
 
 bool HEkkDualRow::chooseFinalWorkGroupHeap() {
-  const double Td = ekk_instance_.opt_point_->dual_feasibility_tolerance;
+  const double Td = ekk_instance_.options_->dual_feasibility_tolerance;
   HighsInt fullCount = alt_workCount;
   double totalChange = initial_total_change;
   double selectTheta = workTheta;
@@ -360,7 +360,7 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
   if (heap_num_en <= 0) {
     HighsInt num_var = ekk_instance_.lp_.num_col_ + ekk_instance_.lp_.num_row_;
     // No entries in heap = > failure
-    debugDualChuzcFailHeap(*ekk_instance_.opt_point_, alt_workCount,
+    debugDualChuzcFailHeap(*ekk_instance_.options_, alt_workCount,
                            original_workData, num_var, workDual, selectTheta,
                            true);
     return false;
