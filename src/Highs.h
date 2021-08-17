@@ -882,15 +882,6 @@ class Highs {
    */
   double getRunTime() { return timer_.readRunHighsClock(); }
 
-#ifdef HiGHSDEV
-  /**
-   * @brief Report the model status, solution and basis vector sizes and basis
-   * validity
-   */
-  void reportModelStatusSolutionBasis(const std::string message,
-                                      const HighsInt hmo_ix = -1);
-#endif
-
   std::string modelStatusToString(const HighsModelStatus model_status) const;
 
   std::string solutionStatusToString(const HighsInt solution_status) const;

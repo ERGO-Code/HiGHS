@@ -1797,9 +1797,12 @@ HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
 
 HighsStatus Highs::deleteCols(HighsInt* mask) {
   clearPresolve();
+  const HighsInt original_num_col = model_.lp_.num_col_;
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_col_);
+  create(index_collection, mask, original_num_col);
   deleteColsInterface(index_collection);
+  for (HighsInt iCol = 0; iCol < original_num_col; iCol++)
+    mask[iCol] = index_collection.mask_[iCol];
   return returnFromHighs(HighsStatus::kOk);
 }
 
@@ -1831,9 +1834,12 @@ HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
 
 HighsStatus Highs::deleteRows(HighsInt* mask) {
   clearPresolve();
+  const HighsInt original_num_row = model_.lp_.num_row_;
   HighsIndexCollection index_collection;
-  create(index_collection, mask, model_.lp_.num_row_);
+  create(index_collection, mask, original_num_row);
   deleteRowsInterface(index_collection);
+  for (HighsInt iRow = 0; iRow < original_num_row; iRow++)
+    mask[iRow] = index_collection.mask_[iRow];
   return returnFromHighs(HighsStatus::kOk);
 }
 

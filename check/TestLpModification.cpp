@@ -2,9 +2,11 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
+#include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
 
 const bool dev_run = false;
+const double double_equal_tolerance = 1e-5;
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
                        HighsStatus status) {
@@ -19,9 +21,6 @@ void callRun(Highs& highs, const HighsLogOptions& log_options,
   HighsStatus return_status = highs.run();
   HighsStatusReport(log_options, message, return_status);
   REQUIRE(return_status == require_return_status);
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis(message);
-#endif
 }
 
 bool areLpColEqual(const HighsInt num_col0, const double* colCost0,
@@ -522,19 +521,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.deleteCols(col1357_num_ix, col1357_col_set) ==
           HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleting columns 1, 3, 5, 7");
-#endif
-
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
                         col1357_upper, col1357_num_nz, col1357_start,
                         col1357_index, col1357_value) == HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After restoring columns 1, 3, 5, 7\n");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -544,25 +535,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After re-solving");
-#endif
-
   // Delete all the columns: OK
   REQUIRE(highs.deleteCols(0, num_col - 1) == HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleting all columns");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   // Delete all the rows: OK
   REQUIRE(highs.deleteRows(0, num_row - 1) == HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleteRows(0, num_row - 1)");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -576,10 +555,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
                         &ARstart[0], &ARindex[0],
                         &ARvalue[0]) == HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("With columns but and rows");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -623,10 +598,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.deleteRows(row0135789_num_ix, row0135789_row_set) ==
           HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleting rows 0-1, 3, 5, 7-9");
-#endif
-
   HighsInt row012_row_set[] = {0, 1, 2};
   HighsInt row012_row_mask[] = {1, 1, 1};
   HighsInt row012_num_ix = 3;
@@ -644,17 +615,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.deleteRows(row012_row_mask) == HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleting rows 0-2");
-#endif
-
   // Delete all the columns: OK
   REQUIRE(highs.deleteCols(0, num_col - 1) == HighsStatus::kOk);
 
-#ifdef HiGHSDEV
   messageReportLp("After deleting all columns", highs.getLp());
-  highs.reportModelStatusSolutionBasis("After deleting all columns");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -681,10 +645,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
                         row012_num_nz, row012_start, row012_index,
                         row012_value) == HighsStatus::kOk);
 
-#ifdef HiGHSDEV
   messageReportLp("After restoring all rows", highs.getLp());
-  highs.reportModelStatusSolutionBasis("After restoring all rows");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -693,10 +654,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After resolve");
-#endif
 
   // Try to delete an empty range of rows: OK
   REQUIRE(highs.deleteRows(0, -1) == HighsStatus::kOk);
@@ -744,17 +701,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleting all rows and columns");
-#endif
-
   // Adding row vectors to model with no columns returns OK
   REQUIRE(highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
                         0, NULL, NULL, NULL) == HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After restoring 7 rows");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -762,37 +711,20 @@ TEST_CASE("LP-modification", "[highs_data]") {
                         row012_start, row012_index,
                         row012_value) == HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After restoring all rows");
-#endif
-
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   REQUIRE(highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
                         col1357_upper, col1357_num_nz, col1357_start,
                         col1357_index, col1357_value) == HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After restoring columns 1, 3, 5, 7");
-#endif
-
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis(
-      "After solving after restoring all rows and columns 1, 3, 5, 7");
-#endif
-
   REQUIRE(highs.addCols(col0123_num_col, col0123_cost, col0123_lower,
                         col0123_upper, col0123_num_nz, col0123_start,
                         col0123_index, col0123_value) == HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After restoring columns 0-3");
-#endif
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
@@ -875,19 +807,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
 
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("After deleteing all rows and columns");
-#endif
-
   // Adding column vectors to model with no rows returns OK
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL) == HighsStatus::kOk);
 
   callRun(highs, options.log_options, "highs.run()", HighsStatus::kOk);
-
-#ifdef HiGHSDEV
-  highs.reportModelStatusSolutionBasis("With columns but no rows");
-#endif
 
   // Adding row vectors and matrix to model with columns returns OK
   REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
@@ -1254,4 +1178,157 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
                      optimal_objective_function_value);
   REQUIRE(optimal_objective_function_value ==
           avgas_optimal_objective_function_value);
+}
+TEST_CASE("LP-delete", "[highs_data]") {
+  // Rather better testing of deleteCols() and deleteRows()
+  Highs highs;
+  HighsOptions options;
+  HighsLogOptions& log_options = options.log_options;
+
+  if (!dev_run) {
+    highs.setOptionValue("output_flag", false);
+    options.output_flag = false;
+  }
+
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+
+  const HighsLp& lp = highs.getLp();
+
+  callRun(highs, log_options, "highs.run()", HighsStatus::kOk);
+
+  double adlittle_objective_function_value;
+  highs.getInfoValue("objective_function_value",
+                     adlittle_objective_function_value);
+
+  HighsRandom random(0);
+  double objective_function_value;
+  HighsInt num_nz = lp.a_matrix_.numNz();
+  vector<HighsInt> mask;
+  vector<HighsInt> mask_check;
+  HighsInt get_num_nz;
+  vector<HighsInt> get_start;
+  vector<HighsInt> get_index;
+  vector<double> get_cost;
+  vector<double> get_lower;
+  vector<double> get_upper;
+  vector<double> get_value;
+
+  // Test deleteCols
+  HighsInt num_col = lp.num_col_;
+  HighsInt rm_num_col = num_col / 5;
+  assert(rm_num_col >= 10);
+  mask.assign(num_col, 0);
+  mask_check.assign(num_col, 0);
+  HighsInt num_col_k = 0;
+  for (;;) {
+    HighsInt iCol = random.integer(num_col);
+    if (mask[iCol]) continue;
+    mask[iCol] = 1;
+    num_col_k++;
+    if (num_col_k >= rm_num_col) break;
+  }
+  HighsInt new_col_index = 0;
+  for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+    if (!mask[iCol]) {
+      mask_check[iCol] = new_col_index;
+      new_col_index++;
+    } else {
+      mask_check[iCol] = -1;
+    }
+  }
+  HighsInt get_num_col;
+  get_cost.resize(rm_num_col);
+  get_lower.resize(rm_num_col);
+  get_upper.resize(rm_num_col);
+  get_start.resize(rm_num_col);
+  get_index.resize(num_nz);
+  get_value.resize(num_nz);
+
+  // Get the set of cols to be removed - so that they can be reintroduced
+  REQUIRE(highs.getCols(&mask[0], get_num_col, &get_cost[0], &get_lower[0],
+                        &get_upper[0], get_num_nz, &get_start[0], &get_index[0],
+                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(get_num_col == rm_num_col);
+  get_index.resize(get_num_nz);
+  get_value.resize(get_num_nz);
+
+  // Remove the set of cols
+  REQUIRE(highs.deleteCols(&mask[0]) == HighsStatus::kOk);
+  REQUIRE(mask == mask_check);
+  REQUIRE(lp.num_col_ == num_col - rm_num_col);
+
+  // Replace the set of cols
+  REQUIRE(highs.addCols(get_num_col, &get_cost[0], &get_lower[0], &get_upper[0],
+                        get_num_nz, &get_start[0], &get_index[0],
+                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(lp.num_col_ == num_col);
+
+  callRun(highs, log_options, "highs.run()", HighsStatus::kOk);
+
+  highs.getInfoValue("objective_function_value", objective_function_value);
+
+  REQUIRE(
+      std::fabs(objective_function_value - adlittle_objective_function_value) <
+      double_equal_tolerance);
+
+  // Test deleteRows
+  HighsInt num_row = lp.num_row_;
+  HighsInt rm_num_row = num_row / 5;
+  assert(rm_num_row >= 10);
+  mask.assign(num_row, 0);
+  mask_check.assign(num_row, 0);
+  HighsInt num_row_k = 0;
+  for (;;) {
+    HighsInt iRow = random.integer(num_row);
+    if (mask[iRow]) continue;
+    mask[iRow] = 1;
+    num_row_k++;
+    if (num_row_k >= rm_num_row) break;
+  }
+  HighsInt new_row_index = 0;
+  for (HighsInt iRow = 0; iRow < num_row; iRow++) {
+    if (!mask[iRow]) {
+      mask_check[iRow] = new_row_index;
+      new_row_index++;
+    } else {
+      mask_check[iRow] = -1;
+    }
+  }
+  HighsInt get_num_row;
+  get_lower.resize(rm_num_row);
+  get_upper.resize(rm_num_row);
+  get_start.resize(rm_num_row);
+  get_index.resize(num_nz);
+  get_value.resize(num_nz);
+
+  // Get the set of rows to be removed - so that they can be reintroduced
+  REQUIRE(highs.getRows(&mask[0], get_num_row, &get_lower[0], &get_upper[0],
+                        get_num_nz, &get_start[0], &get_index[0],
+                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(get_num_row == rm_num_row);
+  get_index.resize(get_num_nz);
+  get_value.resize(get_num_nz);
+
+  // Remove the set of rows
+  REQUIRE(highs.deleteRows(&mask[0]) == HighsStatus::kOk);
+  REQUIRE(mask == mask_check);
+  REQUIRE(lp.num_row_ == num_row - rm_num_row);
+
+  // Replace the set of rows
+  REQUIRE(highs.addRows(get_num_row, &get_lower[0], &get_upper[0], get_num_nz,
+                        &get_start[0], &get_index[0],
+                        &get_value[0]) == HighsStatus::kOk);
+  REQUIRE(lp.num_row_ == num_row);
+
+  callRun(highs, log_options, "highs.run()", HighsStatus::kOk);
+
+  highs.getInfoValue("objective_function_value", objective_function_value);
+
+  REQUIRE(
+      std::fabs(objective_function_value - adlittle_objective_function_value) <
+      double_equal_tolerance);
 }

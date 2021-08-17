@@ -107,7 +107,6 @@ HighsStatus Highs::addColsInterface(HighsInt XnumNewCol, const double* XcolCost,
   // Append the columns to LP matrix
   lp.a_matrix_.addCols(local_a_matrix);
   if (lp_has_scaling) {
-    assert(1 == 0);
     // Extend the column scaling factors
     scale.col.resize(newNumCol);
     for (HighsInt iCol = 0; iCol < XnumNewCol; iCol++)
