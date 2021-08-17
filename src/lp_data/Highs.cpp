@@ -2560,10 +2560,13 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::kLogicalError)
       return_status = HighsStatus::kError;
   }
-  if (debugHighsSolution("Return from run()", options_, model_, solution_,
-                         basis_, model_status_,
-                         info_) == HighsDebugStatus::kLogicalError)
-    return_status = HighsStatus::kError;
+  if (have_primal_solution) {
+    // Debug the Highs solution - needs primal values at least
+    if (debugHighsSolution("Return from run()", options_, model_, solution_,
+                           basis_, model_status_,
+                           info_) == HighsDebugStatus::kLogicalError)
+      return_status = HighsStatus::kError;
+  }
   if (debugInfo(options_, model_.lp_, basis_, solution_, info_,
                 scaled_model_status_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;

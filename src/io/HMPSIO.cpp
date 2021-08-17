@@ -627,8 +627,9 @@ HighsStatus writeMps(
   }
   highsLogDev(log_options, HighsLogType::kInfo,
               "Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
-              highsBoolToString(have_rhs), highsBoolToString(have_ranges),
-              highsBoolToString(have_bounds));
+              highsBoolToString(have_rhs).c_str(),
+              highsBoolToString(have_ranges).c_str(),
+              highsBoolToString(have_bounds).c_str());
 
   // Field:    1           2          3         4         5         6
   // Columns:  2-3        5-12      15-22     25-36     40-47     50-61 Indexed
