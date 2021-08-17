@@ -363,8 +363,8 @@ HighsStatus HEkk::solve() {
     workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
     assert(called_return_from_solve_);
-    return_status =
-        interpretCallStatus(opt_point_->log_options, call_status, return_status, "HEkkPrimal::solve");
+    return_status = interpretCallStatus(opt_point_->log_options, call_status,
+                                        return_status, "HEkkPrimal::solve");
   } else {
     algorithm_name = "dual";
     reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_,
@@ -391,8 +391,8 @@ HighsStatus HEkk::solve() {
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
     assert(called_return_from_solve_);
-    return_status =
-        interpretCallStatus(opt_point_->log_options, call_status, return_status, "HEkkDual::solve");
+    return_status = interpretCallStatus(opt_point_->log_options, call_status,
+                                        return_status, "HEkkDual::solve");
 
     // Dual simplex solver may set model_status to be
     // kUnboundedOrInfeasible, and Highs::run() may not allow that to
@@ -402,8 +402,8 @@ HighsStatus HEkk::solve() {
       HEkkPrimal primal_solver(*this);
       call_status = primal_solver.solve();
       assert(called_return_from_solve_);
-      return_status =
-          interpretCallStatus(opt_point_->log_options, call_status, return_status, "HEkkPrimal::solve");
+      return_status = interpretCallStatus(opt_point_->log_options, call_status,
+                                          return_status, "HEkkPrimal::solve");
     }
   }
   reportSimplexPhaseIterations(opt_point_->log_options, iteration_count_,
@@ -448,7 +448,8 @@ HighsStatus HEkk::cleanup() {
     call_status = dual_solver.solve();
     assert(called_return_from_solve_);
     return_status =
-        interpretCallStatus(this->opt_point_->log_options, call_status, return_status, "HEkkDual::solve");
+        interpretCallStatus(this->opt_point_->log_options, call_status,
+                            return_status, "HEkkDual::solve");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // Dual infeasibilities, so should be just primal phase 2
@@ -462,7 +463,8 @@ HighsStatus HEkk::cleanup() {
     call_status = primal_solver.solve();
     assert(called_return_from_solve_);
     return_status =
-        interpretCallStatus(this->opt_point_->log_options, call_status, return_status, "HEkkPrimal::solve");
+        interpretCallStatus(this->opt_point_->log_options, call_status,
+                            return_status, "HEkkPrimal::solve");
     if (return_status == HighsStatus::kError) return return_status;
   }
   return return_status;
@@ -836,7 +838,8 @@ HighsStatus HEkk::setup() {
   if (opt_point_->highs_debug_level > kHighsDebugLevelNone) {
     // ... so, if debugging, check the LP.
     HighsStatus call_status = assessLp(lp_, *opt_point_);
-    return_status = interpretCallStatus(this->opt_point_->log_options, call_status, return_status, "assessLp");
+    return_status = interpretCallStatus(this->opt_point_->log_options,
+                                        call_status, return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
   initialiseForNewLp();

@@ -322,8 +322,8 @@ HighsStatus HEkkDual::solve() {
           save_primal_simplex_bound_perturbation_multiplier;
       analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
       assert(ekk_instance_.called_return_from_solve_);
-      return_status =
-          interpretCallStatus(options.log_options, call_status, return_status, "HEkkPrimal::solve");
+      return_status = interpretCallStatus(options.log_options, call_status,
+                                          return_status, "HEkkPrimal::solve");
       // Reset called_return_from_solve_ to be false, since it's
       // called for this solve
       ekk_instance_.called_return_from_solve_ = false;
@@ -331,14 +331,14 @@ HighsStatus HEkkDual::solve() {
         return ekk_instance_.returnFromSolve(return_status);
       if (ekk_instance_.model_status_ == HighsModelStatus::kOptimal &&
           info.num_primal_infeasibilities + info.num_dual_infeasibilities)
-        highsLogDev(
-            options.log_options, HighsLogType::kWarning,
-            "HEkkDual:: Primal simplex clean up yields optimality, "
-            "but with %" HIGHSINT_FORMAT
-            " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
-            " (max %g) dual infeasibilities\n",
-            info.num_primal_infeasibilities, info.max_primal_infeasibility,
-            info.num_dual_infeasibilities, info.max_dual_infeasibility);
+        highsLogDev(options.log_options, HighsLogType::kWarning,
+                    "HEkkDual:: Primal simplex clean up yields optimality, "
+                    "but with %" HIGHSINT_FORMAT
+                    " (max %g) primal infeasibilities and " HIGHSINT_FORMAT
+                    " (max %g) dual infeasibilities\n",
+                    info.num_primal_infeasibilities,
+                    info.max_primal_infeasibility,
+                    info.num_dual_infeasibilities, info.max_dual_infeasibility);
     }
   }
   assert(model_status == HighsModelStatus::kOptimal ||

@@ -238,8 +238,8 @@ HighsStatus HEkkPrimal::solve() {
     info.simplex_strategy = simplex_strategy;
     analysis->simplexTimerStop(SimplexDualPhase2Clock);
     assert(ekk_instance_.called_return_from_solve_);
-    return_status =
-        interpretCallStatus(options.log_options, call_status, return_status, "HEkkDual::solve");
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "HEkkDual::solve");
     // Reset called_return_from_solve_ to be false, since it's
     // called for this solve
     ekk_instance_.called_return_from_solve_ = false;

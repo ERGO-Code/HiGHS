@@ -792,7 +792,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     //    assert(0==3);
     getHighsNonVertexSolution(options.log_options, lp, num_col, num_row, rhs,
                               constraint_type, lps, highs_solution);
+    assert(!highs_basis.valid);
   }
+  highs_info.basis_validity = highs_basis.valid ? kBasisValidityValid : kBasisValidityInvalid;
   HighsStatus return_status;
   if (imprecise_solution) {
     model_status = HighsModelStatus::kUnknown;

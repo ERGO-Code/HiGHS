@@ -26,7 +26,7 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Error";
       break;
     default:
-      assert(1==0);
+      assert(1 == 0);
       return "Unrecognised HiGHS status";
       break;
   }
@@ -34,15 +34,15 @@ std::string HighsStatusToString(HighsStatus status) {
 }
 
 HighsStatus interpretCallStatus(const HighsLogOptions log_options,
-				const HighsStatus call_status,
+                                const HighsStatus call_status,
                                 const HighsStatus from_return_status,
                                 const std::string& message) {
   HighsStatus to_return_status;
   to_return_status = worseStatus(call_status, from_return_status);
   if (call_status != HighsStatus::kOk)
     highsLogDev(log_options, HighsLogType::kWarning,
-		"%s return of HighsStatus::%s\n", message.c_str(),
-		HighsStatusToString(call_status).c_str());
+                "%s return of HighsStatus::%s\n", message.c_str(),
+                HighsStatusToString(call_status).c_str());
   return to_return_status;
 }
 

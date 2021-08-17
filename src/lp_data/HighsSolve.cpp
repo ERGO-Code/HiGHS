@@ -39,14 +39,15 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     // If any errors have been found or normalisation carried out,
     // call_status will be ERROR or WARNING, so only valid return is OK.
     assert(call_status == HighsStatus::kOk);
-    return_status = interpretCallStatus(options.log_options, call_status, return_status, "assessLp");
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "assessLp");
     if (return_status == HighsStatus::kError) return return_status;
   }
   if (!solver_object.lp_.num_row_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(solver_object);
-    return_status =
-        interpretCallStatus(options.log_options, call_status, return_status, "solveUnconstrainedLp");
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::kError) return return_status;
     // Set the scaled model status for completeness
     solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
@@ -66,8 +67,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
     assert(solver_object.solution_.value_valid);
     // Set the return_status, model status and, for completeness, scaled
     // model status
-    return_status =
-        interpretCallStatus(options.log_options, call_status, return_status, "solveLpIpx");
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpIpx");
     if (return_status == HighsStatus::kError) return return_status;
     // model status has been set in solveLpIpx
     solver_object.scaled_model_status_ = solver_object.unscaled_model_status_;
@@ -99,8 +100,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
       // the outcome of the simplex solve
       return_status = HighsStatus::kOk;
       call_status = solveLpSimplex(solver_object);
-      return_status =
-          interpretCallStatus(options.log_options, call_status, return_status, "solveLpSimplex");
+      return_status = interpretCallStatus(options.log_options, call_status,
+                                          return_status, "solveLpSimplex");
       if (return_status == HighsStatus::kError) return return_status;
       if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
         highsLogUser(options.log_options, HighsLogType::kError,
@@ -116,8 +117,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object, const string message) {
   } else {
     // Use Simplex
     call_status = solveLpSimplex(solver_object);
-    return_status =
-        interpretCallStatus(options.log_options, call_status, return_status, "solveLpSimplex");
+    return_status = interpretCallStatus(options.log_options, call_status,
+                                        return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
     if (!isSolutionRightSize(solver_object.lp_, solver_object.solution_)) {
       highsLogUser(options.log_options, HighsLogType::kError,

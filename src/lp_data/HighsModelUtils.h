@@ -33,8 +33,8 @@ void writeModelBoundSol(FILE* file, const bool columns, const HighsInt dim,
                         const std::vector<double>& dual,
                         const std::vector<HighsBasisStatus>& status);
 bool hasNamesWithSpaces(const HighsLogOptions& log_options,
-			const HighsInt num_name,
-			const std::vector<std::string>& names);
+                        const HighsInt num_name,
+                        const std::vector<std::string>& names);
 HighsInt maxNameLength(const HighsInt num_name,
                        const std::vector<std::string>& names);
 HighsStatus normaliseNames(const HighsLogOptions& log_options,

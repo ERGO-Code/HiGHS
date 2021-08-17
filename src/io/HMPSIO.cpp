@@ -49,10 +49,12 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
   // Astart.clear() added since setting Astart.push_back(0) in
   // setup_clearModel() messes up the MPS read
   Astart.clear();
-  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Trying to open file %s\n", filename.c_str());
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "readMPS: Trying to open file %s\n", filename.c_str());
   FILE* file = fopen(filename.c_str(), "r");
   if (file == 0) {
-    highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Not opened file OK\n");
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "readMPS: Not opened file OK\n");
     return FilereaderRetcode::kFileNotFound;
   }
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Opened file  OK\n");
@@ -82,7 +84,8 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
     } else {
       return FilereaderRetcode::kParserError;
     }
-    highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read OBJSENSE OK\n");
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "readMPS: Read OBJSENSE OK\n");
     // Load ROWS
     load_mpsLine(file, integerCol, lmax, line, flag, data);
   }
@@ -169,9 +172,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
           name = field_5;
         }
         num_alien_entries++;
-        highsLogDev(log_options, HighsLogType::kInfo, 
+        highsLogDev(
+            log_options, HighsLogType::kInfo,
             "COLUMNS section contains row %-8s not in ROWS    section, line: "
-            "%s\n", name.c_str(), line);
+            "%s\n",
+            name.c_str(), line);
       }
     }
     save_flag1 = flag[1];
@@ -217,9 +222,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
       // Treat negation of a RHS entry for the N row as an objective
       // offset. Not all MPS readers do this, so give different
       // reported objective values for problems (eg e226)
-      highsLogDev(log_options, HighsLogType::kInfo, 
+      highsLogDev(
+          log_options, HighsLogType::kInfo,
           "Using RHS value of %g for N-row in MPS file as negated objective "
-          "offset\n", data[0]);
+          "offset\n",
+          data[0]);
       objOffset = -data[0];  // Objective offset
     }
     save_flag1 = flag[1];
@@ -262,9 +269,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
           name = field_5;
         }
         num_alien_entries++;
-        highsLogDev(log_options, HighsLogType::kInfo, 
+        highsLogDev(
+            log_options, HighsLogType::kInfo,
             "RANGES  section contains row %-8s not in ROWS    section, line: "
-            "%s\n", name.c_str(), line);
+            "%s\n",
+            name.c_str(), line);
       }
       save_flag1 = flag[1];
     }
@@ -339,9 +348,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
         std::string name(&line[field_3_start],
                          &line[field_3_start] + field_3_width);
         num_alien_entries++;
-        highsLogDev(log_options, HighsLogType::kInfo, 
+        highsLogDev(
+            log_options, HighsLogType::kInfo,
             "BOUNDS  section contains col %-8s not in COLUMNS section, line: "
-            "%s\n", name.c_str(), line);
+            "%s\n",
+            name.c_str(), line);
       }
     }
   }
@@ -362,9 +373,11 @@ FilereaderRetcode readMps(const HighsLogOptions& log_options,
                  num_alien_entries);
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read BOUNDS  OK\n");
   highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Read ENDATA  OK\n");
-  highsLogDev(log_options, HighsLogType::kInfo, "readMPS: Model has %" HIGHSINT_FORMAT " rows and %" HIGHSINT_FORMAT
-         " columns with %" HIGHSINT_FORMAT " integer\n",
-         numRow, numCol, num_int);
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "readMPS: Model has %" HIGHSINT_FORMAT
+              " rows and %" HIGHSINT_FORMAT " columns with %" HIGHSINT_FORMAT
+              " integer\n",
+              numRow, numCol, num_int);
   // Load ENDATA and close file
   fclose(file);
   return FilereaderRetcode::kOk;
@@ -519,7 +532,8 @@ HighsStatus writeMps(
   const bool write_zero_no_cost_columns = true;
   HighsInt num_zero_no_cost_columns = 0;
   HighsInt num_zero_no_cost_columns_in_bounds_section = 0;
-  highsLogDev(log_options, HighsLogType::kInfo, "writeMPS: Trying to open file %s\n", filename.c_str());
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "writeMPS: Trying to open file %s\n", filename.c_str());
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
     highsLogUser(log_options, HighsLogType::kError, "Cannot open file %s",
@@ -611,9 +625,10 @@ HighsStatus writeMps(
       break;
     }
   }
-  highsLogDev(log_options, HighsLogType::kInfo, "Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
-         highsBoolToString(have_rhs), highsBoolToString(have_ranges),
-         highsBoolToString(have_bounds));
+  highsLogDev(log_options, HighsLogType::kInfo,
+              "Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
+              highsBoolToString(have_rhs), highsBoolToString(have_ranges),
+              highsBoolToString(have_bounds));
 
   // Field:    1           2          3         4         5         6
   // Columns:  2-3        5-12      15-22     25-36     40-47     50-61 Indexed
@@ -796,16 +811,19 @@ HighsStatus writeMps(
   }
   fprintf(file, "ENDATA\n");
   if (num_zero_no_cost_columns) {
-    highsLogDev(log_options, HighsLogType::kInfo, "Model has %" HIGHSINT_FORMAT
-           " zero columns with no costs: %" HIGHSINT_FORMAT
-           " have finite upper bounds "
-           "or nonzero lower bounds",
-           num_zero_no_cost_columns,
-           num_zero_no_cost_columns_in_bounds_section);
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Model has %" HIGHSINT_FORMAT
+                " zero columns with no costs: %" HIGHSINT_FORMAT
+                " have finite upper bounds "
+                "or nonzero lower bounds",
+                num_zero_no_cost_columns,
+                num_zero_no_cost_columns_in_bounds_section);
     if (write_zero_no_cost_columns) {
-      highsLogDev(log_options, HighsLogType::kInfo, " and are written in MPS file\n");
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  " and are written in MPS file\n");
     } else {
-      highsLogDev(log_options, HighsLogType::kInfo, " and are not written in MPS file\n");
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  " and are not written in MPS file\n");
     }
   }
   fclose(file);
