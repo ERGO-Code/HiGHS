@@ -32,9 +32,7 @@ void HSimplexNla::setup(const HighsLp* lp,
                         HighsTimer* timer, HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
-  lp_ = lp;
-  scale_ = NULL;
-  if (lp_->scale_.has_scaling && !lp_->is_scaled_) scale_ = &(lp_->scale_);
+  setLpAndScalePointers(lp);
   base_index_ = base_index;
   options_ = options;
   timer_ = timer;
@@ -50,13 +48,10 @@ void HSimplexNla::setup(const HighsLp* lp,
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
-void HSimplexNla::setLpAndScalePointers(const HighsLp& for_lp) {
-  this->lp_ = &for_lp;
-  if (this->lp_->is_scaled_ || !this->lp_->scale_.has_scaling) {
-    this->scale_ = NULL;
-  } else {
-    this->scale_ = &(lp_->scale_);
-  }
+void HSimplexNla::setLpAndScalePointers(const HighsLp* for_lp) {
+  this->lp_ = for_lp;
+  this->scale_ = NULL;
+  if (for_lp->scale_.has_scaling && !for_lp->is_scaled_) this->scale_ = &(for_lp->scale_);
 }
 
 void HSimplexNla::setPointers(const HighsLp* for_lp,
@@ -64,7 +59,7 @@ void HSimplexNla::setPointers(const HighsLp* for_lp,
                               HighsInt* base_index, const HighsOptions* options,
                               HighsTimer* timer,
                               HighsSimplexAnalysis* analysis) {
-  this->setLpAndScalePointers(*for_lp);
+  this->setLpAndScalePointers(for_lp);
   if (factor_a_matrix) factor_.setupMatrix(factor_a_matrix);
   if (base_index) base_index_ = base_index;
   if (options) options_ = options;

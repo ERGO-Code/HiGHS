@@ -66,7 +66,7 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   // Ensure that simplex NLA is set up and has the right scaling
   assert(simplex_nla.is_setup_);
   // Set the simplex NLA scaling
-  simplex_nla.setLpAndScalePointers(incumbent_lp);
+  simplex_nla.setLpAndScalePointers(&incumbent_lp);
   if (incumbent_lp.scale_.has_scaling) {
     // The LP has scaling, so ensure that the simplex NLA has its scaling
     void* nla_scale = (void*)simplex_nla.scale_;
@@ -199,7 +199,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
       // Now that the incumbent LP is unscaled, to use the simplex NLA
       // requires scaling to be applied
-      simplex_nla.setLpAndScalePointers(incumbent_lp);
+      simplex_nla.setLpAndScalePointers(&incumbent_lp);
       unscaleSolution(solution, incumbent_lp.scale_);
       // Determine whether the unscaled LP has been solved
       getUnscaledInfeasibilities(options, incumbent_lp.scale_, ekk_basis,
@@ -296,7 +296,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Move the incumbent LP back from Ekk
   incumbent_lp = std::move(ekk_lp);
   incumbent_lp.is_moved_ = false;
-  simplex_nla.setLpAndScalePointers(incumbent_lp);
+  simplex_nla.setLpAndScalePointers(&incumbent_lp);
   if (return_status == HighsStatus::kError) {
     return returnFromSolveLpSimplex(solver_object, HighsStatus::kError);
   }
