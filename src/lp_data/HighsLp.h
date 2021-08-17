@@ -65,8 +65,7 @@ class HighsLp {
   void clearScale();
   void applyScale();
   void unapplyScale();
-  void moveLp(HighsLp& lp);
-  void moveLpBackAndUnapplyScaling(HighsLp lp);
+  void moveBackLpAndUnapplyScaling(HighsLp lp);
   void clear();
 };
 

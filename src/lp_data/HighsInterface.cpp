@@ -1022,7 +1022,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     lp.ensureColWise();
     // Consider scaling the LP, and then move to EKK
     considerScaling(options_, lp);
-    lp.moveLp(ekk_lp);
+    ekk_instance_.moveLp(std::move(lp));
+    lp.is_moved_ = true;
     ekk_instance_.setPointers(&options_, &timer_);
     // If the simplex LP isn't initialised, do so
     if (!ekk_status.initialised) {
@@ -1031,7 +1032,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
         // Setup has failed - can only happen if there are excessive
         // matrix entries in an LP that should already have been
         // assessed - so move the LP back and unscale
-        lp.moveLpBackAndUnapplyScaling(ekk_lp);
+        lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return return_status;
       }
     }
@@ -1052,7 +1053,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "getBasicVariables called without a simplex or HiGHS basis\n");
-        lp.moveLpBackAndUnapplyScaling(ekk_lp);
+        lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return HighsStatus::kError;
       }
     }
@@ -1060,7 +1061,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     const bool only_from_known_basis = true;
     HighsInt return_value =
         ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
-    lp.moveLpBackAndUnapplyScaling(ekk_lp);
+    lp.moveBackLpAndUnapplyScaling(ekk_lp);
     if (return_value) return HighsStatus::kError;
   }
   assert(ekk_status.has_invert);

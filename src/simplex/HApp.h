@@ -141,13 +141,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Move the LP to EKK, updating other EKK pointers and any simplex
   // NLA pointers, since they may have moved if the LP has been
   // modified
-  ekk_instance.moveLp(std::move(incumbent_lp), solver_object);
+  ekk_instance.moveLp(std::move(incumbent_lp), &solver_object);
   incumbent_lp.is_moved_ = true;
   if (!status.initialised) {
     // The simplex instance isn't initialised
     call_status = ekk_instance.setup();
     if (call_status == HighsStatus::kError) {
-      incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
+      incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
       return returnFromSolveLpSimplex(solver_object, call_status);
     }
   }
@@ -155,7 +155,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   if (!status.has_basis && basis.valid) {
     call_status = ekk_instance.setBasis(basis);
     if (call_status == HighsStatus::kError) {
-      incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
+      incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
       return returnFromSolveLpSimplex(solver_object, call_status);
     }
   }
@@ -179,7 +179,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // Solve the scaled LP!
       return_status = ekk_instance.solve();
       if (return_status == HighsStatus::kError) {
-        incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
+        incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return returnFromSolveLpSimplex(solver_object, return_status);
       }
       // Copy solution data from the EKK instance
@@ -190,7 +190,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       basis = ekk_instance.getHighsBasis();
       assert(basis.valid);
       highs_info.basis_validity = kBasisValidityValid;
-      incumbent_lp.moveLpBackAndUnapplyScaling(ekk_lp);
+      incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
       // Now that the incumbent LP is unscaled, to use the simplex NLA
       // requires scaling to be applied
       simplex_nla.setLpAndScalePointers(incumbent_lp);
@@ -255,7 +255,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     //
     // Move the incumbent LP and pass pointers to the scaling factors
     // and scaled matrix for the HFactor instance
-    ekk_instance.moveLp(std::move(incumbent_lp), solver_object,
+    ekk_instance.moveLp(std::move(incumbent_lp), &solver_object,
                         &scaled_lp.a_matrix_);
     incumbent_lp.is_moved_ = true;
     // Save options/strategies that may be changed
