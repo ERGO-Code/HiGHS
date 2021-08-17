@@ -294,13 +294,6 @@ void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
   this->analysis_.timer_ = this->tim_point_;
 }
 
-HighsScale* HEkk::getScalePointer() {
-  HighsScale* local_scale = NULL;
-  if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) 
-    local_scale = &(this->lp_.scale_);
-  return local_scale;
-}
-
 HighsSparseMatrix* HEkk::getScaledAMatrixPointer() {
   HighsSparseMatrix* local_scaled_a_matrix = &(this->lp_.a_matrix_);
   if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) {
@@ -1245,8 +1238,7 @@ HighsInt HEkk::computeFactor() {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= opt_point_->factor_pivot_threshold);
     HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
-    HighsScale* local_scale = getScalePointer();
-    simplex_nla_.setup(&lp_, local_scale, &basis_.basicIndex_[0], opt_point_,
+    simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], opt_point_,
                        tim_point_, &analysis_, local_scaled_a_matrix,
                        info_.factor_pivot_threshold);
     status_.has_factor_arrays = true;

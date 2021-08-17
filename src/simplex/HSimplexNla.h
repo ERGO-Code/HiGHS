@@ -32,7 +32,7 @@
 
 class HSimplexNla {
  public:
-  void setup(const HighsLp* lp, const HighsScale* scale, HighsInt* base_index,
+  void setup(const HighsLp* lp, HighsInt* base_index,
              const HighsOptions* options, HighsTimer* timer,
              HighsSimplexAnalysis* analysis,
              const HighsSparseMatrix* factor_a_matrix,

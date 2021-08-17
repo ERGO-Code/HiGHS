@@ -166,8 +166,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       kHighsIllegalInfeasibilityCount;
   HighsInt num_unscaled_dual_infeasibilities = kHighsIllegalInfeasibilityCount;
   if (!incumbent_lp.scale_.has_scaling) {
+    //
     // Solve the unscaled LP with unscaled NLA
+    //
     return_status = ekk_instance.solve();
+    //
   } else {
     // Indicate that there is no (current) need to refine the solution
     // by solving the unscaled LP with scaled NLA
@@ -176,8 +179,11 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
             kSimplexUnscaledSolutionStrategyNone ||
         options.simplex_unscaled_solution_strategy ==
             kSimplexUnscaledSolutionStrategyRefine) {
+      //
       // Solve the scaled LP!
+      //
       return_status = ekk_instance.solve();
+      //
       if (return_status == HighsStatus::kError) {
         incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
         return returnFromSolveLpSimplex(solver_object, return_status);
@@ -265,12 +271,13 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
       // ToDo Track whether steepest edge weights are known &&
       // !status.has_dual_steepest_edge_weights) {
       ekk_info.dual_edge_weight_strategy = kSimplexDualEdgeWeightStrategyDevex;
+      // options.dual_simplex_cost_perturbation_multiplier = 0;
     }
-    //    }
-    //    options.dual_simplex_cost_perturbation_multiplier = 0;
-    //  }
+    //
     // Solve the unscaled LP with scaled NLA
+    //
     return_status = ekk_instance.solve();
+    //
     // Restore the options/strategies that may have been changed
     options.simplex_strategy = simplex_strategy;
     options.dual_simplex_cost_perturbation_multiplier =

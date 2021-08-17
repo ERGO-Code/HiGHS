@@ -27,20 +27,14 @@
 
 using std::vector;
 
-void HSimplexNla::setup(const HighsLp* lp, const HighsScale* scale,
+void HSimplexNla::setup(const HighsLp* lp, 
                         HighsInt* base_index, const HighsOptions* options,
                         HighsTimer* timer, HighsSimplexAnalysis* analysis,
                         const HighsSparseMatrix* factor_a_matrix,
                         const double factor_pivot_threshold) {
   lp_ = lp;
-  if (lp_->scale_.has_scaling && !lp_->is_scaled_) {
-    const HighsScale* local_scale = &(lp_->scale_);
-    assert((void*)local_scale == (void*)scale_);
-  } else {
-    const HighsScale* local_scale = NULL;
-    assert((void*)local_scale == (void*)scale_);
-  }
-  scale_ = scale;
+  scale_ = NULL;
+  if (lp_->scale_.has_scaling && !lp_->is_scaled_) scale_ = &(lp_->scale_);
   base_index_ = base_index;
   options_ = options;
   timer_ = timer;
