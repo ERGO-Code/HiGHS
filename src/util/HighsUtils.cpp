@@ -126,7 +126,7 @@ bool ok(const HighsIndexCollection& index_collection) {
       printf("Index collection is both set and mask\n");
       return false;
     }
-    if (&index_collection.set_[0] == NULL) {
+    if (index_collection.set_.empty()) {
       printf("Index set is NULL\n");
       return false;
     }
@@ -157,7 +157,7 @@ bool ok(const HighsIndexCollection& index_collection) {
   } else if (index_collection.is_mask_) {
     // Changing by mask: check the parameters and check that set and interval
     // are false
-    if (&index_collection.mask_[0] == NULL) {
+    if (index_collection.mask_.empty()) {
       printf("Index mask is NULL\n");
       return false;
     }
