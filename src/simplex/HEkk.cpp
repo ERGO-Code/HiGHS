@@ -89,7 +89,6 @@ void HEkk::clearData() {
   // simplex_nla_; No clear yet
 
   this->scale_ = NULL;
-  this->factor_a_matrix_ = NULL;
 
   this->cost_scale_ = 1;
   this->iteration_count_ = 0;
@@ -277,8 +276,8 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject* solver_object) {
   // this->scale_ becomes the pointer to scaling factors used by
   // simplex NLA
   this->scale_ = NULL;
-  HighsSparseMatrix* local_scaled_a_matrix = scaledAMatrix();
-  this->factor_a_matrix_ = local_scaled_a_matrix;
+  HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
+  HighsScale* local_scale = getScalePointer();
   // Record whether the simplex algorithm runs in the scaled space. By
   // default it will - if the LP has scaling factors
   this->simplex_in_scaled_space_ = this->lp_.scale_.has_scaling;
@@ -294,13 +293,13 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject* solver_object) {
     //
     // Copy the (unscaled) constraint matrix and scale it
     this->scale_ = &(this->lp_.scale_);
-    this->factor_a_matrix_ = local_scaled_a_matrix;
     this->simplex_in_scaled_space_ = false;
   }
   if (!solver_object) return;
   // Update other EKK pointers
   this->setPointers(&(solver_object->options_), &(solver_object->timer_));
   // If simplex NLA is set up, pass the pointers that it uses
+  assert((void*)this->scale_ == (void*)local_scale);
   if (this->simplex_nla_.is_setup_)
     this->simplex_nla_.setPointers(
         &(this->lp_), local_scaled_a_matrix,
@@ -314,7 +313,14 @@ void HEkk::setPointers(HighsOptions* opt_point, HighsTimer* tim_point) {
   this->analysis_.timer_ = this->tim_point_;
 }
 
-HighsSparseMatrix* HEkk::scaledAMatrix() {
+HighsScale* HEkk::getScalePointer() {
+  HighsScale* local_scale = NULL;
+  if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) 
+    local_scale = &(this->lp_.scale_);
+  return local_scale;
+}
+
+HighsSparseMatrix* HEkk::getScaledAMatrixPointer() {
   HighsSparseMatrix* local_scaled_a_matrix = &(this->lp_.a_matrix_);
   if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) {
     scaled_a_matrix_ = this->lp_.a_matrix_;
@@ -865,7 +871,6 @@ void HEkk::initialiseForNewLp() {
   initialiseControl();
   initialiseSimplexLpRandomVectors();
   scale_ = NULL;
-  factor_a_matrix_ = &lp_.a_matrix_;
   status_.initialised = true;
 }
 
@@ -1259,9 +1264,11 @@ HighsInt HEkk::computeFactor() {
   if (!status_.has_factor_arrays) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= opt_point_->factor_pivot_threshold);
-    factor_a_matrix_ = scaledAMatrix();
+    HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
+    HighsScale* local_scale = getScalePointer();
+    assert((void*)this->scale_ == (void*)local_scale);
     simplex_nla_.setup(&lp_, scale_, &basis_.basicIndex_[0], opt_point_,
-                       tim_point_, &analysis_, factor_a_matrix_,
+                       tim_point_, &analysis_, local_scaled_a_matrix,
                        info_.factor_pivot_threshold);
     status_.has_factor_arrays = true;
   }
