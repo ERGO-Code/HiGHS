@@ -278,15 +278,14 @@ void HSimplexNla::reportPackValue(const std::string message,
   printf("\n");
 }
 
-HighsDebugStatus HSimplexNla::debugCheckData(const std::string message,
-                                             const bool require_setup) const {
+HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
   std::string scale_status;
   if (scale_ == NULL) {
     scale_status = "NULL";
   } else {
     scale_status = "non-NULL";
   }
-  const bool setup_ok = !require_setup || is_setup_;
+  const bool setup_ok = is_setup_;
   if (!setup_ok) {
     assert(setup_ok);
     return HighsDebugStatus::kLogicalError;
