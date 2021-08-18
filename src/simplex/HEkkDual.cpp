@@ -907,18 +907,14 @@ void HEkkDual::rebuild() {
     }
   }
 
-  if (!ekk_instance_.status_.has_matrix) {
-    // Don't have the matrix either row-wise or col-wise, so
-    // reinitialise it
+  if (!ekk_instance_.status_.has_ar_matrix) {
+    // Don't have the row-wise matrix, so reinitialise it
+    //
+    // Should only happen when backtracking
     assert(info.backtracking_);
-    HighsLp& lp = ekk_instance_.lp_;
-    analysis->simplexTimerStart(matrixSetupClock);
-    ekk_instance_.ar_matrix_.createRowwisePartitioned(
-        ekk_instance_.lp_.a_matrix_, &ekk_instance_.basis_.nonbasicFlag_[0]);
+    ekk_instance_.initialiseMatrix();
     assert(ekk_instance_.ar_matrix_.debugPartitionOk(
         &ekk_instance_.basis_.nonbasicFlag_[0]));
-    status.has_matrix = true;
-    analysis->simplexTimerStop(matrixSetupClock);
   }
   // Record whether the update objective value should be tested. If
   // the objective value is known, then the updated objective value

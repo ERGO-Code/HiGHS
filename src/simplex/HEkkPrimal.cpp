@@ -590,19 +590,14 @@ void HEkkPrimal::rebuild() {
       return;
     }
   }
-  if (!ekk_instance_.status_.has_matrix) {
-    // Don't have the matrix either row-wise or col-wise, so
-    // reinitialise it
+  if (!ekk_instance_.status_.has_ar_matrix) {
+    // Don't have the row-wise matrix, so reinitialise it
+    //
+    // Should only happen when backtracking
     assert(info.backtracking_);
-    HighsLp& lp = ekk_instance_.lp_;
-    HighsSparseMatrix& ar_matrix = ekk_instance_.ar_matrix_;
-    const int8_t* nonbasicFlag = &ekk_instance_.basis_.nonbasicFlag_[0];
-    analysis->simplexTimerStart(matrixSetupClock);
-    ar_matrix.createRowwisePartitioned(lp.a_matrix_, nonbasicFlag);
-    assert(ar_matrix.debugPartitionOk(nonbasicFlag));
-
-    status.has_matrix = true;
-    analysis->simplexTimerStop(matrixSetupClock);
+    ekk_instance_.initialiseMatrix();
+    assert(ekk_instance_.ar_matrix_.debugPartitionOk(
+        &ekk_instance_.basis_.nonbasicFlag_[0]));
   }
 
   if (info.backtracking_) {

@@ -51,7 +51,7 @@ void HEkk::invalidateBasis() {
 
 void HEkk::invalidateBasisArtifacts() {
   // Invalidate the artifacts of the basis of the simplex LP
-  this->status_.has_matrix = false;
+  this->status_.has_ar_matrix = false;
   // has_factor_arrays shouldn't be set false unless model dimension
   // changes, but invalidateBasisArtifacts() is all that's
   // called when rows or columns are added, so can't change this now.
@@ -249,7 +249,7 @@ void HEkk::updateStatus(LpAction action) {
       this->invalidateBasisArtifacts();
       break;
     case LpAction::kBacktracking:
-      this->status_.has_matrix = false;
+      this->status_.has_ar_matrix = false;
       this->status_.has_nonbasic_dual_values = false;
       this->status_.has_basic_primal_values = false;
       this->status_.has_fresh_rebuild = false;
@@ -268,7 +268,7 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   incumbent_lp.is_moved_ = true;
   //
   // Invalidate the row-wise matrix
-  this->status_.has_matrix = false;
+  this->status_.has_ar_matrix = false;
   //
   // The simplex algorithm runs in the same space as the LP that has
   // just been moved in. This is a scaled space if the LP is scaled.
@@ -843,7 +843,7 @@ void HEkk::handleRankDeficiency() {
     basis_.nonbasicFlag_[variable_in] = kNonbasicFlagFalse;
     basis_.nonbasicFlag_[variable_out] = kNonbasicFlagTrue;
   }
-  status_.has_matrix = false;
+  status_.has_ar_matrix = false;
 }
 
 // Private methods
@@ -1280,13 +1280,13 @@ HighsInt HEkk::computeFactor() {
   return rank_deficiency;
 }
 
-void HEkk::initialiseMatrix(const bool forced) {
-  if (status_.has_matrix && !forced) return;
+void HEkk::initialiseMatrix() {
+  if (status_.has_ar_matrix) return;
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
   assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
   analysis_.simplexTimerStop(matrixSetupClock);
-  status_.has_matrix = true;
+  status_.has_ar_matrix = true;
 }
 
 void HEkk::setNonbasicMove() {

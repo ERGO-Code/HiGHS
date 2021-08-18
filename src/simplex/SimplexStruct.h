@@ -37,7 +37,7 @@ struct HighsSimplexStatus {
   bool initialised = false;
   bool valid = false;
   bool has_basis = false;   // The simplex LP has a valid simplex basis
-  bool has_matrix = false;  // The HMatrix matrices are valid
+  bool has_ar_matrix = false;  // HEkk has the row-wise matrix
   bool has_factor_arrays =
       false;  // Has the arrays for the representation of B^{-1}
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known

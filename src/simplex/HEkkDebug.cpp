@@ -735,7 +735,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
   const HighsOptions& options = *ekk_instance.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = status.has_basis && status.has_matrix && status.has_factor_arrays &&
+  ok = status.has_basis && status.has_ar_matrix && status.has_factor_arrays &&
        //       status.has_dual_steepest_edge_weights &&
        status.has_invert;
   if (!ok) {
@@ -744,11 +744,11 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                   "Not OK to solve since status.has_basis = "
                   "%" HIGHSINT_FORMAT "\n",
                   status.has_basis);
-    if (!status.has_matrix)
+    if (!status.has_ar_matrix)
       highsLogDev(options.log_options, HighsLogType::kError,
-                  "Not OK to solve since status.has_matrix = "
+                  "Not OK to solve since status.has_ar_matrix = "
                   "%" HIGHSINT_FORMAT "\n",
-                  status.has_matrix);
+                  status.has_ar_matrix);
     if (!status.has_factor_arrays)
       highsLogDev(options.log_options, HighsLogType::kError,
                   "Not OK to solve since status.has_factor_arrays "
