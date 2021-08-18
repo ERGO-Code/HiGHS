@@ -30,6 +30,7 @@ class HEkk {
    */
   void clear();
   void invalidate();
+  void invalidateBasisAfterDimensionChange();
   void invalidateBasis();
   void invalidateBasisArtifacts();
   void clearData();

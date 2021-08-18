@@ -39,7 +39,11 @@ void HEkk::clear() { this->invalidate(); }
 void HEkk::invalidate() {
   this->status_.initialised = false;
   this->status_.valid = false;
-  this->invalidateBasis();
+  this->invalidateBasisAfterDimensionChange();
+}
+
+void HEkk::invalidateBasisAfterDimensionChange() {
+   this->invalidateBasis();
 }
 
 void HEkk::invalidateBasis() {
@@ -51,11 +55,8 @@ void HEkk::invalidateBasis() {
 
 void HEkk::invalidateBasisArtifacts() {
   // Invalidate the artifacts of the basis of the simplex LP
+   this->status_.has_nla = false;
   this->status_.has_ar_matrix = false;
-  // has_nla shouldn't be set false unless model dimension
-  // changes, but invalidateBasisArtifacts() is all that's
-  // called when rows or columns are added, so can't change this now.
-  this->status_.has_nla = false;
   this->status_.has_dual_steepest_edge_weights = false;
   this->status_.has_invert = false;
   this->status_.has_fresh_invert = false;
