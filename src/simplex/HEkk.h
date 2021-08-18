@@ -38,7 +38,7 @@ class HEkk {
 
   void updateStatus(LpAction action);
   void moveLp(HighsLp lp, HighsLpSolverObject* solver_object = NULL);
-  void setPointers(HighsOptions* options, HighsTimer* tim_point);
+  void setPointers(HighsOptions* options, HighsTimer* timer);
   HighsSparseMatrix* getScaledAMatrixPointer();
   HighsScale* getScalePointer();
 

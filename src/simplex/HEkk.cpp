@@ -267,35 +267,55 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject* solver_object) {
   incumbent_lp.is_moved_ = true;
   assert(incumbent_lp.is_scaled_ == this->lp_.is_scaled_);
   if (status_.has_matrix) initialiseMatrix(true);
-  // By default, either solving a scaled LP, or solving an LP that has
-  // no scaling factors. In both cases, there is no scaling in simplex
-  // NLA, and HFactor uses the LP's constraint matrix
+  //
+  // The simplex algorithm runs in the same space as the LP that has
+  // just been moved in. This is a scaled space if the LP is scaled.
+  this->simplex_in_scaled_space_ = this->lp_.is_scaled_;
+  //
+  // moveLp can be called with NULL solver_object when all that's needed is ...
+  if (!solver_object) return;
+  //
+  // Update other EKK pointers. Currently just pointers to the
+  // HighsOptions and HighsTimer members of the Highs class that are
+  // communicated by reference via the HighsLpSolverObject instance.
+  this->setPointers(&(solver_object->options_), &(solver_object->timer_));
+  //
+  // The simplex NLA operates in the scaled space if the LP has
+  // scaling factors. If they exist but haven't been applied, then the
+  // simplex NLA needs a separate, scaled constraint matrix. Thus
+  // getScaledAMatrixPointer() returns a pointer to either the
+  // constraint matrix or a scaled copy (that is a member of the HEkk
+  // class), with the latter returned if the LP has scaling factors
+  // but is unscaled.
   //
   HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
-  // Record whether the simplex algorithm runs in the scaled space. By
-  // default it will - if the LP has scaling factors
-  this->simplex_in_scaled_space_ = this->lp_.scale_.has_scaling;
-  if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_)
-    this->simplex_in_scaled_space_ = false;
-  if (!solver_object) return;
-  // Update other EKK pointers
-  this->setPointers(&(solver_object->options_), &(solver_object->timer_));
-  // If simplex NLA is set up, pass the pointers that it uses
+  //
+  // If simplex NLA is set up, pass the pointers that it uses. It
+  // deduces any scaling factors that it must use by inspecting
+  // whether the LP has scaling factors, and whether it is scaled.
+  //
+  // If simplex NLA is not set up, then it will be done if 
+  //
   if (this->simplex_nla_.is_setup_)
     this->simplex_nla_.setPointers(
-        &(this->lp_), local_scaled_a_matrix,
+        &(this->lp_),
+	local_scaled_a_matrix,
         &(solver_object->ekk_instance_.basis_.basicIndex_)[0],
-        &(solver_object->options_), &(solver_object->timer_),
+        &(solver_object->options_),
+	&(solver_object->timer_),
         &(this->analysis_));
 }
 
-void HEkk::setPointers(HighsOptions* options, HighsTimer* tim_point) {
+void HEkk::setPointers(HighsOptions* options, HighsTimer* timer) {
   this->options_ = options;
-  this->timer_ = tim_point;
+  this->timer_ = timer;
   this->analysis_.timer_ = this->timer_;
 }
 
 HighsSparseMatrix* HEkk::getScaledAMatrixPointer() {
+  // Return a pointer to either the constraint matrix or a scaled copy
+  // (that is a member of the HEkk class), with the latter returned if
+  // the LP has scaling factors but is unscaled.
   HighsSparseMatrix* local_scaled_a_matrix = &(this->lp_.a_matrix_);
   if (this->lp_.scale_.has_scaling && !this->lp_.is_scaled_) {
     scaled_a_matrix_ = this->lp_.a_matrix_;
