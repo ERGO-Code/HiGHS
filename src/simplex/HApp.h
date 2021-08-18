@@ -142,8 +142,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // NLA pointers, since they may have moved if the LP has been
   // modified
   ekk_instance.moveLp(solver_object);
-  // Ensure that the simplex instance is initialised
-  ekk_instance.initialiseEkk();
   // If there is no simplex basis, use the HiGHS basis
   if (!status.has_basis && basis.valid) {
     call_status = ekk_instance.setBasis(basis);

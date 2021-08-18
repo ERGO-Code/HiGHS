@@ -1029,30 +1029,13 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     considerScaling(options_, lp);
     // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
-				      ekk_instance_, options_, timer_);
+                                       ekk_instance_, options_, timer_);
     ekk_instance_.moveLp(solver_object);
-    // Ensure that the simplex instance is initialised
-    ekk_instance_.initialiseEkk();
     if (!ekk_status.has_basis) {
-      //
       // The Ekk instance has no simplex basis, so pass the HiGHS basis
-      // if it's valid, otherwise return an error for consistency with
-      // old code
-      //
-      // Arguable that a warning should be issued and a logical basis
-      // set up
-      if (basis_.valid) {
-        return_status = interpretCallStatus(options_.log_options,
-                                            ekk_instance_.setBasis(basis_),
-                                            return_status, "setBasis");
-        if (return_status == HighsStatus::kError) return return_status;
-      } else {
-        highsLogUser(
-            options_.log_options, HighsLogType::kError,
-            "getBasicVariables called without a simplex or HiGHS basis\n");
-        lp.moveBackLpAndUnapplyScaling(ekk_lp);
-        return HighsStatus::kError;
-      }
+      HighsStatus call_status = ekk_instance_.setBasis(basis_);
+      return_status = interpretCallStatus(options_.log_options, call_status, return_status, "setBasis");
+      if (return_status == HighsStatus::kError) return return_status;
     }
     // Now form the invert
     assert(ekk_status.has_basis);

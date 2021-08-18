@@ -301,6 +301,8 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
         &solver_object.options_,
 	&solver_object.timer_,
         &(this->analysis_));
+  // Ensure that the simplex instance is initialised
+  this->initialiseEkk();
 }
 
 void HEkk::setPointers(HighsOptions* options, HighsTimer* timer) {
