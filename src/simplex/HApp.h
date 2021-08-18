@@ -141,7 +141,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // Move the LP to EKK, updating other EKK pointers and any simplex
   // NLA pointers, since they may have moved if the LP has been
   // modified
-  ekk_instance.moveLp(std::move(incumbent_lp), solver_object);
+  ekk_instance.moveLp(solver_object);
   incumbent_lp.is_moved_ = true;
   if (!status.initialised) {
     // The simplex instance isn't initialised
@@ -253,7 +253,7 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(!incumbent_lp.is_moved_);
     assert(!incumbent_lp.is_scaled_);
     // Move the incumbent LP
-    ekk_instance.moveLp(std::move(incumbent_lp), solver_object);
+    ekk_instance.moveLp(solver_object);
     incumbent_lp.is_moved_ = true;
     // Save options/strategies that may be changed
     HighsInt simplex_strategy = options.simplex_strategy;

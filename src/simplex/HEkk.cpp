@@ -261,11 +261,11 @@ void HEkk::updateStatus(LpAction action) {
   }
 }
 
-void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object) {
+void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   // Move the incumbent LP to EKK
+  HighsLp& incumbent_lp = solver_object.lp_;
   this->lp_ = std::move(incumbent_lp);
   incumbent_lp.is_moved_ = true;
-  assert(incumbent_lp.is_scaled_ == this->lp_.is_scaled_);
   if (status_.has_matrix) initialiseMatrix(true);
   //
   // The simplex algorithm runs in the same space as the LP that has

@@ -1030,7 +1030,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
 				      ekk_instance_, options_, timer_);
-    ekk_instance_.moveLp(std::move(lp), solver_object);
+    ekk_instance_.moveLp(solver_object);
     lp.is_moved_ = true;
     ekk_instance_.setPointers(&options_, &timer_);
     // If the simplex LP isn't initialised, do so
