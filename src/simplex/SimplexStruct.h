@@ -38,11 +38,8 @@ struct HighsSimplexStatus {
   bool valid = false;
   bool has_basis = false;   // The simplex LP has a valid simplex basis
   bool has_ar_matrix = false;  // HEkk has the row-wise matrix
-  bool has_factor_arrays =
-      false;  // Has the arrays for the representation of B^{-1}
+  bool has_nla = false;  // SimplexNla is set up
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known
-  bool has_nonbasic_dual_values = false;  // The nonbasic dual values are known
-  bool has_basic_primal_values = false;   // The basic primal values are known
   bool has_invert =
       false;  // The representation of B^{-1} corresponds to the current basis
   bool has_fresh_invert = false;  // The representation of B^{-1} corresponds to
@@ -70,8 +67,7 @@ struct HighsSimplexInfo {
   //
   // workDual: Values of the dual variables corresponding to
   // workCost. Latter not known until solve() is called since B^{-1}
-  // is required to compute them. Knowledge of them is indicated by
-  // has_nonbasic_dual_values
+  // is required to compute them. 
   //
   // workShift: Values added to workCost in order that workDual
   // remains feasible, thereby remaining dual feasible in phase 2
@@ -98,8 +94,7 @@ struct HighsSimplexInfo {
   //
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
-  // is called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by has_basic_primal_values
+  // is called since B^{-1} is required to compute them. 
   //
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;

@@ -78,7 +78,6 @@ class HSimplexNla {
   // Pointers:
 
   // Class data members
-  bool is_setup_ = false;
   const HighsLp* lp_;
   const HighsScale* scale_;
   HighsInt* base_index_;

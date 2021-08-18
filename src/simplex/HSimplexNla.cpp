@@ -44,7 +44,6 @@ void HSimplexNla::setup(const HighsLp* lp, HighsInt* base_index,
                 options_->factor_pivot_tolerance, options_->highs_debug_level,
                 options_->output_flag, options_->log_file_stream,
                 options_->log_to_console, options_->log_dev_level);
-  is_setup_ = true;
   assert(debugCheckData("After HSimplexNla::setup") == HighsDebugStatus::kOk);
 }
 
@@ -76,7 +75,6 @@ void HSimplexNla::clear() {
   timer_ = NULL;
   analysis_ = NULL;
   report_ = false;
-  is_setup_ = false;
 }
 
 HighsInt HSimplexNla::invert() {
@@ -285,14 +283,8 @@ HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
   } else {
     scale_status = "non-NULL";
   }
-  const bool setup_ok = is_setup_;
-  if (!setup_ok) {
-    assert(setup_ok);
-    return HighsDebugStatus::kLogicalError;
-  }
   //  if (options_->highs_debug_level < kHighsDebugLevelCheap) return
   //  HighsDebugStatus::kOk;
-  if (!is_setup_) return HighsDebugStatus::kOk;
   HighsLp check_lp = *lp_;
   bool error0_found = false;
   bool error1_found = false;

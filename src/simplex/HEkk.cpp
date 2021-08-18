@@ -52,13 +52,11 @@ void HEkk::invalidateBasis() {
 void HEkk::invalidateBasisArtifacts() {
   // Invalidate the artifacts of the basis of the simplex LP
   this->status_.has_ar_matrix = false;
-  // has_factor_arrays shouldn't be set false unless model dimension
+  // has_nla shouldn't be set false unless model dimension
   // changes, but invalidateBasisArtifacts() is all that's
   // called when rows or columns are added, so can't change this now.
-  this->status_.has_factor_arrays = false;
+  this->status_.has_nla = false;
   this->status_.has_dual_steepest_edge_weights = false;
-  this->status_.has_nonbasic_dual_values = false;
-  this->status_.has_basic_primal_values = false;
   this->status_.has_invert = false;
   this->status_.has_fresh_invert = false;
   this->status_.has_fresh_rebuild = false;
@@ -209,13 +207,11 @@ void HEkk::updateStatus(LpAction action) {
       this->invalidateBasis();
       break;
     case LpAction::kNewCosts:
-      this->status_.has_nonbasic_dual_values = false;
       this->status_.has_fresh_rebuild = false;
       this->status_.has_dual_objective_value = false;
       this->status_.has_primal_objective_value = false;
       break;
     case LpAction::kNewBounds:
-      this->status_.has_basic_primal_values = false;
       this->status_.has_fresh_rebuild = false;
       this->status_.has_dual_objective_value = false;
       this->status_.has_primal_objective_value = false;
@@ -250,8 +246,6 @@ void HEkk::updateStatus(LpAction action) {
       break;
     case LpAction::kBacktracking:
       this->status_.has_ar_matrix = false;
-      this->status_.has_nonbasic_dual_values = false;
-      this->status_.has_basic_primal_values = false;
       this->status_.has_fresh_rebuild = false;
       this->status_.has_dual_objective_value = false;
       this->status_.has_primal_objective_value = false;
@@ -800,7 +794,7 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   //
   // If simplex NLA is not set up, then it will be done if 
   //
-  if (this->simplex_nla_.is_setup_)
+  if (this->status_.has_nla)
     this->simplex_nla_.setPointers(
         &(this->lp_),
 	local_scaled_a_matrix,
@@ -1243,14 +1237,14 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 }
 
 HighsInt HEkk::computeFactor() {
-  if (!status_.has_factor_arrays) {
+  if (!status_.has_nla) {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_->factor_pivot_threshold);
     HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
     simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], options_, timer_,
                        &analysis_, local_scaled_a_matrix,
                        info_.factor_pivot_threshold);
-    status_.has_factor_arrays = true;
+    status_.has_nla = true;
   }
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
@@ -1872,8 +1866,6 @@ void HEkk::computePrimal() {
   info_.max_primal_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_primal_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 
-  // Now have basic primals
-  status_.has_basic_primal_values = true;
   analysis_.simplexTimerStop(ComputePrimalClock);
 }
 
@@ -1912,8 +1904,6 @@ void HEkk::computeDual() {
   info_.max_dual_infeasibility = kHighsIllegalInfeasibilityMeasure;
   info_.sum_dual_infeasibilities = kHighsIllegalInfeasibilityMeasure;
 
-  // Now have nonbasic duals
-  status_.has_nonbasic_dual_values = true;
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 

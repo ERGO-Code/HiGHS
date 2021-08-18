@@ -63,8 +63,8 @@ HighsStatus returnFromSolveLpSimplex(HighsLpSolverObject& solver_object,
   //
   // Ensure that there is an invert for the current LP
   assert(ekk_instance.status_.has_invert);
-  // Ensure that simplex NLA is set up and has the right scaling
-  assert(simplex_nla.is_setup_);
+  // Ensure that simplex NLA is set up
+  assert(ekk_instance.status_.has_nla);
   // Set the simplex NLA scaling
   simplex_nla.setLpAndScalePointers(&incumbent_lp);
   if (incumbent_lp.scale_.has_scaling) {
