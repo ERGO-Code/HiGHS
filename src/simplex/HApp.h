@@ -142,9 +142,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // NLA pointers, since they may have moved if the LP has been
   // modified
   ekk_instance.moveLp(solver_object);
-  incumbent_lp.is_moved_ = true;
-  // The simplex instance isn't initialised
-  if (!status.initialised) ekk_instance.setupEkk();
+  // Ensure that the simplex instance is initialised
+  ekk_instance.initialiseEkk();
   // If there is no simplex basis, use the HiGHS basis
   if (!status.has_basis && basis.valid) {
     call_status = ekk_instance.setBasis(basis);
@@ -248,7 +247,6 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
     assert(!incumbent_lp.is_scaled_);
     // Move the incumbent LP
     ekk_instance.moveLp(solver_object);
-    incumbent_lp.is_moved_ = true;
     // Save options/strategies that may be changed
     HighsInt simplex_strategy = options.simplex_strategy;
     double dual_simplex_cost_perturbation_multiplier =

@@ -1031,10 +1031,8 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
 				      ekk_instance_, options_, timer_);
     ekk_instance_.moveLp(solver_object);
-    lp.is_moved_ = true;
-    ekk_instance_.setPointers(&options_, &timer_);
-    // If the simplex LP isn't initialised, do so
-    if (!ekk_status.initialised) ekk_instance_.setupEkk();
+    // Ensure that the simplex instance is initialised
+    ekk_instance_.initialiseEkk();
     if (!ekk_status.has_basis) {
       //
       // The Ekk instance has no simplex basis, so pass the HiGHS basis

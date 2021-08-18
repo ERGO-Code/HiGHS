@@ -42,7 +42,7 @@ class HEkk {
   HighsSparseMatrix* getScaledAMatrixPointer();
   HighsScale* getScalePointer();
 
-  void setupEkk();
+  void initialiseEkk();
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();

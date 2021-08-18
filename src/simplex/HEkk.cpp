@@ -840,7 +840,8 @@ void HEkk::handleRankDeficiency() {
 
 // Private methods
 
-void HEkk::setupEkk() {
+void HEkk::initialiseEkk() {
+  if (status_.initialised) return;
   setSimplexOptions();
   initialiseControl();
   initialiseSimplexLpRandomVectors();
