@@ -463,7 +463,8 @@ HighsStatus Highs::readBasis(const std::string filename) {
   // Update the HiGHS basis and invalidate any simplex basis for the model
   basis_ = read_basis;
   basis_.valid = true;
-  clearBasisInterface();
+  // Follow implications of a new HiGHS basis
+  newHighsBasis();
   // Can't use returnFromHighs since...
   return HighsStatus::kOk;
 }
@@ -2281,7 +2282,7 @@ void Highs::reportModel() {
 // Actions to take if there is a new Highs basis
 void Highs::newHighsBasis() {
   // Clear any simplex basis
-  clearBasisInterface();
+  ekk_instance_.updateStatus(LpAction::kNewBasis);
 }
 
 // Ensure that the HiGHS solution and basis have the same size as the

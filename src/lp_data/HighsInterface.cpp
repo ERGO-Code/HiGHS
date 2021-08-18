@@ -1003,10 +1003,6 @@ void Highs::appendBasicRowsToBasisInterface(const HighsInt XnumNewRow) {
   }
 }
 
-void Highs::clearBasisInterface() {
-  ekk_instance_.updateStatus(LpAction::kNewBasis);
-}
-
 // Get the basic variables, performing INVERT if necessary
 HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsStatus return_status = HighsStatus::kOk;

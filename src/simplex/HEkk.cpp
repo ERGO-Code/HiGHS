@@ -794,15 +794,26 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   //
   // If simplex NLA is not set up, then it will be done if 
   //
-  if (this->status_.has_nla)
-    this->simplex_nla_.setPointers(
-        &(this->lp_),
-	local_scaled_a_matrix,
-        &this->basis_.basicIndex_[0],
-        this->options_,
-	this->timer_,
-        &(this->analysis_));
-
+  if (this->status_.has_nla) {
+    this->simplex_nla_.setPointers(&(this->lp_),
+				   local_scaled_a_matrix,
+				   &this->basis_.basicIndex_[0],
+				   this->options_,
+				   this->timer_,
+				   &(this->analysis_));
+  } else {
+    // todo @ Julian: this fails on glass4
+    assert(info_.factor_pivot_threshold >= options_->factor_pivot_threshold);
+    HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
+    simplex_nla_.setup(&(this->lp_),//&lp_,
+		       &this->basis_.basicIndex_[0],//&basis_.basicIndex_[0],
+		       this->options_,//options_,
+		       this->timer_,//timer_,
+                       &(this->analysis_),//&analysis_,
+		       local_scaled_a_matrix,
+                       this->info_.factor_pivot_threshold);
+    status_.has_nla = true;
+  }
 
 
   const HighsInt rank_deficiency = computeFactor();
@@ -817,6 +828,8 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     // Account for rank deficiency by correcing nonbasicFlag
     handleRankDeficiency();
     this->updateStatus(LpAction::kNewBasis);
+    printf("Singularity, but keeping simplex NLA\n");
+    status_.has_nla = true;
     setNonbasicMove();
     status_.has_basis = true;
     status_.has_invert = true;
@@ -1237,15 +1250,7 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 }
 
 HighsInt HEkk::computeFactor() {
-  if (!status_.has_nla) {
-    // todo @ Julian: this fails on glass4
-    assert(info_.factor_pivot_threshold >= options_->factor_pivot_threshold);
-    HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
-    simplex_nla_.setup(&lp_, &basis_.basicIndex_[0], options_, timer_,
-                       &analysis_, local_scaled_a_matrix,
-                       info_.factor_pivot_threshold);
-    status_.has_nla = true;
-  }
+  assert(status_.has_nla);
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
   if (analysis_.analyse_factor_data)
