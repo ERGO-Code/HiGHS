@@ -905,7 +905,7 @@ HighsStatus HEkk::initialiseForSolve() {
   assert(status_.has_basis);
 
   updateSimplexOptions();
-  initialiseMatrix();  // Timed
+  initialisePartitionedRowWiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
   initialiseBound(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
@@ -1303,7 +1303,7 @@ HighsInt HEkk::computeFactor() {
   return rank_deficiency;
 }
 
-void HEkk::initialiseMatrix() {
+void HEkk::initialisePartitionedRowWiseMatrix() {
   if (status_.has_ar_matrix) return;
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
