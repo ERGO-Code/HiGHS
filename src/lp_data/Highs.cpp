@@ -250,7 +250,7 @@ HighsStatus Highs::passModel(HighsModel model) {
   // Check that the Hessian format is valid
   if (!hessian.formatOk()) return HighsStatus::kError;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   // Check validity of the LP, normalising its values
   return_status = interpretCallStatus(
       options_.log_options, assessLp(lp, options_), return_status, "assessLp");
@@ -473,7 +473,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Ensure that the LP is column-wise
-  model_.lp_.ensureColWise();
+  model_.lp_.ensureColwise();
   if (filename == "") {
     // Empty file name: report model on logging stream
     reportModel();
@@ -506,8 +506,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  HighsInt min_highs_debug_level = //kHighsDebugLevelMin;
-        kHighsDebugLevelCostly;
+  HighsInt min_highs_debug_level =  // kHighsDebugLevelMin;
+      kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
   //
   //  if (model_.lp_.num_row_>0 && model_.lp_.num_col_>0)
@@ -558,7 +558,7 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
-  model_.lp_.ensureColWise();
+  model_.lp_.ensureColwise();
   if (options_.highs_debug_level > min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
@@ -701,9 +701,9 @@ HighsStatus Highs::run() {
           return HighsStatus::kError;
         // Log the presolve reductions
         reportPresolveReductions(log_options, incumbent_lp, reduced_lp);
-	// Solving the presolved LP with strictly reduced dimensions
-	// so ensure that the Ekk instance is cleared
-	ekk_instance_.clear();
+        // Solving the presolved LP with strictly reduced dimensions
+        // so ensure that the Ekk instance is cleared
+        ekk_instance_.clear();
         ekk_instance_.lp_name_ = "Presolved LP";
         // Don't try dual cut-off when solving the presolved LP, as the
         // objective values aren't correct
@@ -1149,7 +1149,7 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   if (row_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "getReducedRow: row_vector is NULL\n");
@@ -1204,7 +1204,7 @@ HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   if (col_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "getReducedColumn: col_vector is NULL\n");
@@ -1915,7 +1915,7 @@ HighsPresolveStatus Highs::runPresolve() {
 
   // Ensure that the LP is column-wise
   HighsLp& original_lp = model_.lp_;
-  original_lp.ensureColWise();
+  original_lp.ensureColwise();
 
   if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;

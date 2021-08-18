@@ -72,10 +72,11 @@ HighsDebugStatus debugCheckInvert(const HSimplexNla& simplex_nla,
       }
     } else {
       HighsInt index = iCol - num_col;
-      assert(index<num_row);
+      assert(index < num_row);
       //      printf("value = %g' \n", value); fflush(stdout);
-      //      printf("index/num_row = %d/%d; \n", (int)index, (int)num_row); fflush(stdout);
-      //      printf("rhs.array[index] = %g\n", rhs.array[index]); fflush(stdout);
+      //      printf("index/num_row = %d/%d; \n", (int)index, (int)num_row);
+      //      fflush(stdout); printf("rhs.array[index] = %g\n",
+      //      rhs.array[index]); fflush(stdout);
       rhs.array[index] += value;
     }
   }

@@ -64,7 +64,7 @@ class HEkk {
   HighsInt initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
   void handleRankDeficiency();
-  void initialisePartitionedRowWiseMatrix();
+  void initialisePartitionedRowwiseMatrix();
 
   // Interface methods
   void appendColsToVectors(const HighsInt num_new_col,

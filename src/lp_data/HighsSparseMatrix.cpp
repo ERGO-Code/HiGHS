@@ -82,14 +82,14 @@ void HighsSparseMatrix::range(double& min_value, double& max_value) const {
 void HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
   assert(this->formatOk());
   if (desired_format == MatrixFormat::kColwise) {
-    this->ensureColWise();
+    this->ensureColwise();
   } else {
-    this->ensureRowWise();
+    this->ensureRowwise();
   }
   assert(this->format_ == desired_format);
 }
 
-void HighsSparseMatrix::ensureColWise() {
+void HighsSparseMatrix::ensureColwise() {
   assert(this->formatOk());
   if (this->isColwise()) return;
   HighsInt num_col = this->num_col_;
@@ -144,7 +144,7 @@ void HighsSparseMatrix::ensureColWise() {
   assert((HighsInt)this->value_.size() >= num_nz);
 }
 
-void HighsSparseMatrix::ensureRowWise() {
+void HighsSparseMatrix::ensureRowwise() {
   assert(this->formatOk());
   if (this->isRowwise()) return;
   HighsInt num_col = this->num_col_;
@@ -247,7 +247,7 @@ void HighsSparseMatrix::addCols(const HighsSparseMatrix new_cols,
     // nonzeros
     if (num_new_nz > num_nz) {
       assert(1 == 0);
-      this->ensureColWise();
+      this->ensureColwise();
     }
   }
   // Determine the new number of columns and nonzeros in the matrix
@@ -330,7 +330,7 @@ void HighsSparseMatrix::addRows(const HighsSparseMatrix new_rows,
   if (this->isColwise()) {
     // Matrix is currently a standard col-wise matrix, so flip
     // row-wise if there are more new nonzeros than current nonzeros
-    if (num_new_nz > num_nz) this->ensureRowWise();
+    if (num_new_nz > num_nz) this->ensureRowwise();
   }
   // Determine the new number of rows and nonzeros in the matrix
   HighsInt new_num_nz = num_nz + num_new_nz;

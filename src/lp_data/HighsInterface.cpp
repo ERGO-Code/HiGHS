@@ -251,7 +251,7 @@ HighsStatus Highs::addRowsInterface(HighsInt XnumNewRow,
 void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
-  lp.ensureColWise();
+  lp.ensureColwise();
 
   // Keep a copy of the original number of columns to check whether
   // any columns have been removed, and if there is mask to be updated
@@ -297,7 +297,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
 void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
-  lp.ensureColWise();
+  lp.ensureColwise();
   // Keep a copy of the original number of rows to check whether
   // any rows have been removed, and if there is mask to be updated
   HighsInt original_num_row = lp.num_row_;
@@ -344,7 +344,7 @@ void Highs::getColsInterface(const HighsIndexCollection& index_collection,
                              double* col_matrix_value) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -394,7 +394,7 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
                              double* row_matrix_value) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   assert(ok(index_collection));
   HighsInt from_k;
   HighsInt to_k;
@@ -411,7 +411,7 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   HighsInt current_set_entry = 0;
   HighsInt row_dim = lp.num_row_;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   // Set up a row mask so that entries to be got from the column-wise
   // matrix can be identified and have their correct row index.
   vector<HighsInt> new_index;
@@ -516,7 +516,7 @@ void Highs::getCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
   assert(0 <= Xcol && Xcol < lp.num_col_);
   value = 0;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   for (HighsInt el = lp.a_matrix_.start_[Xcol];
        el < lp.a_matrix_.start_[Xcol + 1]; el++) {
     if (lp.a_matrix_.index_[el] == Xrow) {
@@ -670,7 +670,7 @@ void Highs::changeCoefficientInterface(const HighsInt Xrow, const HighsInt Xcol,
                                        const double XnewValue) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   assert(0 <= Xrow && Xrow < lp.num_row_);
   assert(0 <= Xcol && Xcol < lp.num_col_);
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
@@ -692,7 +692,7 @@ HighsStatus Highs::scaleColInterface(const HighsInt col,
   HighsSimplexStatus& simplex_status = ekk_instance_.status_;
 
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
   if (col < 0) return HighsStatus::kError;
   if (col >= lp.num_col_) return HighsStatus::kError;
   if (!scaleval) return HighsStatus::kError;
@@ -738,7 +738,7 @@ HighsStatus Highs::scaleRowInterface(const HighsInt row,
   HighsSimplexStatus& simplex_status = ekk_instance_.status_;
 
   // Ensure that the LP is column-wise
-  lp.ensureColWise();
+  lp.ensureColwise();
 
   if (row < 0) return HighsStatus::kError;
   if (row >= lp.num_row_) return HighsStatus::kError;
@@ -1015,22 +1015,23 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   if (num_row == 0) return return_status;
   if (!basis_.valid) {
     highsLogUser(options_.log_options, HighsLogType::kError,
-		 "getBasicVariables called without a HiGHS basis\n");
+                 "getBasicVariables called without a HiGHS basis\n");
     return HighsStatus::kError;
   }
   if (!ekk_status.has_invert) {
     // The LP has no invert to use, so have to set one up
-    lp.ensureColWise();
+    lp.ensureColwise();
     // Consider scaling the LP
     considerScaling(options_, lp);
     // Create a HighsLpSolverObject, and then move its LP to EKK
     HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
-                                       ekk_instance_, options_, timer_);
+                                      ekk_instance_, options_, timer_);
     ekk_instance_.moveLp(solver_object);
     if (!ekk_status.has_basis) {
       // The Ekk instance has no simplex basis, so pass the HiGHS basis
       HighsStatus call_status = ekk_instance_.setBasis(basis_);
-      return_status = interpretCallStatus(options_.log_options, call_status, return_status, "setBasis");
+      return_status = interpretCallStatus(options_.log_options, call_status,
+                                          return_status, "setBasis");
       if (return_status == HighsStatus::kError) return return_status;
     }
     // Now form the invert
@@ -1190,7 +1191,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
     vector<double> column;
     column.assign(num_row, 0);
     rhs.assign(num_row, 0);
-    lp.ensureColWise();
+    lp.ensureColwise();
     HighsInt primal_ray_sign = ekk_instance_.info_.primal_ray_sign_;
     if (col < num_col) {
       for (HighsInt iEl = lp.a_matrix_.start_[col];

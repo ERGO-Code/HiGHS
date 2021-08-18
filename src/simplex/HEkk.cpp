@@ -34,9 +34,7 @@
 // using std::cout;
 // using std::endl;
 
-void HEkk::clear() {
-  this->clearData();
-}
+void HEkk::clear() { this->clearData(); }
 
 void HEkk::invalidate() {
   this->status_.initialised = false;
@@ -259,7 +257,7 @@ void HEkk::updateStatus(LpAction action) {
       //   this->invalidateBasis();
       break;
     case LpAction::kDelRowsBasisOk:
-      assert(1==0);
+      assert(1 == 0);
       //      info.lp_ = true;
       break;
     case LpAction::kScaledCol:
@@ -816,29 +814,25 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
   // deduces any scaling factors that it must use by inspecting
   // whether the LP has scaling factors, and whether it is scaled.
   //
-  // If simplex NLA is not set up, then it will be done if 
+  // If simplex NLA is not set up, then it will be done if
   //
   if (this->status_.has_nla) {
-    this->simplex_nla_.setPointers(&(this->lp_),
-				   local_scaled_a_matrix,
-				   &this->basis_.basicIndex_[0],
-				   this->options_,
-				   this->timer_,
-				   &(this->analysis_));
+    this->simplex_nla_.setPointers(&(this->lp_), local_scaled_a_matrix,
+                                   &this->basis_.basicIndex_[0], this->options_,
+                                   this->timer_, &(this->analysis_));
   } else {
     // todo @ Julian: this fails on glass4
     assert(info_.factor_pivot_threshold >= options_->factor_pivot_threshold);
     HighsSparseMatrix* local_scaled_a_matrix = getScaledAMatrixPointer();
-    simplex_nla_.setup(&(this->lp_),//&lp_,
-		       &this->basis_.basicIndex_[0],//&basis_.basicIndex_[0],
-		       this->options_,//options_,
-		       this->timer_,//timer_,
-                       &(this->analysis_),//&analysis_,
-		       local_scaled_a_matrix,
+    simplex_nla_.setup(&(this->lp_),                  //&lp_,
+                       &this->basis_.basicIndex_[0],  //&basis_.basicIndex_[0],
+                       this->options_,                // options_,
+                       this->timer_,                  // timer_,
+                       &(this->analysis_),            //&analysis_,
+                       local_scaled_a_matrix,
                        this->info_.factor_pivot_threshold);
     status_.has_nla = true;
   }
-
 
   const HighsInt rank_deficiency = computeFactor();
   if (rank_deficiency) {
@@ -905,7 +899,7 @@ HighsStatus HEkk::initialiseForSolve() {
   assert(status_.has_basis);
 
   updateSimplexOptions();
-  initialisePartitionedRowWiseMatrix();  // Timed
+  initialisePartitionedRowwiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
   initialiseBound(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
@@ -1303,7 +1297,7 @@ HighsInt HEkk::computeFactor() {
   return rank_deficiency;
 }
 
-void HEkk::initialisePartitionedRowWiseMatrix() {
+void HEkk::initialisePartitionedRowwiseMatrix() {
   if (status_.has_ar_matrix) return;
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);

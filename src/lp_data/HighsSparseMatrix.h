@@ -46,8 +46,8 @@ class HighsSparseMatrix {
   HighsInt numNz() const;
   void range(double& min_value, double& max_value) const;
   void setFormat(const MatrixFormat desired_format);
-  void ensureColWise();
-  void ensureRowWise();
+  void ensureColwise();
+  void ensureRowwise();
 
   void addCols(const HighsSparseMatrix new_cols,
                const int8_t* in_partition = NULL);

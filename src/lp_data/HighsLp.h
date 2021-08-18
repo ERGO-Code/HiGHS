@@ -58,8 +58,8 @@ class HighsLp {
   void setMatrixDimensions();
   bool dimensionsOk(std::string message) const;
   void setFormat(const MatrixFormat format);
-  void ensureColWise() { this->a_matrix_.ensureColWise(); };
-  void ensureRowWise() { this->a_matrix_.ensureRowWise(); };
+  void ensureColwise() { this->a_matrix_.ensureColwise(); };
+  void ensureRowwise() { this->a_matrix_.ensureRowwise(); };
   void clearScaling();
   void resetScale();
   void clearScale();

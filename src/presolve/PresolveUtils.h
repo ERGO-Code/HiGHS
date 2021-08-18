@@ -19,7 +19,7 @@
 
 namespace presolve {
 
-void printRowWise(
+void printRowwise(
     const HighsInt numRow, const HighsInt numCol,
     const std::vector<double>& colCost, const std::vector<double>& colLower,
     const std::vector<double>& colUpper, const std::vector<double>& rowLower,

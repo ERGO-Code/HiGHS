@@ -129,7 +129,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   } catch (std::invalid_argument& ex) {
     return FilereaderRetcode::kParserError;
   }
-  lp.ensureColWise();
+  lp.ensureColwise();
   return FilereaderRetcode::kOk;
 }
 
