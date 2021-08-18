@@ -1034,16 +1034,7 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
     lp.is_moved_ = true;
     ekk_instance_.setPointers(&options_, &timer_);
     // If the simplex LP isn't initialised, do so
-    if (!ekk_status.initialised) {
-      return_status = ekk_instance_.setup();
-      if (return_status == HighsStatus::kError) {
-        // Setup has failed - can only happen if there are excessive
-        // matrix entries in an LP that should already have been
-        // assessed - so move the LP back and unscale
-        lp.moveBackLpAndUnapplyScaling(ekk_lp);
-        return return_status;
-      }
-    }
+    if (!ekk_status.initialised) ekk_instance_.setupEkk();
     if (!ekk_status.has_basis) {
       //
       // The Ekk instance has no simplex basis, so pass the HiGHS basis

@@ -143,14 +143,8 @@ HighsStatus solveLpSimplex(HighsLpSolverObject& solver_object) {
   // modified
   ekk_instance.moveLp(solver_object);
   incumbent_lp.is_moved_ = true;
-  if (!status.initialised) {
-    // The simplex instance isn't initialised
-    call_status = ekk_instance.setup();
-    if (call_status == HighsStatus::kError) {
-      incumbent_lp.moveBackLpAndUnapplyScaling(ekk_lp);
-      return returnFromSolveLpSimplex(solver_object, call_status);
-    }
-  }
+  // The simplex instance isn't initialised
+  if (!status.initialised) ekk_instance.setupEkk();
   // If there is no simplex basis, use the HiGHS basis
   if (!status.has_basis && basis.valid) {
     call_status = ekk_instance.setBasis(basis);

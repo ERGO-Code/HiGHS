@@ -42,7 +42,7 @@ class HEkk {
   HighsSparseMatrix* getScaledAMatrixPointer();
   HighsScale* getScalePointer();
 
-  HighsStatus setup();
+  void setupEkk();
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
@@ -112,7 +112,6 @@ class HEkk {
   double total_synthetic_tick_;
 
  private:
-  void initialiseForNewLp();
   bool isUnconstrainedLp();
   HighsStatus initialiseForSolve();
   void setSimplexOptions();

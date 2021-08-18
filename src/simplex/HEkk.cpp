@@ -840,27 +840,11 @@ void HEkk::handleRankDeficiency() {
 
 // Private methods
 
-HighsStatus HEkk::setup() {
-  HighsStatus return_status = HighsStatus::kOk;
-  // Shouldn't have to check the incoming LP since this is an internal
-  // call, but it may be an LP that's set up internally with errors
-  // :-) ...
-  if (options_->highs_debug_level > kHighsDebugLevelNone) {
-    // ... so, if debugging, check the LP.
-    HighsStatus call_status = assessLp(lp_, *options_);
-    return_status = interpretCallStatus(this->options_->log_options,
-                                        call_status, return_status, "assessLp");
-    if (return_status == HighsStatus::kError) return return_status;
-  }
-  initialiseForNewLp();
-  simplex_nla_.clear();
-  return return_status;
-}
-
-void HEkk::initialiseForNewLp() {
+void HEkk::setupEkk() {
   setSimplexOptions();
   initialiseControl();
   initialiseSimplexLpRandomVectors();
+  simplex_nla_.clear();
   status_.initialised = true;
 }
 
