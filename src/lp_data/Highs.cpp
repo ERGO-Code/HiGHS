@@ -701,6 +701,9 @@ HighsStatus Highs::run() {
           return HighsStatus::kError;
         // Log the presolve reductions
         reportPresolveReductions(log_options, incumbent_lp, reduced_lp);
+	// Solving the presolved LP with strictly reduced dimensions
+	// so ensure that the Ekk instance is cleared
+	ekk_instance_.clear();
         ekk_instance_.lp_name_ = "Presolved LP";
         // Don't try dual cut-off when solving the presolved LP, as the
         // objective values aren't correct

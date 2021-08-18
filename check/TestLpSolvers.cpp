@@ -186,9 +186,9 @@ void testSolversSetup(const std::string model,
                       vector<HighsInt>& simplex_strategy_iteration_count) {
   if (model.compare("adlittle") == 0) {
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyChoose] = 87;
+        int)SimplexStrategy::kSimplexStrategyChoose] = 86;
     simplex_strategy_iteration_count[(
-        int)SimplexStrategy::kSimplexStrategyDualPlain] = 87;
+        int)SimplexStrategy::kSimplexStrategyDualPlain] = 86;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::kSimplexStrategyDualTasks] = 72;
     simplex_strategy_iteration_count[(

@@ -34,28 +34,33 @@
 // using std::cout;
 // using std::endl;
 
-void HEkk::clear() { this->invalidate(); }
+void HEkk::clear() {
+  this->clearData();
+}
 
 void HEkk::invalidate() {
   this->status_.initialised = false;
   this->status_.valid = false;
-  this->invalidateBasisAfterDimensionChange();
+  this->invalidateBasisMatrix();
 }
 
-void HEkk::invalidateBasisAfterDimensionChange() {
-   this->invalidateBasis();
+void HEkk::invalidateBasisMatrix() {
+  // When the constraint matrix changes - dimensions or just (basic)
+  // values, the simplex NLA becomes invalid, and the simplex basis is
+  // no longer valid.
+  this->status_.has_nla = false;
+  invalidateBasis();
 }
 
 void HEkk::invalidateBasis() {
   // Invalidate the basis of the simplex LP, and all its other
-  // properties - since they are basis-related
+  // basis-related properties
   this->status_.has_basis = false;
   this->invalidateBasisArtifacts();
 }
 
 void HEkk::invalidateBasisArtifacts() {
   // Invalidate the artifacts of the basis of the simplex LP
-   this->status_.has_nla = false;
   this->status_.has_ar_matrix = false;
   this->status_.has_dual_steepest_edge_weights = false;
   this->status_.has_invert = false;
@@ -74,7 +79,7 @@ void HEkk::clearData() {
 
   this->lp_.clear();
   lp_name_ = "";
-  // status_; Invalidated elsewhere
+  this->clearStatus();
   this->clearInfo();
   model_status_ = HighsModelStatus::kNotset;
   this->clearSimplexBasis(this->basis_);
@@ -99,6 +104,23 @@ void HEkk::clearData() {
 
   this->build_synthetic_tick_ = 0;
   this->total_synthetic_tick_ = 0;
+}
+
+void HEkk::clearStatus() {
+  HighsSimplexStatus& status = this->status_;
+  status.initialised = false;
+  status.valid = false;
+  status.has_basis = false;
+  status.has_ar_matrix = false;
+  status.has_nla = false;
+  status.has_dual_steepest_edge_weights = false;
+  status.has_invert = false;
+  status.has_fresh_invert = false;
+  status.has_fresh_rebuild = false;
+  status.has_dual_objective_value = false;
+  status.has_primal_objective_value = false;
+  status.has_dual_ray = false;
+  status.has_primal_ray = false;
 }
 
 void HEkk::clearInfo() {
@@ -205,7 +227,7 @@ void HEkk::clearSimplexBasis(SimplexBasis& simplex_basis) {
 void HEkk::updateStatus(LpAction action) {
   switch (action) {
     case LpAction::kScale:
-      this->invalidateBasis();
+      this->invalidateBasisMatrix();
       break;
     case LpAction::kNewCosts:
       this->status_.has_fresh_rebuild = false;
@@ -237,13 +259,14 @@ void HEkk::updateStatus(LpAction action) {
       //   this->invalidateBasis();
       break;
     case LpAction::kDelRowsBasisOk:
+      assert(1==0);
       //      info.lp_ = true;
       break;
     case LpAction::kScaledCol:
-      this->invalidateBasisArtifacts();
+      this->invalidateBasisMatrix();
       break;
     case LpAction::kScaledRow:
-      this->invalidateBasisArtifacts();
+      this->invalidateBasisMatrix();
       break;
     case LpAction::kBacktracking:
       this->status_.has_ar_matrix = false;
@@ -829,8 +852,6 @@ HighsInt HEkk::initialiseSimplexLpBasisAndFactor(
     // Account for rank deficiency by correcing nonbasicFlag
     handleRankDeficiency();
     this->updateStatus(LpAction::kNewBasis);
-    printf("Singularity, but keeping simplex NLA\n");
-    status_.has_nla = true;
     setNonbasicMove();
     status_.has_basis = true;
     status_.has_invert = true;

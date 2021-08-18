@@ -30,11 +30,12 @@ class HEkk {
    */
   void clear();
   void invalidate();
-  void invalidateBasisAfterDimensionChange();
+  void invalidateBasisMatrix();
   void invalidateBasis();
   void invalidateBasisArtifacts();
   void clearData();
   void clearInfo();
+  void clearStatus();
   void clearSimplexBasis(SimplexBasis& simplex_basis);
 
   void updateStatus(LpAction action);
