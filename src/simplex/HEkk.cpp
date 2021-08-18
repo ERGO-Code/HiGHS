@@ -1273,6 +1273,8 @@ void HEkk::computeDualObjectiveValue(const HighsInt phase) {
 
 HighsInt HEkk::computeFactor() {
   assert(status_.has_nla);
+  // If the INVERT is fresh, no need to call simplex_nla_.invert()
+  if (status_.has_fresh_invert) return 0;
   analysis_.simplexTimerStart(InvertClock);
   const HighsInt rank_deficiency = simplex_nla_.invert();
   if (analysis_.analyse_factor_data)
