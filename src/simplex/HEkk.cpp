@@ -261,7 +261,7 @@ void HEkk::updateStatus(LpAction action) {
   }
 }
 
-void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject* solver_object) {
+void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject& solver_object) {
   // Move the incumbent LP to EKK
   this->lp_ = std::move(incumbent_lp);
   incumbent_lp.is_moved_ = true;
@@ -272,13 +272,10 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject* solver_object) {
   // just been moved in. This is a scaled space if the LP is scaled.
   this->simplex_in_scaled_space_ = this->lp_.is_scaled_;
   //
-  // moveLp can be called with NULL solver_object when all that's needed is ...
-  if (!solver_object) return;
-  //
   // Update other EKK pointers. Currently just pointers to the
   // HighsOptions and HighsTimer members of the Highs class that are
   // communicated by reference via the HighsLpSolverObject instance.
-  this->setPointers(&(solver_object->options_), &(solver_object->timer_));
+  this->setPointers(&solver_object.options_, &solver_object.timer_);
   //
   // The simplex NLA operates in the scaled space if the LP has
   // scaling factors. If they exist but haven't been applied, then the
@@ -300,9 +297,9 @@ void HEkk::moveLp(HighsLp incumbent_lp, HighsLpSolverObject* solver_object) {
     this->simplex_nla_.setPointers(
         &(this->lp_),
 	local_scaled_a_matrix,
-        &(solver_object->ekk_instance_.basis_.basicIndex_)[0],
-        &(solver_object->options_),
-	&(solver_object->timer_),
+        &solver_object.ekk_instance_.basis_.basicIndex_[0],
+        &solver_object.options_,
+	&solver_object.timer_,
         &(this->analysis_));
 }
 

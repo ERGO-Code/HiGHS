@@ -1017,12 +1017,20 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
   HighsSimplexStatus& ekk_status = ekk_instance_.status_;
   // For an LP with no rows the solution is vacuous
   if (num_row == 0) return return_status;
+  if (!basis_.valid) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+		 "getBasicVariables called without a HiGHS basis\n");
+    return HighsStatus::kError;
+  }
   if (!ekk_status.has_invert) {
     // The LP has no invert to use, so have to set one up
     lp.ensureColWise();
-    // Consider scaling the LP, and then move to EKK
+    // Consider scaling the LP
     considerScaling(options_, lp);
-    ekk_instance_.moveLp(std::move(lp));
+    // Create a HighsLpSolverObject, and then move its LP to EKK
+    HighsLpSolverObject solver_object(lp, basis_, solution_, info_,
+				      ekk_instance_, options_, timer_);
+    ekk_instance_.moveLp(std::move(lp), solver_object);
     lp.is_moved_ = true;
     ekk_instance_.setPointers(&options_, &timer_);
     // If the simplex LP isn't initialised, do so
@@ -1057,11 +1065,14 @@ HighsStatus Highs::getBasicVariablesInterface(HighsInt* basic_variables) {
         return HighsStatus::kError;
       }
     }
+    // Now form the invert
     assert(ekk_status.has_basis);
     const bool only_from_known_basis = true;
     HighsInt return_value =
         ekk_instance_.initialiseSimplexLpBasisAndFactor(only_from_known_basis);
+    // Once the invert is formed, move back the LP and remove any scaling.
     lp.moveBackLpAndUnapplyScaling(ekk_lp);
+    // If the current basis cannot be inverted, return an error
     if (return_value) return HighsStatus::kError;
   }
   assert(ekk_status.has_invert);
