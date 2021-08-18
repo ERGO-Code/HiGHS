@@ -266,7 +266,6 @@ void HEkk::moveLp(HighsLpSolverObject& solver_object) {
   HighsLp& incumbent_lp = solver_object.lp_;
   this->lp_ = std::move(incumbent_lp);
   incumbent_lp.is_moved_ = true;
-  if (status_.has_matrix) initialiseMatrix(true);
   //
   // The simplex algorithm runs in the same space as the LP that has
   // just been moved in. This is a scaled space if the LP is scaled.
@@ -331,7 +330,8 @@ HighsStatus HEkk::solve() {
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
   dual_simplex_cleanup_level_ = 0;
-  if (initialiseForSolve() == HighsStatus::kError) return HighsStatus::kError;
+  HighsStatus call_status = initialiseForSolve();
+  if (call_status == HighsStatus::kError) return HighsStatus::kError;
 
   const HighsDebugStatus simplex_nla_status =
       simplex_nla_.debugCheckData("Before HEkk::solve()");
@@ -349,7 +349,6 @@ HighsStatus HEkk::solve() {
   if (model_status_ == HighsModelStatus::kOptimal) return HighsStatus::kOk;
 
   HighsStatus return_status = HighsStatus::kOk;
-  HighsStatus call_status;
   std::string algorithm_name;
 
   // Indicate that dual and primal rays are not known
@@ -870,7 +869,7 @@ HighsStatus HEkk::initialiseForSolve() {
   assert(status_.has_basis);
 
   updateSimplexOptions();
-  initialiseMatrix();  // Timed
+  initialiseMatrix(true);  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
   initialiseBound(SimplexAlgorithm::kPrimal, kSolvePhaseUnknown, false);
@@ -1279,8 +1278,8 @@ void HEkk::initialiseMatrix(const bool forced) {
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_, &basis_.nonbasicFlag_[0]);
   assert(ar_matrix_.debugPartitionOk(&basis_.nonbasicFlag_[0]));
-  status_.has_matrix = true;
   analysis_.simplexTimerStop(matrixSetupClock);
+  status_.has_matrix = true;
 }
 
 void HEkk::setNonbasicMove() {
