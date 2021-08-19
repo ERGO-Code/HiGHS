@@ -226,6 +226,7 @@ void HSimplexNla::addRows(const HighsLp* updated_lp,
   // HFactor matrix isn't needed until reinversion has to be performed
   setLpAndScalePointers(updated_lp);
   base_index_ = base_index;
+  factor_.baseIndex = base_index;
   factor_.addRows(scaled_ar_matrix);
 }
 

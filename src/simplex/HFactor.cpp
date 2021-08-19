@@ -203,7 +203,7 @@ void HFactor::setup(const HighsInt numCol_, const HighsInt numRow_,
   dwork.assign(numRow, 0);
 
   // Find Basis matrix limit size
-  HighsInt BlimitX = 0;
+  BlimitX = 0;
   iwork.assign(numRow + 1, 0);
   for (HighsInt i = 0; i < numCol; i++) iwork[Astart[i + 1] - Astart[i]]++;
   for (HighsInt i = numRow, counted = 0; i >= 0 && counted < numRow; i--)
@@ -369,84 +369,6 @@ bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
   if (new_pivot_threshold > kMaxPivotThreshold) return false;
   pivot_threshold = new_pivot_threshold;
   return true;
-}
-
-void HFactor::addCols(const HighsInt num_new_col) {
-  numCol += num_new_col;
-}
-
-void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
-  HighsInt num_new_row = ar_matrix->num_row_;
-  HighsInt new_num_row = numRow + num_new_row;
-  printf("Adding %" HIGHSINT_FORMAT " new rows to HFactor instance: increasing dimension from %"
-	 HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT " \n", num_new_row, numRow, new_num_row);
-  this->LpivotLookup.resize(new_num_row);
-  this->LpivotIndex.reserve(new_num_row);
-  this->Lstart.reserve(new_num_row + 1);
-  this->LRstart.reserve(new_num_row + 1);
-  this->UpivotLookup.resize(new_num_row);
-  // Need to know where (if) a column is basic
-  vector<HighsInt> in_basis;
-  in_basis.assign(numCol, -1);
-  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-    HighsInt iVar = baseIndex[iRow];
-    printf("Basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
-    if (iVar<numCol) in_basis[iVar] = iRow;
-  }
-  for (HighsInt iRow = numRow; iRow < new_num_row; iRow++) {
-    HighsInt iVar = baseIndex[iRow];
-    printf("New basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
-    assert(iVar>=numCol);
-  }
-
-  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
-    printf("L matrix row %" HIGHSINT_FORMAT " has start %" HIGHSINT_FORMAT
-	   ", pivot index %" HIGHSINT_FORMAT " and lookup %" HIGHSINT_FORMAT "\n",
-	   iRow, Lstart[iRow], LpivotIndex[iRow], LpivotLookup[iRow]);
-    for (HighsInt iEl = Lstart[iRow]; iEl < Lstart[iRow+1]; iEl++) {
-      printf("   Index %" HIGHSINT_FORMAT " has value %g\n", Lindex[iEl], Lvalue[iEl]);
-    }
-  }
-
-  HVector rhs;
-  rhs.setup(numRow);
-  for (HighsInt inewRow = 0; inewRow < num_new_row; inewRow++) {
-    printf("For new row %" HIGHSINT_FORMAT "\n", inewRow);
-    printf("Lindex.size() = %" HIGHSINT_FORMAT "; Lindex.capacity() = %" HIGHSINT_FORMAT "\n",
-	   (HighsInt)Lindex.size(), (HighsInt)Lindex.capacity());
-    printf("Lvalue.size() = %" HIGHSINT_FORMAT "; Lvalue.capacity() = %" HIGHSINT_FORMAT "\n",
-	   (HighsInt)Lvalue.size(), (HighsInt)Lvalue.capacity());
-    // Prepare RHS for system U^T.v = r
-    rhs.clear();
-    rhs.packFlag = true;
-    for (HighsInt iEl = ar_matrix->start_[inewRow]; iEl < ar_matrix->start_[inewRow+1]; iEl++) {
-      HighsInt iCol = ar_matrix->index_[iEl];
-      HighsInt basis_index = in_basis[iCol];
-      if (basis_index>=0) {
-	rhs.array[basis_index] = ar_matrix->value_[iEl];
-	rhs.index[rhs.count++] = basis_index;
-      }
-    }
-    // Solve U^T.v = r
-    double expected_density = 1.0;
-    btranU(rhs, expected_density);
-    rhs.tight();
-    // Append v to the L matrix
-    LpivotIndex.push_back(numRow + inewRow);
-    for (HighsInt iX = 0; iX < rhs.count; iX++) {
-      HighsInt iCol = rhs.index[iX];
-      double value = rhs.array[iCol];
-      HighsInt iEl = Lstart[numRow];
-      Lindex.push_back(iCol);
-      Lvalue.push_back(value);
-      Lstart[numRow]++;
-    }
-    Lstart.push_back(Lstart[numRow]);
-    
-    
-  }
-  // Increase the number of rows in HFactor
-  numRow += num_new_row;
 }
 
 void HFactor::buildSimple() {
@@ -2120,3 +2042,179 @@ void HFactor::updateAPF(HVector* aq, HVector* ep, HighsInt iRow
   // Store pivot
   PFpivotValue.push_back(aq->array[iRow]);
 }
+
+void HFactor::addCols(const HighsInt num_new_col) {
+  numCol += num_new_col;
+}
+
+void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
+  const HighsInt kExtraNz = 100;
+  HighsInt num_new_row = ar_matrix->num_row_;
+  HighsInt new_num_row = numRow + num_new_row;
+  printf("Adding %" HIGHSINT_FORMAT " new rows to HFactor instance: increasing dimension from %"
+	 HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT " \n", num_new_row, numRow, new_num_row);
+  HighsInt l_matrix_num_nz = Lstart[numRow];
+  HighsInt lr_matrix_num_nz = LRstart[numRow];
+  HighsInt l_matrix_size = Lindex.size();
+  HighsInt lr_matrix_size = LRindex.size();
+  assert(l_matrix_num_nz==l_matrix_size);
+  assert(lr_matrix_num_nz==lr_matrix_size);
+  HighsInt l_matrix_capacity = Lindex.capacity();
+  HighsInt lr_matrix_capacity = LRindex.capacity();
+  assert((HighsInt)Lvalue.capacity() == l_matrix_capacity);
+  assert((HighsInt)LRvalue.capacity() == lr_matrix_capacity);
+
+  this->LpivotLookup.resize(new_num_row);
+  this->LpivotIndex.reserve(new_num_row);
+  this->LRstart.reserve(new_num_row + 1);
+  this->UpivotLookup.resize(new_num_row);
+  // Need to know where (if) a column is basic
+  vector<HighsInt> in_basis;
+  in_basis.assign(numCol, -1);
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    HighsInt iVar = baseIndex[iRow];
+    printf("Basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
+    if (iVar<numCol) in_basis[iVar] = iRow;
+  }
+  for (HighsInt iRow = numRow; iRow < new_num_row; iRow++) {
+    HighsInt iVar = baseIndex[iRow];
+    printf("New basic variable %" HIGHSINT_FORMAT " is %" HIGHSINT_FORMAT "\n", iRow, iVar);
+    assert(iVar>=numCol);
+  }
+  
+  printf("L and LR matrices:\n");
+  printf("l_matrix_size =  %" HIGHSINT_FORMAT "; l_matrix_capacity =  %" HIGHSINT_FORMAT "\n",
+	 l_matrix_size, l_matrix_capacity);
+  printf("lr_matrix_size = %" HIGHSINT_FORMAT "; lr_matrix_capacity = %" HIGHSINT_FORMAT "\n",
+	 lr_matrix_size, lr_matrix_capacity);
+
+  for (HighsInt iRow = 0; iRow < numRow; iRow++) {
+    printf("L matrix row %" HIGHSINT_FORMAT " has start %" HIGHSINT_FORMAT
+	   ", pivot index %" HIGHSINT_FORMAT " and lookup %" HIGHSINT_FORMAT "\n",
+	   iRow, Lstart[iRow], LpivotIndex[iRow], LpivotLookup[iRow]);
+    for (HighsInt iEl = Lstart[iRow]; iEl < Lstart[iRow+1]; iEl++) {
+      printf("   Index %" HIGHSINT_FORMAT " has value %g\n", Lindex[iEl], Lvalue[iEl]);
+    }
+  }
+
+  // Create a row-wise sparse matrix containing the new rows of L - so that the 
+  HighsSparseMatrix new_lr_rows;
+  HighsInt new_lr_rows_capacity = kExtraNz + (BlimitX * num_new_row) / numRow;
+  printf("For BlimitX = %" HIGHSINT_FORMAT ", new_lr_rows_capacity = %" HIGHSINT_FORMAT "\n", BlimitX, new_lr_rows_capacity);
+  assert(new_lr_rows_capacity>kExtraNz);
+  HighsInt new_lr_rows_num_nz = 0;
+  new_lr_rows.format_ = MatrixFormat::kRowwise;
+  new_lr_rows.num_col_ = numRow;
+  new_lr_rows.num_row_ = num_new_row;
+  new_lr_rows.start_.reserve(num_new_row+1);
+  new_lr_rows.index_.reserve(new_lr_rows_capacity);
+  new_lr_rows.value_.reserve(new_lr_rows_capacity);
+  
+  HVector rhs;
+  rhs.setup(numRow);
+  for (HighsInt inewRow = 0; inewRow < num_new_row; inewRow++) {
+    printf("For new row %" HIGHSINT_FORMAT "\n", inewRow);
+    // Prepare RHS for system U^T.v = r
+    rhs.clear();
+    rhs.packFlag = true;
+    for (HighsInt iEl = ar_matrix->start_[inewRow]; iEl < ar_matrix->start_[inewRow+1]; iEl++) {
+      HighsInt iCol = ar_matrix->index_[iEl];
+      HighsInt basis_index = in_basis[iCol];
+      if (basis_index>=0) {
+	rhs.array[basis_index] = ar_matrix->value_[iEl];
+	rhs.index[rhs.count++] = basis_index;
+      }
+    }
+    // Solve U^T.v = r
+    double expected_density = 1.0;
+    btranU(rhs, expected_density);
+    rhs.tight();
+    // Append v to the matrix containing the new rows of L
+    //
+    // Ensure that there is space for all values
+    HighsInt rhs_num_nz = rhs.count;
+    if (new_lr_rows_capacity < new_lr_rows_num_nz + rhs_num_nz) {
+      assert(1==0);
+      HighsInt extra_nz = std::max(kExtraNz, rhs_num_nz);
+      new_lr_rows_capacity += extra_nz;
+      new_lr_rows.index_.reserve(new_lr_rows_capacity);
+      new_lr_rows.value_.reserve(new_lr_rows_capacity);
+    }
+    for (HighsInt iX = 0; iX < rhs.count; iX++) {
+      HighsInt iCol = rhs.index[iX];
+      double value = rhs.array[iCol];
+      new_lr_rows.index_.push_back(iCol);
+      new_lr_rows.value_.push_back(value);
+      new_lr_rows_num_nz++;
+    }
+    new_lr_rows.start_.push_back(new_lr_rows_num_nz);
+    // Append v to the L matrix
+    //
+    // Ensure that there is space for all values
+    
+    if (lr_matrix_capacity < lr_matrix_num_nz + rhs_num_nz) {
+      assert(1==0);
+      HighsInt extra_nz = std::max(kExtraNz, rhs_num_nz);
+      lr_matrix_capacity += extra_nz;
+      LRindex.reserve(lr_matrix_capacity);
+      LRvalue.reserve(lr_matrix_capacity);
+    }
+    //    LpivotIndex.push_back(numRow + inewRow);
+    for (HighsInt iX = 0; iX < rhs.count; iX++) {
+      HighsInt iCol = rhs.index[iX];
+      double value = rhs.array[iCol];
+      HighsInt iEl = LRstart[numRow];
+      LRindex.push_back(iCol);
+      LRvalue.push_back(value);
+      lr_matrix_num_nz++;
+    }
+    LRstart.push_back(lr_matrix_num_nz);
+  }
+  // Now create a column-wise copy of the new rows
+  HighsSparseMatrix new_lr_cols = new_lr_rows;
+  new_lr_cols.ensureColwise();
+
+  vector<HighsInt> new_lr_cols_length;
+  new_lr_cols_length.assign(numRow, 0);
+  for (HighsInt iCol=0; iCol<numRow;iCol++) {
+    for(HighsInt iEl = new_lr_cols.start_[iCol]; iEl < new_lr_cols.start_[iCol+1]; iEl++) {
+      new_lr_cols_length[new_lr_cols.index_[iEl]]++;
+    }
+  }
+  // Insert the column-wise copy into the L matrix
+  //
+  // Ensure that there is space for all values
+  const HighsInt l_matrix_new_num_nz = Lstart[numRow] + new_lr_rows_num_nz;
+  if (l_matrix_new_num_nz > lr_matrix_capacity) {
+    assert(1==0);
+    l_matrix_capacity = l_matrix_new_num_nz + kExtraNz;
+    Lvalue.reserve(l_matrix_capacity);
+    Lindex.reserve(l_matrix_capacity);
+  }
+  this->Lstart.resize(new_num_row + 1);
+  this->Lindex.resize(l_matrix_new_num_nz);
+  this->Lvalue.resize(l_matrix_new_num_nz);
+  // 
+  HighsInt to_el = l_matrix_new_num_nz;
+  for (HighsInt iCol=new_num_row; iCol>numRow;iCol--) Lstart[iCol] = to_el;
+  for (HighsInt iCol=numRow-1; iCol>=0;iCol--) {
+    for(HighsInt iEl = new_lr_cols.start_[iCol+1]-1; iEl>=new_lr_cols.start_[iCol]; iEl--) {
+      to_el--;
+      Lindex[to_el] = new_lr_cols.index_[iEl];
+      Lvalue[to_el] = new_lr_cols.value_[iEl];
+    }
+    const HighsInt from_el = Lstart[iCol+1];
+    Lstart[iCol+1] = to_el;
+    for(HighsInt iEl = from_el-1; iEl>=Lstart[iCol]; iEl--) {
+      to_el--;
+      Lindex[to_el] = Lindex[iEl];
+      Lvalue[to_el] = Lvalue[iEl];
+    }
+  }
+  assert(to_el==0);
+      
+
+  // Increase the number of rows in HFactor
+  numRow += num_new_row;
+}
+

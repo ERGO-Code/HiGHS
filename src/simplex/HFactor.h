@@ -215,13 +215,7 @@ class HFactor {
    */
   const double* getAvalue() const { return Avalue; }
 
-  // Properties of data held in HFactor.h. To "have" them means that
-  // they are assigned.
-  HighsInt haveArrays;
-  // The representation of B^{-1} corresponds to the current basis
-  HighsInt haveInvert;
-  // The representation of B^{-1} corresponds to the current basis and is fresh
-  HighsInt haveFreshInvert;
+  // Properties of data held in HFactor.h
   HighsInt basis_matrix_num_el = 0;
   HighsInt invert_num_el = 0;
   HighsInt kernel_dim = 0;
@@ -248,6 +242,7 @@ class HFactor {
   std::unique_ptr<std::tuple<bool, bool, HighsInt>> log_data;
   HighsLogOptions log_options;
   bool use_original_HFactor_logic;
+  HighsInt BlimitX;
   HighsInt updateMethod;
 
   // Working buffer
@@ -438,6 +433,7 @@ class HFactor {
       rlinkFirst[-xlast - 2] = xnext;
     if (xnext >= 0) rlinkLast[xnext] = xlast;
   }
+  friend class HSimplexNla;
 };
 
 #endif /* HFACTOR_H_ */
