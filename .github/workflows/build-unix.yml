@@ -34,7 +34,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C $BUILD_TYPE --output-on-failure
+      run: ctest --output-on-failure -C $BUILD_TYPE
 
   release:
     runs-on: ${{ matrix.os }}
@@ -66,7 +66,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --output-on-failure -C Release
 
   debug64:
     runs-on: ${{ matrix.os }}
@@ -98,7 +98,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --output-on-failure -C Release
 
   Release64:
     runs-on: ${{ matrix.os }}
@@ -130,4 +130,4 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --output-on-failure -C Release

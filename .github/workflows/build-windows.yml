@@ -35,7 +35,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --output-on-failure -C Release
 
   windows_release:
     runs-on: windows-latest
@@ -69,7 +69,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --output-on-failure -C Release
 
   fast_build_debug:
     runs-on: windows-latest
@@ -103,7 +103,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Debug --output-on-failure
+      run: ctest --output-on-failure -C Debug
 
   windows_debug:
     runs-on: windows-latest
@@ -137,7 +137,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Debug --output-on-failure
+      run: ctest --output-on-failure -C Debug
 
   windows_release64:
     runs-on: windows-latest
@@ -171,7 +171,7 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Release --output-on-failure
+      run: ctest --output-on-failure -C Release
 
   windows_debug64:
     runs-on: windows-latest
@@ -205,4 +205,4 @@ jobs:
       shell: bash
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C Debug --output-on-failure
+      run: ctest --output-on-failure -C Debug
